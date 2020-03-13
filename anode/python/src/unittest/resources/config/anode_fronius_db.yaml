@@ -1,0 +1,12 @@
+host: 0.0.0.0
+port: 8091
+save_on_exit: True
+save_seconds: 100
+plugin:
+  fronius:
+    poll_seconds: 1
+    buffer_ticks: 100
+    history_partitions: 100000000000000
+    history_ticks: 100000000000000
+    history_partition_seconds: 9999999999
+    repeat_seconds: -1

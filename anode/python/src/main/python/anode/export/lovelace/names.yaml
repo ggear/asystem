@@ -1,0 +1,228 @@
+sensor.ada_temperature:
+  friendly_name: Ada
+sensor.basement_temperature:
+  friendly_name: Basement
+sensor.deck_temperature:
+  friendly_name: Deck
+sensor.dining_temperature:
+  friendly_name: Dining
+sensor.edwin_temperature:
+  friendly_name: Edwin
+sensor.kitchen_temperature:
+  friendly_name: Kitchen
+sensor.laundry_temperature:
+  friendly_name: Laundry
+sensor.lounge_temperature:
+  friendly_name: Lounge
+sensor.office_temperature:
+  friendly_name: Office
+sensor.pantry_temperature:
+  friendly_name: Pantry
+sensor.parents_temperature:
+  friendly_name: Parents
+sensor.roof_temperature:
+  friendly_name: Roof
+sensor.utility_temperature:
+  friendly_name: Utility
+sensor.ada_carbon_dioxide:
+  friendly_name: Ada
+sensor.dining_carbon_dioxide:
+  friendly_name: Dining
+sensor.edwin_carbon_dioxide:
+  friendly_name: Edwin
+sensor.kitchen_carbon_dioxide:
+  friendly_name: Kitchen
+sensor.laundry_carbon_dioxide:
+  friendly_name: Laundry
+sensor.lounge_carbon_dioxide:
+  friendly_name: Lounge
+sensor.office_carbon_dioxide:
+  friendly_name: Office
+sensor.pantry_carbon_dioxide:
+  friendly_name: Pantry
+sensor.parents_carbon_dioxide:
+  friendly_name: Parents
+sensor.base_cloud:
+  friendly_name: Base
+sensor.fan_energy:
+  friendly_name: Fan
+sensor.kitchen_lights_energy:
+  friendly_name: Kitchen Lights
+sensor.lamp_lights_energy:
+  friendly_name: Lamp Lights
+sensor.ensuite_lights_energy:
+  friendly_name: Ensuite Lights
+sensor.dining_lights_energy:
+  friendly_name: Dining Lights
+sensor.office_lights_energy:
+  friendly_name: Office Lights
+sensor.lounge_lights_energy:
+  friendly_name: Lounge Lights
+sensor.pantry_lights_energy:
+  friendly_name: Pantry Lights
+sensor.bathroom_lights_energy:
+  friendly_name: Bathroom Lights
+sensor.parents_lights_energy:
+  friendly_name: Parents Lights
+sensor.hallway_lights_energy:
+  friendly_name: Hallway Lights
+sensor.filter_energy:
+  friendly_name: Filter
+sensor.wardrobe_lights_energy:
+  friendly_name: Wardrobe Lights
+sensor.freezer_energy:
+  friendly_name: Freezer
+sensor.servers_energy:
+  friendly_name: Servers
+sensor.laundry_lights_energy:
+  friendly_name: Laundry Lights
+sensor.ada_health_index:
+  friendly_name: Ada
+sensor.edwin_health_index:
+  friendly_name: Edwin
+sensor.laundry_health_index:
+  friendly_name: Laundry
+sensor.parents_health_index:
+  friendly_name: Parents
+sensor.roof_heatindex:
+  friendly_name: Roof
+sensor.ada_humidity:
+  friendly_name: Ada
+sensor.basement_humidity:
+  friendly_name: Basement
+sensor.deck_humidity:
+  friendly_name: Deck
+sensor.dining_humidity:
+  friendly_name: Dining
+sensor.edwin_humidity:
+  friendly_name: Edwin
+sensor.kitchen_humidity:
+  friendly_name: Kitchen
+sensor.laundry_humidity:
+  friendly_name: Laundry
+sensor.lounge_humidity:
+  friendly_name: Lounge
+sensor.office_humidity:
+  friendly_name: Office
+sensor.pantry_humidity:
+  friendly_name: Pantry
+sensor.parents_humidity:
+  friendly_name: Parents
+sensor.roof_humidity:
+  friendly_name: Roof
+sensor.utility_humidity:
+  friendly_name: Utility
+sensor.ping_perth_internet:
+  friendly_name: Ping Perth
+sensor.download_london_internet:
+  friendly_name: Download London
+sensor.upload_new_york_city_internet:
+  friendly_name: Upload New York City
+sensor.download_new_york_city_internet:
+  friendly_name: Download New York City
+sensor.ping_london_internet:
+  friendly_name: Ping London
+sensor.upload_london_internet:
+  friendly_name: Upload London
+sensor.ping_new_york_city_internet:
+  friendly_name: Ping New York City
+sensor.download_perth_internet:
+  friendly_name: Download Perth
+sensor.upload_perth_internet:
+  friendly_name: Upload Perth
+sensor.ada_noise:
+  friendly_name: Ada
+sensor.edwin_noise:
+  friendly_name: Edwin
+sensor.kitchen_noise:
+  friendly_name: Kitchen
+sensor.laundry_noise:
+  friendly_name: Laundry
+sensor.office_noise:
+  friendly_name: Office
+sensor.parents_noise:
+  friendly_name: Parents
+sensor.lounge_lights_power:
+  friendly_name: Lounge Lights
+sensor.wardrobe_lights_power:
+  friendly_name: Wardrobe Lights
+sensor.ensuite_lights_power:
+  friendly_name: Ensuite Lights
+sensor.kitchen_lights_power:
+  friendly_name: Kitchen Lights
+sensor.pantry_lights_power:
+  friendly_name: Pantry Lights
+sensor.freezer_power:
+  friendly_name: Freezer
+sensor.parents_lights_power:
+  friendly_name: Parents Lights
+sensor.hallway_lights_power:
+  friendly_name: Hallway Lights
+sensor.office_lights_power:
+  friendly_name: Office Lights
+sensor.dining_lights_power:
+  friendly_name: Dining Lights
+sensor.filter_power:
+  friendly_name: Filter
+sensor.fan_power:
+  friendly_name: Fan
+sensor.laundry_lights_power:
+  friendly_name: Laundry Lights
+sensor.bathroom_lights_power:
+  friendly_name: Bathroom Lights
+sensor.lamp_lights_power:
+  friendly_name: Lamp Lights
+sensor.servers_power:
+  friendly_name: Servers
+sensor.ada_pressure_absolute:
+  friendly_name: Ada
+sensor.edwin_pressure_absolute:
+  friendly_name: Edwin
+sensor.kitchen_pressure_absolute:
+  friendly_name: Kitchen
+sensor.laundry_pressure_absolute:
+  friendly_name: Laundry
+sensor.office_pressure_absolute:
+  friendly_name: Office
+sensor.parents_pressure_absolute:
+  friendly_name: Parents
+sensor.ada_pressure:
+  friendly_name: Ada
+sensor.edwin_pressure:
+  friendly_name: Edwin
+sensor.kitchen_pressure:
+  friendly_name: Kitchen
+sensor.laundry_pressure:
+  friendly_name: Laundry
+sensor.office_pressure:
+  friendly_name: Office
+sensor.parents_pressure:
+  friendly_name: Parents
+sensor.roof_pressure:
+  friendly_name: Roof
+sensor.last_30_min_rain:
+  friendly_name: Last 30 Min
+sensor.year_rain:
+  friendly_name: Year
+sensor.month_rain:
+  friendly_name: Month
+sensor.rate_rain:
+  friendly_name: Rate
+sensor.roof_dew_point_rain:
+  friendly_name: Roof Dew Point
+sensor.day_rain:
+  friendly_name: Day
+sensor.utility_dew_point_rain:
+  friendly_name: Utility Dew Point
+sensor.azimuth_sun:
+  friendly_name: Azimuth
+sensor.rise_sun:
+  friendly_name: Rise
+sensor.altitude_sun:
+  friendly_name: Altitude
+sensor.set_sun:
+  friendly_name: Set
+sensor.gust_bearing_wind:
+  friendly_name: Gust Bearing
+sensor.gust_speed_wind:
+  friendly_name: Gust Speed
