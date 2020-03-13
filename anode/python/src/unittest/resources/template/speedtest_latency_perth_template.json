@@ -1,0 +1,6 @@
+{
+  "ping-icmp": "${FLOATINGPOINT}",
+  "server": {
+    "id": "2627"
+  }
+}
