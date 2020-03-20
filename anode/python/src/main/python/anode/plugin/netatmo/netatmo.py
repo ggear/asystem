@@ -78,9 +78,9 @@ class Netatmo(Plugin):
             dict_content = json.loads(content, parse_float=Decimal)
             bin_timestamp = self.get_time()
             for device in dict_content["body"]["devices"]:
-                module_name = "__conditions__" + device["module_name" if device["type"] == "NAMain" else (
+                module_name = "__indoor__" + device["module_name" if device["type"] == "NAMain" else (
                     "station_name" if "station_name" in device else "name")].lower().encode("UTF-8")
-                if module_name != "__conditions__ignore" and "dashboard_data" in device:
+                if module_name != "__indoor__ignore" and "dashboard_data" in device:
                     data_timestamp = device["dashboard_data"]["time_utc"]
                     self.datum_push(
                         "temperature" + module_name,
@@ -116,6 +116,21 @@ class Netatmo(Plugin):
                         "pressure" + module_name,
                         "current", "point",
                         self.datum_value(device, ["dashboard_data", "Pressure"]),
+                        "mbar",
+                        1,
+                        data_timestamp,
+                        bin_timestamp,
+                        self.config["poll_seconds"],
+                        "second",
+                        data_version="1001",
+                        data_bound_lower=0,
+                        data_derived_max=True,
+                        data_derived_min=True
+                    )
+                    self.datum_push(
+                        "pressure_Dabsolute" + module_name,
+                        "current", "point",
+                        self.datum_value(device, ["dashboard_data", "AbsolutePressure"]),
                         "mbar",
                         1,
                         data_timestamp,
@@ -175,9 +190,9 @@ class Netatmo(Plugin):
                         )
                 if "modules" in device:
                     for device_sub in device["modules"]:
-                        module_name = (("__conditions__" if device_sub["type"] == "NAModule4" else "__conditions__") +
+                        module_name = (("__indoor__" if device_sub["type"] == "NAModule4" else "__outdoor__") +
                                        device_sub["module_name"].lower()).encode("UTF-8")
-                        if module_name != "__conditions__ignore" and "dashboard_data" in device_sub:
+                        if module_name != "__outdoor__ignore" and "dashboard_data" in device_sub:
                             data_timestamp = device_sub["dashboard_data"]["time_utc"]
                             self.datum_push(
                                 "temperature" + module_name,
@@ -189,7 +204,7 @@ class Netatmo(Plugin):
                                 bin_timestamp,
                                 self.config["poll_seconds"],
                                 "second",
-                                data_version="0" if module_name == "__conditions__parents" else "1001",
+                                data_version="0" if module_name == "__outdoor__parents" else "1001",
                                 data_derived_max=True,
                                 data_derived_min=True
                             )
@@ -203,7 +218,7 @@ class Netatmo(Plugin):
                                 bin_timestamp,
                                 self.config["poll_seconds"],
                                 "second",
-                                data_version="0" if module_name == "__conditions__parents" else "1001",
+                                data_version="0" if module_name == "__outdoor__parents" else "1001",
                                 data_bound_upper=100,
                                 data_bound_lower=0,
                                 data_derived_max=True,
@@ -220,7 +235,7 @@ class Netatmo(Plugin):
                                     bin_timestamp,
                                     self.config["poll_seconds"],
                                     "second",
-                                    data_version="0" if module_name == "__conditions__parents" else "1001",
+                                    data_version="0" if module_name == "__outdoor__parents" else "1001",
                                     data_bound_lower=0,
                                     data_derived_max=True,
                                     data_derived_min=True
