@@ -22,7 +22,7 @@ class Davis(Plugin):
                 bin_width = dict_content["packet"]["interval"]
                 data_timestamp = dict_content["packet"]["dateTime"]
                 self.datum_push(
-                    "temperature__conditions__utility",
+                    "temperature__indoor__utility",
                     "current", "point",
                     None if self.datum_value(dict_content["packet"], ["inTemp"]) is None else self.datum_value(
                         (dict_content["packet"]["inTemp"] - 32) * 5 / 9 - 1, factor=10),
@@ -36,7 +36,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "humidity__conditions__utility",
+                    "humidity__indoor__utility",
                     "current", "point",
                     self.datum_value(dict_content["packet"], ["inHumidity"]),
                     "_P25",
@@ -51,7 +51,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "sun__conditions__azimuth",
+                    "sun__outdoor__azimuth",
                     "current", "point",
                     self.datum_value(dict_content["packet"], ["sunaz"]),
                     "_PC2_PB0",
@@ -64,7 +64,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "sun__conditions__altitude",
+                    "sun__outdoor__altitude",
                     "current", "point",
                     self.datum_value(dict_content["packet"], ["sunalt"]),
                     "_PC2_PB0",
@@ -77,7 +77,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "sun__conditions__rise",
+                    "sun__outdoor__rise",
                     "current", "epoch",
                     self.datum_value(dict_content["packet"], ["sunrise"]),
                     "scalar",
@@ -88,7 +88,7 @@ class Davis(Plugin):
                     "day"
                 )
                 self.datum_push(
-                    "sun__conditions__set",
+                    "sun__outdoor__set",
                     "current", "epoch",
                     self.datum_value(dict_content["packet"], ["sunset"]),
                     "scalar",
@@ -99,7 +99,7 @@ class Davis(Plugin):
                     "day"
                 )
                 self.datum_push(
-                    "temperature__conditions__roof",
+                    "temperature__outdoor__roof",
                     "current", "point",
                     None if self.datum_value(dict_content["packet"], ["outTemp"]) is None else self.datum_value(
                         (dict_content["packet"]["outTemp"] - 32) * 5 / 9, factor=10),
@@ -115,7 +115,7 @@ class Davis(Plugin):
 
                 # TODO: Disable wind properties since weewx doesnt seem to report them any more, or at the least they are None when 0
                 # self.datum_push(
-                #     "wind__conditions__speed",
+                #     "wind__outdoor__speed",
                 #     "current", "point",
                 #     None if self.datum_value(dict_content["packet"], ["windSpeed"]) is None else self.datum_value(
                 #         dict_content["packet"]["windSpeed"] * Decimal(1.60934)),
@@ -130,7 +130,7 @@ class Davis(Plugin):
                 #     data_derived_min=True
                 # )
                 # self.datum_push(
-                #     "wind__conditions__bearing",
+                #     "wind__outdoor__bearing",
                 #     "current", "point",
                 #     self.datum_value(dict_content["packet"], ["windDir"]),
                 #     "_PC2_PB0",
@@ -144,7 +144,7 @@ class Davis(Plugin):
                 #     data_derived_min=True
                 # )
                 # self.datum_push(
-                #     "wind__conditions__chill",
+                #     "wind__outdoor__chill",
                 #     "current", "point",
                 #     None if self.datum_value(dict_content["packet"], ["windchill"]) is None else self.datum_value(
                 #         (dict_content["packet"]["windchill"] - 32) * 5 / 9, factor=10),
@@ -159,7 +159,7 @@ class Davis(Plugin):
                 # )
 
                 self.datum_push(
-                    "wind__conditions__gust_Dspeed",
+                    "wind__outdoor__gust_Dspeed",
                     "current", "point",
                     None if self.datum_value(dict_content["packet"], ["windGust"]) is None else self.datum_value(
                         dict_content["packet"]["windGust"] * Decimal(1.60934)),
@@ -174,7 +174,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "wind__conditions__gust_Dbearing",
+                    "wind__outdoor__gust_Dbearing",
                     "current", "point",
                     self.datum_value(dict_content["packet"], ["windGustDir"]),
                     "_PC2_PB0",
@@ -188,7 +188,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "pressure__conditions__roof",
+                    "pressure__outdoor__roof",
                     "current", "point",
                     None if self.datum_value(dict_content["packet"], ["barometer"]) is None else self.datum_value(
                         dict_content["packet"]["barometer"] * Decimal(33.8639)),
@@ -203,7 +203,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "heat_Dindex__conditions__roof",
+                    "heatindex__outdoor__roof",
                     "current", "point",
                     self.datum_value(dict_content["packet"], ["heatindex"]),
                     "scalar",
@@ -217,7 +217,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "humidity__conditions__roof",
+                    "humidity__outdoor__roof",
                     "current", "point",
                     self.datum_value(dict_content["packet"], ["outHumidity"]),
                     "_P25",
@@ -232,7 +232,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "cloud__conditions__base",
+                    "cloud__outdoor__base",
                     "current", "point",
                     None if self.datum_value(dict_content["packet"], ["cloudbase"]) is None else self.datum_value(
                         dict_content["packet"]["cloudbase"] * Decimal(0.3048)),
@@ -246,7 +246,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "rain__conditions__roof_Ddew_Dpoint",
+                    "rain__outdoor__roof_Ddew_Dpoint",
                     "current", "point",
                     None if self.datum_value(dict_content["packet"], ["dewpoint"]) is None else self.datum_value(
                         (dict_content["packet"]["dewpoint"] - 32) * 5 / 9, factor=10),
@@ -260,7 +260,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "rain__conditions__utility_Ddew_Dpoint",
+                    "rain__indoor__utility_Ddew_Dpoint",
                     "current", "point",
                     None if self.datum_value(dict_content["packet"], ["inDewpoint"]) is None else self.datum_value(
                         (dict_content["packet"]["inDewpoint"] - 32) * 5 / 9, factor=10),
@@ -273,12 +273,12 @@ class Davis(Plugin):
                     data_derived_max=True,
                     data_derived_min=True
                 )
-                rain_conditions_roof_month = None if self.datum_value(dict_content["packet"], ["monthRain"]) is None else self.datum_value(
+                rain_outdoor_roof_month = None if self.datum_value(dict_content["packet"], ["monthRain"]) is None else self.datum_value(
                     dict_content["packet"]["monthRain"] * Decimal(2.54), factor=100)
                 self.datum_push(
-                    "rain__conditions__month",
+                    "rain__outdoor__month",
                     "current", "integral",
-                    rain_conditions_roof_month,
+                    rain_outdoor_roof_month,
                     "cm",
                     100,
                     data_timestamp,
@@ -288,13 +288,13 @@ class Davis(Plugin):
                     data_bound_lower=0,
                     data_derived_min=True
                 )
-                rain_conditions_roof_month_min = self.datum_get(DATUM_QUEUE_MIN, "rain__conditions__roof", "integral", "cm", 1, "month", 1, "day")
-                rain_conditions_roof_day = rain_conditions_roof_month - rain_conditions_roof_month_min["data_value"] \
-                    if rain_conditions_roof_month_min is not None else 0
+                rain_outdoor_roof_month_min = self.datum_get(DATUM_QUEUE_MIN, "rain__outdoor__roof", "integral", "cm", 1, "month", 1, "day")
+                rain_outdoor_roof_day = rain_outdoor_roof_month - rain_outdoor_roof_month_min["data_value"] \
+                    if rain_outdoor_roof_month_min is not None else 0
                 self.datum_push(
-                    "rain__conditions__day",
+                    "rain__outdoor__day",
                     "current", "integral",
-                    rain_conditions_roof_day * 10,
+                    rain_outdoor_roof_day * 10,
                     "mm",
                     100,
                     data_timestamp,
@@ -304,7 +304,7 @@ class Davis(Plugin):
                     data_bound_lower=0
                 )
                 self.datum_push(
-                    "rain__conditions__year",
+                    "rain__outdoor__year",
                     "current", "integral",
                     None if self.datum_value(dict_content["packet"], ["yearRain"]) is None else self.datum_value(
                         dict_content["packet"]["yearRain"] * Decimal(0.0254), factor=10000),
@@ -322,7 +322,7 @@ class Davis(Plugin):
                 bin_width = dict_content["record"]["interval"]
                 data_timestamp = dict_content["record"]["dateTime"]
                 self.datum_push(
-                    "rain__conditions__rate",
+                    "rain__outdoor__rate",
                     "current", "mean",
                     None if self.datum_value(dict_content["record"], ["rainRate"]) is None else self.datum_value(
                         dict_content["record"]["rainRate"] * Decimal(25.4), factor=10),
@@ -337,7 +337,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "rain__conditions__last_D30_Dmin",
+                    "rain__outdoor__last_D30_Dmin",
                     "current", "integral",
                     None if self.datum_value(dict_content["record"], ["rain"]) is None else self.datum_value(
                         dict_content["record"]["rain"] * Decimal(25.4), factor=10),

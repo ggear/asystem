@@ -34,19 +34,19 @@ class Energyforecast(Plugin):
                 energy_production_today = energy_production_today["data_value"] / energy_production_today["data_scale"] \
                     if energy_production_today is not None else None
                 sun_rise = self.anode.get_plugin("davis").datum_get(
-                    DATUM_QUEUE_LAST, "sun__conditions__rise", "epoch", "scalar", 1, "day")
+                    DATUM_QUEUE_LAST, "sun__outdoor__rise", "epoch", "scalar", 1, "day")
                 sun_rise = sun_rise["data_value"] / sun_rise["data_scale"] \
                     if sun_rise is not None else None
                 sun_set = self.anode.get_plugin("davis").datum_get(
-                    DATUM_QUEUE_LAST, "sun__conditions__set", "epoch", "scalar", 1, "day")
+                    DATUM_QUEUE_LAST, "sun__outdoor__set", "epoch", "scalar", 1, "day")
                 sun_set = sun_set["data_value"] / sun_set["data_scale"] \
                     if sun_set is not None else None
                 sun_azimuth = self.anode.get_plugin("davis").datum_get(
-                    DATUM_QUEUE_LAST, "sun__conditions__azimuth", "point", "_PC2_PB0", 2, "second")
+                    DATUM_QUEUE_LAST, "sun__outdoor__azimuth", "point", "_PC2_PB0", 2, "second")
                 sun_azimuth = sun_azimuth["data_value"] / sun_azimuth["data_scale"] \
                     if sun_azimuth is not None else None
                 sun_altitude = self.anode.get_plugin("davis").datum_get(
-                    DATUM_QUEUE_LAST, "sun__conditions__altitude", "point", "_PC2_PB0", 2, "second")
+                    DATUM_QUEUE_LAST, "sun__outdoor__altitude", "point", "_PC2_PB0", 2, "second")
                 sun_altitude = sun_altitude["data_value"] / sun_altitude["data_scale"] \
                     if sun_altitude is not None else None
                 current = int(time.time())
@@ -86,10 +86,10 @@ class Energyforecast(Plugin):
                         "rain__forecast__darlington": rain_forecast,
                         "humidity__forecast__darlington": humidity_forecast,
                         "wind__forecast__darlington": wind_forecast,
-                        "sun__conditions__rise": sun_rise,
-                        "sun__conditions__set": sun_set,
-                        "sun__conditions__azimuth": sun_azimuth,
-                        "sun__conditions__altitude": sun_altitude,
+                        "sun__outdoor__rise": sun_rise,
+                        "sun__outdoor__set": sun_set,
+                        "sun__outdoor__azimuth": sun_azimuth,
+                        "sun__outdoor__altitude": sun_altitude,
                         "conditions__forecast__darlington": conditions_forecast
                     }
                     model_features = pandas.DataFrame([model_features_dict]).apply(pandas.to_numeric, errors='ignore')

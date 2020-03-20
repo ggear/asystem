@@ -1,5 +1,9 @@
 from __future__ import print_function
 
+import sys
+
+sys.path.append('./main/python')
+
 import HTMLParser
 import StringIO
 import abc
