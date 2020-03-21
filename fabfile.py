@@ -9,13 +9,14 @@ from fablib import *
 @task(default=True)
 def default(context):
     print_header("asystem", "initialise")
+
+    print_line("Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(VERSION_COMPACT, VERSION_NUMERIC, VERSION_ABSOLUTE))
+
     if len(run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) == 0:
         run_local(context, "conda create -y -n $CONDA_ENV python=2.7")
-        print("Installing requirements ...")
+        print_line("Installing requirements ...")
         for requirement in glob.glob('*/*/*/reqs_*.txt'):
             run_local(context, "pip install -r {}".format(requirement))
-    print("To activate python environment run:")
-    print("conda activate {}".format(run_local(context, "echo $CONDA_ENV", hide='out').stdout.strip()))
     print_footer("asystem", "initialise")
     for module_changed in filter(lambda module:
                                  os.path.isdir(module) and
@@ -30,4 +31,5 @@ def clean(context):
     print_header("asystem", "clean")
     if len(run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) > 0:
         run_local(context, "conda remove -y -n $CONDA_ENV --all")
+    run_local(context, "docker image prune -f -a")
     print_footer("asystem", "clean")

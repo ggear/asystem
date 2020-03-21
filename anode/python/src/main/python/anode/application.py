@@ -1,10 +1,8 @@
-# TODO: Hook into build versioning system
+APP_VERSION = "$VERSION_ABSOLUTE"
+APP_VERSION_COMPACT = int("$VERSION_COMPACT")
+APP_VERSION_NUMERIC = int("$VERSION_NUMERIC")
 
-APP_NAME = "asystem-anode"
-APP_NAME_ESCAPED = "ASYSTEM_ANODE"
-APP_VERSION = "10.000.0142-SNAPSHOT"
-APP_VERSION_NUMERIC = -143
-
+# TODO: Swap model versions to use above versions, there is only one version, if the model changes it will be published with above
 APP_MODEL_VERSION = "1001"
 APP_MODEL_ENERGYFORECAST_INTERDAY_PROD_VERSION = "1006"
 APP_MODEL_ENERGYFORECAST_INTRADAY_PROD_VERSION = "1003"
