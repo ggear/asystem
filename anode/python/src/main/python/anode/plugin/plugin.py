@@ -273,7 +273,7 @@ class Plugin(object):
         log_timer = anode.Log(logging.DEBUG).start()
         if data_value is not None:
             datum_dict = {
-                "asystem_version": APP_VERSION_NUMERIC if asystem_version is None else Plugin.datum_version_encode(asystem_version),
+                "asystem_version": APP_VERSION_COMPACT if asystem_version is None else Plugin.datum_version_encode(asystem_version),
                 "data_version": 0 if data_version is None else Plugin.datum_version_encode(data_version, 1000),
                 "data_source": self.name,
                 "data_metric": data_metric,
