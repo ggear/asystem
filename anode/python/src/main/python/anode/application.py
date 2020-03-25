@@ -1,6 +1,6 @@
-APP_VERSION = "$VERSION_ABSOLUTE"
-APP_VERSION_COMPACT = int("$VERSION_COMPACT")
-APP_VERSION_NUMERIC = int("$VERSION_NUMERIC")
+APP_VERSION = "10.100.1000-SNAPSHOT" if "$" in "$VERSION_ABSOLUTE" else "$VERSION_ABSOLUTE"
+APP_VERSION_COMPACT = 0 if "$" in "$VERSION_ABSOLUTE" else int("$VERSION_COMPACT")
+APP_VERSION_NUMERIC = 101001000 if "$" in "$VERSION_ABSOLUTE" else int("$VERSION_NUMERIC")
 
 # TODO: Swap model versions to use above versions, there is only one version, if the model changes it will be published with above
 APP_MODEL_VERSION = "1001"

@@ -1,9 +1,18 @@
+import os
+
 import setuptools
 from pathlib2 import Path
 from setuptools import setup
 
+PROFILE = {}
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".profile"), 'r') as file:
+    for line in file.readlines():
+        if "export" in line and "=" in line:
+            tokens = line.replace("export ", "").replace("\"","").strip().split("=")
+            PROFILE[tokens[0]] = tokens[1]
+
 setup(
-    name="anode",
+    name=PROFILE["APPLICATION_NAME"],
     version="10.100.1000.dev0" if "$" in "$VERSION_ABSOLUTE" else "$VERSION_ABSOLUTE".replace("-SNAPSHOT", ".dev0"),
     description=" asystem anode",
     classifiers=[
@@ -18,7 +27,7 @@ setup(
     author_email="notmyemail@company.com",
     packages=setuptools.find_packages(where='main/python', include=['anode', 'anode.*']),
     package_dir={'': 'main/python'},
-    install_requires=Path("reqs_run.txt").read_text().split("\n"),
+    install_requires=Path(os.path.join(os.path.dirname(os.path.abspath(__file__)), "reqs_run.txt")).read_text().split("\n"),
     tests_require=["mock"],
     test_suite="test",
     setup_requires=["setuptools_trial"],

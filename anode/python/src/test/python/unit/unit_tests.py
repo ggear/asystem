@@ -5,7 +5,7 @@ from __future__ import print_function
 
 import sys
 
-sys.path.append('./main/python')
+sys.path.append('../../../main/python')
 
 import calendar
 import datetime
@@ -1483,13 +1483,12 @@ TIME_BOOT_LOCAL = time.localtime()
 TIME_OFFSET = calendar.timegm(TIME_BOOT_LOCAL) - calendar.timegm(time.gmtime(time.mktime(TIME_BOOT_LOCAL)))
 TIME_START_OF_DAY = (TIME_BOOT + TIME_OFFSET) - (TIME_BOOT + TIME_OFFSET) % (24 * 60 * 60) - TIME_OFFSET
 
-
 DIR_ROOT = (os.path.dirname(__file__) + "/../../..")
+DIR_TARGET = DIR_ROOT + "/../target" if os.path.isdir(DIR_ROOT + "/../target") else DIR_ROOT + "/../../target"
 DIR_TEST = DIR_ROOT + "/test/resources"
-DIR_TARGET = DIR_ROOT + "/../target"
-DIR_ANODE = DIR_TARGET + "/anode-runtime"
+DIR_ANODE = DIR_TARGET + "/runtime"
 DIR_ANODE_DB = DIR_ANODE + "/config"
-DIR_ANODE_TMP = DIR_TARGET + "/anode-runtime-tmp"
+DIR_ANODE_TMP = DIR_TARGET + "/runtime-tmp"
 DIR_ANODE_DB_TMP = DIR_ANODE_TMP + "/config"
 DIR_ASYSTEM_TMP = "/tmp/asystem"
 
@@ -1560,9 +1559,11 @@ HTTP_GETS = {
     # str(int(APP_MODEL_ENERGYFORECAST_INTERDAY_PROD_VERSION) + 1) + "/model.pkl":
     #     ilio.read(FILE_MODEL_ENERGYFORECAST),
     # "http://asystem-amodel.s3-ap-southeast-2.amazonaws.com" +
-    # "/asystem-amodel/asystem/amodel/energyforecastinterday/model/pickle/joblib/none/amodel_version=10.000.0000/amodel_model=1010/model.pkl":
+    # "/asystem-amodel/asystem/amodel/energyforecastinterday/model/pickle/joblib/none/amodel_version=10.000.0000/amodel_model=" +
+    #     "1010/model.pkl":
     #     "A CORRUPT PICKLE",
     # "http://asystem-amodel.s3-ap-southeast-2.amazonaws.com" +
-    # "/asystem-amodel/asystem/amodel/energyforecastinterday/model/pickle/joblib/none/amodel_version=10.000.0000/amodel_model=9000/model.pkl":
+    # "/asystem-amodel/asystem/amodel/energyforecastinterday/model/pickle/joblib/none/amodel_version=10.000.0000/amodel_model=" +
+    #     "9000/model.pkl":
     #     ilio.read(FILE_MODEL_ENERGYFORECAST)
 }
