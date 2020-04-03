@@ -421,14 +421,11 @@ class ANodeTest(TestCase):
                                     "/rest/?metrics=wind.outdoor.gust-bearing&units=°" +
                                     (("&format=" + filter_format) if filter_format is not None else "") +
                                     (("&scope=" + filter_scope) if filter_scope is not None else ""), True)
-
-                    # TODO: Fix, something broke when I udpated the metric names?
-                    # self.assertRest(0 if filter_scope == "publish" else 6,
-                    #                 anode,
-                    #                 "/rest/?metrics=internet&types=point&print=pretty" +
-                    #                 (("&format=" + filter_format) if filter_format is not None else "") +
-                    #                 (("&scope=" + filter_scope) if filter_scope is not None else ""), True)
-
+                    self.assertRest(0 if filter_scope == "publish" else 6,
+                                    anode,
+                                    "/rest/?metrics=internet&types=point&print=pretty" +
+                                    (("&format=" + filter_format) if filter_format is not None else "") +
+                                    (("&scope=" + filter_scope) if filter_scope is not None else ""), True)
                     self.assertRest(0 if filter_scope == "publish" else 13,
                                     anode,
                                     "/rest/?bins=2second" +
@@ -1251,112 +1248,111 @@ class ANodeTest(TestCase):
                             "&start=" + str(TIME_START_OF_DAY + period * iterations + 1), True)
             anode.stop_server()
 
-    # TODO: Breaks when run with setuptools and fabric
-    # def test_bad_plots(self):
-    #     period = 1
-    #     iterations = 50
-    #     self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
-    #     anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=100",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=2",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1&period=10",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1&period=10&method=min",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1&period=10&method=max&fill"
-    #                     "=zeros",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1&period=10&method=max&fill"
-    #                     "=linear",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history&print=pretty",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power&scope=history",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg&metrics=power",
-    #                     False, True)
-    #     self.assertRest(0,
-    #                     anode,
-    #                     "/rest/?format=svg",
-    #                     False, True)
-    #     anode.stop_server()
-    #
-    # def test_good_plots(self):
-    #     self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB, "-s"])
-    #     anode = self.anode_init(False, False, False, False, period=1, iterations=0)
-    #     last_timestamp = \
-    #         self.assertRest(0, anode,
-    #                         "/rest/?metrics=temperature.indoor.shed&metrics=temperature.outdoor.roof&bins=2second&bins=1day&units=°C"
-    #                         "&types=point&types=integral&types=mean&scope=history&format=csv",
-    #                         False)[0]["bin_timestamp"].iloc[-2]
-    #     for parameters in [
-    #         ("&start=" + str(last_timestamp + 1) + "&finish=" + str(last_timestamp) +
-    #          "&period=1&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - 1) + "&finish=" + str(last_timestamp) +
-    #          "&period=1&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - 10) + "&finish=" + str(last_timestamp) +
-    #          "&period=1&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - 60) + "&finish=" + str(last_timestamp) +
-    #          "&period=5&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - 60 * 2) + "&finish=" + str(last_timestamp) +
-    #          "&period=5&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - (60 * 60 - 100)) + "&finish=" + str(last_timestamp) +
-    #          "&period=5&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - (60 * 60)) + "&finish=" + str(last_timestamp) +
-    #          "&period=5&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - (60 * 60 * 4)) + "&finish=" + str(last_timestamp) +
-    #          "&period=300&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - (60 * 60 * 8)) + "&finish=" + str(last_timestamp) +
-    #          "&period=300&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - (60 * 60 * 16)) + "&finish=" + str(last_timestamp) +
-    #          "&period=300&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - (60 * 60 * 24)) + "&finish=" + str(last_timestamp) +
-    #          "&period=300&method=max&fill=linear"),
-    #         "&partitions=1&period=300&method=max&fill=linear",
-    #         ("&start=" + str(last_timestamp - (60 * 60 * 24 * 2 + 60 * 60 * 4)) + "&finish=" + str(last_timestamp) +
-    #          "&period=1800&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - (60 * 60 * 24 * 2 + 60 * 60 * 8)) + "&finish=" + str(last_timestamp) +
-    #          "&period=1800&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - (60 * 60 * 24 * 2 + 60 * 60 * 16)) + "&finish=" + str(last_timestamp) +
-    #          "&period=1800&method=max&fill=linear"),
-    #         ("&start=" + str(last_timestamp - (60 * 60 * 24 * 2 + 60 * 60 * 24)) + "&finish=" + str(last_timestamp) +
-    #          "&period=1800&method=max&fill=linear"),
-    #         "&partitions=3&period=1800&method=max&fill=linear"
-    #     ]:
-    #         self.assertRest(0,
-    #                         anode,
-    #                         "/rest/?metrics=temperature.indoor.shed&metrics=temperature.outdoor.roof&bins=2second&bins=1day&units=°C"
-    #                         "&types=point&types=integral&types=mean&scope=history&print=pretty&format=svg" + parameters,
-    #                         False, True)
-    #     anode.stop_server()
+    def test_bad_plots(self):
+        period = 1
+        iterations = 50
+        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=100",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=2",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1&period=10",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1&period=10&method=min",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1&period=10&method=max&fill"
+                        "=zeros",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history&print=pretty&types=point&partition=1&period=10&method=max&fill"
+                        "=linear",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history&print=pretty",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power&scope=history",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg&metrics=power",
+                        False, True)
+        self.assertRest(0,
+                        anode,
+                        "/rest/?format=svg",
+                        False, True)
+        anode.stop_server()
+
+    def test_good_plots(self):
+        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB, "-s"])
+        anode = self.anode_init(False, False, False, False, period=1, iterations=0)
+        last_timestamp = \
+            self.assertRest(0, anode,
+                            "/rest/?metrics=temperature.indoor.shed&metrics=temperature.outdoor.roof&bins=2second&bins=1day&units=°C"
+                            "&types=point&types=integral&types=mean&scope=history&format=csv",
+                            False)[0]["bin_timestamp"].iloc[-2]
+        for parameters in [
+            ("&start=" + str(last_timestamp + 1) + "&finish=" + str(last_timestamp) +
+             "&period=1&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - 1) + "&finish=" + str(last_timestamp) +
+             "&period=1&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - 10) + "&finish=" + str(last_timestamp) +
+             "&period=1&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - 60) + "&finish=" + str(last_timestamp) +
+             "&period=5&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - 60 * 2) + "&finish=" + str(last_timestamp) +
+             "&period=5&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - (60 * 60 - 100)) + "&finish=" + str(last_timestamp) +
+             "&period=5&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - (60 * 60)) + "&finish=" + str(last_timestamp) +
+             "&period=5&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - (60 * 60 * 4)) + "&finish=" + str(last_timestamp) +
+             "&period=300&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - (60 * 60 * 8)) + "&finish=" + str(last_timestamp) +
+             "&period=300&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - (60 * 60 * 16)) + "&finish=" + str(last_timestamp) +
+             "&period=300&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - (60 * 60 * 24)) + "&finish=" + str(last_timestamp) +
+             "&period=300&method=max&fill=linear"),
+            "&partitions=1&period=300&method=max&fill=linear",
+            ("&start=" + str(last_timestamp - (60 * 60 * 24 * 2 + 60 * 60 * 4)) + "&finish=" + str(last_timestamp) +
+             "&period=1800&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - (60 * 60 * 24 * 2 + 60 * 60 * 8)) + "&finish=" + str(last_timestamp) +
+             "&period=1800&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - (60 * 60 * 24 * 2 + 60 * 60 * 16)) + "&finish=" + str(last_timestamp) +
+             "&period=1800&method=max&fill=linear"),
+            ("&start=" + str(last_timestamp - (60 * 60 * 24 * 2 + 60 * 60 * 24)) + "&finish=" + str(last_timestamp) +
+             "&period=1800&method=max&fill=linear"),
+            "&partitions=3&period=1800&method=max&fill=linear"
+        ]:
+            self.assertRest(0,
+                            anode,
+                            "/rest/?metrics=temperature.indoor.shed&metrics=temperature.outdoor.roof&bins=2second&bins=1day&units=°C"
+                            "&types=point&types=integral&types=mean&scope=history&print=pretty&format=svg" + parameters,
+                            False, True)
+        anode.stop_server()
 
     def test_models(self):
         if TEST_INTEGRATION:
@@ -1522,7 +1518,7 @@ HTTP_POSTS = {
     "speedtest": {
         "2627": ilio.read(DIR_TEST + "/template/speedtest_latency_perth_template.json"),
         "5029": ilio.read(DIR_TEST + "/template/speedtest_latency_throughput_newyork_template.json"),
-        "4078": ilio.read(DIR_TEST + "/template/speedtest_throughput_london_template.json")
+        "27260": ilio.read(DIR_TEST + "/template/speedtest_throughput_london_template.json")
     }
 }
 

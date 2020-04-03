@@ -1,10 +1,20 @@
 # -*- coding: utf-8 -*-
 
+# TODO:
+#   - Action and then delete sensors_delta.xlsx
+#   - Add export.py into fab scripts
+#   - Check energy (and all other) metrics will work in new naming scheme
+#   - Update all smart plugs to have accurate labels
+#   - Implement filter and order in sensors.csv
+#   - Develop customize.yaml and lovelace.yaml replacement script
+
+import inspect
 import os
 import sys
 
 DIR_ROOT = os.path.dirname(os.path.realpath(__file__)) + "/../.."
 DIR_WORK = DIR_ROOT + "/anode/export"
+DIR_HOMEASSISTANT = DIR_WORK + "/../../../../../../../ahub/homeassistant/src"
 sys.path.insert(0, DIR_ROOT)
 
 import json
@@ -14,16 +24,13 @@ import time
 from anode.plugin.plugin import Plugin
 import paho.mqtt.client as mqtt
 import yaml
-import operator
 
 MODE = "QUERY"
-# MODE = "DELETE"
 
 CONFIG = None
 TIME_WAIT_SECS = 2
 
 SENSORS = {}
-SENSORS_RAW = {}
 SENSORS_HEADER = [
     "Index ID",
     "Unique ID",
@@ -68,7 +75,6 @@ def on_message(client, user_data, message):
                     payload_unicode
                 ]
                 SENSORS[payload_id] = sensor_raw[:-1]
-                SENSORS_RAW[payload_id] = sensor_raw
         if MODE == "DELETE":
             client.publish(topic, payload=None, qos=1, retain=True)
     except Exception as exception:
@@ -105,18 +111,12 @@ if __name__ == "__main__":
             for sensor in [SENSORS_HEADER] + sensors:
                 file.write("{}\n".format(",".join(sensor)))
 
-        with open(DIR_WORK + "/lovelace/names.yaml", "w") as file:
+        with open(DIR_HOMEASSISTANT + "/customize.yaml", "w") as file:
             for sensor in sensors:
-                file.write(
-                    "sensor.{}:\n"
-                    "  friendly_name: {}\n"
-                        .format(sensor[2], sensor[5]))
-
-        with open(DIR_WORK + "/lovelace/badges.yaml", "w") as file:
-            for sensor in sensors:
-                file.write(
-                    "      - entity: sensor.{}\n"
-                        .format(sensor[2]))
+                file.write(inspect.cleandoc("""
+                    sensor.{}:
+                      friendly_name: {}
+                """.format(sensor[2], sensor[5])) + "\n")
 
         sensors_domain = {}
         for sensor in sensors:
@@ -124,7 +124,7 @@ if __name__ == "__main__":
                 sensors_domain[sensor[6]] += [sensor]
             else:
                 sensors_domain[sensor[6]] = [sensor]
-        with open(DIR_WORK + "/lovelace/tiles.yaml", "w") as file:
+        with open(DIR_HOMEASSISTANT + "/lovelace.yaml", "w") as file:
             for domain in sensors_domain:
                 file.write(
                     "      - type: entities\n"
@@ -135,10 +135,5 @@ if __name__ == "__main__":
                     file.write(
                         "          - entity: sensor.{}\n"
                             .format(sensor[2]))
-
-        sensors_raw = sorted(SENSORS_RAW.values(), key=lambda x: x[0].zfill(7) + x[6] + x[8])
-        with open(DIR_WORK + "/mqtt/sensors.csv", "w") as file:
-            for sensor in [SENSORS_HEADER] + sensors_raw:
-                file.write("{}\n".format(",".join(sensor)))
 
         print("{} [{}] metrics".format("DELETED" if MODE == "DELETE" else "DETECTED", len(SENSORS)))

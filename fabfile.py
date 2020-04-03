@@ -90,11 +90,11 @@ def release(context):
             VERSION_ABSOLUTE), os.path.join(module, "target/image"))
         print_footer(module, "release")
 
-
 @task(setup)
 def deploy(context):
-    for module in get_modules(context, "Dockerfile"):
+    for module in get_modules(context, "deploy"):
         print_header(module, "deploy")
+        #TODO: Pickup deploy files and execute remotely
         print_footer(module, "deploy")
 
 
@@ -105,6 +105,7 @@ def default(context):
     test(context)
     package(context)
     release(context)
+    deploy(context)
 
 
 def get_modules(context, filter_path=None, filter_changes=True):
@@ -123,7 +124,7 @@ def get_modules(context, filter_path=None, filter_changes=True):
             for nested_modules in filter(lambda module: os.path.isdir(module), glob.glob('*')):
                 working_modules.append("{}/{}".format(working_dirs[root_dir_index + 1], nested_modules))
     working_modules[:] = [module for module in working_modules
-                          if filter_path is None or os.path.exists("{}/{}/{}".format(ROOT_DIR, module, filter_path))]
+                          if filter_path is None or glob.glob("{}/{}/{}*".format(ROOT_DIR, module, filter_path))]
     return working_modules
 
 
@@ -159,7 +160,7 @@ def print_footer(module, stage):
     print_line(FOOTER.format(stage.upper(), module.lower().replace('/', '-'), VERSION_ABSOLUTE))
 
 
-ECHO = True
+ECHO = False
 PROFILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".profile")
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
