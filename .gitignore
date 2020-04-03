@@ -1,10 +1,11 @@
 .m2
 .ssh
+~$*.*
 .profile
 .DS_Store
-.classpath
 .project
 .settings
+.classpath
 .idea
 *.iml
 .config
