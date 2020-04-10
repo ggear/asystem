@@ -29,7 +29,7 @@ def purge(context, module="asystem"):
     print_footer(module, "purge")
 
 
-@task(setup)
+@task
 def clean(context):
     for module in get_modules(context, "target", False):
         print_header(module, "clean")
@@ -43,58 +43,94 @@ def build(context):
         print_header(module, "build")
         print_line("Preparing resources ...")
         run_local(context, "mkdir -p target && cp -rvf src target/package", module)
-        module_profile = get_module_profile(context, os.path.join(ROOT_DIR, module, "src", ".profile"))
         run_local(context, "envsubst < setup.py > setup.py.new && "
                            "mv setup.py.new setup.py",
                   os.path.join(module, "target/package"), env=TEMPLATE_VARIABLES)
         run_local(context, "envsubst < main/python/{}/application.py > main/python/{}/application.py.new && "
                            "mv main/python/{}/application.py.new main/python/{}/application.py".format(
-            module_profile["APPLICATION_NAME"], module_profile["APPLICATION_NAME"],
-            module_profile["APPLICATION_NAME"], module_profile["APPLICATION_NAME"]),
+            os.path.dirname(module), os.path.dirname(module),
+            os.path.dirname(module), os.path.dirname(module)),
                   os.path.join(module, "target/package"), env=TEMPLATE_VARIABLES)
         run_local(context, "python setup.py sdist", os.path.join(module, "target/package"))
         print_footer(module, "build")
 
 
-@task(setup)
-def test(context):
+@task(setup, build)
+def unittest(context):
     for module in get_modules(context, "src/setup.py"):
-        print_header(module, "test")
-        module_profile = get_module_profile(context, os.path.join(ROOT_DIR, module, "src", ".profile"))
-        print_line("Running tests ...")
-        run_local(context, "python setup.py test", os.path.join(module, "target/package"), env=module_profile)
-        print_footer(module, "test")
+        print_header(module, "unittest")
+        print_line("Running unit tests ...")
+        run_local(context, "python setup.py test", os.path.join(module, "target/package"),
+                  env=get_module_profile(context, os.path.join(ROOT_DIR, module, "src", ".profile")))
+        print_footer(module, "unittest")
 
 
-@task(setup)
+@task(setup, build)
 def package(context):
     for module in get_modules(context, "Dockerfile"):
         print_header(module, "package")
-        module_profile = get_module_profile(context, os.path.join(ROOT_DIR, module, "src", ".profile"))
-        run_local(context, "docker image build -t {}:{} .".format(module_profile["APPLICATION_NAME"], VERSION_ABSOLUTE), module)
-        run_local(context, "docker image ls {}".format(module_profile["APPLICATION_NAME"]))
+        run_local(context, "docker image build -t {}:{} .".format(os.path.dirname(module), VERSION_ABSOLUTE), module)
+        run_local(context, "docker image ls {}".format(os.path.dirname(module)))
         run_local(context, "mkdir -p target/image", module)
         print_line("\nTo run a shell from the docker image run:")
-        print_line("docker run -it {}:{} /bin/bash\n".format(module_profile["APPLICATION_NAME"], VERSION_ABSOLUTE))
+        print_line("docker run -it {}:{} /bin/bash\n".format(os.path.dirname(module), VERSION_ABSOLUTE))
         print_footer(module, "package")
 
 
+# TODO: Work out if to use deps or not, dont seem to work?
+# @task(setup, package)
 @task(setup)
+def systest(context):
+    for module in get_modules(context, "src/setup.py"):
+        print_header(module, "systest")
+        print_line("Running system tests ...")
+        print_line("Preparing environment ...")
+        run_local(context, "mkdir -p target/runtime-system", module)
+        run_local(context, "cp -rvf src/main/resources/config/* target/runtime-system", module)
+        run_local(context, "docker stop anode-systest || true && docker rm anode-systest || true", hide='err')
+        print_line("Starting server ...")
+        run_local(context, "docker run -d --name anode-systest -v {}/{}/target/runtime-system:/etc/anode -p 8091:8091 {}:{} anode".format(
+            ROOT_DIR, module, os.path.dirname(module), VERSION_ABSOLUTE))
+        print_line("Stopping and removing server ...")
+        run_local(context, "docker stop anode-systest || true && docker rm anode-systest || true")
+        print_footer(module, "systest")
+
+
+# TODO: Work out if to use deps or not, dont seem to work?
+# @task(setup, package)
+@task(setup)
+def run(context):
+    for module in get_modules(context, "src/setup.py"):
+        print_header(module, "run")
+        print_line("Running system tests ...")
+        print_line("Preparing environment ...")
+        run_local(context, "mkdir -p target/runtime-system", module)
+        run_local(context, "cp -rvf src/.profile src/main/resources/config/* target/runtime-system", module)
+        run_local(context, "docker stop anode-systest || true && docker rm anode-systest || true", hide='err')
+        print_line("Starting server ...")
+        run_local(context, "docker run --name anode-systest -v {}/{}/target/runtime-system:/etc/anode -p 8091:8091 {}:{} anode -v".format(
+            ROOT_DIR, module, os.path.dirname(module), VERSION_ABSOLUTE))
+        print_line("Stopping and removing server ...")
+        run_local(context, "docker stop anode-systest || true && docker rm anode-systest || true")
+        print_footer(module, "run")
+
+
+@task(setup, unittest, systest)
 def release(context):
     for module in get_modules(context, "Dockerfile"):
         print_header(module, "release")
-        module_profile = get_module_profile(context, os.path.join(ROOT_DIR, module, "src", ".profile"))
         print_line("Saving docker image ...")
         run_local(context, "docker image save -o {}-{}.tar.gz {}:{}".format(
-            module_profile["APPLICATION_NAME"], VERSION_ABSOLUTE, module_profile["APPLICATION_NAME"],
+            os.path.dirname(module), VERSION_ABSOLUTE, os.path.dirname(module),
             VERSION_ABSOLUTE), os.path.join(module, "target/image"))
         print_footer(module, "release")
 
-@task(setup)
+
+@task(setup, package)
 def deploy(context):
     for module in get_modules(context, "deploy"):
         print_header(module, "deploy")
-        #TODO: Pickup deploy files and execute remotely
+        # TODO: Pickup deploy files and execute remotely
         print_footer(module, "deploy")
 
 
@@ -102,8 +138,9 @@ def deploy(context):
 def default(context):
     clean(context)
     build(context)
-    test(context)
+    unittest(context)
     package(context)
+    systest(context)
     release(context)
     deploy(context)
 
@@ -128,6 +165,7 @@ def get_modules(context, filter_path=None, filter_changes=True):
     return working_modules
 
 
+# TODO: Remove this method
 def get_module_profile(context, path):
     module_profile = {}
     with open(path, 'r') as file:
