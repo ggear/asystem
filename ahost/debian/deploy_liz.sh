@@ -23,7 +23,7 @@ if [ $(grep graham /home/graham/.ssh/authorized_keys | wc -l) -eq 0 ]; then
   touch /home/graham/.ssh/authorized_keys
   chmod 644 /home/graham/.ssh/authorized_keys
   chown -R graham /home/graham
-  cat <<EOF > /home/graham/.ssh/authorized_keys
+  cat <<EOF >/home/graham/.ssh/authorized_keys
 ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC17bbhX9GtT/YyDrYO98Q9xzfyhn3WtBbftpFJ1yTm0wkssNMrW6YNjW2dVDm2qPgJUg9pKqw+XdyDUcxKWal1mLecPDYNAJgU0mJkFehDAxW91YNzjCH+kY70mVgZCzhi6XAx8pX5TDDHRMNnp76OyblMlge8g21tf3AwrzvJIQuC7UTrJYRWsxAIxTQBKqPW96JfvPLXk9l+vs31xC1y+wbWlKRey8LpYi4v/dePkkpQaac4R2DR4AlJNPRsoSn+W1zYYMi34bw4smpglrH83fA42rWClPkth/X2RzXPrQMyBNPFLalMbDe+xXMq6ExdfTlU6gE4s8dW4Gi3b1J1 graham.gear@gmail.com
 EOF
 fi
@@ -42,13 +42,11 @@ kubectl -n kube-system create serviceaccount tiller
 kubectl create clusterrolebinding tiller --clusterrole cluster-admin --serviceaccount=kube-system:tiller
 helm init --service-account tiller
 
-
 apt-get install -y golang-cfssl=1.2.0+git20160825.89.7fb22c8-3+b13
-
 
 # https://carpie.net/articles/installing-docker-registry-on-k3s
 # https://itnext.io/setup-a-private-registry-on-k3s-f30404f8e4d3
-cat <<EOF > /etc/rancher/k3s/registries.yaml
+cat <<EOF >/etc/rancher/k3s/registries.yaml
 mirrors:
   "192.168.2.6:30500":
     endpoint:

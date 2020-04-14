@@ -2,7 +2,6 @@ from __future__ import print_function
 
 import json
 import logging
-import os
 import time
 from decimal import Decimal
 
@@ -28,8 +27,8 @@ class Netatmo(Plugin):
             elif self.token_expiry <= self.get_time():
                 self.http_post("https://api.netatmo.com/oauth2/token", {'grant_type': 'refresh_token',
                                                                         'refresh_token': self.token_refresh,
-                                                                        'client_id': os.environ['NETATMO_CLIENT_ID'],
-                                                                        'client_secret': os.environ['NETATMO_CLIENT_SECRET']},
+                                                                        'client_id': self.config["profile"]['NETATMO_CLIENT_ID'],
+                                                                        'client_secret': self.config["profile"]['NETATMO_CLIENT_SECRET']},
                                self.cache_tokens)
             else:
                 self.http_get("https://api.netatmo.com/api/getstationsdata?access_token=" + self.token_access, self.push_getdata)
@@ -253,10 +252,10 @@ class Netatmo(Plugin):
         self.token_refresh = None
         self.token_expiry = None
         try:
-            self.netatmo_username = os.environ['NETATMO_USERNAME']
-            self.netatmo_password = os.environ['NETATMO_PASSWORD']
-            self.netatmo_client_id = os.environ['NETATMO_CLIENT_ID']
-            self.netatmo_client_secret = os.environ['NETATMO_CLIENT_SECRET']
+            self.netatmo_username = self.config["profile"]['NETATMO_USERNAME']
+            self.netatmo_password = self.config["profile"]['NETATMO_PASSWORD']
+            self.netatmo_client_id = self.config["profile"]['NETATMO_CLIENT_ID']
+            self.netatmo_client_secret = self.config["profile"]['NETATMO_CLIENT_SECRET']
         except KeyError as key_error:
             self.disabled = True
             anode.Log(logging.ERROR).log("Plugin", "error",

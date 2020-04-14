@@ -395,8 +395,6 @@ class Plugin(object):
                         if "publish_push_data_topic" in self.config else None
                     publish_push_metadata_topic = self.config["publish_push_metadata_topic"] \
                         if "publish_push_metadata_topic" in self.config else None
-
-                    # TODO: Complete publish service
                     if publish_service is not None and publish_push_data_topic is not None and publish_push_metadata_topic is not None:
                         if publish_service.isConnected():
                             datum_dict_decoded = Plugin.datum_decode(datum_dict)
@@ -1564,7 +1562,7 @@ DATUM_SCHEMA_METRICS = {Plugin.datum_field_decode(DATUM_SCHEMA_JSON["fields"][4]
                             i * 10 for i in range(len(DATUM_SCHEMA_JSON["fields"][4]["type"]["symbols"]))}
 
 PUBLISH_METADATA_CACHE = {}
-PUBLISH_BATCH_TOPIC = "/anode_version=" + APP_VERSION + "/anode_id=" + ID_HEX + "/anode_model=" + APP_MODEL_VERSION
+PUBLISH_BATCH_TOPIC = "/anode_version=" + APP_VERSION + "/anode_id=" + ID_HEX
 
 
 class ModelPull(Plugin):
@@ -1580,7 +1578,8 @@ class ModelPull(Plugin):
         timestamp = datetime.datetime.utcnow()
         headers = {"host": host, "x-amz-content-sha256": payload, "x-amz-date": timestamp.strftime(auth.ISO8601_FMT)}
         headers["Authorization"] = auth.compute_auth_header(headers, "GET", timestamp, region, bucket, path, params, payload,
-                                                            os.environ["AWS_ACCESS_KEY"], os.environ["AWS_SECRET_KEY"])
+                                                            self.config["profile"]["AWS_ACCESS_KEY"],
+                                                            self.config["profile"]["AWS_SECRET_KEY"])
         connection_pool = self.config["pool"] if "pool" in self.config else None
         treq.get(url, headers=headers, timeout=HTTP_TIMEOUT, pool=connection_pool).addCallbacks(
             lambda response, url=url, callback=callback: self.http_response(response, url, callback),

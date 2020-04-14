@@ -35,6 +35,7 @@ from twisted_s3 import auth
 from anode.anode import MqttPublishService
 from anode.anode import S3_BUCKET
 from anode.anode import S3_REGION
+from anode.anode import profile_load
 from anode.anode import main
 from anode.application import *
 from anode.application import APP_MODEL_ENERGYFORECAST_INTERDAY_BUILD_VERSION
@@ -281,33 +282,33 @@ class ANodeTest(TestCase):
         self.assertEqual(-1, Plugin.compare_version("10.000.0000-SNAPSHOT", "10.000.0000"))
 
     def test_bare(self):
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_BARE, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_BARE, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, iterations=5)
         self.assertRest(0, anode, "/rest", False)
         anode.stop_server()
 
     def test_null(self):
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, True, False)
         self.assertRest(0, anode, "/rest", False)
         anode.stop_server()
 
     def test_corrupt(self):
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, True)
         self.assertRest(0, anode, "/rest", False)
         anode.stop_server()
 
     def test_random(self):
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(True, True, False, False, iterations=5)
         self.assertRest(0, anode, "/rest", False)
         anode.stop_server()
 
     def test_coverage(self):
         for arguments in [
-            ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"],
-            ["anode", "--config=" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "--shutup"]
+            ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"],
+            ["anode", "--profile=" + FILE_PROFILE, "--config=" + FILE_CONFIG_ALL, "--db-dir=" + DIR_ANODE_DB_TMP, "--shutup"]
         ]:
             self.patch(sys, "argv", arguments)
             anode = self.anode_init(False, True, False, False)
@@ -383,12 +384,14 @@ class ANodeTest(TestCase):
                                     (("&scope=" + filter_scope) if filter_scope is not None else ""), True)
                     self.assertRest(0 if filter_scope == "publish" else 1,
                                     anode,
-                                    "/rest/?metrics=power-production.electricity.inverter&metrics=some.fake.metric&metrics=&types=point&bins=1second" +
+                                    "/rest/?metrics=power-production.electricity.inverter&metrics=some.fake.metric&metrics=&types=point"
+                                    "&bins=1second" +
                                     (("&format=" + filter_format) if filter_format is not None else "") +
                                     (("&scope=" + filter_scope) if filter_scope is not None else ""), True)
                     self.assertRest(0 if filter_scope == "publish" else 1,
                                     anode,
-                                    "/rest/?metrics=power-production.electricity.inverter&metrics=&types=point&types=fake.type&bins=1second" +
+                                    "/rest/?metrics=power-production.electricity.inverter&metrics=&types=point&types=fake.type&bins"
+                                    "=1second" +
                                     (("&format=" + filter_format) if filter_format is not None else "") +
                                     (("&scope=" + filter_scope) if filter_scope is not None else ""), True)
                     self.assertRest(0 if filter_scope == "publish" else 1,
@@ -403,12 +406,14 @@ class ANodeTest(TestCase):
                                     (("&scope=" + filter_scope) if filter_scope is not None else ""), True)
                     self.assertRest(0 if filter_scope == "publish" else 1,
                                     anode,
-                                    "/rest/?metrics=power-production.electricity.inverter&metrics=&types=point&bins=1second&units=W&print=pretty" +
+                                    "/rest/?metrics=power-production.electricity.inverter&metrics=&types=point&bins=1second&units=W&print"
+                                    "=pretty" +
                                     (("&format=" + filter_format) if filter_format is not None else "") +
                                     (("&scope=" + filter_scope) if filter_scope is not None else ""), True)
                     self.assertRest(0 if filter_scope == "publish" else 2,
                                     anode,
-                                    "/rest/?metrics=power-production.electricity.inverter&metrics=power-export.electricity.grid&metrics=&types=point&bins=1second" +
+                                    "/rest/?metrics=power-production.electricity.inverter&metrics=power-export.electricity.grid&metrics"
+                                    "=&types=point&bins=1second" +
                                     (("&format=" + filter_format) if filter_format is not None else "") +
                                     (("&scope=" + filter_scope) if filter_scope is not None else ""), True)
                     self.assertRest(0 if filter_scope == "publish" else 3,
@@ -476,7 +481,7 @@ class ANodeTest(TestCase):
             FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL,
             FILE_CONFIG_FRONIUS_UNBOUNDED_LARGE
         ]:
-            self.patch(sys, "argv", ["anode", "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
+            self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
             anode = self.anode_init(False, False, False, False, period=10, iterations=25)
             for filter_method in [None, "min", "max"]:
                 for fitler_fill in [None, "zeros", "linear"]:
@@ -506,7 +511,7 @@ class ANodeTest(TestCase):
         period = 1
         iterations = 101
         partition_index = 50
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_BOUNDED_TICKS, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_FRONIUS_BOUNDED_TICKS, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
         metrics = self.assertRest(266, anode, "/rest/?metrics=power&scope=history", True)[1]
         anode.stop_server()
@@ -514,7 +519,7 @@ class ANodeTest(TestCase):
             FILE_CONFIG_FRONIUS_BOUNDED_TICKS,
             FILE_CONFIG_FRONIUS_BOUNDED_PARTITIONS
         ]:
-            self.patch(sys, "argv", ["anode", "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
+            self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
             anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
             self.assertEquals(0 if config == FILE_CONFIG_FRONIUS_BOUNDED_TICKS else 100,
                               self.assertRest(1,
@@ -524,12 +529,14 @@ class ANodeTest(TestCase):
             self.assertEquals(TIME_START_OF_DAY + 2 + partition_index,
                               self.assertRest(partition_index,
                                               anode,
-                                              "/rest/?scope=history&format=csv&metrics=energy-export.electricity.grid&bins=1day&types=integral",
+                                              "/rest/?scope=history&format=csv"
+                                              "&metrics=energy-export.electricity.grid&bins=1day&types=integral",
                                               True)[0]["bin_timestamp"][0])
             self.assertEquals(TIME_START_OF_DAY + iterations,
                               self.assertRest(partition_index,
                                               anode,
-                                              "/rest/?scope=history&format=csv&metrics=energy-export.electricity.grid&bins=1day&types=integral",
+                                              "/rest/?scope=history&format=csv"
+                                              "&metrics=energy-export.electricity.grid&bins=1day&types=integral",
                                               True)[0]["bin_timestamp"][partition_index - 1])
             self.assertRest(metrics,
                             anode,
@@ -541,7 +548,7 @@ class ANodeTest(TestCase):
         period = 1
         iterations = 100
         partition_index = 48
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_LARGE, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_LARGE, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
         metrics = self.assertRest(1527, anode, "/rest/?scope=history", True)[1]
         anode.stop_server()
@@ -550,7 +557,7 @@ class ANodeTest(TestCase):
             FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL,
             FILE_CONFIG_FRONIUS_UNBOUNDED_LARGE
         ]:
-            self.patch(sys, "argv", ["anode", "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
+            self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
             anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
             self.assertEquals(0,
                               self.assertRest(1,
@@ -560,12 +567,14 @@ class ANodeTest(TestCase):
             self.assertEquals(TIME_START_OF_DAY + 1,
                               self.assertRest(iterations,
                                               anode,
-                                              "/rest/?scope=history&format=csv&metrics=energy-export.electricity.grid&bins=1day&types=integral",
+                                              "/rest/?scope=history&format=csv"
+                                              "&metrics=energy-export.electricity.grid&bins=1day&types=integral",
                                               True)[0]["bin_timestamp"][0])
             self.assertEquals(TIME_START_OF_DAY + 1 + partition_index,
                               self.assertRest(iterations,
                                               anode,
-                                              "/rest/?scope=history&format=csv&metrics=energy-export.electricity.grid&bins=1day&types=integral",
+                                              "/rest/?scope=history&format=csv"
+                                              "&metrics=energy-export.electricity.grid&bins=1day&types=integral",
                                               True)[0]["bin_timestamp"][partition_index])
             self.assertRest(metrics,
                             anode,
@@ -576,7 +585,7 @@ class ANodeTest(TestCase):
     def test_publish(self):
         period = 100
         self.patch(MqttPublishService, "isConnected", lambda myself: False)
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_PUBLISH, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_FRONIUS_PUBLISH, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=1)
         metrics = self.assertRest(24, anode, "/rest/?scope=publish&format=csv", True)[1]
         self.assertRest(metrics,
@@ -594,7 +603,7 @@ class ANodeTest(TestCase):
     def test_temporal(self):
         period = 1
         iterations = 3
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
         self.assertRest(1,
                         anode,
@@ -619,280 +628,336 @@ class ANodeTest(TestCase):
 
     def test_dailies(self):
         period = 1
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_DAY, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_DAY, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=1)
         self.assertRest(2,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.grid&bins=1all-time",
                         True)
         self.assertRest(0,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
                         True)
         self.assertRest(0,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
                         True)
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-morning-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-morning-grid",
                                           True)[0]["Off Peak Morning Grid (1 Day)"][0])
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid",
                                           True)[0]["Peak Grid (1 Day)"][0])
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-evening-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-evening-grid",
                                           True)[0]["Off Peak Evening Grid (1 Day)"][0])
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid",
                                           True)[0]["Off Peak Grid (1 Day)"][0])
         self.clock_tick(anode, period, 60 * 60 * 2 - 1, True)
         self.assertRest(3,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.grid&bins=1all-time",
                         True)
         self.assertRest(0,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
                         True)
         self.assertRest(0,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
                         True)
         self.assertEquals(1,
                           self.assertRest(2,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-morning-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-morning-grid",
                                           True)[0]["Off Peak Morning Grid (1 Day)"][1])
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid",
                                           True)[0]["Peak Grid (1 Day)"][0])
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-evening-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-evening-grid",
                                           True)[0]["Off Peak Evening Grid (1 Day)"][0])
         self.assertEquals(1,
                           self.assertRest(2,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid",
                                           True)[0]["Off Peak Grid (1 Day)"][1])
         self.clock_tick(anode, period, 60 * 60 * 13, True)
         self.assertRest(4,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.grid&bins=1all-time",
                         True)
         self.assertEquals(3,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
                                           True, True)[0]["Peak Grid (All Time)"][0])
         self.assertRest(0,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
                         True)
         self.assertEquals(2,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-morning-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-morning-grid",
                                           True)[0]["Off Peak Morning Grid (1 Day)"][2])
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1day",
                                           True)[0]["Peak Grid (1 Day)"][0])
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-evening-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-evening-grid",
                                           True)[0]["Off Peak Evening Grid (1 Day)"][0])
         self.assertEquals(2,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid",
                                           True)[0]["Off Peak Grid (1 Day)"][2])
         self.clock_tick(anode, period, 60 * 60 * 2, True)
         self.assertRest(5,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.grid&bins=1all-time",
                         True)
         self.assertEquals(3,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
                                           True)[0]["Peak Grid (All Time)"][0])
         self.assertRest(0,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
                         True)
         self.assertEquals(2,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-morning-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-morning-grid",
                                           True)[0]["Off Peak Morning Grid (1 Day)"][2])
         self.assertEquals(1,
                           self.assertRest(2,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1day",
                                           True)[0]["Peak Grid (1 Day)"][1])
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-evening-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-evening-grid",
                                           True)[0]["Off Peak Evening Grid (1 Day)"][0])
         self.assertEquals(2,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid",
                                           True)[0]["Off Peak Grid (1 Day)"][2])
         self.clock_tick(anode, period, 60 * 60 * 4, True)
         self.assertRest(6,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.grid&bins=1all-time",
                         True)
         self.assertEquals(3,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
                                           True)[0]["Peak Grid (All Time)"][0])
         self.assertEquals(5,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
                                           True)[0]["Off Peak Grid (All Time)"][0])
         self.assertEquals(2,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-morning-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-morning-grid",
                                           True)[0]["Off Peak Morning Grid (1 Day)"][2])
         self.assertEquals(2,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1day",
                                           True)[0]["Peak Grid (1 Day)"][2])
         self.assertEquals(0,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-evening-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-evening-grid",
                                           True)[0]["Off Peak Evening Grid (1 Day)"][0])
         self.assertEquals(2,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid&bins=1day",
                                           True)[0]["Off Peak Grid (1 Day)"][2])
         self.clock_tick(anode, period, 60 * 60 * 1, True)
         self.assertRest(7,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.grid&bins=1all-time",
                         True)
         self.assertEquals(3,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
                                           True)[0]["Peak Grid (All Time)"][0])
         self.assertEquals(5,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
                                           True)[0]["Off Peak Grid (All Time)"][0])
         self.assertEquals(2,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-morning-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-morning-grid",
                                           True)[0]["Off Peak Morning Grid (1 Day)"][2])
         self.assertEquals(2,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1day",
                                           True)[0]["Peak Grid (1 Day)"][2])
         self.assertEquals(1,
                           self.assertRest(2,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-evening-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-evening-grid",
                                           True)[0]["Off Peak Evening Grid (1 Day)"][1])
         self.assertEquals(3,
                           self.assertRest(4,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid&bins=1day",
                                           True)[0]["Off Peak Grid (1 Day)"][3])
         self.clock_tick(anode, period, 60 * 60 * 2, True)
         self.assertRest(9,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.grid&bins=1all-time",
                         True)
         self.assertEquals(3,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
                                           True)[0]["Peak Grid (All Time)"][0])
         self.assertEquals(5,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
                                           True)[0]["Off Peak Grid (All Time)"][0])
         self.assertEquals(0,
                           self.assertRest(4,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-morning-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-morning-grid",
                                           True)[0]["Off Peak Morning Grid (1 Day)"][3])
         self.assertEquals(0,
                           self.assertRest(4,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1day",
                                           True)[0]["Peak Grid (1 Day)"][3])
         self.assertEquals(0,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-evening-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-evening-grid",
                                           True)[0]["Off Peak Evening Grid (1 Day)"][2])
         self.assertEquals(0,
                           self.assertRest(5,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid&bins=1day",
                                           True)[0]["Off Peak Grid (1 Day)"][4])
         self.clock_tick(anode, period, 60 * 60 * 1, True)
         self.assertRest(10,
                         anode,
-                        "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.grid&bins=1all-time",
+                        "/rest/?scope=history&print=pretty&format=csv"
+                        "&metrics=energy-consumption.electricity.grid&bins=1all-time",
                         True)
         self.assertEquals(3,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1all-time",
                                           True)[0]["Peak Grid (All Time)"][0])
         self.assertEquals(5,
                           self.assertRest(1,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid&bins=1all-time",
                                           True)[0]["Off Peak Grid (All Time)"][0])
         self.assertEquals(1,
                           self.assertRest(5,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-morning-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-morning-grid",
                                           True)[0]["Off Peak Morning Grid (1 Day)"][4])
         self.assertEquals(0,
                           self.assertRest(4,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.peak-grid&bins=1day",
                                           True)[0]["Peak Grid (1 Day)"][3])
         self.assertEquals(0,
                           self.assertRest(3,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-evening-grid",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-evening-grid",
                                           True)[0]["Off Peak Evening Grid (1 Day)"][2])
         self.assertEquals(1,
                           self.assertRest(6,
                                           anode,
-                                          "/rest/?scope=history&print=pretty&format=csv&metrics=energy-consumption.electricity.off-peak-grid&bins=1day",
+                                          "/rest/?scope=history&print=pretty&format=csv"
+                                          "&metrics=energy-consumption.electricity.off-peak-grid&bins=1day",
                                           True)[0]["Off Peak Grid (1 Day)"][5])
         anode.stop_server()
 
@@ -900,7 +965,7 @@ class ANodeTest(TestCase):
         period = 1
         iterations = 10
         iterations_repeat = 15
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
         metrics = self.assertRest(66, anode, "/rest/?scope=history&metrics=power", True)[1]
         self.assertTrue(metrics > 0)
@@ -956,7 +1021,7 @@ class ANodeTest(TestCase):
                                           True)[0]["bin_timestamp"][iterations - 1])
         anode.stop_server()
         self.setUp()
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_DB, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_FRONIUS_DB, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=(iterations * 11))
         metrics = self.assertRest(566, anode, "/rest/?scope=history&metrics=power", True)[1]
         self.assertTrue(metrics > 0)
@@ -988,7 +1053,7 @@ class ANodeTest(TestCase):
         period = 1
         iterations = 1
         iterations_repeat = 2
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
         metrics = self.assertRest(40, anode, "/rest/?metrics=energy", False)[1]
         self.assertTrue(metrics > 0)
@@ -1053,7 +1118,9 @@ class ANodeTest(TestCase):
     def test_partition(self):
         period = 1
         iterations = 10
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL_REPEAT_PARTITION, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv",
+                   ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL_REPEAT_PARTITION, "-d" + DIR_ANODE_DB_TMP,
+                    "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
         self.assertRest(iterations,
                         anode,
@@ -1084,7 +1151,9 @@ class ANodeTest(TestCase):
                         "/rest/?metrics=power-export.electricity.grid&types=point&scope=history&format=csv&print=pretty&partitions=" +
                         "a", True)
         anode.stop_server()
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL_REPEAT_PARTITION, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv",
+                   ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL_REPEAT_PARTITION, "-d" + DIR_ANODE_DB_TMP,
+                    "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=1)
         self.clock_tick(anode, 1, 2 * 2460 * 60 + 1, True)
         self.assertRest(1,
@@ -1101,7 +1170,7 @@ class ANodeTest(TestCase):
             FILE_CONFIG_FRONIUS_REPEAT_DAY,
             FILE_CONFIG_FRONIUS_REPEAT_PARTITION
         ]:
-            self.patch(sys, "argv", ["anode", "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
+            self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
             anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
             self.assertRest(iterations if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else iterations + 1,
                             anode,
@@ -1110,23 +1179,26 @@ class ANodeTest(TestCase):
             self.assertEquals(TIME_START_OF_DAY + 1,
                               self.assertRest(iterations if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else iterations + 1,
                                               anode,
-                                              "/rest/?scope=history&format=csv&metrics=energy-export.electricity.grid&bins=1day&types=integral",
+                                              "/rest/?scope=history&format=csv&metrics=energy-export.electricity.grid&bins=1day"
+                                              "&types=integral",
                                               True)[0]["bin_timestamp"][0])
             self.assertEquals(TIME_START_OF_DAY + iterations * period - (0 if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else period),
                               self.assertRest(iterations if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else iterations + 1,
                                               anode,
-                                              "/rest/?scope=history&format=csv&metrics=energy-export.electricity.grid&bins=1day&types=integral",
+                                              "/rest/?scope=history&format=csv&metrics=energy-export.electricity.grid&bins=1day"
+                                              "&types=integral",
                                               True)[0]["bin_timestamp"][iterations - 1])
             self.assertEquals(1,
                               self.assertRest(1,
                                               anode,
-                                              "/rest/?metrics=power-export.electricity.grid&types=low&scope=history&format=csv&print=pretty",
+                                              "/rest/?metrics=power-export.electricity.grid&types=low&scope=history&format=csv"
+                                              "&print=pretty",
                                               True)[0]["Grid (1 Day)"][0])
             self.assertEquals(4,
                               self.assertRest(iterations if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else iterations + 1,
                                               anode,
-                                              "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history&format=csv"
-                                              "&print=pretty",
+                                              "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history"
+                                              "&format=csv&print=pretty",
                                               True)[0]["Grid (1 Day)"].iloc([[-1]])[-1])
             global test_repeats
             test_repeats = True
@@ -1142,8 +1214,8 @@ class ANodeTest(TestCase):
             self.assertEquals(0,
                               self.assertRest(iterations + (1 if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else 2),
                                               anode,
-                                              "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history&format=csv"
-                                              "&print=pretty",
+                                              "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history"
+                                              "&format=csv&print=pretty",
                                               True)[0]["Grid (1 Day)"].iloc([[-1]])[-1])
             self.clock_tick(anode, 1, 1, skip_all=True)
             self.assertRest(iterations + (1 if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else 2),
@@ -1157,8 +1229,8 @@ class ANodeTest(TestCase):
             self.assertEquals(0,
                               self.assertRest(iterations + (1 if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else 2),
                                               anode,
-                                              "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history&format=csv"
-                                              "&print=pretty",
+                                              "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history"
+                                              "&format=csv&print=pretty",
                                               True)[0]["Grid (1 Day)"].iloc([[-1]])[-1])
             self.clock_tick(anode, 1, period - 1, skip_all=True)
             self.assertRest(iterations + (1 if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else 3),
@@ -1172,8 +1244,8 @@ class ANodeTest(TestCase):
             self.assertEquals(0,
                               self.assertRest(iterations + (1 if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else 3),
                                               anode,
-                                              "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history&format=csv"
-                                              "&print=pretty",
+                                              "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history"
+                                              "&format=csv&print=pretty",
                                               True)[0]["Grid (1 Day)"].iloc([[-1]])[-1])
             anode.stop_server()
 
@@ -1185,7 +1257,7 @@ class ANodeTest(TestCase):
             FILE_CONFIG_FRONIUS_UNBOUNDED_DAY,
             FILE_CONFIG_FRONIUS_UNBOUNDED_LARGE
         ]:
-            self.patch(sys, "argv", ["anode", "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
+            self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + config, "-d" + DIR_ANODE_DB_TMP, "-s"])
             anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
             self.assertRest(iterations,
                             anode,
@@ -1251,7 +1323,7 @@ class ANodeTest(TestCase):
     def test_bad_plots(self):
         period = 1
         iterations = 50
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_FRONIUS_UNBOUNDED_SMALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
         self.assertRest(0,
                         anode,
@@ -1305,9 +1377,9 @@ class ANodeTest(TestCase):
                         False, True)
         anode.stop_server()
 
-    #TODO: Bring in new pkl which has 'temperature.condition' metrics not the old forms, why doesnt this print any plots?
+    # TODO: Bring in new pkl which has 'temperature.condition' metrics not the old forms, why doesnt this print any plots?
     def test_good_plots(self):
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB, "-s"])
         anode = self.anode_init(False, False, False, False, period=1, iterations=0)
         last_timestamp = \
             self.assertRest(0, anode,
@@ -1363,7 +1435,7 @@ class ANodeTest(TestCase):
             try:
                 period = 1
                 iterations = 1
-                self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+                self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
                 anode = self.anode_init(False, False, False, False, period=period, iterations=iterations)
                 self.assertRest(len(test_integration_tests) * 3,
                                 anode,
@@ -1376,7 +1448,7 @@ class ANodeTest(TestCase):
 
     def test_oneoff(self):
         period = 1
-        self.patch(sys, "argv", ["anode", "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
+        self.patch(sys, "argv", ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"])
         anode = self.anode_init(False, False, False, False, period=period, iterations=1)
         self.assertRest(0,
                         anode,
@@ -1422,7 +1494,7 @@ class MockHttpResponseContent:
             timestamp = datetime.datetime.utcnow()
             headers = {"host": host, "x-amz-content-sha256": payload, "x-amz-date": timestamp.strftime(auth.ISO8601_FMT)}
             headers["Authorization"] = auth.compute_auth_header(headers, "GET", timestamp, S3_REGION, S3_BUCKET, path, params, payload,
-                                                                os.environ["AWS_ACCESS_KEY"], os.environ["AWS_SECRET_KEY"])
+                                                                PROFILE["AWS_ACCESS_KEY"], PROFILE["AWS_SECRET_KEY"])
             self.content = requests.get(response.url, headers=headers).content
             if "list-type=" not in params:
                 pickle_metadata = re.search(PICKLE_PATH_REGEX, response.url)
@@ -1471,8 +1543,6 @@ test_corruptions = False
 test_integration = False
 test_integration_tests = set()
 
-TEST_INTEGRATION = os.environ["INTEGRATION_TEST_SKIP"].lower() == "false" if "INTEGRATION_TEST_SKIP" in os.environ else is_connected()
-
 TEMPLATE_INTEGER_MAX = 8
 
 TIME_BOOT = calendar.timegm(time.gmtime())
@@ -1490,6 +1560,8 @@ DIR_ANODE_DB_TMP = DIR_ANODE_TMP + "/config"
 DIR_ASYSTEM_TMP = "/tmp/asystem"
 
 FILE_SVG_HTML = DIR_TEST + "/web/index.html"
+
+FILE_PROFILE = DIR_TEST + "/config/.profile"
 
 FILE_CONFIG_ALL = DIR_TEST + "/config/anode_all.yaml"
 FILE_CONFIG_BARE = DIR_TEST + "/config/anode_bare.yaml"
@@ -1511,6 +1583,12 @@ FILE_MODEL_ENERGYFORECAST = DIR_ROOT + "/../asystem-amodel/target/asystem-amodel
 FILE_MODEL_ENERGYFORECAST_INTRADAY = DIR_ROOT + "/../asystem-amodel/target/asystem-amodel/asystem/amodel/energyforecastintraday" + \
                                      "/model/pickle/joblib/none/amodel_version=" + APP_VERSION + "/amodel_model=" + \
                                      APP_MODEL_ENERGYFORECAST_INTRADAY_BUILD_VERSION + "/model.pkl"
+
+PROFILE = {}
+with open(FILE_PROFILE, 'r') as profile_file:
+    PROFILE = profile_load(profile_file)
+
+TEST_INTEGRATION = PROFILE["INTEGRATION_TEST_SKIP"].lower() == "false" if "INTEGRATION_TEST_SKIP" in PROFILE else is_connected()
 
 HTTP_POSTS = {
     "davis": {
