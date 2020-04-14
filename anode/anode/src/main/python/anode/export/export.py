@@ -1,20 +1,5 @@
 # -*- coding: utf-8 -*-
 
-# TODO:
-#   - Improve .profile and env into unit tests and into docker container processing, update filtering, custom per module
-#   - Develop anode run
-#   - Develop sys-test
-#   - Test, resolve regualr MQTT broker reconnection, error on boot
-#   - Add icon in meta-data
-#   - Develop anode K3s deploy for anode - docker-compose?
-#   - Develop K3s for all services - homeassistant, postgres, vernmq, weewx, unifi, influx, grafana, telegraf etc
-#   - Verify fab build, custom module commands (eg filtering in anode?), add anode export.py into homeassistant builds
-#   - Retire old server, test on new server
-#   - Update all smart plugs to have accurate labels
-#   - Implement filter and order in sensors.csv
-#   - Develop customize.yaml and lovelace.yaml replacement script
-#   - Rebuild all servers, deploy accross servers, test
-
 import inspect
 import os
 import sys

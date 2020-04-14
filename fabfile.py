@@ -55,17 +55,16 @@ def build(context):
         print_footer(module, "build")
 
 
-@task(setup, build)
+@task(setup)
 def unittest(context):
     for module in get_modules(context, "src/setup.py"):
         print_header(module, "unittest")
         print_line("Running unit tests ...")
-        run_local(context, "python setup.py test", os.path.join(module, "target/package"),
-                  env=get_module_profile(context, os.path.join(ROOT_DIR, module, "src", ".profile")))
+        run_local(context, "python setup.py test", os.path.join(module, "target/package"))
         print_footer(module, "unittest")
 
 
-@task(setup, build)
+@task(setup)
 def package(context):
     for module in get_modules(context, "Dockerfile"):
         print_header(module, "package")
@@ -77,35 +76,30 @@ def package(context):
         print_footer(module, "package")
 
 
-# TODO: Work out if to use deps or not, dont seem to work?
-# @task(setup, package)
 @task(setup)
 def systest(context):
     for module in get_modules(context, "src/setup.py"):
         print_header(module, "systest")
-        print_line("Running system tests ...")
         print_line("Preparing environment ...")
-        run_local(context, "mkdir -p target/runtime-system", module)
-        run_local(context, "cp -rvf src/main/resources/config/* target/runtime-system", module)
+        run_local(context, "rm -rvf target/runtime-system", module)
+        run_local(context, "cp -rvf src/main/resources/config target/runtime-system", module)
         run_local(context, "docker stop anode-systest || true && docker rm anode-systest || true", hide='err')
         print_line("Starting server ...")
         run_local(context, "docker run -d --name anode-systest -v {}/{}/target/runtime-system:/etc/anode -p 8091:8091 {}:{} anode".format(
             ROOT_DIR, module, os.path.dirname(module), VERSION_ABSOLUTE))
+        print_line("Running system tests ...")
         print_line("Stopping and removing server ...")
         run_local(context, "docker stop anode-systest || true && docker rm anode-systest || true")
         print_footer(module, "systest")
 
 
-# TODO: Work out if to use deps or not, dont seem to work?
-# @task(setup, package)
 @task(setup)
 def run(context):
     for module in get_modules(context, "src/setup.py"):
         print_header(module, "run")
-        print_line("Running system tests ...")
         print_line("Preparing environment ...")
-        run_local(context, "mkdir -p target/runtime-system", module)
-        run_local(context, "cp -rvf src/.profile src/main/resources/config/* target/runtime-system", module)
+        run_local(context, "rm -rvf target/runtime-system", module)
+        run_local(context, "cp -rvf src/main/resources/config target/runtime-system", module)
         run_local(context, "docker stop anode-systest || true && docker rm anode-systest || true", hide='err')
         print_line("Starting server ...")
         run_local(context, "docker run --name anode-systest -v {}/{}/target/runtime-system:/etc/anode -p 8091:8091 {}:{} anode -v".format(
@@ -115,7 +109,7 @@ def run(context):
         print_footer(module, "run")
 
 
-@task(setup, unittest, systest)
+@task(setup)
 def release(context):
     for module in get_modules(context, "Dockerfile"):
         print_header(module, "release")
@@ -126,7 +120,7 @@ def release(context):
         print_footer(module, "release")
 
 
-@task(setup, package)
+@task(setup)
 def deploy(context):
     for module in get_modules(context, "deploy"):
         print_header(module, "deploy")
@@ -163,17 +157,6 @@ def get_modules(context, filter_path=None, filter_changes=True):
     working_modules[:] = [module for module in working_modules
                           if filter_path is None or glob.glob("{}/{}/{}*".format(ROOT_DIR, module, filter_path))]
     return working_modules
-
-
-# TODO: Remove this method
-def get_module_profile(context, path):
-    module_profile = {}
-    with open(path, 'r') as file:
-        for line in file.readlines():
-            if "export" in line and "=" in line:
-                tokens = line.replace("export ", "").replace("\"", "").strip().split("=")
-                module_profile[tokens[0]] = tokens[1]
-    return module_profile
 
 
 def run_local(context, command, working=".", **kwargs):

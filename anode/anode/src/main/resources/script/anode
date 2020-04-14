@@ -13,15 +13,6 @@
 
 PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
-ANODE_ENV_FILE=${ANODE_ENV_FILE:-"/etc/profile"}
-
-if [ -f ${ANODE_ENV_FILE} ]; then
-  $(grep "export AWS" ${ANODE_ENV_FILE})
-  $(grep "export MQTT" ${ANODE_ENV_FILE})
-  $(grep "export NETATMO" ${ANODE_ENV_FILE})
-  $(grep "export PYTHON2" ${ANODE_ENV_FILE})
-fi
-
 ANODE_TIMEOUT_SEC=30
 ANODE_LOCK=/var/lock/subsys/anode
 ANODE_OPTS=${ANODE_OPTS:-"--quiet"}
@@ -47,9 +38,9 @@ start() {
       log_tail_failure "could not locate anode binary"
     else
       mkdir -p $(dirname ${ANODE_PATH}) $(dirname ${ANODE_LOG_FILE})
-      nohup ${ANODE_PATH} ${ANODE_OPTS} > ${ANODE_LOG_FILE} 2>&1 &
+      nohup ${ANODE_PATH} ${ANODE_OPTS} >${ANODE_LOG_FILE} 2>&1 &
       if [ $? -eq 0 ]; then
-        echo $! > ${ANODE_LOCK}
+        echo $! >${ANODE_LOCK}
         log_tail_success "anode started"
       else
         log_tail_failure "anode failed to start"
@@ -63,12 +54,12 @@ start() {
 stop() {
   log_head "Stopping anode: "
   if [ -f ${ANODE_LOCK} ]; then
-    kill $(cat ${ANODE_LOCK}) 2> /dev/null
+    kill $(cat ${ANODE_LOCK}) 2>/dev/null
     kill_success=$?
-    rm -f ${ANODE_LOCK} 2> /dev/null
+    rm -f ${ANODE_LOCK} 2>/dev/null
     timeout_counter=0
     until [ $(ps axg | grep -vw grep | grep -w ${ANODE_PATH} | wc -l) -eq 0 ] || [ ${timeout_counter} -eq ${ANODE_TIMEOUT_SEC} ]; do
-       sleep 1 && ((timeout_counter++))
+      sleep 1 && ((timeout_counter++))
     done
     if [ ${kill_success} -eq 0 ] && [ ${timeout_counter} -ne ${ANODE_TIMEOUT_SEC} ]; then
       log_tail_success "anode stopped"
@@ -90,22 +81,23 @@ status() {
 }
 
 case "$1" in
-  start)
-    start
-    ;;
-  stop)
-    stop
-    ;;
-  restart)
-    stop
-    start
-    ;;
-  status)
-    status
-    ;;
-  *)
-    echo "Usage: $0 {start|stop|status}"
-    exit 1
+start)
+  start
+  ;;
+stop)
+  stop
+  ;;
+restart)
+  stop
+  start
+  ;;
+status)
+  status
+  ;;
+*)
+  echo "Usage: $0 {start|stop|status}"
+  exit 1
+  ;;
 esac
 
 exit 0

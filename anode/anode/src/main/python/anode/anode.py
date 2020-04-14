@@ -1,8 +1,8 @@
 from __future__ import print_function
 
-import os
 import logging
 import logging.config
+import os
 import shutil
 import sys
 import time
@@ -63,8 +63,8 @@ class ANode:
         self.publish = "publish_host" in self.config and len(self.config["publish_host"]) > 0 and \
                        "publish_port" in self.config and self.config["publish_port"] > 0
         if self.publish:
-            access_key = os.environ["MQTT_ACCESS_KEY"] if "MQTT_ACCESS_KEY" in os.environ else None
-            secret_key = os.environ["MQTT_SECRET_KEY"] if "MQTT_SECRET_KEY" in os.environ else None
+            access_key = config["profile"]["MQTT_ACCESS_KEY"] if "MQTT_ACCESS_KEY" in config["profile"] else None
+            secret_key = config["profile"]["MQTT_SECRET_KEY"] if "MQTT_SECRET_KEY" in config["profile"] else None
             mqtt_client_string = clientFromString(reactor, "tcp:" + self.config["publish_host"] + ":" + str(self.config["publish_port"]))
             self.publish_service = MqttPublishService(mqtt_client_string, MQTTFactory(profile=MQTTFactory.PUBLISHER),
                                                       KEEPALIVE_DEFAULT_SECONDS, access_key, secret_key)
@@ -78,6 +78,7 @@ class ANode:
         if "model_pull_seconds" in self.config and self.config["model_pull_seconds"] > 0:
             model_pull = ModelPull(self, "pullmodel", {
                 "pool": self.web_pool, "db_dir": self.options.db_dir,
+                "profile": self.config["profile"],
                 "model_pull_region": self.config["model_pull_region"] if "model_pull_region" in self.config else S3_REGION,
                 "model_pull_bucket": (self.config["model_pull_bucket"] if "model_pull_bucket" in self.config else S3_BUCKET) + (
                     self.config["model_pull_bucket_snapshot"] if ("model_pull_bucket_snapshot" in self.config and
@@ -410,17 +411,32 @@ class Log:
                 logging.exception(exception)
 
 
+def profile_load(profile_file):
+    profile = {}
+    for profile_line in profile_file:
+        profile_line = profile_line.rstrip()
+        if "=" not in profile_line: continue
+        if profile_line.startswith("#"): continue
+        profile_key, profile_value = profile_line.split("=", 1)
+        profile[profile_key] = profile_value
+    return profile
+
+
 def main(core_reactor=reactor):
     parser = OptionParser()
     parser.add_option("-c", "--config", dest="config", default="/etc/anode/anode.yaml", help="config FILE", metavar="FILE")
+    parser.add_option("-p", "--profile", dest="profile", default="/etc/anode/.profile", help="profile FILE", metavar="FILE")
     parser.add_option("-d", "--db-dir", dest="db_dir", default="/etc/anode/", help="config FILE", metavar="FILE")
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False, help="noisy output to stdout")
     parser.add_option("-q", "--quiet", action="store_true", dest="quiet", default=False, help="suppress most output to stdout")
     parser.add_option("-s", "--shutup", action="store_true", dest="shutup", default=False, help="suppress all output to stdout")
     (options, args) = parser.parse_args()
     Log.configure(options.verbose, options.quiet, options.shutup)
-    with open(options.config, "r") as stream:
-        config = yaml.load(stream)
+    with open(options.config, "r") as config_file:
+        config = yaml.load(config_file)
+    config["profile"] = {}
+    with open(options.profile, 'r') as profile_file:
+        config["profile"] = profile_load(profile_file)
     if not os.path.isdir(options.db_dir):
         raise IOError("No such directory: {}".format(options.db_dir))
     anode = ANode(core_reactor, options, config)
