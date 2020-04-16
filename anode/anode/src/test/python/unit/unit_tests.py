@@ -1561,7 +1561,7 @@ DIR_ASYSTEM_TMP = "/tmp/asystem"
 
 FILE_SVG_HTML = DIR_TEST + "/web/index.html"
 
-FILE_PROFILE = DIR_TEST + "/config/.profile"
+FILE_PROFILE = DIR_ROOT + "/main/resources/config/.profile"
 
 FILE_CONFIG_ALL = DIR_TEST + "/config/anode_all.yaml"
 FILE_CONFIG_BARE = DIR_TEST + "/config/anode_bare.yaml"
