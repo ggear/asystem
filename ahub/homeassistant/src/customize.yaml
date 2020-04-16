@@ -226,3 +226,67 @@ sensor.gust_bearing_wind:
   friendly_name: Gust Bearing
 sensor.gust_speed_wind:
   friendly_name: Gust Speed
+sensor.office_lights_energy_consumption:
+  friendly_name: Office Lights
+sensor.freezer_energy_consumption:
+  friendly_name: Freezer
+sensor.kitchen_lights_energy_consumption:
+  friendly_name: Kitchen Lights
+sensor.fan_energy_consumption:
+  friendly_name: Fan
+sensor.servers_energy_consumption:
+  friendly_name: Servers
+sensor.lounge_lights_energy_consumption:
+  friendly_name: Lounge Lights
+sensor.pantry_lights_energy_consumption:
+  friendly_name: Pantry Lights
+sensor.bathroom_lights_energy_consumption:
+  friendly_name: Bathroom Lights
+sensor.wardrobe_lights_energy_consumption:
+  friendly_name: Wardrobe Lights
+sensor.lamp_lights_energy_consumption:
+  friendly_name: Lamp Lights
+sensor.laundry_lights_energy_consumption:
+  friendly_name: Laundry Lights
+sensor.parents_lights_energy_consumption:
+  friendly_name: Parents Lights
+sensor.ensuite_lights_energy_consumption:
+  friendly_name: Ensuite Lights
+sensor.dining_lights_energy_consumption:
+  friendly_name: Dining Lights
+sensor.hallway_lights_energy_consumption:
+  friendly_name: Hallway Lights
+sensor.filter_energy_consumption:
+  friendly_name: Filter
+sensor.ensuite_lights_power_consumption:
+  friendly_name: Ensuite Lights
+sensor.office_lights_power_consumption:
+  friendly_name: Office Lights
+sensor.kitchen_lights_power_consumption:
+  friendly_name: Kitchen Lights
+sensor.lounge_lights_power_consumption:
+  friendly_name: Lounge Lights
+sensor.servers_power_consumption:
+  friendly_name: Servers
+sensor.bathroom_lights_power_consumption:
+  friendly_name: Bathroom Lights
+sensor.lamp_lights_power_consumption:
+  friendly_name: Lamp Lights
+sensor.wardrobe_lights_power_consumption:
+  friendly_name: Wardrobe Lights
+sensor.filter_power_consumption:
+  friendly_name: Filter
+sensor.freezer_power_consumption:
+  friendly_name: Freezer
+sensor.dining_lights_power_consumption:
+  friendly_name: Dining Lights
+sensor.laundry_lights_power_consumption:
+  friendly_name: Laundry Lights
+sensor.fan_power_consumption:
+  friendly_name: Fan
+sensor.hallway_lights_power_consumption:
+  friendly_name: Hallway Lights
+sensor.pantry_lights_power_consumption:
+  friendly_name: Pantry Lights
+sensor.parents_lights_power_consumption:
+  friendly_name: Parents Lights

@@ -1,10 +1,8 @@
 host: 0.0.0.0
 port: 8091
-
-# TODO: Re-enable, to troubleshoot closing of connection uber regularly
-#publish_host: 192.168.2.5
-#publish_port: 1883
-#publish_batch_seconds: 600
+publish_host: 192.168.2.5
+publish_port: 1883
+publish_batch_seconds: 600
 
 # TODO: Add publish_status on start, expire after some time, add on exit too, perhaps on a metric by metric basis? - maybe dont do?
 publish_status_topic: 'anode/status'

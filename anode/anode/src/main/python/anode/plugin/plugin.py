@@ -227,7 +227,8 @@ class Plugin(object):
         )
         datums_publish_pending = 0
         publish_service = self.config["publish_service"] if "publish_service" in self.config else None
-        publish_batch_datum_topic = self.config["publish_batch_datum_topic"] if "publish_batch_datum_topic" in self.config else None
+        publish_batch_datum_topic = "dev/" if "SNAPSHOT" in APP_VERSION \
+            else "" + self.config["publish_batch_datum_topic"] if "publish_batch_datum_topic" in self.config else None
         for datum_metric in self.datums:
             for datum_type in self.datums[datum_metric]:
                 for datum_unit in self.datums[datum_metric][datum_type]:
@@ -391,9 +392,10 @@ class Plugin(object):
                         datum_dict["data_type"] != "high" and \
                         datum_dict["bin_unit"] != "all_Dtime":
                     publish_service = self.config["publish_service"] if "publish_service" in self.config else None
-                    publish_push_data_topic = self.config["publish_push_data_topic"] \
+                    topic_prefix = "dev/" if "SNAPSHOT" in APP_VERSION else ""
+                    publish_push_data_topic = (topic_prefix + self.config["publish_push_data_topic"]) \
                         if "publish_push_data_topic" in self.config else None
-                    publish_push_metadata_topic = self.config["publish_push_metadata_topic"] \
+                    publish_push_metadata_topic = (topic_prefix + self.config["publish_push_metadata_topic"]) \
                         if "publish_push_metadata_topic" in self.config else None
                     if publish_service is not None and publish_push_data_topic is not None and publish_push_metadata_topic is not None:
                         if publish_service.isConnected():
