@@ -1,7 +1,7 @@
-host: 0.0.0.0
-port: 8091
-publish_host: 192.168.2.5
-publish_port: 1883
+host: ${ANODE_HOST}
+port: ${ANODE_PORT}
+publish_host: ${MQTT_HOST}
+publish_port: ${MQTT_PORT}
 publish_batch_seconds: 600
 
 # TODO: Add publish_status on start, expire after some time, add on exit too, perhaps on a metric by metric basis? - maybe dont do?

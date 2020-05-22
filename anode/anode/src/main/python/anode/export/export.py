@@ -77,7 +77,7 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "delete":
         MODE = "DELETE"
     with open(os.path.dirname(os.path.realpath(__file__)) + "/../../../resources/config/anode.yaml", "r") as stream:
-        CONFIG = yaml.load(stream)
+        CONFIG = yaml.safe_load(stream)
 
         with open(DIR_WORK + "/sensors.csv", "r") as file:
             lines = iter(file.readlines())

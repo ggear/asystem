@@ -1,5 +1,5 @@
-host: 0.0.0.0
-port: 8091
+host: ${ANODE_HOST}
+port: ${ANODE_PORT}
 save_on_exit: True
 save_seconds: -1
 model_pull_seconds: 1

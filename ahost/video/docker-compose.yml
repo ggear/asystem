@@ -1,0 +1,31 @@
+version: '3.7'
+services:
+  unifivideo:
+    container_name: unifivideo
+    image: pducharme/unifi-video-controller
+    init: true
+    cap_add:
+      - DAC_READ_SEARCH
+    environment:
+      - TZ=America/Los_Angeles
+      - PUID=99
+      - PGID=100
+      - CREATE_TMPFS=no
+      - DEBUG=0
+    ports:
+      - '10001:10001'
+      - '1935:1935'
+      - '6666:6666'
+      - '7080:7080'
+      - '7442:7442'
+      - '7443:7443'
+      - '7444:7444'
+      - '7445:7445'
+      - '7446:7446'
+      - '7447:7447'
+    volumes:
+      - './target/binary:/var/lib/unifi-video'
+      - './target/cache:/var/cache/unifi-video'
+      - './target/video:/var/lib/unifi-video/videos'
+      - './target/video/exports:/var/cache/unifi-video/exports'
+      - './target/video/hls:/var/cache/unifi-video/hls'

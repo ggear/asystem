@@ -1,5 +1,5 @@
-host: 0.0.0.0
-port: 8091
+host: ${ANODE_HOST}
+port: ${ANODE_PORT}
 publish_host: 5.196.95.208
 publish_port: 1883
 publish_batch_seconds: 10
