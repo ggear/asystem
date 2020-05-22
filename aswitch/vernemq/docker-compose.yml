@@ -1,0 +1,11 @@
+version: '3.7'
+services:
+  run:
+    container_name: vernemq
+    image: vernemq/vernemq:1.10.2-1-alpine
+    init: true
+    environment:
+      - DOCKER_VERNEMQ_ACCEPT_EULA=yes
+      - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
+    ports:
+      - '1883:1883'

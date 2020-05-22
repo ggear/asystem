@@ -3,6 +3,7 @@ from __future__ import print_function
 import logging
 import logging.config
 import os
+import re
 import shutil
 import sys
 import time
@@ -41,6 +42,7 @@ LOG_FORMAT = "%(asctime)s %(name)-12s %(levelname)-8s %(message)s"
 
 KEEPALIVE_DEFAULT_SECONDS = 3613
 
+# TODO: Are these required? Should push out to config
 S3_REGION = "ap-southeast-2"
 S3_BUCKET = "asystem-amodel"
 
@@ -433,10 +435,23 @@ def main(core_reactor=reactor):
     (options, args) = parser.parse_args()
     Log.configure(options.verbose, options.quiet, options.shutup)
     with open(options.config, "r") as config_file:
-        config = yaml.load(config_file)
-    config["profile"] = {}
+        config = yaml.safe_load(config_file)
     with open(options.profile, 'r') as profile_file:
-        config["profile"] = profile_load(profile_file)
+        profile = profile_load(profile_file)
+    substitution_pattern = re.compile(r'\${([^}]+)}')
+
+    def substitute(node, substitutions):
+        for key, value in node.items() if isinstance(node, dict) else node.items():
+            if isinstance(value, dict) or isinstance(value, list):
+                substitute(value, substitutions)
+            elif isinstance(value, str):
+                for variable in re.findall(substitution_pattern, value):
+                    if variable in substitutions:
+                        value = value.replace("${" + variable + "}", substitutions[variable])
+            node[key] = value
+
+    substitute(config, profile)
+    config["profile"] = profile
     if not os.path.isdir(options.db_dir):
         raise IOError("No such directory: {}".format(options.db_dir))
     anode = ANode(core_reactor, options, config)

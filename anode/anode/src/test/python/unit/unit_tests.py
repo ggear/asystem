@@ -44,6 +44,7 @@ from anode.application import APP_MODEL_ENERGYFORECAST_INTRADAY_BUILD_VERSION
 from anode.application import APP_MODEL_ENERGYFORECAST_INTRADAY_PROD_VERSION
 from anode.plugin import PICKLE_PATH_REGEX
 from anode.plugin import Plugin
+from anode.plugin.kasa.kasa import KasaMeter
 
 
 # noinspection PyPep8Naming, PyUnresolvedReferences, PyShadowingNames,PyPep8,PyTypeChecker
@@ -59,6 +60,7 @@ class ANodeTest(TestCase):
         self.patch(MqttPublishService, "startService", lambda myself: None)
         self.patch(MqttPublishService, "isConnected", lambda myself: True)
         self.patch(MqttPublishService, "publishMessage", lambda myself, topic, message, queue, qos, retain, on_failure: succeed(None))
+        self.patch(KasaMeter, "datagramRequest", lambda myself: None)
         shutil.rmtree(DIR_ANODE, ignore_errors=True)
         state_dir = DIR_ANODE + "/config"
         os.makedirs(state_dir)
@@ -307,7 +309,7 @@ class ANodeTest(TestCase):
 
     def test_coverage(self):
         for arguments in [
-            ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP, "-s"],
+            ["anode", "-p" + FILE_PROFILE, "-c" + FILE_CONFIG_ALL, "-d" + DIR_ANODE_DB_TMP],
             ["anode", "--profile=" + FILE_PROFILE, "--config=" + FILE_CONFIG_ALL, "--db-dir=" + DIR_ANODE_DB_TMP, "--shutup"]
         ]:
             self.patch(sys, "argv", arguments)
