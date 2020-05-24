@@ -172,7 +172,7 @@ class ANode:
         web = Site(web_root, logPath="/dev/null")
         web.noisy = False
         self.core_reactor.addSystemEventTrigger("after", "shutdown", self.stop_server)
-        self.core_reactor.listenTCP(self.config["port"], web)
+        self.core_reactor.listenTCP(int(self.config["port"]), web)
         log_timer.log("Service", "timer", lambda: "[anode] started", context=self.start_server)
         self.core_reactor.run()
 
@@ -308,6 +308,7 @@ class WebRest:
                                .format(datum_filter, sum(len(datums_values) for datums_values in datums.values())))
         datum_format = "json" if "format" not in datum_filter else datum_filter["format"][0]
         datums_formatted = yield threads.deferToThread(Plugin.datums_to_format, datums, datum_format, datum_filter, True)
+        request.setHeader("Access-Control-Allow-Origin", "*")
         request.setHeader("Content-Disposition", "attachment; filename=anode." + datum_format)
         request.setHeader("Content-Type",
                           "text/csv" if datum_format == "csv" else (
@@ -315,7 +316,6 @@ class WebRest:
                                       "application" + datum_format))))
         log_timer.log("Interface", "timer", lambda: "[rest]", context=self.get)
         returnValue(datums_formatted)
-
 
 class WebUtil:
     def __init__(self):
