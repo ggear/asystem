@@ -59,7 +59,7 @@ class Hue(Plugin):
 
     def _poll(self):
         self.light_state = self.get_light_state()
-        self.http_get("https://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/lights", self.lights_adjust)
+        self.http_get("http://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/lights", self.lights_adjust)
 
     def http_get(self, url, callback):
         connection_pool = self.config["pool"] if "pool" in self.config else None
@@ -111,7 +111,7 @@ class Hue(Plugin):
                         group_on = False
                         LIGHT_STATE.pop(light, None)
                 if group_adjust:
-                    self.http_put("https://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/groups/" + group + "/action",
+                    self.http_put("http://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/groups/" + group + "/action",
                                   json.dumps(LIGHT_STATES[self.light_state]["state"]), self.light_adjusted)
 
                 power_second_bin = power * len(self.groups[group]["lights"]) if group_on else 0
@@ -193,4 +193,4 @@ class Hue(Plugin):
     def __init__(self, parent, name, config, reactor):
         super(Hue, self).__init__(parent, name, config, reactor)
         self.light_state = None
-        self.groups = requests.get("https://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/groups", verify=False).json()
+        self.groups = requests.get("http://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/groups", verify=False).json()

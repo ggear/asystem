@@ -151,17 +151,15 @@ def _systest(context):
         _run_local(context, "rm -rvf target/runtime-system", module)
         _run_local(context, "cp -rvf src/main/resources/config target/runtime-system", module)
         _print_line("Starting server ...")
-        _run_local(context, "docker-compose --no-ansi up -d --force-recreate", "aswitch/vernemq")
-        _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up -d --force-recreate", module)
+        _run_local(context, "docker-compose --no-ansi up --force-recreate -d", "aswitch/vernemq")
+        _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate -d", module)
         _print_line("Running system tests ...")
-
-        # TODO: Implement system tests, do the same for vernemq, work out how to launch
-        # export JASMINE_BROWSER=chrome
-        # sudo webdrivermanager chrome --linkpath /usr/local/bin
-
+        test_exit_code = _run_local(context, "karma start", join(module, "src/test/resources/karma"), warn=True).exited
         _print_line("Stopping and removing server ...")
         _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi down -v", module)
         _run_local(context, "docker-compose --no-ansi down -v", "aswitch/vernemq")
+        if test_exit_code != 0:
+            _run_local(context, "false || echo Tests failed")
         _print_footer(module, "systest")
 
 
