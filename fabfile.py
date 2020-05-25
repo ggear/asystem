@@ -1,5 +1,6 @@
 import glob
 import math
+import signal
 import sys
 from os.path import *
 
@@ -37,12 +38,14 @@ def clean(context):
 @task
 def build(context):
     _setup(context)
+    _clean(context)
     _build(context)
 
 
 @task
 def unittest(context):
     _setup(context)
+    _clean(context)
     _build(context)
     _unittest(context)
 
@@ -50,6 +53,7 @@ def unittest(context):
 @task
 def package(context):
     _setup(context)
+    _clean(context)
     _build(context)
     _package(context)
 
@@ -57,6 +61,7 @@ def package(context):
 @task
 def systest(context):
     _setup(context)
+    _clean(context)
     _build(context)
     _package(context)
     _systest(context)
@@ -65,6 +70,7 @@ def systest(context):
 @task
 def run(context):
     _setup(context)
+    _clean(context)
     _build(context)
     _package(context)
     _run(context)
@@ -90,12 +96,16 @@ def _setup(context, module="asystem"):
         _print_line("Installing requirements ...")
         for requirement in glob.glob("{}/*/*/*/reqs_*.txt".format(DIR_ROOT)):
             _run_local(context, "pip install -r {}".format(requirement))
+
+    # TODO: Update requirements or manage
+    # sudo npm install -g karma jasmine karma-jasmine karma-chrome-launcher --unsafe-perm=true --allow-root
+
     _print_footer(module, "setup")
 
 
 def _purge(context, module="asystem"):
     _print_header(module, "purge")
-    _run_local(context, "docker image prune -f -a")
+    _run_local(context, "docker system prune --volumes -f")
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) > 0:
         _run_local(context, "conda remove -y -n $CONDA_ENV --all")
     _print_footer(module, "purge")
@@ -150,25 +160,42 @@ def _systest(context):
         _print_line("Preparing environment ...")
         _run_local(context, "rm -rvf target/runtime-system", module)
         _run_local(context, "cp -rvf src/main/resources/config target/runtime-system", module)
+        _run_local(context, "docker network prune -f")
         _print_line("Starting server ...")
         _run_local(context, "docker-compose --no-ansi up --force-recreate -d", "aswitch/vernemq")
         _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate -d", module)
+        _run_local(context, "sleep 2")
         _print_line("Running system tests ...")
-        test_exit_code = _run_local(context, "karma start", join(module, "src/test/resources/karma"), warn=True).exited
+        test_exit_code = _run_local(context, "karma start",
+                                    join(module, "src/test/resources/karma"), warn=True).exited
+        test_exit_code += _run_local(context, "python system_tests.py -o cache_dir=../target/.pytest_cache",
+                                     join(module, "src/test/python/system"), warn=True).exited
         _print_line("Stopping and removing server ...")
         _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi down -v", module)
         _run_local(context, "docker-compose --no-ansi down -v", "aswitch/vernemq")
         if test_exit_code != 0:
-            _run_local(context, "false || echo Tests failed")
+            _print_line("Tests ... failed")
+            _run_local(context, "false")
         _print_footer(module, "systest")
 
 
 def _run(context):
     for module in _get_modules(context, "src/setup.py"):
         _print_header(module, "run")
+        _print_line("Preparing environment ...")
+        _run_local(context, "rm -rvf target/runtime-system", module)
+        _run_local(context, "cp -rvf src/main/resources/config target/runtime-system", module)
+        _run_local(context, "docker network prune -f")
+        _print_line("Starting server ...")
+        _run_local(context, "docker-compose --no-ansi up --force-recreate -d", "aswitch/vernemq")
 
-        # TODO: Implement run mode, starting vernemq, anode, tailing logs, then capturing ctrl-c and stopping all services
+        def server_stop(signal, frame):
+            _print_line("Stopping and removing server ...")
+            _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi down -v", module)
+            _run_local(context, "docker-compose --no-ansi down -v", "aswitch/vernemq")
 
+        signal.signal(signal.SIGINT, server_stop)
+        _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate", module)
         _print_footer(module, "run")
 
 

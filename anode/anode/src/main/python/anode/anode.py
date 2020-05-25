@@ -317,6 +317,7 @@ class WebRest:
         log_timer.log("Interface", "timer", lambda: "[rest]", context=self.get)
         returnValue(datums_formatted)
 
+
 class WebUtil:
     def __init__(self):
         pass
@@ -413,7 +414,7 @@ class Log:
                 logging.exception(exception)
 
 
-def profile_load(profile_file):
+def load_profile(profile_file):
     profile = {}
     for profile_line in profile_file:
         profile_line = profile_line.rstrip()
@@ -424,20 +425,11 @@ def profile_load(profile_file):
     return profile
 
 
-def main(core_reactor=reactor):
-    parser = OptionParser()
-    parser.add_option("-c", "--config", dest="config", default="/etc/anode/anode.yaml", help="config FILE", metavar="FILE")
-    parser.add_option("-p", "--profile", dest="profile", default="/etc/anode/.profile", help="profile FILE", metavar="FILE")
-    parser.add_option("-d", "--db-dir", dest="db_dir", default="/etc/anode/", help="config FILE", metavar="FILE")
-    parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False, help="noisy output to stdout")
-    parser.add_option("-q", "--quiet", action="store_true", dest="quiet", default=False, help="suppress most output to stdout")
-    parser.add_option("-s", "--shutup", action="store_true", dest="shutup", default=False, help="suppress all output to stdout")
-    (options, args) = parser.parse_args()
-    Log.configure(options.verbose, options.quiet, options.shutup)
-    with open(options.config, "r") as config_file:
+def load_config(config_path, profile_path):
+    with open(config_path, "r") as config_file:
         config = yaml.safe_load(config_file)
-    with open(options.profile, 'r') as profile_file:
-        profile = profile_load(profile_file)
+    with open(profile_path, 'r') as profile_file:
+        profile = load_profile(profile_file)
     substitution_pattern = re.compile(r'\${([^}]+)}')
 
     def substitute(node, substitutions):
@@ -452,6 +444,20 @@ def main(core_reactor=reactor):
 
     substitute(config, profile)
     config["profile"] = profile
+    return config
+
+
+def main(core_reactor=reactor):
+    parser = OptionParser()
+    parser.add_option("-c", "--config", dest="config", default="/etc/anode/anode.yaml", help="config FILE", metavar="FILE")
+    parser.add_option("-p", "--profile", dest="profile", default="/etc/anode/.profile", help="profile FILE", metavar="FILE")
+    parser.add_option("-d", "--db-dir", dest="db_dir", default="/etc/anode/", help="config FILE", metavar="FILE")
+    parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False, help="noisy output to stdout")
+    parser.add_option("-q", "--quiet", action="store_true", dest="quiet", default=False, help="suppress most output to stdout")
+    parser.add_option("-s", "--shutup", action="store_true", dest="shutup", default=False, help="suppress all output to stdout")
+    (options, args) = parser.parse_args()
+    Log.configure(options.verbose, options.quiet, options.shutup)
+    config = load_config(options.config, options.profile)
     if not os.path.isdir(options.db_dir):
         raise IOError("No such directory: {}".format(options.db_dir))
     anode = ANode(core_reactor, options, config)
