@@ -5,18 +5,15 @@ jasmine.DEFAULT_TIMEOUT_INTERVAL = 10000;
 
 describe('ANode', function () {
 
-    var metrics;
-    var metrics_anode;
+    var metrics_sum;
 
     beforeAll(function (done) {
-        metrics = 0;
-        metrics_anode = 0;
+        metrics_sum = 0;
         setTimeout(function () {
             new ANode(connectionUri("")).restfulRequest("metrics=anode", function (datums) {
                 for (var i = 0; i < datums.length; i++) {
-                    metrics++;
                     if (datums[i].data_metric.indexOf("metrics", this.length - "metrics".length) !== -1) {
-                        metrics_anode += datums[i].data_value;
+                        metrics_sum += datums[i].data_value;
                     }
                 }
                 done();
@@ -28,7 +25,15 @@ describe('ANode', function () {
         connectionTest(done, connectionUri(""))
     });
 
-    // TODO: Adjust for power metrics unavailable
+    it('message', function (done) {
+        messageTest(done, connectionUri(""), metrics_sum)
+    });
+
+    it('message something ', function (done) {
+        messageTest(done, connectionUri("some=rubbish"), metrics_sum)
+    });
+
+    // TODO: Re-enable once power (ie reliable real-time) metrics are again available
     // it('message metrics bins', function (done) {
     //     messageTest(done, connectionUri("metrics=power-production.electricity.inverter&bins=1second"), 1)
     // });
@@ -60,27 +65,14 @@ describe('ANode', function () {
     // it('message metrics', function (done) {
     //     messageTest(done, connectionUri("metrics=power-production.electricity.inverter"), 3)
     // });
-
-    it('message bins', function (done) {
-        messageTest(done, connectionUri("bins=1second"), 9)
-    });
-
+    //
+    // it('message bins', function (done) {
+    //     messageTest(done, connectionUri("bins=1second"), 9)
+    // });
+    //
     // it('message metrics', function (done) {
     //     messageTest(done, connectionUri("metrics=power"), 21)
     // });
-
-    it('message something ', function (done) {
-        messageTest(done, connectionUri("something=else"), metrics)
-    });
-
-    // TODO: Re-enable once publish reliability resolved
-    // it('message publish', function (done) {
-    //     restTest(done, connectionUri("scope=publish", true), 0)
-    // });
-
-    it('message', function (done) {
-        messageTest(done, connectionUri(""), metrics)
-    });
 
 });
 

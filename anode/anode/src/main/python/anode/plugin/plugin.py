@@ -225,7 +225,6 @@ class Plugin(object):
             "second",
             data_transient=True
         )
-        datums_publish_pending = 0
         publish_service = self.config["publish_service"] if "publish_service" in self.config else None
         publish_batch_datum_topic = "dev/" if "SNAPSHOT" in APP_VERSION \
             else "" + self.config["publish_batch_datum_topic"] if "publish_batch_datum_topic" in self.config else None
@@ -251,11 +250,10 @@ class Plugin(object):
                                                 str(failure).replace("\n", ""))), queue.appendleft(message)))
                         elif publish_service is None:
                             datums_publish.clear()
-                        datums_publish_pending += len(datums_publish)
         self.datum_push(
             metric_name + "queue",
             "current", "point",
-            self.datum_value(datums_publish_pending),
+            self.datum_value(len(datums_publish)),
             "datums",
             1,
             time_now,
@@ -265,7 +263,8 @@ class Plugin(object):
             data_bound_lower=0,
             data_transient=True
         )
-        anode.Log(logging.INFO).log("Plugin", "state", lambda: "[{}] published [{}] datums".format(self.name, datums_publish_pending))
+        anode.Log(logging.INFO).log("Plugin", "state", lambda: "[{}] published [{}], pending [{}] datums"
+                                    .format(self.name, datums_publish_len - len(datums_publish), len(datums_publish)))
 
     def datum_push(self, data_metric, data_temporal, data_type, data_value, data_unit, data_scale, data_timestamp, bin_timestamp, bin_width,
                    bin_unit, asystem_version=None, data_version=None, data_string=None, data_bound_upper=None, data_bound_lower=None,

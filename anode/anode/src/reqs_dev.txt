@@ -3,3 +3,5 @@ pathlib2==2.3.2
 paho-mqtt==1.5.0
 jasmine==3.5.0
 webdrivermanager==0.8.0
+pytest==4.6.10
+websocket-client==0.57.0

@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import inspect
 import os
 import sys
@@ -15,11 +13,10 @@ import sys
 import time
 from anode.plugin.plugin import Plugin
 import paho.mqtt.client as mqtt
-import yaml
+import anode
 
 MODE = "QUERY"
 
-CONFIG = None
 TIME_WAIT_SECS = 2
 
 SENSORS = {}
@@ -36,6 +33,9 @@ SENSORS_HEADER = [
     "Entity Topic"
 ]
 
+CONFIG = anode.anode.load_config(
+    os.path.join(DIR_ROOT, "../resources/config/anode.yaml"),
+    os.path.join(DIR_ROOT, "../resources/config/.profile"))
 
 def on_connect(client, user_data, flags, return_code):
     client.subscribe("{}/#".format(CONFIG["publish_push_metadata_topic"]))
@@ -76,56 +76,53 @@ def on_message(client, user_data, message):
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "delete":
         MODE = "DELETE"
-    with open(os.path.dirname(os.path.realpath(__file__)) + "/../../../resources/config/anode.yaml", "r") as stream:
-        CONFIG = yaml.safe_load(stream)
+    with open(DIR_WORK + "/sensors.csv", "r") as file:
+        lines = iter(file.readlines())
+        next(lines)
+        for line in lines:
+            sensor = line.split(",")
+            SENSORS[sensor[1]] = sensor
 
-        with open(DIR_WORK + "/sensors.csv", "r") as file:
-            lines = iter(file.readlines())
-            next(lines)
-            for line in lines:
-                sensor = line.split(",")
-                SENSORS[sensor[1]] = sensor
+    client = mqtt.Client()
+    client.on_connect = on_connect
+    client.on_message = on_message
+    client.connect(CONFIG["publish_host"], CONFIG["publish_port"], 60)
+    time_start = time.time()
+    while True:
+        client.loop()
+        time_elapsed = time.time() - time_start
+        if time_elapsed > TIME_WAIT_SECS:
+            client.disconnect()
+            break
 
-        client = mqtt.Client()
-        client.on_connect = on_connect
-        client.on_message = on_message
-        client.connect(CONFIG["publish_host"], CONFIG["publish_port"], 60)
-        time_start = time.time()
-        while True:
-            client.loop()
-            time_elapsed = time.time() - time_start
-            if time_elapsed > TIME_WAIT_SECS:
-                client.disconnect()
-                break
+    sensors = sorted(SENSORS.values(), key=lambda x: x[0].zfill(7) + x[6] + x[8])
+    with open(DIR_WORK + "/sensors.csv", "w") as file:
+        for sensor in [SENSORS_HEADER] + sensors:
+            file.write("{}\n".format(",".join(sensor)))
 
-        sensors = sorted(SENSORS.values(), key=lambda x: x[0].zfill(7) + x[6] + x[8])
-        with open(DIR_WORK + "/sensors.csv", "w") as file:
-            for sensor in [SENSORS_HEADER] + sensors:
-                file.write("{}\n".format(",".join(sensor)))
-
-        with open(DIR_HOMEASSISTANT + "/customize.yaml", "w") as file:
-            for sensor in sensors:
-                file.write(inspect.cleandoc("""
-                    sensor.{}:
-                      friendly_name: {}
-                """.format(sensor[2], sensor[5])) + "\n")
-
-        sensors_domain = {}
+    with open(DIR_HOMEASSISTANT + "/customize.yaml", "w") as file:
         for sensor in sensors:
-            if sensor[6] in sensors_domain:
-                sensors_domain[sensor[6]] += [sensor]
-            else:
-                sensors_domain[sensor[6]] = [sensor]
-        with open(DIR_HOMEASSISTANT + "/lovelace.yaml", "w") as file:
-            for domain in sensors_domain:
-                file.write(
-                    "      - type: entities\n"
-                    "        show_header_toggle: false\n"
-                    "        entities:\n"
-                        .format(domain))
-                for sensor in sensors_domain[domain]:
-                    file.write(
-                        "          - entity: sensor.{}\n"
-                            .format(sensor[2]))
+            file.write(inspect.cleandoc("""
+                sensor.{}:
+                  friendly_name: {}
+            """.format(sensor[2], sensor[5])) + "\n")
 
-        print("{} [{}] metrics".format("DELETED" if MODE == "DELETE" else "DETECTED", len(SENSORS)))
+    sensors_domain = {}
+    for sensor in sensors:
+        if sensor[6] in sensors_domain:
+            sensors_domain[sensor[6]] += [sensor]
+        else:
+            sensors_domain[sensor[6]] = [sensor]
+    with open(DIR_HOMEASSISTANT + "/lovelace.yaml", "w") as file:
+        for domain in sensors_domain:
+            file.write(
+                "      - type: entities\n"
+                "        show_header_toggle: false\n"
+                "        entities:\n"
+                    .format(domain))
+            for sensor in sensors_domain[domain]:
+                file.write(
+                    "          - entity: sensor.{}\n"
+                        .format(sensor[2]))
+
+    print("{} [{}] metrics".format("DELETED" if MODE == "DELETE" else "DETECTED", len(SENSORS)))

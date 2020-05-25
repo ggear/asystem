@@ -35,7 +35,7 @@ from twisted_s3 import auth
 from anode.anode import MqttPublishService
 from anode.anode import S3_BUCKET
 from anode.anode import S3_REGION
-from anode.anode import profile_load
+from anode.anode import load_profile
 from anode.anode import main
 from anode.application import *
 from anode.application import APP_MODEL_ENERGYFORECAST_INTERDAY_BUILD_VERSION
@@ -1588,7 +1588,7 @@ FILE_MODEL_ENERGYFORECAST_INTRADAY = DIR_ROOT + "/../asystem-amodel/target/asyst
 
 PROFILE = {}
 with open(FILE_PROFILE, 'r') as profile_file:
-    PROFILE = profile_load(profile_file)
+    PROFILE = load_profile(profile_file)
 
 TEST_INTEGRATION = PROFILE["INTEGRATION_TEST_SKIP"].lower() == "false" if "INTEGRATION_TEST_SKIP" in PROFILE else is_connected()
 
