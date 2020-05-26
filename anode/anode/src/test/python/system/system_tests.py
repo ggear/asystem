@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.join(DIR_ROOT, "src/main/python"))
 import os
 
 import requests
-from pytest import main
+import pytest
 import anode
 import json
 import time
@@ -89,5 +89,5 @@ def test_ws():
 
 
 if __name__ == '__main__':
-    sys.argv.append(__file__)
-    sys.exit(main())
+    sys.argv.extend([__file__, "-o", "cache_dir=../target/.pytest_cache"])
+    sys.exit(pytest.main())

@@ -21,6 +21,7 @@ import time
 import urlparse
 from StringIO import StringIO
 from random import randint
+import pytest
 
 import ilio
 import pandas
@@ -1552,7 +1553,7 @@ TIME_BOOT_LOCAL = time.localtime()
 TIME_OFFSET = calendar.timegm(TIME_BOOT_LOCAL) - calendar.timegm(time.gmtime(time.mktime(TIME_BOOT_LOCAL)))
 TIME_START_OF_DAY = (TIME_BOOT + TIME_OFFSET) - (TIME_BOOT + TIME_OFFSET) % (24 * 60 * 60) - TIME_OFFSET
 
-DIR_ROOT = (os.path.dirname(__file__) + "/../../..")
+DIR_ROOT = os.path.dirname(os.path.realpath(__file__)) + "/../../.."
 DIR_TARGET = DIR_ROOT + "/../target" if os.path.isdir(DIR_ROOT + "/../target") else DIR_ROOT + "/../../target"
 DIR_TEST = DIR_ROOT + "/test/resources"
 DIR_ANODE = DIR_TARGET + "/runtime-unit"
@@ -1644,3 +1645,7 @@ HTTP_GETS = {
     #     "9000/model.pkl":
     #     ilio.read(FILE_MODEL_ENERGYFORECAST)
 }
+
+if __name__ == '__main__':
+    sys.argv.extend([__file__, "-o", "cache_dir=../target/.pytest_cache"])
+    sys.exit(pytest.main())

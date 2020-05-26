@@ -138,8 +138,8 @@ def _unittest(context):
     for module in _get_modules(context, "src/setup.py"):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "python setup.py test", join(module, "target/package"))
-        _print_footer(module, "unittest")
+        _run_local(context, "python unit_tests.py", join(module, "src/test/python/unit"))
+    _print_footer(module, "unittest")
 
 
 def _package(context):
@@ -166,10 +166,8 @@ def _systest(context):
         _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate -d", module)
         _run_local(context, "sleep 2")
         _print_line("Running system tests ...")
-        test_exit_code = _run_local(context, "karma start",
-                                    join(module, "src/test/resources/karma"), warn=True).exited
-        test_exit_code += _run_local(context, "python system_tests.py -o cache_dir=../target/.pytest_cache",
-                                     join(module, "src/test/python/system"), warn=True).exited
+        test_exit_code = _run_local(context, "karma start", join(module, "src/test/resources/karma"), warn=True).exited
+        test_exit_code += _run_local(context, "python system_tests.py", join(module, "src/test/python/system"), warn=True).exited
         _print_line("Stopping and removing server ...")
         _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi down -v", module)
         _run_local(context, "docker-compose --no-ansi down -v", "aswitch/vernemq")
