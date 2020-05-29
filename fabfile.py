@@ -130,6 +130,10 @@ def _build(context):
                             "mv main/python/{}/application.py.new main/python/{}/application.py"
                    .format(_name(module), _name(module), _name(module), _name(module)), join(module, "target/package"),
                    env=TEMPLATE_VARIABLES)
+        _run_local(context, "envsubst < main/python/{}/web/js/metadata/datum.avsc > main/python/{}/web/js/metadata/datum.avsc.new && "
+                            "mv main/python/{}/web/js/metadata/datum.avsc.new main/python/{}/web/js/metadata/datum.avsc"
+                   .format(_name(module), _name(module), _name(module), _name(module)), join(module, "target/package"),
+                   env=TEMPLATE_VARIABLES)
         _run_local(context, "python setup.py sdist", join(module, "target/package"))
         _print_footer(module, "build")
 
@@ -193,7 +197,7 @@ def _run(context):
             _run_local(context, "docker-compose --no-ansi down -v", "aswitch/vernemq")
 
         signal.signal(signal.SIGINT, server_stop)
-        _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate", module)
+        _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi run --service-ports anode anode -v", module)
         _print_footer(module, "run")
 
 

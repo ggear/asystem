@@ -2,7 +2,7 @@ host: ${ANODE_HOST}
 port: ${ANODE_PORT}
 publish_host: ${MQTT_HOST}
 publish_port: ${MQTT_PORT}
-publish_batch_seconds: 600
+publish_batch_seconds: 0
 
 # TODO: Add publish_status on start, expire after some time, add on exit too, perhaps on a metric by metric basis? - maybe dont do?
 publish_status_topic: 'anode/status'
@@ -21,16 +21,16 @@ save_on_exit: True
 save_seconds: 600
 plugin:
 
-# TODO: Diable until energy meter is moved to Wootoona
-#  fronius:
-#    poll_seconds: 1
-#    buffer_ticks: 120
-#    history_partitions: 15
-#    history_ticks: 10500000
-#    history_partition_seconds: 86400
-#    repeat_seconds: 99
-#    repeat_partition: True
-#    publish_ticks: -1
+  # TODO: Diable until energy meter is moved to Wootoona
+  #  fronius:
+  #    poll_seconds: 1
+  #    buffer_ticks: 120
+  #    history_partitions: 15
+  #    history_ticks: 10500000
+  #    history_partition_seconds: 86400
+  #    repeat_seconds: 99
+  #    repeat_partition: True
+  #    publish_ticks: -1
 
   kasa:
     poll_seconds: 1

@@ -228,12 +228,14 @@ class Plugin(object):
         publish_service = self.config["publish_service"] if "publish_service" in self.config else None
         publish_batch_datum_topic = "dev/" if "SNAPSHOT" in APP_VERSION \
             else "" + self.config["publish_batch_datum_topic"] if "publish_batch_datum_topic" in self.config else None
+        datums_publish_len_sum = 0
         for datum_metric in self.datums:
             for datum_type in self.datums[datum_metric]:
                 for datum_unit in self.datums[datum_metric][datum_type]:
                     for datum_bin in self.datums[datum_metric][datum_type][datum_unit]:
                         datums_publish = self.datums[datum_metric][datum_type][datum_unit][datum_bin][DATUM_QUEUE_PUBLISH]
                         datums_publish_len = len(datums_publish)
+                        datums_publish_len_sum += datums_publish_len
                         if publish_service is not None and publish_batch_datum_topic is not None:
                             if publish_service.isConnected():
                                 for index in xrange(datums_publish_len):
@@ -263,8 +265,8 @@ class Plugin(object):
             data_bound_lower=0,
             data_transient=True
         )
-        anode.Log(logging.INFO).log("Plugin", "state", lambda: "[{}] published [{}], pending [{}] datums"
-                                    .format(self.name, datums_publish_len - len(datums_publish), len(datums_publish)))
+        anode.Log(logging.DEBUG).log("Plugin", "state", lambda: "[{}] batch publish queue length is [{}] datums"
+                                     .format(self.name, datums_publish_len_sum))
 
     def datum_push(self, data_metric, data_temporal, data_type, data_value, data_unit, data_scale, data_timestamp, bin_timestamp, bin_width,
                    bin_unit, asystem_version=None, data_version=None, data_string=None, data_bound_upper=None, data_bound_lower=None,
@@ -310,8 +312,8 @@ class Plugin(object):
                 self.datums[datum_dict["data_metric"]][datum_dict["data_type"]][datum_dict["data_unit"]] = {}
             if str(datum_dict["bin_width"]) + datum_dict["bin_unit"] not in \
                     self.datums[datum_dict["data_metric"]][datum_dict["data_type"]][datum_dict["data_unit"]]:
-                self.datums[datum_dict["data_metric"]][datum_dict["data_type"]][datum_dict["data_unit"]][
-                    str(datum_dict["bin_width"]) + datum_dict["bin_unit"]] = {
+                self.datums[datum_dict["data_metric"]][datum_dict["data_type"]][datum_dict["data_unit"]] \
+                    [str(datum_dict["bin_width"]) + datum_dict["bin_unit"]] = {
                     DATUM_QUEUE_PUBLISH: deque(maxlen=(None if "publish_ticks" not in self.config or self.config["publish_ticks"] < 1
                                                        else self.config["publish_ticks"])), DATUM_QUEUE_BUFFER: deque()}
                 if not data_transient:
@@ -370,7 +372,8 @@ class Plugin(object):
                                             else data_derived_unit, asystem_version=asystem_version, data_version=data_version,
                                             data_derived_force=data_derived_force, data_push_force=data_push_force,
                                             data_transient=data_transient)
-                    if not datum_dict["data_temporal"] == "derived":
+                    if not datum_dict["data_temporal"] == "derived" and "publish_batch_seconds" in self.config and \
+                            self.config["publish_batch_seconds"] > 0:
                         datums_deref[DATUM_QUEUE_PUBLISH].append(datum_avro)
                     if "history_ticks" in self.config and self.config["history_ticks"] > 0 and \
                             "history_partitions" in self.config and self.config["history_partitions"] > 0 and \

@@ -37,6 +37,7 @@ CONFIG = anode.anode.load_config(
     os.path.join(DIR_ROOT, "../resources/config/anode.yaml"),
     os.path.join(DIR_ROOT, "../resources/config/.profile"))
 
+
 def on_connect(client, user_data, flags, return_code):
     client.subscribe("{}/#".format(CONFIG["publish_push_metadata_topic"]))
 

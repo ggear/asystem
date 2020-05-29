@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-<!--suppress ALL -->
 <html lang="en">
 <head>
     <title>anode</title>
@@ -41,8 +40,8 @@
                     document.getElementById("datums_header").innerHTML =
                         "<a href='javascript: toggleLinks(); void(0)'>anode.<span id='datums_header_connection'>connected</span><span id='datums_header_status'>»</span></a>";
                     styleTick(document.getElementById("datums_header_connection"), 1);
-                    document.getElementById("datums_header_version").innerHTML = metadata["asystem"]
-                    if (metadata["asystem"].endsWith("SNAPSHOT")) styleTick(document.getElementById("datums_header_version"), -1)
+                    document.getElementById("datums_header_version").innerHTML = metadata["version"]
+                    if (metadata["version"].endsWith("SNAPSHOT")) styleTick(document.getElementById("datums_header_version"), -1)
                     else styleTick(document.getElementById("datums_header_version"), 1)
                 },
                 function () {

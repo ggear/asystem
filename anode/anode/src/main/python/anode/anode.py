@@ -90,8 +90,11 @@ class ANode:
             for plugin_name in self.config["plugin"]:
                 self.config["plugin"][plugin_name]["pool"] = self.web_pool
                 self.config["plugin"][plugin_name]["db_dir"] = self.options.db_dir
+                self.config["plugin"][plugin_name]["profile"] = self.config["profile"]
                 if self.publish_service is not None:
                     self.config["plugin"][plugin_name]["publish_service"] = self.publish_service
+                if "publish_batch_seconds" in self.config:
+                    self.config["plugin"][plugin_name]["publish_batch_seconds"] = self.config["publish_batch_seconds"]
                 if "publish_status_topic" in self.config:
                     self.config["plugin"][plugin_name]["publish_status_topic"] = self.config["publish_status_topic"]
                 if "publish_push_data_topic" in self.config:

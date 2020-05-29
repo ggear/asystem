@@ -1,5 +1,6 @@
 {
   "namespace": "com.jag.asystem.anode.avro",
+  "version": "$VERSION_ABSOLUTE",
   "name": "Datum",
   "type": "record",
   "fields": [
