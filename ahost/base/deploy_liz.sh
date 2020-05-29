@@ -34,14 +34,14 @@ fi
 # Install Docker
 ###############################################################################
 apt-get install -y \
-    apt-transport-https=1.8.2 \
-    ca-certificates=20190110 \
-    curl=7.64.0-4+deb10u1 \
-    gnupg-agent=2.2.12-1+deb10u1 \
-    software-properties-common=0.96.20.2-2
+  apt-transport-https=1.8.2 \
+  ca-certificates=20190110 \
+  curl=7.64.0-4+deb10u1 \
+  gnupg-agent=2.2.12-1+deb10u1 \
+  software-properties-common=0.96.20.2-2
 curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
 add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/debian \
+  "deb [arch=amd64] https://download.docker.com/linux/debian \
    $(lsb_release -cs) \
    stable"
 apt-get install -y \

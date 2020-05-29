@@ -30,4 +30,4 @@ RUN export PYTHONPATH=/asystem/runtime/lib/python2.7/site-packages:/asystem/inst
 FROM image_runtime
 COPY --from=image_install /asystem/runtime /usr/local
 
-CMD ["anode"]
+CMD ["anode", "--quiet"]

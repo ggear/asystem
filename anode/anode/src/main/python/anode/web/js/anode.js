@@ -31,7 +31,7 @@ function decodeDatumField(datumField) {
 function ANode(uri, onopen, onclose, onmessage) {
 
     if (!(this instanceof ANode)) {
-        throw "Anonde constructor not used";
+        throw "Anode constructor not used";
     }
 
     var outer = this;
@@ -103,43 +103,36 @@ function ANode(uri, onopen, onclose, onmessage) {
         datum.order_index = this.orderingIndexes["data_metric"][datum.data_metric] + this.orderingIndexes["data_type"][datum.data_type] +
             this.orderingIndexes["bin_unit"][datum.bin_unit] + datum.bin_width;
         datum.data_timeliness = "";
-        //noinspection EqualityComparisonWithCoercionJS,EqualityComparisonWithCoercionJS,EqualityComparisonWithCoercionJS,EqualityComparisonWithCoercionJS,EqualityComparisonWithCoercionJS
         if (((datum.data_temporal == "current" || datum.data_temporal == "repeat" || datum.data_temporal == "derived") && datum.data_type == "point") || datum.bin_width == 0) {
             datum.data_timeliness = "now";
         } else {
-            //noinspection EqualityComparisonWithCoercionJS,EqualityComparisonWithCoercionJS,EqualityComparisonWithCoercionJS,EqualityComparisonWithCoercionJS
             if (datum.data_type != "point" && datum.data_type != "integral" && datum.data_type != "enumeration" && datum.data_type != "epoch") {
                 datum.data_timeliness = datum.data_type + " ";
             }
             if (datum.bin_width > 1) {
-                //noinspection EqualityComparisonWithCoercionJS
                 if (datum.data_temporal == "forecast") {
-                    //noinspection EqualityComparisonWithCoercionJS
                     if (datum.bin_unit == "day") {
-                        //noinspection EqualityComparisonWithCoercionJS
                         if (datum.bin_width == 2) {
                             datum.data_timeliness += "tomorrow";
-                        } else { //noinspection EqualityComparisonWithCoercionJS
+                        } else {
                             if (datum.bin_width == 3) {
                                 datum.data_timeliness += "overmorrow";
                             }
                         }
-                    } else { //noinspection EqualityComparisonWithCoercionJS
+                    } else {
                         if (datum.bin_unit == "day-time") {
-                            //noinspection EqualityComparisonWithCoercionJS
                             if (datum.bin_width == 2) {
                                 datum.data_timeliness += "tomorrow day time";
-                            } else { //noinspection EqualityComparisonWithCoercionJS
+                            } else {
                                 if (datum.bin_width == 3) {
                                     datum.data_timeliness += "overmorrow day time";
                                 }
                             }
-                        } else { //noinspection EqualityComparisonWithCoercionJS
+                        } else {
                             if (datum.bin_unit == "night-time") {
-                                //noinspection EqualityComparisonWithCoercionJS
                                 if (datum.bin_width == 2) {
                                     datum.data_timeliness += "tomorrow night time";
-                                } else { //noinspection EqualityComparisonWithCoercionJS
+                                } else {
                                     if (datum.bin_width == 3) {
                                         datum.data_timeliness += "overmorrow night time";
                                     }
@@ -151,16 +144,15 @@ function ANode(uri, onopen, onclose, onmessage) {
                     datum.data_timeliness += "over the last " + datum.bin_width + " " + datum.bin_unit + "s";
                 }
             } else {
-                //noinspection EqualityComparisonWithCoercionJS
                 if (datum.bin_unit == "day") {
                     datum.data_timeliness += "today";
-                } else { //noinspection EqualityComparisonWithCoercionJS
+                } else {
                     if (datum.bin_unit == "day-time") {
                         datum.data_timeliness += "during the day";
-                    } else { //noinspection EqualityComparisonWithCoercionJS
+                    } else {
                         if (datum.bin_unit == "night-time") {
                             datum.data_timeliness += "over night";
-                        } else { //noinspection EqualityComparisonWithCoercionJS
+                        } else {
                             if (datum.bin_unit == "all-time") {
                                 datum.data_timeliness += "for all time";
                             } else {
@@ -185,9 +177,8 @@ ANode.prototype.metadataRequest = function () {
     var metadataHttpRequest = new XMLHttpRequest();
     metadataHttpRequest.open("GET", this.metadataUri, false);
     metadataHttpRequest.onreadystatechange = function () {
-        //noinspection EqualityComparisonWithCoercionJS
         if (metadataHttpRequest.readyState == 4) {
-            //noinspection EqualityComparisonWithCoercionJS
+
             if (metadataHttpRequest.status == 200) {
                 metadata = JSON.parse(metadataHttpRequest.responseText);
             }
@@ -201,9 +192,8 @@ ANode.prototype.restfulRequest = function (parameters, onmessage) {
     var restfulHttpRequest = new XMLHttpRequest();
     restfulHttpRequest.open("GET", this.restfulUri + (parameters ? ("?" + parameters) : ""), true);
     restfulHttpRequest.onreadystatechange = function () {
-        //noinspection EqualityComparisonWithCoercionJS
         if (restfulHttpRequest.readyState == 4) {
-            //noinspection EqualityComparisonWithCoercionJS
+
             if (restfulHttpRequest.status == 200) {
                 onmessage(JSON.parse(restfulHttpRequest.responseText));
             }
