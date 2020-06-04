@@ -42,6 +42,9 @@ LOG_FORMAT = "%(asctime)s %(name)-12s %(levelname)-8s %(message)s"
 
 KEEPALIVE_DEFAULT_SECONDS = 3613
 
+STATUS_UP = "UP"
+STATUS_DOWN = "DOWN"
+
 # TODO: Are these required? Should push out to config
 S3_REGION = "ap-southeast-2"
 S3_BUCKET = "asystem-amodel"
@@ -70,7 +73,6 @@ class ANode:
             mqtt_client_string = clientFromString(reactor, "tcp:" + self.config["publish_host"] + ":" + str(self.config["publish_port"]))
             self.publish_service = MqttPublishService(mqtt_client_string, MQTTFactory(profile=MQTTFactory.PUBLISHER),
                                                       KEEPALIVE_DEFAULT_SECONDS, access_key, secret_key)
-            self.publish_service.startService()
 
         def looping_call(loop_function, loop_seconds):
             loop_call = LoopingCall(loop_function)
@@ -116,11 +118,10 @@ class ANode:
                 time_current = plugin.get_time()
                 time_partition = self.config["plugin"][plugin.name]["history_partition_seconds"]
                 time_partition_next = time_partition - (time_current - plugin.get_time_period(time_current, time_partition))
-                plugin_partitioncall = LoopingCall(self.plugins[plugin.name].repeat, force=True)
-                plugin_partitioncall.clock = self.core_reactor
-                self.core_reactor.callLater(time_partition_next,
-                                            lambda _plugin_partitioncall, _time_partition: _plugin_partitioncall.start(_time_partition),
-                                            plugin_partitioncall, time_partition)
+                plugin_partition_call = LoopingCall(self.plugins[plugin.name].repeat, force=True)
+                plugin_partition_call.clock = self.core_reactor
+                self.core_reactor.callLater(time_partition_next, lambda _plugin_partition_call, _time_partition: \
+                    _plugin_partition_call.start(_time_partition), plugin_partition_call, time_partition)
         if self.publish and "publish_batch_seconds" in self.config and self.config["publish_batch_seconds"] > 0:
             looping_call(self.publish_datums, self.config["publish_batch_seconds"])
         if "save_seconds" in self.config and self.config["save_seconds"] > 0:
@@ -149,8 +150,18 @@ class ANode:
         self.web_ws.push(datums)
 
     def publish_datums(self):
+        self.publish_status(STATUS_UP)
         for plugin in self.plugins.values():
             plugin.publish()
+
+    def publish_status(self, status):
+        if self.publish and self.publish_service is not None and "publish_status_topic" in self.config \
+                and self.publish_service.isConnected():
+            self.publish_service.publishMessage(self.config["publish_status_topic"], status, None, 1, False,
+                                                lambda failure, message, queue: (
+                                                    Log(logging.ERROR).log("Service", "state", lambda:
+                                                    "[{}] publish failed status [{}] with reason {}".format(
+                                                        self.name, status, str(failure).replace("\n", ""))), None))
 
     def store_state(self):
         state_dir = os.path.join(self.options.db_dir, "anode")
@@ -176,6 +187,8 @@ class ANode:
         web.noisy = False
         self.core_reactor.addSystemEventTrigger("after", "shutdown", self.stop_server)
         self.core_reactor.listenTCP(int(self.config["port"]), web)
+        if self.publish_service is not None:
+            self.publish_service.startService()
         log_timer.log("Service", "timer", lambda: "[anode] started", context=self.start_server)
         self.core_reactor.run()
 
@@ -183,6 +196,9 @@ class ANode:
         log_timer = Log(logging.DEBUG).start()
         Log(logging.INFO).log("Service", "state", lambda: "[anode] stopping")
         if "save_on_exit" in self.config: self.store_state()
+        if self.publish_service is not None:
+            self.publish_status(STATUS_DOWN)
+            self.publish_service.stopService()
         log_timer.log("Service", "timer", lambda: "[anode] stopped", context=self.stop_server)
         return succeed(None)
 
@@ -199,6 +215,9 @@ class MqttPublishService(ClientService):
     def startService(self):
         self.whenConnected().addCallback(self.makeConnection)
         ClientService.startService(self)
+
+    def stopService(self):
+        ClientService.stopService(self)
 
     @inlineCallbacks
     def makeConnection(self, protocol):

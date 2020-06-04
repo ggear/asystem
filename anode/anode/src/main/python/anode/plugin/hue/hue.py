@@ -9,6 +9,7 @@ import requests
 import treq
 import urllib3
 from astral import Astral
+from requests.exceptions import RequestException
 from treq.client import HTTPClient
 from twisted.internet import ssl
 from twisted.web.client import Agent
@@ -58,8 +59,9 @@ class DoNotVerifySSLContextFactory(object):
 class Hue(Plugin):
 
     def _poll(self):
-        self.light_state = self.get_light_state()
-        self.http_get("http://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/lights", self.lights_adjust)
+        if not self.disabled:
+            self.light_state = self.get_light_state()
+            self.http_get("http://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/lights", self.lights_adjust)
 
     def http_get(self, url, callback):
         connection_pool = self.config["pool"] if "pool" in self.config else None
@@ -192,5 +194,11 @@ class Hue(Plugin):
 
     def __init__(self, parent, name, config, reactor):
         super(Hue, self).__init__(parent, name, config, reactor)
+        self.disabled = False
         self.light_state = None
-        self.groups = requests.get("http://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/groups", verify=False).json()
+        try:
+            self.groups = requests.get("http://" + BRIDGE_IP + "/api/" + BRIDGE_TOKEN + "/groups", verify=False).json()
+        except RequestException as exception:
+            self.disabled = True
+            anode.Log(logging.ERROR).log("Plugin", "error", lambda: "[{}] error [{}] processing request, disabling plugin:\n"
+                                         .format(self.name, exception), exception)
