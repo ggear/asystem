@@ -4,7 +4,7 @@ module.exports = function (config) {
         frameworks: ['jasmine'],
         files: [
             '../../../../src/main/python/anode/web/js/anode.js',
-            '../../../../src/test/javascript/javascript.js',
+            '../../../../src/test/python/system/system_tests.js',
         ],
         exclude: [],
         preprocessors: {},

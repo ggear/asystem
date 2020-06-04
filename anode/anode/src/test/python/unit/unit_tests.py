@@ -59,6 +59,7 @@ class ANodeTest(TestCase):
         self.patch(threads, "deferToThread",
                    lambda to_execute, *arguments, **keyword_arguments: to_execute(*arguments, **keyword_arguments))
         self.patch(MqttPublishService, "startService", lambda myself: None)
+        self.patch(MqttPublishService, "stopService", lambda myself: None)
         self.patch(MqttPublishService, "isConnected", lambda myself: True)
         self.patch(MqttPublishService, "publishMessage", lambda myself, topic, message, queue, qos, retain, on_failure: succeed(None))
         self.patch(KasaMeter, "datagramRequest", lambda myself: None)

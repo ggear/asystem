@@ -372,8 +372,7 @@ class Plugin(object):
                                             else data_derived_unit, asystem_version=asystem_version, data_version=data_version,
                                             data_derived_force=data_derived_force, data_push_force=data_push_force,
                                             data_transient=data_transient)
-                    if not datum_dict["data_temporal"] == "derived" and "publish_batch_seconds" in self.config and \
-                            self.config["publish_batch_seconds"] > 0:
+                    if not datum_dict["data_temporal"] == "derived" and "publish_batch_datum_topic" in self.config:
                         datums_deref[DATUM_QUEUE_PUBLISH].append(datum_avro)
                     if "history_ticks" in self.config and self.config["history_ticks"] > 0 and \
                             "history_partitions" in self.config and self.config["history_partitions"] > 0 and \

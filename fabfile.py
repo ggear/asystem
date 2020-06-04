@@ -16,8 +16,6 @@ def default(context):
     _unittest(context)
     _package(context)
     _systest(context)
-    _release(context)
-    _deploy(context)
 
 
 @task
@@ -119,31 +117,30 @@ def _clean(context):
 
 
 def _build(context):
-    for module in _get_modules(context, "src/setup.py"):
+    for module in _get_modules(context, "src"):
         _print_header(module, "build")
         _print_line("Preparing resources ...")
         _run_local(context, "mkdir -p target && cp -rvf src target/package", module)
-        _run_local(context, "envsubst < setup.py > setup.py.new && "
-                            "mv setup.py.new setup.py",
-                   join(module, "target/package"), env=TEMPLATE_VARIABLES)
-        _run_local(context, "envsubst < main/python/{}/application.py > main/python/{}/application.py.new && "
-                            "mv main/python/{}/application.py.new main/python/{}/application.py"
-                   .format(_name(module), _name(module), _name(module), _name(module)), join(module, "target/package"),
-                   env=TEMPLATE_VARIABLES)
-        _run_local(context, "envsubst < main/python/{}/web/js/metadata/datum.avsc > main/python/{}/web/js/metadata/datum.avsc.new && "
-                            "mv main/python/{}/web/js/metadata/datum.avsc.new main/python/{}/web/js/metadata/datum.avsc"
-                   .format(_name(module), _name(module), _name(module), _name(module)), join(module, "target/package"),
-                   env=TEMPLATE_VARIABLES)
-        _run_local(context, "python setup.py sdist", join(module, "target/package"))
+        env_subst_path = join(DIR_ROOT, module, "env_subst.txt")
+        if isfile(env_subst_path):
+            with open(env_subst_path, "r") as env_subst_file:
+                for env_subst in env_subst_file:
+                    env_subst = env_subst.strip()
+                    if env_subst != "" and not env_subst.startswith("#"):
+                        _run_local(context, "envsubst < {} > {}.new && mv {}.new {}"
+                                   .format(env_subst, env_subst, env_subst, env_subst),
+                                   join(module, "target/package"), env=TEMPLATE_VARIABLES)
+        if isfile(join(DIR_ROOT, module, "src/setup.py")):
+            _run_local(context, "python setup.py sdist", join(module, "target/package"))
         _print_footer(module, "build")
 
 
 def _unittest(context):
-    for module in _get_modules(context, "src/setup.py"):
+    for module in _get_modules(context, "src/test/python/unit/unit_tests.py"):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
         _run_local(context, "python unit_tests.py", join(module, "src/test/python/unit"))
-    _print_footer(module, "unittest")
+        _print_footer(module, "unittest")
 
 
 def _package(context):
@@ -159,22 +156,12 @@ def _package(context):
 
 
 def _systest(context):
-    for module in _get_modules(context, "src/setup.py"):
+    for module in _get_modules(context, "src/test/python/system/system_tests.py"):
         _print_header(module, "systest")
-        _print_line("Preparing environment ...")
-        _run_local(context, "rm -rvf target/runtime-system", module)
-        _run_local(context, "cp -rvf src/main/resources/config target/runtime-system", module)
-        _run_local(context, "docker network prune -f")
-        _print_line("Starting server ...")
-        _run_local(context, "docker-compose --no-ansi up --force-recreate -d", "aswitch/vernemq")
-        _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate -d", module)
-        _run_local(context, "sleep 2")
+        _up_module(context, module)
         _print_line("Running system tests ...")
-        test_exit_code = _run_local(context, "karma start", join(module, "src/test/resources/karma"), warn=True).exited
-        test_exit_code += _run_local(context, "python system_tests.py", join(module, "src/test/python/system"), warn=True).exited
-        _print_line("Stopping and removing server ...")
-        _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi down -v", module)
-        _run_local(context, "docker-compose --no-ansi down -v", "aswitch/vernemq")
+        test_exit_code = _run_local(context, "python system_tests.py", join(module, "src/test/python/system"), warn=True).exited
+        _down_module(context, module)
         if test_exit_code != 0:
             _print_line("Tests ... failed")
             _run_local(context, "false")
@@ -182,22 +169,20 @@ def _systest(context):
 
 
 def _run(context):
-    for module in _get_modules(context, "src/setup.py"):
+    for module in _get_modules(context, "docker-compose.yml"):
         _print_header(module, "run")
-        _print_line("Preparing environment ...")
-        _run_local(context, "rm -rvf target/runtime-system", module)
-        _run_local(context, "cp -rvf src/main/resources/config target/runtime-system", module)
-        _run_local(context, "docker network prune -f")
-        _print_line("Starting server ...")
-        _run_local(context, "docker-compose --no-ansi up --force-recreate -d", "aswitch/vernemq")
+        _up_module(context, module, False)
 
         def server_stop(signal, frame):
-            _print_line("Stopping and removing server ...")
-            _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi down -v", module)
-            _run_local(context, "docker-compose --no-ansi down -v", "aswitch/vernemq")
+            _down_module(context, module)
 
         signal.signal(signal.SIGINT, server_stop)
-        _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi run --service-ports anode anode -v", module)
+        run_dev_path = join(DIR_ROOT, module, "run_dev.sh")
+        if isfile(run_dev_path):
+            _run_local(context, "run_dev.sh", module)
+        else:
+            _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate", module)
+
         _print_footer(module, "run")
 
 
@@ -205,9 +190,12 @@ def _release(context):
     for module in _get_modules(context, "Dockerfile"):
         _print_header(module, "release")
         _print_line("Saving docker image ...")
+
+        # TODO: Tag git, checkout in target and save each dockerfile
         _run_local(context, "docker image save -o {}-{}.tar.gz {}:{}"
                    .format(_name(module), VERSION_ABSOLUTE, _name(module), VERSION_ABSOLUTE),
                    join(module, "target/image"))
+
         _print_footer(module, "release")
 
 
@@ -244,6 +232,39 @@ def _get_modules(context, filter_path=None, filter_changes=True):
     working_modules[:] = [module for module in working_modules
                           if filter_path is None or glob.glob("{}/{}/{}*".format(DIR_ROOT, module, filter_path))]
     return working_modules
+
+
+def _get_dependencies(context, module):
+    run_deps = []
+    run_deps_path = join(DIR_ROOT, module, "run_deps.txt")
+    if isfile(run_deps_path):
+        with open(run_deps_path, "r") as run_deps_file:
+            for run_dep in run_deps_file:
+                run_dep = run_dep.strip()
+                if run_dep != "" and not run_dep.startswith("#"):
+                    run_deps.append(run_dep)
+    return run_deps + [module]
+
+
+def _up_module(context, module, up_this=True):
+    if isfile(join(DIR_ROOT, module, "docker-compose.yml")):
+        _print_line("Starting servers ...")
+        for run_dep in _get_dependencies(context, module):
+            _run_local(context, "rm -rvf target/runtime-system && mkdir -p target/runtime-system", run_dep)
+            if isdir(join(DIR_ROOT, run_dep, "src/main/resources/config")):
+                _run_local(context, "cp -vf src/main/resources/config/.* target/runtime-system 2> /dev/null || "
+                                    "cp -rvf src/main/resources/config/* target/runtime-system", run_dep, warn=True)
+            if run_dep != module or up_this:
+                _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate -d", run_dep)
+
+
+
+def _down_module(context, module, down_this=True):
+    if isfile(join(DIR_ROOT, module, "docker-compose.yml")):
+        _print_line("Stopping servers ...")
+        for run_dep in reversed(_get_dependencies(context, module)):
+            if run_dep != module or down_this:
+                _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi down -v", run_dep)
 
 
 def _run_local(context, command, working=".", **kwargs):
