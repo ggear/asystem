@@ -96,7 +96,7 @@ def _setup(context, module="asystem"):
             _run_local(context, "pip install -r {}".format(requirement))
 
     # TODO: Update requirements or manage
-    # sudo npm install -g karma jasmine karma-jasmine karma-chrome-launcher --unsafe-perm=true --allow-root
+    # sudo npm install -g karma jasmine karma-jasmine karma-chrome-launcher html-minifier uglify-js --unsafe-perm=true --allow-root
 
     _print_footer(module, "setup")
 
@@ -114,22 +114,40 @@ def _clean(context):
         _print_header(module, "clean")
         _run_local(context, "rm -rf {}/{}/target".format(DIR_ROOT, module))
         _print_footer(module, "clean")
+    _run_local(context, "find . -name *.pyc -prune -exec rm -rf {} \;")
+    _run_local(context, "find . -name __pycache__ -prune -exec rm -rf {} \;")
 
 
 def _build(context):
     for module in _get_modules(context, "src"):
         _print_header(module, "build")
+        if isdir(join(DIR_ROOT, module, "src/main/python")):
+            _print_line("Compiling resources ...")
+
+            # TODO: Re-enable once I have cleaned up anode codebase
+            _run_local(context, "pylint --disable=all src/main/python/*", module)
+
         _print_line("Preparing resources ...")
         _run_local(context, "mkdir -p target && cp -rvf src target/package", module)
-        env_subst_path = join(DIR_ROOT, module, "env_subst.txt")
-        if isfile(env_subst_path):
-            with open(env_subst_path, "r") as env_subst_file:
-                for env_subst in env_subst_file:
-                    env_subst = env_subst.strip()
-                    if env_subst != "" and not env_subst.startswith("#"):
+        package_resource_path = join(DIR_ROOT, module, "src/pkg_res.txt")
+        if isfile(package_resource_path):
+            with open(package_resource_path, "r") as package_resource_file:
+                for package_resource in package_resource_file:
+                    package_resource = package_resource.strip()
+                    if package_resource != "" and not package_resource.startswith("#"):
                         _run_local(context, "envsubst < {} > {}.new && mv {}.new {}"
-                                   .format(env_subst, env_subst, env_subst, env_subst),
+                                   .format(package_resource, package_resource, package_resource, package_resource),
                                    join(module, "target/package"), env=TEMPLATE_VARIABLES)
+                        if package_resource.endswith(".html") or package_resource.endswith(".css"):
+                            _run_local(context, "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
+                                                " --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace"
+                                                " --use-short-doctype --minify-css true --minify-js true {} > {}.new && mv {}.new {}"
+                                       .format(package_resource, package_resource, package_resource, package_resource),
+                                       join(module, "target/package"))
+                        elif package_resource.endswith(".js"):
+                            _run_local(context, "uglifyjs {} -c -m > {}.new && mv {}.new {}"
+                                       .format(package_resource, package_resource, package_resource, package_resource),
+                                       join(module, "target/package"))
         if isfile(join(DIR_ROOT, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
         _print_footer(module, "build")
@@ -181,7 +199,7 @@ def _run(context):
         if isfile(run_dev_path):
             _run_local(context, "run_dev.sh", module)
         else:
-            _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate", module)
+            _run_local(context, "{} docker-compose --no-ansi up --force-recreate".format(DOCKER_VARIABLES), module)
 
         _print_footer(module, "run")
 
@@ -202,16 +220,18 @@ def _release(context):
 def _deploy(context):
     for module in _get_modules(context, "deploy"):
         _print_header(module, "deploy")
+
         # TODO: Pickup deploy files and execute remotely
+
         _print_footer(module, "deploy")
 
 
 def _group(module):
-    return dirname(dirname(module))
+    return dirname(module)
 
 
 def _name(module):
-    return dirname(module)
+    return basename(module)
 
 
 def _get_modules(context, filter_path=None, filter_changes=True):
@@ -255,8 +275,7 @@ def _up_module(context, module, up_this=True):
                 _run_local(context, "cp -vf src/main/resources/config/.* target/runtime-system 2> /dev/null || "
                                     "cp -rvf src/main/resources/config/* target/runtime-system", run_dep, warn=True)
             if run_dep != module or up_this:
-                _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi up --force-recreate -d", run_dep)
-
+                _run_local(context, "{} docker-compose --no-ansi up --force-recreate -d".format(DOCKER_VARIABLES), run_dep)
 
 
 def _down_module(context, module, down_this=True):
@@ -264,7 +283,7 @@ def _down_module(context, module, down_this=True):
         _print_line("Stopping servers ...")
         for run_dep in reversed(_get_dependencies(context, module)):
             if run_dep != module or down_this:
-                _run_local(context, "DATA_DIR=./target/runtime-system docker-compose --no-ansi down -v", run_dep)
+                _run_local(context, "{} docker-compose --no-ansi down -v".format(DOCKER_VARIABLES), run_dep)
 
 
 def _run_local(context, command, working=".", **kwargs):
@@ -295,6 +314,8 @@ FILE_PROFILE = join(dirname(abspath(__file__)), ".profile")
 VERSION_ABSOLUTE = Path(join(dirname(abspath(__file__)), ".version")).read_text()
 VERSION_NUMERIC = int(VERSION_ABSOLUTE.replace(".", "").replace("-SNAPSHOT", "")) * (-1 if "SNAPSHOT" in VERSION_ABSOLUTE else 1)
 VERSION_COMPACT = int((math.fabs(VERSION_NUMERIC) - 101001000) * (-1 if "SNAPSHOT" in VERSION_ABSOLUTE else 1))
+
+DOCKER_VARIABLES = "DATA_DIR=./target/runtime-system LOCAL_IP=$(/usr/sbin/ipconfig getifaddr en1)"
 
 TEMPLATE_VARIABLES = {
     "VERSION_COMPACT": str(VERSION_COMPACT),
