@@ -1,0 +1,14 @@
+version: '3.7'
+services:
+  anode:
+    container_name: anode
+    image: anode:latest
+    init: true
+    env_file:
+      - .env
+    environment:
+      - LOCAL_IP
+    ports:
+      - '8091:8091'
+    volumes:
+      - '${DATA_DIR}:/etc/anode'
