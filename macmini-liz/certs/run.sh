@@ -1,7 +1,9 @@
-# TODO: Enable Let's encrypt, auto renew and local DNS as per https://blog.bryanroessler.com/2019-02-09-automatic-certbot-namecheap-acme-dns
-# https://github.com/joohoi/acme-dns#using-docker
+# all - generalise deploy artefacts to scripts, docker, certs, 
 
-# https://github.com/linuxserver/docker-letsencrypt
-# https://github.com/adferrand/dnsrobocert/issues/11
-# Keep authorized keys on UDM, otherwise I cant adopt? sshpass if key not available?
+# macmini-liz/certs - Add mount points to docker-compose.yml for config, certs, hooks (udm, anode, ha etc)
 
+# udm-rack/host - Develop script to sshpass authorization key if not there, prepapre and copy certifcates, post uptime (ssh/portal/network/video/internet) to MQTT
+
+# macmini-liz/ha - Develop script to copy certs, checkuptime, restart
+
+# macmini-liz/anode - Develop script to copy certs, run speedtest, uptime to down, perhaps restart

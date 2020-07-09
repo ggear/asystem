@@ -1,15 +1,12 @@
 version: '3.7'
 services:
-  acmedns:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: joohoi/acme-dns:latest
-    ports:
-      - "443:443"
-      - "53:53"
-      - "53:53/udp"
-      - "80:80"
+  dnsrobocert:
+    image: adferrand/dnsrobocert:3.4.0
+    container_name: dnsrobocert
+    env_file: .env
     volumes:
-      - ./config:/etc/acme-dns:ro
-      - ./data:/var/lib/acme-dns
+    - $ROOT/letsencrypt:/etc/letsencrypt
+    - $ROOT/dnsrobocert:/etc/dnsrobocert
+    environment:
+    - VERSION=latest
+    restart: always
