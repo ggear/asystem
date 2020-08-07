@@ -3,9 +3,11 @@
 #     - consider an init.sh and a poll.sh script, the former does a cron, the latter does the ticks
 #     - convert all docker-compose to run.sh
 
-# macmini-liz/certs - Add mount points to docker-compose.yml for config, certs, hooks (udm, anode, ha etc)
+# macmini-liz/certs - Add mount points to docker-compose.yml for config, certs, hooks (namecheap whitelist before, udm, anode, ha etc after)
 
 # udm-rack/host - Develop script to sshpass authorization key if not there, prepapre and copy certifcates, post uptime (ssh/portal/network/video/internet) to MQTT
+# scp /Users/graham/_/dev/asystem/macmini-liz/letsencrypt/target/letsencrypt/live/janeandgraham.com/privkey.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
+# scp /Users/graham/_/dev/asystem/macmini-liz/letsencrypt/target/letsencrypt/live/janeandgraham.com/fullchain.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
 
 # macmini-liz/ha - Develop script to copy certs, checkuptime, restart
 

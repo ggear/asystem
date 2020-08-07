@@ -1,3 +1,8 @@
+# Implement sshpass for bootstrap
+# Make idempotent
+# Implement pihole
+
+
 unifi-os shell
 curl -L https://raw.githubusercontent.com/boostchicken/udm-utilities/master/on-boot-script/packages/udm-boot_1.0.1-1_all.deb -o udm-boot_1.0.1-1_all.deb
 dpkg -i udm-boot_1.0.1-1_all.deb

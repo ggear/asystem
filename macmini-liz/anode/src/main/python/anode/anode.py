@@ -455,7 +455,7 @@ def get_local_ip():
 def load_profile(profile_file):
     profile = {}
     for profile_line in profile_file:
-        profile_line = profile_line.rstrip()
+        profile_line = profile_line.replace("export ", "").rstrip()
         if "=" not in profile_line:
             continue
         if profile_line.startswith("#"):
