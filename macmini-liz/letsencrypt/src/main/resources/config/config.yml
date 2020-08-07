@@ -1,0 +1,18 @@
+draft: false
+acme:
+  email_account: graham.gear@gmail.com
+  staging: false
+profiles:
+  - name: namecheap_profile
+    provider: namecheap
+    provider_options:
+      auth_token: ${NAMECHEAP_TOKEN}
+      auth_username: ${NAMECHEAP_USER}
+      auth_client_ip: ${NAMECHEAP_IP}
+      auth_sandbox: false
+certificates:
+  - domains:
+      - "*.janeandgraham.com"
+      - janeandgraham.com
+    profile: namecheap_profile
+#    deploy_hook: python /home/user/local_deploy.py
