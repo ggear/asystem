@@ -3,9 +3,13 @@
 
 ###############################################################################
 # Installer pre-conditions:
-#   - create partitions for /, /tmp, /var, /home
+#   - Debian 10 (buster amd64 net iso)
+#   - Install (non-graphical)
+#   - Dont load proproetry media
+#   - set host to macmini-*.janeandgraham.com
 #   - create user graham
-#   - install ssh, standard utils
+#   - guided entire disk and setup LVM create partitions for /, /tmp, /var, /home, max, force UEFI
+#   - install SSH server, standard sys utils
 ###############################################################################
 
 ###############################################################################

@@ -11,6 +11,7 @@ Baseline
 -------------------------------------------------------------------------------
 
 Portal:
+- Enable SSH
 
 Network:
 - Adopt all Client switches/access points
@@ -28,7 +29,6 @@ Nice to have
 -------------------------------------------------------------------------------
 
 Portal:
-- Enable SSH
 - Add local alias graham with certificate
 
 Network:
