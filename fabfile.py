@@ -167,7 +167,6 @@ def _package(context):
         _run_local(context, "docker image build -t {}:latest -t {}:{} ."
                    .format(_name(module), _name(module), VERSION_ABSOLUTE), module)
         _run_local(context, "docker image ls {}".format(_name(module)))
-        _run_local(context, "mkdir -p target/image", module)
         _print_line("\nTo run a shell from the docker image run:")
         _print_line("docker run -it {}:{} /bin/bash\n".format(_name(module), VERSION_ABSOLUTE))
         _print_footer(module, "package")
@@ -209,20 +208,28 @@ def _release(context):
         _print_header(module, "release")
         _print_line("Saving docker image ...")
 
-        # TODO: Tag git, checkout in target and save each dockerfile
+        # TODO: Tag git, checkout in target and save scripts, docker-compose, docker-images to release
+        _run_local(context, "mkdir -p target/release", module)
         _run_local(context, "docker image save -o {}-{}.tar.gz {}:{}"
                    .format(_name(module), VERSION_ABSOLUTE, _name(module), VERSION_ABSOLUTE),
-                   join(module, "target/image"))
+                   join(module, "target/release"))
 
         _print_footer(module, "release")
 
 
 def _deploy(context):
-    for module in _get_modules(context, "deploy"):
+    for module in _get_modules(context, "src"):
         _print_header(module, "deploy")
+        for host in _get_hosts(context, module):
 
-        # TODO: Pickup deploy files and execute remotely
+            # TODO: Copy release to remote server, run install scripts
 
+            if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit &>/dev/null"
+                    .format(host), warn=True).exited != 0:
+                for script in glob.glob("{}/src/script/bootstrap/*.sh".format(join(DIR_ROOT, module))):
+                    _run_local(context, "sshpass -f /Users/graham/.ssh/.password ssh -q root@{} sh < {}".format(host, script))
+            for script in glob.glob("{}/src/script/install/*.sh".format(join(DIR_ROOT, module))):
+                _run_local(context, "ssh -q root@{} sh < {}".format(host, script))
         _print_footer(module, "deploy")
 
 
@@ -252,6 +259,10 @@ def _get_modules(context, filter_path=None, filter_changes=True):
     working_modules[:] = [module for module in working_modules
                           if filter_path is None or glob.glob("{}/{}/{}*".format(DIR_ROOT, module, filter_path))]
     return working_modules
+
+
+def _get_hosts(context, module):
+    return module.split("/")[0].split("_")
 
 
 def _get_dependencies(context, module):
