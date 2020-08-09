@@ -205,14 +205,13 @@ def _release(context):
     for module in _get_modules(context, "src"):
         _print_header(module, "release")
         print("Preparing release ... ")
+        file_image = "{}-{}.tar.gz".format(_name(module), VERSION_ABSOLUTE)
         _run_local(context, "mkdir -p target/release", module)
         _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
-
-        # TODO: docker-compose and docker-image
-        # _run_local(context, "docker image save -o {}-{}.tar.gz {}:{}"
-        #        .format(_name(module), VERSION_ABSOLUTE, _name(module), VERSION_ABSOLUTE),
-        #        join(module, "target/release"))
-
+        _run_local(context, "cp -rvf docker-compose.yml target/release", module, hide='err', warn=True)
+        if isfile(join(DIR_ROOT, module, "Dockerfile")):
+            _run_local(context, "docker image save -o {} {}:{}"
+                       .format(file_image, _name(module), VERSION_ABSOLUTE), join(module, "target/release"))
         for host in _get_hosts(context, module):
             ssh_pass = "sshpass -f /Users/graham/.ssh/.password" \
                 if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
@@ -220,6 +219,10 @@ def _release(context):
             dir_install = "/var/lib/asystem/install/{}/{}".format(VERSION_ABSOLUTE, module)
             print("Copying release to {} ... ".format(host))
             _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh_pass, host, dir_install, dir_install))
+            if isfile(join(DIR_ROOT, module, "target/release/docker-compose.yml")):
+                _run_local(context, "{} scp -qr target/release/docker-compose.yml root@{}:{}".format(ssh_pass, host, dir_install), module)
+            if isfile(join(DIR_ROOT, module, "target/release/{}".format(file_image))):
+                _run_local(context, "{} scp -qr target/release/{} root@{}:{}".format(ssh_pass, file_image, host, dir_install), module)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 _run_local(context, "{} scp -qr target/release/run.sh root@{}:{}".format(ssh_pass, host, dir_install), module)
                 print("Installing release to {} ... ".format(host))
