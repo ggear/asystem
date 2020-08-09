@@ -204,7 +204,7 @@ def _run(context):
 def _release(context):
     for module in _get_modules(context, "src"):
         _print_header(module, "release")
-
+        print("Preparing release ... ")
         _run_local(context, "mkdir -p target/release", module)
         _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
 
@@ -214,17 +214,16 @@ def _release(context):
         #        join(module, "target/release"))
 
         for host in _get_hosts(context, module):
-            ssh_prefix = "sshpass -f /Users/graham/.ssh/.password" \
+            ssh_pass = "sshpass -f /Users/graham/.ssh/.password" \
                 if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
                               .format(host), hide="err", warn=True).exited > 0 else ""
             dir_install = "/var/lib/asystem/install/{}/{}".format(VERSION_ABSOLUTE, module)
             print("Copying release to {} ... ".format(host))
-            _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh_prefix, host, dir_install, dir_install))
+            _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh_pass, host, dir_install, dir_install))
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
-                _run_local(context, "{} scp -qr target/release/run.sh root@{}:{}".format(ssh_prefix, host, dir_install), module)
+                _run_local(context, "{} scp -qr target/release/run.sh root@{}:{}".format(ssh_pass, host, dir_install), module)
                 print("Installing release to {} ... ".format(host))
-                _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh_prefix, host, dir_install, dir_install))
-
+                _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh_pass, host, dir_install, dir_install))
         _print_footer(module, "release")
 
 
