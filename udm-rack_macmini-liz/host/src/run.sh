@@ -1,6 +1,6 @@
 #!/bin/sh
 
-function key_append() {
+key_append() {
   if [ ! -e "${3}/${1}/.ssh/authorized_keys" ] || [ $(grep graham "${3}/${1}/.ssh/authorized_keys" | wc -l) -eq 0 ]; then
     [ -d "${3}" ] && mkdir -p ${3}
     [ $(grep "${1}" "/etc/passwd" | wc -l) -eq 0 ] && adduser -D "${1}"
