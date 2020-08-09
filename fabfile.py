@@ -1,5 +1,6 @@
 import glob
 import math
+import os
 import signal
 import sys
 from os.path import *
@@ -10,14 +11,12 @@ from pathlib2 import Path
 
 @task(default=True)
 def default(context):
-    # TODO: Temporality default to release
-    # _setup(context)
-    # _clean(context)
-    # _build(context)
-    # _unittest(context)
-    # _package(context)
-    # _systest(context)
-    release(context)
+    _setup(context)
+    _clean(context)
+    _build(context)
+    _unittest(context)
+    _package(context)
+    _systest(context)
 
 
 @task
@@ -207,26 +206,27 @@ def _release(context):
         print("Preparing release ... ")
         file_image = "{}-{}.tar.gz".format(_name(module), VERSION_ABSOLUTE)
         _run_local(context, "mkdir -p target/release", module)
-        _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
+        _run_local(context, "cp -rvf .env_prod target/release/.env", module, hide='err', warn=True)
         _run_local(context, "cp -rvf docker-compose.yml target/release", module, hide='err', warn=True)
         if isfile(join(DIR_ROOT, module, "Dockerfile")):
+            print("docker -> target/release/{}".format(file_image))
             _run_local(context, "docker image save -o {} {}:{}"
                        .format(file_image, _name(module), VERSION_ABSOLUTE), join(module, "target/release"))
+        _run_local(context, "cp -vf target/package/main/resources/config/.* target/release 2> /dev/null || "
+                            "cp -rvf target/package/main/resources/config/* target/release", module, hide='err', warn=True)
+        _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
         for host in _get_hosts(context, module):
-            ssh_pass = "sshpass -f /Users/graham/.ssh/.password" \
+            ssh = "sshpass -f /Users/graham/.ssh/.password" \
                 if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
                               .format(host), hide="err", warn=True).exited > 0 else ""
-            dir_install = "/var/lib/asystem/install/{}/{}".format(VERSION_ABSOLUTE, module)
-            print("Copying release to {} ... ".format(host))
-            _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh_pass, host, dir_install, dir_install))
-            if isfile(join(DIR_ROOT, module, "target/release/docker-compose.yml")):
-                _run_local(context, "{} scp -qr target/release/docker-compose.yml root@{}:{}".format(ssh_pass, host, dir_install), module)
-            if isfile(join(DIR_ROOT, module, "target/release/{}".format(file_image))):
-                _run_local(context, "{} scp -qr target/release/{} root@{}:{}".format(ssh_pass, file_image, host, dir_install), module)
+            install = "/var/lib/asystem/install/{}/{}".format(VERSION_ABSOLUTE, module)
+            if os.listdir(join(DIR_ROOT, module, "target/release")):
+                print("Copying release to {} ... ".format(host))
+                _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
+                _run_local(context, "{} scp -qr target/release/.??* target/release/* root@{}:{}".format(ssh, host, install), module)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
-                _run_local(context, "{} scp -qr target/release/run.sh root@{}:{}".format(ssh_pass, host, dir_install), module)
                 print("Installing release to {} ... ".format(host))
-                _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh_pass, host, dir_install, dir_install))
+                _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
         _print_footer(module, "release")
 
 
