@@ -10,12 +10,14 @@ from pathlib2 import Path
 
 @task(default=True)
 def default(context):
-    _setup(context)
-    _clean(context)
-    _build(context)
-    _unittest(context)
-    _package(context)
-    _systest(context)
+    # TODO: Temporality default to release
+    # _setup(context)
+    # _clean(context)
+    # _build(context)
+    # _unittest(context)
+    # _package(context)
+    # _systest(context)
+    release(context)
 
 
 @task
@@ -77,13 +79,10 @@ def run(context):
 @task
 def release(context):
     _setup(context)
+    _clean(context)
+    _build(context)
+    _package(context)
     _release(context)
-
-
-@task
-def deploy(context):
-    _setup(context)
-    _deploy(context)
 
 
 def _setup(context, module="asystem"):
@@ -199,38 +198,34 @@ def _run(context):
             _run_local(context, "run_dev.sh", module)
         else:
             _run_local(context, "{} docker-compose --no-ansi up --force-recreate".format(DOCKER_VARIABLES), module)
-
         _print_footer(module, "run")
 
 
 def _release(context):
-    for module in _get_modules(context, "Dockerfile"):
+    for module in _get_modules(context, "src"):
         _print_header(module, "release")
-        _print_line("Saving docker image ...")
 
-        # TODO: Tag git, checkout in target and save scripts, docker-compose, docker-images to release
         _run_local(context, "mkdir -p target/release", module)
-        _run_local(context, "docker image save -o {}-{}.tar.gz {}:{}"
-                   .format(_name(module), VERSION_ABSOLUTE, _name(module), VERSION_ABSOLUTE),
-                   join(module, "target/release"))
+        _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
+
+        # TODO: docker-compose and docker-image
+        # _run_local(context, "docker image save -o {}-{}.tar.gz {}:{}"
+        #        .format(_name(module), VERSION_ABSOLUTE, _name(module), VERSION_ABSOLUTE),
+        #        join(module, "target/release"))
+
+        for host in _get_hosts(context, module):
+            ssh_prefix = "sshpass -f /Users/graham/.ssh/.password" \
+                if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
+                              .format(host), hide="err", warn=True).exited > 0 else ""
+            dir_install = "/var/lib/asystem/install/{}/{}".format(VERSION_ABSOLUTE, module)
+            print("Copying release to {} ... ".format(host))
+            _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh_prefix, host, dir_install, dir_install))
+            if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
+                _run_local(context, "{} scp -qr target/release/run.sh root@{}:{}".format(ssh_prefix, host, dir_install), module)
+                print("Installing release to {} ... ".format(host))
+                _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh_prefix, host, dir_install, dir_install))
 
         _print_footer(module, "release")
-
-
-def _deploy(context):
-    for module in _get_modules(context, "src"):
-        _print_header(module, "deploy")
-        for host in _get_hosts(context, module):
-
-            # TODO: Copy release to remote server, run install scripts
-
-            if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit &>/dev/null"
-                    .format(host), warn=True).exited != 0:
-                for script in glob.glob("{}/src/script/bootstrap/*.sh".format(join(DIR_ROOT, module))):
-                    _run_local(context, "sshpass -f /Users/graham/.ssh/.password ssh -q root@{} sh < {}".format(host, script))
-            for script in glob.glob("{}/src/script/install/*.sh".format(join(DIR_ROOT, module))):
-                _run_local(context, "ssh -q root@{} sh < {}".format(host, script))
-        _print_footer(module, "deploy")
 
 
 def _group(module):
