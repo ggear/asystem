@@ -4,6 +4,7 @@ services:
     container_name: anode
     image: anode:${VERSION}
     init: true
+    restart: ${RESTART}
     env_file: .env
     environment:
       - TZ=Australia/Perth
