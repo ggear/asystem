@@ -4,6 +4,7 @@ services:
     container_name: vernemq
     image: vernemq/vernemq:1.10.2-1-alpine
     init: true
+    restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
       - DOCKER_VERNEMQ_ACCEPT_EULA=yes
