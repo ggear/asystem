@@ -6,6 +6,7 @@ services:
     init: true
     env_file: .env
     environment:
+      - TZ=Australia/Perth
       - LOCAL_IP
     ports:
       - '8091:8091'
