@@ -26,21 +26,18 @@
 ################################################################################
 # Network baseline
 ################################################################################
-# Adopt all Client switches/access points
-# Change device names to udm-rack, usw-house and uap-hallway
-# Setup WiFi wireless site BertAndErnie
-# Add Network janeandgraham.com domain
-# Update Network DHCP range up to 50
-# Update Clients udm-rack 1, macmini-liz 10, phillips-hue 12
-# Update Gateway Dynamic DNS, namecheap, home, janeandgraham.com, X, dynamicdns.park-your-domain.com
+# Wireless Networks -> BertAndErnie
+# Networks -> LAN -> Domain name -> janeandgraham.com
+# Networks -> LAN -> DHCP range -> 192.168.1.50 to 192.168.1.254
+# Devices -> udm-rack, usw-house and uap-hallway
+# Clients -> udm-rack 192.168.1.1, macmini-liz 192.168.1.10, phillips-hue 192.168.1.12
+# Services -> Dynamic DNS -> namecheap, home, janeandgraham.com, X, dynamicdns.park-your-domain.com
+# Routing & Firewall -> Port Forwarding -> Anode, 8091, 192.168.1.10, 8091, TCP, Enable Logging
 
 ################################################################################
 # Network nice-to-have
 ################################################################################
-# Add daily backup
-# Update controller to write to syslog
-# Update all icons
-# Update host names and statis IPs
+# Clients -> names, icons
 
 ################################################################################
 # Protect baseline
