@@ -1,5 +1,6 @@
 .m2
 .ssh
+*.pem
 ~$*.*
 .profile
 .DS_Store

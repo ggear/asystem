@@ -2,7 +2,7 @@
 
 cd /var/lib/asystem/install/$VERSION_ABSOLUTE/macmini-liz/anode
 mkdir -p /home/asystem/anode
-cp -rf .profile anode.yaml /home/asystem/anode
+cp -rf .pem .profile anode.yaml /home/asystem/anode
 docker image load -i anode-$VERSION_ABSOLUTE.tar.gz
 docker stop anode 2>&1 >/dev/null && docker wait anode 2>&1 >/dev/null
 VERSION=$VERSION_ABSOLUTE \

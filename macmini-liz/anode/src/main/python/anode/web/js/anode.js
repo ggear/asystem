@@ -39,9 +39,9 @@ function ANode(uri, onopen, onclose, onmessage) {
     var uriHostPort = uriBase.substring(0, uriBase.indexOf("/"))
     var uriParameters = uriBase.substring(uriBase.indexOf("/") + 1, uriBase.length)
 
-    this.restfulUri = "http://" + uriHostPort + "/rest/"
-    this.metadataUri = "http://" + uriHostPort + "/js/metadata/datum.avsc"
-    this.webSocketUri = "ws://" + uriHostPort + "/ws/" + uriParameters
+    this.restfulUri = "https://" + uriHostPort + "/rest/"
+    this.metadataUri = "https://" + uriHostPort + "/js/metadata/datum.avsc"
+    this.webSocketUri = "wss://" + uriHostPort + "/ws/" + uriParameters
 
     this.metadata = this.metadataRequest()
     this.orderingIndexes = {}

@@ -11,6 +11,7 @@ import time
 import urlparse
 from optparse import OptionParser
 
+import pem
 import yaml
 from autobahn.twisted.resource import WebSocketResource
 from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
@@ -61,7 +62,8 @@ class ANode:
         self.options = options
         self.config = config
         self.plugins = {}
-        self.web_ws = WebWsFactory(u"ws://" + self.config["host"] + ":" + str(self.config["port"]), self)
+        self.certificate = pem.twisted.certificateOptionsFromFiles(self.options.certificate)
+        self.web_ws = WebWsFactory(u"wss://" + self.config["host"] + ":" + str(self.config["port"]), self, self.certificate)
         self.web_ws.protocol = WebWs
         self.web_rest = WebRest(self)
         self.web_pool = HTTPConnectionPool(reactor, persistent=True)
@@ -188,7 +190,7 @@ class ANode:
         web = Site(web_root, logPath="/dev/null")
         web.noisy = False
         self.core_reactor.addSystemEventTrigger("after", "shutdown", self.stop_server)
-        self.core_reactor.listenTCP(int(self.config["port"]), web)
+        self.core_reactor.listenSSL(int(self.config["port"]), web, self.certificate)
         if self.publish_service is not None:
             self.publish_service.startService()
         log_timer.log("Service", "timer", lambda: "[anode] started", context=self.start_server)
@@ -256,8 +258,8 @@ class MqttPublishService(ClientService):
 
 
 class WebWsFactory(WebSocketServerFactory):
-    def __init__(self, url, anode):
-        super(WebWsFactory, self).__init__(url)
+    def __init__(self, url, anode, context):
+        super(WebWsFactory, self).__init__(url, context)
         self.anode = anode
         self.ws_clients = []
 
@@ -495,6 +497,7 @@ def main(core_reactor=reactor):
     parser = OptionParser()
     parser.add_option("-c", "--config", dest="config", default="/etc/anode/anode.yaml", help="config FILE", metavar="FILE")
     parser.add_option("-p", "--profile", dest="profile", default="/etc/anode/.profile", help="profile FILE", metavar="FILE")
+    parser.add_option("-e", "--certificate", dest="certificate", default="/etc/anode/.pem", help="PEM FILE", metavar="FILE")
     parser.add_option("-d", "--db-dir", dest="db_dir", default="/etc/anode/", help="config FILE", metavar="FILE")
     parser.add_option("-v", "--verbose", action="store_true", dest="verbose", default=False, help="noisy output to stdout")
     parser.add_option("-q", "--quiet", action="store_true", dest="quiet", default=False, help="suppress most output to stdout")

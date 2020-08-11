@@ -223,7 +223,7 @@ def _release(context):
             if os.listdir(join(DIR_ROOT, module, "target/release")):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
-                _run_local(context, "{} scp -qr target/release/.??* target/release/* root@{}:{}".format(ssh, host, install), module)
+                _run_local(context, "{} scp -qpr target/release/.??* target/release/* root@{}:{}".format(ssh, host, install), module)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
