@@ -78,9 +78,9 @@ describe('ANode', function () {
 
 connectionUri = function (parameters, isRest) {
 
-    // TODO: Lookup host from env eg https://github.com/karma-runner/karma/issues/2066
+    // TODO: Lookup IP/host from env eg https://github.com/karma-runner/karma/issues/2066
 
-    return "http://localhost:" + WEB_PORT +
+    return "https://macmini-sheryl.janeandgraham.com:" + WEB_PORT +
         ((typeof (isRest) === 'undefined' || !isRest) ? "/" : "/rest/") +
         (parameters ? ("?" + parameters) : "");
 };
