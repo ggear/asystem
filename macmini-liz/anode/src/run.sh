@@ -10,3 +10,4 @@ VERSION=$VERSION_ABSOLUTE \
   LOCAL_IP=$(/usr/sbin/ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep '192.168.1') \
   docker-compose --no-ansi up --force-recreate -d
 docker system prune --volumes -f
+cd /root && ls -dt /var/lib/asystem/install/*/ | tail -n -$(($(ls -dt ls -dt /var/lib/asystem/install/*/ | wc -l) - 2)) | xargs rm -rf
