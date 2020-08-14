@@ -302,7 +302,7 @@ class Plugin(object):
                 datum_avro = self.datum_dict_to_avro(datum_dict)[0]
             except AvroTypeException as exception:
                 anode.Log(logging.ERROR).log("Plugin", "error",
-                                             lambda: "[{}] error serialising Avro object [{}]".format(self.name, datum_dict), exception)
+                                             lambda: "[{}] error serialising Avro object [{}]".format(self.name, datum_dict))
                 return
             if datum_dict["data_metric"] not in self.datums:
                 self.datums[datum_dict["data_metric"]] = {}

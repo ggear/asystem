@@ -4,7 +4,7 @@ import sys
 
 DIR_ROOT = os.path.dirname(os.path.realpath(__file__)) + "/../.."
 DIR_WORK = DIR_ROOT + "/anode/export"
-DIR_HOMEASSISTANT = DIR_WORK + "/../../../../../../../ahub/homeassistant/src"
+DIR_HOMEASSISTANT = DIR_WORK + "/../../../../../../../macmini-liz/homeassistant/src"
 sys.path.insert(0, DIR_ROOT)
 
 import json
@@ -88,7 +88,10 @@ if __name__ == "__main__":
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-    client.connect(CONFIG["publish_host"], CONFIG["publish_port"], 60)
+
+    # TODO: Implement localhost v production lookup
+    client.connect('192.168.1.10', CONFIG["publish_port"], 60)
+
     time_start = time.time()
     while True:
         client.loop()
