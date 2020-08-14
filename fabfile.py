@@ -213,11 +213,7 @@ def _release(context):
     _get_versions_next_release()
     _clean(context)
     _build(context)
-    if ENV_SKIP_TESTS not in os.environ:
-        _unittest(context)
     _package(context)
-    if ENV_SKIP_TESTS not in os.environ:
-        _systest(context)
     _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in _get_modules(context, "src"):
