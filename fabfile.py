@@ -242,6 +242,8 @@ def _release(context):
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
+                _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f".format(ssh, host))
+                _run_local(context, "{} ssh -q root@{} 'rm -rvf /var/lib/asystem/install".format(ssh, host))
         _print_footer(module, "release")
     _get_versions_next_snapshot()
     _clean(context)
