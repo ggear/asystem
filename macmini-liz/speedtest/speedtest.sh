@@ -31,7 +31,6 @@ while [[ $# -gt 0 ]]; do
     RANDOM_THROUGHPUT=true
     ;;
   *) ;;
-
   esac
   shift
 done
