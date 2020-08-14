@@ -205,18 +205,18 @@ def _run(context):
 def _release(context):
     _clean(context)
     _build(context)
-    if ENV_SKIP_TESTS in os.environ:
+    if ENV_SKIP_TESTS not in os.environ:
         _unittest(context)
     _package(context)
-    if ENV_SKIP_TESTS in os.environ:
+    if ENV_SKIP_TESTS not in os.environ:
         _systest(context)
     _get_versions_next_release()
     _clean(context)
     _build(context)
-    if ENV_SKIP_TESTS in os.environ:
+    if ENV_SKIP_TESTS not in os.environ:
         _unittest(context)
     _package(context)
-    if ENV_SKIP_TESTS in os.environ:
+    if ENV_SKIP_TESTS not in os.environ:
         _systest(context)
     _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
@@ -250,10 +250,10 @@ def _release(context):
     _get_versions_next_snapshot()
     _clean(context)
     _build(context)
-    if ENV_SKIP_TESTS in os.environ:
+    if ENV_SKIP_TESTS not in os.environ:
         _unittest(context)
     _package(context)
-    if ENV_SKIP_TESTS in os.environ:
+    if ENV_SKIP_TESTS not in os.environ:
         _systest(context)
     _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
