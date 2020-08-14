@@ -219,7 +219,7 @@ def _release(context):
     if ENV_SKIP_TESTS in os.environ:
         _systest(context)
     _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
-               .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]))
+               .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in _get_modules(context, "src"):
         _print_header(module, "release")
         print("Preparing release ... ")
