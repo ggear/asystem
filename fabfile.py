@@ -258,6 +258,8 @@ def _release(context):
     _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]))
 
+    _run_local(context,"pwd && env")
+
 
 def _group(module):
     return dirname(module)
