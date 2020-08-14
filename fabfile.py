@@ -227,8 +227,8 @@ def _release(context):
             print("docker -> target/release/{}".format(file_image))
             _run_local(context, "docker image save -o {} {}:{}"
                        .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
-        _run_local(context, "cp -vf target/package/main/resources/config/.* target/release 2> /dev/null", module, hide='err', warn=True)
-        _run_local(context, "cp -rvf target/package/main/resources/config/* target/release 2> /dev/null", module, hide='err', warn=True)
+        _run_local(context, "cp -vf target/package/main/resources/config/.* target/release", module, hide='err', warn=True)
+        _run_local(context, "cp -rvf target/package/main/resources/config/* target/release", module, hide='err', warn=True)
         _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
         for host in _get_hosts(context, module):
             ssh = "sshpass -f /Users/graham/.ssh/.password" \
@@ -238,8 +238,8 @@ def _release(context):
             if os.listdir(join(DIR_ROOT, module, "target/release")):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
-                _run_local(context, "{} scp -qpr target/release/.* root@{}:{} 2> /dev/null".format(ssh, host, install), module)
-                _run_local(context, "{} scp -qpr target/release/* root@{}:{} 2> /dev/null".format(ssh, host, install), module)
+                _run_local(context, "{} scp -qpr target/release/.* root@{}:{}".format(ssh, host, install), module, hide='err', warn=True)
+                _run_local(context, "{} scp -qpr target/release/* root@{}:{}".format(ssh, host, install), module, hide='err', warn=True)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
