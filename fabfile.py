@@ -247,6 +247,7 @@ def _release(context):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
         _print_footer(module, "release")
+    _get_versions_next_snapshot()
     _clean(context)
     _build(context)
     if ENV_SKIP_TESTS in os.environ:
