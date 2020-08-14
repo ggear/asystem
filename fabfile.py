@@ -218,7 +218,7 @@ def _release(context):
     _package(context)
     if ENV_SKIP_TESTS in os.environ:
         _systest(context)
-    _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}' && git push origin --tags"
+    _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]))
     for module in _get_modules(context, "src"):
         _print_header(module, "release")
@@ -247,7 +247,6 @@ def _release(context):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
         _print_footer(module, "release")
-    _get_versions_next_snapshot()
     _clean(context)
     _build(context)
     if ENV_SKIP_TESTS in os.environ:
@@ -255,7 +254,7 @@ def _release(context):
     _package(context)
     if ENV_SKIP_TESTS in os.environ:
         _systest(context)
-    _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push origin --tags"
+    _run_local(context, "git add -A && git commit -m 'Update asystem-{}'"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]))
 
 
@@ -332,13 +331,17 @@ def _run_remote(context, command, **kwargs):
     return context.run(command, **kwargs)
 
 
-def _get_versions(version_absolute=Path(join(dirname(abspath(__file__)), ".version")).read_text()):
+def _get_versions(version_absolute=None):
+    if version_absolute is None:
+        version_absolute = Path(join(dirname(abspath(__file__)), ".version")).read_text()
     version_numeric = int(version_absolute.replace(".", "").replace("-SNAPSHOT", "")) * (-1 if "SNAPSHOT" in version_absolute else 1)
     version_compact = int((math.fabs(version_numeric) - 101001000) * (-1 if "SNAPSHOT" in version_absolute else 1))
     return (version_absolute, version_numeric, version_compact)
 
 
-def _get_versions_next(versions=_get_versions()):
+def _get_versions_next(versions=None):
+    if versions is None:
+        versions = _get_versions()
     version_next_numeric = abs(versions[1]) if "SNAPSHOT" in versions[0] else (abs(versions[1]) + 1)
     version_next_absolute = u"{}.{}.{}".format(
         int(version_next_numeric / 10000000) % 10000,
