@@ -234,7 +234,9 @@ def _release(context):
             ssh = "sshpass -f /Users/graham/.ssh/.password" \
                 if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
                               .format(host), hide="err", warn=True).exited > 0 else ""
-            _run_local(context, "{} ssh -q root@{} 'echo Connected to {}'".format(ssh, host, host))
+
+            print(_run_local(context, "{} ssh -q root@{} 'echo Connected to {}'".format(ssh, host, host)))
+
             install = "/var/lib/asystem/install/{}/{}".format(_get_versions()[0], module)
             if os.listdir(join(DIR_ROOT, module, "target/release")):
                 print("Copying release to {} ... ".format(host))
