@@ -256,7 +256,7 @@ def _release(context):
     if ENV_SKIP_TESTS in os.environ:
         _systest(context)
     _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
-               .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"GIT_AUTHOR_NAME":"Graham Gear","GIT_AUTHOR_EMAIL":"graham.gear@gmail.com"})
+               .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]))
 
     _run_local(context,"pwd && env")
 
