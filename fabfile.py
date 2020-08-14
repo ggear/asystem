@@ -78,15 +78,13 @@ def run(context):
 @task
 def release(context):
     _setup(context)
-    _clean(context)
-    _build(context)
-    _package(context)
     _release(context)
 
 
 def _setup(context, module="asystem"):
     _print_header(module, "setup")
-    _print_line("Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(VERSION_COMPACT, VERSION_NUMERIC, VERSION_ABSOLUTE))
+    _print_line(
+        "Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(_get_versions()[2], _get_versions()[1], _get_versions()[0]))
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) == 0:
         _run_local(context, "conda create -y -n $CONDA_ENV python=2.7")
         _print_line("Installing requirements ...")
@@ -135,7 +133,11 @@ def _build(context):
                     if package_resource != "" and not package_resource.startswith("#"):
                         _run_local(context, "envsubst < {} > {}.new && mv {}.new {}"
                                    .format(package_resource, package_resource, package_resource, package_resource),
-                                   join(module, "target/package"), env=TEMPLATE_VARIABLES)
+                                   join(module, "target/package"), env={
+                                "VERSION_COMPACT": str(_get_versions()[2]),
+                                "VERSION_NUMERIC": str(_get_versions()[1]),
+                                "VERSION_ABSOLUTE": _get_versions()[0],
+                            })
                         if package_resource.endswith(".html") or package_resource.endswith(".css"):
                             _run_local(context, "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
                                                 " --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace"
@@ -163,10 +165,10 @@ def _package(context):
     for module in _get_modules(context, "Dockerfile"):
         _print_header(module, "package")
         _run_local(context, "docker image build -t {}:latest -t {}:{} ."
-                   .format(_name(module), _name(module), VERSION_ABSOLUTE), module)
+                   .format(_name(module), _name(module), _get_versions()[0]), module)
         _run_local(context, "docker image ls {}".format(_name(module)))
         _print_line("\nTo run a shell from the docker image run:")
-        _print_line("docker run -it {}:{} /bin/bash\n".format(_name(module), VERSION_ABSOLUTE))
+        _print_line("docker run -it {}:{} /bin/bash\n".format(_name(module), _get_versions()[0]))
         _print_footer(module, "package")
 
 
@@ -201,17 +203,34 @@ def _run(context):
 
 
 def _release(context):
+    _clean(context)
+    _build(context)
+    if ENV_SKIP_TESTS in os.environ:
+        _unittest(context)
+    _package(context)
+    if ENV_SKIP_TESTS in os.environ:
+        _systest(context)
+    _get_versions_next_release()
+    _clean(context)
+    _build(context)
+    if ENV_SKIP_TESTS in os.environ:
+        _unittest(context)
+    _package(context)
+    if ENV_SKIP_TESTS in os.environ:
+        _systest(context)
+    _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}' && git push origin --tags"
+               .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]))
     for module in _get_modules(context, "src"):
         _print_header(module, "release")
         print("Preparing release ... ")
-        file_image = "{}-{}.tar.gz".format(_name(module), VERSION_ABSOLUTE)
+        file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
         _run_local(context, "mkdir -p target/release", module)
         _run_local(context, "cp -rvf .env_prod target/release/.env", module, hide='err', warn=True)
         _run_local(context, "cp -rvf docker-compose.yml target/release", module, hide='err', warn=True)
         if isfile(join(DIR_ROOT, module, "Dockerfile")):
             print("docker -> target/release/{}".format(file_image))
             _run_local(context, "docker image save -o {} {}:{}"
-                       .format(file_image, _name(module), VERSION_ABSOLUTE), join(module, "target/release"))
+                       .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
         _run_local(context, "cp -vf target/package/main/resources/config/.* target/release 2> /dev/null || "
                             "cp -rvf target/package/main/resources/config/* target/release", module, hide='err', warn=True)
         _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
@@ -219,7 +238,7 @@ def _release(context):
             ssh = "sshpass -f /Users/graham/.ssh/.password" \
                 if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
                               .format(host), hide="err", warn=True).exited > 0 else ""
-            install = "/var/lib/asystem/install/{}/{}".format(VERSION_ABSOLUTE, module)
+            install = "/var/lib/asystem/install/{}/{}".format(_get_versions()[0], module)
             if os.listdir(join(DIR_ROOT, module, "target/release")):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
@@ -228,6 +247,16 @@ def _release(context):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
         _print_footer(module, "release")
+    _get_versions_next_snapshot()
+    _clean(context)
+    _build(context)
+    if ENV_SKIP_TESTS in os.environ:
+        _unittest(context)
+    _package(context)
+    if ENV_SKIP_TESTS in os.environ:
+        _systest(context)
+    _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push origin --tags"
+               .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]))
 
 
 def _group(module):
@@ -303,33 +332,53 @@ def _run_remote(context, command, **kwargs):
     return context.run(command, **kwargs)
 
 
+def _get_versions(version_absolute=Path(join(dirname(abspath(__file__)), ".version")).read_text()):
+    version_numeric = int(version_absolute.replace(".", "").replace("-SNAPSHOT", "")) * (-1 if "SNAPSHOT" in version_absolute else 1)
+    version_compact = int((math.fabs(version_numeric) - 101001000) * (-1 if "SNAPSHOT" in version_absolute else 1))
+    return (version_absolute, version_numeric, version_compact)
+
+
+def _get_versions_next(versions=_get_versions()):
+    version_next_numeric = abs(versions[1]) if "SNAPSHOT" in versions[0] else (abs(versions[1]) + 1)
+    version_next_absolute = u"{}.{}.{}".format(
+        int(version_next_numeric / 10000000) % 10000,
+        int(version_next_numeric / 10000) % 10000,
+        version_next_numeric % 10000)
+    return _get_versions(version_next_absolute)
+
+
+def _get_versions_next_release():
+    versions_next_release = _get_versions(_get_versions_next()[0])
+    Path(join(dirname(abspath(__file__)), ".version")).write_text(versions_next_release[0])
+    return versions_next_release
+
+
+def _get_versions_next_snapshot():
+    versions_next_snapshot = _get_versions(_get_versions_next(_get_versions(
+        _get_versions()[0].replace("-SNAPSHOT", "") if "SNAPSHOT" in _get_versions()[0] else _get_versions()[0]))[0] + "-SNAPSHOT")
+    Path(join(dirname(abspath(__file__)), ".version")).write_text(versions_next_snapshot[0])
+    return versions_next_snapshot
+
+
 def _print_line(message):
     print(message)
     sys.stdout.flush()
 
 
 def _print_header(module, stage):
-    _print_line(HEADER.format(stage.upper(), module.lower().replace('/', '-'), VERSION_ABSOLUTE))
+    _print_line(HEADER.format(stage.upper(), module.lower().replace('/', '-'), _get_versions()[0]))
 
 
 def _print_footer(module, stage):
-    _print_line(FOOTER.format(stage.upper(), module.lower().replace('/', '-'), VERSION_ABSOLUTE))
+    _print_line(FOOTER.format(stage.upper(), module.lower().replace('/', '-'), _get_versions()[0]))
 
 
 DIR_ROOT = dirname(abspath(__file__))
 FILE_PROFILE = join(dirname(abspath(__file__)), ".profile")
 
-VERSION_ABSOLUTE = Path(join(dirname(abspath(__file__)), ".version")).read_text()
-VERSION_NUMERIC = int(VERSION_ABSOLUTE.replace(".", "").replace("-SNAPSHOT", "")) * (-1 if "SNAPSHOT" in VERSION_ABSOLUTE else 1)
-VERSION_COMPACT = int((math.fabs(VERSION_NUMERIC) - 101001000) * (-1 if "SNAPSHOT" in VERSION_ABSOLUTE else 1))
+ENV_SKIP_TESTS = 'FAB_SKIP_TESTS'
 
 DOCKER_VARIABLES = "DATA_DIR=./target/runtime-system LOCAL_IP=$(/usr/sbin/ipconfig getifaddr en1)"
-
-TEMPLATE_VARIABLES = {
-    "VERSION_COMPACT": str(VERSION_COMPACT),
-    "VERSION_NUMERIC": str(VERSION_NUMERIC),
-    "VERSION_ABSOLUTE": VERSION_ABSOLUTE,
-}
 
 HEADER = \
     "------------------------------------------------------------\n" \
