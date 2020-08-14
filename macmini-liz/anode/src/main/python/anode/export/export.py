@@ -82,7 +82,7 @@ if __name__ == "__main__":
         lines = iter(file.readlines())
         next(lines)
         for line in lines:
-            sensor = line.split(",")
+            sensor = line.strip().split(",")
             SENSORS[sensor[1]] = sensor
 
     client = mqtt.Client()

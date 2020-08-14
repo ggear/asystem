@@ -7,6 +7,11 @@
           - entity: sensor.laundry_noise
           - entity: sensor.office_noise
           - entity: sensor.parents_noise
+          - entity: sensor.ada_noise
+          - entity: sensor.edwin_noise
+          - entity: sensor.kitchen_noise
+          - entity: sensor.office_noise
+          - entity: sensor.parents_noise
       - type: entities
         show_header_toggle: false
         entities:
@@ -23,6 +28,16 @@
           - entity: sensor.parents_temperature
           - entity: sensor.roof_temperature
           - entity: sensor.utility_temperature
+          - entity: sensor.ada_temperature
+          - entity: sensor.basement_temperature
+          - entity: sensor.deck_temperature
+          - entity: sensor.dining_temperature
+          - entity: sensor.edwin_temperature
+          - entity: sensor.kitchen_temperature
+          - entity: sensor.lounge_temperature
+          - entity: sensor.office_temperature
+          - entity: sensor.pantry_temperature
+          - entity: sensor.parents_temperature
       - type: entities
         show_header_toggle: false
         entities:
@@ -52,6 +67,11 @@
           - entity: sensor.office_pressure
           - entity: sensor.parents_pressure
           - entity: sensor.roof_pressure
+          - entity: sensor.ada_pressure
+          - entity: sensor.edwin_pressure
+          - entity: sensor.kitchen_pressure
+          - entity: sensor.office_pressure
+          - entity: sensor.parents_pressure
       - type: entities
         show_header_toggle: false
         entities:
@@ -67,6 +87,14 @@
           - entity: sensor.edwin_carbon_dioxide
           - entity: sensor.kitchen_carbon_dioxide
           - entity: sensor.laundry_carbon_dioxide
+          - entity: sensor.lounge_carbon_dioxide
+          - entity: sensor.office_carbon_dioxide
+          - entity: sensor.pantry_carbon_dioxide
+          - entity: sensor.parents_carbon_dioxide
+          - entity: sensor.ada_carbon_dioxide
+          - entity: sensor.dining_carbon_dioxide
+          - entity: sensor.edwin_carbon_dioxide
+          - entity: sensor.kitchen_carbon_dioxide
           - entity: sensor.lounge_carbon_dioxide
           - entity: sensor.office_carbon_dioxide
           - entity: sensor.pantry_carbon_dioxide
@@ -101,6 +129,9 @@
           - entity: sensor.edwin_health_index
           - entity: sensor.laundry_health_index
           - entity: sensor.parents_health_index
+          - entity: sensor.ada_health_index
+          - entity: sensor.edwin_health_index
+          - entity: sensor.parents_health_index
       - type: entities
         show_header_toggle: false
         entities:
@@ -117,6 +148,16 @@
           - entity: sensor.parents_humidity
           - entity: sensor.roof_humidity
           - entity: sensor.utility_humidity
+          - entity: sensor.ada_humidity
+          - entity: sensor.basement_humidity
+          - entity: sensor.deck_humidity
+          - entity: sensor.dining_humidity
+          - entity: sensor.edwin_humidity
+          - entity: sensor.kitchen_humidity
+          - entity: sensor.lounge_humidity
+          - entity: sensor.office_humidity
+          - entity: sensor.pantry_humidity
+          - entity: sensor.parents_humidity
       - type: entities
         show_header_toggle: false
         entities:
@@ -124,6 +165,11 @@
           - entity: sensor.edwin_pressure_absolute
           - entity: sensor.kitchen_pressure_absolute
           - entity: sensor.laundry_pressure_absolute
+          - entity: sensor.office_pressure_absolute
+          - entity: sensor.parents_pressure_absolute
+          - entity: sensor.ada_pressure_absolute
+          - entity: sensor.edwin_pressure_absolute
+          - entity: sensor.kitchen_pressure_absolute
           - entity: sensor.office_pressure_absolute
           - entity: sensor.parents_pressure_absolute
       - type: entities
@@ -137,7 +183,9 @@
           - entity: sensor.lounge_lights_energy_consumption
           - entity: sensor.pantry_lights_energy_consumption
           - entity: sensor.bathroom_lights_energy_consumption
+          - entity: sensor.edwin_lights_energy_consumption
           - entity: sensor.wardrobe_lights_energy_consumption
+          - entity: sensor.towelrails_energy_consumption
           - entity: sensor.lamp_lights_energy_consumption
           - entity: sensor.laundry_lights_energy_consumption
           - entity: sensor.parents_lights_energy_consumption
@@ -145,9 +193,12 @@
           - entity: sensor.dining_lights_energy_consumption
           - entity: sensor.hallway_lights_energy_consumption
           - entity: sensor.filter_energy_consumption
+          - entity: sensor.ada_lights_energy_consumption
+          - entity: sensor.office_energy_consumption
       - type: entities
         show_header_toggle: false
         entities:
+          - entity: sensor.ada_lights_power_consumption
           - entity: sensor.ensuite_lights_power_consumption
           - entity: sensor.office_lights_power_consumption
           - entity: sensor.kitchen_lights_power_consumption
@@ -162,8 +213,11 @@
           - entity: sensor.laundry_lights_power_consumption
           - entity: sensor.fan_power_consumption
           - entity: sensor.hallway_lights_power_consumption
+          - entity: sensor.edwin_lights_power_consumption
           - entity: sensor.pantry_lights_power_consumption
           - entity: sensor.parents_lights_power_consumption
+          - entity: sensor.towelrails_power_consumption
+          - entity: sensor.office_power_consumption
       - type: entities
         show_header_toggle: false
         entities:
