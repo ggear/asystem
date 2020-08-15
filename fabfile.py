@@ -214,7 +214,8 @@ def _release(context):
     _clean(context)
     _build(context)
     _package(context)
-    _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
+    if ENV_SKIP_GIT not in os.environ:
+        _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in _get_modules(context, "src"):
         _print_header(module, "release")
@@ -227,8 +228,9 @@ def _release(context):
             print("docker -> target/release/{}".format(file_image))
             _run_local(context, "docker image save -o {} {}:{}"
                        .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
-        _run_local(context, "cp -vf target/package/main/resources/config/.* target/release", module, hide='err', warn=True)
-        _run_local(context, "cp -rvf target/package/main/resources/config/* target/release", module, hide='err', warn=True)
+        dir_config = join(DIR_ROOT, module, "target/package/main/resources/config")
+        if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
+            _run_local(context, "cp -rvf $(ls -A {}) target/release".format(dir_config), module)
         _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
         for host in _get_hosts(context, module):
             ssh = "sshpass -f /Users/graham/.ssh/.password" \
@@ -241,8 +243,9 @@ def _release(context):
             if os.listdir(join(DIR_ROOT, module, "target/release")):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
-                _run_local(context, "{} scp -qp target/release/.* root@{}:{}".format(ssh, host, install), module, hide='err', warn=True)
-                _run_local(context, "{} scp -qpr target/release/* root@{}:{}".format(ssh, host, install), module, hide='err', warn=True)
+            dir_config = join(DIR_ROOT, module, "target/release")
+            if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
+                _run_local(context, "{} scp -qpr $(ls -A {}) root@{}:{}".format(ssh, dir_config, host, install), module)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
@@ -258,7 +261,8 @@ def _release(context):
     _package(context)
     if ENV_SKIP_TESTS not in os.environ:
         _systest(context)
-    _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
+    if ENV_SKIP_GIT not in os.environ:
+        _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
 
 
@@ -311,9 +315,9 @@ def _up_module(context, module, up_this=True):
         _print_line("Starting servers ...")
         for run_dep in _get_dependencies(context, module):
             _run_local(context, "rm -rvf target/runtime-system && mkdir -p target/runtime-system", run_dep)
-            if isdir(join(DIR_ROOT, run_dep, "src/main/resources/config")):
-                _run_local(context, "cp -vf src/main/resources/config/.* target/runtime-system 2> /dev/null || "
-                                    "cp -rvf src/main/resources/config/* target/runtime-system", run_dep, warn=True)
+            dir_config = join(DIR_ROOT, run_dep, "src/main/resources/config")
+            if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
+                _run_local(context, "cp -rvf $(ls -A src/main/resources/config) target/runtime-system")
             if run_dep != module or up_this:
                 _run_local(context, "{} docker-compose --no-ansi up --force-recreate -d".format(DOCKER_VARIABLES), run_dep)
 
@@ -383,6 +387,7 @@ def _print_footer(module, stage):
 DIR_ROOT = dirname(abspath(__file__))
 FILE_PROFILE = join(dirname(abspath(__file__)), ".profile")
 
+ENV_SKIP_GIT = 'FAB_SKIP_GIT'
 ENV_SKIP_TESTS = 'FAB_SKIP_TESTS'
 
 DOCKER_VARIABLES = "DATA_DIR=./target/runtime-system LOCAL_IP=$(/usr/sbin/ipconfig getifaddr en1)"
