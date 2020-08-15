@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cd /var/lib/asystem/install/$VERSION_ABSOLUTE/macmini-liz/anode
+cd /var/lib/asystem/install/$VERSION_ABSOLUTE/${HOSTNAME}/anode
 mkdir -p /home/asystem/anode
 cp -rf .pem .profile anode.yaml /home/asystem/anode
 docker image load -i anode-$VERSION_ABSOLUTE.tar.gz
