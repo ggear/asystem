@@ -76,6 +76,13 @@ def on_message(client, user_data, message):
 
 
 if __name__ == "__main__":
+
+    # TODO: Move delete to anode start, done synchronously before start, maybe as a script call into docker container
+    # TODO: Only ever connect to production
+    # TODO: How to get hostname, maybe this is in its own module, pulls hostname from module name? or as above and refer to config
+    # TODO: Mark all existing sensros as 'Hidden', when found, makr as 'Displayed'
+    # TODO: Work through meta-data requirements of HA, Grafana and Chronograf
+
     if len(sys.argv) > 1 and sys.argv[1] == "delete":
         MODE = "DELETE"
     with open(DIR_WORK + "/sensors.csv", "r") as file:
