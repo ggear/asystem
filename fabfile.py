@@ -237,7 +237,7 @@ def _release(context):
             if _run_local(context, "{} ssh -q root@{} 'echo Connected to {}'".format(ssh, host, host), hide="err", warn=True).exited > 0:
                 print("Error: Cannot connect via [{} ssh -q root@{}]".format(ssh, host))
                 exit(1)
-            install = "/var/lib/asystem/install/{}/{}".format(_get_versions()[0], module)
+            install = "/var/lib/asystem/install/{}/{}".format(module, _get_versions()[0])
             if os.listdir(join(DIR_ROOT, module, "target/release")):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
@@ -246,7 +246,10 @@ def _release(context):
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
-        _print_footer(module, "release")
+                _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f'".format(ssh, host))
+                _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
+                           .format(ssh, host, install, install))
+    _print_footer(module, "release")
     _get_versions_next_snapshot()
     _clean(context)
     _build(context)
