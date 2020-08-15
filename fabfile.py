@@ -230,7 +230,7 @@ def _release(context):
                        .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
         dir_config = join(DIR_ROOT, module, "target/package/main/resources/config")
         if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
-            _run_local(context, "cp -rvf $(ls -A {}) target/release".format(dir_config), module)
+            _run_local(context, "cp -rvf $(find {} -printf '%p ') target/release".format(dir_config), module)
         _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
         for host in _get_hosts(context, module):
             ssh = "sshpass -f /Users/graham/.ssh/.password" \
@@ -245,7 +245,7 @@ def _release(context):
                 _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
             dir_config = join(DIR_ROOT, module, "target/release")
             if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
-                _run_local(context, "{} scp -qpr $(ls -A {}) root@{}:{}".format(ssh, dir_config, host, install), module)
+                _run_local(context, "{} scp -qpr $(find {} -printf '%p ') root@{}:{}".format(ssh, dir_config, host, install), module)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
@@ -317,7 +317,7 @@ def _up_module(context, module, up_this=True):
             _run_local(context, "rm -rvf target/runtime-system && mkdir -p target/runtime-system", run_dep)
             dir_config = join(DIR_ROOT, run_dep, "src/main/resources/config")
             if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
-                _run_local(context, "cp -rvf $(ls -A src/main/resources/config) target/runtime-system")
+                _run_local(context, "cp -rvf $(find {} -printf '%p ') target/runtime-system".format(dir_config))
             if run_dep != module or up_this:
                 _run_local(context, "{} docker-compose --no-ansi up --force-recreate -d".format(DOCKER_VARIABLES), run_dep)
 
