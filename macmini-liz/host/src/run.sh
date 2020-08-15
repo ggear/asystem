@@ -13,8 +13,9 @@
 # Enable remote root login : /etc/ssh/sshd_config PermitRootLogin yes
 
 ################################################################################
-# Resize volumes
+# Volumes
 ################################################################################
+# TODO: Resize /var
 df -h
 vgdisplay
 

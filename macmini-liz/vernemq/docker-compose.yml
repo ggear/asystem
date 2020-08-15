@@ -10,4 +10,4 @@ services:
       - DOCKER_VERNEMQ_ACCEPT_EULA=yes
       - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
     ports:
-      - '1883:1883'
+      - 1883:1883

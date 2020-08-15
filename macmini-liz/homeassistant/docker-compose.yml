@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: homeassistant/home-assistant:0.114.0
+    init: true
+    restart: ${RESTART}
+    environment:
+      - TZ=Australia/Perth
+    volumes:
+      - ${DATA_DIR}:/config
+    ports:
+      - 8123:8123
