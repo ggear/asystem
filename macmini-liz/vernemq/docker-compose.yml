@@ -1,6 +1,6 @@
 version: '3.7'
 services:
-  run:
+  vernemq:
     container_name: vernemq
     image: vernemq/vernemq:1.10.2-1-alpine
     init: true
