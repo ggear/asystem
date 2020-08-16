@@ -25,4 +25,9 @@ if [ ! -d "$SERVICE_HOME" ]; then
   rm -rvf "$SERVICE_HOME_OLDEST"
 fi
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvf $(find config -mindepth 1) "${SERVICE_HOME}"
+cat <<EOF >>.env
+RESTART=always
+VERSION=${VERSION_ABSOLUTE}
+DATA_DIR=${SERVICE_HOME}
+EOF
 VERSION=${VERSION_ABSOLUTE} DATA_DIR="${SERVICE_HOME}" LOCAL_IP="${SERVICE_HOST_IP}" docker-compose --no-ansi up --force-recreate -d

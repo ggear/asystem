@@ -137,7 +137,6 @@ def _build(context):
                 for package_resource in package_resource_file:
                     package_resource = package_resource.strip()
                     if package_resource != "" and not package_resource.startswith("#"):
-
                         package_resource_source = DIR_ROOT if package_resource == "run.sh" and not isfile(package_resource) \
                             else "target/package"
                         environment = {
@@ -150,7 +149,6 @@ def _build(context):
                                    .format(" ".join(["$" + sub for sub in environment.keys()]),
                                            package_resource_source, package_resource, package_resource, package_resource, package_resource),
                                    join(module, "target/package"), env=environment)
-
                         if package_resource.endswith(".html") or package_resource.endswith(".css"):
                             _run_local(context, "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
                                                 " --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace"
