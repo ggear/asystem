@@ -13,7 +13,7 @@ SERVICE_HOST_IP=$(/usr/sbin/ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]
 
 cd "${SERVICE_INSTALL}" || exit
 [ -f "${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz
-docker stop "${SERVICE_NAME}" 2>&1 >/dev/null || docker wait "${SERVICE_NAME}" 2>&1 >/dev/null || docker system prune --volumes -f
+docker stop "${SERVICE_NAME}" 2>&1 >/dev/null || docker wait "${SERVICE_NAME}" 2>&1 >/dev/null
 if [ ! -d "$SERVICE_HOME" ]; then
   if [ -d "$SERVICE_HOME_OLD" ]; then
     cp -rvf "$SERVICE_HOME_OLD" "$SERVICE_HOME"
