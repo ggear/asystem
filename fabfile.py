@@ -131,13 +131,15 @@ def _build(context):
                 for package_resource in package_resource_file:
                     package_resource = package_resource.strip()
                     if package_resource != "" and not package_resource.startswith("#"):
-                        _run_local(context, "envsubst < {} > {}.new && mv {}.new {}"
-                                   .format(package_resource, package_resource, package_resource, package_resource),
-                                   join(module, "target/package"), env={
-                                "VERSION_COMPACT": str(_get_versions()[2]),
-                                "VERSION_NUMERIC": str(_get_versions()[1]),
-                                "VERSION_ABSOLUTE": _get_versions()[0],
-                            })
+                        environment = {
+                            "VERSION_COMPACT": str(_get_versions()[2]),
+                            "VERSION_NUMERIC": str(_get_versions()[1]),
+                            "VERSION_ABSOLUTE": _get_versions()[0],
+                        }
+                        _run_local(context, "envsubst '{}' < {} > {}.new && mv {}.new {}"
+                                   .format(" ".join(["$" + sub for sub in environment.keys()]),
+                                           package_resource, package_resource, package_resource, package_resource),
+                                   join(module, "target/package"), env=environment)
                         if package_resource.endswith(".html") or package_resource.endswith(".css"):
                             _run_local(context, "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
                                                 " --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace"
