@@ -251,15 +251,17 @@ def _release(context):
                 _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f'".format(ssh, host))
                 _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
                            .format(ssh, host, install, install))
-    _print_footer(module, "release")
     _get_versions_next_snapshot()
-    _clean(context)
-    _build(context)
-    _package(context)
+
+    # _clean(context)
+    # _build(context)
+    # _package(context)
+
     if ENV_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
+    _print_footer(module, "release")
 
 
 def _group(module):
