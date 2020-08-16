@@ -132,9 +132,10 @@ def _build(context):
                     package_resource = package_resource.strip()
                     if package_resource != "" and not package_resource.startswith("#"):
                         environment = {
-                            "VERSION_COMPACT": str(_get_versions()[2]),
-                            "VERSION_NUMERIC": str(_get_versions()[1]),
+                            "SERVICE_NAME": _name(module),
                             "VERSION_ABSOLUTE": _get_versions()[0],
+                            "VERSION_NUMERIC": str(_get_versions()[1]),
+                            "VERSION_COMPACT": str(_get_versions()[2]),
                         }
                         _run_local(context, "envsubst '{}' < {} > {}.new && mv {}.new {}"
                                    .format(" ".join(["$" + sub for sub in environment.keys()]),
