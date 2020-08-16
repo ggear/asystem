@@ -138,7 +138,7 @@ def _build(context):
                     package_resource = package_resource.strip()
                     if package_resource != "" and not package_resource.startswith("#"):
                         package_resource_source = DIR_ROOT if package_resource == "run.sh" and not isfile(package_resource) \
-                            else "target/package"
+                            else join(DIR_ROOT, module, "target/package")
                         environment = {
                             "SERVICE_NAME": _name(module),
                             "VERSION_ABSOLUTE": _get_versions()[0],
