@@ -221,11 +221,11 @@ def _release(context):
     for module in _get_modules(context, "src"):
         _print_header(module, "release")
         print("Preparing release ... ")
-        file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
         _run_local(context, "mkdir -p target/release", module)
         _run_local(context, "cp -rvf .env_prod target/release/.env", module, hide='err', warn=True)
         _run_local(context, "cp -rvf docker-compose.yml target/release", module, hide='err', warn=True)
         if isfile(join(DIR_ROOT, module, "Dockerfile")):
+            file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
             print("docker -> target/release/{}".format(file_image))
             _run_local(context, "docker image save -o {} {}:{}"
                        .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
@@ -233,7 +233,10 @@ def _release(context):
             _run_local(context, "cp -rvf target/package/main/resources/config target/release", module)
         else:
             _run_local(context, "mkdir -p target/release/config", module)
-        _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
+        if isfile(join(DIR_ROOT, module, "target/package/run.sh")):
+            _run_local(context, "cp -rvf target/package/run.sh target/release", module)
+        else:
+            _run_local(context, "touch target/release/run.sh", module)
         for host in _get_hosts(context, module):
             ssh = "sshpass -f /Users/graham/.ssh/.password" \
                 if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
@@ -244,13 +247,13 @@ def _release(context):
             install = "/var/lib/asystem/install/{}/{}".format(module, _get_versions()[0])
             print("Copying release to {} ... ".format(host))
             _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
-            _run_local(context, "{} scp -qpr $(find target/release -type f) root@{}:{}".format(ssh, host, install), module)
-            if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
-                print("Installing release to {} ... ".format(host))
-                _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
-                _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f'".format(ssh, host))
-                _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
-                           .format(ssh, host, install, install))
+            _run_local(context, "{} scp -qpr $(find target/release -maxdepth 1 -type f) root@{}:{}".format(ssh, host, install), module)
+            _run_local(context, "{} scp -qpr target/release/config root@{}:{}".format(ssh, host, install), module)
+            print("Installing release to {} ... ".format(host))
+            _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
+            _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f'".format(ssh, host))
+            _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
+                       .format(ssh, host, install, install))
     _get_versions_next_snapshot()
 
     # _clean(context)
