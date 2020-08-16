@@ -215,6 +215,7 @@ def _release(context):
     _build(context)
     _package(context)
     if ENV_SKIP_GIT not in os.environ:
+        print("Tagging repo ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in _get_modules(context, "src"):
@@ -262,6 +263,7 @@ def _release(context):
     if ENV_SKIP_TESTS not in os.environ:
         _systest(context)
     if ENV_SKIP_GIT not in os.environ:
+        print("Pushing repo ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
                .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
 

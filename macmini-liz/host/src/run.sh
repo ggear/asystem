@@ -32,7 +32,7 @@ apt-get update && apt-get install -y \
 ################################################################################
 apt-get update && apt-get install -y \
   avahi-daemon=0.7-4+b1
-cat <<EOF >>/etc/avahi/avahi-daemon.conf
+cat <<EOF >/etc/avahi/avahi-daemon.conf
 # See avahi-daemon.conf(5) for more information
 
 [server]
