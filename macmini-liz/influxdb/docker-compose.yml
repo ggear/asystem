@@ -7,13 +7,14 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
+
+      # TODO: Automate setup as per https://github.com/influxdata/influxdb/pull/17946/commits/996ba9a65c68005ab1f8f64377af97be7550d010#diff-c43edca80239cb76564c11e503856bc9
       - INFLUXDB_USER=asystem
       - INFLUXDB_PASSWORD=Asystem1980!
       - INFLUXDB_ORG=asystem
       - INFLUXDB_BUCKET=asystem
+
     volumes:
       - ${DATA_DIR}:/root/.influxdbv2
     ports:
       - 9999:9999
-
-# TODO: Automate steup as per https://github.com/influxdata/influxdb/pull/17946/commits/996ba9a65c68005ab1f8f64377af97be7550d010#diff-c43edca80239cb76564c11e503856bc9
