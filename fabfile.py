@@ -242,9 +242,8 @@ def _release(context):
                 print("Error: Cannot connect via [{} ssh -q root@{}]".format(ssh, host))
                 exit(1)
             install = "/var/lib/asystem/install/{}/{}".format(module, _get_versions()[0])
-            if os.listdir(join(DIR_ROOT, module, "target/release")):
-                print("Copying release to {} ... ".format(host))
-                _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
+            print("Copying release to {} ... ".format(host))
+            _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
             _run_local(context, "{} scp -qpr $(find target/release -mindepth 1) root@{}:{}".format(ssh, host, install), module)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
