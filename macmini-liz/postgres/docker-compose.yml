@@ -7,8 +7,8 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
+      - POSTGRES_USER=asystem
+      - POSTGRES_PASSWORD=asystem
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - ${DATA_DIR}:/var/lib/postgresql/data
