@@ -131,18 +131,29 @@ def _build(context):
                 for package_resource in package_resource_file:
                     package_resource = package_resource.strip()
                     if package_resource != "" and not package_resource.startswith("#"):
-                        if package_resource == "run.sh" and not isfile(package_resource):
-                            package_resource = join(DIR_ROOT, "run.sh")
+
+
+
+
+
+
+
+                        package_resource_source = DIR_ROOT if package_resource == "run.sh" and not isfile(package_resource) \
+                            else "target/package"
                         environment = {
                             "SERVICE_NAME": _name(module),
                             "VERSION_ABSOLUTE": _get_versions()[0],
                             "VERSION_NUMERIC": str(_get_versions()[1]),
                             "VERSION_COMPACT": str(_get_versions()[2]),
                         }
-                        _run_local(context, "envsubst '{}' < {} > {}.new && mv {}.new {}"
+                        _run_local(context, "envsubst '{}' < {}/{} > {}.new && mv {}.new {}"
                                    .format(" ".join(["$" + sub for sub in environment.keys()]),
-                                           package_resource, package_resource, package_resource, package_resource),
+                                           package_resource_source, package_resource, package_resource, package_resource, package_resource),
                                    join(module, "target/package"), env=environment)
+
+
+
+
                         if package_resource.endswith(".html") or package_resource.endswith(".css"):
                             _run_local(context, "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
                                                 " --remove-redundant-attributes --remove-script-type-attributes --remove-tag-whitespace"

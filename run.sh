@@ -1,14 +1,14 @@
 #!/bin/sh
 
-SERVICE_HOME=/home/asystem/influxdb/10.100.1138-SNAPSHOT
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/10.100.1138-SNAPSHOT
 SERVICE_HOME_OLD=$(ls -dt $(dirname ${SERVICE_HOME})/*/ 2>/dev/null | head -n 1)
 SERVICE_HOME_OLDEST=$(ls -dt $(dirname ${SERVICE_HOME})/*/ 2>/dev/null | tail -n -$(($(ls -dt $(dirname ${SERVICE_HOME})/*/ 2>/dev/null | wc -l) - 1)) 2>/dev/null)
-SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/influxdb/10.100.1138-SNAPSHOT
+SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/10.100.1138-SNAPSHOT
 SERVICE_HOST_IP=$(/usr/sbin/ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep '192.168.1')
 
 cd "${SERVICE_INSTALL}" || exit
-[ -f "influxdb-10.100.1138-SNAPSHOT.tar.gz" ] && docker image load -i influxdb-10.100.1138-SNAPSHOT.tar.gz
-docker stop "influxdb" 2>/dev/null && docker wait "influxdb" 2>/dev/null && docker system prune --volumes -f
+[ -f "${SERVICE_NAME}-10.100.1138-SNAPSHOT.tar.gz" ] && docker image load -i ${SERVICE_NAME}-10.100.1138-SNAPSHOT.tar.gz
+docker stop "${SERVICE_NAME}" 2>/dev/null && docker wait "${SERVICE_NAME}" 2>/dev/null && docker system prune --volumes -f
 if [ ! -d "$SERVICE_HOME" ]; then
   if [ -d "$SERVICE_HOME_OLD" ]; then
     cp -rvf "$SERVICE_HOME_OLD" "$SERVICE_HOME"
