@@ -244,7 +244,7 @@ def _release(context):
             install = "/var/lib/asystem/install/{}/{}".format(module, _get_versions()[0])
             print("Copying release to {} ... ".format(host))
             _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
-            _run_local(context, "{} scp -qpr $(find target/release -mindepth 1) root@{}:{}".format(ssh, host, install), module)
+            _run_local(context, "{} scp -qpr $(find target/release -type f) root@{}:{}".format(ssh, host, install), module)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
