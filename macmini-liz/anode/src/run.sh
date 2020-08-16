@@ -2,7 +2,7 @@
 
 cd /var/lib/asystem/install/$(hostname)/anode/$VERSION_ABSOLUTE
 mkdir -p /home/asystem/anode
-cp -vrf .pem .profile anode.yaml /home/asystem/anode
+cp -rvf $(find ./* ! -name run.sh) /home/asystem/anode
 docker image load -i anode-$VERSION_ABSOLUTE.tar.gz
 docker stop anode 2>&1 >/dev/null && docker wait anode 2>&1 >/dev/null
 VERSION=$VERSION_ABSOLUTE \
