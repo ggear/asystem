@@ -2,8 +2,8 @@
 
 SERVICE_NAME=homeassistant
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
-SERVICE_HOME_OLD=$(ls -dt $(dirname ${SERVICE_HOME})/*/ | head -n 1)
-SERVICE_HOME_OLDEST=$(ls -dt $(dirname ${SERVICE_HOME})/*/ | tail -n -$(($(ls -dt $(dirname ${SERVICE_HOME})/*/ | wc -l) - 1)))
+SERVICE_HOME_OLD=$(ls -dt $(dirname ${SERVICE_HOME})/*/ 2>/dev/null | head -n 1)
+SERVICE_HOME_OLDEST=$(ls -dt $(dirname ${SERVICE_HOME})/*/ 2>/dev/null | tail -n -$(($(ls -dt $(dirname ${SERVICE_HOME})/*/ | wc -l) - 1)))
 SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 SERVICE_HOST_IP=$(/usr/sbin/ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep '192.168.1')
 
