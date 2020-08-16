@@ -254,9 +254,9 @@ def _release(context):
             _run_local(context, "{} scp -qpr target/release/config root@{}:{}".format(ssh, host, install), module)
             print("Installing release to {} ... ".format(host))
             _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
-            _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f'".format(ssh, host))
+            _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f'".format(ssh, host), hide='err', warn=True)
             _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
-                       .format(ssh, host, install, install))
+                       .format(ssh, host, install, install), hide='err', warn=True)
     _get_versions_next_snapshot()
     if ENV_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
