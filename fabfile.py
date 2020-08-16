@@ -257,11 +257,7 @@ def _release(context):
     _get_versions_next_snapshot()
     _clean(context)
     _build(context)
-    if ENV_SKIP_TESTS not in os.environ:
-        _unittest(context)
     _package(context)
-    if ENV_SKIP_TESTS not in os.environ:
-        _systest(context)
     if ENV_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
