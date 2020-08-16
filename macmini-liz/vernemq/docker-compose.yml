@@ -9,4 +9,5 @@ services:
       - TZ=Australia/Perth
       - DOCKER_VERNEMQ_ACCEPT_EULA=yes
       - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
-    network_mode: host
+    ports:
+      - 1883:1883

@@ -9,5 +9,4 @@ services:
       - TZ=Australia/Perth
     volumes:
       - ${DATA_DIR}:/config
-    ports:
-      - 8123:8123
+    network_mode: host
