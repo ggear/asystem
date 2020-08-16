@@ -230,8 +230,10 @@ def _release(context):
             _run_local(context, "docker image save -o {} {}:{}"
                        .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
         dir_config = join(DIR_ROOT, module, "target/package/main/resources/config")
-        if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
-            _run_local(context, "cp -rvf $(find {} -mindepth 1) target/release".format(dir_config), module)
+        if isdir(dir_config):
+            _run_local(context, "cp -rvf {} target/release".format(dir_config), module)
+        else:
+            _run_local(context, "mkdir -p {}".format(dir_config), module)
         _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
         for host in _get_hosts(context, module):
             ssh = "sshpass -f /Users/graham/.ssh/.password" \
@@ -245,8 +247,7 @@ def _release(context):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
             dir_config = join(DIR_ROOT, module, "target/release")
-            if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
-                _run_local(context, "{} scp -qpr $(find {} -mindepth 1) root@{}:{}".format(ssh, dir_config, host, install), module)
+            _run_local(context, "{} scp -qpr {} root@{}:{}".format(ssh, dir_config, host, install), module)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
