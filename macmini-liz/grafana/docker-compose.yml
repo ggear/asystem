@@ -7,6 +7,8 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
+      - GF_SECURITY_ADMIN_USER=asystem
+      - GF_SECURITY_ADMIN_PASSWORD=asystem
     volumes:
       - ${DATA_DIR}:/var/lib/grafana
     ports:
