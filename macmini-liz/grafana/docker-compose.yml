@@ -9,7 +9,7 @@ services:
       - TZ=Australia/Perth
       - GF_SECURITY_ADMIN_USER=asystem
       - GF_SECURITY_ADMIN_PASSWORD=Asystem1980!
-    volumes:
+#    volumes:
 #      - ${DATA_DIR}:/var/lib/grafana
     ports:
       - 3000:3000
