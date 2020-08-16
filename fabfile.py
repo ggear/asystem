@@ -255,11 +255,6 @@ def _release(context):
             _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
                        .format(ssh, host, install, install))
     _get_versions_next_snapshot()
-
-    # _clean(context)
-    # _build(context)
-    # _package(context)
-
     if ENV_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
