@@ -217,7 +217,7 @@ def _release(context):
     if ENV_SKIP_GIT not in os.environ:
         print("Tagging repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
-               .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
+                   .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in _get_modules(context, "src"):
         _print_header(module, "release")
         print("Preparing release ... ")
@@ -229,11 +229,10 @@ def _release(context):
             print("docker -> target/release/{}".format(file_image))
             _run_local(context, "docker image save -o {} {}:{}"
                        .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
-        dir_config = join(DIR_ROOT, module, "target/package/main/resources/config")
-        if isdir(dir_config):
-            _run_local(context, "cp -rvf {} target/release".format(dir_config), module)
+        if isdir(join(DIR_ROOT, module, "target/package/main/resources/config")):
+            _run_local(context, "cp -rvf target/package/main/resources/config target/release", module)
         else:
-            _run_local(context, "mkdir -p {}".format(dir_config), module)
+            _run_local(context, "mkdir -p target/release/config", module)
         _run_local(context, "cp -rvf target/package/run.sh target/release", module, hide='err', warn=True)
         for host in _get_hosts(context, module):
             ssh = "sshpass -f /Users/graham/.ssh/.password" \
@@ -246,8 +245,7 @@ def _release(context):
             if os.listdir(join(DIR_ROOT, module, "target/release")):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
-            dir_config = join(DIR_ROOT, module, "target/release")
-            _run_local(context, "{} scp -qpr $(find {} -mindepth 1) root@{}:{}".format(ssh, dir_config, host, install), module)
+            _run_local(context, "{} scp -qpr $(find target/release -mindepth 1) root@{}:{}".format(ssh, host, install), module)
             if isfile(join(DIR_ROOT, module, "target/release/run.sh")):
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
@@ -262,7 +260,7 @@ def _release(context):
     if ENV_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
-               .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
+                   .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
 
 
 def _group(module):
