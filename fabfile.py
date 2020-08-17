@@ -324,7 +324,7 @@ def _up_module(context, module, up_this=True):
             _run_local(context, "rm -rvf target/runtime-system && mkdir -p target/runtime-system", run_dep)
             dir_config = join(DIR_ROOT, run_dep, "src/main/resources/config")
             if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
-                _run_local(context, "cp -rvf $(find {} -mindepth 1) target/runtime-system".format(dir_config))
+                _run_local(context, "cp -rvf $(find {} -mindepth 1) target/runtime-system".format(dir_config), module)
             if run_dep != module or up_this:
                 _run_local(context, "{} docker-compose --no-ansi up --force-recreate -d".format(DOCKER_VARIABLES), run_dep)
 
