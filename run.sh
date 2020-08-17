@@ -32,5 +32,8 @@ VERSION=${VERSION_ABSOLUTE}
 DATA_DIR=${SERVICE_HOME}
 
 EOF
+export LOCAL_IP="${SERVICE_HOST_IP}"
+export VERSION="${VERSION_ABSOLUTE}"
+export DATA_DIR="${SERVICE_HOME}"
 [ -f "${SERVICE_HOME}/.profile" ] && . "${SERVICE_HOME}/.profile"
-VERSION=${VERSION_ABSOLUTE} DATA_DIR="${SERVICE_HOME}" LOCAL_IP="${SERVICE_HOST_IP}" docker-compose --no-ansi up --force-recreate -d
+docker-compose --no-ansi up --force-recreate -d
