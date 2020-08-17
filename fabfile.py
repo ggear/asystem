@@ -223,20 +223,21 @@ def _run(context):
 def _release(context):
     _clean(context)
     _build(context)
-    # if ENV_SKIP_TESTS not in os.environ:
-    #     _unittest(context)
-    # _package(context)
-    # if ENV_SKIP_TESTS not in os.environ:
-    #     _systest(context)
-    # _get_versions_next_release()
-    # _clean(context)
-    # _build(context)
-    # _package(context)
+    if ENV_SKIP_TESTS not in os.environ:
+        _unittest(context)
+    _package(context)
+    if ENV_SKIP_TESTS not in os.environ:
+        _systest(context)
+    _get_versions_next_release()
+    _clean(context)
+    _build(context)
+    _package(context)
+    modules = _get_modules(context, "src")
     if ENV_SKIP_GIT not in os.environ:
         print("Tagging repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
-    for module in _get_modules(context, "src"):
+    for module in modules:
         _print_header(module, "release")
         print("Preparing release ... ")
         _run_local(context, "mkdir -p target/release", module)
@@ -278,6 +279,7 @@ def _release(context):
         print("Pushing repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
+
 
 def _group(module):
     return dirname(module)
