@@ -62,7 +62,7 @@ function ANode(uri, onopen, onclose, onmessage) {
     }
 
     this.connected = false
-    this.webSocket = new WebSocket(this.webSocketUri)
+    this.webSocket = new ReconnectingWebSocket(this.webSocketUri)
 
     this.webSocket.onopen = function () {
         outer.connected = true
@@ -97,14 +97,6 @@ function ANode(uri, onopen, onclose, onmessage) {
     }
 
     this.toDatum = function (datumJson) {
-        /**
-         * @property datum
-         * @property datum.data_metric
-         * @property datum.bin_unit
-         * @property datum.bin_width
-         * @property datum.data_timeliness
-         * @property datum.data_temporal
-         */
         var datum = JSON.parse(datumJson)
         datum.ui_id_sans_bin = "datums_" + (datum.data_metric + "_").replace(/\//g, "_").replace(/\./g, "_").toLowerCase()
         datum.ui_id = (datum.ui_id_sans_bin + datum.bin_width + "_" + datum.bin_unit).replace(/\//g, "_").replace(/\./g, "_").toLowerCase()

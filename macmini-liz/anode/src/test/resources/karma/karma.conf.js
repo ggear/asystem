@@ -3,6 +3,7 @@ module.exports = function (config) {
         basePath: '',
         frameworks: ['jasmine'],
         files: [
+            '../../../../src/main/python/anode/web/js/robust-ws.js',
             '../../../../src/main/python/anode/web/js/anode.js',
             '../../../../src/test/python/system/system_tests.js',
         ],
