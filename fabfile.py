@@ -307,6 +307,12 @@ def _get_modules(context, filter_path=None, filter_changes=True):
                 working_modules.append("{}/{}".format(working_dirs[root_dir_index + 1], nested_modules))
     working_modules[:] = [module for module in working_modules
                           if filter_path is None or glob.glob("{}/{}/{}*".format(DIR_ROOT, module, filter_path))]
+    try:
+        working_modules = [module for _, module in
+                           sorted(zip([MODULE_NAMES.index(_name(module)) for module in working_modules], working_modules))]
+    except ValueError as exception:
+        raise Exception("Error: MODULE_NAMES {} needs to be updated with {}!"
+                        .format(MODULE_NAMES, list(set(_name(module) for module in working_modules) - set(MODULE_NAMES))))
     return working_modules
 
 
@@ -402,6 +408,22 @@ def _print_footer(module, stage):
 
 DIR_ROOT = dirname(abspath(__file__))
 FILE_PROFILE = join(dirname(abspath(__file__)), ".profile")
+
+MODULE_NAMES = [
+    "host",
+    "keys",
+    "letsencrypt",
+    "vernemq",
+    "influxdb",
+    "postgres",
+    "telegraf",
+    "grafana",
+    "weewx",
+    "speedtest",
+    "googledrive",
+    "anode",
+    "homeassistant"
+]
 
 DOCKER_VARIABLES = "DATA_DIR=./target/runtime-system LOCAL_IP=$(/usr/sbin/ipconfig getifaddr en1)"
 
