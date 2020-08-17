@@ -32,4 +32,5 @@ VERSION=${VERSION_ABSOLUTE}
 DATA_DIR=${SERVICE_HOME}
 
 EOF
+[ -f "${SERVICE_HOME}/.profile" ] && . "${SERVICE_HOME}/.profile"
 VERSION=${VERSION_ABSOLUTE} DATA_DIR="${SERVICE_HOME}" LOCAL_IP="${SERVICE_HOST_IP}" docker-compose --no-ansi up --force-recreate -d
