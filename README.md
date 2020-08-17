@@ -1,9 +1,11 @@
 # ASystem
 
-A plugable set of home IoT modules.
+A home data, analytics and automation system.
 
-## Build Requirements
-* Conda 4.6+
+## Build requirements
+* conda-4.6+
+* fabric-2.5+
 
 ## Run requirements
-* Docker 19+
+* docker-19+
+* docker-compose 1.26+
