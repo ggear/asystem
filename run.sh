@@ -1,7 +1,7 @@
 #!/bin/sh
 ###############################################################################
 #
-# Generic service run script
+# Generic service run script, to be invoked by the fabric management script
 #
 ###############################################################################
 
