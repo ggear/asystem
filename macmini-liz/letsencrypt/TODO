@@ -1,6 +1,3 @@
-
-
-
 # all - generalise deploy artefacts to scripts, docker, certs from target - wrap up as bundle
 #     - add python3 install, include fab, mqtt etc in requirements.txt
 #     - consider an init.sh and a poll.sh script, the former does a cron, the latter does the ticks
