@@ -4,14 +4,12 @@ services:
     container_name: letsencrypt
     image: adferrand/dnsrobocert:3.4.0
     init: true
-    env_file: .env
 
-# TODO: Update to cloudflare to avoid the whitelisting in namecheap?
-
+    # TODO: Update to cloudflare to avoid the whitelisting in namecheap?
     environment:
       - NAMECHEAP_TOKEN
       - NAMECHEAP_USER
       - NAMECHEAP_IP
     volumes:
       - ${DATA_DIR}/letsencrypt:/etc/letsencrypt
-      - ./src/main/resources/config:/etc/dnsrobocert
+      - ${DATA_DIR}/dnsrobocert:/etc/dnsrobocert

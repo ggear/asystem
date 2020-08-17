@@ -212,11 +212,13 @@ def _run(context):
             _down_module(context, module)
 
         signal.signal(signal.SIGINT, server_stop)
+        source_profile = ". target/runtime-system/.profile && " \
+            if isfile(join(DIR_ROOT, module, "target/runtime-system/.profile")) else ""
         run_dev_path = join(DIR_ROOT, module, "run_dev.sh")
         if isfile(run_dev_path):
-            _run_local(context, "run_dev.sh", module)
+            _run_local(context, "{}run_dev.sh".format(source_profile), module)
         else:
-            _run_local(context, "{} docker-compose --no-ansi up --force-recreate".format(DOCKER_VARIABLES), module)
+            _run_local(context, "{}{} docker-compose --no-ansi up --force-recreate".format(source_profile, DOCKER_VARIABLES), module)
         _print_footer(module, "run")
 
 
@@ -341,7 +343,10 @@ def _up_module(context, module, up_this=True):
             if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
                 _run_local(context, "cp -rvf $(find {} -mindepth 1) target/runtime-system".format(dir_config), module)
             if run_dep != module or up_this:
-                _run_local(context, "{} docker-compose --no-ansi up --force-recreate -d".format(DOCKER_VARIABLES), run_dep)
+                source_profile = ". target/runtime-system/.profile && " \
+                    if isfile(join(DIR_ROOT, run_dep, "target/runtime-system/.profile")) else ""
+                _run_local(context, "{}{} docker-compose --no-ansi up --force-recreate -d"
+                           .format(source_profile, DOCKER_VARIABLES), run_dep)
 
 
 def _down_module(context, module, down_this=True):
