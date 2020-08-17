@@ -430,7 +430,7 @@ MODULE_NAMES = [
     "homeassistant"
 ]
 
-DOCKER_VARIABLES = "DATA_DIR=./target/runtime-system LOCAL_IP=$(/usr/sbin/ipconfig getifaddr en1)"
+DOCKER_VARIABLES = "LOCAL_IP=$(/usr/sbin/ipconfig getifaddr en1)"
 
 HEADER = \
     "------------------------------------------------------------\n" \
