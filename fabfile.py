@@ -14,6 +14,10 @@ from os.path import *
 from fabric import task
 from pathlib2 import Path
 
+ENV_SKIP_GIT = 'FAB_SKIP_GIT'
+ENV_SKIP_TESTS = 'FAB_SKIP_TESTS'
+ENV_SKIP_DELTA = 'FAB_SKIP_DELTA'
+
 
 @task(default=True)
 def default(context):
@@ -105,6 +109,8 @@ def _setup(context, module="asystem"):
 
 def _purge(context, module="asystem"):
     _print_header(module, "purge")
+    _run_local(context, "[ $(docker ps -a -q | wc -l) -gt 0 ] && docker rm -vf $(docker ps -a -q)", warn=True)
+    _run_local(context, "[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)", warn=True)
     _run_local(context, "docker system prune --volumes -f")
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) > 0:
         _run_local(context, "conda remove -y -n $CONDA_ENV --all")
@@ -137,7 +143,8 @@ def _build(context):
                 for package_resource in package_resource_file:
                     package_resource = package_resource.strip()
                     if package_resource != "" and not package_resource.startswith("#"):
-                        package_resource_source = DIR_ROOT if package_resource == "run.sh" and not isfile(package_resource) \
+                        package_resource_source = DIR_ROOT if package_resource == "run.sh" and \
+                                                              not isfile(join(DIR_ROOT, module, package_resource)) \
                             else join(DIR_ROOT, module, "target/package")
                         environment = {
                             "SERVICE_NAME": _name(module),
@@ -283,6 +290,7 @@ def _name(module):
 
 def _get_modules(context, filter_path=None, filter_changes=True):
     working_modules = []
+    filter_changes = filter_changes if ENV_SKIP_DELTA not in os.environ else False
     working_dirs = _run_local(context, "pwd", hide='out').stdout.encode("utf8").strip().split('/')
     if working_dirs[-1] == "asystem":
         for filtered_module in filter(lambda module_tmp: isdir(module_tmp) and (
@@ -393,9 +401,6 @@ def _print_footer(module, stage):
 
 DIR_ROOT = dirname(abspath(__file__))
 FILE_PROFILE = join(dirname(abspath(__file__)), ".profile")
-
-ENV_SKIP_GIT = 'FAB_SKIP_GIT'
-ENV_SKIP_TESTS = 'FAB_SKIP_TESTS'
 
 DOCKER_VARIABLES = "DATA_DIR=./target/runtime-system LOCAL_IP=$(/usr/sbin/ipconfig getifaddr en1)"
 
