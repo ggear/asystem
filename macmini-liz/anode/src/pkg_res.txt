@@ -3,5 +3,6 @@ setup.py
 main/python/anode/web/index.html
 main/python/anode/web/css/anode.css
 main/python/anode/web/js/anode.js
+main/python/anode/web/js/robust-ws.js
 main/python/anode/application.py
 main/python/anode/web/js/metadata/datum.avsc
