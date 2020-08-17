@@ -222,7 +222,7 @@ def _run(context):
 
 def _release(context):
     _clean(context)
-    # _build(context)
+    _build(context)
     # if ENV_SKIP_TESTS not in os.environ:
     #     _unittest(context)
     # _package(context)
