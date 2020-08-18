@@ -152,6 +152,17 @@ def _build(context):
                             "VERSION_NUMERIC": str(_get_versions()[1]),
                             "VERSION_COMPACT": str(_get_versions()[2]),
                         }
+                        profile_path = join(DIR_ROOT, module, "src/main/resources/config/.profile")
+                        if isfile(profile_path):
+                            with open(profile_path, 'r') as profile_file:
+                                for profile_line in profile_file:
+                                    profile_line = profile_line.replace("export ", "").rstrip()
+                                    if "=" not in profile_line:
+                                        continue
+                                    if profile_line.startswith("#"):
+                                        continue
+                                    profile_key, profile_value = profile_line.split("=", 1)
+                                    environment[profile_key] = profile_value
                         _run_local(context, "envsubst '{}' < {}/{} > {}.new && mv {}.new {}"
                                    .format(" ".join(["$" + sub for sub in environment.keys()]),
                                            package_resource_source, package_resource, package_resource, package_resource, package_resource),
@@ -417,6 +428,7 @@ FILE_PROFILE = join(dirname(abspath(__file__)), ".profile")
 MODULE_NAMES = [
     "host",
     "keys",
+    "ddclient",
     "letsencrypt",
     "influxdb",
     "postgres",
