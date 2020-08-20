@@ -136,7 +136,7 @@ def _build(context):
             _run_local(context, "pylint --disable=all src/main/python/*", module)
 
         _print_line("Preparing resources ...")
-        _run_local(context, "mkdir -p target && cp -rvf src target/package", module)
+        _run_local(context, "mkdir -p target && cp -rvfp src target/package", module)
         package_resource_path = join(DIR_ROOT, module, "src/pkg_res.txt")
         if isfile(package_resource_path):
             with open(package_resource_path, "r") as package_resource_file:
@@ -254,19 +254,19 @@ def _release(context):
         _print_header(module, "release")
         print("Preparing release ... ")
         _run_local(context, "mkdir -p target/release", module)
-        _run_local(context, "cp -rvf .env_prod target/release/.env", module, hide='err', warn=True)
-        _run_local(context, "cp -rvf docker-compose.yml target/release", module, hide='err', warn=True)
+        _run_local(context, "cp -rvfp .env_prod target/release/.env", module, hide='err', warn=True)
+        _run_local(context, "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
         if isfile(join(DIR_ROOT, module, "Dockerfile")):
             file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
             print("docker -> target/release/{}".format(file_image))
             _run_local(context, "docker image save -o {} {}:{}"
                        .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
         if isdir(join(DIR_ROOT, module, "target/package/main/resources/config")):
-            _run_local(context, "cp -rvf target/package/main/resources/config target/release", module)
+            _run_local(context, "cp -rvfp target/package/main/resources/config target/release", module)
         else:
             _run_local(context, "mkdir -p target/release/config", module)
         if isfile(join(DIR_ROOT, module, "target/package/run.sh")):
-            _run_local(context, "cp -rvf target/package/run.sh target/release", module)
+            _run_local(context, "cp -rvfp target/package/run.sh target/release", module)
         else:
             _run_local(context, "touch target/release/run.sh", module)
         for host in _get_hosts(context, module):
@@ -352,7 +352,7 @@ def _up_module(context, module, up_this=True):
             _run_local(context, "rm -rvf target/runtime-system && mkdir -p target/runtime-system", run_dep)
             dir_config = join(DIR_ROOT, run_dep, "src/main/resources/config")
             if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
-                _run_local(context, "cp -rvf $(find {} -mindepth 1) target/runtime-system".format(dir_config), module)
+                _run_local(context, "cp -rvfp $(find {} -mindepth 1) target/runtime-system".format(dir_config), module)
             if run_dep != module or up_this:
                 source_profile = ". target/runtime-system/.profile && " \
                     if isfile(join(DIR_ROOT, run_dep, "target/runtime-system/.profile")) else ""

@@ -9,6 +9,7 @@
 .classpath
 .idea
 *.iml
+.id_rsa
 .config
 .pydevproject
 .toolchain*
