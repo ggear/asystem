@@ -1,0 +1,15 @@
+[Unit]
+Description=Push TLS certifcates service
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=root
+ExecStart=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}/pushcerts.sh
+
+[Install]
+WantedBy=multi-user.target
+
