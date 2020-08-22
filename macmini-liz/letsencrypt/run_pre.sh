@@ -6,7 +6,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_A
 cd "${SERVICE_INSTALL}" || exit
 
 #cp -rvf "${SERVICE_INSTALL}/" /etc/systemd/system
-systemctl daemon-reload
-systemctl enable myservice.service
-systemctl start myservice.service
+#systemctl daemon-reload
+#systemctl enable myservice.service
+#systemctl start myservice.service
 
