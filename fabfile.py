@@ -265,8 +265,8 @@ def _release(context):
             _run_local(context, "cp -rvfp target/package/main/resources/config target/release", module)
         else:
             _run_local(context, "mkdir -p target/release/config", module)
-        if isfile(join(DIR_ROOT, module, "target/package/run.sh")):
-            _run_local(context, "cp -rvfp target/package/run.sh target/release", module)
+        if glob.glob(join(DIR_ROOT, module, "target/package/run*")):
+            _run_local(context, "cp -rvfp target/package/run* target/release", module)
         else:
             _run_local(context, "touch target/release/run.sh", module)
         for host in _get_hosts(context, module):
