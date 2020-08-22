@@ -14,9 +14,9 @@ from os.path import *
 from fabric import task
 from pathlib2 import Path
 
-ENV_SKIP_GIT = 'FAB_SKIP_GIT'
-ENV_SKIP_TESTS = 'FAB_SKIP_TESTS'
-ENV_SKIP_DELTA = 'FAB_SKIP_DELTA'
+FAB_SKIP_GIT = 'FAB_SKIP_GIT'
+FAB_SKIP_TESTS = 'FAB_SKIP_TESTS'
+FAB_SKIP_DELTA = 'FAB_SKIP_DELTA'
 
 
 @task(default=True)
@@ -236,17 +236,17 @@ def _run(context):
 def _release(context):
     _clean(context)
     _build(context)
-    if ENV_SKIP_TESTS not in os.environ:
+    if FAB_SKIP_TESTS not in os.environ:
         _unittest(context)
     _package(context)
-    if ENV_SKIP_TESTS not in os.environ:
+    if FAB_SKIP_TESTS not in os.environ:
         _systest(context)
     _get_versions_next_release()
     _clean(context)
     _build(context)
     _package(context)
     modules = _get_modules(context, "src")
-    if ENV_SKIP_GIT not in os.environ:
+    if FAB_SKIP_GIT not in os.environ:
         print("Tagging repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
@@ -288,7 +288,7 @@ def _release(context):
                        .format(ssh, host, install, install), hide='err', warn=True)
         _print_footer(module, "release")
     _get_versions_next_snapshot()
-    if ENV_SKIP_GIT not in os.environ:
+    if FAB_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git push --all && git push origin --tags"
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
@@ -304,7 +304,7 @@ def _name(module):
 
 def _get_modules(context, filter_path=None, filter_changes=True):
     working_modules = []
-    filter_changes = filter_changes if ENV_SKIP_DELTA not in os.environ else False
+    filter_changes = filter_changes if FAB_SKIP_DELTA not in os.environ else False
     working_dirs = _run_local(context, "pwd", hide='out').stdout.encode("utf8").strip().split('/')
     if working_dirs[-1] == "asystem":
         for filtered_module in filter(lambda module_tmp: isdir(module_tmp) and (
