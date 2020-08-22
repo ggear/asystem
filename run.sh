@@ -37,6 +37,12 @@ LOCAL_IP=${SERVICE_HOST_IP}
 EOF
   [ -f ".config/.profile" ] && sed 's/export //g' config/.profile >>.env
 fi
+if [ -f ".env" ]; then
+  export VERSION=${VERSION_ABSOLUTE}
+  export DATA_DIR=${SERVICE_HOME}
+  export LOCAL_IP=${SERVICE_HOST_IP}
+  envsubst < .env > .env.new && mv -f .env.new .env
+fi
 docker-compose --no-ansi up --force-recreate -d
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
 docker ps -f name="${SERVICE_NAME}"
