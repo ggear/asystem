@@ -1,3 +1,3 @@
-run.sh
-run_pre.sh
+../run.sh
+../run_pre.sh
 main/resources/config/dnsrobocert/config.yml

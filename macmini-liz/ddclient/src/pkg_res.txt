@@ -1,2 +1,2 @@
-run.sh
+../run.sh
 main/resources/config/ddclient.conf
