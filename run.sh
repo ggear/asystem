@@ -26,9 +26,10 @@ if [ ! -d "$SERVICE_HOME" ]; then
   rm -rvf "$SERVICE_HOME_OLDEST"
 fi
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvf $(find config -mindepth 1) "${SERVICE_HOME}"
-if [ -f "docker-compose.yml" ]; then
+if [ -f "docker-compose.yml" ] && ([ ! -f ".env" ] || [ $(grep -c "# Installed" .env) -eq 0 ]); then
   cat <<EOF >>.env
 
+# Installed on $(date)
 RESTART=always
 VERSION=${VERSION_ABSOLUTE}
 DATA_DIR=${SERVICE_HOME}
