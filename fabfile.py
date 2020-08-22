@@ -136,7 +136,7 @@ def _build(context):
             _run_local(context, "pylint --disable=all src/main/python/*", module)
 
         _print_line("Preparing resources ...")
-        _run_local(context, "mkdir -p target/package && cp -rvfp src run* target/package", module, hide='err', warn=True)
+        _run_local(context, "mkdir -p target/package && cp -rvfp src/* run* target/package", module, hide='err', warn=True)
         package_resource_path = join(DIR_ROOT, module, "src/pkg_res.txt")
         if isfile(package_resource_path):
             with open(package_resource_path, "r") as package_resource_file:
