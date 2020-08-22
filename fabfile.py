@@ -285,7 +285,7 @@ def _release(context):
             print("Installing release to {} ... ".format(host))
             _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
             _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f'".format(ssh, host), hide='err', warn=True)
-            _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
+            _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf && df -h'"
                        .format(ssh, host, install, install), hide='err', warn=True)
         _print_footer(module, "release")
     _get_versions_next_snapshot()
