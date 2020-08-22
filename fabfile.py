@@ -143,6 +143,7 @@ def _build(context):
                 for package_resource in package_resource_file:
                     package_resource = package_resource.strip()
                     if package_resource != "" and not package_resource.startswith("#"):
+                        package_resource = package_resource.replace("../run", "run")
                         package_resource_source = DIR_ROOT if package_resource == "run.sh" and \
                                                               not isfile(join(DIR_ROOT, module, package_resource)) \
                             else join(DIR_ROOT, module, "target/package")

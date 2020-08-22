@@ -1,4 +1,4 @@
-run.sh
+../run.sh
 setup.py
 main/python/anode/web/index.html
 main/python/anode/web/css/anode.css
