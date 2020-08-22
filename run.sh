@@ -19,13 +19,15 @@ docker wait "${SERVICE_NAME}" >/dev/null 2>&1
 docker system prune --volumes -f 2>&1 >/dev/null
 if [ ! -d "$SERVICE_HOME" ]; then
   if [ -d "$SERVICE_HOME_OLD" ]; then
-    cp -rvf "$SERVICE_HOME_OLD" "$SERVICE_HOME"
+    cp -rvfp "$SERVICE_HOME_OLD" "$SERVICE_HOME"
   else
     mkdir -p "${SERVICE_HOME}"
   fi
   rm -rvf "$SERVICE_HOME_OLDEST"
 fi
-[ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvf $(find config -mindepth 1) "${SERVICE_HOME}"
+[ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1) "${SERVICE_HOME}"
+touch .env
+chmod 600 .env
 if [ -f "docker-compose.yml" ] && ([ ! -f ".env" ] || [ $(grep -c "# Installed" .env) -eq 0 ]); then
   cat <<EOF >>.env
 
