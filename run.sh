@@ -12,7 +12,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_A
 SERVICE_HOST_IP=$(/usr/sbin/ifconfig | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*' | grep '192.168.1')
 
 cd "${SERVICE_INSTALL}" || exit
-[ -f "./run_pre.sh" ] && ./run_pre.sh
+[ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
 [ -f "${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz
 docker stop "${SERVICE_NAME}" 2>&1 >/dev/null
 docker wait "${SERVICE_NAME}" 2>&1 >/dev/null
@@ -26,14 +26,18 @@ if [ ! -d "$SERVICE_HOME" ]; then
   rm -rvf "$SERVICE_HOME_OLDEST"
 fi
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvf $(find config -mindepth 1) "${SERVICE_HOME}"
-cat <<EOF >>.env
 
+if [ "$(grep -c '# Installed' .env)" -eq 0 ]; then
+  cat <<EOF >>.env
+
+# Installed on $(date)
 RESTART=always
 VERSION=${VERSION_ABSOLUTE}
 DATA_DIR=${SERVICE_HOME}
 LOCAL_IP=${SERVICE_HOST_IP}
-
 EOF
-sed 's/export //g' config/.profile >>.env
+  sed 's/export //g' config/.profile >>.env
+fi
+
 docker-compose --no-ansi up --force-recreate -d
-[ -f "./run_post.sh" ] && ./run_post.sh
+[ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
