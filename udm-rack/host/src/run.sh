@@ -31,13 +31,13 @@
 # Networks -> LAN -> DHCP range -> 192.168.1.50 to 192.168.1.254
 # Devices -> udm-rack, usw-house and uap-hallway
 # Clients -> udm-rack 192.168.1.1, macmini-liz 192.168.1.10, phillips-hue 192.168.1.12
-# Services -> Dynamic DNS -> namecheap, home, janeandgraham.com, X, dynamicdns.park-your-domain.com
 # Routing & Firewall -> Port Forwarding -> Anode, 8091, 192.168.1.10, 8091, TCP, Enable Logging
 
 ################################################################################
 # Network nice-to-have
 ################################################################################
 # Clients -> names, icons
+# Services -> Dynamic DNS -> Cloudflare version of (namecheap, home, janeandgraham.com, X, dynamicdns.park-your-domain.com)
 
 ################################################################################
 # Protect baseline
