@@ -46,6 +46,6 @@ fi
 docker-compose --no-ansi up --force-recreate -d
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
 
-if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c $SERVICENAME) -eq 0 ]; then
-  echo "Container failed to start" && exit 1
+if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
+  echo "Container failed to start"
 fi
