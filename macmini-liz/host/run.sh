@@ -29,7 +29,8 @@ lvdisplay /dev/macmini-liz-vg/var
 ################################################################################
 # Utilities
 ################################################################################
-apt-get update && apt-get install -y \
+apt-get update
+apt-get install -y \
   vim=2:8.1.0875-5 \
   curl=7.64.0-4+deb10u1 \
   fswatch=1.14.0+repack-8 \
@@ -38,7 +39,7 @@ apt-get update && apt-get install -y \
 ################################################################################
 # Network
 ################################################################################
-apt-get update && apt-get install -y \
+apt-get install -y \
   avahi-daemon=0.7-4+b1
 cat <<EOF >/etc/avahi/avahi-daemon.conf
 # See avahi-daemon.conf(5) for more information
@@ -66,7 +67,7 @@ EOF
 ################################################################################
 # Monitoring
 ################################################################################
-apt-get update && apt-get install -y \
+apt-get install -y \
   htop=2.2.0-1+b1 \
   lm-sensors=1:3.5.0-3
 sensors-detect --auto
@@ -74,7 +75,7 @@ sensors-detect --auto
 ################################################################################
 # Docker
 ################################################################################
-apt-get update && apt-get install -y \
+apt-get install -y \
   apt-transport-https=1.8.2.1 \
   ca-certificates=20200601~deb10u1 \
   gnupg-agent=2.2.12-1+deb10u1 \
@@ -84,7 +85,7 @@ add-apt-repository \
   "deb [arch=amd64] https://download.docker.com/linux/debian \
    $(lsb_release -cs) \
    stable"
-apt-get update && apt-get install -y \
+apt-get install -y \
   docker-ce=5:19.03.12~3-0~debian-buster \
   docker-ce-cli=5:19.03.12~3-0~debian-buster \
   containerd.io=1.2.13-2
