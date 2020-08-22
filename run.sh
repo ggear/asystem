@@ -30,7 +30,6 @@ fi
 if [ ! -f ".env" ]; then
   cat <<EOF >>.env
 
-# Installed on $(date)
 RESTART=always
 VERSION=${VERSION_ABSOLUTE}
 DATA_DIR=${SERVICE_HOME}
