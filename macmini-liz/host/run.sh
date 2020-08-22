@@ -91,3 +91,5 @@ apt-get install -y \
   containerd.io=1.2.13-2
 curl -sL "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
+[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)
+docker system prune --volumes -f
