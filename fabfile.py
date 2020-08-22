@@ -261,8 +261,8 @@ def _release(context):
             print("docker -> target/release/{}".format(file_image))
             _run_local(context, "docker image save -o {} {}:{}"
                        .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
-        if isdir(join(DIR_ROOT, module, "target/package/main/resources/config")):
-            _run_local(context, "cp -rvfp target/package/main/resources/config target/release", module)
+        if isdir(join(DIR_ROOT, module, "target/package/src/main/resources/config")):
+            _run_local(context, "cp -rvfp target/package/src/main/resources/config target/release", module)
         else:
             _run_local(context, "mkdir -p target/release/config", module)
         if isfile(join(DIR_ROOT, module, "target/package/run.sh")):
