@@ -2,8 +2,6 @@
 
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 
-cd "${SERVICE_HOME}" || exit
-
 #TODO: while true, fswatch on .last_updated, then copy into git/anode, local/anode, udm-rack/unifi
 
 # git/anode
