@@ -26,7 +26,6 @@ if [ ! -d "$SERVICE_HOME" ]; then
   rm -rvf "$SERVICE_HOME_OLDEST"
 fi
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvf $(find config -mindepth 1) "${SERVICE_HOME}"
-
 if [ ! -f ".env" ]; then
   cat <<EOF >>.env
 
@@ -37,7 +36,6 @@ LOCAL_IP=${SERVICE_HOST_IP}
 EOF
   sed 's/export //g' config/.profile >>.env
 fi
-
 docker-compose --no-ansi up --force-recreate -d
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
-docker ps -f name=""${SERVICE_NAME}""
+docker ps -f name="${SERVICE_NAME}"
