@@ -282,7 +282,7 @@ def _release(context):
             _run_local(context, "{} scp -qpr $(find target/release -maxdepth 1 -type f) root@{}:{}".format(ssh, host, install), module)
             _run_local(context, "{} scp -qpr target/release/config root@{}:{}".format(ssh, host, install), module)
             print("Installing release to {} ... ".format(host))
-            _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
+            _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install), warn=True)
             _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f'".format(ssh, host), hide='err', warn=True)
             _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
                        .format(ssh, host, install, install), hide='err', warn=True)
