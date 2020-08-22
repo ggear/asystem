@@ -34,7 +34,7 @@ VERSION=${VERSION_ABSOLUTE}
 DATA_DIR=${SERVICE_HOME}
 LOCAL_IP=${SERVICE_HOST_IP}
 EOF
-  sed 's/export //g' config/.profile >>.env
+  [ -f ".config/.profile" ] && sed 's/export //g' config/.profile >>.env
 fi
 docker-compose --no-ansi up --force-recreate -d
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
