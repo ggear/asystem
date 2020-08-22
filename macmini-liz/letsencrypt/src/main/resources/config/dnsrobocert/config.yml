@@ -3,7 +3,7 @@ acme:
   email_account: graham.gear@gmail.com
   staging: false
 profiles:
-  - name: namecheap_profile
+  - name: cloudflare_profile
     provider: cloudflare
     provider_options:
       auth_username: graham.gear@gmail.com
@@ -12,5 +12,5 @@ certificates:
   - domains:
       - "*.janeandgraham.com"
       - janeandgraham.com
-    profile: namecheap_profile
-#    deploy_hook: python /home/user/local_deploy.py
+    profile: cloudflare_profile
+    deploy_hook: /home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}/pushcerts.sh
