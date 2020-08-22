@@ -12,4 +12,3 @@ ExecStart=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}/pushcerts.sh
 
 [Install]
 WantedBy=multi-user.target
-
