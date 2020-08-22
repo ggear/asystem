@@ -40,3 +40,4 @@ fi
 
 docker-compose --no-ansi up --force-recreate -d
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
+docker ps -f name=""${SERVICE_NAME}""
