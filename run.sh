@@ -27,7 +27,7 @@ if [ ! -d "$SERVICE_HOME" ]; then
 fi
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvf $(find config -mindepth 1) "${SERVICE_HOME}"
 
-if [ "$(grep -c '# Installed' .env)" -eq 0 ]; then
+if [ ! -f ".env" ]; then
   cat <<EOF >>.env
 
 # Installed on $(date)
