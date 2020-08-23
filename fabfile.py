@@ -118,6 +118,7 @@ def _purge(context, module="asystem"):
 
 
 def _clean(context):
+    _run_local(context, "git pull --all")
     for module in _get_modules(context, "target", False):
         _print_header(module, "clean")
         _run_local(context, "rm -rf {}/{}/target".format(DIR_ROOT, module))
