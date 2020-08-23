@@ -52,4 +52,4 @@ if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; t
   echo && echo "Container failed to start" && echo && exit 1
 fi
 echo && echo "----------\n----------\n----------" && docker ps -f name="${SERVICE_NAME}"
-echo && docker logs "${SERVICE_NAME}" && echo && echo "----------\n----------\n----------"
+echo && docker logs "${SERVICE_NAME}" && echo "----------"
