@@ -3,13 +3,13 @@
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 
 cd "${SERVICE_HOME}" || exit
-[ ! -d "certificates" ] && [ -d "letsencrypt/archive/janeandgraham.com" ] && cp -rvfp letsencrypt/live/janeandgraham.com certificates
-if [ ! -d "certificates" ]; then
-  mkdir "certificates"
-  touch "certificates/cert.pem"
-  touch "certificates/fullchain.pem"
-  touch "certificates/chain.pem"
-  touch "certificates/privkey.pem"
+[ ! -d "./certificates" ] && [ -d "./letsencrypt/archive/janeandgraham.com" ] && cp -rvfp letsencrypt/live/janeandgraham.com certificates
+if [ ! -d "./certificates" ]; then
+  mkdir "./certificates"
+  touch "./certificates/cert.pem"
+  touch "./certificates/fullchain.pem"
+  touch "./certificates/chain.pem"
+  touch "./certificates/privkey.pem"
 fi
 if [ $(fswatch -1 -o --event=Updated ${SERVICE_HOME}/letsencrypt/live/janeandgraham.com/privkey.pem) -eq 2 ]; then
   echo "Certs updated" && sleep 2
