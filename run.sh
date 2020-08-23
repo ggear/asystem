@@ -47,8 +47,9 @@ if [ -f ".env" ]; then
 fi
 docker-compose --no-ansi up --force-recreate -d
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
+sleep 2
 if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
   echo && echo "Container failed to start" && echo && exit 1
 fi
-sleep 2 && echo && echo "----------\n----------\n----------" && docker ps -f name="${SERVICE_NAME}"
-sleep 2 && echo && docker logs "${SERVICE_NAME}" && echo
+echo && echo "----------\n----------\n----------" && docker ps -f name="${SERVICE_NAME}"
+echo && docker logs "${SERVICE_NAME}" && echo && echo "----------\n----------\n----------"
