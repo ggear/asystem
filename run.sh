@@ -50,5 +50,5 @@ docker-compose --no-ansi up --force-recreate -d
 if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
   echo && echo "Container failed to start" && echo && exit 1
 fi
-echo && docker ps -f name="${SERVICE_NAME}" && echo
-echo && docker logs "${SERVICE_NAME}" --tail 100 && echo
+sleep 2 && echo && docker ps -f name="${SERVICE_NAME}" && echo
+sleep 2 && echo && docker logs "${SERVICE_NAME}" --tail 100 && echo
