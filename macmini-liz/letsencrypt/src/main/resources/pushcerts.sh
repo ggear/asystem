@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 
 cd "${SERVICE_HOME}" || exit
@@ -7,18 +9,18 @@ cd "${SERVICE_HOME}" || exit
 [ ! -d "./certificates" ] && mkdir "./certificates" && touch "./certificates/cert.pem"
 if [ $(fswatch -1 -x --event=Updated "${SERVICE_HOME}/letsencrypt/live/janeandgraham.com/privkey.pem" | grep -c "Updated") -eq 2 ]; then
   sleep 2
-  if [ $(cmp ./certificates/cert.pem ./letsencrypt/live/janeandgraham.com/cert.pem >/dev/null) ]; then
+  if [ ! $(cmp ./certificates/cert.pem ./letsencrypt/live/janeandgraham.com/cert.pem >/dev/null) ]; then
     cp -rvfpL letsencrypt/live/janeandgraham.com/* certificates
 
     #TODO: Checkout git repo to check where anode is deployed
-    ANODE_HOME=$(find /home/asystem/anode -maxdepth 1 -mindepth 1 | tail -n 1)
+    ANODE_HOME=$(find /var/lib/asystem/install/$(hostname)/anode -maxdepth 1 -mindepth 1 | tail -n 1)
     if [ -d "${ANODE_HOME}" ]; then
-      cat ./fullchain.pem ./privkey.pem >"${ANODE_HOME}"/.pem
+      cat ./certificates/fullchain.pem ./certificates/privkey.pem >"${ANODE_HOME}"/.pem
       docker-compose -f "${ANODE_HOME}"/docker-compose.yml --env-file "${ANODE_HOME}"/.env restart
     fi
 
-    scp -o "StrictHostKeyChecking=no" ./privkey.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
-    scp -o "StrictHostKeyChecking=no" ./fullchain.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
+    scp -o "StrictHostKeyChecking=no" ./certificates/privkey.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
+    scp -o "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
     ssh -o "StrictHostKeyChecking=no" root@unifi "unifi-os restart"
   fi
 fi
