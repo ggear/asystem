@@ -13,8 +13,8 @@ if [ $(fswatch -1 -x --event=Updated "${SERVICE_HOME}/letsencrypt/live/janeandgr
     cp -rvfpL letsencrypt/live/janeandgraham.com/* certificates
 
     #TODO: Checkout git repo to check where anode is deployed
-    ANODE_HOME=$(find /home/asystem/anode -maxdepth 1 -mindepth 1 | tail -n 1)
-    ANODE_INSTALL=$(find /var/lib/asystem/install/$(hostname)/anode -maxdepth 1 -mindepth 1 | tail -n 1)
+    ANODE_HOME=$(find /home/asystem/anode -maxdepth 1 -mindepth 1 | sort | tail -n 1)
+    ANODE_INSTALL=$(find /var/lib/asystem/install/$(hostname)/anode -maxdepth 1 -mindepth 1 | sort | tail -n 1)
     if [ -d "${ANODE_HOME}" ]; then
       cat ./certificates/fullchain.pem ./certificates/privkey.pem >"${ANODE_HOME}"/.pem
       docker-compose -f "${ANODE_INSTALL}"/docker-compose.yml --env-file "${ANODE_INSTALL}"/.env restart
