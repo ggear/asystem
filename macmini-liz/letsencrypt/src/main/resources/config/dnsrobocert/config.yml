@@ -13,3 +13,4 @@ certificates:
       - "*.janeandgraham.com"
       - janeandgraham.com
     profile: cloudflare_profile
+    deploy_hook: date > /etc/letsencrypt/.updated
