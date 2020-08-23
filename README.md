@@ -8,4 +8,4 @@ A home data, analytics and automation system.
 
 ## Run requirements
 * docker-19+
-* docker-compose 1.26+
+* docker-compose-1.26+
