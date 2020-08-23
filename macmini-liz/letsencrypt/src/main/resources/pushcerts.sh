@@ -3,24 +3,22 @@
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 
 cd "${SERVICE_HOME}" || exit
-[ ! -d "./certificates" ] && [ -d "./letsencrypt/archive/janeandgraham.com" ] && cp -rvfp letsencrypt/live/janeandgraham.com certificates
-if [ ! -d "./certificates" ]; then
-  mkdir "./certificates"
-  touch "./certificates/cert.pem"
-  touch "./certificates/fullchain.pem"
-  touch "./certificates/chain.pem"
-  touch "./certificates/privkey.pem"
+[ ! -d "./certificates" ] && [ -d "./letsencrypt/archive/janeandgraham.com" ] && cp -rvfpL letsencrypt/live/janeandgraham.com certificates
+[ ! -d "./certificates" ] && mkdir "./certificates" && touch "./certificates/cert.pem"
+if [ $(fswatch -1 -x --event=Updated "${SERVICE_HOME}/letsencrypt/live/janeandgraham.com/privkey.pem" | grep -c "Updated") -eq 2 ]; then
+  sleep 2
+  if [ $(cmp ./certificates/cert.pem ./letsencrypt/live/janeandgraham.com/cert.pem >/dev/null) ]; then
+    cp -rvfpL letsencrypt/live/janeandgraham.com/* certificates
+
+    #TODO: Checkout git repo to check where anode is deployed
+    ANODE_HOME=$(find /home/asystem/anode -maxdepth 1 -mindepth 1 | tail -n 1)
+    if [ -d "${ANODE_HOME}" ]; then
+      cat ./fullchain.pem ./privkey.pem >"${ANODE_HOME}"/.pem
+      docker-compose -f "${ANODE_HOME}"/docker-compose.yml --env-file "${ANODE_HOME}"/.env restart
+    fi
+
+    scp -o "StrictHostKeyChecking=no" ./privkey.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
+    scp -o "StrictHostKeyChecking=no" ./fullchain.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
+    ssh -o "StrictHostKeyChecking=no" root@unifi "unifi-os restart"
+  fi
 fi
-if [ $(fswatch -1 -o --event=Updated ${SERVICE_HOME}/letsencrypt/live/janeandgraham.com/privkey.pem) -eq 2 ]; then
-  echo "Certs updated" && sleep 2
-fi
-
-# git/anode
-# cat /Users/graham/_/dev/asystem/macmini-liz/letsencrypt/target/letsencrypt/live/janeandgraham.com/fullchain.pem /Users/graham/_/dev/asystem/macmini-liz/letsencrypt/target/letsencrypt/live/janeandgraham.com/privkey.pem > /Users/graham/_/dev/asystem/macmini-liz/anode/src/main/resources/config/.pem
-
-# macmini-liz/anode
-# cat /Users/graham/_/dev/asystem/macmini-liz/letsencrypt/target/letsencrypt/live/janeandgraham.com/fullchain.pem /Users/graham/_/dev/asystem/macmini-liz/letsencrypt/target/letsencrypt/live/janeandgraham.com/privkey.pem > /Users/graham/_/dev/asystem/macmini-liz/anode/src/main/resources/config/.pem
-
-# udm-rack/host
-# scp /Users/graham/_/dev/asystem/macmini-liz/letsencrypt/target/letsencrypt/live/janeandgraham.com/privkey.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
-# scp /Users/graham/_/dev/asystem/macmini-liz/letsencrypt/target/letsencrypt/live/janeandgraham.com/fullchain.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
