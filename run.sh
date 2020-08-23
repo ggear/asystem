@@ -45,11 +45,10 @@ if [ -f ".env" ]; then
   export LOCAL_IP=${SERVICE_HOST_IP}
   envsubst <.env >.env.new && mv -f .env.new .env
 fi
-docker-compose --no-ansi up --force-recreate -d
+docker-compose --no-ansi up --force-recreate -d && sleep 2
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
-sleep 2
 if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
   echo && echo "Container failed to start" && echo && exit 1
 fi
 echo "----------" && docker ps -f name="${SERVICE_NAME}" && echo "----------"
-docker logs "${SERVICE_NAME}" && echo "----------"
+sleep 2 && docker logs "${SERVICE_NAME}" && echo "----------"
