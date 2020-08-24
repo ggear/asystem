@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -x
-
 key_append() {
   if [ ! -e "${3}/${1}/.ssh/authorized_keys" ] || [ $(grep graham "${3}/${1}/.ssh/authorized_keys" | wc -l) -eq 0 ]; then
     [ -d "${3}" ] && mkdir -p ${3}
