@@ -23,5 +23,6 @@ if [ $(fswatch -1 -x --event=Updated "${SERVICE_HOME}/letsencrypt/live/janeandgr
     scp -o "StrictHostKeyChecking=no" ./certificates/privkey.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
     scp -o "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
     ssh -o "StrictHostKeyChecking=no" root@unifi "unifi-os restart"
+    logger "Loaded new ASystem certificates"
   fi
 fi
