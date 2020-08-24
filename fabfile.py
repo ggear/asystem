@@ -249,7 +249,7 @@ def _release(context):
     _package(context)
     modules = _get_modules(context, "src")
     hosts = set(filter(len, _run_local(context, "find {} -type d ! -name '.*' -maxdepth 1"
-                                       .format(DIR_ROOT), hide='out').stdout.replace("./", "").replace("_", "\n").split("\n")))
+                                       .format(DIR_ROOT), hide='out').stdout.replace(DIR_ROOT, "").replace("_", "\n").split("\n")))
     if FAB_SKIP_GIT not in os.environ:
         print("Tagging repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
