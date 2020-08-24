@@ -8,7 +8,7 @@ Type=simple
 Restart=always
 RestartSec=1
 User=root
-ExecStart=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_ABSOLUTE}/pushcerts.sh
+ExecStart=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}/pushcerts.sh
 
 [Install]
 WantedBy=multi-user.target
