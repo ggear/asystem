@@ -16,20 +16,21 @@ if [ $(fswatch -1 -x --event=Updated "${SERVICE_HOME}/letsencrypt/live/janeandgr
     if [ -f "${SERVICE_INSTALL}/hosts" ]; then
       while read -r host; do
         ANODE_HOME=$(ssh -o "StrictHostKeyChecking=no" root@${host} \
-          "find /home/asystem/anode -maxdepth 1 -mindepth 1 | sort | tail -n 1")
+          "find /home/asystem/anode -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
         ANODE_INSTALL=$(ssh -o "StrictHostKeyChecking=no" root@${host} \
-          "find /var/lib/asystem/install/\$(hostname)/anode -maxdepth 1 -mindepth 1 | sort | tail -n 1")
+          "find /var/lib/asystem/install/\$(hostname)/anode -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
         if [ -n "${ANODE_HOME}" ] && [ -n "${ANODE_INSTALL}" ]; then
           scp -o "StrictHostKeyChecking=no" \
             ./certificates/fullchain_privkey.pem root@${host}:"${ANODE_HOME}/.pem"
           scp -o "StrictHostKeyChecking=no" root@${host} \
             "docker-compose -f "${ANODE_INSTALL}"/docker-compose.yml --env-file "${ANODE_INSTALL}"/.env restart"
+          logger "Loaded new anode certificates on ${host}"
         fi
       done <"${SERVICE_INSTALL}/hosts"
     fi
-    scp -o "StrictHostKeyChecking=no" ./certificates/privkey.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
-    scp -o "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@unifi:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
-    ssh -o "StrictHostKeyChecking=no" root@unifi "unifi-os restart"
-    logger "Loaded new ASystem certificates"
+    scp -o "StrictHostKeyChecking=no" ./certificates/privkey.pem root@udm-rack:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
+    scp -o "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@udm-rack:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
+    ssh -o "StrictHostKeyChecking=no" root@udm-rack "unifi-os restart"
+    logger "Loaded new unifi certificates on udm-rack"
   fi
 fi
