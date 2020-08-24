@@ -248,7 +248,7 @@ def _release(context):
     _build(context)
     _package(context)
     modules = _get_modules(context, "src")
-    hosts = set(filter(len, _run_local(context, "find . -type d ! -name '.*' -maxdepth 1", DIR_ROOT, hide='out') \
+    hosts = set(filter(len, _run_local(context, "find . -type d ! -name '.*' -maxdepth 1", DIR_ROOT, hide='out')
                        .stdout.replace("./", "").replace("_", "\n").split("\n")))
     if FAB_SKIP_GIT not in os.environ:
         print("Tagging repository ...")
@@ -269,7 +269,7 @@ def _release(context):
             _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
         else:
             _run_local(context, "mkdir -p target/release/config", module)
-        Path(join(DIR_ROOT, module, "target/package/hosts")).write_text("\n".join(hosts))
+        Path(join(DIR_ROOT, module, "target/release/hosts")).write_text("\n".join(hosts))
         if glob.glob(join(DIR_ROOT, module, "target/package/run*")):
             _run_local(context, "cp -rvfp target/package/run* target/release", module)
         else:
