@@ -40,6 +40,11 @@ def purge(context):
 
 
 @task
+def pull(context):
+    _pull(context)
+
+
+@task
 def clean(context):
     _clean(context)
 
@@ -47,6 +52,7 @@ def clean(context):
 @task
 def build(context):
     _setup(context)
+    _pull(context)
     _clean(context)
     _build(context)
 
@@ -54,6 +60,7 @@ def build(context):
 @task
 def unittest(context):
     _setup(context)
+    _pull(context)
     _clean(context)
     _build(context)
     _unittest(context)
@@ -62,6 +69,7 @@ def unittest(context):
 @task
 def package(context):
     _setup(context)
+    _pull(context)
     _clean(context)
     _build(context)
     _package(context)
@@ -70,6 +78,7 @@ def package(context):
 @task
 def systest(context):
     _setup(context)
+    _pull(context)
     _clean(context)
     _build(context)
     _package(context)
@@ -79,6 +88,7 @@ def systest(context):
 @task
 def run(context):
     _setup(context)
+    _pull(context)
     _clean(context)
     _build(context)
     _package(context)
@@ -117,8 +127,23 @@ def _purge(context, module="asystem"):
     _print_footer(module, "purge")
 
 
-def _clean(context):
+def _pull(context, module="asystem"):
+    _print_header(module, "pull")
     _run_local(context, "git pull --all")
+    host_anode = _run_local(context, "basename $(dirname $(find {} -type d -mindepth 1 -maxdepth 2 ! -path '/*/.*' | grep {}))"
+                            .format(DIR_ROOT, "anode"), hide='out').stdout.strip()
+    host_letsencrypt = _run_local(context, "basename $(dirname $(find {} -type d -mindepth 1 -maxdepth 2 ! -path '/*/.*' | grep {}))"
+                                  .format(DIR_ROOT, "letsencrypt"), hide='out').stdout.strip()
+    ssh_pass = _ssh_pass(context, host_letsencrypt)
+    dir_letsencrypt = _run_local(context, "{}ssh -q root@{} 'find /home/asystem/{} -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1'"
+                                 .format(ssh_pass, host_letsencrypt, "letsencrypt"), hide='out').stdout.strip()
+    _run_local(context, "{}scp -qpr root@{}:{}/certificates/fullchain_privkey.pem {} 2> /dev/null"
+               .format(ssh_pass, host_letsencrypt, dir_letsencrypt,
+                       join(DIR_ROOT, host_anode, "anode/src/main/resources/config/.pem")), warn=True)
+    _print_footer(module, "pull")
+
+
+def _clean(context):
     for module in _get_modules(context, "target", False):
         _print_header(module, "clean")
         _run_local(context, "rm -rf {}/{}/target".format(DIR_ROOT, module))
@@ -237,6 +262,7 @@ def _run(context):
 
 def _release(context):
     _clean(context)
+    _pull(context)
     _build(context)
     if FAB_SKIP_TESTS not in os.environ:
         _unittest(context)
@@ -275,23 +301,18 @@ def _release(context):
         else:
             _run_local(context, "touch target/release/run.sh", module)
         for host in _get_hosts(context, module):
-            ssh = "sshpass -f /Users/graham/.ssh/.password" \
-                if _run_local(context, "ssh -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
-                              .format(host), hide="err", warn=True).exited > 0 else ""
-            if _run_local(context, "{} ssh -q root@{} 'echo Connected to {}'".format(ssh, host, host), hide="err", warn=True).exited > 0:
-                print("Error: Cannot connect via [{} ssh -q root@{}]".format(ssh, host))
-                exit(1)
+            ssh_pass = _ssh_pass(context, host)
             install = "/var/lib/asystem/install/{}/{}".format(module, _get_versions()[0])
             print("Copying release to {} ... ".format(host))
-            _run_local(context, "{} ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh, host, install, install))
-            _run_local(context, "{} scp -qpr $(find target/release -maxdepth 1 -type f) root@{}:{}".format(ssh, host, install), module)
-            _run_local(context, "{} scp -qpr target/release/config root@{}:{}".format(ssh, host, install), module)
+            _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh_pass, host, install, install))
+            _run_local(context, "{}scp -qpr $(find target/release -maxdepth 1 -type f) root@{}:{}".format(ssh_pass, host, install), module)
+            _run_local(context, "{}scp -qpr target/release/config root@{}:{}".format(ssh_pass, host, install), module)
             print("Installing release to {} ... ".format(host))
-            _run_local(context, "{} ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh, host, install, install))
-            _run_local(context, "{} ssh -q root@{} 'docker system prune --volumes -f'".format(ssh, host), hide='err', warn=True)
-            _run_local(context, "{} ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
-                       .format(ssh, host, install, install), hide='err', warn=True)
-            _run_local(context, "{} ssh -q root@{} 'echo && df -h /root /tmp /var /home && echo'".format(ssh, host, install, install))
+            _run_local(context, "{}ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh_pass, host, install, install))
+            _run_local(context, "{}ssh -q root@{} 'docker system prune --volumes -f'".format(ssh_pass, host), hide='err', warn=True)
+            _run_local(context, "{}ssh -q root@{} 'ls -dt {}/../*/ | tail -n -$(($(ls -dt {}/../*/ | wc -l) - 2)) | xargs rm -rf'"
+                       .format(ssh_pass, host, install, install), hide='err', warn=True)
+            _run_local(context, "{}ssh -q root@{} 'echo && df -h /root /tmp /var /home && echo'".format(ssh_pass, host, install, install))
         _print_footer(module, "release")
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
@@ -333,6 +354,16 @@ def _get_modules(context, filter_path=None, filter_changes=True):
         raise Exception("Error: MODULE_NAMES {} needs to be updated with {}!"
                         .format(MODULE_NAMES, list(set(_name(module) for module in working_modules) - set(MODULE_NAMES))))
     return working_modules
+
+
+def _ssh_pass(context, host):
+    ssh_prefix = "sshpass -f /Users/graham/.ssh/.password " \
+        if _run_local(context, "ssh -q -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
+                      .format(host), hide="err", warn=True).exited > 0 else ""
+    if _run_local(context, "{}ssh -q root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err", warn=True).exited > 0:
+        print("Error: Cannot connect via [{}ssh -q root@{}]".format(ssh_prefix, host))
+        exit(1)
+    return ssh_prefix
 
 
 def _get_hosts(context, module):
