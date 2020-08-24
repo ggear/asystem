@@ -21,7 +21,7 @@ if [ $(fswatch -1 -x --event=Updated "${SERVICE_HOME}/letsencrypt/live/janeandgr
         if [ -n "${ANODE_HOME}" ] && [ -n "${ANODE_INSTALL}" ]; then
           scp -o "StrictHostKeyChecking=no" \
             ./certificates/fullchain_privkey.pem root@${host}:"${ANODE_HOME}/.pem"
-          scp -o "StrictHostKeyChecking=no" root@${host} \
+          ssh -n -o "StrictHostKeyChecking=no" root@${host} \
             "docker-compose -f '${ANODE_INSTALL}/docker-compose.yml' --env-file '${ANODE_INSTALL}/.env' restart"
           logger "Loaded new anode certificates on ${host}"
         fi
