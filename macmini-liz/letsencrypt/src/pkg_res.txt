@@ -1,5 +1,5 @@
 ../run.sh
-../run_pre.sh
+../run_post.sh
 main/resources/pushcerts.sh
 main/resources/pushcerts.service
 main/resources/config/dnsrobocert/config.yml
