@@ -15,6 +15,7 @@ import websocket
 import random
 import string
 import ssl
+import urllib3
 
 TIMEOUT = 2
 TIMEOUT_WARMUP = 30
@@ -23,6 +24,8 @@ CONFIG = anode.anode.load_config(
     os.path.join(DIR_ROOT, "src/main/resources/config/anode.yaml"),
     os.path.join(DIR_ROOT, ".env")
 )
+
+urllib3.disable_warnings()
 
 
 def get_metrics_sum():
