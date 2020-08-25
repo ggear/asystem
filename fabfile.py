@@ -130,6 +130,8 @@ def _purge(context, module="asystem"):
 def _pull(context, module="asystem"):
     _print_header(module, "pull")
     _run_local(context, "git pull --all")
+
+    #TODO: Refactor into module/pull.sh
     host_anode = _run_local(context, "basename $(dirname $(find {} -type d -mindepth 1 -maxdepth 2 ! -path '/*/.*' | grep {}))"
                             .format(DIR_ROOT, "anode"), hide='out').stdout.strip()
     host_letsencrypt = _run_local(context, "basename $(dirname $(find {} -type d -mindepth 1 -maxdepth 2 ! -path '/*/.*' | grep {}))"
@@ -347,6 +349,8 @@ def _get_modules(context, filter_path=None, filter_changes=True):
                 working_modules.append("{}/{}".format(working_dirs[root_dir_index + 1], nested_modules))
     working_modules[:] = [module for module in working_modules
                           if filter_path is None or glob.glob("{}/{}/{}*".format(DIR_ROOT, module, filter_path))]
+
+    #TODO: Refactor to reflect on module/.priority to determine sort order, 0,1,2,3,4,5
     try:
         working_modules = [module for _, module in
                            sorted(zip([MODULE_NAMES.index(_name(module)) for module in working_modules], working_modules))]
