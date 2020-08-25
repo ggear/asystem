@@ -1,7 +1,7 @@
 draft: false
 acme:
   email_account: graham.gear@gmail.com
-  staging: true
+  staging: false
 profiles:
   - name: cloudflare_profile
     provider: cloudflare
