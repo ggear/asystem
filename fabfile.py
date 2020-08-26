@@ -343,15 +343,18 @@ def _get_modules(context, filter_path=None, filter_changes=True):
                 working_modules.append("{}/{}".format(working_dirs[root_dir_index + 1], nested_modules))
     working_modules[:] = [module for module in working_modules
                           if filter_path is None or glob.glob("{}/{}/{}*".format(DIR_ROOT, module, filter_path))]
-
-    # TODO: Refactor to reflect on module/.priority to determine sort order, 0,1,2,3,4,5
-    try:
-        working_modules = [module for _, module in
-                           sorted(zip([MODULE_NAMES.index(_name(module)) for module in working_modules], working_modules))]
-    except ValueError as exception:
-        raise Exception("Error: MODULE_NAMES {} needs to be updated with {}!"
-                        .format(MODULE_NAMES, list(set(_name(module) for module in working_modules) - set(MODULE_NAMES))))
-    return working_modules
+    grouped_modules = {}
+    for module in working_modules:
+        group_path = Path(join(DIR_ROOT, module, ".group"))
+        group = group_path.read_text().strip() if group_path.exists() else "ZZZZZ"
+        if group not in grouped_modules:
+            grouped_modules[group] = [module]
+        else:
+            grouped_modules[group].append(module)
+    sorted_modules = []
+    for group in sorted(grouped_modules):
+        sorted_modules.extend(grouped_modules[group])
+    return sorted_modules
 
 
 def _ssh_pass(context, host):
@@ -459,23 +462,6 @@ def _print_footer(module, stage):
 
 DIR_ROOT = dirname(abspath(__file__))
 FILE_PROFILE = join(dirname(abspath(__file__)), ".profile")
-
-MODULE_NAMES = [
-    "host",
-    "keys",
-    "ddclient",
-    "letsencrypt",
-    "influxdb",
-    "postgres",
-    "telegraf",
-    "vernemq",
-    "grafana",
-    "weewx",
-    "speedtest",
-    "googledrive",
-    "anode",
-    "homeassistant"
-]
 
 DOCKER_VARIABLES = "LOCAL_IP=$(/usr/sbin/ipconfig getifaddr en1)"
 
