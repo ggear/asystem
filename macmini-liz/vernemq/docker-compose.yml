@@ -9,5 +9,7 @@ services:
       - TZ=Australia/Perth
       - DOCKER_VERNEMQ_ACCEPT_EULA=yes
       - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
+    volumes:
+      - ${DATA_DIR}:/var/lib/vernemq
     ports:
       - 1883:1883
