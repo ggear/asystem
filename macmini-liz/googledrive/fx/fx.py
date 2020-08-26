@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 import calendar
+import datetime
 import os.path
 import re
 import ssl
 import urllib2
 
-import datetime
 import pandas as pd
 from gspread_pandas import Spread
 
