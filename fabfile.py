@@ -388,7 +388,7 @@ def _up_module(context, module, up_this=True):
         _print_line("Starting servers ...")
         for run_dep in _get_dependencies(context, module):
             _run_local(context, "rm -rvf target/runtime-system && mkdir -p target/runtime-system", run_dep)
-            dir_config = join(DIR_ROOT, run_dep, "src/main/resources/config")
+            dir_config = join(DIR_ROOT, run_dep, "target/package/main/resources/config")
             if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
                 _run_local(context, "cp -rvfp $(find {} -mindepth 1) target/runtime-system".format(dir_config), module)
             if run_dep != module or up_this:
