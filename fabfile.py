@@ -133,7 +133,7 @@ def _pull(context, module="asystem"):
     _print_footer(module, "pull")
     for module in _get_modules(context, "pull.sh", False):
         _print_header(module, "pull")
-        _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module))
+        _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), DIR_ROOT)
         _print_footer(module, "pull")
 
 

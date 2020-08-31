@@ -9,7 +9,7 @@ while :; do
   if [ $(fswatch -1 "${SERVICE_HOME}/letsencrypt/live/janeandgraham.com" | wc -l) -gt 0 ]; then
     sleep 5
     [ ! -d "./certificates" ] && mkdir "./certificates" && touch "./certificates/privkey.pem"
-    if [ -f ./letsencrypt/live/janeandgraham.com/privkey.pem ] && [ ! $(cmp ./certificates/privkey.pem ./letsencrypt/live/janeandgraham.com/privkey.pem >/dev/null) ]; then
+    if [ -f ./letsencrypt/live/janeandgraham.com/privkey.pem ] && [ ! $(diff ./certificates/privkey.pem ./letsencrypt/live/janeandgraham.com/privkey.pem | wc -l) -gt 0 ]; then
       cp -rvfpL letsencrypt/live/janeandgraham.com/* certificates &&
         cat ./certificates/fullchain.pem ./certificates/privkey.pem >./certificates/fullchain_privkey.pem &&
         logger -t pushcerts "Cached new certificates"
