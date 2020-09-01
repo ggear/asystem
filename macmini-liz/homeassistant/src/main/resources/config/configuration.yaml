@@ -1,5 +1,14 @@
 default_config:
 
+group: !include groups.yaml
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+homeassistant:
+  customize: !include customize.yaml
+  customize_glob: !include customize_glob.yaml
+
 http:
   ssl_key: /config/.pem
   ssl_certificate: /config/certificate.pem
@@ -12,14 +21,13 @@ http:
 tts:
   - platform: google_translate
 
-group: !include groups.yaml
-automation: !include automations.yaml
-script: !include scripts.yaml
-scene: !include scenes.yaml
-
-homeassistant:
-  customize: !include customize.yaml
-  customize_glob: !include customize_glob.yaml
+recorder:
+  db_url: !env_var DB_URL
+  purge_keep_days: 1
+  purge_interval: 1
+#  exclude:
+#    domains:
+#      - sensor
 
 mqtt:
   broker: !env_var MQTT_HOST
@@ -55,3 +63,8 @@ lovelace:
 #      title: hidden
 #      show_in_sidebar: false
 #      filename: hidden.yaml
+
+logger:
+  default: warning
+  logs:
+    homeassistant.components.mqtt: warning
