@@ -24,7 +24,6 @@ tts:
 recorder:
   db_url: !env_var DB_URL
   purge_keep_days: 1
-  purge_interval: 1
 #  exclude:
 #    domains:
 #      - sensor

@@ -8,7 +8,7 @@ services:
     environment:
       - TZ=Australia/Perth
       - GF_SECURITY_ADMIN_USER=asystem
-      - GF_SECURITY_ADMIN_PASSWORD=Asystem1980!
+      - GF_SECURITY_ADMIN_PASSWORD=ASystem1980!
 
     # TODO: Fix volume permission issues
     #    volumes:
