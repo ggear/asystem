@@ -21,6 +21,19 @@ homeassistant:
   customize: !include customize.yaml
   customize_glob: !include customize_glob.yaml
 
+mqtt:
+  broker: 192.168.1.10
+  port: 1883
+  client_id: 'hass'
+  discovery: true
+  discovery_prefix: 'haas/sensor/config'
+  birth_message:
+    topic: 'hass/status'
+    payload: 'online'
+  will_message:
+    topic: 'hass/status'
+    payload: 'offline'
+
 lovelace:
   mode: yaml
   # Include external resources only add when mode is yaml, otherwise manage in the resources in the lovelace configuration panel.
