@@ -9,10 +9,6 @@ http:
     - https://janeandgraham.com
     - https://home.janeandgraham.com
 
-homeassistant:
-  customize: !include customize.yaml
-  customize_glob: !include customize_glob.yaml
-
 tts:
   - platform: google_translate
 
@@ -20,3 +16,10 @@ group: !include groups.yaml
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
+
+homeassistant:
+  customize: !include customize.yaml
+  customize_glob: !include customize_glob.yaml
+
+lovelace:
+  mode: yaml
