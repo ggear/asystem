@@ -5,7 +5,7 @@
 ################################################################################
 # Fix intermittent crashing, log uptime on 1.7.1-public.beta.1.2615
 # Upgrade to a release quality version 1.7.2+
-# Create nice to haves
+# Add nice to haves
 
 ################################################################################
 # Shell (unifi-os shell) baseline
@@ -31,6 +31,7 @@
 # Networks -> LAN -> DHCP range -> 192.168.1.50 to 192.168.1.254
 # Devices -> udm-rack, usw-house and uap-hallway
 # Clients -> udm-rack 192.168.1.1, macmini-liz 192.168.1.10, phillips-hue 192.168.1.12
+# Routing & Firewall -> Port Forwarding -> Anode, 8091, 192.168.1.10, 8091, TCP, Enable Logging
 # Routing & Firewall -> Port Forwarding -> Anode, 8091, 192.168.1.10, 8091, TCP, Enable Logging
 
 ################################################################################
