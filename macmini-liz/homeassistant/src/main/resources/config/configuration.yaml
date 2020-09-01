@@ -23,3 +23,22 @@ homeassistant:
 
 lovelace:
   mode: yaml
+  # Include external resources only add when mode is yaml, otherwise manage in the resources in the lovelace configuration panel.
+  #  resources:
+  #    - url: /local/my-custom-card.js
+  #      type: module
+  #    - url: /local/my-webfont.css
+  #      type: css
+  dashboards:
+    lovelace-generated:
+      mode: yaml
+      filename: notexist.yaml
+      title: Generated
+      icon: mdi:tools
+      show_in_sidebar: true
+      require_admin: true
+    lovelace-hidden:
+      mode: yaml
+      title: Custom
+      show_in_sidebar: true
+      filename: lovelace.yaml
