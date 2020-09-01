@@ -37,8 +37,8 @@ lovelace:
       icon: mdi:tools
       show_in_sidebar: true
       require_admin: true
-    lovelace-overview:
-      mode: yaml
-      title: Overview
-      show_in_sidebar: true
-      filename: lovelace.yaml
+#    lovelace-hidden:
+#      mode: yaml
+#      title: hidden
+#      show_in_sidebar: false
+#      filename: hidden.yaml
