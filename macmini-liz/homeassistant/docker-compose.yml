@@ -7,6 +7,7 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
+      - DB_URL
       - MQTT_HOST
       - MQTT_PORT
     volumes:
