@@ -1,8 +1,8 @@
 default_config:
 
 http:
+  ssl_key: /config/.pem
   ssl_certificate: /config/certificate.pem
-  ssl_key: /config/privkey.pem
 
 homeassistant:
   customize: !include customize.yaml
