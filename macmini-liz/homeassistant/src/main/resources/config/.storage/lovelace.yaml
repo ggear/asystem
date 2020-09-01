@@ -1,0 +1,110 @@
+title: Home
+views:
+  - path: default_view
+    title: Home
+    badges:
+    #      - entity: binary_sensor.updater
+    #      - entity: person.graham_gear
+    #      - entity: sensor.iphone_graham_activity
+    #      - entity: sensor.iphone_graham_battery_level
+    #      - entity: sensor.iphone_graham_battery_state
+    #      - entity: sensor.iphone_graham_bssid
+    #      - entity: sensor.iphone_graham_connection_type
+    #      - entity: sensor.iphone_graham_sim_1
+    #      - entity: sensor.iphone_graham_sim_2
+    #      - entity: sensor.iphone_graham_ssid
+    #      - entity: sensor.iphone_graham_geocoded_location
+    #      - entity: sensor.iphone_graham_last_update_trigger
+    #      - entity: sensor.iphone_graham_average_active_pace
+    #      - entity: sensor.iphone_graham_distance
+    #      - entity: sensor.iphone_graham_floors_ascended
+    #      - entity: sensor.iphone_graham_floors_descended
+    #      - entity: sensor.iphone_graham_steps
+    #      - entity: sensor.iphone_graham_storage
+    #      - entity: sensor.iphone_graham_activity_2
+    #      - entity: sensor.iphone_graham_battery_level_2
+    #      - entity: sensor.iphone_graham_battery_state_2
+    #      - entity: sensor.iphone_graham_bssid_2
+    #      - entity: sensor.iphone_graham_connection_type_2
+    #      - entity: sensor.iphone_graham_sim_1_2
+    #      - entity: sensor.iphone_graham_sim_2_2
+    #      - entity: sensor.iphone_graham_ssid_2
+    #      - entity: sensor.iphone_graham_geocoded_location_2
+    #      - entity: sensor.iphone_graham_last_update_trigger_2
+    #      - entity: sensor.iphone_graham_average_active_pace_2
+    #      - entity: sensor.iphone_graham_distance_2
+    #      - entity: sensor.iphone_graham_floors_ascended_2
+    #      - entity: sensor.iphone_graham_floors_descended_2
+    #      - entity: sensor.iphone_graham_steps_2
+    #      - entity: sensor.iphone_graham_storage_2
+    #      - entity: sun.sun
+    cards:
+      - type: weather-forecast
+        entity: weather.home
+      - type: entities
+        entities:
+          - light.ada
+          - light.bathroom
+          - light.dining
+          - light.edwin
+          - light.ensuite
+          - light.hallway
+          #          - light.hue_ambiance_lamp_1
+          #          - light.hue_ambiance_lamp_10
+          #          - light.hue_ambiance_lamp_11
+          #          - light.hue_ambiance_lamp_12
+          #          - light.hue_ambiance_lamp_2
+          #          - light.hue_ambiance_lamp_3
+          #          - light.hue_ambiance_lamp_4
+          #          - light.hue_ambiance_lamp_5
+          #          - light.hue_ambiance_lamp_6
+          #          - light.hue_ambiance_lamp_7
+          #          - light.hue_ambiance_lamp_8
+          #          - light.hue_ambiance_lamp_9
+          #          - light.hue_color_candle_10
+          #          - light.hue_color_candle_11
+          #          - light.hue_color_candle_12
+          #          - light.hue_color_candle_13
+          #          - light.hue_color_candle_14
+          #          - light.hue_color_candle_15
+          #          - light.hue_color_candle_16
+          #          - light.hue_color_candle_17
+          #          - light.hue_color_candle_2
+          #          - light.hue_color_candle_3
+          #          - light.hue_color_candle_4
+          #          - light.hue_color_candle_5
+          #          - light.hue_color_candle_6
+          #          - light.hue_color_candle_7
+          #          - light.hue_color_candle_8
+          #          - light.hue_color_candle_9
+          - light.kitchen
+          - light.laundry
+          - light.lounge
+          - light.office
+          - light.pantry
+          - light.parents
+          - light.wardrobe
+        title: Light
+  - title: Media
+    path: media
+    badges: [ ]
+    cards:
+      - type: media-control
+        entity: media_player.ada_home
+      - type: media-control
+        entity: media_player.edwin_home
+      - type: media-control
+        entity: media_player.kitchen_home
+      - type: media-control
+        entity: media_player.kitchen_speaker
+      - type: media-control
+        entity: media_player.parents_home
+      - type: media-control
+        entity: media_player.parents_speaker
+      - type: media-control
+        entity: media_player.office_tv
+      - type: media-control
+        entity: media_player.office_speaker
+      - type: media-control
+        entity: media_player.lounge_home
+
