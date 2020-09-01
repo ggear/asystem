@@ -22,8 +22,8 @@ homeassistant:
   customize_glob: !include customize_glob.yaml
 
 mqtt:
-  broker: ${MQTT_HOST}
-  port: ${MQTT_PORT}
+  broker: !env_var MQTT_HOST
+  port: !env_var MQTT_PORT
   client_id: 'hass'
   discovery: true
   discovery_prefix: 'haas/sensor/config'
