@@ -31,8 +31,8 @@
 # Networks -> LAN -> DHCP range -> 192.168.1.50 to 192.168.1.254
 # Devices -> udm-rack, usw-house and uap-hallway
 # Clients -> udm-rack 192.168.1.1, macmini-liz 192.168.1.10, phillips-hue 192.168.1.12
-# Routing & Firewall -> Port Forwarding -> Anode, 8091, 192.168.1.10, 8091, TCP, Enable Logging
-# Routing & Firewall -> Port Forwarding -> Anode, 8091, 192.168.1.10, 8091, TCP, Enable Logging
+# Routing & Firewall -> Port Forwarding -> ANode, 8091, 192.168.1.10, 8091, TCP, Enable Logging
+# Routing & Firewall -> Port Forwarding -> Home Assistant, 8092, 192.168.1.10, 8123, TCP, Enable Logging
 
 ################################################################################
 # Network nice-to-have
