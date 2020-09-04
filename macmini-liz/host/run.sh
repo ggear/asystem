@@ -49,6 +49,7 @@ use-ipv4=yes
 use-ipv6=yes
 ratelimit-interval-usec=1000000
 ratelimit-burst=1000
+cache-entries-max=0
 
 [wide-area]
 enable-wide-area=yes
