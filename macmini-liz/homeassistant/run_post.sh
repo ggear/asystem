@@ -12,13 +12,12 @@ SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_A
 # Integrations - add HACS, BOM Forecast, BOM Weather Card, SenseMe,
 #
 
+# TODO: Move into Dockerfile
 cd "${SERVICE_INSTALL}" || exit
 if [ $(docker exec -it homeassistant /bin/bash -c "ls /config/custom_components/hacs 2>/dev/null" | wc -l) -eq 0 ]; then
   docker exec -it homeassistant /bin/bash -c "curl -sfSL https://hacs.xyz/install | bash -"
-  docker-compose --no-ansi up --force-recreate -d
 fi
-if [ $(docker exec -it homeassistant /bin/bash -c "ls /config/www/icons/weather_icons 2>/dev/null" | wc -l) -eq 0 ]; then
+if [ $(docker exec -it homeassistant /bin/bash -c "ls /config/www/icons/weather_icons 2>/dev/null" | wc -l) -ge 0 ]; then
   docker exec -it homeassistant /bin/bash -c "mkdir -p /config/www/icons/weather_icons && curl -o /tmp/icons.zip https://raw.githubusercontent.com/DavidFW1960/bom-weather-card/master/weather_icons.zip && unzip /tmp/icons.zip -d /config/www/icons/weather_icons && rm -rf /tmp/icons.zip"
-  docker-compose --no-ansi up --force-recreate -d
 fi
-
+docker-compose --no-ansi up --force-recreate -d
