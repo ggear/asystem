@@ -15,21 +15,22 @@ while :; do
         logger -t pushcerts "Cached new certificates"
       if [ -f "${SERVICE_INSTALL}/hosts" ]; then
         while read -r host; do
-          ANODE_HOME=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} "find /home/asystem/anode -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
+          ANODE_HOME=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
+            "find /home/asystem/anode -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
           ANODE_INSTALL=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
             "find /var/lib/asystem/install/\$(hostname)/anode -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
           if [ -n "${ANODE_HOME}" ] && [ -n "${ANODE_INSTALL}" ]; then
-            scp -q -o "StrictHostKeyChecking=no" \
+            scp -qo "StrictHostKeyChecking=no" \
               ./certificates/fullchain_privkey.pem root@${host}:"${ANODE_HOME}/.pem"
-            ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
+            ssh -qno "StrictHostKeyChecking=no" root@${host} \
               "docker-compose -f '${ANODE_INSTALL}/docker-compose.yml' --env-file '${ANODE_INSTALL}/.env' restart"
             logger -t pushcerts "Loaded new anode certificates on ${host}"
           fi
         done <"${SERVICE_INSTALL}/hosts"
       fi
-      scp -q -o "StrictHostKeyChecking=no" ./certificates/privkey.pem root@udm-rack:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
-      scp -q -o "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@udm-rack:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
-      ssh -q -o "StrictHostKeyChecking=no" root@udm-rack "unifi-os restart"
+      scp -qo "StrictHostKeyChecking=no" ./certificates/privkey.pem root@udm-rack:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
+      scp -qo "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@udm-rack:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
+      ssh -qo "StrictHostKeyChecking=no" root@udm-rack "unifi-os restart"
       logger -t pushcerts "Loaded new unifi certificates on udm-rack"
     fi
   fi

@@ -7,6 +7,5 @@ SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_A
 # Portal baseline
 ################################################################################
 # Setup graham and jane users
-# Integrations - REMOVE Meteorologisk
-# Integrations - ADD Hue, Sonos, Google
-# Integrations - ADD HACS, SenseMe
+# Integrations Core - HACS, Hue, Sonos, Google
+# Integrations HACS - SenseMe
