@@ -41,33 +41,33 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
-hacs:
-  token: 3f8f8d1288256d31683a7efaa9e533ea86e60b3d
+#hacs:
+#  token: 3f8f8d1288256d31683a7efaa9e533ea86e60b3d
 
-sensor:
-  - platform: bom_forecast
-    product_id: IDW12300
-    name: Perth
-    forecast_days: 6
-    rest_of_today: true
-    friendly: false
-    friendly_state_format: '{max}, {summary}'
-    monitored_conditions:
-      - 'max'
-      - 'min'
-      - 'chance_of_rain'
-      - 'possible_rainfall'
-      - 'summary'
-      - 'detailed_summary'
-      - 'icon'
-      - 'uv_alert'
-      - 'fire_danger'
+#sensor:
+#  - platform: bom_forecast
+#    product_id: IDW12300
+#    name: Perth
+#    forecast_days: 6
+#    rest_of_today: true
+#    friendly: false
+#    friendly_state_format: '{max}, {summary}'
+#    monitored_conditions:
+#      - 'max'
+#      - 'min'
+#      - 'chance_of_rain'
+#      - 'possible_rainfall'
+#      - 'summary'
+#      - 'detailed_summary'
+#      - 'icon'
+#      - 'uv_alert'
+#      - 'fire_danger'
 
 lovelace:
   mode: yaml
-  resources:
-    - url: /local/custom_ui/bom-weather-card.js?v=0.1
-      type: module
+#  resources:
+#    - url: /local/custom_ui/bom-weather-card.js?v=0.1
+#      type: module
   dashboards:
     lovelace-generated:
       mode: yaml
