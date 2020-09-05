@@ -82,4 +82,8 @@ lovelace:
 logger:
   default: info
   logs:
+    hacs: debug
+    queueman: debug
+    AIOGitHubAPI: debug
+    custom_components.hacs: debug
     homeassistant.components.mqtt: warning
