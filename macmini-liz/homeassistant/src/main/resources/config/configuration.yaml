@@ -60,7 +60,7 @@ mqtt:
 weather:
   - platform: bom
     name: Perth
-    station: IDW12300
+    station: IDW60901.94610
 
 camera:
   - platform: bom
@@ -85,4 +85,5 @@ logger:
   logs:
     hacs: debug
     custom_components.hacs: debug
+    homeassistant.components.bom: debug
     homeassistant.components.mqtt: warning
