@@ -62,12 +62,9 @@ sensor:
 
 lovelace:
   mode: yaml
-  # Include external resources only add when mode is yaml, otherwise manage in the resources in the lovelace configuration panel.
-  #  resources:
-  #    - url: /local/my-custom-card.js
-  #      type: module
-  #    - url: /local/my-webfont.css
-  #      type: css
+  resources:
+    - url: /config/www/community/bom-weather-card/bom-weather-card.js
+      type: module
   dashboards:
     lovelace-generated:
       mode: yaml
@@ -81,9 +78,6 @@ lovelace:
   #      title: hidden
   #      show_in_sidebar: false
   #      filename: hidden.yaml
-  resources:
-    - url: /config/www/community/bom-weather-card/bom-weather-card.js
-      type: module
 
 logger:
   default: warning
