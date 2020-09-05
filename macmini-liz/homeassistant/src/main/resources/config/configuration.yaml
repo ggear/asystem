@@ -62,6 +62,9 @@ sensor:
 
 lovelace:
   mode: yaml
+  resources:
+    - url: /hacsfiles/bom-weather-card/bom-weather-card.js
+      type: module
   dashboards:
     lovelace-generated:
       mode: yaml

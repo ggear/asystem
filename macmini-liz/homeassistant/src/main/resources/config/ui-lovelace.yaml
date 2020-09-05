@@ -1,6 +1,3 @@
-resources:
-  - url: /hacsfiles/bom-weather-card/bom-weather-card.js
-    type: module
 title: Home
 views:
   - path: default_view
