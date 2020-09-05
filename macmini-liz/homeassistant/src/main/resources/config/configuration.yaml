@@ -108,10 +108,10 @@ lovelace:
       require_admin: true
 
 logger:
-  default: info
+  default: warning
   logs:
     hacs: warning
     custom_components.hacs: warning
+    custom_components.bom_forecast: debug
     homeassistant.components.bom: debug
-    homeassistant.components.bom_forecast: debug
     homeassistant.components.mqtt: warning
