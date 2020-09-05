@@ -4,6 +4,10 @@ views:
     title: Home
     badges: [ ]
     cards:
+      - type: weather-forecast
+        entity: weather.bom_perth
+      - type: picture-entity
+        entity: camera.bom_radar_loop_perth
 
   # TODO: Re-enable when I can get working!
   #      - type: custom:bom-weather-card
