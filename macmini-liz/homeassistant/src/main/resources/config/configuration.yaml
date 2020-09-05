@@ -38,24 +38,33 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
-sensor:
-  - platform: bom_forecast
-    product_id: IDW12300
+#sensor:
+#  - platform: bom_forecast
+#    product_id: IDW12300
+#    name: Perth
+#    forecast_days: 6
+#    rest_of_today: true
+#    friendly: false
+#    friendly_state_format: '{max}, {summary}'
+#    monitored_conditions:
+#      - 'max'
+#      - 'min'
+#      - 'chance_of_rain'
+#      - 'possible_rainfall'
+#      - 'summary'
+#      - 'detailed_summary'
+#      - 'icon'
+#      - 'uv_alert'
+#      - 'fire_danger'
+
+weather:
+  - platform: bom
     name: Perth
-    forecast_days: 6
-    rest_of_today: true
-    friendly: false
-    friendly_state_format: '{max}, {summary}'
-    monitored_conditions:
-      - 'max'
-      - 'min'
-      - 'chance_of_rain'
-      - 'possible_rainfall'
-      - 'summary'
-      - 'detailed_summary'
-      - 'icon'
-      - 'uv_alert'
-      - 'fire_danger'
+    station: IDW12300
+
+camera:
+  - platform: bom
+    location: Perth
 
 lovelace:
   mode: yaml
