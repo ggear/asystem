@@ -83,6 +83,6 @@ lovelace:
   #      filename: hidden.yaml
 
 logger:
-  default: debug
+  default: info
   logs:
     homeassistant.components.mqtt: warning
