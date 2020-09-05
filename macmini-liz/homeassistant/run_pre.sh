@@ -15,9 +15,9 @@ if [ -f "${SERVICE_INSTALL}/hosts" ]; then
     POSTGRES_INSTALL=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
       "find /var/lib/asystem/install/\$(hostname)/postgres -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
     if [ -n "${POSTGRES_HOME}" ] && [ -n "${POSTGRES_INSTALL}" ]; then
-      ssh -qno "StrictHostKeyChecking=no" ${host} "echo 'SELECT '\''CREATE USER haas'\'' WHERE NOT EXISTS (SELECT FROM pg_user WHERE usename = '\''haas'\'')\gexec' | docker exec -i postgres psql -U asystem -d asystem"
-      ssh -qno "StrictHostKeyChecking=no" ${host} "echo 'ALTER USER haas WITH PASSWORD '\''haas'\''\;' | docker exec -i postgres psql -U asystem -d asystem" >/dev/null
-      ssh -qno "StrictHostKeyChecking=no" ${host} "echo 'SELECT '\''CREATE DATABASE haas'\'' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '\''haas'\'')\gexec' | docker exec -i postgres psql -U asystem -d asystem"
+#      ssh -qno "StrictHostKeyChecking=no" ${host} "echo 'SELECT '\''CREATE USER haas'\'' WHERE NOT EXISTS (SELECT FROM pg_user WHERE usename = '\''haas'\'')\gexec' | docker exec -i postgres psql -U asystem -d asystem"
+#      ssh -qno "StrictHostKeyChecking=no" ${host} "echo 'ALTER USER haas WITH PASSWORD '\''haas'\''\;' | docker exec -i postgres psql -U asystem -d asystem" >/dev/null
+#      ssh -qno "StrictHostKeyChecking=no" ${host} "echo 'SELECT '\''CREATE DATABASE haas'\'' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '\''haas'\'')\gexec' | docker exec -i postgres psql -U asystem -d asystem"
       ssh -qno "StrictHostKeyChecking=no" ${host} "docker exec -i postgres pg_dump -U asystem -d asystem" >haas_backup_pre_${VERSION_ABSOLUTE}.sql
     fi
   done <"${SERVICE_INSTALL}/hosts"
