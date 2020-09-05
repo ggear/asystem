@@ -82,7 +82,7 @@ lovelace:
   #      show_in_sidebar: false
   #      filename: hidden.yaml
   resources:
-    - url: /hacsfiles/bom-weather-card/bom-weather-card.js
+    - url: /config/www/community/bom-weather-card/bom-weather-card.js
       type: module
 
 logger:
