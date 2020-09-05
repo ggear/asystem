@@ -12,9 +12,9 @@ SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_A
 SERVICE_HOST_IP=$(ifconfig enp1s0f0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*')
 
 cd "${SERVICE_INSTALL}" || exit
-[ -f "${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz
 docker stop "${SERVICE_NAME}" >/dev/null 2>&1
 docker wait "${SERVICE_NAME}" >/dev/null 2>&1
+[ -f "${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz
 [ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
 if [ ! -d "$SERVICE_HOME" ]; then
   if [ -d "$SERVICE_HOME_OLD" ]; then
