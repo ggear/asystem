@@ -25,7 +25,7 @@ if [ ! -d "$SERVICE_HOME" ]; then
   fi
   rm -rvf "$SERVICE_HOME_OLDEST"
 fi
-[ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1) "${SERVICE_HOME}"
+[ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
 chmod 600 .env
 if [ -f "docker-compose.yml" ] && ([ ! -f ".env" ] || [ $(grep -c "# Installed" .env) -eq 0 ]); then
