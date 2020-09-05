@@ -17,3 +17,8 @@ if [ $(docker exec -it homeassistant /bin/bash -c "[ ! -d /config/custom_compone
   docker exec -it homeassistant /bin/bash -c "curl -sfSL https://hacs.xyz/install | bash -"
   docker-compose --no-ansi up --force-recreate -d
 fi
+if [ $(docker exec -it homeassistant /bin/bash -c "[ ! -d /config/www/icons/weather_icons ]") ]; then
+  docker exec -it homeassistant /bin/bash -c "mkdir -p /config/www/icons/weather_icons && curl -o /tmp/icons.zip https://raw.githubusercontent.com/DavidFW1960/bom-weather-card/master/weather_icons.zip && unzip /tmp/icons.zip -d /config/www/icons/weather_icons && rm -rf /tmp/icons.zip"
+  docker-compose --no-ansi up --force-recreate -d
+fi
+
