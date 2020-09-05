@@ -44,7 +44,7 @@ mqtt:
 sensor:
   - platform: bom_forecast
     product_id: IDW12300
-    name: Midland
+    name: Perth
     forecast_days: 6
     rest_of_today: true
     friendly: false
