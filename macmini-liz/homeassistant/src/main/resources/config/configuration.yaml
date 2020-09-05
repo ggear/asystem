@@ -41,6 +41,9 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
+hacs:
+  token: 3f8f8d1288256d31683a7efaa9e533ea86e60b3d
+
 sensor:
   - platform: bom_forecast
     product_id: IDW12300
@@ -63,7 +66,7 @@ sensor:
 lovelace:
   mode: yaml
   resources:
-    - url: /hacsfiles/bom-weather-card/bom-weather-card.js
+    - url: /local/custom_ui/bom-weather-card.js?v=0.1
       type: module
   dashboards:
     lovelace-generated:
