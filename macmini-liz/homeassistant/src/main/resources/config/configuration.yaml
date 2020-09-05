@@ -41,9 +41,6 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
-#hacs:
-#  token: 3f8f8d1288256d31683a7efaa9e533ea86e60b3d
-
 #sensor:
 #  - platform: bom_forecast
 #    product_id: IDW12300
