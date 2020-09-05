@@ -38,29 +38,56 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
-#sensor:
-#  - platform: bom_forecast
-#    product_id: IDW12300
-#    name: Perth
-#    forecast_days: 6
-#    rest_of_today: true
-#    friendly: false
-#    friendly_state_format: '{max}, {summary}'
-#    monitored_conditions:
-#      - 'max'
-#      - 'min'
-#      - 'chance_of_rain'
-#      - 'possible_rainfall'
-#      - 'summary'
-#      - 'detailed_summary'
-#      - 'icon'
-#      - 'uv_alert'
-#      - 'fire_danger'
-
-weather:
+sensor:
   - platform: bom
     name: Perth
     station: IDW60901.94610
+    monitored_conditions:
+      - apparent_t
+      - cloud
+      - cloud_base_m
+      - cloud_oktas
+      - cloud_type_id
+      - cloud_type
+      - delta_t
+      - gust_kmh
+      - gust_kt
+      - air_temp
+      - dewpt
+      - local_date_time
+      - local_date_time_full
+      - press
+      - press_qnh
+      - press_msl
+      - press_tend
+      - rain_trace
+      - rel_hum
+      - sea_state
+      - swell_dir_worded
+      - swell_height
+      - swell_period
+      - vis_km
+      - weather
+      - wind_dir
+      - wind_spd_kmh
+      - wind_spd_kt
+  - platform: bom_forecast
+    name: Perth
+    product_id: IDW60901
+    forecast_days: 6
+    rest_of_today: True
+    friendly: True
+    friendly_state_format: '{max}, {summary}'
+    monitored_conditions:
+      - 'max'
+      - 'min'
+      - 'chance_of_rain'
+      - 'possible_rainfall'
+      - 'summary'
+      - 'detailed_summary'
+      - 'icon'
+      - 'uv_alert'
+      - 'fire_danger'
 
 camera:
   - platform: bom
