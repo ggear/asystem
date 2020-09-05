@@ -73,7 +73,7 @@ sensor:
       - wind_spd_kt
   - platform: bom_forecast
     name: Perth
-    product_id: IDW60901
+    product_id: IDW12300
     forecast_days: 6
     rest_of_today: True
     friendly: True
