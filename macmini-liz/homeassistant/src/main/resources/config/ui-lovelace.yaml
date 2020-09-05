@@ -4,10 +4,10 @@ views:
     title: Home
     badges: [ ]
     cards:
-      - type: custom:bom-weather-card
-        title: BOM Weather
+#      - type: custom:bom-weather-card
+#        title: BOM Weather
 #        entity_current_conditions: sensor.bom_perth_icon_0
-        entity_temperature: sensor.bom_perth_air_temp_c
+#        entity_temperature: sensor.bom_perth_air_temp_c
 #        entity_forecast_high_temp_1: sensor.bom_perth_max_temp_c_1
 #        entity_forecast_high_temp_2: sensor.bom_perth_max_temp_c_2
 #        entity_forecast_high_temp_3: sensor.bom_perth_max_temp_c_3
