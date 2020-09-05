@@ -41,6 +41,25 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
+sensor:
+  - platform: bom_forecast
+    product_id: IDW12300
+    name: Midland
+    forecast_days: 6
+    rest_of_today: true
+    friendly: false
+    friendly_state_format: '{max}, {summary}'
+    monitored_conditions:
+      - 'max'
+      - 'min'
+      - 'chance_of_rain'
+      - 'possible_rainfall'
+      - 'summary'
+      - 'detailed_summary'
+      - 'icon'
+      - 'uv_alert'
+      - 'fire_danger'
+
 lovelace:
   mode: yaml
   # Include external resources only add when mode is yaml, otherwise manage in the resources in the lovelace configuration panel.
@@ -57,11 +76,14 @@ lovelace:
       icon: mdi:tools
       show_in_sidebar: true
       require_admin: true
-#    lovelace-hidden:
-#      mode: yaml
-#      title: hidden
-#      show_in_sidebar: false
-#      filename: hidden.yaml
+  #    lovelace-hidden:
+  #      mode: yaml
+  #      title: hidden
+  #      show_in_sidebar: false
+  #      filename: hidden.yaml
+  resources:
+    - url: /hacsfiles/bom-weather-card/bom-weather-card.js
+      type: module
 
 logger:
   default: warning
