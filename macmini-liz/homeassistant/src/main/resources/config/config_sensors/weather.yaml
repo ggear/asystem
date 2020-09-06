@@ -72,11 +72,11 @@
         {%- if states('sensor.bom_perth_fire_danger_0') == '##' -%}
         Fire Danger Today: No Data
         {%- elif states('sensor.bom_perth_fire_danger_0') != 'n/a' -%}
-        Fire Danger Today: {{ states('sensor.bom_perth_fire_danger_0') }}
+        Fire Danger Today: {{ states('sensor.bom_perth_fire_danger_0')[0] }}
         {%- elif states('sensor.bom_perth_fire_danger_1') == '##' -%}
         Fire Danger Tomorrow: No Data
         {%- else -%}
-        Fire Danger Tomorrow: {{ states('sensor.bom_perth_fire_danger_1') }}
+        Fire Danger Tomorrow: {{ states('sensor.bom_perth_fire_danger_1')[0] }}
         {%- endif -%}
 
     bom_fire_danger_summary:
