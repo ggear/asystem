@@ -43,13 +43,13 @@
     bom_uv_alert:
       value_template: >
         {%- if states('sensor.bom_perth_uv_alert_0') == '##' -%}
-        UV Today: No Data
+        No UV data available for today.
         {%- elif states('sensor.bom_perth_uv_alert_0') != 'n/a' -%}
-        UV Today: {{ states('sensor.bom_perth_uv_alert_0') }}
+        For today, {{ states('sensor.bom_perth_uv_alert_0') }}.
         {%- elif states('sensor.bom_perth_uv_alert_1') == '##' -%}
-        UV Tomorrow: No Data
+        No UV data available for tomorrow.
         {%- else -%}
-        UV Tomorrow: {{ states('sensor.bom_perth_uv_alert_1') }}
+        For tomorrow {{ states('sensor.bom_perth_uv_alert_1') }}.
         {%- endif -%}
 
     bom_uv_alert_summary:
@@ -70,13 +70,13 @@
     bom_fire_danger:
       value_template: >
         {%- if states('sensor.bom_perth_fire_danger_0') == '##' -%}
-        Fire Danger Today: No Data
+        No Fire Danger data available for today.
         {%- elif states('sensor.bom_perth_fire_danger_0') != 'n/a' -%}
-        Fire Danger Today: {{ states('sensor.bom_perth_fire_danger_0')[0] }}
+        Today's Fire Danger warning for {{ states('sensor.bom_perth_fire_danger_0') }}.
         {%- elif states('sensor.bom_perth_fire_danger_1') == '##' -%}
-        Fire Danger Tomorrow: No Data
+        No Fire Danger data available for tomorrow.
         {%- else -%}
-        Fire Danger Tomorrow: {{ states('sensor.bom_perth_fire_danger_1')[0] }}
+        Tomorrow's Fire Danger warning for {{ states('sensor.bom_perth_fire_danger_1') }}.
         {%- endif -%}
 
     bom_fire_danger_summary:
@@ -84,11 +84,11 @@
         {%- if states('sensor.bom_perth_fire_danger_0') == '##' -%}
         No Data
         {%- elif states('sensor.bom_perth_fire_danger_0') != 'n/a' -%}
-        {{ states('sensor.bom_perth_fire_danger_0') }}
+        {{ states('sensor.bom_perth_fire_danger_0').split(',')[1].split(': ')[1] }} Risk
         {%- elif states('sensor.bom_perth_fire_danger_1') == '##' -%}
         No Data
         {%- else -%}
-        {{ states('sensor.bom_perth_fire_danger_1') }}
+        {{ states('sensor.bom_perth_fire_danger_1').split(',')[1].split(': ')[1] }} Risk
         {%- endif -%}
 
     bom_forecast_0:
@@ -211,6 +211,16 @@
           {{ state_attr('sensor.today_temp_bom', 'min_value') }}
         {% else %}
           {{ states('sensor.bom_perth_min_temp_c_0') }}
+        {% endif %}
+
+    bom_today_detailed_summary:
+      entity_id:
+        - sensor.bom_perth_detailed_summary_0
+      value_template: >
+        {%- if states('sensor.bom_perth_detailed_summary_0') == '##' -%}
+        No Data
+        {%- elif states('sensor.bom_perth_detailed_summary_0') != 'n/a' -%}
+          {{ states('sensor.bom_perth_detailed_summary_0').replace(' ...', '.') }}
         {% endif %}
 
 - platform: statistics
