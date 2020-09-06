@@ -40,7 +40,7 @@ mqtt:
 
 sensor:
   - platform: bom
-    name: Perth Airport
+    name: Perth
     station: IDW60901.94610
     monitored_conditions:
       - apparent_t

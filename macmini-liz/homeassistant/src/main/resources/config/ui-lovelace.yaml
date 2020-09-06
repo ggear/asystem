@@ -18,28 +18,28 @@ views:
 
       - type: custom:bom-weather-card
         title: BOM Weather
-#        entity_current_conditions: sensor.bom_perth_airport_icon_0
-        entity_temperature: sensor.bom_perth_airport_air_temp_c
-#        entity_forecast_high_temp_1: sensor.bom_perth_airport_max_temp_c_1
-#        entity_forecast_high_temp_2: sensor.bom_perth_airport_max_temp_c_2
-#        entity_forecast_high_temp_3: sensor.bom_perth_airport_max_temp_c_3
-#        entity_forecast_high_temp_4: sensor.bom_perth_airport_max_temp_c_4
-#        entity_forecast_high_temp_5: sensor.bom_perth_airport_max_temp_c_5
-#        entity_forecast_icon_1: sensor.bom_perth_airport_icon_1
-#        entity_forecast_icon_2: sensor.bom_perth_airport_icon_2
-#        entity_forecast_icon_3: sensor.bom_perth_airport_icon_3
-#        entity_forecast_icon_4: sensor.bom_perth_airport_icon_4
-#        entity_forecast_icon_5: sensor.bom_perth_airport_icon_5
-#        entity_forecast_low_temp_1: sensor.bom_perth_airport_min_temp_c_1
-#        entity_forecast_low_temp_2: sensor.bom_perth_airport_min_temp_c_2
-#        entity_forecast_low_temp_3: sensor.bom_perth_airport_min_temp_c_3
-#        entity_forecast_low_temp_4: sensor.bom_perth_airport_min_temp_c_4
-#        entity_forecast_low_temp_5: sensor.bom_perth_airport_min_temp_c_5
-#        entity_summary_1: sensor.bom_perth_airport_summary_1
-#        entity_summary_2: sensor.bom_perth_airport_summary_2
-#        entity_summary_3: sensor.bom_perth_airport_summary_3
-#        entity_summary_4: sensor.bom_perth_airport_summary_4
-#        entity_summary_5: sensor.bom_perth_airport_summary_5
+        entity_current_conditions: sensor.bom_perth_icon_0
+        entity_temperature: sensor.bom_perth_air_temp_c
+        entity_forecast_high_temp_1: sensor.bom_perth_max_temp_c_1
+        entity_forecast_high_temp_2: sensor.bom_perth_max_temp_c_2
+        entity_forecast_high_temp_3: sensor.bom_perth_max_temp_c_3
+        entity_forecast_high_temp_4: sensor.bom_perth_max_temp_c_4
+        entity_forecast_high_temp_5: sensor.bom_perth_max_temp_c_5
+        entity_forecast_icon_1: sensor.bom_perth_icon_1
+        entity_forecast_icon_2: sensor.bom_perth_icon_2
+        entity_forecast_icon_3: sensor.bom_perth_icon_3
+        entity_forecast_icon_4: sensor.bom_perth_icon_4
+        entity_forecast_icon_5: sensor.bom_perth_icon_5
+        entity_forecast_low_temp_1: sensor.bom_perth_min_temp_c_1
+        entity_forecast_low_temp_2: sensor.bom_perth_min_temp_c_2
+        entity_forecast_low_temp_3: sensor.bom_perth_min_temp_c_3
+        entity_forecast_low_temp_4: sensor.bom_perth_min_temp_c_4
+        entity_forecast_low_temp_5: sensor.bom_perth_min_temp_c_5
+        entity_summary_1: sensor.bom_perth_summary_1
+        entity_summary_2: sensor.bom_perth_summary_2
+        entity_summary_3: sensor.bom_perth_summary_3
+        entity_summary_4: sensor.bom_perth_summary_4
+        entity_summary_5: sensor.bom_perth_summary_5
 
 
 
