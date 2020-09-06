@@ -76,7 +76,7 @@ sensor:
     product_id: IDW12300
     forecast_days: 6
     rest_of_today: True
-    friendly: True
+    friendly: False
     friendly_state_format: '{max}, {summary}'
     monitored_conditions:
       - 'max'
