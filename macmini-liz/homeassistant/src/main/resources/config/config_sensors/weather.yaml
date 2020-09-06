@@ -72,11 +72,11 @@
         {%- if states('sensor.bom_perth_fire_danger_0') == '##' -%}
         No Fire Danger data available for today.
         {%- elif states('sensor.bom_perth_fire_danger_0') != 'n/a' -%}
-        Today's Fire Danger warning for {{ states('sensor.bom_perth_fire_danger_0') }}.
+        Today's Fire Danger risk for {{ states('sensor.bom_perth_fire_danger_0') }}.
         {%- elif states('sensor.bom_perth_fire_danger_1') == '##' -%}
         No Fire Danger data available for tomorrow.
         {%- else -%}
-        Tomorrow's Fire Danger warning for {{ states('sensor.bom_perth_fire_danger_1') }}.
+        Tomorrow's Fire Danger risk for {{ states('sensor.bom_perth_fire_danger_1') }}.
         {%- endif -%}
 
     bom_fire_danger_summary:
