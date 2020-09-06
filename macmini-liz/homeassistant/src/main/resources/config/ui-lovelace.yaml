@@ -5,7 +5,7 @@ views:
     badges: [ ]
     cards:
       - type: weather-forecast
-        entity: weather.bom_perth
+        entity: weather.bom_perth_airport
         name: Perth Airport
       - type: picture-entity
         name: Perth (last hour)
