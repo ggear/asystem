@@ -1,20 +1,11 @@
 title: Home
 views:
+
+  # HOME
   - path: default_view
     title: Home
     badges: [ ]
     cards:
-
-#      - type: weather-forecast
-#        entity: weather.bom_perth_airport
-#        name: Perth Airport
-
-      - type: picture-entity
-        name: Perth (last hour)
-        show_name: false
-        show_state: false
-        entity: camera.bom_radar_loop_perth
-
 
       - type: custom:bom-weather-card
         title: BOM Weather
@@ -41,12 +32,18 @@ views:
         entity_summary_4: sensor.bom_perth_summary_4
         entity_summary_5: sensor.bom_perth_summary_5
 
+      - type: picture-entity
+        name: Perth (last hour)
+        show_name: false
+        show_state: false
+        entity: camera.bom_radar_loop_perth
 
-
+  # LIGHTS
   - path: lights
     title: Lights
     badges: [ ]
     cards:
+
       - type: entities
         entities:
           - light.ada
@@ -63,25 +60,36 @@ views:
           - light.parents
           - light.wardrobe
         title: Light
+
+  # MEDIA
   - path: media
     title: Media
     badges: [ ]
     cards:
+
       - type: media-control
         entity: media_player.ada_home
+
       - type: media-control
         entity: media_player.edwin_home
+
       - type: media-control
         entity: media_player.kitchen_home
+
       - type: media-control
         entity: media_player.kitchen_speaker
+
       - type: media-control
         entity: media_player.parents_home
+
       - type: media-control
         entity: media_player.parents_speaker
+
       - type: media-control
         entity: media_player.office_tv
+
       - type: media-control
         entity: media_player.office_speaker
+
       - type: media-control
         entity: media_player.lounge_home
