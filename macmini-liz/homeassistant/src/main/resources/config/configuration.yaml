@@ -89,11 +89,6 @@ sensor:
       - 'uv_alert'
       - 'fire_danger'
 
-#weather:
-#  - platform: bom
-#    name: Perth Airport
-#    station: IDW60901.94610
-
 camera:
   - platform: bom
     location: Perth
