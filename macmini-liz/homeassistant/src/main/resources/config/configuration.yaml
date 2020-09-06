@@ -66,6 +66,6 @@ logger:
   logs:
     hacs: warning
     custom_components.hacs: warning
-    custom_components.bom_forecast: debug
-    homeassistant.components.bom: debug
+    custom_components.bom_forecast: warning
+    homeassistant.components.bom: warning
     homeassistant.components.mqtt: warning
