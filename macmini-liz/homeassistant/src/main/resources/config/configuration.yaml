@@ -35,6 +35,11 @@ mqtt:
 sensor:
   !include_dir_merge_list config_sensors
 
+weather:
+  - platform: bom
+    name: Perth Airport
+    station: IDW60901.94610
+
 camera:
   - platform: bom
     location: Perth
