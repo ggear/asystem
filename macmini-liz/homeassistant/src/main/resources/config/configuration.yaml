@@ -38,6 +38,7 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
+# TODO: Re-enable when I can get working!
 #sensor:
 #  - platform: bom
 #    name: Perth
