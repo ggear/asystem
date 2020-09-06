@@ -33,14 +33,14 @@ mqtt:
     payload: 'offline'
 
 sensor:
-  !include weather_sensor.yaml
+  !include_dir_list sensors
 
 camera:
   - platform: bom
     location: Perth
 
 automation:
-  !include weather_automation.yaml
+  !include_dir_list automations
 
 lovelace:
   mode: yaml
