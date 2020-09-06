@@ -306,8 +306,8 @@ def _release(context):
             print("Installing release to {} ... ".format(host))
             _run_local(context, "{}ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh_pass, host, install, install))
             _run_local(context, "{}ssh -q root@{} 'docker system prune --volumes -f'".format(ssh_pass, host), hide='err', warn=True)
-            _run_local(context, "{}ssh -q root@{} 'find $(dirname {}) -maxdepth 1 -mindepth 1 | sort | "
-                                "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 | wc -l) - 2)) | xargs rm -rf'"
+            _run_local(context, "{}ssh -q root@{} 'find $(dirname {}) -maxdepth 1 -mindepth 1 2>/dev/null | sort | "
+                                "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 2>/dev/null | wc -l) - 2)) | xargs rm -rf'"
                        .format(ssh_pass, host, install, install), hide='err', warn=True)
             _run_local(context, "{}ssh -q root@{} 'echo && df -h /root /tmp /var /home && echo'".format(ssh_pass, host, install, install))
         _print_footer(module, "release")
