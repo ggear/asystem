@@ -96,6 +96,11 @@ def run(context):
 
 
 @task
+def deploy(context):
+    _deploy(context)
+
+
+@task
 def release(context):
     _setup(context)
     _release(context)
@@ -254,6 +259,13 @@ def _run(context):
         else:
             _run_local(context, "{}{} docker-compose --no-ansi up --force-recreate".format(source_profile, DOCKER_VARIABLES), module)
         _print_footer(module, "run")
+
+
+def _deploy(context):
+    for module in _get_modules(context, "deploy.sh"):
+        _print_header(module, "deploy")
+        _run_local(context, "deploy.sh", module)
+        _print_footer(module, "deploy")
 
 
 def _release(context):
