@@ -136,8 +136,8 @@ views:
       - type: entities
         title: Switches
         entities:
-          - switch.filter
-          - switch.unkown
+          - switch.office
+          - switch.towelrails
 
   # MEDIA
   - path: media
