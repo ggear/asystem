@@ -1,7 +1,10 @@
+#TODO: Look at examples to structure, such as https://www.awesome-ha.com and https://isabellaalstrom.github.io
+
 default_config:
 
 homeassistant:
   customize: !include customize.yaml
+
 
 http:
   ssl_key: /config/.pem
@@ -18,6 +21,20 @@ tts:
 recorder:
   db_url: !env_var DB_URL
   purge_keep_days: 1
+
+
+#influxdb:
+#  database: home_assistant
+#  ssl: false
+#  verify_ssl: false
+#  max_retries: 3
+#  default_measurement: state
+#  tags:
+#    instance: production
+#    source: home_assistant
+#  include:
+#    domains:
+#      - sensor
 
 mqtt:
   broker: !env_var MQTT_HOST

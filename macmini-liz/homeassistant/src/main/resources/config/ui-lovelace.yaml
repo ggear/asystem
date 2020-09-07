@@ -67,7 +67,7 @@ views:
         tooltip_border_width: 1
         tooltip_caret_size: 5
         tooltip_fg_color: '#fff'
-        tooltip_left_offset: 0
+        tooltip_left_offset: 3
         tooltip_width: 80
         tooltips: true
         old_daily_format: false
@@ -170,3 +170,11 @@ views:
 
       - type: media-control
         entity: media_player.office_speaker
+
+  # MONITOR
+  - path: monitor
+    title: Monitor
+    cards:
+
+      !include lovelace/monitor.yaml
+

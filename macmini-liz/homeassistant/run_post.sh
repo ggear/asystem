@@ -7,5 +7,4 @@ SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_A
 # Portal baseline
 ################################################################################
 # Setup graham and jane users
-# Integrations Core - HACS, Hue, Sonos, Google
-# Integrations HACS - SenseMe
+# Integrations Core - Hue, Sonos, Google, SenseME, TP-Link Kasa Smart
