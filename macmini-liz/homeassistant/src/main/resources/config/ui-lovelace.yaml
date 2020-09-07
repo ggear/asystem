@@ -133,6 +133,12 @@ views:
           - fan.edwin
           - fan.lounge
 
+      - type: entities
+        title: Switches
+        entities:
+          - switch.filter
+          - switch.unkown
+
   # MEDIA
   - path: media
     title: Media

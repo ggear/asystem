@@ -44,6 +44,12 @@ camera:
   - platform: bom
     location: Perth
 
+tplink:
+  discovery: false
+  switch:
+    - host: 192.168.1.22
+    - host: 192.168.1.25
+
 automation:
   !include_dir_merge_list config_automations
 
