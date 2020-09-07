@@ -112,7 +112,7 @@ if __name__ == "__main__":
         for sensor in [SENSORS_HEADER] + sensors:
             file.write("{}\n".format(",".join(sensor)))
 
-    with open(DIR_HOMEASSISTANT + "/customize.yaml", "w") as file:
+    with open(DIR_HOMEASSISTANT + "/main/resources/config/customize.yaml", "w") as file:
         for sensor in sensors:
             file.write(inspect.cleandoc("""
                 sensor.{}:
@@ -125,10 +125,11 @@ if __name__ == "__main__":
             sensors_domain[sensor[6]] += [sensor]
         else:
             sensors_domain[sensor[6]] = [sensor]
-    with open(DIR_HOMEASSISTANT + "/lovelace.yaml", "w") as file:
+    with open(DIR_HOMEASSISTANT + "/main/resources/config/lovelace/monitor.yaml", "w") as file:
         for domain in sensors_domain:
             file.write(
                 "      - type: entities\n"
+                "        title: {}\n"
                 "        show_header_toggle: false\n"
                 "        entities:\n"
                     .format(domain))
