@@ -2,18 +2,18 @@ title: Home
 views:
 
   - path: default_view
-    title: WEATHER
-    cards: !include lovelace/weather.yaml
+    title: Weather
+    cards: !include ui-lovelace/weather.yaml
 
   - path: control
     title: Control
-    cards: !include lovelace/control.yaml
+    cards: !include ui-lovelace/control.yaml
 
   - path: media
     title: Media
-    cards: !include lovelace/media.yaml
+    cards: !include ui-lovelace/media.yaml
 
   - path: monitor
     title: Monitor
-    cards: !include lovelace/monitor.yaml
+    cards: !include ui-lovelace/monitor.yaml
 

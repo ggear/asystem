@@ -263,8 +263,9 @@ class BOMWeatherCard extends LitElement {
 // #####
 
   get dayOrNight() {
-    const transformDayNight = { "below_horizon": "night", "above_horizon": "day", };
-    return this.config.entity_sun ? transformDayNight[this._hass.states[this.config.entity_sun].state] : 'day';
+    // const transformDayNight = { "below_horizon": "night", "above_horizon": "day", };
+    // return this.config.entity_sun ? transformDayNight[this._hass.states[this.config.entity_sun].state] : 'day';
+    return 'day';
   }
 
 
