@@ -3,13 +3,28 @@
   name: Perth
   monitored_conditions:
     - apparent_t
+    - cloud
+    - cloud_base_m
+    - cloud_oktas
+    - cloud_type_id
+    - cloud_type
     - delta_t
     - gust_kmh
     - gust_kt
     - air_temp
     - dewpt
+    - press
+    - press_qnh
+    - press_msl
+    - press_tend
     - rain_trace
     - rel_hum
+    - sea_state
+    - swell_dir_worded
+    - swell_height
+    - swell_period
+    - vis_km
+    - weather
     - wind_dir
     - wind_spd_kmh
     - wind_spd_kt
@@ -22,15 +37,15 @@
   friendly: false
   friendly_state_format: '{max}, {summary}'
   monitored_conditions:
-    - 'max'
-    - 'min'
-    - 'chance_of_rain'
-    - 'possible_rainfall'
-    - 'summary'
-    - 'detailed_summary'
-    - 'icon'
-    - 'uv_alert'
-    - 'fire_danger'
+    - max
+    - min
+    - chance_of_rain
+    - possible_rainfall
+    - summary
+    - detailed_summary
+    - icon
+    - uv_alert
+    - fire_danger
 
 - platform: template
   sensors:
@@ -84,11 +99,11 @@
         {%- if states('sensor.bom_perth_fire_danger_0') == '##' -%}
         No Data
         {%- elif states('sensor.bom_perth_fire_danger_0') != 'n/a' -%}
-        {{ states('sensor.bom_perth_fire_danger_0').split(',')[1].split(': ')[1] }} Risk
+        {{ states('sensor.bom_perth_fire_danger_0').split(',')[1].split(': ')[1] }}
         {%- elif states('sensor.bom_perth_fire_danger_1') == '##' -%}
         No Data
         {%- else -%}
-        {{ states('sensor.bom_perth_fire_danger_1').split(',')[1].split(': ')[1] }} Risk
+        {{ states('sensor.bom_perth_fire_danger_1').split(',')[1].split(': ')[1] }}
         {%- endif -%}
 
     bom_forecast_0:
