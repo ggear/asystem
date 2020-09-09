@@ -34,7 +34,7 @@
   entity_apparent_temp: sensor.bom_perth_feels_like_c
   entity_daily_summary: sensor.bom_today_detailed_summary
   entity_pop: sensor.bom_perth_chance_of_rain_0
-  entity_pop_intensity: sensor.bom_perth_rain_today
+  entity_pop_intensity: sensor.bom_perth_possible_rainfall_0
   entity_possible_today: sensor.bom_perth_possible_rainfall_0
   entity_pos_1: sensor.bom_perth_possible_rainfall_1
   entity_pos_2: sensor.bom_perth_possible_rainfall_2
