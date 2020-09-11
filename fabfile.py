@@ -382,7 +382,7 @@ def _ssh_pass(context, host):
 
 def _get_hosts(context, module):
 
-    print(module.split("/")[0])
+    print(module.split("/")[0].split("_"))
 
     return module.split("/")[0].split("_")
 
