@@ -21,3 +21,5 @@ key_append 'graham' 'users' '/home'
 
 [ ! -L /root/home ] && ln -s /home/asystem /root/home
 [ ! -L /root/install ] && ln -s /var/lib/asystem/install install
+
+echo "Completed host normalisation"
