@@ -309,9 +309,6 @@ def _release(context):
         else:
             _run_local(context, "touch target/release/run.sh", module)
         for host in _get_hosts(context, module):
-
-            print(host)
-
             ssh_pass = _ssh_pass(context, host)
             install = "/var/lib/asystem/install/{}/{}".format(module, _get_versions()[0])
             print("Copying release to {} ... ".format(host))
@@ -384,6 +381,9 @@ def _ssh_pass(context, host):
 
 
 def _get_hosts(context, module):
+
+    print(module)
+
     return module.split("/")[0].split("_")
 
 
