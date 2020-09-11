@@ -73,7 +73,9 @@ automation:
 lovelace:
   mode: yaml
   resources:
-    - url: /local/custom_ui/bom-weather-card.js?v=0.1
+    - url: /local/custom_ui/mini-graph-card-bundle.js?v=0.9.4
+      type: module
+    - url: /local/custom_ui/bom-weather-card.js?v=0.78_HACKED_BY_ME
       type: module
   dashboards:
     lovelace-generated:

@@ -1,4 +1,3 @@
-import inspect
 import os
 import sys
 
@@ -114,10 +113,10 @@ if __name__ == "__main__":
 
     with open(DIR_HOMEASSISTANT + "/main/resources/config/customize.yaml", "w") as file:
         for sensor in sensors:
-            file.write(inspect.cleandoc("""
-                sensor.{}:
-                  friendly_name: {}
-            """.format(sensor[2], sensor[5])) + "\n")
+            file.write("""
+sensor.{}:
+  friendly_name: {}
+            """.format(sensor[2], sensor[5]).strip() + "\n")
 
     sensors_domain = {}
     for sensor in sensors:
@@ -127,15 +126,35 @@ if __name__ == "__main__":
             sensors_domain[sensor[6]] = [sensor]
     with open(DIR_HOMEASSISTANT + "/main/resources/config/ui-lovelace/monitor.yaml", "w") as file:
         for domain in sensors_domain:
-            file.write(
-                "- type: entities\n"
-                "  title: {}\n"
-                "  show_header_toggle: false\n"
-                "  entities:\n"
-                    .format(domain))
+
+            file.write("""
+- type: custom:mini-graph-card
+  name: {}
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+            """.format(domain).strip() + "\n")
             for sensor in sensors_domain[domain]:
-                file.write(
-                    "    - entity: sensor.{}\n"
-                        .format(sensor[2]))
+                file.write("    " + """
+    - sensor.{}
+                """.format(sensor[2]).strip() + "\n")
+            file.write("""
+- type: entities
+  show_header_toggle: false
+  entities:
+            """.strip() + "\n")
+            for sensor in sensors_domain[domain]:
+                file.write("    " + """
+    - entity: sensor.{}
+                """.format(sensor[2]).strip() + "\n")
 
     print("{} [{}] metrics".format("DELETED" if MODE == "DELETE" else "DETECTED", len(SENSORS)))

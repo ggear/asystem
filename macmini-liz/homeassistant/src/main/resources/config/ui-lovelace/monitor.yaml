@@ -1,5 +1,34 @@
+- type: custom:mini-graph-card
+  name: Energy Consumption
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.hallway_lights_energy_consumption
+    - sensor.office_lights_energy_consumption
+    - sensor.dining_lights_energy_consumption
+    - sensor.kitchen_lights_energy_consumption
+    - sensor.pantry_lights_energy_consumption
+    - sensor.servers_energy_consumption
+    - sensor.ada_lights_energy_consumption
+    - sensor.laundry_lights_energy_consumption
+    - sensor.bathroom_lights_energy_consumption
+    - sensor.lounge_lights_energy_consumption
+    - sensor.towelrails_energy_consumption
+    - sensor.parents_lights_energy_consumption
+    - sensor.ensuite_lights_energy_consumption
+    - sensor.edwin_lights_energy_consumption
+    - sensor.wardrobe_lights_energy_consumption
+    - sensor.office_energy_consumption
 - type: entities
-  title: Energy Consumption
   show_header_toggle: false
   entities:
     - entity: sensor.hallway_lights_energy_consumption
@@ -18,8 +47,32 @@
     - entity: sensor.edwin_lights_energy_consumption
     - entity: sensor.wardrobe_lights_energy_consumption
     - entity: sensor.office_energy_consumption
+- type: custom:mini-graph-card
+  name: Temperature
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.ada_temperature
+    - sensor.basement_temperature
+    - sensor.deck_temperature
+    - sensor.dining_temperature
+    - sensor.edwin_temperature
+    - sensor.kitchen_temperature
+    - sensor.lounge_temperature
+    - sensor.office_temperature
+    - sensor.pantry_temperature
+    - sensor.parents_temperature
+    - sensor.laundry_temperature
 - type: entities
-  title: Temperature
   show_header_toggle: false
   entities:
     - entity: sensor.ada_temperature
@@ -33,8 +86,27 @@
     - entity: sensor.pantry_temperature
     - entity: sensor.parents_temperature
     - entity: sensor.laundry_temperature
+- type: custom:mini-graph-card
+  name: Pressure
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.ada_pressure
+    - sensor.edwin_pressure
+    - sensor.kitchen_pressure
+    - sensor.office_pressure
+    - sensor.parents_pressure
+    - sensor.laundry_pressure
 - type: entities
-  title: Pressure
   show_header_toggle: false
   entities:
     - entity: sensor.ada_pressure
@@ -43,8 +115,30 @@
     - entity: sensor.office_pressure
     - entity: sensor.parents_pressure
     - entity: sensor.laundry_pressure
+- type: custom:mini-graph-card
+  name: Carbon Dioxide
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.ada_carbon_dioxide
+    - sensor.dining_carbon_dioxide
+    - sensor.edwin_carbon_dioxide
+    - sensor.kitchen_carbon_dioxide
+    - sensor.lounge_carbon_dioxide
+    - sensor.office_carbon_dioxide
+    - sensor.pantry_carbon_dioxide
+    - sensor.parents_carbon_dioxide
+    - sensor.laundry_carbon_dioxide
 - type: entities
-  title: Carbon Dioxide
   show_header_toggle: false
   entities:
     - entity: sensor.ada_carbon_dioxide
@@ -56,16 +150,57 @@
     - entity: sensor.pantry_carbon_dioxide
     - entity: sensor.parents_carbon_dioxide
     - entity: sensor.laundry_carbon_dioxide
+- type: custom:mini-graph-card
+  name: Health Index
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.ada_health_index
+    - sensor.edwin_health_index
+    - sensor.parents_health_index
+    - sensor.laundry_health_index
 - type: entities
-  title: Health Index
   show_header_toggle: false
   entities:
     - entity: sensor.ada_health_index
     - entity: sensor.edwin_health_index
     - entity: sensor.parents_health_index
     - entity: sensor.laundry_health_index
+- type: custom:mini-graph-card
+  name: Humidity
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.ada_humidity
+    - sensor.basement_humidity
+    - sensor.deck_humidity
+    - sensor.dining_humidity
+    - sensor.edwin_humidity
+    - sensor.kitchen_humidity
+    - sensor.lounge_humidity
+    - sensor.office_humidity
+    - sensor.pantry_humidity
+    - sensor.parents_humidity
+    - sensor.laundry_humidity
 - type: entities
-  title: Humidity
   show_header_toggle: false
   entities:
     - entity: sensor.ada_humidity
@@ -79,8 +214,27 @@
     - entity: sensor.pantry_humidity
     - entity: sensor.parents_humidity
     - entity: sensor.laundry_humidity
+- type: custom:mini-graph-card
+  name: Pressure Absolute
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.ada_pressure_absolute
+    - sensor.edwin_pressure_absolute
+    - sensor.kitchen_pressure_absolute
+    - sensor.office_pressure_absolute
+    - sensor.parents_pressure_absolute
+    - sensor.laundry_pressure_absolute
 - type: entities
-  title: Pressure Absolute
   show_header_toggle: false
   entities:
     - entity: sensor.ada_pressure_absolute
@@ -89,8 +243,37 @@
     - entity: sensor.office_pressure_absolute
     - entity: sensor.parents_pressure_absolute
     - entity: sensor.laundry_pressure_absolute
+- type: custom:mini-graph-card
+  name: Power Consumption
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.bathroom_lights_power_consumption
+    - sensor.ada_lights_power_consumption
+    - sensor.ensuite_lights_power_consumption
+    - sensor.edwin_lights_power_consumption
+    - sensor.office_lights_power_consumption
+    - sensor.kitchen_lights_power_consumption
+    - sensor.dining_lights_power_consumption
+    - sensor.pantry_lights_power_consumption
+    - sensor.wardrobe_lights_power_consumption
+    - sensor.lounge_lights_power_consumption
+    - sensor.parents_lights_power_consumption
+    - sensor.servers_power_consumption
+    - sensor.laundry_lights_power_consumption
+    - sensor.hallway_lights_power_consumption
+    - sensor.towelrails_power_consumption
+    - sensor.office_power_consumption
 - type: entities
-  title: Power Consumption
   show_header_toggle: false
   entities:
     - entity: sensor.bathroom_lights_power_consumption
@@ -109,8 +292,27 @@
     - entity: sensor.hallway_lights_power_consumption
     - entity: sensor.towelrails_power_consumption
     - entity: sensor.office_power_consumption
+- type: custom:mini-graph-card
+  name: Noise
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.ada_noise
+    - sensor.edwin_noise
+    - sensor.kitchen_noise
+    - sensor.office_noise
+    - sensor.parents_noise
+    - sensor.laundry_noise
 - type: entities
-  title: Noise
   show_header_toggle: false
   entities:
     - entity: sensor.ada_noise
