@@ -20,4 +20,4 @@ key_append 'root' 'root' ''
 key_append 'graham' 'users' '/home'
 
 [ ! -L /root/home ] && ln -s /home/asystem /root/home
-[ ! -L /var/lib/asystem/install/$(hostname) ] && ln -s /var/lib/asystem/install/$(hostname) install
+#[ ! -L /var/lib/asystem/install/$(hostname) ] && ln -s /var/lib/asystem/install/$(hostname) install
