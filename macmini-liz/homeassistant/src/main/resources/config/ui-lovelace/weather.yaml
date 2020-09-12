@@ -68,19 +68,6 @@
   show_decimals: false
   refresh_interval: 60
   show_separator: false
-
-  # TODO: Fix the ordering of this, pressure does not show? Try and get two columns on my iphone?
-#  slot_l1: daytime_high
-#  slot_l2: daytime_low
-#  slot_l3: wind
-#  slot_l4: sun_next
-#  slot_l5: sun_following
-#  slot_r1: pop
-#  slot_r2: humidity
-#  slot_r3: uv_alert
-#  slot_r4: fire_danger
-#  slot_r5: empty
-
   slot_l1: daytime_high
   slot_l2: daytime_low
   slot_l3: humidity

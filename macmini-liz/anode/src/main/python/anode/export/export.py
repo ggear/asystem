@@ -14,6 +14,8 @@ from anode.plugin.plugin import Plugin
 import paho.mqtt.client as mqtt
 import anode
 
+from collections import OrderedDict
+
 MODE = "QUERY"
 
 TIME_WAIT_SECS = 2
@@ -118,21 +120,21 @@ sensor.{}:
   friendly_name: {}
             """.format(sensor[2], sensor[5]).strip() + "\n")
 
-    sensors_domain = {}
+    sensors_domain = OrderedDict()
     for sensor in sensors:
-        if sensor[6] in sensors_domain:
-            sensors_domain[sensor[6]] += [sensor]
-        else:
-            sensors_domain[sensor[6]] = [sensor]
+        if sensor[3] != 'Hidden':
+            if sensor[6] in sensors_domain:
+                sensors_domain[sensor[6]] += [sensor]
+            else:
+                sensors_domain[sensor[6]] = [sensor]
     with open(DIR_HOMEASSISTANT + "/main/resources/config/ui-lovelace/monitor.yaml", "w") as file:
         for domain in sensors_domain:
-
             file.write("""
 - type: custom:mini-graph-card
   name: {}
   font_size_header: 19
   aggregate_func: max
-  hours_to_show: 24
+  hours_to_show: 72
   points_per_hour: 6
   line_width: 2
   tap_action: none
