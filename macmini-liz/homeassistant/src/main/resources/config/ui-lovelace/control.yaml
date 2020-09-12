@@ -1,32 +1,48 @@
 - type: entities
   title: Lights
   entities:
-    - light.ada
-    - light.ada_light
-    - light.bathroom
-    - light.dining
-    - light.edwin
-    - light.edwin_light
-    - light.ensuite
-    - light.hallway
-    - light.kitchen
-    - light.laundry
-    - light.lounge
-    - light.lounge_light
-    - light.office
-    - light.pantry
-    - light.parents
-    - light.wardrobe
+    - entity: light.ada
+      name: Ada Main
+    - entity: light.ada_light
+      name: Ada Lamp
+    - entity: light.bathroom
+      name: Bathroom Main
+    - entity: light.dining
+      name: Dining Main
+    - entity: light.edwin
+      name: Edwin Main
+    - entity: light.edwin_light
+      name: Edwin Lamp
+    - entity: light.ensuite
+      name: Ensuite Main
+    - entity: light.hallway
+      name: Hallyway Main
+    - entity: light.kitchen
+      name: Kitchen Main
+    - entity: light.laundry
+      name: Laundry Main
+    - entity: light.lounge
+      name: Lounge Main
+    - entity: light.lounge_light
+      name: Lounge Lamp
+    - entity: light.office
+      name: Office Main
+    - entity: light.pantry
+      name: Pantry Main
+    - entity: light.parents
+      name: Parents Main
+    - entity: light.wardrobe
+      name: Wardrobe Main
 
 - type: entities
   title: Fans
   entities:
-    - fan.ada
-    - fan.edwin
-    - fan.lounge
+    - entity: fan.ada
+    - entity: fan.edwin
+    - entity: fan.lounge
 
 - type: entities
   title: Switches
   entities:
-    - switch.office
-    - switch.towelrails
+    - entity: switch.towelrails
+      name: Bathroom Towel Rails
