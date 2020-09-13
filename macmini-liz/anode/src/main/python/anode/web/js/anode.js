@@ -35,13 +35,14 @@ function ANode(uri, onopen, onclose, onmessage) {
     }
 
     var outer = this
+    var uriProtocol = uri.substring(0, uri.indexOf("//") + 2)
     var uriBase = uri.substring(uri.indexOf("//") + 2, uri.length)
     var uriHostPort = uriBase.substring(0, uriBase.indexOf("/"))
     var uriParameters = uriBase.substring(uriBase.indexOf("/") + 1, uriBase.length)
 
-    this.restfulUri = "https://" + uriHostPort + "/rest/"
-    this.metadataUri = "https://" + uriHostPort + "/js/metadata/datum.avsc"
-    this.webSocketUri = "wss://" + uriHostPort + "/ws/" + uriParameters
+    this.restfulUri = uriProtocol + uriHostPort + "/rest/"
+    this.metadataUri = uriProtocol + uriHostPort + "/js/metadata/datum.avsc"
+    this.webSocketUri = uriProtocol.replace("http","ws") + uriHostPort + "/ws/" + uriParameters
 
     this.metadata = this.metadataRequest()
     this.orderingIndexes = {}

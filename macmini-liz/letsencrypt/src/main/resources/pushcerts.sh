@@ -15,16 +15,18 @@ while :; do
         logger -t pushcerts "Cached new certificates"
       if [ -f "${SERVICE_INSTALL}/hosts" ]; then
         while read -r host; do
-          ANODE_HOME=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
-            "find /home/asystem/anode -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
-          ANODE_INSTALL=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
-            "find /var/lib/asystem/install/\$(hostname)/anode -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
-          if [ -n "${ANODE_HOME}" ] && [ -n "${ANODE_INSTALL}" ]; then
+          NGINX_HOME=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
+            "find /home/asystem/nginx -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
+          NGINX_INSTALL=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
+            "find /var/lib/asystem/install/\$(hostname)/nginx -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
+          if [ -n "${NGINX_HOME}" ] && [ -n "${NGINX_INSTALL}" ]; then
             scp -qo "StrictHostKeyChecking=no" \
-              ./certificates/fullchain_privkey.pem root@${host}:"${ANODE_HOME}/.pem"
+              ./certificates/privkey.pem root@${host}:"${NGINX_HOME}/.key.pem"
+            scp -qo "StrictHostKeyChecking=no" \
+              ./certificates/fullchain.pem root@${host}:"${NGINX_HOME}/certificate.pem"
             ssh -qno "StrictHostKeyChecking=no" root@${host} \
-              "docker-compose -f '${ANODE_INSTALL}/docker-compose.yml' --env-file '${ANODE_INSTALL}/.env' restart"
-            logger -t pushcerts "Loaded new anode certificates on ${host}"
+              "docker-compose -f '${NGINX_INSTALL}/docker-compose.yml' --env-file '${NGINX_INSTALL}/.env' restart"
+            logger -t pushcerts "Loaded new nginx certificates on ${host}"
           fi
         done <"${SERVICE_INSTALL}/hosts"
       fi
