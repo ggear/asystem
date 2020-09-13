@@ -30,7 +30,7 @@ urllib3.disable_warnings()
 
 def get_metrics_sum():
     metrics_sum = 0
-    for metric in requests.get("https://{}:{}/rest/?metrics=anode".format(CONFIG["host"], CONFIG["port"]), verify=False).json():
+    for metric in requests.get("http://{}:{}/rest/?metrics=anode".format(CONFIG["host"], CONFIG["port"]), verify=False).json():
         if metric["data_metric"].endswith(".metrics"):
             metrics_sum += metric["data_value"]
     return metrics_sum
@@ -79,11 +79,11 @@ def test_warmup():
     assert success is True
 
 
-def test_https():
+def test_http():
     metrics_sum = get_metrics_sum()
 
     def assert_get(query, len_min):
-        response = requests.get("https://{}:{}/rest/?{}".format(CONFIG["host"], CONFIG["port"], query), verify=False)
+        response = requests.get("http://{}:{}/rest/?{}".format(CONFIG["host"], CONFIG["port"], query), verify=False)
         assert response is not None
         assert response.status_code == 200
         assert response.json() is not None
@@ -117,12 +117,12 @@ def test_mqtt():
     assert len(metrics_metadata) > 0
 
 
-def test_wss():
+def test_ws():
     metrics_sum = get_metrics_sum()
 
     def assert_receive(query, len_min):
         metrics_count = 0
-        client = websocket.create_connection("wss://{}:{}/ws/?{}".format(CONFIG["host"], CONFIG["port"], query), sslopt={
+        client = websocket.create_connection("ws://{}:{}/ws/?{}".format(CONFIG["host"], CONFIG["port"], query), sslopt={
             "cert_reqs": ssl.CERT_NONE, "check_hostname": False, "ssl_version": ssl.PROTOCOL_TLSv1})
         client.settimeout(TIMEOUT)
         while metrics_count < len_min:

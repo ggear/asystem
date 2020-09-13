@@ -80,7 +80,7 @@ connectionUri = function (parameters, isRest) {
 
     // TODO: Lookup IP/host from env eg https://github.com/karma-runner/karma/issues/2066
 
-    return "https://macmini-sheryl.janeandgraham.com:" + WEB_PORT +
+    return "http://macmini-sheryl.janeandgraham.com:" + WEB_PORT +
         ((typeof (isRest) === 'undefined' || !isRest) ? "/" : "/rest/") +
         (parameters ? ("?" + parameters) : "");
 };

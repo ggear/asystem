@@ -7,8 +7,6 @@ homeassistant:
 
 
 http:
-  ssl_key: /config/.pem
-  ssl_certificate: /config/certificate.pem
   cors_allowed_origins:
     - https://google.com
     - https://www.home-assistant.io

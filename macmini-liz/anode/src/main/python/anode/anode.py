@@ -3,6 +3,7 @@ from __future__ import print_function
 import logging
 import logging.config
 import os
+import os.path
 import re
 import shutil
 import socket
@@ -62,8 +63,10 @@ class ANode:
         self.options = options
         self.config = config
         self.plugins = {}
-        self.certificate = pem.twisted.certificateOptionsFromFiles(self.options.certificate)
-        self.web_ws = WebWsFactory(u"wss://" + self.config["host"] + ":" + str(self.config["port"]), self, self.certificate)
+        self.certificate = pem.twisted.certificateOptionsFromFiles(self.options.certificate) \
+            if os.path.isfile(self.options.certificate) else None
+        self.web_ws = WebWsFactory(u"ws" + ("" if self.certificate is None else "s") + "://"
+                                   + self.config["host"] + ":" + str(self.config["port"]), self, self.certificate)
         self.web_ws.protocol = WebWs
         self.web_rest = WebRest(self)
         self.web_pool = HTTPConnectionPool(reactor, persistent=True)
@@ -190,7 +193,10 @@ class ANode:
         web = Site(web_root, logPath="/dev/null")
         web.noisy = False
         self.core_reactor.addSystemEventTrigger("after", "shutdown", self.stop_server)
-        self.core_reactor.listenSSL(int(self.config["port"]), web, self.certificate)
+        if self.certificate is None:
+            self.core_reactor.listenTCP(int(self.config["port"]), web)
+        else:
+            self.core_reactor.listenSSL(int(self.config["port"]), web, self.certificate)
         if self.publish_service is not None:
             self.publish_service.startService()
         log_timer.log("Service", "timer", lambda: "[anode] started", context=self.start_server)
