@@ -37,7 +37,7 @@ VERSION=${VERSION_ABSOLUTE}
 DATA_DIR=${SERVICE_HOME}
 LOCAL_IP=${SERVICE_HOST_IP}
 EOF
-  [ -f "config/.profile" ] && sed 's/export //g' config/.profile >>.env
+  [ -f "config/.profile" ] && sed 's/export //g' config/.profile >>.env && chmod 600 .env
 fi
 if [ -f ".env" ]; then
   export VERSION=${VERSION_ABSOLUTE}

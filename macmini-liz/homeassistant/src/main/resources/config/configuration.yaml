@@ -29,7 +29,10 @@ influxdb:
   host: macmini-liz
   port: 9999
   token: EDwkKCzUe5EFFgAhk7gMiDJ0vVLu_7gFzwMx3ysGiAKYfWaWhaUnljQoldNkAQWX--NtRTj3aXjhQoTlSvQ1Vg==
+
+  # TODO: Update to 'Home' once InfluxDB-2-Beta-17 comes out and database format reverts to 1.8 format
   organization: asystem
+
   bucket: haas
   tags:
     instance: production
