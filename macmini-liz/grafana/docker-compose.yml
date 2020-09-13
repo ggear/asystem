@@ -2,13 +2,13 @@ version: '3.7'
 services:
   grafana:
     container_name: grafana
-    image: grafana/grafana:7.1.3
+    image: grafana/grafana:7.1.5
     init: true
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
-      - GF_SECURITY_ADMIN_USER=asystem
-      - GF_SECURITY_ADMIN_PASSWORD=ASystem1980!
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
 
     # TODO: Fix volume permission issues
     #    volumes:
