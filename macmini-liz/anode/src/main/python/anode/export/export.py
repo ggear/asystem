@@ -134,7 +134,7 @@ sensor.{}:
   name: {}
   font_size_header: 19
   aggregate_func: max
-  hours_to_show: 72
+  hours_to_show: 24
   points_per_hour: 6
   line_width: 2
   tap_action: none
