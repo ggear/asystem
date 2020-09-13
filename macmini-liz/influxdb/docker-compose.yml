@@ -9,10 +9,7 @@ services:
       - TZ=Australia/Perth
       - INFLUXDB_USER
       - INFLUXDB_PASSWORD=${INFLUXDB_KEY}
-
-      # TODO: Update to 'Home' once InfluxDB-2-Beta-17 comes out and database format reverts to 1.8 format
-      - INFLUXDB_ORG=asystem
-
+      - INFLUXDB_ORG=home
       - INFLUXDB_BUCKET=asystem
     volumes:
       - ${DATA_DIR}:/root/.influxdbv2
