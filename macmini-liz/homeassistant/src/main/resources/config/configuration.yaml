@@ -28,12 +28,9 @@ influxdb:
   ssl: false
   host: macmini-liz
   port: 9999
-  token: EDwkKCzUe5EFFgAhk7gMiDJ0vVLu_7gFzwMx3ysGiAKYfWaWhaUnljQoldNkAQWX--NtRTj3aXjhQoTlSvQ1Vg==
-
-  # TODO: Update to 'Home' once InfluxDB-2-Beta-17 comes out and database format reverts to 1.8 format
-  organization: asystem
-
-  bucket: haas
+  token: wMhIUIiC2UoceR5joo07AbjouNoN0jEjcNm-WihDvitV0i0M3u05uaVEAi-9C_2adHWZ903je3dpXR5ib4JjPA==
+  organization: home
+  bucket: asystem
   tags:
     instance: production
     source: home_assistant
