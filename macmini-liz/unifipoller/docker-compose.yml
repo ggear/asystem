@@ -1,6 +1,6 @@
 version: '3.7'
 services:
-  grafana:
+  unifipoller:
     container_name: unifipoller
     image: golift/unifi-poller:2.0.1
     init: true
@@ -9,5 +9,3 @@ services:
       - TZ=Australia/Perth
     volumes:
       - ${DATA_DIR}:/config
-    # ports:
-    #   - 3000:3000
