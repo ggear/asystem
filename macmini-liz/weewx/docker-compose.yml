@@ -9,11 +9,7 @@ services:
       - TZ=Australia/Perth
       - WEEWX_UID=weewx
       - WEEWX_GID=dialout
-
     volumes:
-      - type: bind
-        source: ${DATA_DIR}
-        target: /data
-
+      - ${DATA_DIR}:/data
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
