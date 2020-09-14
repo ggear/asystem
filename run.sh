@@ -22,6 +22,7 @@ if [ ! -d "$SERVICE_HOME" ]; then
     cp -rvfp "$SERVICE_HOME_OLD" "$SERVICE_HOME"
   else
     mkdir -p "${SERVICE_HOME}"
+    chmod 777 "${SERVICE_HOME}"
   fi
   rm -rvf "$SERVICE_HOME_OLDEST"
 fi
