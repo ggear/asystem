@@ -11,5 +11,5 @@ services:
       - WEEWX_GID=dialout
     volumes:
       - ${DATA_DIR}:/data
-#    devices:
-#      - /dev/ttyUSB0:/dev/ttyUSB0
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
