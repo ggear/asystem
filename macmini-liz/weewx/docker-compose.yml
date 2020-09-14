@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+  weewx:
+    container_name: weewx
+    image: felddy/weewx:4.0.0
+    init: true
+    restart: ${RESTART}
+    environment:
+      - TZ=Australia/Perth
+    volumes:
+      - ${DATA_DIR}:/data
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
