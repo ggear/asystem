@@ -23,7 +23,7 @@ class BOMWeatherCard extends LitElement {
 //  Handle Configuration Flags
 //    var icons = this.config.static_icons ? "static" : "animated";
     var currentText = this.config.entity_current_text ? html`<span class="currentText" id="current-text">${this._hass.states[this.config.entity_current_text].state}</span>` : ``;
-    var apparentTemp = this.config.entity_apparent_temp ? html`<span class="apparent">${this.localeText.feelsLike} <span id="apparent-text">${this.current.apparent}</span> ${this.getUOM("temperature")}</span>` : ``;
+    var apparentTemp = this.config.entity_apparent_temp ? html`<span class="apparent"><span id="apparent-text">${this.current.apparent}</span> ${this.getUOM('temperature')} ${this.localeText.feelsLike}</span>` : ``;
     var summary = this.config.entity_daily_summary ? html`${this._hass.states[this.config.entity_daily_summary].state}` : ``;
     var separator = this.config.show_separator ? html`<hr class=line>` : ``;
     var uv_alert = this.config.entity_uv_alert ? html`${this._hass.states[this.config.entity_uv_alert].state}` : ``;
@@ -247,7 +247,7 @@ class BOMWeatherCard extends LitElement {
         }
       default :
         return {
-          feelsLike: "Feels like",
+          feelsLike: "on our roof",
           maxToday: "Today's High",
           minToday: "Today's Low",
           posToday: "Forecast",
