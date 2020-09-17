@@ -26,7 +26,7 @@ WORKDIR /tmp
 
 RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
 
-RUN mkdir /data
+RUN mkdir -p /data/html && touch /data/html/index.html
 RUN rm -rf /var/www/html && ln -s /data/html /var/www/html
 COPY src/main/resources/apache2.conf /etc/apache2
 
