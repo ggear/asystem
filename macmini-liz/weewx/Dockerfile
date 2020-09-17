@@ -39,7 +39,7 @@ WORKDIR ${WEEWX_HOME}
 RUN python ./setup.py build
 RUN python ./setup.py install
 RUN cp -f /home/weewx/weewx.conf /data
-COPY src/main/resources/weewx_anode_plugin.py /home/weewx/bin/user
+COPY src/main/python/weewx_anode_plugin.py /home/weewx/bin/user
 COPY src/main/resources/entrypoint.sh ./
 
 EXPOSE 80
