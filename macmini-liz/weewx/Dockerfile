@@ -1,0 +1,41 @@
+FROM python:3.8.5-slim-buster as image_base
+
+ENV WEEWX_VERSION="4.1.1"
+ENV WEEWX_HOME="/home/weewx"
+ENV WEEWX_ARCHIVE="weewx-${WEEWX_VERSION}.tar.gz"
+
+RUN apt-get update && apt-get -y --no-install-recommends install \
+  rsyslog=8.1901.0-1 \
+  gnupg2=2.2.12-1+deb10u1 \
+  wget=1.20.1-1.1 \
+  tar=1.30+dfsg-6 \
+  apache2=2.4.38-3+deb10u4 \
+  apache2-utils=2.4.38-3+deb10u4 \
+  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN pip install --no-cache \
+  configobj==5.0.6 \
+  cheetah3==3.2.5 \
+  pillow==7.2.0 \
+  pyserial==3.4 \
+  pyusb==1.0.2 \
+  ephem==3.7.7.0
+
+WORKDIR /tmp
+RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
+COPY src/main/resources/apache2.conf /etc/apache2
+RUN mkdir -p ${WEEWX_HOME}
+RUN wget -q -O "${WEEWX_ARCHIVE}" "http://www.weewx.com/downloads/released_versions/${WEEWX_ARCHIVE}"
+RUN tar --extract --gunzip --directory ${WEEWX_HOME} --strip-components=1 --file "${WEEWX_ARCHIVE}"
+
+WORKDIR ${WEEWX_HOME}
+RUN python ./setup.py build
+RUN python ./setup.py install
+COPY src/main/resources/entrypoint.sh ./
+RUN mkdir /data && cp weewx.conf /data
+
+EXPOSE 80
+VOLUME ["/data"]
+
+ENTRYPOINT ["./entrypoint.sh"]
+CMD ["/data/weewx.conf"]

@@ -5,7 +5,6 @@ services:
     image: anode:${VERSION}
     init: true
     restart: ${RESTART}
-    env_file: .env
     environment:
       - TZ=Australia/Perth
       - LOCAL_IP

@@ -2,13 +2,15 @@ version: '3.7'
 services:
   weewx:
     container_name: weewx
-    image: felddy/weewx:4.0.0
+    image: weewx:${VERSION}
     init: true
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
       - WEEWX_UID=weewx
       - WEEWX_GID=dialout
+    ports:
+      - 8092:80
     volumes:
       - ${DATA_DIR}:/data
     devices:
