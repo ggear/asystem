@@ -15,6 +15,7 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
 
 RUN pip install --no-cache \
   configobj==5.0.6 \
+  requests==2.24.0 \
   cheetah3==3.2.5 \
   pillow==7.2.0 \
   pyserial==3.4 \
@@ -22,17 +23,23 @@ RUN pip install --no-cache \
   ephem==3.7.7.0
 
 WORKDIR /tmp
+
 RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
+
+RUN mkdir /data
+RUN rm -rf /var/www/html && ln -s /data/html /var/www/html
 COPY src/main/resources/apache2.conf /etc/apache2
+
 RUN mkdir -p ${WEEWX_HOME}
 RUN wget -q -O "${WEEWX_ARCHIVE}" "http://www.weewx.com/downloads/released_versions/${WEEWX_ARCHIVE}"
 RUN tar --extract --gunzip --directory ${WEEWX_HOME} --strip-components=1 --file "${WEEWX_ARCHIVE}"
 
 WORKDIR ${WEEWX_HOME}
+
 RUN python ./setup.py build
 RUN python ./setup.py install
+COPY src/main/resources/weewx_anode_plugin.py /home/weewx/bin/user
 COPY src/main/resources/entrypoint.sh ./
-RUN mkdir /data && cp weewx.conf /data
 
 EXPOSE 80
 VOLUME ["/data"]
