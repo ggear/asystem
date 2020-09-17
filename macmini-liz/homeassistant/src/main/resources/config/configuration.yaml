@@ -12,6 +12,10 @@ http:
     - https://www.home-assistant.io
     - https://janeandgraham.com
     - https://home.janeandgraham.com
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+    - 192.168.1.0/24
 
 tts:
   - platform: google_translate
