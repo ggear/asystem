@@ -40,6 +40,7 @@
     - entity: fan.ada
     - entity: fan.edwin
     - entity: fan.lounge
+    - entity: fan.parents
 
 - type: entities
   title: Switches
