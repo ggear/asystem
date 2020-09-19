@@ -116,6 +116,8 @@ sensor.office_noise:
   friendly_name: Office
 sensor.parents_noise:
   friendly_name: Parents
+sensor.roof_humidity:
+  friendly_name: Roof
 sensor.ada_humidity:
   friendly_name: Ada
 sensor.basement_humidity:
@@ -136,8 +138,6 @@ sensor.office_humidity:
   friendly_name: Office
 sensor.pantry_humidity:
   friendly_name: Pantry
-sensor.roof_humidity:
-  friendly_name: Roof
 sensor.parents_humidity:
   friendly_name: Parents
 sensor.utility_humidity:

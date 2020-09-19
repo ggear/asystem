@@ -144,11 +144,33 @@
     fill: false
   entities:
     - sensor.roof_humidity
+    - sensor.ada_humidity
+    - sensor.basement_humidity
+    - sensor.deck_humidity
+    - sensor.dining_humidity
+    - sensor.edwin_humidity
+    - sensor.kitchen_humidity
+    - sensor.laundry_humidity
+    - sensor.lounge_humidity
+    - sensor.office_humidity
+    - sensor.pantry_humidity
+    - sensor.parents_humidity
     - sensor.utility_humidity
 - type: entities
   show_header_toggle: false
   entities:
     - entity: sensor.roof_humidity
+    - entity: sensor.ada_humidity
+    - entity: sensor.basement_humidity
+    - entity: sensor.deck_humidity
+    - entity: sensor.dining_humidity
+    - entity: sensor.edwin_humidity
+    - entity: sensor.kitchen_humidity
+    - entity: sensor.laundry_humidity
+    - entity: sensor.lounge_humidity
+    - entity: sensor.office_humidity
+    - entity: sensor.pantry_humidity
+    - entity: sensor.parents_humidity
     - entity: sensor.utility_humidity
 - type: custom:mini-graph-card
   name: Dew Point
