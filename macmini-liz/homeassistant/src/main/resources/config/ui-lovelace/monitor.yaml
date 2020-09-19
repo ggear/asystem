@@ -1,4 +1,177 @@
 - type: custom:mini-graph-card
+  name: Temperature
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.roof_temperature
+    - sensor.ada_temperature
+    - sensor.basement_temperature
+    - sensor.deck_temperature
+    - sensor.dining_temperature
+    - sensor.edwin_temperature
+    - sensor.kitchen_temperature
+    - sensor.laundry_temperature
+    - sensor.lounge_temperature
+    - sensor.office_temperature
+    - sensor.pantry_temperature
+    - sensor.parents_temperature
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.roof_temperature
+    - entity: sensor.ada_temperature
+    - entity: sensor.basement_temperature
+    - entity: sensor.deck_temperature
+    - entity: sensor.dining_temperature
+    - entity: sensor.edwin_temperature
+    - entity: sensor.kitchen_temperature
+    - entity: sensor.laundry_temperature
+    - entity: sensor.lounge_temperature
+    - entity: sensor.office_temperature
+    - entity: sensor.pantry_temperature
+    - entity: sensor.parents_temperature
+- type: custom:mini-graph-card
+  name: Rain
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.last_30_min_rain
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.last_30_min_rain
+- type: custom:mini-graph-card
+  name: Pressure
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.roof_pressure
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.roof_pressure
+- type: custom:mini-graph-card
+  name: Power Consumption
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.office_power_consumption
+    - sensor.servers_power_consumption
+    - sensor.towelrails_power_consumption
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.office_power_consumption
+    - entity: sensor.servers_power_consumption
+    - entity: sensor.towelrails_power_consumption
+- type: custom:mini-graph-card
+  name: Noise
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.ada_noise
+    - sensor.edwin_noise
+    - sensor.kitchen_noise
+    - sensor.laundry_noise
+    - sensor.office_noise
+    - sensor.parents_noise
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.ada_noise
+    - entity: sensor.edwin_noise
+    - entity: sensor.kitchen_noise
+    - entity: sensor.laundry_noise
+    - entity: sensor.office_noise
+    - entity: sensor.parents_noise
+- type: custom:mini-graph-card
+  name: Humidity
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.roof_humidity
+    - sensor.utility_humidity
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.roof_humidity
+    - entity: sensor.utility_humidity
+- type: custom:mini-graph-card
+  name: Dew Point
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.roof_dew_point
+    - sensor.utility_dew_point
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.roof_dew_point
+    - entity: sensor.utility_dew_point
+- type: custom:mini-graph-card
   name: Carbon Dioxide
   font_size_header: 19
   aggregate_func: max
@@ -33,184 +206,3 @@
     - entity: sensor.office_carbon_dioxide
     - entity: sensor.pantry_carbon_dioxide
     - entity: sensor.parents_carbon_dioxide
-- type: custom:mini-graph-card
-  name: Noise
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-    - sensor.ada_noise
-    - sensor.edwin_noise
-    - sensor.kitchen_noise
-    - sensor.laundry_noise
-    - sensor.office_noise
-    - sensor.parents_noise
-- type: entities
-  show_header_toggle: false
-  entities:
-    - entity: sensor.ada_noise
-    - entity: sensor.edwin_noise
-    - entity: sensor.kitchen_noise
-    - entity: sensor.laundry_noise
-    - entity: sensor.office_noise
-    - entity: sensor.parents_noise
-- type: custom:mini-graph-card
-  name: Temperature
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-    - sensor.ada_temperature
-    - sensor.basement_temperature
-    - sensor.deck_temperature
-    - sensor.dining_temperature
-    - sensor.edwin_temperature
-    - sensor.kitchen_temperature
-    - sensor.laundry_temperature
-    - sensor.lounge_temperature
-    - sensor.office_temperature
-    - sensor.pantry_temperature
-    - sensor.parents_temperature
-    - sensor.roof_temperature
-- type: entities
-  show_header_toggle: false
-  entities:
-    - entity: sensor.ada_temperature
-    - entity: sensor.basement_temperature
-    - entity: sensor.deck_temperature
-    - entity: sensor.dining_temperature
-    - entity: sensor.edwin_temperature
-    - entity: sensor.kitchen_temperature
-    - entity: sensor.laundry_temperature
-    - entity: sensor.lounge_temperature
-    - entity: sensor.office_temperature
-    - entity: sensor.pantry_temperature
-    - entity: sensor.parents_temperature
-    - entity: sensor.roof_temperature
-- type: custom:mini-graph-card
-  name: Rain
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-    - sensor.day_rain
-    - sensor.last_30_min_rain
-    - sensor.month_rain
-    - sensor.rate_rain
-    - sensor.year_rain
-- type: entities
-  show_header_toggle: false
-  entities:
-    - entity: sensor.day_rain
-    - entity: sensor.last_30_min_rain
-    - entity: sensor.month_rain
-    - entity: sensor.rate_rain
-    - entity: sensor.year_rain
-- type: custom:mini-graph-card
-  name: Power Consumption
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-    - sensor.office_power_consumption
-    - sensor.servers_power_consumption
-    - sensor.towelrails_power_consumption
-- type: entities
-  show_header_toggle: false
-  entities:
-    - entity: sensor.office_power_consumption
-    - entity: sensor.servers_power_consumption
-    - entity: sensor.towelrails_power_consumption
-- type: custom:mini-graph-card
-  name: Dew Point
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-    - sensor.roof_dew_point
-    - sensor.utility_dew_point
-- type: entities
-  show_header_toggle: false
-  entities:
-    - entity: sensor.roof_dew_point
-    - entity: sensor.utility_dew_point
-- type: custom:mini-graph-card
-  name: Humidity
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-    - sensor.roof_humidity
-    - sensor.utility_humidity
-- type: entities
-  show_header_toggle: false
-  entities:
-    - entity: sensor.roof_humidity
-    - entity: sensor.utility_humidity
-- type: custom:mini-graph-card
-  name: Pressure
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-    - sensor.roof_pressure
-- type: entities
-  show_header_toggle: false
-  entities:
-    - entity: sensor.roof_pressure
