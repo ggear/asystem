@@ -40,6 +40,12 @@ def purge(context):
 
 
 @task
+def backup(context):
+    _clean(context)
+    _backup(context)
+
+
+@task
 def pull(context):
     _pull(context)
 
@@ -132,20 +138,33 @@ def _purge(context, module="asystem"):
     _print_footer(module, "purge")
 
 
+def _backup(context, module="asystem"):
+    _print_header(module, "backup")
+    _run_local(context, "git check-ignore $(find . -type f -print) | grep -v ./asystem.iml | grep -v ./.idea")
+    _run_local(context, "rsync -vr ../asystem ../asystem-backup")
+    _print_footer(module, "backup")
+
+
 def _pull(context, module="asystem"):
     _print_header(module, "pull")
     _run_local(context, "git pull --all")
-    for module in _get_modules(context, "pull.sh", False):
-        _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), DIR_ROOT)
-    for module in _get_modules(context, "src/main/python/*/metadata/build.py", False):
-        _run_local(context, "python {}/{}/src/main/python/{}/metadata/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
     _print_footer(module, "pull")
+    for module in _get_modules(context, "pull.sh", False):
+        _print_header(module, "pull")
+        _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), DIR_ROOT)
+        _print_footer(module, "pull")
+    for module in _get_modules(context, "src/main/python/*/metadata/build.py", False):
+        _print_header(module, "pull")
+        _run_local(context, "python {}/{}/src/main/python/{}/metadata/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
+        _print_footer(module, "pull")
 
 
 def _clean(context):
     _print_header("asystem", "clean")
     _run_local(context, "find . -name *.pyc -prune -exec rm -rf {} \;")
     _run_local(context, "find . -name __pycache__ -prune -exec rm -rf {} \;")
+    _run_local(context, "find . -name .coverage -prune -exec rm -rf {} \;")
+    _run_local(context, "find . -name .DS_Store -prune -exec rm -rf {} \;")
     _print_footer("asystem", "clean")
     for module in _get_modules(context, "target", False):
         _print_header(module, "clean")
