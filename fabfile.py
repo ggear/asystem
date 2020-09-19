@@ -135,11 +135,11 @@ def _purge(context, module="asystem"):
 def _pull(context, module="asystem"):
     _print_header(module, "pull")
     _run_local(context, "git pull --all")
-    _print_footer(module, "pull")
     for module in _get_modules(context, "pull.sh", False):
-        _print_header(module, "pull")
         _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), DIR_ROOT)
-        _print_footer(module, "pull")
+    for module in _get_modules(context, "src/main/python/*/metadata/build.py", False):
+        _run_local(context, "python {}/{}/src/main/python/{}/metadata/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
+    _print_footer(module, "pull")
 
 
 def _clean(context):
