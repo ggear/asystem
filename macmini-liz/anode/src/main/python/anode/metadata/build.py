@@ -1,10 +1,13 @@
+import glob
 import os
 import sys
 
-DIR_ROOT = os.path.dirname(os.path.realpath(__file__)) + "/../.."
-DIR_WORK = DIR_ROOT + "/anode/export"
-DIR_HOMEASSISTANT = DIR_WORK + "/../../../../../../../macmini-liz/homeassistant/src"
-sys.path.insert(0, DIR_ROOT)
+DIR_MODULE_ROOT = os.path.abspath("{}/../..".format(os.path.dirname(os.path.realpath(__file__))))
+DIR_ROOT = os.path.abspath("{}/../../../../../".format(DIR_MODULE_ROOT))
+for dir_module in glob.glob("{}/*/*/".format(DIR_ROOT)):
+    if dir_module.split("/")[-2] == "vernemq":
+        HOST_VERNEMQ = dir_module.split("/")[-3]
+sys.path.insert(0, DIR_MODULE_ROOT)
 
 import json
 
@@ -13,10 +16,6 @@ import time
 from anode.plugin.plugin import Plugin
 import paho.mqtt.client as mqtt
 import anode
-
-from collections import OrderedDict
-
-MODE = "QUERY"
 
 TIME_WAIT_SECS = 2
 
@@ -35,8 +34,8 @@ SENSORS_HEADER = [
 ]
 
 CONFIG = anode.anode.load_config(
-    os.path.join(DIR_ROOT, "../resources/config/anode.yaml"),
-    os.path.join(DIR_ROOT, "../../../.env")
+    os.path.join(DIR_MODULE_ROOT, "../resources/config/anode.yaml"),
+    os.path.join(DIR_MODULE_ROOT, "../../../.env")
 )
 
 
@@ -70,36 +69,26 @@ def on_message(client, user_data, message):
                     payload_unicode
                 ]
                 SENSORS[payload_id] = sensor_raw[:-1]
-        if MODE == "DELETE":
+        if mode() == "clean":
             client.publish(topic, payload=None, qos=1, retain=True)
     except Exception as exception:
         print(exception)
 
 
-if __name__ == "__main__":
-
-    # TODO: Move delete to anode start, done synchronously before start, maybe as a script call into docker container
-    # TODO: Only ever connect to production
-    # TODO: How to get hostname, maybe this is in its own module, pulls hostname from module name? or as above and refer to config
-    # TODO: Mark all existing sensros as 'Hidden', when found, makr as 'Displayed'
-    # TODO: Work through meta-data requirements of HA, Grafana and Chronograf
-
-    if len(sys.argv) > 1 and sys.argv[1] == "delete":
-        MODE = "DELETE"
-    with open(DIR_WORK + "/sensors.csv", "r") as file:
-        lines = iter(file.readlines())
-        next(lines)
-        for line in lines:
-            sensor = line.strip().split(",")
-            SENSORS[sensor[1]] = sensor
-
+def load():
+    print("Metadata script [anode] sensor load")
+    file_sensor = "{}/anode/metadata/sensor.csv".format(DIR_MODULE_ROOT)
+    if os.path.isfile(file_sensor):
+        with open(file_sensor, "r") as file:
+            lines = iter(file.readlines())
+            next(lines)
+            for line in lines:
+                sensor = line.strip().split(",")
+                SENSORS[sensor[1]] = sensor
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-
-    # TODO: Implement localhost v production lookup
-    client.connect('192.168.1.10', CONFIG["publish_port"], 60)
-
+    client.connect(HOST_VERNEMQ, CONFIG["publish_port"], 60)
     time_start = time.time()
     while True:
         client.loop()
@@ -107,56 +96,21 @@ if __name__ == "__main__":
         if time_elapsed > TIME_WAIT_SECS:
             client.disconnect()
             break
-
+    print("Metadata script [anode] sensor refresh")
     sensors = sorted(SENSORS.values(), key=lambda x: x[0].zfill(7) + x[6] + x[8])
-    with open(DIR_WORK + "/sensors.csv", "w") as file:
+    with open(file_sensor, "w") as file:
         for sensor in [SENSORS_HEADER] + sensors:
             file.write("{}\n".format(",".join(sensor)))
+    print("Metadata script [anode] sensor saved")
+    return sensors
 
-    with open(DIR_HOMEASSISTANT + "/main/resources/config/customize.yaml", "w") as file:
-        for sensor in sensors:
-            file.write("""
-sensor.{}:
-  friendly_name: {}
-            """.format(sensor[2], sensor[5]).strip() + "\n")
 
-    sensors_domain = OrderedDict()
-    for sensor in sensors:
-        if sensor[3] != 'Hidden':
-            if sensor[6] in sensors_domain:
-                sensors_domain[sensor[6]] += [sensor]
-            else:
-                sensors_domain[sensor[6]] = [sensor]
-    with open(DIR_HOMEASSISTANT + "/main/resources/config/ui-lovelace/monitor.yaml", "w") as file:
-        for domain in sensors_domain:
-            file.write("""
-- type: custom:mini-graph-card
-  name: {}
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-            """.format(domain).strip() + "\n")
-            for sensor in sensors_domain[domain]:
-                file.write("    " + """
-    - sensor.{}
-                """.format(sensor[2]).strip() + "\n")
-            file.write("""
-- type: entities
-  show_header_toggle: false
-  entities:
-            """.strip() + "\n")
-            for sensor in sensors_domain[domain]:
-                file.write("    " + """
-    - entity: sensor.{}
-                """.format(sensor[2]).strip() + "\n")
+def mode():
+    mode = 'build'
+    if len(sys.argv) == 2 and (sys.argv[1] == "clean" or sys.argv[1] == "build"):
+        mode = sys.argv[1]
+    return mode
 
-    print("{} [{}] metrics".format("DELETED" if MODE == "DELETE" else "DETECTED", len(SENSORS)))
+
+if __name__ == "__main__":
+    sensors = load()
