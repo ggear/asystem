@@ -1,210 +1,210 @@
-sensor.ada_carbon_dioxide:
-  friendly_name: Ada
-sensor.ada_health_index:
-  friendly_name: Ada
-sensor.ada_humidity:
-  friendly_name: Ada
-sensor.ada_noise:
-  friendly_name: Ada
-sensor.ada_pressure:
-  friendly_name: Ada
-sensor.ada_pressure_absolute:
-  friendly_name: Ada
-sensor.ada_temperature:
-  friendly_name: Ada
-sensor.ada_lights_energy_consumption:
-  friendly_name: Ada Lights
-sensor.ada_lights_power_consumption:
-  friendly_name: Ada Lights
-sensor.altitude_sun:
-  friendly_name: Altitude
-sensor.azimuth_sun:
-  friendly_name: Azimuth
-sensor.base_cloud:
-  friendly_name: Base
-sensor.basement_humidity:
-  friendly_name: Basement
-sensor.basement_temperature:
-  friendly_name: Basement
-sensor.bathroom_lights_energy_consumption:
-  friendly_name: Bathroom Lights
-sensor.bathroom_lights_power_consumption:
-  friendly_name: Bathroom Lights
-sensor.day_rain:
-  friendly_name: Day
-sensor.deck_humidity:
-  friendly_name: Deck
-sensor.deck_temperature:
-  friendly_name: Deck
-sensor.dining_carbon_dioxide:
-  friendly_name: Dining
-sensor.dining_humidity:
-  friendly_name: Dining
-sensor.dining_temperature:
-  friendly_name: Dining
-sensor.dining_lights_energy_consumption:
-  friendly_name: Dining Lights
-sensor.dining_lights_power_consumption:
-  friendly_name: Dining Lights
-sensor.edwin_carbon_dioxide:
-  friendly_name: Edwin
-sensor.edwin_health_index:
-  friendly_name: Edwin
-sensor.edwin_humidity:
-  friendly_name: Edwin
-sensor.edwin_noise:
-  friendly_name: Edwin
-sensor.edwin_pressure:
-  friendly_name: Edwin
-sensor.edwin_pressure_absolute:
-  friendly_name: Edwin
-sensor.edwin_temperature:
-  friendly_name: Edwin
-sensor.edwin_lights_energy_consumption:
-  friendly_name: Edwin Lights
-sensor.edwin_lights_power_consumption:
-  friendly_name: Edwin Lights
-sensor.ensuite_lights_energy_consumption:
-  friendly_name: Ensuite Lights
-sensor.ensuite_lights_power_consumption:
-  friendly_name: Ensuite Lights
 sensor.gust_bearing_wind:
   friendly_name: Gust Bearing
 sensor.gust_speed_wind:
   friendly_name: Gust Speed
-sensor.hallway_lights_energy_consumption:
-  friendly_name: Hallway Lights
-sensor.hallway_lights_power_consumption:
-  friendly_name: Hallway Lights
-sensor.kitchen_carbon_dioxide:
-  friendly_name: Kitchen
-sensor.kitchen_humidity:
-  friendly_name: Kitchen
-sensor.kitchen_noise:
-  friendly_name: Kitchen
-sensor.kitchen_pressure:
-  friendly_name: Kitchen
-sensor.kitchen_pressure_absolute:
-  friendly_name: Kitchen
+sensor.roof_temperature:
+  friendly_name: Roof
+sensor.ada_temperature:
+  friendly_name: Ada
+sensor.basement_temperature:
+  friendly_name: Basement
+sensor.deck_temperature:
+  friendly_name: Deck
+sensor.dining_temperature:
+  friendly_name: Dining
+sensor.edwin_temperature:
+  friendly_name: Edwin
 sensor.kitchen_temperature:
   friendly_name: Kitchen
-sensor.kitchen_lights_energy_consumption:
-  friendly_name: Kitchen Lights
-sensor.kitchen_lights_power_consumption:
-  friendly_name: Kitchen Lights
-sensor.last_30_min_rain:
-  friendly_name: Last 30 Min
-sensor.laundry_carbon_dioxide:
-  friendly_name: Laundry
-sensor.laundry_health_index:
-  friendly_name: Laundry
-sensor.laundry_humidity:
-  friendly_name: Laundry
-sensor.laundry_noise:
-  friendly_name: Laundry
-sensor.laundry_pressure:
-  friendly_name: Laundry
-sensor.laundry_pressure_absolute:
-  friendly_name: Laundry
 sensor.laundry_temperature:
   friendly_name: Laundry
-sensor.laundry_lights_energy_consumption:
-  friendly_name: Laundry Lights
-sensor.laundry_lights_power_consumption:
-  friendly_name: Laundry Lights
-sensor.lounge_carbon_dioxide:
-  friendly_name: Lounge
-sensor.lounge_humidity:
-  friendly_name: Lounge
 sensor.lounge_temperature:
   friendly_name: Lounge
-sensor.lounge_lights_energy_consumption:
-  friendly_name: Lounge Lights
-sensor.lounge_lights_power_consumption:
-  friendly_name: Lounge Lights
+sensor.office_temperature:
+  friendly_name: Office
+sensor.pantry_temperature:
+  friendly_name: Pantry
+sensor.parents_temperature:
+  friendly_name: Parents
+sensor.utility_temperature:
+  friendly_name: Utility
+sensor.altitude_sun:
+  friendly_name: Altitude
+sensor.azimuth_sun:
+  friendly_name: Azimuth
+sensor.rise_sun:
+  friendly_name: Rise
+sensor.set_sun:
+  friendly_name: Set
+sensor.day_rain:
+  friendly_name: Day
+sensor.last_30_min_rain:
+  friendly_name: Last 30 Min
 sensor.month_rain:
   friendly_name: Month
-sensor.office_carbon_dioxide:
-  friendly_name: Office
-sensor.office_energy_consumption:
-  friendly_name: Office
-sensor.office_humidity:
-  friendly_name: Office
-sensor.office_noise:
-  friendly_name: Office
-sensor.office_power_consumption:
-  friendly_name: Office
-sensor.office_pressure:
-  friendly_name: Office
+sensor.rate_rain:
+  friendly_name: Rate
+sensor.year_rain:
+  friendly_name: Year
+sensor.ada_pressure_absolute:
+  friendly_name: Ada
+sensor.edwin_pressure_absolute:
+  friendly_name: Edwin
+sensor.kitchen_pressure_absolute:
+  friendly_name: Kitchen
+sensor.laundry_pressure_absolute:
+  friendly_name: Laundry
 sensor.office_pressure_absolute:
   friendly_name: Office
-sensor.office_temperature:
+sensor.parents_pressure_absolute:
+  friendly_name: Parents
+sensor.ada_pressure:
+  friendly_name: Ada
+sensor.edwin_pressure:
+  friendly_name: Edwin
+sensor.kitchen_pressure:
+  friendly_name: Kitchen
+sensor.laundry_pressure:
+  friendly_name: Laundry
+sensor.roof_pressure:
+  friendly_name: Roof
+sensor.office_pressure:
+  friendly_name: Office
+sensor.parents_pressure:
+  friendly_name: Parents
+sensor.ada_lights_power_consumption:
+  friendly_name: Ada Lights
+sensor.bathroom_lights_power_consumption:
+  friendly_name: Bathroom Lights
+sensor.dining_lights_power_consumption:
+  friendly_name: Dining Lights
+sensor.edwin_lights_power_consumption:
+  friendly_name: Edwin Lights
+sensor.ensuite_lights_power_consumption:
+  friendly_name: Ensuite Lights
+sensor.hallway_lights_power_consumption:
+  friendly_name: Hallway Lights
+sensor.kitchen_lights_power_consumption:
+  friendly_name: Kitchen Lights
+sensor.laundry_lights_power_consumption:
+  friendly_name: Laundry Lights
+sensor.office_power_consumption:
+  friendly_name: Office
+sensor.servers_power_consumption:
+  friendly_name: Servers
+sensor.lounge_lights_power_consumption:
+  friendly_name: Lounge Lights
+sensor.towelrails_power_consumption:
+  friendly_name: Towelrails
+sensor.office_lights_power_consumption:
+  friendly_name: Office Lights
+sensor.pantry_lights_power_consumption:
+  friendly_name: Pantry Lights
+sensor.parents_lights_power_consumption:
+  friendly_name: Parents Lights
+sensor.wardrobe_lights_power_consumption:
+  friendly_name: Wardrobe Lights
+sensor.ada_noise:
+  friendly_name: Ada
+sensor.edwin_noise:
+  friendly_name: Edwin
+sensor.kitchen_noise:
+  friendly_name: Kitchen
+sensor.laundry_noise:
+  friendly_name: Laundry
+sensor.office_noise:
+  friendly_name: Office
+sensor.parents_noise:
+  friendly_name: Parents
+sensor.ada_humidity:
+  friendly_name: Ada
+sensor.basement_humidity:
+  friendly_name: Basement
+sensor.deck_humidity:
+  friendly_name: Deck
+sensor.dining_humidity:
+  friendly_name: Dining
+sensor.edwin_humidity:
+  friendly_name: Edwin
+sensor.kitchen_humidity:
+  friendly_name: Kitchen
+sensor.laundry_humidity:
+  friendly_name: Laundry
+sensor.lounge_humidity:
+  friendly_name: Lounge
+sensor.office_humidity:
+  friendly_name: Office
+sensor.pantry_humidity:
+  friendly_name: Pantry
+sensor.roof_humidity:
+  friendly_name: Roof
+sensor.parents_humidity:
+  friendly_name: Parents
+sensor.utility_humidity:
+  friendly_name: Utility
+sensor.roof_heat_index:
+  friendly_name: Roof
+sensor.ada_health_index:
+  friendly_name: Ada
+sensor.edwin_health_index:
+  friendly_name: Edwin
+sensor.laundry_health_index:
+  friendly_name: Laundry
+sensor.parents_health_index:
+  friendly_name: Parents
+sensor.ada_lights_energy_consumption:
+  friendly_name: Ada Lights
+sensor.bathroom_lights_energy_consumption:
+  friendly_name: Bathroom Lights
+sensor.dining_lights_energy_consumption:
+  friendly_name: Dining Lights
+sensor.edwin_lights_energy_consumption:
+  friendly_name: Edwin Lights
+sensor.ensuite_lights_energy_consumption:
+  friendly_name: Ensuite Lights
+sensor.hallway_lights_energy_consumption:
+  friendly_name: Hallway Lights
+sensor.kitchen_lights_energy_consumption:
+  friendly_name: Kitchen Lights
+sensor.laundry_lights_energy_consumption:
+  friendly_name: Laundry Lights
+sensor.lounge_lights_energy_consumption:
+  friendly_name: Lounge Lights
+sensor.office_energy_consumption:
   friendly_name: Office
 sensor.office_lights_energy_consumption:
   friendly_name: Office Lights
-sensor.office_lights_power_consumption:
-  friendly_name: Office Lights
-sensor.pantry_carbon_dioxide:
-  friendly_name: Pantry
-sensor.pantry_humidity:
-  friendly_name: Pantry
-sensor.pantry_temperature:
-  friendly_name: Pantry
 sensor.pantry_lights_energy_consumption:
   friendly_name: Pantry Lights
-sensor.pantry_lights_power_consumption:
-  friendly_name: Pantry Lights
-sensor.parents_carbon_dioxide:
-  friendly_name: Parents
-sensor.parents_health_index:
-  friendly_name: Parents
-sensor.parents_humidity:
-  friendly_name: Parents
-sensor.parents_noise:
-  friendly_name: Parents
-sensor.parents_pressure:
-  friendly_name: Parents
-sensor.parents_pressure_absolute:
-  friendly_name: Parents
-sensor.parents_temperature:
-  friendly_name: Parents
 sensor.parents_lights_energy_consumption:
   friendly_name: Parents Lights
-sensor.parents_lights_power_consumption:
-  friendly_name: Parents Lights
-sensor.rate_rain:
-  friendly_name: Rate
-sensor.rise_sun:
-  friendly_name: Rise
-sensor.roof_dew_point:
-  friendly_name: Roof
-sensor.roof_heat_index:
-  friendly_name: Roof
-sensor.roof_humidity:
-  friendly_name: Roof
-sensor.roof_pressure:
-  friendly_name: Roof
-sensor.roof_temperature:
-  friendly_name: Roof
 sensor.servers_energy_consumption:
   friendly_name: Servers
-sensor.servers_power_consumption:
-  friendly_name: Servers
-sensor.set_sun:
-  friendly_name: Set
 sensor.towelrails_energy_consumption:
   friendly_name: Towelrails
-sensor.towelrails_power_consumption:
-  friendly_name: Towelrails
-sensor.utility_dew_point:
-  friendly_name: Utility
-sensor.utility_humidity:
-  friendly_name: Utility
-sensor.utility_temperature:
-  friendly_name: Utility
 sensor.wardrobe_lights_energy_consumption:
   friendly_name: Wardrobe Lights
-sensor.wardrobe_lights_power_consumption:
-  friendly_name: Wardrobe Lights
-sensor.year_rain:
-  friendly_name: Year
+sensor.roof_dew_point:
+  friendly_name: Roof
+sensor.utility_dew_point:
+  friendly_name: Utility
+sensor.base_cloud:
+  friendly_name: Base
+sensor.ada_carbon_dioxide:
+  friendly_name: Ada
+sensor.dining_carbon_dioxide:
+  friendly_name: Dining
+sensor.edwin_carbon_dioxide:
+  friendly_name: Edwin
+sensor.kitchen_carbon_dioxide:
+  friendly_name: Kitchen
+sensor.laundry_carbon_dioxide:
+  friendly_name: Laundry
+sensor.lounge_carbon_dioxide:
+  friendly_name: Lounge
+sensor.office_carbon_dioxide:
+  friendly_name: Office
+sensor.pantry_carbon_dioxide:
+  friendly_name: Pantry
+sensor.parents_carbon_dioxide:
+  friendly_name: Parents
