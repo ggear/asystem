@@ -1,0 +1,9 @@
+version: '3.7'
+services:
+  speedtest:
+    container_name: speedtest
+    image: speedtest:${VERSION}
+    init: true
+    restart: ${RESTART}
+    environment:
+      - TZ=Australia/Perth
