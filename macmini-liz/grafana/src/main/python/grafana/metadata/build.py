@@ -14,7 +14,7 @@ import subprocess
 if __name__ == "__main__":
     sensors = load()
 
-    # TODO: Provide implementation
+    # TODO: Capture stdout, exit code
     subprocess.call("./build.sh", cwd=DIR_MODULE_ROOT + "/../resources")
 
     print("Metadata script [grafana] dashboard saved")

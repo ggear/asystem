@@ -11,4 +11,3 @@ make dev
 
 cd ../grafonnet-lib
 ./../grizzly/grr apply ./../monitor.jsonnet
-
