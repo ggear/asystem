@@ -1,6 +1,6 @@
 .m2
 .ssh
-.git
+.git/
 *.pem
 ~$*.*
 .profile
