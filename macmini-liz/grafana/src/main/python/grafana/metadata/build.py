@@ -9,7 +9,12 @@ for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../../..".format(os
 sys.path.insert(0, DIR_MODULE_ROOT)
 
 from anode.metadata.build import load
+import subprocess
 
 if __name__ == "__main__":
     sensors = load()
+
+    # TODO: Provide implementation
+    subprocess.call("./build.sh", cwd=DIR_MODULE_ROOT + "/../resources")
+
     print("Metadata script [grafana] dashboard saved")
