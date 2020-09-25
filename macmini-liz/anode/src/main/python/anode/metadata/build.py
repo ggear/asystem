@@ -16,6 +16,7 @@ import time
 from anode.plugin.plugin import Plugin
 import paho.mqtt.client as mqtt
 import anode
+from collections import OrderedDict
 
 TIME_WAIT_SECS = 2
 
@@ -101,8 +102,15 @@ def load():
     with open(file_sensor, "w") as file:
         for sensor in [SENSORS_HEADER] + sensors:
             file.write("{}\n".format(",".join(sensor)))
+    sensors_domain = OrderedDict()
+    for sensor in sensors:
+        if sensor[3] != 'Hidden':
+            if sensor[6] in sensors_domain:
+                sensors_domain[sensor[6]] += [sensor]
+            else:
+                sensors_domain[sensor[6]] = [sensor]
     print("Metadata script [anode] sensor saved")
-    return sensors
+    return sensors_domain
 
 
 def mode():
