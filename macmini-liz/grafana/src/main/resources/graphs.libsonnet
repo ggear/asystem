@@ -5,30 +5,6 @@
     local graph = grafana.graphPanel;
     local influxdb = grafana.influxdb;
     [
-      graph.new(title='Temperature', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
-        from(bucket: "asystem")
-           |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-           |> filter(fn: (r) => r["entity_id"] == "roof_temperature" or r["entity_id"] == "ada_temperature" or r["entity_id"] == "basement_temperature" or r["entity_id"] == "deck_temperature" or r["entity_id"] == "dining_temperature" or r["entity_id"] == "edwin_temperature" or r["entity_id"] == "kitchen_temperature" or r["entity_id"] == "laundry_temperature" or r["entity_id"] == "lounge_temperature" or r["entity_id"] == "office_temperature" or r["entity_id"] == "pantry_temperature" or r["entity_id"] == "parents_temperature")
-           |> group(columns: ["friendly_name"])
-           |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-           |> yield(name: "mean")
-      ')) { gridPos: { x: 0, y: 0, w: 24, h: 15 } },
-      graph.new(title='Rain', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
-        from(bucket: "asystem")
-           |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-           |> filter(fn: (r) => r["entity_id"] == "last_30_min_rain")
-           |> group(columns: ["friendly_name"])
-           |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-           |> yield(name: "mean")
-      ')) { gridPos: { x: 0, y: 0, w: 24, h: 15 } },
-      graph.new(title='Pressure', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
-        from(bucket: "asystem")
-           |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-           |> filter(fn: (r) => r["entity_id"] == "roof_pressure")
-           |> group(columns: ["friendly_name"])
-           |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-           |> yield(name: "mean")
-      ')) { gridPos: { x: 0, y: 0, w: 24, h: 15 } },
       graph.new(title='Power Consumption', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
         from(bucket: "asystem")
            |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -37,10 +13,34 @@
            |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
            |> yield(name: "mean")
       ')) { gridPos: { x: 0, y: 0, w: 24, h: 15 } },
+      graph.new(title='Temperature', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
+        from(bucket: "asystem")
+           |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+           |> filter(fn: (r) => r["entity_id"] == "roof_temperature" or r["entity_id"] == "ada_temperature" or r["entity_id"] == "basement_temperature" or r["entity_id"] == "deck_temperature" or r["entity_id"] == "dining_temperature" or r["entity_id"] == "edwin_temperature" or r["entity_id"] == "kitchen_temperature" or r["entity_id"] == "laundry_temperature" or r["entity_id"] == "lounge_temperature" or r["entity_id"] == "office_temperature" or r["entity_id"] == "pantry_temperature" or r["entity_id"] == "parents_temperature")
+           |> group(columns: ["friendly_name"])
+           |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+           |> yield(name: "mean")
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 15 } },
+      graph.new(title='Carbon Dioxide', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
+        from(bucket: "asystem")
+           |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+           |> filter(fn: (r) => r["entity_id"] == "ada_carbon_dioxide" or r["entity_id"] == "dining_carbon_dioxide" or r["entity_id"] == "edwin_carbon_dioxide" or r["entity_id"] == "kitchen_carbon_dioxide" or r["entity_id"] == "laundry_carbon_dioxide" or r["entity_id"] == "lounge_carbon_dioxide" or r["entity_id"] == "office_carbon_dioxide" or r["entity_id"] == "pantry_carbon_dioxide" or r["entity_id"] == "parents_carbon_dioxide")
+           |> group(columns: ["friendly_name"])
+           |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+           |> yield(name: "mean")
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 15 } },
       graph.new(title='Noise', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
         from(bucket: "asystem")
            |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
            |> filter(fn: (r) => r["entity_id"] == "ada_noise" or r["entity_id"] == "edwin_noise" or r["entity_id"] == "kitchen_noise" or r["entity_id"] == "laundry_noise" or r["entity_id"] == "office_noise" or r["entity_id"] == "parents_noise")
+           |> group(columns: ["friendly_name"])
+           |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+           |> yield(name: "mean")
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 15 } },
+      graph.new(title='Pressure', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
+        from(bucket: "asystem")
+           |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+           |> filter(fn: (r) => r["entity_id"] == "roof_pressure" or r["entity_id"] == "ada_pressure" or r["entity_id"] == "edwin_pressure" or r["entity_id"] == "kitchen_pressure" or r["entity_id"] == "laundry_pressure" or r["entity_id"] == "office_pressure" or r["entity_id"] == "parents_pressure")
            |> group(columns: ["friendly_name"])
            |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
            |> yield(name: "mean")
@@ -56,15 +56,15 @@
       graph.new(title='Dew Point', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
         from(bucket: "asystem")
            |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-           |> filter(fn: (r) => r["entity_id"] == "roof_dew_point" or r["entity_id"] == "utility_dew_point")
+           |> filter(fn: (r) => r["entity_id"] == "utility_dew_point" or r["entity_id"] == "roof_dew_point")
            |> group(columns: ["friendly_name"])
            |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
            |> yield(name: "mean")
       ')) { gridPos: { x: 0, y: 0, w: 24, h: 15 } },
-      graph.new(title='Carbon Dioxide', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
+      graph.new(title='Rain', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
         from(bucket: "asystem")
            |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-           |> filter(fn: (r) => r["entity_id"] == "ada_carbon_dioxide" or r["entity_id"] == "dining_carbon_dioxide" or r["entity_id"] == "edwin_carbon_dioxide" or r["entity_id"] == "kitchen_carbon_dioxide" or r["entity_id"] == "laundry_carbon_dioxide" or r["entity_id"] == "lounge_carbon_dioxide" or r["entity_id"] == "office_carbon_dioxide" or r["entity_id"] == "pantry_carbon_dioxide" or r["entity_id"] == "parents_carbon_dioxide")
+           |> filter(fn: (r) => r["entity_id"] == "last_30_min_rain")
            |> group(columns: ["friendly_name"])
            |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
            |> yield(name: "mean")
