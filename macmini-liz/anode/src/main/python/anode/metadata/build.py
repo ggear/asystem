@@ -102,15 +102,17 @@ def load():
     with open(file_sensor, "w") as file:
         for sensor in [SENSORS_HEADER] + sensors:
             file.write("{}\n".format(",".join(sensor)))
-    sensors_domain = OrderedDict()
+    sensors_group_domain = OrderedDict()
     for sensor in sensors:
         if sensor[3] != 'Hidden':
-            if sensor[6] in sensors_domain:
-                sensors_domain[sensor[6]] += [sensor]
+            if sensor[7] not in sensors_group_domain:
+                sensors_group_domain[sensor[7]] = OrderedDict()
+            if sensor[6] in sensors_group_domain[sensor[7]]:
+                sensors_group_domain[sensor[7]][sensor[6]] += [sensor]
             else:
-                sensors_domain[sensor[6]] = [sensor]
+                sensors_group_domain[sensor[7]][sensor[6]] = [sensor]
     print("Metadata script [anode] sensor saved")
-    return sensors_domain
+    return sensors_group_domain
 
 
 def mode():
