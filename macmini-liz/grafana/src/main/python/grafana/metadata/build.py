@@ -12,30 +12,70 @@ from anode.metadata.build import load
 
 if __name__ == "__main__":
     sensors = load()
-    with open(DIR_MODULE_ROOT + "/../../main/resources/graphs.libsonnet", "w") as file:
-        file.write("""
+    for group in sensors:
+        with open(DIR_MODULE_ROOT + "/../../main/resources/config/graphs_{}.libsonnet".format(group.lower()), "w") as file:
+            file.write("""
 {
   graphs()::
+  
     local grafana = import 'grafonnet/grafana.libsonnet';
     local dashboard = grafana.dashboard;
     local graph = grafana.graphPanel;
     local influxdb = grafana.influxdb;
+    
     [
-        """.strip() + "\n")
-        for domain in sensors:
-            filter = " or ".join([sub + '"' for sub in ['r["entity_id"] == "' + sub for sub in [sensor[2] for sensor in sensors[domain]]]])
-            file.write("      " + """
-      graph.new(title='{}', datasource='InfluxDB', fill=0).addTarget(influxdb.target(query='
-        from(bucket: "asystem")
-           |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-           |> filter(fn: (r) => {})
-           |> group(columns: ["friendly_name"])
-           |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-           |> yield(name: "mean")
-      ')) {{ gridPos: {{ x: 0, y: 0, w: 24, h: 15 }} }},
-            """.format(domain, filter).strip() + "\n")
-        file.write("""
+            """.strip() + "\n\n")
+            for domain in sensors[group]:
+                filter = " or ".join([sub + '"'
+                                      for sub in ['r["entity_id"] == "' + sub for sub in [sensor[2] for sensor in sensors[group][domain]]]])
+                flux = """
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => {})
+  |> fill(usePrevious: true)
+  |> group(columns: ["friendly_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+  |> yield(name: "mean")                
+                """.format(filter).strip()
+                file.write("      " + """
+      graph.new(title='{}', datasource='InfluxDB', fill=0)
+        .addTarget(influxdb.target(
+          query='{}'
+        )) {{ gridPos: {{ x: 0, y: 0, w: 24, h: 10 }} }},
+                """.format(domain, flux).strip() + "\n\n")
+            file.write("    " + """
     ],
 }
+            """.strip() + "\n")
+    print("Metadata script [grafana] graphs saved")
+    with open(DIR_MODULE_ROOT + "/../../main/resources/config/dashboards_all.jsonnet", "w") as file:
+        file.write("""
+local grafana = import 'grafonnet/grafana.libsonnet';
+local dashboard = grafana.dashboard;
         """.strip() + "\n")
-    print("Metadata script [grafana] dashboard saved")
+        for group in sensors:
+            file.write("""
+local graphs_{} = import 'graphs_{}.libsonnet';
+            """.format(group.lower(), group.lower()).strip() + "\n")
+        file.write("\n" + """
+
+{
+  grafanaDashboards:: {
+        """.strip() + "\n")
+        for group in sensors:
+            file.write("\n    " + """
+    {}_dashboard:
+      dashboard.new(
+        title='{}',
+        uid='{}',
+        editable=true,
+        schemaVersion=26,
+        time_from='now-2d'
+      )
+      .addPanels(graphs_{}.graphs()),
+            """.format(group.lower(), group, group, group.lower()).strip() + "\n\n")
+        file.write("  " + """
+  },
+}
+        """.strip() + "\n")
+    print("Metadata script [grafana] dashboards saved")

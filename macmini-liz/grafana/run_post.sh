@@ -1,3 +1,7 @@
 #!/bin/sh
 
-#TODO: Script dashbaords - https://grafana.github.io/grafonnet-lib and https://grafanalib.readthedocs.io
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_ABSOLUTE}
+
+cd "${SERVICE_INSTALL}" || exit
+
