@@ -7,15 +7,25 @@ cd "${SERVICE_INSTALL}" || exit
 . config/.profile
 cd config/grizzly
 make dev
+
+#TODO: Does not currently configure for queryLanguage, have to flip to it in the UI
 curl -i -XPOST --silent -H "Accept: application/json" -H "Content-Type: application/json" "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" -d '{
   "name": "InfluxDB",
   "type": "influxdb",
   "url": "http://macmini-liz:9999",
   "access": "proxy",
   "queryLanguage": "Flux",
-  "organization": "home",
-  "defaultBucket": "asystem",
-  "token": "${INFLUXDB_TOKEN}"
+  "jsonData": {
+    "organization": "home",
+    "defaultBucket": "asystem"
+  },
+  "secureJsonData": {
+    "token": "${INFLUXDB_TOKEN}"
+  },
+  "secureJsonFields": {
+    "token": true
+  }
 }'
+
 cd ../grafonnet-lib
 GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@macmini-liz:3000 ./../grizzly/grr apply ./../dashboards_all.jsonnet
