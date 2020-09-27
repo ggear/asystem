@@ -35,6 +35,11 @@ apt-get install -y \
   curl=7.64.0-4+deb10u1 \
   fswatch=1.14.0+repack-8 \
   net-tools=1.60+git20180626.aebd88e-1
+mkdir /tmp/go && cd /tmp/go
+wget https://dl.google.com/go/go1.14.linux-amd64.tar.gz
+tar xvfz go1.14.linux-amd64.tar.gz
+mv go /usr/local/go
+cd && rm -rf /tmp/go
 
 ################################################################################
 # Network
