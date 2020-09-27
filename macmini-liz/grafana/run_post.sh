@@ -9,7 +9,7 @@ cd config/grizzly
 make dev
 curl -i -XPOST --silent -H "Accept: application/json" -H "Content-Type: application/json" "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" -d '{
   "name": "InfluxDB",
-  "type": "grafana-influxdb-flux-datasource",
+  "type": "Flux (InfluxDB) [BETA]",
   "url": "http://macmini-liz:9999",
   "access": "proxy",
   "queryLanguage": "Flux",
