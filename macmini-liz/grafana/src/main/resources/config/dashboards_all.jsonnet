@@ -13,7 +13,8 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         uid='Conditions',
         editable=true,
         schemaVersion=26,
-        time_from='now-2d'
+        time_from='now-2d',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_conditions.graphs()),
 
@@ -24,7 +25,8 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         uid='Water',
         editable=true,
         schemaVersion=26,
-        time_from='now-2d'
+        time_from='now-2d',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_water.graphs()),
 
@@ -35,7 +37,8 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         uid='Electricity',
         editable=true,
         schemaVersion=26,
-        time_from='now-2d'
+        time_from='now-2d',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_electricity.graphs()),
 

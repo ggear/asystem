@@ -78,7 +78,7 @@ def on_message(client, user_data, message):
 
 def load():
     print("Metadata script [anode] sensor load")
-    file_sensor = "{}/anode/metadata/sensor.csv".format(DIR_MODULE_ROOT)
+    file_sensor = "{}/../resources/metadata/sensor.csv".format(DIR_MODULE_ROOT)
     if os.path.isfile(file_sensor):
         with open(file_sensor, "r") as file:
             lines = iter(file.readlines())
