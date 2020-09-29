@@ -1,3 +1,5 @@
+# coding=utf-8
+
 import glob
 import os
 import sys
@@ -25,6 +27,10 @@ if __name__ == "__main__":
     
     [
             """.strip() + "\n\n")
+            snip_path = file.name.replace(".libsonnet", ".snipsonnet")
+            if os.path.isfile(snip_path):
+                with open(snip_path, 'r') as snip_file:
+                    file.write(snip_file.read())
             for domain in sensors[group]:
                 filter = " or ".join([sub + '"'
                                       for sub in ['r["entity_id"] == "' + sub for sub in [sensor[2] for sensor in sensors[group][domain]]]])
@@ -32,17 +38,21 @@ if __name__ == "__main__":
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => {})
+  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> fill(usePrevious: true)
-  |> group(columns: ["friendly_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-  |> yield(name: "mean")                
+  |> rename(columns: {{friendly_name: "name"}})
+  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
                 """.format(filter).strip()
                 file.write("      " + """
-      graph.new(title='{}', datasource='InfluxDB', fill=0)
-        .addTarget(influxdb.target(
-          query='{}'
-        )) {{ gridPos: {{ x: 0, y: 0, w: 24, h: 10 }} }},
-                """.format(domain, flux).strip() + "\n\n")
+      graph.new(
+        title='{}',
+        datasource='InfluxDB',
+        fill=0,
+        format='{}'
+      ).addTarget(influxdb.target(query='
+{}
+        ')) {{ gridPos: {{ x: 0, y: 0, w: 24, h: 10 }} }},
+                """.format(domain, "short", flux).strip() + "\n\n")
             file.write("    " + """
     ],
 }
@@ -70,7 +80,8 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         uid='{}',
         editable=true,
         schemaVersion=26,
-        time_from='now-2d'
+        time_from='now-2d',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_{}.graphs()),
             """.format(group.lower(), group, group, group.lower()).strip() + "\n\n")

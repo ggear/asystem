@@ -8,16 +8,20 @@
     
     [
 
-      graph.new(title='Rain', datasource='InfluxDB', fill=0)
-        .addTarget(influxdb.target(
-          query='from(bucket: "asystem")
+      graph.new(
+        title='Rain',
+        datasource='InfluxDB',
+        fill=0,
+        format='short'
+      ).addTarget(influxdb.target(query='
+from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "last_30_min_rain")
+  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> fill(usePrevious: true)
-  |> group(columns: ["friendly_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-  |> yield(name: "mean")'
-        )) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+  |> rename(columns: {friendly_name: "name"})
+  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
+        ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
     ],
 }
