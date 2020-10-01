@@ -13,7 +13,6 @@
         datasource='InfluxDB',
         fill=3,
         format='ºC',
-        points=true,
         staircase=true
       ).addTarget(influxdb.target(query='
 from(bucket: "asystem")
@@ -21,7 +20,8 @@ from(bucket: "asystem")
   |> filter(fn: (r) => r["entity_id"] == "roof_temperature")
   |> aggregateWindow(every: 1d, fn: max, createEmpty: false)
   |> set(key: "name", value: "Max")
-  |> timeShift(duration: -1d)
+  |> timeShift(duration: -32h)
+  |> fill(usePrevious: true)
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
       ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
