@@ -1,0 +1,11 @@
+version: '3.7'
+services:
+  telegraf:
+    container_name: telegraf
+    image: telegraf:1.15.3
+    init: true
+    restart: ${RESTART}
+    environment:
+      - TZ=Australia/Perth
+    volumes:
+      - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
