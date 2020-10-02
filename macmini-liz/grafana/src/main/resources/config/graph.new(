@@ -1,0 +1,38 @@
+      graph.new(
+        title='Temperature Means',
+        datasource='InfluxDB',
+        fill=3,
+        format='ºC',
+        points=true,
+        staircase=true
+      ).addTarget(influxdb.target(query='
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["entity_id"] == "roof_temperature")
+  |> aggregateWindow(every: 1d, fn: max, createEmpty: false)
+  |> set(key: "name", value: "Roof Max")
+  |> timeShift(duration: -1d)
+  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+
+
+
+influx config create \
+    --config-name influx_old \
+    --host-url http://macmini-liz:9999 \
+    --org home \
+    --token wMhIUIiC2UoceR5joo07AbjouNoN0jEjcNm-WihDvitV0i0M3u05uaVEAi-9C_2adHWZ903je3dpXR5ib4JjPA==
+
+
+influx config create \
+    --config-name influx_new \
+    --host-url http://macmini-liz:8086 \
+    --org home \
+    --token aPh6OSxvyUXo6POASvvjjOJ1npgQ_lu0bZeUzOayI2WdPSauAIsXfc2hJpzc2OXXgoQavTWhCDx23KGUqJFskQ==
+
+influx export all -c influx_old | influx apply -c influx_new
+
+influx query -c influx_old 'from(bucket: "asystem") |> range(start: -3y)' --raw > /tmp/data.csv
+
+influx write -c influx_new --format csv -b asystem -f /tmp/data.csv --skipRowOnError
+

@@ -27,7 +27,7 @@ influxdb:
   api_version: 2
   ssl: false
   host: macmini-liz
-  port: 9999
+  port: 8086
   token: wMhIUIiC2UoceR5joo07AbjouNoN0jEjcNm-WihDvitV0i0M3u05uaVEAi-9C_2adHWZ903je3dpXR5ib4JjPA==
   organization: home
   bucket: asystem
