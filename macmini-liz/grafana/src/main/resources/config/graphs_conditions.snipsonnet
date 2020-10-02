@@ -8,10 +8,10 @@
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "roof_temperature")
-  |> aggregateWindow(every: 1d, fn: max, createEmpty: false)
+  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
   |> set(key: "name", value: "Roof High")
   |> timeShift(duration: -32h)
   |> fill(usePrevious: true)
-  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
+  |> aggregateWindow(every: 1d, fn: max, createEmpty: false)
       ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
