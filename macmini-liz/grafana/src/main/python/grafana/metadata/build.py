@@ -38,10 +38,10 @@ if __name__ == "__main__":
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => {})
-  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
-  |> fill(usePrevious: true)
   |> rename(columns: {{friendly_name: "name"}})
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
+  |> fill(usePrevious: true)
+  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
                 """.format(filter).strip()
                 file.write("      " + """
       graph.new(

@@ -17,10 +17,10 @@
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "last_30_min_rain")
-  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
-  |> fill(usePrevious: true)
   |> rename(columns: {friendly_name: "name"})
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
+  |> fill(usePrevious: true)
+  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
         ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
     ],
