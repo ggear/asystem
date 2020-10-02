@@ -17,4 +17,4 @@ services:
     volumes:
       - ${DATA_DIR}:/root/.influxdbv2
     ports:
-      - 9999:8086
+      - 8086:8086
