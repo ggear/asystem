@@ -28,7 +28,7 @@ influx config create \
     --config-name influx_new \
     --host-url http://macmini-liz:8086 \
     --org home \
-    --token FKjrGkm9KZHbCLRROmVr4nzWLzYYs-jIAbLAB1Zjo1b-fbrrpYtCs83XcyKMFRJWKOd1NdsLJ-4XUg-PRWEDzg==
+    --token aPh6OSxvyUXo6POASvvjjOJ1npgQ_lu0bZeUzOayI2WdPSauAIsXfc2hJpzc2OXXgoQavTWhCDx23KGUqJFskQ==
 
 influx export all -c influx_old | influx apply -c influx_new
 
