@@ -1,16 +1,18 @@
 #!/bin/sh
 
+. config/.profile
+
 influx config create \
     --config-name influx_old \
     --host-url http://macmini-liz:9999 \
     --org home \
-    --token wMhIUIiC2UoceR5joo07AbjouNoN0jEjcNm-WihDvitV0i0M3u05uaVEAi-9C_2adHWZ903je3dpXR5ib4JjPA==
+    --token ${INFLUXDB_TOKEN}
 
 influx config create \
     --config-name influx_new \
     --host-url http://macmini-liz:8086 \
     --org home \
-    --token aPh6OSxvyUXo6POASvvjjOJ1npgQ_lu0bZeUzOayI2WdPSauAIsXfc2hJpzc2OXXgoQavTWhCDx23KGUqJFskQ==
+    --token ${INFLUXDB_TOKEN}
 
 influx export all -c influx_old | influx apply -c influx_new
 
