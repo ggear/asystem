@@ -10,6 +10,7 @@ services:
       - DB_URL
       - MQTT_HOST
       - MQTT_PORT
+      - INFLUXDB_TOKEN
     volumes:
       - ${DATA_DIR}:/config
     network_mode: host
