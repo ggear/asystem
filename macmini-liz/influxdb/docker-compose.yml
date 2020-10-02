@@ -2,7 +2,7 @@ version: '3.7'
 services:
   influxdb:
     container_name: influxdb
-    image: quay.io/influxdb/influxdb:2.0.0-rc
+    image: quay.io/influxdb/influxdb:2.0.0-beta
     init: true
     restart: ${RESTART}
     environment:
@@ -17,4 +17,4 @@ services:
     volumes:
       - ${DATA_DIR}:/root/.influxdbv2
     ports:
-      - 8086:8086
+      - 9999:9999
