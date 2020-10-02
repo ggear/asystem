@@ -28,7 +28,7 @@ influxdb:
   ssl: false
   host: macmini-liz
   port: 8086
-  token: wMhIUIiC2UoceR5joo07AbjouNoN0jEjcNm-WihDvitV0i0M3u05uaVEAi-9C_2adHWZ903je3dpXR5ib4JjPA==
+  token: !env_var INFLUXDB_TOKEN
   organization: home
   bucket: asystem
   tags:
