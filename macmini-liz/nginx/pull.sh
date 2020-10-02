@@ -1,3 +1,5 @@
+#!/bin/sh
+
 ROOT_DIR="$PWD"
 while [ "$(basename ${ROOT_DIR})" != "asystem" ]; do ROOT_DIR=$(dirname ${ROOT_DIR}); done
 HOST_NGINX=$(basename $(dirname $(find ${ROOT_DIR} -type d -mindepth 1 -maxdepth 2 ! -path '/*/.*' | grep nginx)))

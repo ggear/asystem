@@ -10,7 +10,7 @@ make dev
 curl -i -XPOST --silent -H "Accept: application/json" -H "Content-Type: application/json" "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" -d '{
   "name": "InfluxDB",
   "type": "influxdb",
-  "url": "http://macmini-liz:9999",
+  "url": "http://macmini-liz:8086",
   "access": "proxy",
   "jsonData": {
     "version": "Flux",
