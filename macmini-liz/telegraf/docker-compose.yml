@@ -7,5 +7,7 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
+      - HOST_IP
+      - HOST_NAME
     volumes:
       - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
