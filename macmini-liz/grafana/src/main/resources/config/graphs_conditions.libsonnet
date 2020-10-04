@@ -10,7 +10,7 @@
 
       graph.new(
         title='Temperature Means',
-        datasource='InfluxDB',
+        datasource='InfluxDB2',
         fill=3,
         format='ºC',
         staircase=true
