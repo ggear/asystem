@@ -479,8 +479,8 @@ def load_config(config_path, profile_path):
     with open(profile_path, 'r') as profile_file:
         profile = load_profile(profile_file)
     substitution_pattern = re.compile(r'\${([^}]+)}')
-    if "LOCAL_IP" not in profile:
-        profile["LOCAL_IP"] = get_local_ip()
+    if "HOST_IP" not in profile:
+        profile["HOST_IP"] = get_local_ip()
 
     def substitute(node, substitutions):
         for key, value in node.items() if isinstance(node, dict) else node.items():

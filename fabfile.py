@@ -495,7 +495,7 @@ def _print_footer(module, stage):
 DIR_ROOT = dirname(abspath(__file__))
 FILE_PROFILE = join(dirname(abspath(__file__)), ".profile")
 
-DOCKER_VARIABLES = "LOCAL_IP=$(/usr/sbin/ipconfig getifaddr en1)"
+DOCKER_VARIABLES = "HOST_IP=$(/usr/sbin/ipconfig getifaddr en1) HOST_NAME=$(hostname)"
 
 HEADER = \
     "------------------------------------------------------------\n" \

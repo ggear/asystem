@@ -7,7 +7,7 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
-      - LOCAL_IP
+      - HOST_IP
       - ANODE_HOST
       - ANODE_PORT
       - MQTT_HOST
