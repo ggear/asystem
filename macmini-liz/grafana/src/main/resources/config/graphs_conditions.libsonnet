@@ -27,7 +27,7 @@ from(bucket: "asystem")
 
       graph.new(
         title='Temperature',
-        datasource='InfluxDB',
+        datasource='InfluxDB2',
         fill=0,
         format='short'
       ).addTarget(influxdb.target(query='
@@ -42,7 +42,7 @@ from(bucket: "asystem")
 
       graph.new(
         title='Carbon Dioxide',
-        datasource='InfluxDB',
+        datasource='InfluxDB2',
         fill=0,
         format='short'
       ).addTarget(influxdb.target(query='
@@ -57,7 +57,7 @@ from(bucket: "asystem")
 
       graph.new(
         title='Noise',
-        datasource='InfluxDB',
+        datasource='InfluxDB2',
         fill=0,
         format='short'
       ).addTarget(influxdb.target(query='
@@ -72,7 +72,7 @@ from(bucket: "asystem")
 
       graph.new(
         title='Pressure',
-        datasource='InfluxDB',
+        datasource='InfluxDB2',
         fill=0,
         format='short'
       ).addTarget(influxdb.target(query='
@@ -87,7 +87,7 @@ from(bucket: "asystem")
 
       graph.new(
         title='Humidity',
-        datasource='InfluxDB',
+        datasource='InfluxDB2',
         fill=0,
         format='short'
       ).addTarget(influxdb.target(query='
@@ -102,7 +102,7 @@ from(bucket: "asystem")
 
       graph.new(
         title='Dew Point',
-        datasource='InfluxDB',
+        datasource='InfluxDB2',
         fill=0,
         format='short'
       ).addTarget(influxdb.target(query='

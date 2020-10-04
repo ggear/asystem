@@ -10,7 +10,7 @@
 
       graph.new(
         title='Rain',
-        datasource='InfluxDB',
+        datasource='InfluxDB2',
         fill=0,
         format='short'
       ).addTarget(influxdb.target(query='
