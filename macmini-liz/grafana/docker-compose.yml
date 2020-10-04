@@ -2,17 +2,12 @@ version: '3.7'
 services:
   grafana:
     container_name: grafana
-    image: grafana/grafana:7.1.5
+    image: grafana/grafana:7.2.0
     init: true
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
-
-    # TODO: Fix volume permission issues
-    #    volumes:
-    #      - ${DATA_DIR}:/var/lib/grafana
-
     ports:
-      - 3000:3000
+      - ${GRAFANA_PORT}:${GRAFANA_PORT}
