@@ -1,0 +1,2 @@
+../run.sh
+main/resources/config/telegraf.conf
