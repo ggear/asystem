@@ -4,16 +4,36 @@ SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 
 cd "${SERVICE_INSTALL}" || exit
+. .env
 . config/.profile
 cd config/grizzly
-make dev
+GOPATH=$PWD/go make dev
 curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" \
   -H "Accept: application/json" \
-  -H "Content-Type: application/json"
+  -H "Content-Type: application/json" \
   -d '{
-        "name": "InfluxDB",
+        "name": "InfluxDB1",
         "type": "influxdb",
-        "url": "http://macmini-liz:8086",
+        "url": "http://${INFLUXDB_HOST}:${INFLUXDB_PORT}",
+        "access": "proxy",
+        "jsonData": {
+          "version": "InfluxQL",
+          "user": "influxdb",
+        },
+        "secureJsonData": {
+          "password": "${INFLUXDB_TOKEN}"
+        },
+        "secureJsonFields": {
+          "token": true
+        }
+      }'
+curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "InfluxDB2",
+        "type": "influxdb",
+        "url": "http://${INFLUXDB_HOST}:${INFLUXDB_PORT}",
         "access": "proxy",
         "jsonData": {
           "version": "Flux",
