@@ -46,7 +46,7 @@ from(bucket: "asystem")
                 file.write("      " + """
       graph.new(
         title='{}',
-        datasource='InfluxDB',
+        datasource='InfluxDB2',
         fill=0,
         format='{}'
       ).addTarget(influxdb.target(query='

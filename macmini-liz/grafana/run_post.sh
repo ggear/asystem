@@ -12,29 +12,11 @@ curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/ap
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
-        "name": "InfluxDB1",
-        "type": "influxdb",
-        "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
-        "access": "proxy",
-        "jsonData": {
-          "version": "InfluxQL",
-          "user": "influxdb",
-        },
-        "secureJsonData": {
-          "password": "'"${INFLUXDB_TOKEN}"'"
-        },
-        "secureJsonFields": {
-          "token": true
-        }
-      }'
-curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
         "name": "InfluxDB2",
         "type": "influxdb",
         "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
         "access": "proxy",
+        "isDefault": true,
         "jsonData": {
           "version": "Flux",
           "organization": "home",
@@ -46,6 +28,19 @@ curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/ap
         "secureJsonFields": {
           "token": true
         }
+      }'
+curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "name": "InfluxDB1",
+        "type": "influxdb",
+        "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+        "access": "proxy",
+        "isDefault": false,
+        "database": "hosts",
+        "user": "influxdb",
+        "password": "'"${INFLUXDB_TOKEN}"'"
       }'
 cd ../grafonnet-lib
 GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@macmini-liz:3000 ./../grizzly/grr apply ./../dashboards_all.jsonnet
