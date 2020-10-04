@@ -4,10 +4,10 @@ SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 
 cd "${SERVICE_INSTALL}" || exit
-. .env
-. config/.profile
+. ./.env
+. ./config/.profile
 cd config/grizzly
-GOPATH=$PWD/go make dev
+GOPATH=$SERVICE_HOME/.go make dev
 curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
