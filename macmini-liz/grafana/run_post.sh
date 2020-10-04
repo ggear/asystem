@@ -14,14 +14,14 @@ curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/ap
   -d '{
         "name": "InfluxDB1",
         "type": "influxdb",
-        "url": "http://${INFLUXDB_HOST}:${INFLUXDB_PORT}",
+        "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
         "access": "proxy",
         "jsonData": {
           "version": "InfluxQL",
           "user": "influxdb",
         },
         "secureJsonData": {
-          "password": "${INFLUXDB_TOKEN}"
+          "password": "'"${INFLUXDB_TOKEN}"'"
         },
         "secureJsonFields": {
           "token": true
@@ -33,7 +33,7 @@ curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/ap
   -d '{
         "name": "InfluxDB2",
         "type": "influxdb",
-        "url": "http://${INFLUXDB_HOST}:${INFLUXDB_PORT}",
+        "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
         "access": "proxy",
         "jsonData": {
           "version": "Flux",
@@ -41,7 +41,7 @@ curl -i -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/ap
           "defaultBucket": "asystem"
         },
         "secureJsonData": {
-          "token": "${INFLUXDB_TOKEN}"
+          "token": "'"${INFLUXDB_TOKEN}"'"
         },
         "secureJsonFields": {
           "token": true
