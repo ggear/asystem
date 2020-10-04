@@ -10,6 +10,7 @@ SERVICE_HOME_OLD=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 2>/de
 SERVICE_HOME_OLDEST=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 2>/dev/null | sort | head -n $(($(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 2>/dev/null | wc -l) - 1)))
 SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 SERVICE_HOST_IP=$(ifconfig enp1s0f0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*')
+SERVICE_HOST_NAME=$(hostname)
 
 cd "${SERVICE_INSTALL}" || exit
 [ -f "${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz
@@ -36,14 +37,16 @@ if [ -f "docker-compose.yml" ] && ([ ! -f ".env" ] || [ $(grep -c "# Installed" 
 RESTART=always
 VERSION=${VERSION_ABSOLUTE}
 DATA_DIR=${SERVICE_HOME}
-LOCAL_IP=${SERVICE_HOST_IP}
+HOST_IP=${SERVICE_HOST_IP}
+HOST_NAME=${SERVICE_HOST_NAME}
 EOF
   [ -f "config/.profile" ] && sed 's/export //g' config/.profile >>.env && chmod 600 .env
 fi
 if [ -f ".env" ]; then
   export VERSION=${VERSION_ABSOLUTE}
   export DATA_DIR=${SERVICE_HOME}
-  export LOCAL_IP=${SERVICE_HOST_IP}
+  export HOST_IP=${SERVICE_HOST_IP}
+  export HOST_NAME=${SERVICE_HOST_NAME}
   envsubst <.env >.env.new && mv -f .env.new .env
 fi
 docker-compose --no-ansi up --force-recreate -d && sleep 2

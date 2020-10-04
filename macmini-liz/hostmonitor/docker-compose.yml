@@ -7,6 +7,8 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
+      - HOST_IP
+      - HOST_NAME
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc
       - HOST_SYS=/hostfs/sys
