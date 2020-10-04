@@ -15,6 +15,8 @@ services:
       - HOST_VAR=/hostfs/var
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
+      - INFLUXDB_PORT
+      - INFLUXDB_HOST
     volumes:
       - /:/hostfs:ro
       - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
