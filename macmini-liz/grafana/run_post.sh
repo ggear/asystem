@@ -8,8 +8,8 @@ cd "${SERVICE_INSTALL}" || exit
 . ./config/.profile
 cd config/grizzly
 GOPATH=$SERVICE_HOME/.go make dev
-if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources/name/InfluxDB2" | grep "InfluxDB2" | wc -l) -eq 0 ]; then
-  curl -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" \
+if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}/api/datasources/name/InfluxDB2" | grep "InfluxDB2" | wc -l) -eq 0 ]; then
+  curl -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}/api/datasources" \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -31,8 +31,8 @@ if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/d
           }
         }'
 fi
-if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources/name/InfluxDB1" | grep "InfluxDB1" | wc -l) -eq 0 ]; then
-  curl -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@localhost:3000/api/datasources" \
+if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}/api/datasources/name/InfluxDB1" | grep "InfluxDB1" | wc -l) -eq 0 ]; then
+  curl -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}/api/datasources" \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
