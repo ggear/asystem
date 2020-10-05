@@ -2,8 +2,9 @@
 
 cd src/main/resources/config
 . ./.profile
+. ./.env_prod
 
-export GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@macmini-liz:3000
+export GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}
 export DASHBOARD_ASYSTEM_UID=0fcqnVOGz
 
 cd ./grizzly
