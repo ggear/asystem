@@ -1,1 +1,2 @@
-main/resources/config/unifi-poller.conf
+../run.sh
+./main/resources/config/unifi-poller.conf
