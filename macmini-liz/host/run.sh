@@ -97,7 +97,7 @@ add-apt-repository \
 apt-get install -y \
   docker-ce=5:19.03.12~3-0~debian-buster \
   docker-ce-cli=5:19.03.12~3-0~debian-buster \
-  containerd.io=1.2.13-2
+  containerd.io=1.3.7-1
 curl -sL "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)
