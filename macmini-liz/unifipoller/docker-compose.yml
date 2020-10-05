@@ -7,5 +7,11 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
+      - UNFI_USER
+      - UNFI_PASSWORD
+      - INFLUXDB_HOST
+      - INFLUXDB_PORT
+      - INFLUXDB_USER
+      - INFLUXDB_TOKEN
     volumes:
       - ${DATA_DIR}:/config
