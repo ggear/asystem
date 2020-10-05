@@ -1,7 +1,7 @@
 version: '3.7'
 services:
-  hostmonitor:
-    container_name: hostmonitor
+  monitor:
+    container_name: monitor
     image: telegraf:1.15.3
     init: true
     restart: ${RESTART}
@@ -9,14 +9,14 @@ services:
       - TZ=Australia/Perth
       - HOST_IP
       - HOST_NAME
+      - INFLUXDB_PORT
+      - INFLUXDB_HOST
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc
       - HOST_SYS=/hostfs/sys
       - HOST_VAR=/hostfs/var
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
-      - INFLUXDB_PORT
-      - INFLUXDB_HOST
     volumes:
       - /:/hostfs:ro
       - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
