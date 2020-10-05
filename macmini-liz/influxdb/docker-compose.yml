@@ -18,3 +18,7 @@ services:
       - ${DATA_DIR}:/root/.influxdbv2
     ports:
       - 8086:8086
+    deploy:
+      resources:
+        limits:
+          memory: 4G
