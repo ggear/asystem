@@ -102,3 +102,7 @@ curl -sL "https://github.com/docker/compose/releases/download/1.26.2/docker-comp
 chmod +x /usr/local/bin/docker-compose
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)
 docker system prune --volumes -f
+if [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq 0 ]; then
+  sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="cdgroup_enable=memory swapaccount=1"/' /etc/default/grub
+  update-grub
+fi
