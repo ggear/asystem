@@ -49,7 +49,7 @@ if [ -f ".env" ]; then
   export HOST_NAME=${SERVICE_HOST_NAME}
   envsubst <.env >.env.new && mv -f .env.new .env
 fi
-docker-compose --no-ansi up --force-recreate -d && sleep 2
+docker-compose --compatibility --no-ansi up --force-recreate -d && sleep 2
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
 if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
   echo && echo "Container failed to start" && echo && exit 1

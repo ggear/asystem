@@ -25,7 +25,7 @@ while :; do
             scp -qo "StrictHostKeyChecking=no" \
               ./certificates/fullchain.pem root@${host}:"${NGINX_HOME}/certificate.pem"
             ssh -qno "StrictHostKeyChecking=no" root@${host} \
-              "docker-compose -f '${NGINX_INSTALL}/docker-compose.yml' --env-file '${NGINX_INSTALL}/.env' restart"
+              "docker-compose --compatibility -f '${NGINX_INSTALL}/docker-compose.yml' --env-file '${NGINX_INSTALL}/.env' restart"
             logger -t pushcerts "Loaded new nginx certificates on ${host}"
           fi
         done <"${SERVICE_INSTALL}/hosts"
