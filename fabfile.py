@@ -328,6 +328,7 @@ def _release(context):
         else:
             _run_local(context, "touch target/release/run.sh", module)
         for host in _get_hosts(context, module):
+            _print_header("{}/{}".format(host, _name(module)), "release")
             ssh_pass = _ssh_pass(context, host)
             install = "/var/lib/asystem/install/{}/{}".format(module, _get_versions()[0])
             print("Copying release to {} ... ".format(host))
@@ -341,6 +342,7 @@ def _release(context):
                                 "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 2>/dev/null | wc -l) - 2)) | xargs rm -rf'"
                        .format(ssh_pass, host, install, install), hide='err', warn=True)
             _run_local(context, "{}ssh -q root@{} 'echo && df -h /root /tmp /var /home && echo'".format(ssh_pass, host, install, install))
+            _print_footer("{}/{}".format(host, _name(module)), "release")
         _print_footer(module, "release")
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
