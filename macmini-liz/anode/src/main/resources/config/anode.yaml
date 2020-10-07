@@ -22,7 +22,7 @@ plugin:
   #  fronius:
   #    poll_seconds: 1
   #    buffer_ticks: 120
-  #    history_partitions: 15
+  #    history_partitions: 8
   #    history_ticks: 10500000
   #    history_partition_seconds: 86400
   #    repeat_seconds: 99
@@ -32,7 +32,7 @@ plugin:
   kasa:
     poll_seconds: 1
     buffer_ticks: 110
-    history_partitions: 15
+    history_partitions: 8
     history_ticks: 10500000
     history_partition_seconds: 86400
     repeat_seconds: 101
@@ -41,7 +41,7 @@ plugin:
   davis:
     poll_seconds: -1
     buffer_ticks: 30
-    history_partitions: 15
+    history_partitions: 8
     history_ticks: 1800000
     history_partition_seconds: 86400
     repeat_seconds: 103
@@ -50,7 +50,7 @@ plugin:
     darksky:
       poll_seconds: 300
       buffer_ticks: 5
-      history_partitions: 15
+      history_partitions: 8
       history_ticks: 1500000
       history_partition_seconds: 86400
       repeat_seconds: 111
@@ -59,7 +59,7 @@ plugin:
   netatmo:
     poll_seconds: 50
     buffer_ticks: 10
-    history_partitions: 15
+    history_partitions: 8
     history_ticks: 2100000
     history_partition_seconds: 86400
     repeat_seconds: 107
@@ -68,7 +68,7 @@ plugin:
   speedtest:
     poll_seconds: -1
     buffer_ticks: 30
-    history_partitions: 15
+    history_partitions: 8
     history_ticks: 450000
     history_partition_seconds: 86400
     repeat_seconds: 113
@@ -77,7 +77,7 @@ plugin:
   hue:
     poll_seconds: 1
     buffer_ticks: 110
-    history_partitions: 15
+    history_partitions: 8
     history_ticks: 10500000
     history_partition_seconds: 86400
     repeat_seconds: 117
@@ -88,7 +88,7 @@ plugin:
 #  energyforecast:
 #    poll_seconds: 15
 #    buffer_ticks: 5
-#    history_partitions: 15
+#    history_partitions: 8
 #    history_ticks: 300000
 #    history_partition_seconds: 86400
 #    repeat_seconds: 115

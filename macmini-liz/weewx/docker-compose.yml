@@ -15,3 +15,7 @@ services:
       - ${DATA_DIR}:/data
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
+    deploy:
+      resources:
+        limits:
+          memory: 4G

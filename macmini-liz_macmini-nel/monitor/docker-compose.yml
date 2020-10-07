@@ -21,3 +21,7 @@ services:
       - /:/hostfs:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    deploy:
+      resources:
+        limits:
+          memory: 4G
