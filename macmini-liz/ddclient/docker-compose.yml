@@ -11,3 +11,7 @@ services:
       - PGID=20
     volumes:
       - ${DATA_DIR}:/config
+    deploy:
+      resources:
+        limits:
+          memory: 4G

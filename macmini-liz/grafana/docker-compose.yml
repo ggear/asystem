@@ -11,3 +11,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
     ports:
       - ${GRAFANA_PORT}:${GRAFANA_PORT}
+    deploy:
+      resources:
+        limits:
+          memory: 4G

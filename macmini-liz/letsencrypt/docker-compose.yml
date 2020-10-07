@@ -11,3 +11,7 @@ services:
     volumes:
       - ${DATA_DIR}/letsencrypt:/etc/letsencrypt
       - ${DATA_DIR}/dnsrobocert:/etc/dnsrobocert
+    deploy:
+      resources:
+        limits:
+          memory: 4G
