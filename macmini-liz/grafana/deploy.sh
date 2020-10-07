@@ -2,10 +2,12 @@
 
 cd src/main/resources/config
 . ./.profile
-. ./.env_prod
+. ../../../../.env_prod
 
 export GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}
-export DASHBOARD_ASYSTEM_UID=0fcqnVOGz
+
+echo $GRAFANA_URL
+
 
 cd ./grizzly
 make dev
