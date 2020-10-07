@@ -12,7 +12,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${VERSION
 SERVICE_HOST_IP=$(ifconfig enp1s0f0 | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*')
 SERVICE_HOST_NAME=$(hostname)
 
-cd "${SERVICE_INSTALL}" || exit
+cd ${SERVICE_INSTALL} || exit
 [ -f "${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz
 docker stop "${SERVICE_NAME}" >/dev/null 2>&1
 docker wait "${SERVICE_NAME}" >/dev/null 2>&1
