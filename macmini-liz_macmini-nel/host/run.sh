@@ -17,14 +17,14 @@
 ################################################################################
 vgdisplay
 df -h /var
-lvdisplay /dev/macmini-liz-vg/var
-if [ $(lvdisplay /dev/macmini-liz-vg/var | grep "LV Size                30.00 GiB" | wc -l) -eq 0 ]; then
-  lvextend -L30G /dev/macmini-liz-vg/var
-  resize2fs /dev/macmini-liz-vg/var
+lvdisplay /dev/$(hostname)-vg/var
+if [ $(lvdisplay /dev/$(hostname)-vg/var | grep "LV Size                30.00 GiB" | wc -l) -eq 0 ]; then
+  lvextend -L30G /dev/$(hostname)-vg/var
+  resize2fs /dev/$(hostname)-vg/var
 fi
 vgdisplay
 df -h /var
-lvdisplay /dev/macmini-liz-vg/var
+lvdisplay /dev/$(hostname)-vg/var
 
 ################################################################################
 # Utilities
