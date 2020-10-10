@@ -32,7 +32,7 @@
   entity_wind_gust_kt: sensor.bom_perth_wind_gust_kt
   entity_humidity: sensor.bom_perth_relative_humidity
 
-#  entity_apparent_temp: sensor.bom_perth_feels_like_c
+  #  entity_apparent_temp: sensor.bom_perth_feels_like_c
   entity_apparent_temp: sensor.roof_temperature
 
   entity_daily_summary: sensor.bom_today_detailed_summary
@@ -93,3 +93,11 @@
     action: none
   double_tap_action:
     action: none
+
+- type: entities
+  entities:
+    - entity: sensor.openskyflights
+      type: 'custom:multiple-entity-row'
+      name: Flights Overhead
+      icon: 'mdi:airplane'
+      secondary_info: last-changed

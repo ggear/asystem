@@ -75,6 +75,8 @@ automation:
 lovelace:
   mode: yaml
   resources:
+    - url: /local/custom_ui/multiple-entity-row.js?v=3.4.0
+      type: module
     - url: /local/custom_ui/mini-graph-card-bundle.js?v=0.9.4
       type: module
     - url: /local/custom_ui/bom-weather-card.js?v=0.78_HACKED_BY_ME
