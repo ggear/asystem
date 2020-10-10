@@ -103,6 +103,7 @@ def run(context):
 
 @task
 def deploy(context):
+    _pull(context)
     _deploy(context)
 
 
