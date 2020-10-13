@@ -78,8 +78,20 @@ EOF
 ################################################################################
 apt-get install -y \
   htop=2.2.0-1+b1 \
+  mbpfan=2.0.2-1 \
   lm-sensors=1:3.5.0-3
 sensors-detect --auto
+cat <<EOF >/etc/mbpfan.conf
+[general]
+min_fan_speed = 1800
+max_fan_speed = 5500
+low_temp = 60
+high_temp = 66
+max_temp = 80
+polling_interval = 7
+EOF
+curl https://raw.githubusercontent.com/linux-on-mac/mbpfan/master/mbpfan.service -o /etc/systemd/system/mbpfan.service
+systemctl enable mbpfan.service
 
 ################################################################################
 # Docker
