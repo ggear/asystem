@@ -50,7 +50,7 @@ from(bucket: "asystem")
         format='{}'
       ).addTarget(influxdb.target(query='
 {}
-        ')) {{ gridPos: {{ x: 0, y: 0, w: 24, h: 10 }} }},
+      ')) {{ gridPos: {{ x: 0, y: 0, w: 24, h: 10 }} }},
                 """.format(domain, "short", flux).strip() + "\n\n")
             file.write("    " + """
     ],
@@ -61,6 +61,8 @@ from(bucket: "asystem")
         file.write("""
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
+local graphs_servers = import 'graphs_servers.libsonnet';
+local graphs_network = import 'graphs_network.libsonnet';
         """.strip() + "\n")
         for group in sensors:
             file.write("""
@@ -70,6 +72,29 @@ local graphs_{} = import 'graphs_{}.libsonnet';
 
 {
   grafanaDashboards:: {
+
+    servers_dashboard:
+      dashboard.new(
+        title='Servers',
+        uid='servers',
+        editable=true,
+        schemaVersion=26,
+        time_from='now-2d',
+        graphTooltip='shared_tooltip',
+      )
+      .addPanels(graphs_servers.graphs()),
+
+
+    network_dashboard:
+      dashboard.new(
+        title='Network',
+        uid='network',
+        editable=true,
+        schemaVersion=26,
+        time_from='now-2d',
+        graphTooltip='shared_tooltip',
+      )
+      .addPanels(graphs_network.graphs()),
         """.strip() + "\n")
         for group in sensors:
             file.write("\n    " + """
@@ -83,7 +108,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_{}.graphs()),
-            """.format(group.lower(), group, group, group.lower()).strip() + "\n\n")
+            """.format(group.lower(), group, group.lower(), group.lower()).strip() + "\n\n")
         file.write("  " + """
   },
 }

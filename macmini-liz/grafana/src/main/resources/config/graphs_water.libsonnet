@@ -20,7 +20,7 @@ from(bucket: "asystem")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
   |> fill(usePrevious: true)
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-        ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
     ],
 }

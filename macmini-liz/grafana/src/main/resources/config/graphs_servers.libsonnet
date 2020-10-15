@@ -9,16 +9,15 @@
     [
 
       graph.new(
-        title='Power Consumption',
+        title='CPU Temperature',
         datasource='InfluxDB2',
         fill=0,
         format='short'
       ).addTarget(influxdb.target(query='
-from(bucket: "asystem")
+from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "office_power_consumption" or r["entity_id"] == "servers_power_consumption" or r["entity_id"] == "towelrails_power_consumption")
-  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
-  |> fill(usePrevious: true)
+  |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
+  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
       ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
