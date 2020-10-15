@@ -12,41 +12,45 @@
         title='Temperature Dailies',
         datasource='InfluxDB2',
         fill=3,
-        format='ºC',
+        format='celcius',
         staircase=true
-      ).addTarget(influxdb.target(query='from(bucket: "asystem")
+      ).addTarget(influxdb.target(query='
+from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "roof_temperature")
   |> set(key: "name", value: "Roof High")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
   |> fill(usePrevious: true)
   |> timeShift(duration: -8h)
-  |> aggregateWindow(every: 1d, fn: max, createEmpty: false)')
-      ).addTarget(influxdb.target(query='from(bucket: "asystem")
+  |> aggregateWindow(every: 1d, fn: max, createEmpty: false)
+      ')).addTarget(influxdb.target(query='
+from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "bom_perth_max_temp_c_1" and r["_field"] == "value")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value"])
   |> fill(usePrevious: true)
   |> timeShift(duration: 16h)
   |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)
-  |> set(key: "name", value: "Forecast High")')
-      ).addTarget(influxdb.target(query='from(bucket: "asystem")
+  |> set(key: "name", value: "Forecast High")
+      ')).addTarget(influxdb.target(query='
+from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "roof_temperature")
   |> set(key: "name", value: "Roof Low")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
   |> fill(usePrevious: true)
   |> timeShift(duration: -8h)
-  |> aggregateWindow(every: 1d, fn: min, createEmpty: false)')
-      ).addTarget(influxdb.target(query='from(bucket: "asystem")
+  |> aggregateWindow(every: 1d, fn: min, createEmpty: false)
+      ')).addTarget(influxdb.target(query='
+from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "bom_perth_min_temp_c_1" and r["_field"] == "value")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value"])
   |> fill(usePrevious: true)
   |> timeShift(duration: 16h)
   |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)
-  |> set(key: "name", value: "Forecast Low")')
-      ) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+  |> set(key: "name", value: "Forecast Low")
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
       graph.new(
         title='Temperature',
         datasource='InfluxDB2',
@@ -59,7 +63,7 @@ from(bucket: "asystem")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
   |> fill(usePrevious: true)
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-        ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
       graph.new(
         title='Carbon Dioxide',
@@ -73,7 +77,7 @@ from(bucket: "asystem")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
   |> fill(usePrevious: true)
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-        ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
       graph.new(
         title='Noise',
@@ -87,7 +91,7 @@ from(bucket: "asystem")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
   |> fill(usePrevious: true)
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-        ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
       graph.new(
         title='Pressure',
@@ -101,7 +105,7 @@ from(bucket: "asystem")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
   |> fill(usePrevious: true)
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-        ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
       graph.new(
         title='Humidity',
@@ -115,7 +119,7 @@ from(bucket: "asystem")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
   |> fill(usePrevious: true)
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-        ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
       graph.new(
         title='Dew Point',
@@ -129,7 +133,7 @@ from(bucket: "asystem")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
   |> fill(usePrevious: true)
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-        ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
+      ')) { gridPos: { x: 0, y: 0, w: 24, h: 10 } },
 
     ],
 }

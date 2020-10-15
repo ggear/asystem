@@ -90,7 +90,7 @@ high_temp = 66
 max_temp = 80
 polling_interval = 7
 EOF
-curl https://raw.githubusercontent.com/linux-on-mac/mbpfan/master/mbpfan.service -o /etc/systemd/system/mbpfan.service
+curl https://raw.githubusercontent.com/linux-on-mac/mbpfan/49f544fd8d596fa13d5525a5b042eee311568c67/mbpfan.service -o /etc/systemd/system/mbpfan.service
 systemctl enable mbpfan.service
 
 ################################################################################
