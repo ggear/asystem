@@ -36,7 +36,7 @@ influxdb:
     source: home_assistant
   tags_attributes:
     - friendly_name
-  default_measurement: units
+  default_measurement: state
 
 mqtt:
   broker: !env_var MQTT_HOST
