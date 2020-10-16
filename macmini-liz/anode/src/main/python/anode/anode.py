@@ -68,7 +68,8 @@ class ANode:
         self.web_ws = WebWsFactory(u"ws" + ("" if self.certificate is None else "s") + "://"
                                    + self.config["host"] + ":" + str(self.config["port"]), self, self.certificate)
         self.web_ws.protocol = WebWs
-        self.web_rest = WebRest(self)
+        self.web_rest = WebRest(self, "http" + ("" if self.certificate is None else "s") + "://"
+                                + self.config["host"] + ":" + str(self.config["port"]))
         self.web_pool = HTTPConnectionPool(reactor, persistent=True)
         self.publish_service = None
         self.publish = "publish_host" in self.config and len(self.config["publish_host"]) > 0 and \
@@ -265,6 +266,7 @@ class MqttPublishService(ClientService):
 
 class WebWsFactory(WebSocketServerFactory):
     def __init__(self, url, anode, context):
+        Log(logging.DEBUG).log("Interface", "state", lambda: "[ws] server initialising [{}]".format(url))
         super(WebWsFactory, self).__init__(url, context)
         self.anode = anode
         self.ws_clients = []
@@ -319,7 +321,8 @@ class WebWs(WebSocketServerProtocol):
 class WebRest:
     server = Klein()
 
-    def __init__(self, anode):
+    def __init__(self, anode, url):
+        Log(logging.DEBUG).log("Interface", "state", lambda: "[rest] server initialising [{}]".format(url))
         self.anode = anode
 
     @server.route("/", methods=["POST"])
