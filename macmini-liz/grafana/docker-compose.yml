@@ -2,13 +2,16 @@ version: '3.7'
 services:
   grafana:
     container_name: grafana
-    image: grafana/grafana:7.2.0
+    image: grafana/grafana:7.2.1
     init: true
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
+    volumes:
+      - ${DATA_DIR}/custom.ini:/etc/grafana/grafana.ini
+      - ${DATA_DIR}/dashboard_home.json:/etc/grafana/dashboard_home.json
     ports:
       - ${GRAFANA_PORT}:${GRAFANA_PORT}
     deploy:

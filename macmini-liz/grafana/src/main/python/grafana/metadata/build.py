@@ -47,10 +47,23 @@ from(bucket: "asystem")
         title='{}',
         datasource='InfluxDB2',
         fill=0,
-        format='{}'
+        format='{}',
+        bars=false,
+        lines=true,
+        staircase=false,
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=true,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=350
       ).addTarget(influxdb.target(query='
 {}
-      ')) {{ gridPos: {{ x: 0, y: 0, w: 24, h: 10 }} }},
+      '))
+      {{ gridPos: {{ x: 0, y: 0, w: 24, h: 12 }} }},
                 """.format(domain, "short", flux).strip() + "\n\n")
             file.write("    " + """
     ],
@@ -78,6 +91,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         title='Servers',
         uid='servers',
         editable=true,
+        tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
         graphTooltip='shared_tooltip',
@@ -90,6 +104,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         title='Network',
         uid='network',
         editable=true,
+        tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
         graphTooltip='shared_tooltip',
@@ -103,6 +118,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         title='{}',
         uid='{}',
         editable=true,
+        tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
         graphTooltip='shared_tooltip',
