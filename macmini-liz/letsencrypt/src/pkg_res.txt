@@ -3,3 +3,4 @@
 main/resources/pushcerts.sh
 main/resources/pushcerts.service
 main/resources/config/dnsrobocert/config.yml
+main/resources/config/telegraf.conf
