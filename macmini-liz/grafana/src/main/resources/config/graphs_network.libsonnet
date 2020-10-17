@@ -4,9 +4,23 @@
     local grafana = import 'grafonnet/grafana.libsonnet';
     local dashboard = grafana.dashboard;
     local graph = grafana.graphPanel;
+    local table = grafana.tablePanel;
     local influxdb = grafana.influxdb;
     
     [
+
+      table.new(
+        title='WAN',
+        datasource='InfluxDB2'
+      ).addTarget(influxdb.target(query='
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "usg" and r["_field"] == "ip")
+  |> unique(column: "_value")
+  |> set(key: "name", value: "IP")
+  |> keep(columns: ["_time", "_value", "name"])
+  |> sort(columns: ["_time"], desc: true)
+      ')) { gridPos: { x: 0, y: 0, w: 6, h: 6 } },
 
       graph.new(
         title='WAN',
