@@ -31,12 +31,12 @@ join(
     d1:
       from(bucket: "hosts")
         |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["host"] == "macmini-liz" and  r["common_name"] == "*.janeandgraham.com" and r["_field"] == "enddate")
+        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["common_name"] == "*.janeandgraham.com" and r["_field"] == "enddate")
         |> last()
     ,d2:
       from(bucket: "hosts")
         |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["host"] == "macmini-liz" and  r["common_name"] == "*.janeandgraham.com" and r["_field"] == "expiry")
+        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["common_name"] == "*.janeandgraham.com" and r["_field"] == "expiry")
   }, on: ["_time"])
     |> map(fn: (r) => ({ r with _value: r._value_d2 / (24*60*60) }))
     |> set(key: "name", value: "Expiry Days")
