@@ -30,4 +30,3 @@ RUN set -ex && \
 
 COPY src/main/resources/entrypoint.sh /entrypoint.sh
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["/etc/dnsrobocert/config.yml"]
