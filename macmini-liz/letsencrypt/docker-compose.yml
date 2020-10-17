@@ -2,11 +2,10 @@ version: '3.7'
 services:
   letsencrypt:
     container_name: letsencrypt
-    image: adferrand/dnsrobocert:3.4.0
+    image: adferrand/dnsrobocert:3.7.0
     init: true
-
-    # TODO: Update to cloudflare to avoid the whitelisting in namecheap?
     environment:
+      - LETSENCRYPT_STAGING
       - CLOUDFLARE_TOKEN
     volumes:
       - ${DATA_DIR}/letsencrypt:/etc/letsencrypt
