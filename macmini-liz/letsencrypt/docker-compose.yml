@@ -2,19 +2,14 @@ version: '3.7'
 services:
   letsencrypt:
     container_name: letsencrypt
-    image: letsencrypt:${VERSION}
+    image: adferrand/dnsrobocert:3.7.0
     init: true
     environment:
-      - HOST_IP
-      - HOST_NAME
-      - INFLUXDB_PORT
-      - INFLUXDB_HOST
       - CLOUDFLARE_TOKEN
       - LETSENCRYPT_STAGING
     volumes:
       - ${DATA_DIR}/letsencrypt:/etc/letsencrypt
       - ${DATA_DIR}/dnsrobocert:/etc/dnsrobocert
-      - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     deploy:
       resources:
         limits:

@@ -26,15 +26,22 @@ from(bucket: "hosts")
         title='Certificate',
         datasource='InfluxDB2'
       ).addTarget(influxdb.target(query='
-from(bucket: "hosts")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["host"] == "macmini-liz" and  r["common_name"] == "*.janeandgraham.com" and (r["_field"] == "expiry" or r["_field"] == "enddate"))
-  |> group(columns: ["enddate", "expiry"])
-  |> filter(fn: (r) => r["_field"] == "expiry")
-  |> last()
-  |> map(fn: (r) => ({ r with _value: r._value / (24*60*60) }))
-  |> set(key: "name", value: "Expiry Days")
-  |> keep(columns: ["_time", "_value", "name"])
+join(
+  tables: {
+    d1:
+      from(bucket: "hosts")
+        |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["host"] == "macmini-liz" and  r["common_name"] == "*.janeandgraham.com" and r["_field"] == "enddate")
+        |> last()
+    ,d2:
+      from(bucket: "hosts")
+        |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["host"] == "macmini-liz" and  r["common_name"] == "*.janeandgraham.com" and r["_field"] == "expiry")
+  }, on: ["_time"])
+    |> map(fn: (r) => ({ r with _value: r._value_d2 / (24*60*60) }))
+    |> set(key: "name", value: "Expiry Days")
+    |> keep(columns: ["_time", "_value", "name"]
+)
       ')) { gridPos: { x: 6, y: 0, w: 6, h: 6 } },
 
       graph.new(
