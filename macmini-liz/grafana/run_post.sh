@@ -47,4 +47,4 @@ if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GR
         }'
 fi
 cd ../grafonnet-lib
-GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@macmini-liz:3000 ./../grizzly/grr apply ./../dashboards/dashboards_all.jsonnet
+GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@macmini-liz:3000 ./../grizzly/grr apply ./../dashboards/generated/dashboards_all.jsonnet

@@ -13,4 +13,4 @@ cd ./grizzly
 make dev
 
 cd ../grafonnet-lib
-./../grizzly/grr apply ./../dashboards/dashboards_all.jsonnet
+./../grizzly/grr apply ./../dashboards/generated/dashboards_all.jsonnet
