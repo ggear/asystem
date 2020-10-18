@@ -11,7 +11,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
     volumes:
       - ${DATA_DIR}/custom.ini:/etc/grafana/grafana.ini
-      - ${DATA_DIR}/dashbaords/dashboard_home.json:/etc/grafana/dashboard_home.json
+      - ${DATA_DIR}/dashboards/dashboard_home.json:/etc/grafana/dashboard_home.json
     ports:
       - ${GRAFANA_PORT}:${GRAFANA_PORT}
     deploy:
