@@ -104,3 +104,5 @@ Index ID,Unique ID,Entity ID,Entity Filter,Entity Name,Entity Friendly Name,Enti
 103,anode__rise__sun__season__home,rise_sun,Hidden,Rise Sun,Rise,Sun,Season,Home,haas/sensor/config/sensor/anode/anode__rise__sun__season__home/config
 104,anode__set__sun__season__home,set_sun,Hidden,Set Sun,Set,Sun,Season,Home,haas/sensor/config/sensor/anode/anode__set__sun__season__home/config
 105,anode__base__cloud__season__home,base_cloud,Hidden,Base Cloud,Base,Cloud,Season,Home,haas/sensor/config/sensor/anode/anode__base__cloud__season__home/config
+9999999,anode__lamp_Dlights__energy_Dconsumption__electricity__home,lamp_lights_energy_consumption,Hidden,Lamp Lights Energy Consumption,Lamp Lights,Energy Consumption,Electricity,Home,haas/sensor/config/sensor/anode/anode__lamp_Dlights__energy_Dconsumption__electricity__home/config
+9999999,anode__lamp_Dlights__power_Dconsumption__electricity__home,lamp_lights_power_consumption,Hidden,Lamp Lights Power Consumption,Lamp Lights,Power Consumption,Electricity,Home,haas/sensor/config/sensor/anode/anode__lamp_Dlights__power_Dconsumption__electricity__home/config

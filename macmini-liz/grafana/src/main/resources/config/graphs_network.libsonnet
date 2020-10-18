@@ -3,11 +3,31 @@
   
     local grafana = import 'grafonnet/grafana.libsonnet';
     local dashboard = grafana.dashboard;
+    local stat = grafana.statPanel;
     local graph = grafana.graphPanel;
     local table = grafana.tablePanel;
+    local guage = grafana.gaugePanel;
     local influxdb = grafana.influxdb;
     
     [
+
+      // TODO: Implement
+      stat.new(
+        title='Uptime',
+        datasource='InfluxDB2'
+      ) { gridPos: { x: 0, y: 0, w: 4, h: 6 } },
+
+      // TODO: Implement
+      guage.new(
+        title='Speed',
+        datasource='InfluxDB2'
+      ) { gridPos: { x: 4, y: 0, w: 4, h: 6 } },
+
+      // TODO: Implement
+      guage.new(
+        title='Total',
+        datasource='InfluxDB2'
+      ) { gridPos: { x: 8, y: 0, w: 4, h: 6 } },
 
       table.new(
         title='WAN',
@@ -20,7 +40,13 @@ from(bucket: "hosts")
   |> set(key: "name", value: "IP")
   |> keep(columns: ["_time", "_value", "name"])
   |> sort(columns: ["_time"], desc: true)
-      ')) { gridPos: { x: 0, y: 0, w: 6, h: 6 } },
+      ')) { gridPos: { x: 12, y: 0, w: 4, h: 6 } },
+
+      // TODO: Implement
+      table.new(
+        title='DNS',
+        datasource='InfluxDB2'
+      ) { gridPos: { x: 16, y: 0, w: 4, h: 6 } },
 
       table.new(
         title='Certificate',
@@ -42,7 +68,7 @@ join(
     |> set(key: "name", value: "Expiry Days")
     |> keep(columns: ["_time", "_value", "name"]
 )
-      ')) { gridPos: { x: 6, y: 0, w: 6, h: 6 } },
+      ')) { gridPos: { x: 20, y: 0, w: 4, h: 6 } },
 
       graph.new(
         title='WAN',
@@ -57,7 +83,7 @@ join(
         legend_max=true,
         legend_current=true,
         legend_total=false,
-        legend_avg=true,
+        legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
@@ -96,7 +122,7 @@ from(bucket: "hosts")
         legend_max=true,
         legend_current=true,
         legend_total=false,
-        legend_avg=true,
+        legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
