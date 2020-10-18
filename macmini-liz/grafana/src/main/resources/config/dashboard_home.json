@@ -1,8 +1,4 @@
 {
-  "title": "Home",
-  "uid": "home",
-  "version": 6,
-  "timezone": "browser",
   "annotations": {
     "list": [
       {
@@ -55,8 +51,8 @@
       },
       "folderId": 0,
       "gridPos": {
-        "h": 11,
-        "w": 24,
+        "h": 8,
+        "w": 12,
         "x": 0,
         "y": 3
       },
@@ -86,10 +82,10 @@
       },
       "folderId": null,
       "gridPos": {
-        "h": 11,
-        "w": 24,
-        "x": 0,
-        "y": 14
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 3
       },
       "id": 5,
       "limit": 10,
@@ -167,5 +163,9 @@
       "30d"
     ],
     "type": "timepicker"
-  }
+  },
+  "timezone": "browser",
+  "title": "Home",
+  "uid": "home",
+  "version": 6
 }
