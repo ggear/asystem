@@ -17,7 +17,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
-        graphTooltip='shared_tooltip',
+        graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_servers.graphs()),
 
@@ -30,7 +30,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
-        graphTooltip='shared_tooltip',
+        graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_network.graphs()),
 
@@ -42,7 +42,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
-        graphTooltip='shared_tooltip',
+        graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_conditions.graphs()),
 
@@ -55,7 +55,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
-        graphTooltip='shared_tooltip',
+        graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_water.graphs()),
 
@@ -68,7 +68,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
-        graphTooltip='shared_tooltip',
+        graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_electricity.graphs()),
 
