@@ -15,7 +15,7 @@ from anode.metadata.build import load
 if __name__ == "__main__":
     sensors = load()
     for group in sensors:
-        with open(DIR_MODULE_ROOT + "/../../main/resources/config/graphs_{}.libsonnet".format(group.lower()), "w") as file:
+        with open(DIR_MODULE_ROOT + "/../../main/resources/config/dashboards/graphs_{}.libsonnet".format(group.lower()), "w") as file:
             file.write("""
 {
   graphs()::
@@ -70,7 +70,7 @@ from(bucket: "asystem")
 }
             """.strip() + "\n")
     print("Metadata script [grafana] graphs saved")
-    with open(DIR_MODULE_ROOT + "/../../main/resources/config/dashboards_all.jsonnet", "w") as file:
+    with open(DIR_MODULE_ROOT + "/../../main/resources/config/dashboards/dashboards_all.jsonnet", "w") as file:
         file.write("""
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
@@ -94,7 +94,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
-        graphTooltip='shared_tooltip',
+        graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_servers.graphs()),
 
@@ -107,7 +107,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
-        graphTooltip='shared_tooltip',
+        graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_network.graphs()),
         """.strip() + "\n")
@@ -121,7 +121,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-2d',
-        graphTooltip='shared_tooltip',
+        graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_{}.graphs()),
             """.format(group.lower(), group, group.lower(), group.lower()).strip() + "\n\n")
