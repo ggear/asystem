@@ -21,7 +21,7 @@
         legend_max=true,
         legend_current=true,
         legend_total=false,
-        legend_avg=true,
+        legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
@@ -75,7 +75,7 @@ from(bucket: "asystem")
         legend_max=true,
         legend_current=true,
         legend_total=false,
-        legend_avg=true,
+        legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
@@ -102,7 +102,7 @@ from(bucket: "asystem")
         legend_max=true,
         legend_current=true,
         legend_total=false,
-        legend_avg=true,
+        legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
@@ -129,7 +129,7 @@ from(bucket: "asystem")
         legend_max=true,
         legend_current=true,
         legend_total=false,
-        legend_avg=true,
+        legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
@@ -156,7 +156,7 @@ from(bucket: "asystem")
         legend_max=true,
         legend_current=true,
         legend_total=false,
-        legend_avg=true,
+        legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
@@ -183,7 +183,7 @@ from(bucket: "asystem")
         legend_max=true,
         legend_current=true,
         legend_total=false,
-        legend_avg=true,
+        legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
@@ -210,7 +210,7 @@ from(bucket: "asystem")
         legend_max=true,
         legend_current=true,
         legend_total=false,
-        legend_avg=true,
+        legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350

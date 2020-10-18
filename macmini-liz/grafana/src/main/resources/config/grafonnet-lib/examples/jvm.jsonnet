@@ -197,7 +197,7 @@ grafana.dashboard.new(
       legend_max=true,
       legend_current=true,
       legend_total=false,
-      legend_avg=true,
+      legend_avg=false,
       legend_alignAsTable=true,
       legend_sideWidth=200,
     )
@@ -237,7 +237,7 @@ grafana.dashboard.new(
       legend_max=true,
       legend_current=true,
       legend_total=false,
-      legend_avg=true,
+      legend_avg=false,
       legend_alignAsTable=true,
     )
     .addTarget(
@@ -284,7 +284,7 @@ grafana.dashboard.new(
       legend_max=true,
       legend_current=true,
       legend_total=false,
-      legend_avg=true,
+      legend_avg=false,
       legend_alignAsTable=true,
     )
     .addTarget(
@@ -331,7 +331,7 @@ grafana.dashboard.new(
       legend_max=true,
       legend_current=true,
       legend_total=false,
-      legend_avg=true,
+      legend_avg=false,
       legend_alignAsTable=true,
     )
     .addTarget(
@@ -357,7 +357,7 @@ grafana.dashboard.new(
       legend_max=true,
       legend_current=true,
       legend_total=false,
-      legend_avg=true,
+      legend_avg=false,
       legend_alignAsTable=true,
     )
     .addTarget(
@@ -389,7 +389,7 @@ grafana.dashboard.new(
       legend_max=true,
       legend_current=true,
       legend_total=false,
-      legend_avg=true,
+      legend_avg=false,
       legend_alignAsTable=true,
     )
     .addTarget(
@@ -443,7 +443,7 @@ grafana.dashboard.new(
       legend_max=true,
       legend_current=true,
       legend_total=false,
-      legend_avg=true,
+      legend_avg=false,
       legend_alignAsTable=true,
     )
     .addTarget(
