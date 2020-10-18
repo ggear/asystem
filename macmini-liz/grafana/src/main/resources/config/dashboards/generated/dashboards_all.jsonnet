@@ -1,7 +1,7 @@
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
-local graphs_servers = import 'graphs_servers.libsonnet';
-local graphs_network = import 'graphs_network.libsonnet';
+local graphs_servers = import '../graphs_servers.libsonnet';
+local graphs_network = import '../graphs_network.libsonnet';
 local graphs_conditions = import 'graphs_conditions.libsonnet';
 local graphs_water = import 'graphs_water.libsonnet';
 local graphs_electricity = import 'graphs_electricity.libsonnet';

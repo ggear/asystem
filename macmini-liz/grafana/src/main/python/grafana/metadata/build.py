@@ -12,10 +12,12 @@ sys.path.insert(0, DIR_MODULE_ROOT)
 
 from anode.metadata.build import load
 
+DIR_DASHBOARD_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards"
+
 if __name__ == "__main__":
     sensors = load()
     for group in sensors:
-        with open(DIR_MODULE_ROOT + "/../../main/resources/config/dashboards/graphs_{}.libsonnet".format(group.lower()), "w") as file:
+        with open(DIR_DASHBOARD_ROOT + "/generated/graphs_{}.libsonnet".format(group.lower()), "w") as file:
             file.write("""
 {
   graphs()::
@@ -27,7 +29,7 @@ if __name__ == "__main__":
     
     [
             """.strip() + "\n\n")
-            snip_path = file.name.replace(".libsonnet", ".snipsonnet")
+            snip_path = DIR_DASHBOARD_ROOT + "/" + os.path.basename(file.name).replace(".libsonnet", ".snipsonnet")
             if os.path.isfile(snip_path):
                 with open(snip_path, 'r') as snip_file:
                     file.write(snip_file.read())
@@ -70,12 +72,12 @@ from(bucket: "asystem")
 }
             """.strip() + "\n")
     print("Metadata script [grafana] graphs saved")
-    with open(DIR_MODULE_ROOT + "/../../main/resources/config/dashboards/dashboards_all.jsonnet", "w") as file:
+    with open(DIR_DASHBOARD_ROOT + "/generated/dashboards_all.jsonnet", "w") as file:
         file.write("""
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
-local graphs_servers = import 'graphs_servers.libsonnet';
-local graphs_network = import 'graphs_network.libsonnet';
+local graphs_servers = import '../graphs_servers.libsonnet';
+local graphs_network = import '../graphs_network.libsonnet';
         """.strip() + "\n")
         for group in sensors:
             file.write("""
