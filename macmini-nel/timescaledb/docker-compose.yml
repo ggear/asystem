@@ -7,8 +7,8 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_KEY}
+      - POSTGRES_USER=${TIMESCALEDB_USER}
+      - POSTGRES_PASSWORD=${TIMESCALEDB_KEY}
     volumes:
       - ${DATA_DIR}/data:/var/lib/postgresql/data
     ports:
