@@ -57,17 +57,16 @@ join(
     d1:
       from(bucket: "hosts")
         |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["common_name"] == "*.janeandgraham.com" and r["_field"] == "enddate" and not exists r.host)
+        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["common_name"] == "*.janeandgraham.com" and r["_field"] == "enddate" and r["verification"] == "valid" and not exists r.host)
         |> last()
     ,d2:
       from(bucket: "hosts")
         |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["common_name"] == "*.janeandgraham.com" and r["_field"] == "expiry" and not exists r.host)
+        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["common_name"] == "*.janeandgraham.com" and r["_field"] == "expiry" and r["verification"] == "valid" and not exists r.host)
   }, on: ["_time"])
-    |> map(fn: (r) => ({ r with _value: r._value_d2 / (24*60*60) }))
+    |> map(fn: (r) => ({ r with _value: r._value_d2 / (24 * 60 * 60) }))
     |> set(key: "name", value: "Expiry Days")
-    |> keep(columns: ["_time", "_value", "name"]
-)
+    |> keep(columns: ["_time", "_value", "name"])
       ')) { gridPos: { x: 20, y: 0, w: 4, h: 6 } },
 
       graph.new(

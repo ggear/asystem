@@ -1,0 +1,9 @@
+# TODO:
+- Pull.sh in root
+- Loop over deps to append host/ports to envs and profile
+- Add ports env and keys profile
+- Make deps agnostic of host
+- Add .env_base with host/port, add .env_dev, create .env’s in pull on demand
+- Add .profile_base to create .profile on demand
+
+- https://www.kostolansky.sk/posts/postgresql-advisory-locks/
