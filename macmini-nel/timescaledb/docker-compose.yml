@@ -1,0 +1,19 @@
+version: '3.7'
+services:
+  timescaledb:
+    container_name: timescaledb
+    image: timescale/timescaledb:2.0.0-rc2-pg12
+    init: true
+    restart: ${RESTART}
+    environment:
+      - TZ=Australia/Perth
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_KEY}
+    volumes:
+      - ${DATA_DIR}/data:/var/lib/postgresql/data
+    ports:
+      - 5433:5432
+    deploy:
+      resources:
+        limits:
+          memory: 4G
