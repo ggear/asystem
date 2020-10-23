@@ -1,0 +1,17 @@
+version: '3.7'
+services:
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v2.22.0
+    init: true
+    restart: ${RESTART}
+    environment:
+      - TZ=Australia/Perth
+    volumes:
+      - ${DATA_DIR}/data:/prometheus
+    ports:
+      - 9090:9090
+    deploy:
+      resources:
+        limits:
+          memory: 4G
