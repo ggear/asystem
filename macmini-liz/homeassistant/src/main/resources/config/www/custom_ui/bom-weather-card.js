@@ -6,7 +6,8 @@ console.info(
 // #####
 // ##### Get the LitElement and HTML classes from an already defined HA Lovelace class
 // #####
-var LitElement = LitElement || Object.getPrototypeOf(customElements.get("hui-view"));
+var LitElement = LitElement || Object.getPrototypeOf(customElements.get("hui-masonry-view") || customElements.get('hui-view'));
+
 var html = LitElement.prototype.html;
 
 // #####
