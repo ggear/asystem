@@ -31,6 +31,7 @@ influxdb:
   token: !env_var INFLUXDB_TOKEN
   organization: home
   bucket: asystem
+  precision: ns
   tags:
     instance: production
     source: home_assistant
