@@ -2,7 +2,7 @@ version: '3.7'
 services:
   homeassistant:
     container_name: homeassistant
-    image: homeassistant/home-assistant:0.115.0
+    image: homeassistant/home-assistant:0.116.4
     init: true
     restart: ${RESTART}
     environment:
