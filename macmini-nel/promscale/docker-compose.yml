@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+  promscale:
+    container_name: promscale
+    image: timescale/promscale:0.1.0
+    init: true
+    restart: ${RESTART}
+    environment:
+      - TZ=Australia/Perth
+    deploy:
+      resources:
+        limits:
+          memory: 4G
