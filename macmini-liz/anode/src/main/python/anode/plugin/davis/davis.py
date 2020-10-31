@@ -273,8 +273,8 @@ class Davis(Plugin):
                     data_derived_max=True,
                     data_derived_min=True
                 )
-                rain_conditions_roof_month = None if self.datum_value(dict_content["packet"], ["monthRain"]) is None else self.datum_value(
-                    dict_content["packet"]["monthRain"] * Decimal(2.54), factor=100)
+                rain_conditions_roof_month = None if self.datum_value(dict_content["packet"], ["monthRain"]) is None else \
+                    self.datum_value(dict_content["packet"]["monthRain"] * Decimal(2.54), factor=100)
                 self.datum_push(
                     "rain__water__month",
                     "current", "integral",
@@ -288,8 +288,8 @@ class Davis(Plugin):
                     data_bound_lower=0,
                     data_derived_min=True
                 )
-                rain_conditions_roof_month_min = self.datum_get(DATUM_QUEUE_MIN, "rain__conditions__roof", "integral", "cm", 1, "month", 1,
-                                                                "day")
+                rain_conditions_roof_month_min = \
+                    self.datum_get(DATUM_QUEUE_MIN, "rain__water__month", "integral", "cm", 1, "month", 1, "day")
                 rain_conditions_roof_day = rain_conditions_roof_month - rain_conditions_roof_month_min["data_value"] \
                     if rain_conditions_roof_month_min is not None else 0
                 self.datum_push(
