@@ -4,7 +4,7 @@ FROM image_base as image_package
 RUN apt-get update && apt-get -y --no-install-recommends install \
   pkg-config=0.29-4+b1 \
   build-essential=12.3 \
-  libfreetype6-dev=2.6.3-3.2+deb9u1 \
+  libfreetype6-dev=2.6.3-3.2+deb9u2 \
   libffi-dev=3.2.1-6 \
   libpng-dev=1.6.28-1+deb9u1 \
   tk=8.6.0+9 \

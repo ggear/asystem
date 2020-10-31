@@ -1,0 +1,17 @@
+version: '3.7'
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:6.0.0
+    init: true
+    restart: ${RESTART}
+    environment:
+      - TZ=Australia/Perth
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    ports:
+      - "2181:2181"
+    deploy:
+      resources:
+        limits:
+          memory: 4G

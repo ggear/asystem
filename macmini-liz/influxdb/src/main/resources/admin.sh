@@ -17,5 +17,6 @@ influx config create \
 influx export all -c influx_old | influx apply -c influx_new
 
 influx query -c influx_old 'from(bucket: "asystem") |> range(start: -3y)' --raw > /tmp/data.csv
+influx query -c influx_new 'from(bucket: "asystem") |> range(start: -1m)' --raw > /tmp/asystem_$(date +%s).csv
 
 influx write -c influx_new --format csv -b asystem -f /tmp/data.csv --skipRowOnError
