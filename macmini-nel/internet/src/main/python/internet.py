@@ -118,8 +118,8 @@ def ping():
         pings = []
         host_speedtest = None
         time_start = time_ms()
+        run_code_iteration = RUN_CODE_FAIL_NETWORK
         for i in xrange(PING_COUNT):
-            run_code_iteration = RUN_CODE_FAIL_NETWORK
             try:
                 speedtest = Speedtest()
                 speedtest.get_servers([host_speedtest_id])
