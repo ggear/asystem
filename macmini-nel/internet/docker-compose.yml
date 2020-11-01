@@ -2,7 +2,7 @@ version: '3.7'
 services:
   internet:
     container_name: internet
-    image: telegraf:1.16.0
+    image: internet:${VERSION}
     init: true
     restart: ${RESTART}
     environment:

@@ -1,1 +1,2 @@
+dnspython==1.16.0
 speedtest-cli==2.1.2
