@@ -226,7 +226,7 @@ def download():
             run_code = RUN_CODE_SUCCESS
         else:
             run_code = run_code_iteration
-        print(FORMAT_UPLOAD.format(
+        print(FORMAT_DOWNLOAD.format(
             "speedtest-" + host_speedtest_id,
             host_speedtest["name"].lower() if host_speedtest is not None else "",
             host_speedtest["host"].split(":")[0] if host_speedtest is not None else "",
