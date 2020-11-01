@@ -8,7 +8,7 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem
-RUN cat /asystem/reqs_run.txt | xargs -n 1 pip install --no-deps --prefix=/asystem/runtime && rm -rf /asystem/reqs_run.txt
+RUN cat /asystem/reqs_run.txt | xargs -n 1 pip install && rm -rf /asystem/reqs_run.txt
 COPY src/main/python/internet.py /asystem
 
 ENTRYPOINT ["/entrypoint.sh"]
