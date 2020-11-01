@@ -1,12 +1,10 @@
-FROM telegraf:1.16.0 as image_base
+FROM telegraf:1.16.0
 
-FROM image_base as image_package
 RUN apt-get update && apt-get -y --no-install-recommends install \
   python2.7=2.7.16-2+deb10u1 \
   python-pip=18.1-5 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-FROM image_package as image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem
