@@ -69,7 +69,7 @@ FORMAT_DOWNLOAD = \
     "download_mbps={},download_bytes={},run_code={},run_ms={} {}"
 FORMAT_LOOKUP = \
     "internet,metric=lookup,host_id={},host_location={},host_name={},resolver_ip={} " \
-    "ip={},run_code={},run_ms={} {}"
+    "ip=\"{}\",run_code={},run_ms={} {}"
 FORMAT_UPTIME = \
     "internet,metric=uptime,host_id={},host_location={},host_name={} " \
     "uptime_s={},metrics_failed={},run_code={},run_ms={} {}"
