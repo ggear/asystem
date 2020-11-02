@@ -41,7 +41,7 @@ RUN_CODE_SUCCESS = 0
 RUN_CODE_FAIL_CONFIG = 1
 RUN_CODE_FAIL_NETWORK = 2
 
-FORMAT_TEMPLATE = "internet,metric={},host_id={},{}run_code={},run_ms={} {}"
+FORMAT_TEMPLATE = "internet,metric={},host_id={}{}run_code={},run_ms={} {}"
 
 QUERY_UPTIME_LAST = """
 from(bucket: "hosts")
@@ -129,13 +129,13 @@ def ping():
             "ping",
             "speedtest-" + host_speedtest_id,
             "{} ping_min_ms={},ping_max_ms={},ping_med_ms={},pings_lost={},".format(
-                "host_location={},host_name={}".format(
+                ",host_location={},host_name={}".format(
                     host_speedtest["name"].lower(),
                     host_speedtest["host"].split(":")[0]) if host_speedtest is not None else "",
                 min(pings),
                 max(pings),
                 med(pings),
-                PING_COUNT - len(pings)) if len(pings) > 0 else "",
+                PING_COUNT - len(pings)) if len(pings) > 0 else " ",
             run_code_iteration,
             time_ms() - time_start,
             time_ns()))
@@ -170,11 +170,11 @@ def upload():
             "upload",
             "speedtest-" + host_speedtest_id,
             "{} upload_mbps={},upload_bytes={},".format(
-                "host_location={},host_name={}".format(
+                ",host_location={},host_name={}".format(
                     host_speedtest["name"].lower(),
                     host_speedtest["host"].split(":")[0]) if host_speedtest is not None else "",
                 results_speedtest["upload"] / 8000000,
-                results_speedtest["bytes_sent"]) if results_speedtest is not None else "",
+                results_speedtest["bytes_sent"]) if results_speedtest is not None else " ",
             run_code_iteration,
             time_ms() - time_start,
             time_ns()))
@@ -209,11 +209,11 @@ def download():
             "download",
             "speedtest-" + host_speedtest_id,
             "{} download_mbps={},download_bytes={},".format(
-                "host_location={},host_name={}".format(
+                ",host_location={},host_name={}".format(
                     host_speedtest["name"].lower(),
                     host_speedtest["host"].split(":")[0]) if host_speedtest is not None else "",
                 results_speedtest["download"] / 8000000,
-                results_speedtest["bytes_received"]) if results_speedtest is not None else "",
+                results_speedtest["bytes_received"]) if results_speedtest is not None else " ",
             run_code_iteration,
             time_ms() - time_start,
             time_ns()))
@@ -238,12 +238,12 @@ def lookup():
     print(FORMAT_TEMPLATE.format(
         "lookup",
         HOST_INTERNET_INTERFACE_ID,
-        "host_location={},host_name={},host_resolver={} ip=\"{}\",".format(
+        ",host_location={},host_name={},host_resolver={}{}".format(
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
             "127.0.0.1",
-            home_host_ip
-        ) if home_host_ip is not None else "",
+            " ip=\"{}\",".format(
+                home_host_ip) if home_host_ip is not None else " "),
         run_code_iteration,
         time_ms() - time_start,
         time_ns()))
@@ -267,12 +267,13 @@ def lookup():
         print(FORMAT_TEMPLATE.format(
             "lookup",
             HOST_INTERNET_INTERFACE_ID,
-            "host_location={},host_name={},host_resolver={} ip=\"{}\",".format(
+            ",host_location={},host_name={},host_resolver={}{}".format(
                 HOST_INTERNET_LOCATION,
                 HOST_HOME_NAME,
                 home_host_resolver_ip,
-                home_host_response.address
-            ) if (home_host_response is not None and home_host_response.address is not None and home_host_response.address != "") else "",
+                " ip=\"{}\",".format(
+                    home_host_response.address) if (home_host_response is not None and
+                                                    home_host_response.address is not None and home_host_response.address != "") else " "),
             run_code_iteration,
             time_ms() - time_start,
             time_ns()))
@@ -297,10 +298,10 @@ if __name__ == "__main__":
         up_code += run_code_all[-1]
 
         # TODO: Temporarily disable upload/download speed tests
-        run_code_all.append(upload())
-        up_code += run_code_all[-1]
-        run_code_all.append(download())
-        up_code += run_code_all[-1]
+        # run_code_all.append(upload())
+        # up_code += run_code_all[-1]
+        # run_code_all.append(download())
+        # up_code += run_code_all[-1]
 
         run_code_all.append(lookup())
         run_code_uptime = RUN_CODE_FAIL_CONFIG
@@ -322,11 +323,11 @@ if __name__ == "__main__":
         print(FORMAT_TEMPLATE.format(
             "uptime",
             HOST_INTERNET_INTERFACE_ID,
-            "host_location={},host_name={} {}metrics_suceeded={},metrics_failed={},".format(
+            ",host_location={},host_name={}{}metrics_suceeded={},metrics_failed={},".format(
                 HOST_INTERNET_LOCATION,
                 HOST_HOME_NAME,
-                "uptime_s={},".format(
-                    uptime_new) if uptime_new is not None else "",
+                " uptime_s={},".format(
+                    uptime_new) if uptime_new is not None else " ",
                 run_code_all.count(0) + (1 if run_code_uptime == RUN_CODE_SUCCESS else 0),
                 len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)),
             run_code_uptime,
