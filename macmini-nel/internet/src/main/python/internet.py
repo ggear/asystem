@@ -26,7 +26,7 @@ DEFAULT_INFLUXDB_PORT = "8086"
 
 HOST_HOME_NAME = "home.janeandgraham.com"
 
-HOST_SPEEDTEST_PING_IDS = ["6359", "4153"]
+HOST_SPEEDTEST_PING_IDS = ["6359p", "4153"]
 HOST_SPEEDTEST_THROUGHPUT_IDS = ["2627", "30932", "7581"]
 
 RESOLVER_IPS = ["192.168.1.1", "162.159.44.190", "1.1.1.1", "8.8.8.8"]
@@ -131,7 +131,7 @@ def ping():
                     time_start += PING_SLEEP_SECONDS * 1000
             except Exception as exception:
                 print("Error processing speedtest ping [{}{}]"
-                      .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception), file=sys.stderr))
+                      .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
                 run_code_iteration = RUN_CODE_FAIL_CONFIG
         run_code_iteration = RUN_CODE_SUCCESS \
             if (len(pings) > 0 and max(pings) > 0) else run_code_iteration
@@ -168,7 +168,7 @@ def upload():
             results_speedtest = speedtest.results.dict()
         except Exception as exception:
             print("Error processing speedtest upload [{}{}]"
-                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception), file=sys.stderr))
+                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
             run_code_iteration = RUN_CODE_FAIL_CONFIG
         run_code_iteration = RUN_CODE_SUCCESS \
             if (results_speedtest is not None and "upload" in results_speedtest and results_speedtest["upload"] > 0) \
@@ -204,7 +204,7 @@ def download():
             results_speedtest = speedtest.results.dict()
         except Exception as exception:
             print("Error processing speedtest download [{}{}]"
-                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception), file=sys.stderr))
+                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
             run_code_iteration = RUN_CODE_FAIL_CONFIG
         run_code_iteration = RUN_CODE_SUCCESS \
             if (results_speedtest is not None and "download" in results_speedtest and results_speedtest["download"] > 0) \
@@ -235,7 +235,7 @@ def lookup():
         home_host_ip = gethostbyname(HOST_HOME_NAME)
     except Exception as exception:
         print("Error processing DNS lookup [{}{}]"
-              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception), file=sys.stderr))
+              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
     if home_host_ip is not None and home_host_ip != "":
         run_code_iteration = RUN_CODE_SUCCESS
         run_response_count += 1
@@ -261,7 +261,7 @@ def lookup():
                 home_host_response = home_host_responses[0]
         except Exception as exception:
             print("Error processing DNS lookup [{}{}]"
-                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception), file=sys.stderr))
+                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
         if home_host_response is not None and home_host_response.address is not None and home_host_response.address != "":
             run_code_iteration = RUN_CODE_SUCCESS
             run_response_count += 1
@@ -288,7 +288,7 @@ if __name__ == "__main__":
             profile = load_profile(profile_file)
     except Exception as exception:
         print("Error processing profile [{}] [{}{}]"
-              .format(profile_path, type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception), file=sys.stderr))
+              .format(profile_path, type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
     if profile is not None:
         run_code_all = []
         up_code = 0
@@ -316,7 +316,7 @@ if __name__ == "__main__":
                 uptime_new = int((uptime_now - uptime_rows[0][0]).total_seconds()) + int(uptime_rows[0][1])
         except Exception as exception:
             print("Error processing uptime [{}{}]"
-                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception), file=sys.stderr))
+                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
         if uptime_new is not None and uptime_epoch is not None:
             run_code_uptime = RUN_CODE_SUCCESS
         print(FORMAT_UPTIME.format(
