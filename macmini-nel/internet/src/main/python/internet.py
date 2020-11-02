@@ -295,10 +295,12 @@ if __name__ == "__main__":
 
         run_code_all.append(ping())
         up_code += run_code_all[-1]
-        run_code_all.append(upload())
-        up_code += run_code_all[-1]
-        run_code_all.append(download())
-        up_code += run_code_all[-1]
+
+        # TODO: Temporaliy disable upload/download speed tests
+        # run_code_all.append(upload())
+        # up_code += run_code_all[-1]
+        # run_code_all.append(download())
+        # up_code += run_code_all[-1]
 
         run_code_all.append(lookup())
         run_code_uptime = RUN_CODE_FAIL_CONFIG
