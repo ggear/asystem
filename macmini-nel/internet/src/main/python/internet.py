@@ -1,11 +1,3 @@
-# TODO:
-# - Test for all exceptions, wrong codes, pull ethernet, pull modem etc
-# - Add InfluxDB logic (throughput echo or new)
-# - Add unit tests against run codes, happy paths
-# - Develop grafana graphs
-# - Add a query to get public eth8 address
-# - Add certifcate tests
-
 from __future__ import print_function
 
 import os
@@ -19,6 +11,14 @@ from dateutil.parser import parse
 from dns.resolver import Resolver
 from requests import post
 from speedtest import Speedtest
+
+# TODO:
+# - Test for all exceptions, wrong codes, pull ethernet, pull modem etc
+# - Add InfluxDB logic (throughput echo or new)
+# - Add unit tests against run codes, happy paths
+# - Develop grafana graphs
+# - Add a query to get public eth8 address
+# - Add certifcate tests
 
 DEFAULT_PROFILE_PATH = "../resources/config/.profile"
 DEFAULT_INFLUXDB_HOST = "192.168.1.10"
