@@ -1,6 +1,9 @@
 from __future__ import print_function
 
+import datetime
 import os
+import socket
+import ssl
 import sys
 import time
 from datetime import datetime
@@ -28,10 +31,13 @@ HOST_INTERNET_INTERFACE_ID = "udm-rack-eth8"
 
 PING_COUNT = 3
 PING_SLEEP_SECONDS = 1
+SERVICE_TIMEOUT_SECONDS = 2
 
 RUN_CODE_SUCCESS = 0
 RUN_CODE_FAIL_CONFIG = 1
 RUN_CODE_FAIL_NETWORK = 2
+
+DATE_TLS = r'%b %d %H:%M:%S %Y %Z'
 
 FORMAT_TEMPLATE = "internet,metric={},host_id={}{}run_code={},run_ms={} {}"
 
@@ -99,7 +105,7 @@ def query(env, flux):
     return rows
 
 
-def ping():
+def ping(env):
     run_code = RUN_CODE_FAIL_CONFIG
     for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS + HOST_SPEEDTEST_PING_IDS:
         pings = []
@@ -145,7 +151,7 @@ def ping():
     return run_code
 
 
-def upload():
+def upload(env):
     run_code = RUN_CODE_FAIL_CONFIG
     for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS:
         host_speedtest = None
@@ -186,7 +192,7 @@ def upload():
     return run_code
 
 
-def download():
+def download(env):
     run_code = RUN_CODE_FAIL_CONFIG
     for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS:
         host_speedtest = None
@@ -228,9 +234,9 @@ def download():
 
 
 def lookup(env):
+    time_start = time_ms()
     run_replies = set()
     run_reply_count = 0
-    time_start = time_ms()
     home_host_ip = None
     run_code_iteration = RUN_CODE_FAIL_NETWORK
     time_start_iteration = time_ms()
@@ -288,7 +294,7 @@ def lookup(env):
         try:
             home_host_resolver = Resolver()
             home_host_resolver.nameservers = [home_host_resolver_ip]
-            home_host_replies = home_host_resolver.query(HOST_HOME_NAME, lifetime=2)
+            home_host_replies = home_host_resolver.query(HOST_HOME_NAME, lifetime=SERVICE_TIMEOUT_SECONDS)
             if home_host_replies is not None and len(home_host_replies) == 1:
                 home_host_reply = home_host_replies[0]
         except Exception as exception:
@@ -343,6 +349,52 @@ def lookup(env):
     return run_code
 
 
+def certficate(env):
+    time_start = time_ms()
+    run_code = RUN_CODE_FAIL_CONFIG
+    uptime_new = 0
+    uptime_now = datetime.now(pytz.utc)
+    uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
+    home_host_certificate_expiry = None
+    try:
+        home_host_connection = ssl.create_default_context().wrap_socket(socket.socket(socket.AF_INET), server_hostname=HOST_HOME_NAME)
+        home_host_connection.settimeout(SERVICE_TIMEOUT_SECONDS)
+        home_host_connection.connect((HOST_HOME_NAME, 443))
+        home_host_certificate_expiry = \
+            int((datetime.strptime(home_host_connection.getpeercert()['notAfter'], DATE_TLS) - datetime.now()).total_seconds())
+    except Exception as exception:
+        print("Error processing TLS certificate [{}{}]"
+              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+        run_code = RUN_CODE_FAIL_NETWORK
+    if home_host_certificate_expiry is not None and home_host_certificate_expiry > 600:
+        run_code = RUN_CODE_SUCCESS
+    try:
+        uptime_rows = query(profile, QUERY_UPTIME.format("certifcate"))
+        if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or run_code > RUN_CODE_SUCCESS:
+            uptime_new = 0
+        else:
+            uptime_new = int((uptime_now - uptime_rows[0][0]).total_seconds())
+    except Exception as exception:
+        print("Error processing TLS certificate [{}{}]"
+              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+        run_code = RUN_CODE_FAIL_CONFIG
+    print(FORMAT_TEMPLATE.format(
+        "certificate",
+        HOST_INTERNET_INTERFACE_ID,
+        ",host_location={},host_name={}{}".format(
+            HOST_INTERNET_LOCATION,
+            HOST_HOME_NAME,
+            " expiry_s={},uptime_s={},".format(
+                home_host_certificate_expiry if home_host_certificate_expiry is not None else 0,
+                uptime_new
+            )
+        ),
+        run_code,
+        time_ms() - time_start,
+        uptime_epoch))
+    return run_code
+
+
 if __name__ == "__main__":
     time_start_all = time_ms()
     profile_path = DEFAULT_PROFILE_PATH if len(sys.argv) == 1 else sys.argv[1]
@@ -357,16 +409,21 @@ if __name__ == "__main__":
         run_code_all = []
         up_code = 0
 
-        run_code_all.append(ping())
+        run_code_all.append(ping(profile))
         up_code += run_code_all[-1]
 
         # TODO: Temporarily disable upload/download speed tests
-        # run_code_all.append(upload())
+        # run_code_all.append(upload(profile))
         # up_code += run_code_all[-1]
-        # run_code_all.append(download())
+        # run_code_all.append(download(profile))
         # up_code += run_code_all[-1]
 
         run_code_all.append(lookup(profile))
+        up_code += run_code_all[-1]
+
+        run_code_all.append(certficate(profile))
+        up_code += run_code_all[-1]
+
         run_code_uptime = RUN_CODE_FAIL_CONFIG
         uptime_new = None
         uptime_now = datetime.now(pytz.utc)
