@@ -36,6 +36,7 @@ SERVICE_TIMEOUT_SECONDS = 2
 RUN_CODE_SUCCESS = 0
 RUN_CODE_FAIL_CONFIG = 1
 RUN_CODE_FAIL_NETWORK = 2
+RUN_CODE_FAIL_ZEROED = 3
 
 DATE_TLS = r'%b %d %H:%M:%S %Y %Z'
 
@@ -64,7 +65,7 @@ QUERY_LAST = """
 from(bucket: "hosts")
   |> range(start: -2d, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "internet")
-  |> filter(fn: (r) => r["_field"] == "{}")
+  |> filter(fn: (r) => {})
   |> filter(fn: (r) => r["metric"] == "{}")
   |> keep(columns: ["_time", "_value", "metric", "host_id", "host_name", "host_location"])
   |> last()
@@ -445,14 +446,23 @@ if __name__ == "__main__":
                   .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
         if uptime_new is not None and uptime_epoch is not None:
             run_code_uptime = RUN_CODE_SUCCESS
-
-        # for ping in query(profile, QUERY_LAST.format("ping_med_ms", "ping")):
-        #     print(ping)
-        # for upload in query(profile, QUERY_LAST.format("upload_mbps", "upload")):
-        #     print(upload)
-        # for download in query(profile, QUERY_LAST.format("download_mbps", "download")):
-        #     print(download)
-
+        if up_code_network > RUN_CODE_SUCCESS:
+            zeros = {
+                "ping": [""" r["_field"] == "ping_min_ms" """, ",host_location={},host_name={} ping_min_ms=0,ping_max_ms=0,ping_med_ms=0,"],
+                "upload": [""" r["_field"] == "upload_mbps" """, ",host_location={},host_name={} upload_mbps=0,upload_bytes=0,"],
+                "download": [""" r["_field"] == "download_mbps" """, ",host_location={},host_name={} download_mbps=0,download_bytes=0,"],
+            }
+            for zero in zeros:
+                time_start = time_ms()
+                for zero_reply in query(profile, QUERY_LAST.format(zeros[zero][0], zero)):
+                    FORMAT_TEMPLATE = "internet,metric={},host_id={}{}run_code={},run_ms={} {}"
+                    print(FORMAT_TEMPLATE.format(
+                        zero,
+                        zero_reply[2],
+                        zeros[zero][1].format(zero_reply[3], zero_reply[4]),
+                        RUN_CODE_FAIL_ZEROED,
+                        time_ms() - time_start,
+                        time_ns()))
         print(FORMAT_TEMPLATE.format(
             "network",
             HOST_INTERNET_INTERFACE_ID,
