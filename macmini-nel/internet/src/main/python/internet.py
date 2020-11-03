@@ -189,7 +189,7 @@ def upload(env):
         except Exception as exception:
             print("Error processing speedtest upload [{}{}]"
                   .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
-            run_code = RUN_CODE_FAIL_CONFIG            
+            run_code = RUN_CODE_FAIL_CONFIG
     for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS:
         if host_speedtest_id not in run_host_ids:
             host_speedtest = None
