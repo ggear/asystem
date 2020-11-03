@@ -349,7 +349,7 @@ def lookup(env):
     return run_code
 
 
-def certficate(env):
+def certificate(env):
     time_start = time_ms()
     run_code = RUN_CODE_FAIL_CONFIG
     home_host_certificate_expiry = None
@@ -421,7 +421,7 @@ if __name__ == "__main__":
         # run_code_all.append(lookup(profile))
         # up_code += run_code_all[-1]
 
-        run_code_all.append(certficate(profile))
+        run_code_all.append(certificate(profile))
         up_code += run_code_all[-1]
 
         run_code_uptime = RUN_CODE_FAIL_CONFIG
