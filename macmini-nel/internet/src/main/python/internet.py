@@ -324,7 +324,7 @@ def lookup(env):
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
         uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "lookup"))
-        if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code > RUN_CODE_SUCCESS:
+        if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
             uptime_delta = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
     except Exception as exception:
         print("Error processing DNS lookup uptime [{}{}]"
@@ -369,7 +369,7 @@ def certificate(env):
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
         uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "certificate"))
-        if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code > RUN_CODE_SUCCESS:
+        if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
             uptime_delta = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
     except Exception as exception:
         print("Error processing TLS certificate [{}{}]"
@@ -404,10 +404,10 @@ if __name__ == "__main__":
               .format(profile_path, type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
     if profile is not None:
         run_code_all = []
-        up_code = 0
+        up_code_network = RUN_CODE_SUCCESS
 
-        run_code_all.append(ping(profile))
-        up_code += run_code_all[-1]
+        # run_code_all.append(ping(profile))
+        # up_code_network += run_code_all[-1]
 
         # TODO: Temporarily disable upload/download speed tests
         # run_code_all.append(upload(profile))
@@ -415,7 +415,7 @@ if __name__ == "__main__":
         # run_code_all.append(download(profile))
         # up_code += run_code_all[-1]
 
-        run_code_all.append(lookup(profile))
+        # run_code_all.append(lookup(profile))
         run_code_all.append(certificate(profile))
 
         run_code_uptime = RUN_CODE_FAIL_CONFIG
@@ -424,8 +424,8 @@ if __name__ == "__main__":
         uptime_now = datetime.now(pytz.utc)
         uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
         try:
-            uptime_rows = query(profile, QUERY_UPTIME.format("uptime_s", "uptime"))
-            if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or up_code > RUN_CODE_SUCCESS:
+            uptime_rows = query(profile, QUERY_UPTIME.format("uptime_s", "network"))
+            if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or up_code_network > RUN_CODE_SUCCESS:
                 uptime_new = 0
             else:
                 uptime_delta = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
@@ -436,7 +436,7 @@ if __name__ == "__main__":
         if uptime_new is not None and uptime_epoch is not None:
             run_code_uptime = RUN_CODE_SUCCESS
         print(FORMAT_TEMPLATE.format(
-            "uptime",
+            "network",
             HOST_INTERNET_INTERFACE_ID,
             ",host_location={},host_name={}{}metrics_suceeded={},metrics_failed={},".format(
                 HOST_INTERNET_LOCATION,
