@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import datetime
-import math
 import os
 import socket
 import ssl
@@ -44,7 +43,7 @@ FORMAT_TEMPLATE = "internet,metric={},host_id={}{}run_code={},run_ms={} {}"
 
 QUERY_IP = """
 from(bucket: "hosts")
-  |> range(start: -2h, stop: now())
+  |> range(start: -10m, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "ip")
   |> keep(columns: ["_value", "_time"])
@@ -53,7 +52,7 @@ from(bucket: "hosts")
 
 QUERY_UPTIME = """
 from(bucket: "hosts")
-  |> range(start: -2h, stop: now())
+  |> range(start: -10m, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "{}")
   |> filter(fn: (r) => r["metric"] == "{}")
@@ -61,6 +60,14 @@ from(bucket: "hosts")
   |> last()
 """
 
+QUERY_LAST = """
+from(bucket: "hosts")
+  |> range(start: -10m, stop: now())
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["metric"] == "{}")
+  |> keep(columns: ["_time", "_value", "metric", "host_id", "host_name", "host_location"])
+  |> last()
+"""
 
 def load_profile(profile_file):
     profile = {}
@@ -101,7 +108,7 @@ def query(env, flux):
         }, data=flux)
     rows = []
     for row in response.content.strip().split("\n")[1:]:
-        cols = row.split(",")
+        cols = row.strip().split(",")
         rows.append([parse(cols[3])] + cols[4:])
     return rows
 
@@ -410,10 +417,10 @@ if __name__ == "__main__":
         up_code_network += run_code_all[-1]
 
         # TODO: Temporarily disable upload/download speed tests
-        # run_code_all.append(upload(profile))
-        # up_code += run_code_all[-1]
-        # run_code_all.append(download(profile))
-        # up_code += run_code_all[-1]
+        run_code_all.append(upload(profile))
+        up_code_network += run_code_all[-1]
+        run_code_all.append(download(profile))
+        up_code_network += run_code_all[-1]
 
         run_code_all.append(lookup(profile))
         run_code_all.append(certificate(profile))
@@ -435,6 +442,11 @@ if __name__ == "__main__":
                   .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
         if uptime_new is not None and uptime_epoch is not None:
             run_code_uptime = RUN_CODE_SUCCESS
+
+
+        # for ping in query(profile, QUERY_LAST.format("ping")):
+        #     print(ping)
+
         print(FORMAT_TEMPLATE.format(
             "network",
             HOST_INTERNET_INTERFACE_ID,
