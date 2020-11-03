@@ -325,7 +325,7 @@ def lookup(env):
     try:
         uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "lookup"))
         if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
-            uptime_delta = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
+            uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
     except Exception as exception:
         print("Error processing DNS lookup uptime [{}{}]"
               .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
@@ -370,7 +370,7 @@ def certificate(env):
     try:
         uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "certificate"))
         if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
-            uptime_delta = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
+            uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
     except Exception as exception:
         print("Error processing TLS certificate [{}{}]"
               .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
@@ -428,8 +428,8 @@ if __name__ == "__main__":
             if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or up_code_network > RUN_CODE_SUCCESS:
                 uptime_new = 0
             else:
-                uptime_delta = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
-                uptime_new = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds()) + int(uptime_rows[0][1])
+                uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
+                uptime_new = int(round((uptime_now - uptime_rows[0][0]).total_seconds()) + int(uptime_rows[0][1]))
         except Exception as exception:
             print("Error processing uptime [{}{}]"
                   .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
