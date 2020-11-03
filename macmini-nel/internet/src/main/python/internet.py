@@ -352,9 +352,6 @@ def lookup(env):
 def certficate(env):
     time_start = time_ms()
     run_code = RUN_CODE_FAIL_CONFIG
-    uptime_new = 0
-    uptime_now = datetime.now(pytz.utc)
-    uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     home_host_certificate_expiry = None
     try:
         home_host_connection = ssl.create_default_context().wrap_socket(socket.socket(socket.AF_INET), server_hostname=HOST_HOME_NAME)
@@ -368,8 +365,11 @@ def certficate(env):
         run_code = RUN_CODE_FAIL_NETWORK
     if home_host_certificate_expiry is not None and home_host_certificate_expiry > 600:
         run_code = RUN_CODE_SUCCESS
+    uptime_new = 0
+    uptime_now = datetime.now(pytz.utc)
+    uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
-        uptime_rows = query(profile, QUERY_UPTIME.format("certifcate"))
+        uptime_rows = query(profile, QUERY_UPTIME.format("certificate"))
         if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or run_code > RUN_CODE_SUCCESS:
             uptime_new = 0
         else:
