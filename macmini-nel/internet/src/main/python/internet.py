@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import datetime
+import math
 import os
 import socket
 import ssl
@@ -8,7 +9,6 @@ import sys
 import time
 from datetime import datetime
 from socket import gethostbyname
-import math
 
 import pytz
 from dateutil.parser import parse
@@ -319,15 +319,13 @@ def lookup(env):
             time_ms() - time_start_iteration,
             time_ns()))
     run_code = RUN_CODE_SUCCESS if (run_reply_count == len(RESOLVER_IPS) + 2 and len(run_replies) == 1) else RUN_CODE_FAIL_NETWORK
-    uptime_new = 0
+    uptime_delta = 0
     uptime_now = datetime.now(pytz.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
         uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "lookup"))
-        if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or run_code > RUN_CODE_SUCCESS:
-            uptime_new = 0
-        else:
-            uptime_new = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
+        if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code > RUN_CODE_SUCCESS:
+            uptime_delta = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
     except Exception as exception:
         print("Error processing DNS lookup uptime [{}{}]"
               .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
@@ -341,7 +339,7 @@ def lookup(env):
             "*.*.*.*",
             " ip=\"{}\",uptime_delta_s={},".format(
                 run_replies.pop() if run_code == RUN_CODE_SUCCESS else "DNS not in sync",
-                uptime_new
+                uptime_delta
             )
         ),
         run_code,
@@ -366,15 +364,13 @@ def certificate(env):
         run_code = RUN_CODE_FAIL_NETWORK
     if home_host_certificate_expiry is not None and home_host_certificate_expiry > 600:
         run_code = RUN_CODE_SUCCESS
-    uptime_new = 0
+    uptime_delta = 0
     uptime_now = datetime.now(pytz.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
         uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "certificate"))
-        if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or run_code > RUN_CODE_SUCCESS:
-            uptime_new = 0
-        else:
-            uptime_new = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
+        if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code > RUN_CODE_SUCCESS:
+            uptime_delta = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
     except Exception as exception:
         print("Error processing TLS certificate [{}{}]"
               .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
@@ -387,7 +383,7 @@ def certificate(env):
             HOST_HOME_NAME,
             " expiry_s={},uptime_delta_s={},".format(
                 home_host_certificate_expiry if home_host_certificate_expiry is not None else 0,
-                uptime_new
+                uptime_delta
             )
         ),
         run_code,
@@ -420,12 +416,10 @@ if __name__ == "__main__":
         # up_code += run_code_all[-1]
 
         run_code_all.append(lookup(profile))
-        up_code += run_code_all[-1]
-
         run_code_all.append(certificate(profile))
-        up_code += run_code_all[-1]
 
         run_code_uptime = RUN_CODE_FAIL_CONFIG
+        uptime_delta = 0
         uptime_new = None
         uptime_now = datetime.now(pytz.utc)
         uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
@@ -434,6 +428,7 @@ if __name__ == "__main__":
             if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or up_code > RUN_CODE_SUCCESS:
                 uptime_new = 0
             else:
+                uptime_delta = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds())
                 uptime_new = math.ceil((uptime_now - uptime_rows[0][0]).total_seconds()) + int(uptime_rows[0][1])
         except Exception as exception:
             print("Error processing uptime [{}{}]"
@@ -446,9 +441,12 @@ if __name__ == "__main__":
             ",host_location={},host_name={}{}metrics_suceeded={},metrics_failed={},".format(
                 HOST_INTERNET_LOCATION,
                 HOST_HOME_NAME,
-                " uptime_s={},".format(
-                    uptime_new
-                ) if uptime_new is not None else " ",
+                " uptime_delta_s={}{}".format(
+                    uptime_delta,
+                    ",uptime_s={},".format(
+                        uptime_new
+                    ) if uptime_new is not None else ","
+                ),
                 run_code_all.count(0) + (1 if run_code_uptime == RUN_CODE_SUCCESS else 0),
                 len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)),
             run_code_uptime,
