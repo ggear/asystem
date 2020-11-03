@@ -55,7 +55,7 @@ QUERY_UPTIME = """
 from(bucket: "hosts")
   |> range(start: -2h, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "internet")
-  |> filter(fn: (r) => r["_field"] == "uptime_s")
+  |> filter(fn: (r) => r["_field"] == "{}")
   |> filter(fn: (r) => r["metric"] == "{}")
   |> keep(columns: ["_value", "_time"])
   |> last()
@@ -323,7 +323,7 @@ def lookup(env):
     uptime_now = datetime.now(pytz.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
-        uptime_rows = query(profile, QUERY_UPTIME.format("lookup"))
+        uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "lookup"))
         if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or run_code > RUN_CODE_SUCCESS:
             uptime_new = 0
         else:
@@ -339,7 +339,7 @@ def lookup(env):
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
             "*.*.*.*",
-            " ip=\"{}\",uptime_s={},".format(
+            " ip=\"{}\",uptime_delta_s={},".format(
                 run_replies.pop() if run_code == RUN_CODE_SUCCESS else "DNS not in sync",
                 uptime_new
             )
@@ -370,7 +370,7 @@ def certificate(env):
     uptime_now = datetime.now(pytz.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
-        uptime_rows = query(profile, QUERY_UPTIME.format("certificate"))
+        uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "certificate"))
         if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or run_code > RUN_CODE_SUCCESS:
             uptime_new = 0
         else:
@@ -385,7 +385,7 @@ def certificate(env):
         ",host_location={},host_name={}{}".format(
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
-            " expiry_s={},uptime_s={},".format(
+            " expiry_s={},uptime_delta_s={},".format(
                 home_host_certificate_expiry if home_host_certificate_expiry is not None else 0,
                 uptime_new
             )
@@ -430,7 +430,7 @@ if __name__ == "__main__":
         uptime_now = datetime.now(pytz.utc)
         uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
         try:
-            uptime_rows = query(profile, QUERY_UPTIME.format("uptime"))
+            uptime_rows = query(profile, QUERY_UPTIME.format("uptime_s", "uptime"))
             if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or up_code > RUN_CODE_SUCCESS:
                 uptime_new = 0
             else:
