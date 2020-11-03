@@ -12,22 +12,14 @@ from dns.resolver import Resolver
 from requests import post
 from speedtest import Speedtest
 
-# TODO:
-# - Test for all exceptions, wrong codes, pull ethernet, pull modem etc
-# - Add InfluxDB logic (throughput echo or new)
-# - Add unit tests against run codes, happy paths
-# - Develop grafana graphs
-# - Add a query to get public eth8 address
-# - Add certifcate tests
-
 DEFAULT_PROFILE_PATH = "../resources/config/.profile"
 DEFAULT_INFLUXDB_HOST = "192.168.1.10"
 DEFAULT_INFLUXDB_PORT = "8086"
 
 HOST_HOME_NAME = "home.janeandgraham.com"
 
-HOST_SPEEDTEST_PING_IDS = ["6359", "4153"]
-HOST_SPEEDTEST_THROUGHPUT_IDS = ["2627", "30932", "7581"]
+HOST_SPEEDTEST_PING_IDS = ["30932", "7581"]
+HOST_SPEEDTEST_THROUGHPUT_IDS = ["2627"]
 
 RESOLVER_IPS = ["192.168.1.1", "162.159.44.190", "1.1.1.1", "8.8.8.8"]
 
@@ -42,6 +34,14 @@ RUN_CODE_FAIL_CONFIG = 1
 RUN_CODE_FAIL_NETWORK = 2
 
 FORMAT_TEMPLATE = "internet,metric={},host_id={}{}run_code={},run_ms={} {}"
+
+QUERY_IP_LAST = """
+from(bucket: "hosts")
+  |> range(start: -1h, stop: now())
+  |> filter(fn: (r) => r["_measurement"] == "usg" and r["_field"] == "ip")
+  |> keep(columns: ["_value", "_time"])
+  |> last()
+"""
 
 QUERY_UPTIME_LAST = """
 from(bucket: "hosts")
@@ -131,11 +131,13 @@ def ping():
             "{} ping_min_ms={},ping_max_ms={},ping_med_ms={},pings_lost={},".format(
                 ",host_location={},host_name={}".format(
                     host_speedtest["name"].lower(),
-                    host_speedtest["host"].split(":")[0]) if host_speedtest is not None else "",
+                    host_speedtest["host"].split(":")[0]
+                ) if host_speedtest is not None else "",
                 min(pings),
                 max(pings),
                 med(pings),
-                PING_COUNT - len(pings)) if len(pings) > 0 else " ",
+                PING_COUNT - len(pings)
+            ) if len(pings) > 0 else " ",
             run_code_iteration,
             time_ms() - time_start,
             time_ns()))
@@ -172,9 +174,11 @@ def upload():
             "{} upload_mbps={},upload_bytes={},".format(
                 ",host_location={},host_name={}".format(
                     host_speedtest["name"].lower(),
-                    host_speedtest["host"].split(":")[0]) if host_speedtest is not None else "",
+                    host_speedtest["host"].split(":")[0]
+                ) if host_speedtest is not None else "",
                 results_speedtest["upload"] / 8000000,
-                results_speedtest["bytes_sent"]) if results_speedtest is not None else " ",
+                results_speedtest["bytes_sent"]
+            ) if results_speedtest is not None else " ",
             run_code_iteration,
             time_ms() - time_start,
             time_ns()))
@@ -211,21 +215,49 @@ def download():
             "{} download_mbps={},download_bytes={},".format(
                 ",host_location={},host_name={}".format(
                     host_speedtest["name"].lower(),
-                    host_speedtest["host"].split(":")[0]) if host_speedtest is not None else "",
+                    host_speedtest["host"].split(":")[0]
+                ) if host_speedtest is not None else "",
                 results_speedtest["download"] / 8000000,
-                results_speedtest["bytes_received"]) if results_speedtest is not None else " ",
+                results_speedtest["bytes_received"]
+            ) if results_speedtest is not None else " ",
             run_code_iteration,
             time_ms() - time_start,
             time_ns()))
     return run_code
 
 
-def lookup():
-    run_responses = set()
-    run_response_count = 0
+def lookup(env):
+    run_replies = set()
+    run_reply_count = 0
+    time_start = time_ms()
     home_host_ip = None
     run_code_iteration = RUN_CODE_FAIL_NETWORK
-    time_start = time_ms()
+    time_start_iteration = time_ms()
+    try:
+        home_host_ip = query(env, QUERY_IP_LAST)
+    except Exception as exception:
+        print("Error processing DNS lookup [{}{}]"
+              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+    if home_host_ip is not None and len(home_host_ip) > 0 and len(home_host_ip[0]) > 1 and home_host_ip[0][1] != "":
+        run_code_iteration = RUN_CODE_SUCCESS
+        run_reply_count += 1
+        run_replies.add(home_host_ip[0][1])
+    print(FORMAT_TEMPLATE.format(
+        "lookup",
+        HOST_INTERNET_INTERFACE_ID,
+        ",host_location={},host_name={},host_resolver={}{}".format(
+            HOST_INTERNET_LOCATION,
+            HOST_HOME_NAME,
+            HOST_INTERNET_INTERFACE_ID,
+            " ip=\"{}\",".format(
+                home_host_ip[0][1]
+            ) if home_host_ip is not None and len(home_host_ip) > 0 and len(home_host_ip[0]) > 1 and home_host_ip[0][1] != "" else " "),
+        run_code_iteration,
+        time_ms() - time_start_iteration,
+        time_ns()))
+    home_host_ip = None
+    run_code_iteration = RUN_CODE_FAIL_NETWORK
+    time_start_iteration = time_ms()
     try:
         home_host_ip = gethostbyname(HOST_HOME_NAME)
     except Exception as exception:
@@ -233,8 +265,8 @@ def lookup():
               .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
     if home_host_ip is not None and home_host_ip != "":
         run_code_iteration = RUN_CODE_SUCCESS
-        run_response_count += 1
-        run_responses.add(home_host_ip)
+        run_reply_count += 1
+        run_replies.add(home_host_ip)
     print(FORMAT_TEMPLATE.format(
         "lookup",
         HOST_INTERNET_INTERFACE_ID,
@@ -243,27 +275,28 @@ def lookup():
             HOST_HOME_NAME,
             "127.0.0.1",
             " ip=\"{}\",".format(
-                home_host_ip) if home_host_ip is not None else " "),
+                home_host_ip
+            ) if home_host_ip is not None else " "),
         run_code_iteration,
-        time_ms() - time_start,
+        time_ms() - time_start_iteration,
         time_ns()))
     for home_host_resolver_ip in RESOLVER_IPS:
-        home_host_response = None
+        home_host_reply = None
         run_code_iteration = RUN_CODE_FAIL_NETWORK
-        time_start = time_ms()
+        time_start_iteration = time_ms()
         try:
             home_host_resolver = Resolver()
             home_host_resolver.nameservers = [home_host_resolver_ip]
-            home_host_responses = home_host_resolver.query(HOST_HOME_NAME, lifetime=2)
-            if home_host_responses is not None and len(home_host_responses) == 1:
-                home_host_response = home_host_responses[0]
+            home_host_replies = home_host_resolver.query(HOST_HOME_NAME, lifetime=2)
+            if home_host_replies is not None and len(home_host_replies) == 1:
+                home_host_reply = home_host_replies[0]
         except Exception as exception:
             print("Error processing DNS lookup [{}{}]"
                   .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
-        if home_host_response is not None and home_host_response.address is not None and home_host_response.address != "":
+        if home_host_reply is not None and home_host_reply.address is not None and home_host_reply.address != "":
             run_code_iteration = RUN_CODE_SUCCESS
-            run_response_count += 1
-            run_responses.add(home_host_response.address)
+            run_reply_count += 1
+            run_replies.add(home_host_reply.address)
         print(FORMAT_TEMPLATE.format(
             "lookup",
             HOST_INTERNET_INTERFACE_ID,
@@ -272,12 +305,27 @@ def lookup():
                 HOST_HOME_NAME,
                 home_host_resolver_ip,
                 " ip=\"{}\",".format(
-                    home_host_response.address) if (home_host_response is not None and
-                                                    home_host_response.address is not None and home_host_response.address != "") else " "),
+                    home_host_reply.address
+                ) if (home_host_reply is not None and home_host_reply.address is not None and home_host_reply.address != "") else " "),
             run_code_iteration,
-            time_ms() - time_start,
+            time_ms() - time_start_iteration,
             time_ns()))
-    return RUN_CODE_SUCCESS if (run_response_count == len(RESOLVER_IPS) + 1 and len(run_responses) == 1) else RUN_CODE_FAIL_NETWORK
+    run_code = RUN_CODE_SUCCESS if (run_reply_count == len(RESOLVER_IPS) + 2 and len(run_replies) == 1) else RUN_CODE_FAIL_NETWORK
+    print(FORMAT_TEMPLATE.format(
+        "lookup",
+        HOST_INTERNET_INTERFACE_ID,
+        ",host_location={},host_name={},host_resolver={}{}".format(
+            HOST_INTERNET_LOCATION,
+            HOST_HOME_NAME,
+            "*.*.*.*",
+            " ip=\"{}\",".format(
+                run_replies.pop() if run_code == RUN_CODE_SUCCESS else "DNS not in sync"
+            )
+        ),
+        run_code,
+        time_ms() - time_start,
+        time_ns()))
+    return run_code
 
 
 if __name__ == "__main__":
@@ -303,7 +351,7 @@ if __name__ == "__main__":
         # run_code_all.append(download())
         # up_code += run_code_all[-1]
 
-        run_code_all.append(lookup())
+        run_code_all.append(lookup(profile))
         run_code_uptime = RUN_CODE_FAIL_CONFIG
         uptime_new = None
         uptime_epoch = None
@@ -327,9 +375,10 @@ if __name__ == "__main__":
                 HOST_INTERNET_LOCATION,
                 HOST_HOME_NAME,
                 " uptime_s={},".format(
-                    uptime_new) if uptime_new is not None else " ",
+                    uptime_new
+                ) if uptime_new is not None else " ",
                 run_code_all.count(0) + (1 if run_code_uptime == RUN_CODE_SUCCESS else 0),
                 len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)),
             run_code_uptime,
             time_ms() - time_start_all,
-            uptime_epoch if uptime_epoch is not None else ""))
+            uptime_epoch if uptime_epoch is not None else 0))
