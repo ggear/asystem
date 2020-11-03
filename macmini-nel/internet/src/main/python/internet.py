@@ -37,18 +37,19 @@ FORMAT_TEMPLATE = "internet,metric={},host_id={}{}run_code={},run_ms={} {}"
 
 QUERY_IP_LAST = """
 from(bucket: "hosts")
-  |> range(start: -1h, stop: now())
-  |> filter(fn: (r) => r["_measurement"] == "usg" and r["_field"] == "ip")
+  |> range(start: -2h, stop: now())
+  |> filter(fn: (r) => r["_measurement"] == "usg")
+  |> filter(fn: (r) => r["_field"] == "ip")
   |> keep(columns: ["_value", "_time"])
   |> last()
 """
 
 QUERY_UPTIME_LAST = """
 from(bucket: "hosts")
-  |> range(start: -1h, stop: now())
+  |> range(start: -2h, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "uptime_s")
-  |> filter(fn: (r) => r["metric"] == "uptime")
+  |> filter(fn: (r) => r["metric"] == "{}")
   |> keep(columns: ["_value", "_time"])
   |> last()
 """
@@ -311,6 +312,19 @@ def lookup(env):
             time_ms() - time_start_iteration,
             time_ns()))
     run_code = RUN_CODE_SUCCESS if (run_reply_count == len(RESOLVER_IPS) + 2 and len(run_replies) == 1) else RUN_CODE_FAIL_NETWORK
+    uptime_new = 0
+    uptime_now = datetime.now(pytz.utc)
+    uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
+    try:
+        uptime_rows = query(profile, QUERY_UPTIME_LAST.format("lookup"))
+        if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or run_code > RUN_CODE_SUCCESS:
+            uptime_new = 0
+        else:
+            uptime_new = int((uptime_now - uptime_rows[0][0]).total_seconds())
+    except Exception as exception:
+        print("Error processing DNS lookup uptime [{}{}]"
+              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+        run_code = RUN_CODE_FAIL_CONFIG
     print(FORMAT_TEMPLATE.format(
         "lookup",
         HOST_INTERNET_INTERFACE_ID,
@@ -318,13 +332,14 @@ def lookup(env):
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
             "*.*.*.*",
-            " ip=\"{}\",".format(
-                run_replies.pop() if run_code == RUN_CODE_SUCCESS else "DNS not in sync"
+            " ip=\"{}\",uptime_s={},".format(
+                run_replies.pop() if run_code == RUN_CODE_SUCCESS else "DNS not in sync",
+                uptime_new
             )
         ),
         run_code,
         time_ms() - time_start,
-        time_ns()))
+        uptime_epoch))
     return run_code
 
 
@@ -342,8 +357,8 @@ if __name__ == "__main__":
         run_code_all = []
         up_code = 0
 
-        run_code_all.append(ping())
-        up_code += run_code_all[-1]
+        # run_code_all.append(ping())
+        # up_code += run_code_all[-1]
 
         # TODO: Temporarily disable upload/download speed tests
         # run_code_all.append(upload())
@@ -354,12 +369,11 @@ if __name__ == "__main__":
         run_code_all.append(lookup(profile))
         run_code_uptime = RUN_CODE_FAIL_CONFIG
         uptime_new = None
-        uptime_epoch = None
+        uptime_now = datetime.now(pytz.utc)
+        uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
         try:
-            uptime_now = datetime.now(pytz.utc)
-            uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
-            uptime_rows = query(profile, QUERY_UPTIME_LAST)
-            if len(uptime_rows) == 0 or up_code > 0:
+            uptime_rows = query(profile, QUERY_UPTIME_LAST.format("uptime"))
+            if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or up_code > RUN_CODE_SUCCESS:
                 uptime_new = 0
             else:
                 uptime_new = int((uptime_now - uptime_rows[0][0]).total_seconds()) + int(uptime_rows[0][1])
@@ -381,4 +395,4 @@ if __name__ == "__main__":
                 len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)),
             run_code_uptime,
             time_ms() - time_start_all,
-            uptime_epoch if uptime_epoch is not None else 0))
+            uptime_epoch))
