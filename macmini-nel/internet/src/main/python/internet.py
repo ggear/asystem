@@ -62,12 +62,14 @@ from(bucket: "hosts")
 
 QUERY_LAST = """
 from(bucket: "hosts")
-  |> range(start: -10m, stop: now())
+  |> range(start: -2d, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "{}")
   |> filter(fn: (r) => r["metric"] == "{}")
   |> keep(columns: ["_time", "_value", "metric", "host_id", "host_name", "host_location"])
   |> last()
 """
+
 
 def load_profile(profile_file):
     profile = {}
@@ -109,7 +111,8 @@ def query(env, flux):
     rows = []
     for row in response.content.strip().split("\n")[1:]:
         cols = row.strip().split(",")
-        rows.append([parse(cols[3])] + cols[4:])
+        if (len(cols) > 4):
+            rows.append([parse(cols[3])] + cols[4:])
     return rows
 
 
@@ -417,10 +420,10 @@ if __name__ == "__main__":
         up_code_network += run_code_all[-1]
 
         # TODO: Temporarily disable upload/download speed tests
-        run_code_all.append(upload(profile))
-        up_code_network += run_code_all[-1]
-        run_code_all.append(download(profile))
-        up_code_network += run_code_all[-1]
+        # run_code_all.append(upload(profile))
+        # up_code_network += run_code_all[-1]
+        # run_code_all.append(download(profile))
+        # up_code_network += run_code_all[-1]
 
         run_code_all.append(lookup(profile))
         run_code_all.append(certificate(profile))
@@ -443,9 +446,12 @@ if __name__ == "__main__":
         if uptime_new is not None and uptime_epoch is not None:
             run_code_uptime = RUN_CODE_SUCCESS
 
-
-        # for ping in query(profile, QUERY_LAST.format("ping")):
+        # for ping in query(profile, QUERY_LAST.format("ping_med_ms", "ping")):
         #     print(ping)
+        # for upload in query(profile, QUERY_LAST.format("upload_mbps", "upload")):
+        #     print(upload)
+        # for download in query(profile, QUERY_LAST.format("download_mbps", "download")):
+        #     print(download)
 
         print(FORMAT_TEMPLATE.format(
             "network",
