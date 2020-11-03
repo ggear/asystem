@@ -6,6 +6,7 @@ import socket
 import ssl
 import sys
 import time
+import traceback
 from datetime import datetime
 from socket import gethostbyname
 
@@ -33,6 +34,7 @@ PING_COUNT = 3
 PING_SLEEP_SECONDS = 1
 THROUGHPUT_PERIOD_SECONDS = 6 * 60 * 60
 SERVICE_TIMEOUT_SECONDS = 2
+STACKTRACE_REFERENCE_LIMIT = 1
 
 RUN_CODE_REPEAT = -1
 RUN_CODE_SUCCESS = 0
@@ -114,7 +116,7 @@ def query(env, flux):
     rows = []
     for row in response.content.strip().split("\n")[1:]:
         cols = row.strip().split(",")
-        if (len(cols) > 4):
+        if len(cols) > 4:
             rows.append([parse(cols[3])] + cols[4:])
     return rows
 
@@ -137,8 +139,8 @@ def ping(env):
                     time.sleep(PING_SLEEP_SECONDS)
                     time_start += PING_SLEEP_SECONDS * 1000
             except Exception as exception:
-                print("Error processing speedtest ping [{}{}]"
-                      .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+                print("Error processing speedtest ping - ", end="", file=sys.stderr)
+                traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
                 run_code_iteration = RUN_CODE_FAIL_CONFIG
         run_code_iteration = RUN_CODE_SUCCESS \
             if (len(pings) > 0 and max(pings) > 0) else run_code_iteration
@@ -187,8 +189,8 @@ def upload(env):
                             time_ms() - time_start,
                             time_ns()))
         except Exception as exception:
-            print("Error processing speedtest upload [{}{}]"
-                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+            print("Error processing speedtest upload - ", end="", file=sys.stderr)
+            traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
             run_code = RUN_CODE_FAIL_CONFIG
     for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS:
         if host_speedtest_id not in run_host_ids:
@@ -203,8 +205,8 @@ def upload(env):
                 speedtest.upload()
                 results_speedtest = speedtest.results.dict()
             except Exception as exception:
-                print("Error processing speedtest upload [{}{}]"
-                      .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+                print("Error processing speedtest upload - ", end="", file=sys.stderr)
+                traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
                 run_code_iteration = RUN_CODE_FAIL_NETWORK
             run_code_iteration = RUN_CODE_SUCCESS \
                 if (results_speedtest is not None and "upload" in results_speedtest and results_speedtest["upload"] > 0) \
@@ -252,8 +254,8 @@ def download(env):
                             time_ms() - time_start,
                             time_ns()))
         except Exception as exception:
-            print("Error processing speedtest download [{}{}]"
-                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+            print("Error processing speedtest download - ", end="", file=sys.stderr)
+            traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
             run_code = RUN_CODE_FAIL_CONFIG
     for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS:
         if host_speedtest_id not in run_host_ids:
@@ -268,8 +270,8 @@ def download(env):
                 speedtest.download()
                 results_speedtest = speedtest.results.dict()
             except Exception as exception:
-                print("Error processing speedtest download [{}{}]"
-                      .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+                print("Error processing speedtest download - ", end="", file=sys.stderr)
+                traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
                 run_code_iteration = RUN_CODE_FAIL_NETWORK
             run_code_iteration = RUN_CODE_SUCCESS \
                 if (results_speedtest is not None and "download" in results_speedtest and results_speedtest["download"] > 0) \
@@ -305,8 +307,8 @@ def lookup(env):
     try:
         home_host_ip = query(env, QUERY_IP)
     except Exception as exception:
-        print("Error processing DNS lookup [{}{}]"
-              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+        print("Error processing DNS lookup - ", end="", file=sys.stderr)
+        traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
     if home_host_ip is not None and len(home_host_ip) > 0 and len(home_host_ip[0]) > 1 and home_host_ip[0][1] != "":
         run_code_iteration = RUN_CODE_SUCCESS
         run_reply_count += 1
@@ -330,8 +332,8 @@ def lookup(env):
     try:
         home_host_ip = gethostbyname(HOST_HOME_NAME)
     except Exception as exception:
-        print("Error processing DNS lookup [{}{}]"
-              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+        print("Error processing DNS lookup - ", end="", file=sys.stderr)
+        traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
     if home_host_ip is not None and home_host_ip != "":
         run_code_iteration = RUN_CODE_SUCCESS
         run_reply_count += 1
@@ -360,8 +362,8 @@ def lookup(env):
             if home_host_replies is not None and len(home_host_replies) == 1:
                 home_host_reply = home_host_replies[0]
         except Exception as exception:
-            print("Error processing DNS lookup [{}{}]"
-                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+            print("Error processing DNS lookup - ", end="", file=sys.stderr)
+            traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
         if home_host_reply is not None and home_host_reply.address is not None and home_host_reply.address != "":
             run_code_iteration = RUN_CODE_SUCCESS
             run_reply_count += 1
@@ -388,8 +390,8 @@ def lookup(env):
         if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
             uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
     except Exception as exception:
-        print("Error processing DNS lookup uptime [{}{}]"
-              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+        print("Error processing DNS lookup uptime - ", end="", file=sys.stderr)
+        traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
         run_code = RUN_CODE_FAIL_CONFIG
     print(FORMAT_TEMPLATE.format(
         "lookup",
@@ -420,11 +422,12 @@ def certificate(env):
         home_host_certificate_expiry = \
             int((datetime.strptime(home_host_connection.getpeercert()['notAfter'], DATE_TLS) - datetime.now()).total_seconds())
     except Exception as exception:
-        print("Error processing TLS certificate [{}{}]"
-              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+        print("Error processing TLS certificate - ", end="", file=sys.stderr)
+        traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
         run_code = RUN_CODE_FAIL_NETWORK
     if home_host_certificate_expiry is not None and home_host_certificate_expiry > 600:
         run_code = RUN_CODE_SUCCESS
+    uptime_new = 0
     uptime_delta = 0
     uptime_now = datetime.now(pytz.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
@@ -432,9 +435,12 @@ def certificate(env):
         uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "certificate"))
         if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
             uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
+            uptime_rows = query(profile, QUERY_UPTIME.format("uptime_s", "certificate"))
+            if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
+                uptime_new = uptime_delta + int(uptime_rows[0][1])
     except Exception as exception:
-        print("Error processing TLS certificate [{}{}]"
-              .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+        print("Error processing TLS certificate - ", end="", file=sys.stderr)
+        traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
         run_code = RUN_CODE_FAIL_CONFIG
     print(FORMAT_TEMPLATE.format(
         "certificate",
@@ -442,9 +448,10 @@ def certificate(env):
         ",host_location={},host_name={}{}".format(
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
-            " expiry_s={},uptime_delta_s={},".format(
+            " expiry_s={},uptime_delta_s={},uptime_s={},".format(
                 home_host_certificate_expiry if home_host_certificate_expiry is not None else 0,
-                uptime_delta
+                uptime_delta,
+                uptime_new
             )
         ),
         run_code,
@@ -461,8 +468,8 @@ if __name__ == "__main__":
         with open(profile_path, 'r') as profile_file:
             profile = load_profile(profile_file)
     except Exception as exception:
-        print("Error processing profile [{}] [{}{}]"
-              .format(profile_path, type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+        print("Error processing profile - ", end="", file=sys.stderr)
+        traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
     if profile is not None:
         run_code_all = []
         up_code_network = RUN_CODE_SUCCESS
@@ -485,10 +492,10 @@ if __name__ == "__main__":
                 uptime_new = 0
             else:
                 uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
-                uptime_new = int(round((uptime_now - uptime_rows[0][0]).total_seconds()) + int(uptime_rows[0][1]))
+                uptime_new = uptime_delta + int(uptime_rows[0][1])
         except Exception as exception:
-            print("Error processing network [{}{}]"
-                  .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+            print("Error processing network - ", end="", file=sys.stderr)
+            traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
         if uptime_new is not None and uptime_epoch is not None:
             run_code_uptime = RUN_CODE_SUCCESS
         if up_code_network > RUN_CODE_SUCCESS:
@@ -509,8 +516,8 @@ if __name__ == "__main__":
                             time_ms() - time_start,
                             time_ns()))
                 except Exception as exception:
-                    print("Error processing network [{}{}]"
-                          .format(type(exception).__name__, "" if str(exception) == "" else ":{}".format(exception)), file=sys.stderr)
+                    print("Error processing network - ", end="", file=sys.stderr)
+                    traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
         print(FORMAT_TEMPLATE.format(
             "network",
             HOST_INTERNET_INTERFACE_ID,
