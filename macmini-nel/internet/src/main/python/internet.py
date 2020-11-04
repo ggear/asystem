@@ -178,7 +178,7 @@ def upload(env):
         try:
             for network_stat_reply in query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat)):
                 if int(float(network_stat_reply[1])) != 0 and \
-                        (datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds() < THROUGHPUT_PERIOD_SECONDS:
+                        ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
                     if network_stat_reply[2].replace("speedtest-", "") in HOST_SPEEDTEST_THROUGHPUT_IDS:
                         run_host_ids.add(network_stat_reply[2].replace("speedtest-", ""))
                         print(FORMAT_TEMPLATE.format(
