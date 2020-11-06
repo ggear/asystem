@@ -44,7 +44,7 @@ RUN_CODE_FAIL_ZEROED = 3
 
 DATE_TLS = r'%b %d %H:%M:%S %Y %Z'
 
-FORMAT_TEMPLATE = "internet,metric={},host_id={},run_code={}{}run_ms={} {}"
+FORMAT_TEMPLATE = "internet,metric={},host_id={}{}run_code={},run_ms={} {}"
 
 QUERY_IP = """
 from(bucket: "hosts")
@@ -151,7 +151,6 @@ def ping(env):
         print(FORMAT_TEMPLATE.format(
             "ping",
             "speedtest-" + host_speedtest_id,
-            run_code_iteration,
             "{} ping_min_ms={},ping_max_ms={},ping_med_ms={},pings_lost={},".format(
                 ",host_location={},host_name={}".format(
                     host_speedtest["name"].lower(),
@@ -162,6 +161,7 @@ def ping(env):
                 med(pings),
                 PING_COUNT - len(pings)
             ) if len(pings) > 0 else " ",
+            run_code_iteration,
             time_ms() - time_start,
             time_ns()))
     return run_code
@@ -184,8 +184,8 @@ def upload(env):
                         print(FORMAT_TEMPLATE.format(
                             network_stat,
                             network_stat_reply[2],
-                            RUN_CODE_REPEAT,
                             network_stats[network_stat][1].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
+                            RUN_CODE_REPEAT,
                             time_ms() - time_start,
                             time_ns()))
         except Exception as exception:
@@ -218,7 +218,6 @@ def upload(env):
             print(FORMAT_TEMPLATE.format(
                 "upload",
                 "speedtest-" + host_speedtest_id,
-                run_code_iteration,
                 "{} upload_mbps={},upload_b={},".format(
                     ",host_location={},host_name={}".format(
                         host_speedtest["name"].lower(),
@@ -227,6 +226,7 @@ def upload(env):
                     results_speedtest["upload"] / 8000000,
                     results_speedtest["bytes_sent"]
                 ) if results_speedtest is not None else " ",
+                run_code_iteration,
                 time_ms() - time_start,
                 time_ns()))
     return run_code
@@ -249,8 +249,8 @@ def download(env):
                         print(FORMAT_TEMPLATE.format(
                             network_stat,
                             network_stat_reply[2],
-                            RUN_CODE_REPEAT,
                             network_stats[network_stat][1].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
+                            RUN_CODE_REPEAT,
                             time_ms() - time_start,
                             time_ns()))
         except Exception as exception:
@@ -283,7 +283,6 @@ def download(env):
             print(FORMAT_TEMPLATE.format(
                 "download",
                 "speedtest-" + host_speedtest_id,
-                run_code_iteration,
                 "{} download_mbps={},download_b={},".format(
                     ",host_location={},host_name={}".format(
                         host_speedtest["name"].lower(),
@@ -292,6 +291,7 @@ def download(env):
                     results_speedtest["download"] / 8000000,
                     results_speedtest["bytes_received"]
                 ) if results_speedtest is not None else " ",
+                run_code_iteration,
                 time_ms() - time_start,
                 time_ns()))
     return run_code
@@ -316,7 +316,6 @@ def lookup(env):
     print(FORMAT_TEMPLATE.format(
         "lookup",
         HOST_INTERNET_INTERFACE_ID,
-        run_code_iteration,
         ",host_location={},host_name={},host_resolver={}{}".format(
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
@@ -324,6 +323,7 @@ def lookup(env):
             " ip=\"{}\",".format(
                 home_host_ip[0][1]
             ) if home_host_ip is not None and len(home_host_ip) > 0 and len(home_host_ip[0]) > 1 and home_host_ip[0][1] != "" else " "),
+        run_code_iteration,
         time_ms() - time_start_iteration,
         time_ns()))
     home_host_ip = None
@@ -341,7 +341,6 @@ def lookup(env):
     print(FORMAT_TEMPLATE.format(
         "lookup",
         HOST_INTERNET_INTERFACE_ID,
-        run_code_iteration,
         ",host_location={},host_name={},host_resolver={}{}".format(
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
@@ -349,6 +348,7 @@ def lookup(env):
             " ip=\"{}\",".format(
                 home_host_ip
             ) if home_host_ip is not None else " "),
+        run_code_iteration,
         time_ms() - time_start_iteration,
         time_ns()))
     for home_host_resolver_ip in RESOLVER_IPS:
@@ -371,7 +371,6 @@ def lookup(env):
         print(FORMAT_TEMPLATE.format(
             "lookup",
             HOST_INTERNET_INTERFACE_ID,
-            run_code_iteration,
             ",host_location={},host_name={},host_resolver={}{}".format(
                 HOST_INTERNET_LOCATION,
                 HOST_HOME_NAME,
@@ -379,6 +378,7 @@ def lookup(env):
                 " ip=\"{}\",".format(
                     home_host_reply.address
                 ) if (home_host_reply is not None and home_host_reply.address is not None and home_host_reply.address != "") else " "),
+            run_code_iteration,
             time_ms() - time_start_iteration,
             time_ns()))
     run_code = RUN_CODE_SUCCESS if (run_reply_count == len(RESOLVER_IPS) + 2 and len(run_replies) == 1) else RUN_CODE_FAIL_NETWORK
@@ -396,7 +396,6 @@ def lookup(env):
     print(FORMAT_TEMPLATE.format(
         "lookup",
         HOST_INTERNET_INTERFACE_ID,
-        run_code,
         ",host_location={},host_name={},host_resolver={}{}".format(
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
@@ -406,6 +405,7 @@ def lookup(env):
                 uptime_delta
             )
         ),
+        run_code,
         time_ms() - time_start,
         uptime_epoch))
     return run_code
@@ -445,7 +445,6 @@ def certificate(env):
     print(FORMAT_TEMPLATE.format(
         "certificate",
         HOST_INTERNET_INTERFACE_ID,
-        run_code,
         ",host_location={},host_name={}{}".format(
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
@@ -455,6 +454,7 @@ def certificate(env):
                 uptime_new
             )
         ),
+        run_code,
         time_ms() - time_start,
         uptime_epoch))
     return run_code
@@ -511,8 +511,8 @@ if __name__ == "__main__":
                         print(FORMAT_TEMPLATE.format(
                             network_stat,
                             network_stat_reply[2],
-                            RUN_CODE_FAIL_ZEROED,
                             network_stats[network_stat][1].format(network_stat_reply[3], network_stat_reply[4]),
+                            RUN_CODE_FAIL_ZEROED,
                             time_ms() - time_start,
                             time_ns()))
                 except Exception as exception:
@@ -521,17 +521,17 @@ if __name__ == "__main__":
         print(FORMAT_TEMPLATE.format(
             "network",
             HOST_INTERNET_INTERFACE_ID,
-            run_code_uptime,
             ",host_location={},host_name={}{}metrics_suceeded={},metrics_failed={},".format(
                 HOST_INTERNET_LOCATION,
                 HOST_HOME_NAME,
-                run_code_all.count(0) + (1 if run_code_uptime == RUN_CODE_SUCCESS else 0),
                 " uptime_delta_s={}{}".format(
                     uptime_delta,
                     ",uptime_s={},".format(
                         uptime_new
                     ) if uptime_new is not None else ","
                 ),
+                run_code_all.count(0) + (1 if run_code_uptime == RUN_CODE_SUCCESS else 0),
                 len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)),
+            run_code_uptime,
             time_ms() - time_start_all,
             uptime_epoch))
