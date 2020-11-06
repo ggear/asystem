@@ -32,8 +32,7 @@
       table.new(
         title='WAN',
         datasource='InfluxDB2'
-      ).addTarget(influxdb.target(query='
-from(bucket: "hosts")
+      ).addTarget(influxdb.target(query='from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg" and r["_field"] == "ip")
   |> unique(column: "_value")
@@ -51,8 +50,7 @@ from(bucket: "hosts")
       table.new(
         title='Certificate',
         datasource='InfluxDB2'
-      ).addTarget(influxdb.target(query='
-join(
+      ).addTarget(influxdb.target(query='join(
   tables: {
     d1:
       from(bucket: "hosts")
@@ -86,8 +84,7 @@ join(
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
-      ).addTarget(influxdb.target(query='
-from(bucket: "hosts")
+      ).addTarget(influxdb.target(query='from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
   |> filter(fn: (r) => r["_field"] == "rx_bytes")
@@ -95,8 +92,7 @@ from(bucket: "hosts")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-      ')).addTarget(influxdb.target(query='
-from(bucket: "hosts")
+      ')).addTarget(influxdb.target(query='from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
   |> filter(fn: (r) => r["_field"] == "tx_bytes")
@@ -125,8 +121,7 @@ from(bucket: "hosts")
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
-      ).addTarget(influxdb.target(query='
-from(bucket: "hosts")
+      ).addTarget(influxdb.target(query='from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-rx_bytes")
@@ -134,8 +129,7 @@ from(bucket: "hosts")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-      ')).addTarget(influxdb.target(query='
-from(bucket: "hosts")
+      ')).addTarget(influxdb.target(query='from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-tx_bytes")

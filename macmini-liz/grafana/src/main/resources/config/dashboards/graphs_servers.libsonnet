@@ -25,21 +25,18 @@
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
-      ).addTarget(influxdb.target(query='
-from(bucket: "hosts")
+      ).addTarget(influxdb.target(query='from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-      ')).addTarget(influxdb.target(query='
-from(bucket: "hosts")
+      ')).addTarget(influxdb.target(query='from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg" and r["_field"] == "temp_CPU")
   |> set(key: "host", value: "udm-rack")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-      ')).addTarget(influxdb.target(query='
-from(bucket: "asystem")
+      ')).addTarget(influxdb.target(query='from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
   |> set(key: "host", value: "ambient-rack")
