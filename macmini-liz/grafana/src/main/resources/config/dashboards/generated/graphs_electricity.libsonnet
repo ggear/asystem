@@ -25,13 +25,14 @@
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
-      ).addTarget(influxdb.target(query='from(bucket: "asystem")
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "office_power_consumption" or r["entity_id"] == "servers_power_consumption" or r["entity_id"] == "towelrails_power_consumption")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
   |> fill(usePrevious: true)
-  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-      '))
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+// End'))
       { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
 
     ],

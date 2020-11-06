@@ -6,69 +6,213 @@
     local stat = grafana.statPanel;
     local graph = grafana.graphPanel;
     local table = grafana.tablePanel;
-    local guage = grafana.gaugePanel;
+    local gauge = grafana.gaugePanel;
     local influxdb = grafana.influxdb;
     
     [
 
-      // TODO: Implement
       stat.new(
-        title='Uptime',
-        datasource='InfluxDB2'
-      ) { gridPos: { x: 0, y: 0, w: 4, h: 6 } },
-
-      // TODO: Implement
-      guage.new(
-        title='Speed',
-        datasource='InfluxDB2'
-      ) { gridPos: { x: 4, y: 0, w: 4, h: 6 } },
-
-      // TODO: Implement
-      guage.new(
-        title='Total',
-        datasource='InfluxDB2'
-      ) { gridPos: { x: 8, y: 0, w: 4, h: 6 } },
-
-      table.new(
-        title='WAN',
-        datasource='InfluxDB2'
-      ).addTarget(influxdb.target(query='from(bucket: "hosts")
+        title='Internet Uptime',
+        datasource='InfluxDB2',
+        unit='s',
+        decimals=1,
+        reducerFunction='last',
+        colorMode='value',
+        graphMode='none',
+        justifyMode='auto',
+        thresholdsMode='absolute',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 43200 }
+      ).addThreshold(
+        { color: 'green', value: 86400 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "usg" and r["_field"] == "ip")
-  |> unique(column: "_value")
-  |> set(key: "name", value: "IP")
-  |> keep(columns: ["_time", "_value", "name"])
-  |> sort(columns: ["_time"], desc: true)
-      ')) { gridPos: { x: 12, y: 0, w: 4, h: 6 } },
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "uptime_s")
+  |> filter(fn: (r) => r["metric"] == "network")
+  |> keep(columns: ["_time", "_value"])
+  |> last()
+// End')) { gridPos: { x: 0, y: 0, w: 4, h: 3 } },
+      stat.new(
+        title='Service Availability',
+        datasource='InfluxDB2',
+        unit='percent',
+        decimals=0,
+        reducerFunction='last',
+        colorMode='value',
+        graphMode='none',
+        justifyMode='auto',
+        thresholdsMode='absolute',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 80 }
+      ).addThreshold(
+        { color: 'green', value: 99 }
+      ).addTarget(influxdb.target(query='// Start
+import "math"
+from(bucket: "hosts")
+ |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+ |> filter(fn: (r) => r["_measurement"] == "internet")
+ |> filter(fn: (r) => r["_field"] == "uptime_delta_s")
+ |> filter(fn: (r) => r["metric"] == "network" or r["metric"] == "lookup" or r["metric"] == "certificate")
+ |> keep(columns: ["_start", "_stop", "_time", "_value"])
+ |> sum()
+ |> map(fn: (r) => ({ r with _value: math.round(x: r._value / (3.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0) }))
+// End')) { gridPos: { x: 0, y: 3, w: 4, h: 3 } },
 
-      // TODO: Implement
-      table.new(
-        title='DNS',
-        datasource='InfluxDB2'
-      ) { gridPos: { x: 16, y: 0, w: 4, h: 6 } },
+      stat.new(
+        title='Domain Uptime',
+        datasource='InfluxDB2',
+        unit='s',
+        decimals=1,
+        reducerFunction='last',
+        colorMode='value',
+        graphMode='none',
+        justifyMode='auto',
+        thresholdsMode='absolute',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 600 }
+      ).addThreshold(
+        { color: 'green', value: 12000 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "uptime_s")
+  |> filter(fn: (r) => r["metric"] == "certificate")
+  |> keep(columns: ["_time", "_value"])
+  |> last()
+// End')) { gridPos: { x: 4, y: 0, w: 4, h: 3 } },
+      stat.new(
+        title='Certificate Expiry',
+        datasource='InfluxDB2',
+        unit='s',
+        decimals=1,
+        reducerFunction='last',
+        colorMode='value',
+        graphMode='none',
+        justifyMode='auto',
+        thresholdsMode='absolute',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 432000 }
+      ).addThreshold(
+        { color: 'green', value: 864000 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "expiry_s")
+  |> filter(fn: (r) => r["metric"] == "certificate")
+  |> keep(columns: ["_time", "_value"])
+  |> last()
+// End')) { gridPos: { x: 4, y: 3, w: 4, h: 3 } },
 
-      table.new(
-        title='Certificate',
-        datasource='InfluxDB2'
-      ).addTarget(influxdb.target(query='join(
-  tables: {
-    d1:
-      from(bucket: "hosts")
-        |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["common_name"] == "*.janeandgraham.com" and r["_field"] == "enddate" and r["verification"] == "valid" and not exists r.host)
-        |> last()
-    ,d2:
-      from(bucket: "hosts")
-        |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-        |> filter(fn: (r) => r["_measurement"] == "x509_cert" and r["common_name"] == "*.janeandgraham.com" and r["_field"] == "expiry" and r["verification"] == "valid" and not exists r.host)
-  }, on: ["_time"])
-    |> map(fn: (r) => ({ r with _value: r._value_d2 / (24 * 60 * 60) }))
-    |> set(key: "name", value: "Expiry Days")
-    |> keep(columns: ["_time", "_value", "name"])
-      ')) { gridPos: { x: 20, y: 0, w: 4, h: 6 } },
+      stat.new(
+        title='Internet Latency',
+        datasource='InfluxDB2',
+        unit='ms',
+        decimals=1,
+        reducerFunction='max',
+        colorMode='value',
+        graphMode='area',
+        justifyMode='auto',
+        thresholdsMode='absolute',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'green', value: 0.1 }
+      ).addThreshold(
+        { color: 'yellow', value: 20 }
+      ).addThreshold(
+        { color: 'red', value: 30 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "ping_min_ms")
+  |> filter(fn: (r) => r["metric"] == "ping")
+  |> filter(fn: (r) => r["host_location"] == "perth")
+  |> keep(columns: ["_time", "_value"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> fill(column: "_value", usePrevious: true)
+// End')) { gridPos: { x: 8, y: 3, w: 6, h: 6 } },
+
+      gauge.new(
+        title='Internet Upload',
+        datasource='InfluxDB2',
+        reducerFunction='last',
+        showThresholdLabels=false,
+        showThresholdMarkers=true,
+        unit="MBs",
+        min=0,
+        max=2.5,
+        decimals=1,
+        thresholdsMode='percentage',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 30 }
+      ).addThreshold(
+        { color: 'green', value: 70 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "upload_mbps")
+  |> filter(fn: (r) => r["metric"] == "upload")
+  |> keep(columns: ["_time", "_value"])
+// End')) { gridPos: { x: 14, y: 0, w: 5, h: 6 } },
+
+      gauge.new(
+        title='Internet Download',
+        datasource='InfluxDB2',
+        reducerFunction='last',
+        showThresholdLabels=false,
+        showThresholdMarkers=true,
+        unit="MBs",
+        min=0,
+        max=6.25,
+        decimals=1,
+        thresholdsMode='percentage',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 30 }
+      ).addThreshold(
+        { color: 'green', value: 70 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "download_mbps")
+  |> filter(fn: (r) => r["metric"] == "download")
+  |> keep(columns: ["_time", "_value"])
+// End')) { gridPos: { x: 19, y: 0, w: 5, h: 6 } },
 
       graph.new(
-        title='WAN',
+        title='Internet Throughput',
         datasource='InfluxDB2',
         fill=0,
         format='Bps',
@@ -84,28 +228,30 @@
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
-      ).addTarget(influxdb.target(query='from(bucket: "hosts")
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
   |> filter(fn: (r) => r["_field"] == "rx_bytes")
-  |> set(key: "name", value: "Receiving")
+  |> set(key: "name", value: "Download")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-      ')).addTarget(influxdb.target(query='from(bucket: "hosts")
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
   |> filter(fn: (r) => r["_field"] == "tx_bytes")
-  |> set(key: "name", value: "Transmitting")
+  |> set(key: "name", value: "Upload")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-      ')).addSeriesOverride(
-        { "alias": "Transmitting", "transform": "negative-Y" }
+// End')).addSeriesOverride(
+        { "alias": "Upload", "transform": "negative-Y" }
       ) { gridPos: { x: 0, y: 6, w: 24, h: 12 } },
 
       graph.new(
-        title='LAN',
+        title='Backplane Throughput',
         datasource='InfluxDB2',
         fill=0,
         format='Bps',
@@ -121,25 +267,72 @@
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
-      ).addTarget(influxdb.target(query='from(bucket: "hosts")
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-rx_bytes")
-  |> set(key: "name", value: "Receiving")
+  |> set(key: "name", value: "Download")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-      ')).addTarget(influxdb.target(query='from(bucket: "hosts")
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-tx_bytes")
-  |> set(key: "name", value: "Transmitting")
+  |> set(key: "name", value: "Upload")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
       ')).addSeriesOverride(
-        { "alias": "Transmitting", "transform": "negative-Y" }
+        { "alias": "Upload", "transform": "negative-Y" }
       ) { gridPos: { x: 0, y: 12, w: 24, h: 12 } },
+
+      graph.new(
+        title='Internet Latency',
+        datasource='InfluxDB2',
+        fill=0,
+        format='ms',
+        bars=false,
+        lines=true,
+        staircase=true,
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=false,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=350
+      ).addTarget(influxdb.target(query='// Start
+import "strings"
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "ping_min_ms")
+  |> filter(fn: (r) => r["metric"] == "ping")
+  |> map(fn: (r) => ({ r with host_location: strings.title(v: r.host_location) }))
+  |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: true)
+  |> keep(columns: ["_time", "_value", "host_location"])
+  |> fill(column: "_value", usePrevious: true)
+// End')) { gridPos: { x: 0, y: 36, w: 24, h: 12 } },
+
+      table.new(
+        title='Domain Resolution',
+        datasource='InfluxDB2'
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "ip")
+  |> keep(columns: ["_time", "_value", "host_resolver"])
+  |> truncateTimeColumn(unit: 30s)
+  |> pivot(rowKey:["_time"], columnKey: ["host_resolver"], valueColumn: "_value")
+  |> unique(column: "udm-rack-eth8")
+  |> sort(columns: ["_time"], desc: true)
+// End')) { gridPos: { x: 0, y: 48, w: 24, h: 12 } },
 
     ],
 }

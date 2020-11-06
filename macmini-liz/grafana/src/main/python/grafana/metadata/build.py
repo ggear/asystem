@@ -41,7 +41,7 @@ if __name__ == "__main__":
   |> filter(fn: (r) => {})
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
   |> fill(usePrevious: true)
-  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                 """.format(filter).strip()
                 file.write("      " + """
       graph.new(
@@ -61,8 +61,9 @@ if __name__ == "__main__":
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
-      ).addTarget(influxdb.target(query='{}
-      '))
+      ).addTarget(influxdb.target(query='// Start
+{}
+// End'))
       {{ gridPos: {{ x: 0, y: 0, w: 24, h: 12 }} }},
                 """.format(domain, "short", flux).strip() + "\n\n")
             file.write("    " + """
