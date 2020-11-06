@@ -25,8 +25,7 @@
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
-      ).addTarget(influxdb.target(query='
-from(bucket: "asystem")
+      ).addTarget(influxdb.target(query='from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "last_30_min_rain")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])

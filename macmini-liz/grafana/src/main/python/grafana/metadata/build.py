@@ -36,8 +36,7 @@ if __name__ == "__main__":
             for domain in sensors[group]:
                 filter = " or ".join([sub + '"'
                                       for sub in ['r["entity_id"] == "' + sub for sub in [sensor[2] for sensor in sensors[group][domain]]]])
-                flux = """
-from(bucket: "asystem")
+                flux = """from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => {})
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
@@ -62,8 +61,7 @@ from(bucket: "asystem")
         legend_alignAsTable=true,
         legend_rightSide=true,
         legend_sideWidth=350
-      ).addTarget(influxdb.target(query='
-{}
+      ).addTarget(influxdb.target(query='{}
       '))
       {{ gridPos: {{ x: 0, y: 0, w: 24, h: 12 }} }},
                 """.format(domain, "short", flux).strip() + "\n\n")
