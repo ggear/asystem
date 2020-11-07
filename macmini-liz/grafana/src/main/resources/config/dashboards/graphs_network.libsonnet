@@ -36,6 +36,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "uptime_s")
   |> filter(fn: (r) => r["metric"] == "network")
   |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
   |> last()
 // End')) { gridPos: { x: 0, y: 0, w: 4, h: 3 } },
       stat.new(
@@ -65,7 +66,7 @@ from(bucket: "hosts")
  |> filter(fn: (r) => r["metric"] == "network" or r["metric"] == "lookup" or r["metric"] == "certificate")
  |> keep(columns: ["_start", "_stop", "_time", "_value"])
  |> sum()
- |> map(fn: (r) => ({ r with _value: math.round(x: r._value / (3.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0) }))
+ |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: r._value / (3.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0) }))
 // End')) { gridPos: { x: 0, y: 3, w: 4, h: 3 } },
 
       stat.new(
@@ -93,6 +94,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "uptime_s")
   |> filter(fn: (r) => r["metric"] == "certificate")
   |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
   |> last()
 // End')) { gridPos: { x: 4, y: 0, w: 4, h: 3 } },
       stat.new(
@@ -120,6 +122,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "expiry_s")
   |> filter(fn: (r) => r["metric"] == "certificate")
   |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
   |> last()
 // End')) { gridPos: { x: 4, y: 3, w: 4, h: 3 } },
 
@@ -151,6 +154,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["metric"] == "ping")
   |> filter(fn: (r) => r["host_location"] == "perth")
   |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> fill(column: "_value", usePrevious: true)
 // End')) { gridPos: { x: 8, y: 3, w: 6, h: 6 } },
@@ -181,6 +185,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "upload_mbps")
   |> filter(fn: (r) => r["metric"] == "upload")
   |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
 // End')) { gridPos: { x: 14, y: 0, w: 5, h: 6 } },
 
       gauge.new(
@@ -209,6 +214,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "download_mbps")
   |> filter(fn: (r) => r["metric"] == "download")
   |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
 // End')) { gridPos: { x: 19, y: 0, w: 5, h: 6 } },
 
       graph.new(
@@ -235,6 +241,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "rx_bytes")
   |> set(key: "name", value: "Download")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
+  |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addTarget(influxdb.target(query='// Start
@@ -244,6 +251,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "tx_bytes")
   |> set(key: "name", value: "Upload")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
+  |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addSeriesOverride(
@@ -274,6 +282,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "lan-rx_bytes")
   |> set(key: "name", value: "Download")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
+  |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addTarget(influxdb.target(query='// Start
@@ -283,6 +292,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "lan-tx_bytes")
   |> set(key: "name", value: "Upload")
   |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
+  |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
       ')).addSeriesOverride(
@@ -316,6 +326,7 @@ from(bucket: "hosts")
   |> map(fn: (r) => ({ r with host_location: strings.title(v: r.host_location) }))
   |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: true)
   |> keep(columns: ["_time", "_value", "host_location"])
+  |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
 // End')) { gridPos: { x: 0, y: 36, w: 24, h: 12 } },
 
