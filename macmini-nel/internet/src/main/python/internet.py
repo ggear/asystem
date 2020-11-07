@@ -413,7 +413,7 @@ def lookup(env):
             HOST_HOME_NAME,
             "*.*.*.*",
             " ip=\"{}\",uptime_delta_s={},".format(
-                run_replies.pop() if run_code == RUN_CODE_SUCCESS else "DNS not in sync",
+                run_replies.pop() if run_code == RUN_CODE_SUCCESS else "unknown",
                 uptime_delta
             )
         ),
