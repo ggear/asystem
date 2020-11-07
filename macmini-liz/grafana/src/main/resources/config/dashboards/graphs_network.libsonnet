@@ -66,7 +66,7 @@ from(bucket: "hosts")
  |> filter(fn: (r) => r["metric"] == "network" or r["metric"] == "lookup" or r["metric"] == "certificate")
  |> keep(columns: ["_start", "_stop", "_time", "_value"])
  |> sum()
- |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: r._value / (3.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0) }))
+ |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: math.floor(x: r._value / (3.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0)) }))
 // End')) { gridPos: { x: 0, y: 3, w: 4, h: 3 } },
 
       stat.new(
