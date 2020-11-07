@@ -186,6 +186,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["metric"] == "upload")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
+  |> last()
 // End')) { gridPos: { x: 14, y: 0, w: 5, h: 6 } },
 
       gauge.new(
@@ -215,6 +216,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["metric"] == "download")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
+  |> last()
 // End')) { gridPos: { x: 19, y: 0, w: 5, h: 6 } },
 
       graph.new(
