@@ -131,7 +131,7 @@ from(bucket: "hosts")
         datasource='InfluxDB2',
         unit='ms',
         decimals=1,
-        reducerFunction='max',
+        reducerFunction='last',
         colorMode='value',
         graphMode='area',
         justifyMode='auto',
@@ -158,36 +158,6 @@ from(bucket: "hosts")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> fill(column: "_value", usePrevious: true)
 // End')) { gridPos: { x: 8, y: 3, w: 6, h: 6 } },
-
-      gauge.new(
-        title='Internet Upload',
-        datasource='InfluxDB2',
-        reducerFunction='last',
-        showThresholdLabels=false,
-        showThresholdMarkers=true,
-        unit="MBs",
-        min=0,
-        max=2.5,
-        decimals=1,
-        thresholdsMode='percentage',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 30 }
-      ).addThreshold(
-        { color: 'green', value: 70 }
-      ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "internet")
-  |> filter(fn: (r) => r["_field"] == "upload_mbps")
-  |> filter(fn: (r) => r["metric"] == "upload")
-  |> keep(columns: ["_time", "_value"])
-  |> sort(columns: ["_time"])
-  |> last()
-// End')) { gridPos: { x: 14, y: 0, w: 5, h: 6 } },
 
       gauge.new(
         title='Internet Download',
@@ -217,7 +187,38 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
+// End')) { gridPos: { x: 14, y: 0, w: 5, h: 6 } },
+
+      gauge.new(
+        title='Internet Upload',
+        datasource='InfluxDB2',
+        reducerFunction='last',
+        showThresholdLabels=false,
+        showThresholdMarkers=true,
+        unit="MBs",
+        min=0,
+        max=2.5,
+        decimals=1,
+        thresholdsMode='percentage',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 30 }
+      ).addThreshold(
+        { color: 'green', value: 70 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "upload_mbps")
+  |> filter(fn: (r) => r["metric"] == "upload")
+  |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
+  |> last()
 // End')) { gridPos: { x: 19, y: 0, w: 5, h: 6 } },
+
 
       graph.new(
         title='Internet Throughput',
