@@ -72,7 +72,7 @@ from(bucket: "hosts")
   |> range(start: -8h, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => {})
-  |> filter(fn: (r) => r["metric"] == "{}")
+  |> filter(fn: (r) => r["metric"] == "{}" {})
   |> keep(columns: ["_time", "_value", "metric", "host_id", "host_name", "host_location"])
   |> sort(columns: ["_time"])
   |> last()
@@ -174,21 +174,25 @@ def upload(env):
     run_code = RUN_CODE_SUCCESS
     run_host_ids = set()
     network_stats = {
-        "upload": [""" r["_field"] == "upload_mbps" """, ",host_location={},host_name={} upload_mbps={},"],
+        "upload": [
+            """ r["_field"] == "upload_mbps" """,
+            """ and r["run_code"] == "0" """,
+            ",host_location={},host_name={} upload_mbps={},",
+        ],
     }
     for network_stat in network_stats:
         time_start = time_ms()
         try:
-            for network_stat_reply in query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat)):
-                if int(float(network_stat_reply[1])) != 0 and \
-                        ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) > THROUGHPUT_PERIOD_SECONDS:
+            for network_stat_reply in \
+                    query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
+                if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) > THROUGHPUT_PERIOD_SECONDS:
                     if network_stat_reply[2].replace("speedtest-", "") in HOST_SPEEDTEST_THROUGHPUT_IDS:
                         run_host_ids.add(network_stat_reply[2].replace("speedtest-", ""))
                         print(FORMAT_TEMPLATE.format(
                             network_stat,
                             network_stat_reply[2],
                             RUN_CODE_REPEAT,
-                            network_stats[network_stat][1].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
+                            network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
                             time_ms() - time_start,
                             time_ns()))
         except Exception as exception:
@@ -239,21 +243,25 @@ def download(env):
     run_code = RUN_CODE_SUCCESS
     run_host_ids = set()
     network_stats = {
-        "download": [""" r["_field"] == "download_mbps" """, ",host_location={},host_name={} download_mbps={},"],
+        "download": [
+            """ r["_field"] == "download_mbps" """,
+            """ and r["run_code"] == "0" """,
+            ",host_location={},host_name={} download_mbps={},",
+        ],
     }
     for network_stat in network_stats:
         time_start = time_ms()
         try:
-            for network_stat_reply in query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat)):
-                if int(float(network_stat_reply[1])) != 0 and \
-                        (datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds() > THROUGHPUT_PERIOD_SECONDS:
+            for network_stat_reply in \
+                    query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
+                if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) > THROUGHPUT_PERIOD_SECONDS:
                     if network_stat_reply[2].replace("speedtest-", "") in HOST_SPEEDTEST_THROUGHPUT_IDS:
                         run_host_ids.add(network_stat_reply[2].replace("speedtest-", ""))
                         print(FORMAT_TEMPLATE.format(
                             network_stat,
                             network_stat_reply[2],
                             RUN_CODE_REPEAT,
-                            network_stats[network_stat][1].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
+                            network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
                             time_ms() - time_start,
                             time_ns()))
         except Exception as exception:
@@ -478,13 +486,10 @@ if __name__ == "__main__":
         up_code_network = RUN_CODE_SUCCESS
         run_code_all.append(ping(profile))
         up_code_network += run_code_all[-1]
-
-        # TODO: Re-enable once working
-        # run_code_all.append(upload(profile))
-        # up_code_network += run_code_all[-1]
-        # run_code_all.append(download(profile))
-        # up_code_network += run_code_all[-1]
-
+        run_code_all.append(upload(profile))
+        up_code_network += run_code_all[-1]
+        run_code_all.append(download(profile))
+        up_code_network += run_code_all[-1]
         run_code_all.append(lookup(profile))
         run_code_all.append(certificate(profile))
         run_code_uptime = RUN_CODE_FAIL_CONFIG
@@ -506,19 +511,32 @@ if __name__ == "__main__":
             run_code_uptime = RUN_CODE_SUCCESS
         if up_code_network > RUN_CODE_SUCCESS:
             network_stats = {
-                "ping": [""" r["_field"] == "ping_min_ms" """, ",host_location={},host_name={} ping_min_ms=0,ping_max_ms=0,ping_med_ms=0,"],
-                "upload": [""" r["_field"] == "upload_mbps" """, ",host_location={},host_name={} upload_mbps=0,upload_b=0,"],
-                "download": [""" r["_field"] == "download_mbps" """, ",host_location={},host_name={} download_mbps=0,download_b=0,"],
+                "ping": [
+                    """ r["_field"] == "ping_min_ms" """,
+                    "",
+                    ",host_location={},host_name={} ping_min_ms=0,ping_max_ms=0,ping_med_ms=0,"
+                ],
+                "upload": [
+                    """ r["_field"] == "upload_mbps" """,
+                    "",
+                    ",host_location={},host_name={} upload_mbps=0,upload_b=0,"
+                ],
+                "download": [
+                    """ r["_field"] == "download_mbps" """,
+                    "",
+                    ",host_location={},host_name={} download_mbps=0,download_b=0,"
+                ],
             }
             for network_stat in network_stats:
                 time_start = time_ms()
                 try:
-                    for network_stat_reply in query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat)):
+                    for network_stat_reply in \
+                            query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
                         print(FORMAT_TEMPLATE.format(
                             network_stat,
                             network_stat_reply[2],
                             RUN_CODE_FAIL_ZEROED,
-                            network_stats[network_stat][1].format(network_stat_reply[3], network_stat_reply[4]),
+                            network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4]),
                             time_ms() - time_start,
                             time_ns()))
                 except Exception as exception:
