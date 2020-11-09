@@ -77,6 +77,7 @@ local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
 local graphs_servers = import '../graphs_servers.libsonnet';
 local graphs_network = import '../graphs_network.libsonnet';
+local graphs_internet = import '../graphs_internet.libsonnet';
         """.strip() + "\n")
         for group in sensors:
             file.write("""
@@ -94,7 +95,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
+        time_from='now-2d',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_servers.graphs()),
@@ -107,10 +108,25 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
+        time_from='now-2d',
+        refresh='30s',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_network.graphs()),
+
+
+    internet_dashboard:
+      dashboard.new(
+        title='Internet',
+        uid='internet',
+        editable=true,
+        tags=['published'],
+        schemaVersion=26,
+        time_from='now-2d',
+        refresh='30s',
+        graphTooltip='shared_crosshair',
+      )
+      .addPanels(graphs_internet.graphs()),
         """.strip() + "\n")
         for group in sensors:
             file.write("\n    " + """
@@ -121,7 +137,8 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
+        time_from='now-2d',
+        refresh='30s',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_{}.graphs()),
