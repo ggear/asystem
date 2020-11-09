@@ -39,8 +39,7 @@ if __name__ == "__main__":
                 flux = """from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => {})
-  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "friendly_name"])
-  |> fill(usePrevious: true)
+  |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                 """.format(filter).strip()
                 file.write("      " + """
