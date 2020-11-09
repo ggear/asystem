@@ -2,6 +2,7 @@ local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
 local graphs_servers = import '../graphs_servers.libsonnet';
 local graphs_network = import '../graphs_network.libsonnet';
+local graphs_internet = import '../graphs_internet.libsonnet';
 local graphs_conditions = import 'graphs_conditions.libsonnet';
 local graphs_water = import 'graphs_water.libsonnet';
 local graphs_electricity = import 'graphs_electricity.libsonnet';
@@ -16,7 +17,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
+        time_from='now-2d',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_servers.graphs()),
@@ -29,10 +30,25 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
+        time_from='now-2d',
+        refresh='30s',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_network.graphs()),
+
+
+    internet_dashboard:
+      dashboard.new(
+        title='Internet',
+        uid='internet',
+        editable=true,
+        tags=['published'],
+        schemaVersion=26,
+        time_from='now-2d',
+        refresh='30s',
+        graphTooltip='shared_crosshair',
+      )
+      .addPanels(graphs_internet.graphs()),
 
     conditions_dashboard:
       dashboard.new(
@@ -41,7 +57,8 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
+        time_from='now-2d',
+        refresh='30s',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_conditions.graphs()),
@@ -54,7 +71,8 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
+        time_from='now-2d',
+        refresh='30s',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_water.graphs()),
@@ -67,7 +85,8 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
+        time_from='now-2d',
+        refresh='30s',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_electricity.graphs()),
