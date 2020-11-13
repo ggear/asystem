@@ -14,7 +14,9 @@ SERVICE_HOST_NAME=$(hostname)
 
 cd ${SERVICE_INSTALL} || exit
 [ -f "${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz
+docker stop "${SERVICE_NAME}" >/dev/null 2>&1
 docker stop "${SERVICE_NAME}_${SERVICE_HOST_NAME}" >/dev/null 2>&1
+docker wait "${SERVICE_NAME}" >/dev/null 2>&1
 docker wait "${SERVICE_NAME}_${SERVICE_HOST_NAME}" >/dev/null 2>&1
 docker system prune --volumes -f 2>&1 >/dev/null
 [ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
