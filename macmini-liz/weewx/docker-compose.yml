@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   weewx:
-    container_name: weewx
+    container_name: weewx_${HOST_NAME}
     image: weewx:${VERSION}
     init: true
     restart: ${RESTART}

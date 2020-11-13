@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   speedtest:
-    container_name: speedtest
+    container_name: speedtest_${HOST_NAME}
     image: speedtest:${VERSION}
     init: true
     restart: ${RESTART}
