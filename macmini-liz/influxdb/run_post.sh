@@ -1,9 +1,9 @@
 #!/bin/sh
 
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
-SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 
-cd "${SERVICE_INSTALL}" || exit
+cd ${SERVICE_INSTALL} || exit
 . config/.profile
 
 # TODO: Create buckets (host/asystem) if not exist, get IDs, create DBRPS in this script
