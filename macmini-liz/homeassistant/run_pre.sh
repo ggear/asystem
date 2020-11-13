@@ -1,13 +1,13 @@
 #!/bin/sh
 
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
-SERVICE_INSTALL=/var/lib/asystem/install/$(hostname)/${SERVICE_NAME}/${VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${VERSION_ABSOLUTE}
 
 # find postgres by looping over hosts (see pushcerts.sh)
 # create user/passwrod/db via ssh
 # backup to datbase to home
 
-cd "${SERVICE_INSTALL}" || exit
+cd ${SERVICE_INSTALL} || exit
 if [ -f "${SERVICE_INSTALL}/hosts" ]; then
   while read -r host; do
     POSTGRES_HOME=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
