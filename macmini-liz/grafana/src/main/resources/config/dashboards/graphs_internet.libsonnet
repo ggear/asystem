@@ -7,6 +7,7 @@
     local graph = grafana.graphPanel;
     local table = grafana.tablePanel;
     local gauge = grafana.gaugePanel;
+    local bar = grafana.barGaugePanel;
     local influxdb = grafana.influxdb;
     
     [
@@ -38,37 +39,7 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-// End')) { gridPos: { x: 0, y: 0, w: 4, h: 3 } },
-
-      stat.new(
-        title='Service Availability',
-        datasource='InfluxDB2',
-        unit='percent',
-        decimals=0,
-        reducerFunction='last',
-        colorMode='value',
-        graphMode='none',
-        justifyMode='auto',
-        thresholdsMode='absolute',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 80 }
-      ).addThreshold(
-        { color: 'green', value: 99 }
-      ).addTarget(influxdb.target(query='// Start
-import "math"
-from(bucket: "hosts")
- |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
- |> filter(fn: (r) => r["_measurement"] == "internet")
- |> filter(fn: (r) => r["_field"] == "uptime_delta_s")
- |> filter(fn: (r) => r["metric"] == "network" or r["metric"] == "lookup" or r["metric"] == "certificate")
- |> keep(columns: ["_start", "_stop", "_value"])
- |> sum()
- |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: math.floor(x: r._value / (3.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0)) }))
-// End')) { gridPos: { x: 0, y: 3, w: 4, h: 3 } },
+// End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
       stat.new(
         title='Domain Uptime',
@@ -97,7 +68,7 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-// End')) { gridPos: { x: 4, y: 0, w: 4, h: 3 } },
+// End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
       stat.new(
         title='Certificate Expiry',
@@ -126,10 +97,92 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-// End')) { gridPos: { x: 4, y: 3, w: 4, h: 3 } },
+// End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
+
+      bar.new(
+        title='Service Availability',
+        datasource='InfluxDB2',
+        unit='percent',
+        thresholds=[
+          { 'color': 'red', 'value': null },
+          { 'color': 'yellow', 'value': 80 },
+          { 'color': 'green', 'value': 90 }
+        ],
+      ).addTarget(influxdb.target(query='// Start
+import "math"
+from(bucket: "hosts")
+ |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+ |> filter(fn: (r) => r["_measurement"] == "internet")
+ |> filter(fn: (r) => r["_field"] == "uptime_delta_s")
+ |> filter(fn: (r) => r["metric"] == "network" or r["metric"] == "lookup" or r["metric"] == "certificate")
+ |> keep(columns: ["_start", "_stop", "_value", "metric"])
+ |> sum()
+ |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: math.floor(x: r._value / (1.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0)) }))
+ |> map(fn: (r) => ({ r with metric: if r.metric == "certificate" then "Certificate" else (if r.metric == "lookup" then "Domain" else (if r.metric == "network" then "Internet" else r.metric)) }))
+// End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+
+      gauge.new(
+        title='Internet Max Upload',
+        datasource='InfluxDB2',
+        reducerFunction='last',
+        showThresholdLabels=false,
+        showThresholdMarkers=true,
+        unit="MBs",
+        min=0,
+        max=2.5,
+        decimals=1,
+        thresholdsMode='percentage',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 30 }
+      ).addThreshold(
+        { color: 'green', value: 70 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "upload_mbps")
+  |> filter(fn: (r) => r["metric"] == "upload")
+  |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
+  |> last()
+// End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+
+      gauge.new(
+        title='Internet Max Download',
+        datasource='InfluxDB2',
+        reducerFunction='last',
+        showThresholdLabels=false,
+        showThresholdMarkers=true,
+        unit="MBs",
+        min=0,
+        max=6.25,
+        decimals=1,
+        thresholdsMode='percentage',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 30 }
+      ).addThreshold(
+        { color: 'green', value: 70 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "download_mbps")
+  |> filter(fn: (r) => r["metric"] == "download")
+  |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
+  |> last()
+// End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
 
       stat.new(
-        title='Internet Latency',
+        title='Internet Mean Latency',
         datasource='InfluxDB2',
         unit='ms',
         decimals=1,
@@ -159,68 +212,7 @@ from(bucket: "hosts")
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 8, y: 3, w: 6, h: 6 } },
-
-      gauge.new(
-        title='Internet Download',
-        datasource='InfluxDB2',
-        reducerFunction='last',
-        showThresholdLabels=false,
-        showThresholdMarkers=true,
-        unit="MBs",
-        min=0,
-        max=6.25,
-        decimals=1,
-        thresholdsMode='percentage',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 30 }
-      ).addThreshold(
-        { color: 'green', value: 70 }
-      ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "internet")
-  |> filter(fn: (r) => r["_field"] == "download_mbps")
-  |> filter(fn: (r) => r["metric"] == "download")
-  |> keep(columns: ["_time", "_value"])
-  |> sort(columns: ["_time"])
-  |> last()
-// End')) { gridPos: { x: 14, y: 0, w: 5, h: 6 } },
-
-      gauge.new(
-        title='Internet Upload',
-        datasource='InfluxDB2',
-        reducerFunction='last',
-        showThresholdLabels=false,
-        showThresholdMarkers=true,
-        unit="MBs",
-        min=0,
-        max=2.5,
-        decimals=1,
-        thresholdsMode='percentage',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 30 }
-      ).addThreshold(
-        { color: 'green', value: 70 }
-      ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "internet")
-  |> filter(fn: (r) => r["_field"] == "upload_mbps")
-  |> filter(fn: (r) => r["metric"] == "upload")
-  |> keep(columns: ["_time", "_value"])
-  |> sort(columns: ["_time"])
-  |> last()
-// End')) { gridPos: { x: 19, y: 0, w: 5, h: 6 } },
-
+// End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
 
       graph.new(
         title='Internet Throughput',
@@ -261,8 +253,7 @@ from(bucket: "hosts")
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addSeriesOverride(
         { "alias": "Upload", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 6, w: 24, h: 12 } },
-
+      ) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
 
       graph.new(
         title='Internet Latency',
@@ -293,7 +284,7 @@ from(bucket: "hosts")
   |> map(fn: (r) => ({ r with host_location: strings.title(v: r.host_location) }))
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 36, w: 24, h: 12 } },
+// End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
       table.new(
         title='Domain Resolution',
@@ -321,7 +312,7 @@ finish_ips = from(bucket: "hosts")
   |> sort(columns: ["_time"], desc: true)
 union(tables: [start_ips, finish_ips])
   |> sort(columns: ["_time"], desc: true)
-// End')) { gridPos: { x: 0, y: 48, w: 24, h: 12 } },
+// End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
 
     ],
 }

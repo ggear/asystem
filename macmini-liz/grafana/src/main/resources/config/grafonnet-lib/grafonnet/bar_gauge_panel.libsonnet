@@ -35,6 +35,14 @@
         },
       },
     },
+
+   // HACK Start: Added default options
+   options: {
+      orientation: 'horizontal',
+      displayMode: 'basic'
+    },
+    // HACK End
+
     _nextTarget:: 0,
     addTarget(target):: self {
       // automatically ref id in added targets.
