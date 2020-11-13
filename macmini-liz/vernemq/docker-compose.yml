@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   vernemq:
-    container_name: vernemq
+    container_name: vernemq_${HOST_NAME}
     image: vernemq/vernemq:1.10.4.1-alpine
     init: true
     restart: ${RESTART}
