@@ -68,13 +68,13 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
       bar.new(
-        title='Wireless Success Rate',
+        title='Wireless Performance',
         datasource='InfluxDB2',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
-          { 'color': 'yellow', 'value': 50 },
-          { 'color': 'green', 'value': 70 }
+          { 'color': 'yellow', 'value': 60 },
+          { 'color': 'green', 'value': 80 }
         ],
       ).addTarget(influxdb.target(query='// Start
 import "math"
