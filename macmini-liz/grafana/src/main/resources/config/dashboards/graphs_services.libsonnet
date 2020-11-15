@@ -262,7 +262,7 @@ from(bucket: "hosts")
       graph.new(
         title='Container CPU',
         datasource='InfluxDB2',
-        fill=1,
+        fill=0,
         format='percent',
         bars=false,
         lines=true,
@@ -321,7 +321,7 @@ from(bucket: "hosts")
         lines=false,
         staircase=false,
         points=true,
-        pointradius=2,
+        pointradius=1,
         legend_values=true,
         legend_min=true,
         legend_max=true,
@@ -339,7 +339,7 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-  |> map(fn: (r) => ({ r with container_name: r.container_name + "(Read)" }))
+  |> map(fn: (r) => ({ r with container_name: r.container_name + " (Read)" }))
 // End')).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -348,7 +348,7 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-  |> map(fn: (r) => ({ r with container_name: r.container_name + "(Write)" }))
+  |> map(fn: (r) => ({ r with container_name: r.container_name + " (Write)" }))
 // End')).addSeriesOverride(
         { "alias": "/.*Write.*/", "transform": "negative-Y" }
       ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
@@ -362,7 +362,7 @@ from(bucket: "hosts")
         lines=false,
         staircase=false,
         points=true,
-        pointradius=2,
+        pointradius=1,
         legend_values=true,
         legend_min=true,
         legend_max=true,
@@ -380,7 +380,7 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-  |> map(fn: (r) => ({ r with container_name: r.container_name + "(Receive)" }))
+  |> map(fn: (r) => ({ r with container_name: r.container_name + " (Receive)" }))
 // End')).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -389,7 +389,7 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-  |> map(fn: (r) => ({ r with container_name: r.container_name + "(Transmit)" }))
+  |> map(fn: (r) => ({ r with container_name: r.container_name + " (Transmit)" }))
 // End')).addSeriesOverride(
         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
       ) { gridPos: { x: 0, y: 46, w: 24, h: 12 } },
