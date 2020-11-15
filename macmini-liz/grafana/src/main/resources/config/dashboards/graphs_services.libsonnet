@@ -3,7 +3,11 @@
   
     local grafana = import 'grafonnet/grafana.libsonnet';
     local dashboard = grafana.dashboard;
+    local stat = grafana.statPanel;
     local graph = grafana.graphPanel;
+    local table = grafana.tablePanel;
+    local gauge = grafana.gaugePanel;
+    local bar = grafana.barGaugePanel;
     local influxdb = grafana.influxdb;
     
     [
@@ -11,8 +15,8 @@
       stat.new(
         title='Services Running',
         datasource='InfluxDB2',
-        unit='s',
-        decimals=1,
+        unit='',
+        decimals=0,
         reducerFunction='last',
         colorMode='value',
         graphMode='none',
@@ -23,17 +27,37 @@
       ).addThreshold(
         { color: 'red', value: 0 }
       ).addThreshold(
-        { color: 'yellow', value: 43200 }
+        { color: 'yellow', value: 5 }
       ).addThreshold(
-        { color: 'green', value: 86400 }
+        { color: 'green', value: 10 }
       ).addTarget(influxdb.target(query='// Start
+// TODO: Averaging all values is very slow
+// import "math"
+// from(bucket: "hosts")
+//   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+//   |> filter(fn: (r) => r["_measurement"] == "docker")
+//   |> filter(fn: (r) => r["_field"] == "n_containers_running")
+//   |> keep(columns: ["_time", "_value", "_field"])
+//   |> group(columns: ["_time", "_field"], mode:"by")
+//   |> sum()
+//   |> group()
+//   |> mean()
+//   |> map(fn: (r) => ({ r with _value: math.ceil(x: r._value) }))
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker")
+  |> filter(fn: (r) => r["_field"] == "n_containers_running")
+  |> keep(columns: ["_time", "_value", "_field", "host"])
+  |> last()
+  |> group()
+  |> sum()
 // End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
       stat.new(
-        title='Services Stopped',
+        title='Services Not Running',
         datasource='InfluxDB2',
-        unit='s',
-        decimals=1,
+        unit='',
+        decimals=0,
         reducerFunction='last',
         colorMode='value',
         graphMode='none',
@@ -42,19 +66,37 @@
         repeatDirection='h',
         pluginVersion='7',
       ).addThreshold(
-        { color: 'red', value: 0 }
+        { color: 'green', value: 0 }
       ).addThreshold(
-        { color: 'yellow', value: 600 }
-      ).addThreshold(
-        { color: 'green', value: 12000 }
+        { color: 'red', value: 1 }
       ).addTarget(influxdb.target(query='// Start
+// TODO: Averaging all values is very slow
+// import "math"
+// from(bucket: "hosts")
+//   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+//   |> filter(fn: (r) => r["_measurement"] == "docker")
+//   |> filter(fn: (r) => r["_field"] == "n_containers_paused" or r["_field"] == "n_containers_stopped" )
+//   |> keep(columns: ["_time", "_value", "_field"])
+//   |> group(columns: ["_time", "_field"], mode:"by")
+//   |> sum()
+//   |> group()
+//   |> mean()
+//   |> map(fn: (r) => ({ r with _value: math.ceil(x: r._value) }))
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker")
+  |> filter(fn: (r) => r["_field"] == "n_containers_paused" or r["_field"] == "n_containers_stopped" )
+  |> keep(columns: ["_time", "_value", "_field", "host"])
+  |> last()
+  |> group()
+  |> sum()
 // End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
       stat.new(
-        title='Services Images',
+        title='Service Images',
         datasource='InfluxDB2',
-        unit='s',
-        decimals=1,
+        unit='',
+        decimals=0,
         reducerFunction='last',
         colorMode='value',
         graphMode='none',
@@ -65,11 +107,302 @@
       ).addThreshold(
         { color: 'red', value: 0 }
       ).addThreshold(
-        { color: 'yellow', value: 432000 }
+        { color: 'yellow', value: 5 }
       ).addThreshold(
-        { color: 'green', value: 864000 }
+        { color: 'green', value: 10 }
       ).addTarget(influxdb.target(query='// Start
+// TODO: Averaging all values is very slow
+// import "math"
+// from(bucket: "hosts")
+//   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+//   |> filter(fn: (r) => r["_measurement"] == "docker")
+//   |> filter(fn: (r) => r["_field"] == "n_images" )
+//   |> keep(columns: ["_time", "_value", "_field"])
+//   |> group(columns: ["_time", "_field"], mode:"by")
+//   |> sum()
+//   |> group()
+//   |> mean()
+//   |> map(fn: (r) => ({ r with _value: math.ceil(x: r._value) }))
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker")
+  |> filter(fn: (r) => r["_field"] == "n_images" )
+  |> keep(columns: ["_time", "_value", "_field", "host"])
+  |> last()
+  |> group()
+  |> sum()
 // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
+
+      bar.new(
+        title='Service Status',
+        datasource='InfluxDB2',
+        unit='percent',
+        thresholds=[
+          { 'color': 'red', 'value': null },
+          { 'color': 'yellow', 'value': 60 },
+          { 'color': 'green', 'value': 80 }
+        ],
+      ).addTarget(influxdb.target(query='// Start
+// End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+
+      gauge.new(
+        title='Service Running Rate',
+        datasource='InfluxDB2',
+        reducerFunction='last',
+        showThresholdLabels=false,
+        showThresholdMarkers=true,
+        unit='percent',
+        min=0,
+        max=100,
+        decimals=0,
+        thresholdsMode='percentage',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 95 }
+      ).addThreshold(
+        { color: 'green', value: 99 }
+      ).addTarget(influxdb.target(query='// Start
+import "math"
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker")
+  |> filter(fn: (r) => r["_field"] == "n_containers" or r["_field"] == "n_containers_running")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> truncateTimeColumn(unit: v.windowPeriod)
+  |> group(columns: ["_time", "_field"], mode:"by")
+  |> sum()
+  |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+  |> fill(column: "n_containers_running", value: 1)
+  |> fill(column: "n_containers", value: 1)
+  |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: float(v: r.n_containers_running) / float(v: r.n_containers) * 100.0) }))
+  |> keep(columns: ["_value"])
+  |> mean()
+// End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+
+      gauge.new(
+        title='Service Health Rate',
+        datasource='InfluxDB2',
+        reducerFunction='last',
+        showThresholdLabels=false,
+        showThresholdMarkers=true,
+        unit='percent',
+        min=0,
+        max=100,
+        decimals=0,
+        thresholdsMode='percentage',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 95 }
+      ).addThreshold(
+        { color: 'green', value: 99 }
+      ).addTarget(influxdb.target(query='// Start
+import "math"
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_health")
+  |> filter(fn: (r) => r["_field"] == "health_status")
+  |> filter(fn: (r) => r["_field"] == "health_status")
+  |> keep(columns: ["_value", "container_name"])
+  |> map(fn: (r) => ({ r with _value: if r._value == "healthy" then 1 else (if r._value == "unhealthy" then -1 else 0) }))
+  |> group(columns: ["container_name"], mode:"by")
+  |> keep(columns: ["_value"])
+  |> map(fn: (r) => ({ r with index: 1 }))
+  |> cumulativeSum(columns: ["index"])
+  |> cumulativeSum(columns: ["_value"])
+  |> last()
+  |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: float(v: r._value) / float(v: r.index) * 100.0) }))
+  |> keep(columns: ["_value"])
+  |> group()
+  |> mean()
+// End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
+
+      gauge.new(
+        title='Service Image Utilisation',
+        datasource='InfluxDB2',
+        reducerFunction='last',
+        showThresholdLabels=false,
+        showThresholdMarkers=true,
+        unit='percent',
+        min=0,
+        max=100,
+        decimals=0,
+        thresholdsMode='percentage',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'red', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 95 }
+      ).addThreshold(
+        { color: 'green', value: 99 }
+      ).addTarget(influxdb.target(query='// Start
+import "math"
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker")
+  |> filter(fn: (r) => r["_field"] == "n_containers" or r["_field"] == "n_images")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> truncateTimeColumn(unit: v.windowPeriod)
+  |> group(columns: ["_time", "_field"], mode:"by")
+  |> sum()
+  |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+  |> fill(column: "n_images", value: 1)
+  |> fill(column: "n_containers", value: 1)
+  |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: float(v: r.n_containers) / float(v: r.n_images) * 100.0) }))
+  |> keep(columns: ["_value"])
+  |> mean()
+// End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
+
+      graph.new(
+        title='Container CPU',
+        datasource='InfluxDB2',
+        fill=1,
+        format='percent',
+        bars=false,
+        lines=true,
+        staircase=true,
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=false,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=350
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_cpu")
+  |> filter(fn: (r) => r["_field"] == "usage_percent")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+// End')) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
+
+      graph.new(
+        title='Container RAM',
+        datasource='InfluxDB2',
+        fill=1,
+        format='percent',
+        bars=false,
+        lines=true,
+        staircase=true,
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=false,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=350
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_mem")
+  |> filter(fn: (r) => r["_field"] == "usage_percent")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> fill(column: "_value", usePrevious: true)
+// End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
+
+      graph.new(
+        title='Container IOPS',
+        datasource='InfluxDB2',
+        fill=0,
+        format='Bps',
+        bars=true,
+        lines=false,
+        staircase=false,
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=false,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=350
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
+  |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_read")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> derivative(unit: 1s, nonNegative: true)
+  |> map(fn: (r) => ({ r with container_name: r.container_name + "(Read)" }))
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
+  |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_write")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> derivative(unit: 1s, nonNegative: true)
+  |> map(fn: (r) => ({ r with container_name: r.container_name + "(Write)" }))
+// End')).addSeriesOverride(
+        { "alias": "/.*Write.*/", "transform": "negative-Y" }
+      ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+
+      graph.new(
+        title='Container Network',
+        datasource='InfluxDB2',
+        fill=0,
+        format='Bps',
+        bars=true,
+        lines=false,
+        staircase=false,
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=false,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=350
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
+  |> filter(fn: (r) => r["_field"] == "rx_bytes")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> derivative(unit: 1s, nonNegative: true)
+  |> map(fn: (r) => ({ r with container_name: r.container_name + "(Receive)" }))
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
+  |> filter(fn: (r) => r["_field"] == "tx_bytes")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> derivative(unit: 1s, nonNegative: true)
+  |> map(fn: (r) => ({ r with container_name: r.container_name + "(Transmit)" }))
+// End')).addSeriesOverride(
+        { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
+      ) { gridPos: { x: 0, y: 46, w: 24, h: 12 } },
+
+      table.new(
+        title='Service Status',
+        datasource='InfluxDB2'
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_status")
+  |> filter(fn: (r) => r["_field"] == "uptime_ns")
+  |> keep(columns: ["_time", "_value", "container_name", "container_status"])
+  |> sort(columns: ["_time"])
+  |> last()
+  |> group()
+// End')) { gridPos: { x: 0, y: 60, w: 24, h: 12 } },
 
     ],
 }
