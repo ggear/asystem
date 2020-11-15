@@ -54,6 +54,13 @@
     timeFrom: time_from,
     timeShift: time_shift,
     links: links,
+
+    // HACK Start: Added default options
+    fieldConfig: {
+      defaults: { unit: 'ns' }
+    },
+    // HACK End
+
     [if sort != null then 'sort']: sort,
     [if description != null then 'description']: description,
     [if transform != null then 'transform']: transform,

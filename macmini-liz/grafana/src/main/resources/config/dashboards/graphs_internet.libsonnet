@@ -230,7 +230,7 @@ from(bucket: "hosts")
         legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
-        legend_sideWidth=350
+        legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -271,7 +271,7 @@ from(bucket: "hosts")
         legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
-        legend_sideWidth=350
+        legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
 import "strings"
 from(bucket: "hosts")

@@ -59,7 +59,7 @@ if __name__ == "__main__":
         legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
-        legend_sideWidth=350
+        legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
 {}
 // End'))

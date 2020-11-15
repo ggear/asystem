@@ -13,7 +13,7 @@
     [
 
       stat.new(
-        title='Services Running',
+        title='Containers Running',
         datasource='InfluxDB2',
         unit='',
         decimals=0,
@@ -54,7 +54,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
       stat.new(
-        title='Services Not Running',
+        title='Containers Not Running',
         datasource='InfluxDB2',
         unit='',
         decimals=0,
@@ -93,7 +93,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
       stat.new(
-        title='Service Images',
+        title='Container Images',
         datasource='InfluxDB2',
         unit='',
         decimals=0,
@@ -134,19 +134,88 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
       bar.new(
-        title='Service Status',
+        title='Container Peak Resources <50%',
         datasource='InfluxDB2',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
-          { 'color': 'yellow', 'value': 60 },
-          { 'color': 'green', 'value': 80 }
+          { 'color': 'yellow', 'value': 50 },
+          { 'color': 'green', 'value': 90 }
         ],
       ).addTarget(influxdb.target(query='// Start
+import "math"
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_cpu")
+  |> filter(fn: (r) => r["_field"] == "usage_percent")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> max()
+  |> group()
+  |> map(fn: (r) => ({ r with index: 1 }))
+  |> cumulativeSum(columns: ["index"])
+  |> map(fn: (r) => ({ r with _value: if r._value > 200.0 then 1 else 0 }))
+  |> cumulativeSum(columns: ["_value"])
+  |> last()
+  |> map(fn: (r) => ({ r with "CPU": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
+  |> keep(columns: ["CPU"])
+// End')).addTarget(influxdb.target(query='// Start
+import "math"
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_mem")
+  |> filter(fn: (r) => r["_field"] == "usage_percent")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> max()
+  |> group()
+  |> map(fn: (r) => ({ r with index: 1 }))
+  |> cumulativeSum(columns: ["index"])
+  |> map(fn: (r) => ({ r with _value: if r._value > 50.0 then 1 else 0 }))
+  |> cumulativeSum(columns: ["_value"])
+  |> last()
+  |> map(fn: (r) => ({ r with "RAM": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
+  |> keep(columns: ["RAM"])
+// End')).addTarget(influxdb.target(query='// Start
+import "math"
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
+  |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_read")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> fill(column: "_value", usePrevious: true)
+  |> derivative(unit: 1s, nonNegative: true)
+  |> max()
+  |> group()
+  |> map(fn: (r) => ({ r with index: 1 }))
+  |> cumulativeSum(columns: ["index"])
+  |> map(fn: (r) => ({ r with _value: if r._value > 100000000 then 1 else 0 }))
+  |> cumulativeSum(columns: ["_value"])
+  |> last()
+  |> map(fn: (r) => ({ r with "IOPS": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
+  |> keep(columns: ["IOPS"])
+// End')).addTarget(influxdb.target(query='// Start
+import "math"
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
+  |> filter(fn: (r) => r["_field"] == "rx_bytes" or r["_field"] == "tx_bytes")
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> fill(column: "_value", usePrevious: true)
+  |> derivative(unit: 1s, nonNegative: true)
+  |> max()
+  |> group()
+  |> map(fn: (r) => ({ r with index: 1 }))
+  |> cumulativeSum(columns: ["index"])
+  |> map(fn: (r) => ({ r with _value: if r._value > 62500000 then 1 else 0 }))
+  |> cumulativeSum(columns: ["_value"])
+  |> last()
+  |> map(fn: (r) => ({ r with "Network": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
+  |> keep(columns: ["Network"])
 // End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
       gauge.new(
-        title='Service Running Rate',
+        title='Container Running Rate',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
@@ -183,7 +252,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
 
       gauge.new(
-        title='Service Health Rate',
+        title='Container Healthy Rate',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
@@ -223,7 +292,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
 
       gauge.new(
-        title='Service Image Utilisation',
+        title='Container Image Utilisation',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
@@ -275,7 +344,7 @@ from(bucket: "hosts")
         legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
-        legend_sideWidth=350
+        legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -301,7 +370,7 @@ from(bucket: "hosts")
         legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
-        legend_sideWidth=350
+        legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -330,7 +399,7 @@ from(bucket: "hosts")
         legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
-        legend_sideWidth=350
+        legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -338,6 +407,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_read")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (Read)" }))
 // End')).addTarget(influxdb.target(query='// Start
@@ -347,6 +417,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_write")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (Write)" }))
 // End')).addSeriesOverride(
@@ -371,7 +442,7 @@ from(bucket: "hosts")
         legend_avg=false,
         legend_alignAsTable=true,
         legend_rightSide=true,
-        legend_sideWidth=350
+        legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -379,6 +450,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "rx_bytes")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (Receive)" }))
 // End')).addTarget(influxdb.target(query='// Start
@@ -388,6 +460,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_field"] == "tx_bytes")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (Transmit)" }))
 // End')).addSeriesOverride(
@@ -398,15 +471,36 @@ from(bucket: "hosts")
         title='Service Status',
         datasource='InfluxDB2'
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+status = from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_status")
   |> filter(fn: (r) => r["_field"] == "uptime_ns")
-  |> keep(columns: ["_time", "_value", "container_name", "container_status"])
-  |> sort(columns: ["_time"])
   |> last()
+  |> map(fn: (r) => ({ r with "Name": r.container_name }))
+  |> map(fn: (r) => ({ r with "Status": r.container_status }))
+  |> map(fn: (r) => ({ r with "Uptime": r._value }))
+  |> keep(columns: ["Name", "Status", "Uptime"])
   |> group()
-// End')) { gridPos: { x: 0, y: 60, w: 24, h: 12 } },
+health = from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "docker_container_health")
+  |> filter(fn: (r) => r["_field"] == "health_status")
+  |> last()
+  |> map(fn: (r) => ({ r with "Name": r.container_name }))
+  |> map(fn: (r) => ({ r with "Temperature": r._value }))
+  |> keep(columns: ["Name", "Temperature"])
+  |> group()
+union(tables: [status, health])
+  |> group(columns: ["Name"])
+  |> sort(columns: ["_time"], desc: true)
+  |> fill(column: "Status", usePrevious: true)
+  |> fill(column: "Uptime", usePrevious: true)
+  |> fill(column: "Temperature", value: "healthy")
+  |> map(fn: (r) => ({ r with _value: 0 }))
+  |> last()
+  |> keep(columns: ["Name", "Status", "Temperature", "Uptime"])
+  |> group()
+// End')) { gridPos: { x: 0, y: 60, w: 24, h: 18 } },
 
     ],
 }
