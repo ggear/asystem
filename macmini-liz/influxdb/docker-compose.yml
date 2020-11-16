@@ -2,7 +2,7 @@ version: '3.7'
 services:
   influxdb:
     container_name: influxdb_${HOST_NAME}
-    image: quay.io/influxdb/influxdb:v2.0.0-rc
+    image: quay.io/influxdb/influxdb:2.0.0-rc
     init: true
     restart: ${RESTART}
     environment:
