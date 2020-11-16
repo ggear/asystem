@@ -75,7 +75,7 @@ if __name__ == "__main__":
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
 local graphs_servers = import '../graphs_servers.libsonnet';
-local graphs_services = import '../graphs_services.libsonnet';
+local graphs_containers = import '../graphs_containers.libsonnet';
 local graphs_network = import '../graphs_network.libsonnet';
 local graphs_internet = import '../graphs_internet.libsonnet';
         """.strip() + "\n")
@@ -101,18 +101,18 @@ local graphs_{} = import 'graphs_{}.libsonnet';
       )
       .addPanels(graphs_servers.graphs()),
 
-    services_dashboard:
+    containers_dashboard:
       dashboard.new(
-        title='Services',
-        uid='services',
+        title='Containers',
+        uid='containers',
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-15m',
-        refresh='1m',
+        time_from='now-5m',
+        refresh='5m',
         graphTooltip='shared_crosshair',
       )
-      .addPanels(graphs_services.graphs()),
+      .addPanels(graphs_containers.graphs()),
 
     network_dashboard:
       dashboard.new(

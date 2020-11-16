@@ -13,7 +13,7 @@
     [
 
       stat.new(
-        title='Containers Running',
+        title='Containers Currently Running',
         datasource='InfluxDB2',
         unit='',
         decimals=0,
@@ -54,7 +54,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
       stat.new(
-        title='Containers Not Running',
+        title='Containers Currently Not Running',
         datasource='InfluxDB2',
         unit='',
         decimals=0,
@@ -93,7 +93,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
       stat.new(
-        title='Container Images',
+        title='Container Images Currently Installed',
         datasource='InfluxDB2',
         unit='',
         decimals=0,
@@ -134,7 +134,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
       bar.new(
-        title='Container Peak Resources <50%',
+        title='Containers with Peak Resources <50%',
         datasource='InfluxDB2',
         unit='percent',
         thresholds=[
@@ -215,7 +215,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
       gauge.new(
-        title='Container Running Rate',
+        title='Container Mean Running/Not Running Rate',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
@@ -252,7 +252,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
 
       gauge.new(
-        title='Container Healthy Rate',
+        title='Container Mean Healthy Rate',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
@@ -292,7 +292,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
 
       gauge.new(
-        title='Container Image Utilisation',
+        title='Container Image Usage',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
@@ -329,9 +329,9 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
 
       graph.new(
-        title='Container CPU',
+        title='Container CPU Usage',
         datasource='InfluxDB2',
-        fill=0,
+        fill=1,
         format='percent',
         bars=false,
         lines=true,
@@ -355,7 +355,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
 
       graph.new(
-        title='Container RAM',
+        title='Container RAM Usage',
         datasource='InfluxDB2',
         fill=1,
         format='percent',
@@ -382,7 +382,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
       graph.new(
-        title='Container IOPS',
+        title='Container IOPS Usage',
         datasource='InfluxDB2',
         fill=0,
         format='Bps',
@@ -425,7 +425,7 @@ from(bucket: "hosts")
       ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
 
       graph.new(
-        title='Container Network',
+        title='Container Network Usage',
         datasource='InfluxDB2',
         fill=0,
         format='Bps',
@@ -468,7 +468,7 @@ from(bucket: "hosts")
       ) { gridPos: { x: 0, y: 46, w: 24, h: 12 } },
 
       table.new(
-        title='Service Status',
+        title='Container Current Process Status',
         datasource='InfluxDB2'
       ).addTarget(influxdb.target(query='// Start
 status = from(bucket: "hosts")
