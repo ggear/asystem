@@ -21,10 +21,9 @@
 #
 #influx write -c influx_new --format csv -b asystem -f /tmp/data.csv --skipRowOnError
 
-ORG_NAME="e20dcc436a89fa52"
 ORG_NAME="home"
-BUCKET_ID_HOSTS="e2299a59b47af56c"
-BUCKET_ID_ASYSTEM="aa9a70f5545e6bcd"
+BUCKET_ID_HOSTS="8d2a7264c0f41b55"
+BUCKET_ID_ASYSTEM="77e121ec6ca0e939"
 
 set -x
 
@@ -65,21 +64,15 @@ curl -G --silent --request GET http://macmini-liz:8086/api/v2/dbrps \
   --header "Content-type: application/json" \
   --data-urlencode "org=${ORG_NAME}"
 
-curl --silent -POST 'http://macmini-liz:8086/write?db=hosts' \
-  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
-  --data-raw 'test_metric,test_tag=test_tag_value test_value=0'
+#curl --silent -POST "http://influxdb:${INFLUXDB_TOKEN}@macmini-liz:8086/write?db=hosts" \
+#  --data-raw 'test_metric,test_tag=test_tag_value test_value=0'
+#curl -G --silent --request GET "http://influxdb:${INFLUXDB_TOKEN}@macmini-liz:8086/query?db=hosts" \
+#  --data-urlencode "q=SELECT count(*) FROM test_metric WHERE time >= now() - 15m"
 
-curl --silent -POST 'http://macmini-liz:8086/write?db=asystem' \
-  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
-  --data-raw 'test_metric,test_tag=test_tag_value test_value=0'
+#curl --silent -POST "http://influxdb:${INFLUXDB_TOKEN}@macmini-liz:8086/write?db=asystem" \
+#  --data-raw 'test_metric,test_tag=test_tag_value test_value=0'
+#curl -G --silent --request GET "http://influxdb:${INFLUXDB_TOKEN}@macmini-liz:8086/query?db=asystem" \
+#  --data-urlencode "q=SELECT count(*) FROM test_metric WHERE time >= now() - 15m"
 
-curl -G --silent --request GET http://macmini-liz:8086/query \
-  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
-  --data-urlencode "db=asystem" \
-  --data-urlencode "q=SELECT count(*) FROM test_metric WHERE time >= now() - 15m"
-
-curl -G --silent --request GET http://influxdb:${INFLUXDB_TOKEN}@macmini-liz:8086/query \
-  --data-urlencode "db=hosts" \
-  --data-urlencode "q=SELECT count(*) FROM test_metric WHERE time >= now() - 15m"
 
 echo "" && echo ""
