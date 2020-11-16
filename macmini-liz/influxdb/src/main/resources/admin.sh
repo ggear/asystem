@@ -21,10 +21,10 @@
 #
 #influx write -c influx_new --format csv -b asystem -f /tmp/data.csv --skipRowOnError
 
-ORG_ID="e20dcc436a89fa52"
+ORG_NAME="e20dcc436a89fa52"
 ORG_NAME="home"
-BUCKET_ID_HOSTS="2de730f52b92fae0"
-BUCKET_ID_ASYSTEM="d7c9c0c45bcf09ff"
+BUCKET_ID_HOSTS="e2299a59b47af56c"
+BUCKET_ID_ASYSTEM="aa9a70f5545e6bcd"
 
 set -x
 
@@ -42,7 +42,7 @@ curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header 'Content-type: application/json' \
   --data '{
-    "organization_id": "'${ORG_ID}'",
+    "organization": "'${ORG_NAME}'",
     "bucket_id": "'${BUCKET_ID_HOSTS}'",
     "database": "asystem",
     "retention_policy": "autogen",
@@ -53,7 +53,7 @@ curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header 'Content-type: application/json' \
   --data '{
-    "organization_id": "'${ORG_ID}'",
+    "organization": "'${ORG_NAME}'",
     "bucket_id": "'${BUCKET_ID_ASYSTEM}'",
     "database": "hosts",
     "retention_policy": "autogen",
@@ -63,7 +63,7 @@ curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
 curl -G --silent --request GET http://macmini-liz:8086/api/v2/dbrps \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header "Content-type: application/json" \
-  --data-urlencode "orgID=${ORG_ID}"
+  --data-urlencode "org=${ORG_NAME}"
 
 curl --silent -POST 'http://macmini-liz:8086/write?db=hosts' \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
