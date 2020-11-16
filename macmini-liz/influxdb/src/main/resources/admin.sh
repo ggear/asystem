@@ -21,13 +21,19 @@
 #
 #influx write -c influx_new --format csv -b asystem -f /tmp/data.csv --skipRowOnError
 
-echo "Get [all] Buckets:" && curl -G --request GET http://macmini-liz:8086/api/v2/buckets \
+set -x
+
+curl -G --silent --request GET http://macmini-liz:8086/api/v2/authorizations \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header "Content-type: application/json" \
   --data-urlencode "orgID=3ac4477553d89245"
-echo "" && echo "" && echo "" && echo ""
 
-echo "Create [asystem] DB RP:" && curl --request POST http://macmini-liz:8086/api/v2/dbrps \
+curl -G --silent --request GET http://macmini-liz:8086/api/v2/buckets \
+  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
+  --header "Content-type: application/json" \
+  --data-urlencode "orgID=3ac4477553d89245"
+
+curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header 'Content-type: application/json' \
   --data '{
@@ -37,9 +43,8 @@ echo "Create [asystem] DB RP:" && curl --request POST http://macmini-liz:8086/ap
     "retention_policy": "autogen",
     "default": true
   }'
-echo "" && echo "" && echo "" && echo ""
 
-echo "Create [hosts] DB RP:" && curl --request POST http://macmini-liz:8086/api/v2/dbrps \
+curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header 'Content-type: application/json' \
   --data '{
@@ -49,24 +54,32 @@ echo "Create [hosts] DB RP:" && curl --request POST http://macmini-liz:8086/api/
     "retention_policy": "autogen",
     "default": true
   }'
-echo "" && echo "" && echo "" && echo ""
 
-echo "Get [all] DB RP:" && echo "" && curl -G --request GET http://macmini-liz:8086/api/v2/dbrps \
+curl -G --silent --request GET http://macmini-liz:8086/api/v2/dbrps \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header "Content-type: application/json" \
   --data-urlencode "orgID=3ac4477553d89245"
-echo "" && echo "" && echo "" && echo ""
 
-echo "Query [asystem] example:" && echo "" && curl -G --request GET http://macmini-liz:8086/query \
+curl -G --silent --request GET http://macmini-liz:8086/query \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --data-urlencode "db=asystem" \
   --data-urlencode "q=SELECT count(*) FROM W WHERE time >= now() - 15m"
-echo "" && echo "" && echo "" && echo ""
 
-echo "Query [hosts] example:" && echo "" && curl -G --request GET http://macmini-liz:8086/query \
+curl -G --silent --request GET http://macmini-liz:8086/query \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --data-urlencode "db=hosts" \
   --data-urlencode "q=SELECT count(*) FROM internet WHERE time >= now() - 15m"
-echo "" && echo "" && echo "" && echo ""
 
+curl --silent -POST 'http://macmini-liz:8086/write?db=hosts' \
+  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
+  --data-raw 'test_measurement,test_tag=test_tag_value test_value=0'
 
+curl --silent -POST 'http://macmini-liz:8086/write?db=asystem' \
+  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
+  --data-raw 'test_measurement,test_tag=test_tag_value test_value=0'
+
+curl --silent -POST 'http://macmini-liz:8086/write?db=hosts' \
+  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
+  --data-binary 'test_measurement,test_tag=test_tag_value test_value=0'
+
+echo "" && echo ""
