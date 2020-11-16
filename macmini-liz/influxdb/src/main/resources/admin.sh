@@ -60,11 +60,13 @@ echo "" && echo "" && echo "" && echo ""
 echo "Query [asystem] example:" && echo "" && curl -G --request GET http://macmini-liz:8086/query \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --data-urlencode "db=asystem" \
-  --data-urlencode "q=SELECT * FROM W WHERE time >= now() - 15m"
+  --data-urlencode "q=SELECT count(*) FROM W WHERE time >= now() - 15m"
 echo "" && echo "" && echo "" && echo ""
 
 echo "Query [hosts] example:" && echo "" && curl -G --request GET http://macmini-liz:8086/query \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --data-urlencode "db=hosts" \
-  --data-urlencode "q=SELECT uptime_s FROM internet WHERE time >= now() - 15m"
+  --data-urlencode "q=SELECT count(*) FROM internet WHERE time >= now() - 15m"
 echo "" && echo "" && echo "" && echo ""
+
+
