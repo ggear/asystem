@@ -215,7 +215,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
       gauge.new(
-        title='Container Mean Running/Not Running Rate',
+        title='Container Mean Running Rate',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
