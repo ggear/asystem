@@ -21,10 +21,10 @@
 #
 #influx write -c influx_new --format csv -b asystem -f /tmp/data.csv --skipRowOnError
 
-ORG_ID="a221eadd1f9e351e"
+ORG_ID="e20dcc436a89fa52"
 ORG_NAME="home"
-BUCKET_ID_HOSTS="68e5c1c8a453b5df"
-BUCKET_ID_ASYSTEM="c17aa86ee05d8b99"
+BUCKET_ID_HOSTS="65c3e44009a7a47d"
+BUCKET_ID_ASYSTEM="44b87e724706dfd2"
 
 set -x
 
@@ -70,7 +70,7 @@ curl --silent -POST 'http://macmini-liz:8086/write?db=hosts' \
   --data-raw 'test_metric,test_tag=test_tag_value test_value=0'
 
 curl --silent -POST 'http://macmini-liz:8086/write?db=asystem' \
-  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
+  --header "Authorization: Basic influxdb:${INFLUXDB_TOKEN}" \
   --data-raw 'test_metric,test_tag=test_tag_value test_value=0'
 
 curl -G --silent --request GET http://macmini-liz:8086/query \
