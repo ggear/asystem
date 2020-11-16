@@ -22,8 +22,8 @@
 #influx write -c influx_new --format csv -b asystem -f /tmp/data.csv --skipRowOnError
 
 ORG_NAME="home"
-BUCKET_ID_HOSTS="8d2a7264c0f41b55"
-BUCKET_ID_ASYSTEM="77e121ec6ca0e939"
+BUCKET_ID_HOSTS="79b4ddf1dab01b7f"
+BUCKET_ID_ASYSTEM="2d862108bcf5ce9e"
 
 set -x
 
@@ -43,7 +43,7 @@ curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
   --data '{
     "organization": "'${ORG_NAME}'",
     "bucket_id": "'${BUCKET_ID_HOSTS}'",
-    "database": "asystem",
+    "database": "hosts",
     "retention_policy": "autogen",
     "default": true
   }'
@@ -54,7 +54,7 @@ curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
   --data '{
     "organization": "'${ORG_NAME}'",
     "bucket_id": "'${BUCKET_ID_ASYSTEM}'",
-    "database": "hosts",
+    "database": "asystem",
     "retention_policy": "autogen",
     "default": true
   }'
