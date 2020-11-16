@@ -21,54 +21,49 @@
 #
 #influx write -c influx_new --format csv -b asystem -f /tmp/data.csv --skipRowOnError
 
+ORG_ID="a221eadd1f9e351e"
+ORG_NAME="home"
+BUCKET_ID_HOSTS="06a01ce52840b000"
+BUCKET_ID_ASYSTEM="06a01ce53880b000"
+
 set -x
 
 curl -G --silent --request GET http://macmini-liz:8086/api/v2/authorizations \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header "Content-type: application/json" \
-  --data-urlencode "orgID=3ac4477553d89245"
+  --data-urlencode "org=${ORG_NAME}"
 
 curl -G --silent --request GET http://macmini-liz:8086/api/v2/buckets \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header "Content-type: application/json" \
-  --data-urlencode "orgID=3ac4477553d89245"
+  --data-urlencode "org=${ORG_NAME}"
 
-curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
-  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
-  --header 'Content-type: application/json' \
-  --data '{
-    "organization_id": "3ac4477553d89245",
-    "bucket_id": "54b31e32e392a1cb",
-    "database": "asystem",
-    "retention_policy": "autogen",
-    "default": true
-  }'
-
-curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
-  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
-  --header 'Content-type: application/json' \
-  --data '{
-    "organization_id": "3ac4477553d89245",
-    "bucket_id": "fa47990c0ce24cd1",
-    "database": "hosts",
-    "retention_policy": "autogen",
-    "default": true
-  }'
+#curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
+#  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
+#  --header 'Content-type: application/json' \
+#  --data '{
+#    "organization_id": "${ORG_ID}",
+#    "bucket_id": "${BUCKET_ID_HOSTS}",
+#    "database": "asystem",
+#    "retention_policy": "autogen",
+#    "default": true
+#  }'
+#
+#curl --silent --request POST http://macmini-liz:8086/api/v2/dbrps \
+#  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
+#  --header 'Content-type: application/json' \
+#  --data '{
+#    "organization_id": "${ORG_ID}",
+#    "bucket_id": "${BUCKET_ID_ASYSTEM}",
+#    "database": "hosts",
+#    "retention_policy": "autogen",
+#    "default": true
+#  }'
 
 curl -G --silent --request GET http://macmini-liz:8086/api/v2/dbrps \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --header "Content-type: application/json" \
-  --data-urlencode "orgID=3ac4477553d89245"
-
-curl -G --silent --request GET http://macmini-liz:8086/query \
-  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
-  --data-urlencode "db=asystem" \
-  --data-urlencode "q=SELECT count(*) FROM W WHERE time >= now() - 15m"
-
-curl -G --silent --request GET http://macmini-liz:8086/query \
-  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
-  --data-urlencode "db=hosts" \
-  --data-urlencode "q=SELECT count(*) FROM internet WHERE time >= now() - 15m"
+  --data-urlencode "orgID=${ORG_ID}"
 
 curl --silent -POST 'http://macmini-liz:8086/write?db=hosts' \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
@@ -78,8 +73,14 @@ curl --silent -POST 'http://macmini-liz:8086/write?db=asystem' \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
   --data-raw 'test_measurement,test_tag=test_tag_value test_value=0'
 
-curl --silent -POST 'http://macmini-liz:8086/write?db=hosts' \
+curl -G --silent --request GET http://macmini-liz:8086/query \
   --header "Authorization: Token ${INFLUXDB_TOKEN}" \
-  --data-binary 'test_measurement,test_tag=test_tag_value test_value=0'
+  --data-urlencode "db=asystem" \
+  --data-urlencode "q=SELECT count(*) FROM test_measurement WHERE time >= now() - 15m"
+
+curl -G --silent --request GET http://macmini-liz:8086/query \
+  --header "Authorization: Token ${INFLUXDB_TOKEN}" \
+  --data-urlencode "db=hosts" \
+  --data-urlencode "q=SELECT count(*) FROM test_measurement WHERE time >= now() - 15m"
 
 echo "" && echo ""
