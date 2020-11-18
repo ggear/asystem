@@ -18,10 +18,10 @@ services:
       - HOST_RUN=/hostfs/run
       - HOST_MOUNT_PREFIX=/hostfs
     volumes:
-      - /:/hostfs:ro
+#      - /:/hostfs:ro
+      - /tmp:/hostfs/tmp:ro
       - /var:/hostfs/var:ro
-      - /var:/hostfs/tmp:ro
-      - /var:/hostfs/home:ro
+      - /home:/hostfs/home:ro
       - /var/run/docker.sock:/var/run/docker.sock
       - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     deploy:
