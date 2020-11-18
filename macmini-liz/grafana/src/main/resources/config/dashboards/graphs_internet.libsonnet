@@ -236,7 +236,7 @@ from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
   |> filter(fn: (r) => r["_field"] == "rx_bytes")
-  |> set(key: "name", value: "Download")
+  |> set(key: "name", value: "download")
   |> keep(columns: ["_time", "_value", "name"])
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
@@ -246,13 +246,13 @@ from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
   |> filter(fn: (r) => r["_field"] == "tx_bytes")
-  |> set(key: "name", value: "Upload")
+  |> set(key: "name", value: "upload")
   |> keep(columns: ["_time", "_value", "name"])
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addSeriesOverride(
-        { "alias": "Upload", "transform": "negative-Y" }
+        { "alias": "upload", "transform": "negative-Y" }
       ) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
 
       graph.new(
@@ -281,7 +281,6 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["metric"] == "ping")
   |> keep(columns: ["_time", "_value", "host_location"])
   |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: true)
-  |> map(fn: (r) => ({ r with host_location: strings.title(v: r.host_location) }))
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
 // End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },

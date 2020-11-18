@@ -199,7 +199,7 @@ from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-rx_bytes")
-  |> set(key: "name", value: "Receive")
+  |> set(key: "name", value: "receive")
   |> keep(columns: ["_time", "_value", "name"])
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
@@ -209,13 +209,13 @@ from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-tx_bytes")
-  |> set(key: "name", value: "Transmit")
+  |> set(key: "name", value: "transmit")
   |> keep(columns: ["_time", "_value", "name"])
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addSeriesOverride(
-        { "alias": "Transmit", "transform": "negative-Y" }
+        { "alias": "transmit", "transform": "negative-Y" }
       ) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
 
       graph.new(
@@ -245,7 +245,7 @@ from(bucket: "hosts")
   |> unique()
   |> count()
   |> group()
-  |> set(key: "name", value: "Clients")
+  |> set(key: "name", value: "clients")
 // TODO: Separate wired/wireless, unfortunately data quality is poor coming from unifi, so many wireless devices show up as wired!
 //from(bucket: "hosts")
 //  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -258,7 +258,7 @@ from(bucket: "hosts")
 //  |> count()
 //  |> group(columns: ["name"], mode:"by")
 // End')).addSeriesOverride(
-        { "alias": "Transmit", "transform": "negative-Y" }
+        { "alias": "transmit", "transform": "negative-Y" }
   ) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
     ],

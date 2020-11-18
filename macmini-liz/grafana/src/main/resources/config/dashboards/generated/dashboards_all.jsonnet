@@ -18,8 +18,8 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
-        refresh='30s',
+        time_from='now-1h',
+        refresh='5m',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_servers.graphs()),
@@ -31,7 +31,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-5m',
+        time_from='now-1h',
         refresh='5m',
         graphTooltip='shared_crosshair',
       )
