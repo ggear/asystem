@@ -134,7 +134,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
       bar.new(
-        title='Containers with Peak Resources <50%',
+        title='Containers with Peak Usage <50%',
         datasource='InfluxDB2',
         unit='percent',
         thresholds=[
@@ -144,16 +144,18 @@ from(bucket: "hosts")
         ],
       ).addTarget(influxdb.target(query='// Start
 import "math"
+import "strings"
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_cpu")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
-  |> keep(columns: ["_time", "_value", "container_name"])
+  |> keep(columns: ["_time", "_value", "container_name", "host"])
   |> max()
   |> group()
   |> map(fn: (r) => ({ r with index: 1 }))
   |> cumulativeSum(columns: ["index"])
-  |> map(fn: (r) => ({ r with _value: if r._value > 200.0 then 1 else 0 }))
+  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)  then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)  then r._value / 8.0 else r._value) }))
+  |> map(fn: (r) => ({ r with _value: if r._value > 50.0 then 1 else 0 }))
   |> cumulativeSum(columns: ["_value"])
   |> last()
   |> map(fn: (r) => ({ r with "CPU": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
@@ -346,12 +348,15 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
+import "strings"
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_cpu")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
-  |> keep(columns: ["_time", "_value", "container_name"])
+  |> keep(columns: ["_time", "_value", "container_name", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)  then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)  then r._value / 8.0 else r._value) }))
+  |> keep(columns: ["_time", "_value", "container_name"])
 // End')) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
 
       graph.new(
@@ -377,7 +382,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_measurement"] == "docker_container_mem")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
   |> keep(columns: ["_time", "_value", "container_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
 // End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
@@ -386,8 +391,8 @@ from(bucket: "hosts")
         datasource='InfluxDB2',
         fill=0,
         format='Bps',
-        bars=true,
-        lines=false,
+        bars=false,
+        lines=true,
         staircase=false,
         points=true,
         pointradius=1,
@@ -406,7 +411,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
   |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_read")
   |> keep(columns: ["_time", "_value", "container_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (Read)" }))
@@ -416,7 +421,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
   |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_write")
   |> keep(columns: ["_time", "_value", "container_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (Write)" }))
@@ -429,8 +434,8 @@ from(bucket: "hosts")
         datasource='InfluxDB2',
         fill=0,
         format='Bps',
-        bars=true,
-        lines=false,
+        bars=false,
+        lines=true,
         staircase=false,
         points=true,
         pointradius=1,
@@ -449,7 +454,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
   |> filter(fn: (r) => r["_field"] == "rx_bytes")
   |> keep(columns: ["_time", "_value", "container_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (Receive)" }))
@@ -459,7 +464,7 @@ from(bucket: "hosts")
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
   |> filter(fn: (r) => r["_field"] == "tx_bytes")
   |> keep(columns: ["_time", "_value", "container_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (Transmit)" }))
