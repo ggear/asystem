@@ -15,7 +15,7 @@ if [ ! -f "/root/.influxdbv2/configs" ]; then
     cat <<EOF >>/root/.influxdbv2/setup_create_auth.exp
 #!/usr/bin/expect -f
 set timeout -1
-spawn influx v1 auth create -o home --username 'influxdb_$env(BUCKET)' --read-bucket '$env(BUCKET_ID)' --write-bucket '$env(BUCKET_ID)' -t '$env(INFLUXDB_TOKEN)'
+spawn influx v1 auth create -o home --username 'influxdb_\$env(BUCKET)' --read-bucket '\$env(BUCKET_ID)' --write-bucket '\$env(BUCKET_ID)' -t '\$env(INFLUXDB_TOKEN)'
 match_max 100000
 expect -re {.*password.*}
 send -- '\$env(INFLUXDB_KEY)\r'
