@@ -8,11 +8,11 @@
 #    --org home \
 #    --token ${INFLUXDB_TOKEN}
 #
-#influx config create \
-#    --config-name influx_new \
-#    --host-url http://macmini-liz:8086 \
-#    --org home \
-#    --token ${INFLUXDB_TOKEN}
+influx config create \
+    --config-name influx_new1 \
+    --host-url http://macmini-liz:8086 \
+    --org home \
+    --token ${INFLUXDB_TOKEN}
 #
 #influx export all -c influx_old | influx apply -c influx_new
 #
