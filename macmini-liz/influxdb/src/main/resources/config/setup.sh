@@ -3,8 +3,9 @@
 . /root/.influxdbv2/.profile
 
 if [ ! -f "/root/.influxdbv2/configs" ]; then
-  influx setup -o home -b asystem -u influxdb -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN} -f
+  influx setup -o home -b asystem -u influxdb -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN} -f >/dev/null 2>&1
   if [ $? -eq 0 ]; then
+    echo "Setup InfluxDB for first time ..."
     apt-get install -y jq=1.5+dfsg-2+b1 curl=7.64.0-4+deb10u1 expect=5.45.4-2
     influx bucket create -o home -n hosts -r 7d -t ${INFLUXDB_TOKEN}
     for BUCKET in asystem hosts; do
@@ -15,5 +16,7 @@ if [ ! -f "/root/.influxdbv2/configs" ]; then
       curl -G --silent --request GET "http://influxdb_${BUCKET}:${INFLUXDB_KEY}@localhost:8086/query?db=${BUCKET}" \
         --data-urlencode "q=SELECT count(*) FROM test_metric WHERE time >= now() - 15m"
     done
+  else
+    echo "InfluxDB already setup  ..."
   fi
 fi
