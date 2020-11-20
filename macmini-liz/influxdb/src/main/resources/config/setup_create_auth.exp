@@ -1,0 +1,19 @@
+#!/usr/bin/expect -f
+set force_conservative 0
+if {$force_conservative} {
+	set send_slow {1 .1}
+	proc send {ignore arg} {
+		sleep .1
+		exp_send -s -- $arg
+	}
+}
+set timeout -1
+spawn influx v1 auth create -o home --username influxdb_$env(BUCKET) --read-bucket $env(BUCKET_ID) -t $env(INFLUXDB_TOKEN)
+match_max 100000
+expect -exact "[36mPlease type your password[0m: "
+send -- "$env(INFLUXDB_KEY)\r"
+expect -exact "
+\r
+[36mPlease type your password again[0m: "
+send -- "$env(INFLUXDB_KEY)\r"
+expect eof
