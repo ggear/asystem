@@ -7,7 +7,7 @@ if [ ! -f "/root/.influxdbv2/configs" ]; then
   sleep 5
   influx setup -o home -b asystem -u influxdb -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN} -f >/dev/null 2>&1
   apt-get install -y jq=1.5+dfsg-2+b1 curl=7.64.0-4+deb10u1 expect=5.45.4-2
-  influx bucket create -o home -n hosts -r 7d -t ${INFLUXDB_TOKEN}
+  influx bucket create -o home -n hosts -r 90d -t ${INFLUXDB_TOKEN}
   for BUCKET in asystem hosts; do
     export BUCKET=${BUCKET}
     export BUCKET_ID=$(influx bucket list -o home -n ${BUCKET} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id')
