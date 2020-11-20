@@ -22,7 +22,7 @@
 #influx write -c influx_new --format csv -b asystem -f /tmp/data.csv --skipRowOnError
 
 ORG_NAME="home"
-BUCKET_ID_HOSTS="79b4ddf1dab01b7f"
+BUCKET_ID_HOSTS="aca412936ea5afc3"
 BUCKET_ID_ASYSTEM="2d862108bcf5ce9e"
 
 set -x
