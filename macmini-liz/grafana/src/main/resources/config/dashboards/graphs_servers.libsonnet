@@ -35,16 +35,17 @@ from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "system")
   |> filter(fn: (r) => r["_field"] == "uptime")
+  |> last()
   |> group()
   |> min()
   |> keep(columns: ["_value"])
-  // End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+// End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
       stat.new(
-        title='Servers Median Uptime',
+        title='Servers OS Volumes >80%',
         datasource='InfluxDB2',
-        unit='s',
-        decimals=1,
+        unit='',
+        decimals=0,
         reducerFunction='last',
         colorMode='value',
         graphMode='none',
@@ -53,49 +54,54 @@ from(bucket: "hosts")
         repeatDirection='h',
         pluginVersion='7',
       ).addThreshold(
-        { color: 'red', value: 0 }
+        { color: 'green', value: 0 }
       ).addThreshold(
-        { color: 'yellow', value: 43200 }
+        { color: 'yellow', value: 1 }
       ).addThreshold(
-        { color: 'green', value: 86400 }
+        { color: 'red', value: 2 }
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "system")
-  |> filter(fn: (r) => r["_field"] == "uptime")
-  |> group()
-  |> map(fn: (r) => ({ r with _value: float(v: r._value) }))
-  |> median(column: "_value")
-  |> keep(columns: ["_value"])
-  // End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
-
-      stat.new(
-        title='Servers Max Uptime',
-        datasource='InfluxDB2',
-        unit='s',
-        decimals=1,
-        reducerFunction='last',
-        colorMode='value',
-        graphMode='none',
-        justifyMode='auto',
-        thresholdsMode='absolute',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 43200 }
-      ).addThreshold(
-        { color: 'green', value: 86400 }
-      ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "system")
-  |> filter(fn: (r) => r["_field"] == "uptime")
-  |> group()
+  |> filter(fn: (r) => r["_measurement"] == "disk")
+  |> filter(fn: (r) => r["_field"] == "used_percent")
+  |> filter(fn: (r) => r["path"] == "/" or r["path"] == "/var" or r["path"] == "/tmp")
+  |> keep(columns: ["_value", "host", "path"])
   |> max()
+  |> map(fn: (r) => ({ r with _value: if r._value > 80.0 then 1 else 0 }))
   |> keep(columns: ["_value"])
-  // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
+  |> sum()
+// End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+
+      stat.new(
+        title='Servers Data Volumes >80%',
+        datasource='InfluxDB2',
+        unit='',
+        decimals=0,
+        reducerFunction='last',
+        colorMode='value',
+        graphMode='none',
+        justifyMode='auto',
+        thresholdsMode='absolute',
+        repeatDirection='h',
+        pluginVersion='7',
+      ).addThreshold(
+        { color: 'green', value: 0 }
+      ).addThreshold(
+        { color: 'yellow', value: 1 }
+      ).addThreshold(
+        { color: 'red', value: 2 }
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "disk")
+  |> filter(fn: (r) => r["_field"] == "used_percent")
+  |> filter(fn: (r) => r["path"] == "/home")
+  |> keep(columns: ["_value", "host"])
+  |> max()
+  |> map(fn: (r) => ({ r with _value: if r._value > 80.0 then 1 else 0 }))
+  |> keep(columns: ["_value"])
+  |> sum()
+// End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
       bar.new(
         title='Servers with Peak Usage <50%',
@@ -334,6 +340,36 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
       graph.new(
+        title='Server Volume Usage',
+        datasource='InfluxDB2',
+        fill=1,
+        format='percent',
+        bars=false,
+        lines=true,
+        staircase=true,
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=false,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=425
+      ).addTarget(influxdb.target(query='// Start
+import "strings"
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "disk")
+  |> filter(fn: (r) => r["_field"] == "used_percent")
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+  |> keep(columns: ["_time", "_value", "host", "path"])
+  |> map(fn: (r) => ({ r with path: r.host + " (" + r.path + ")" }))
+  |> keep(columns: ["_time", "_value", "path"])
+  |> sort(columns: ["_time"])
+// End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+
+      graph.new(
         title='Server IOPS Usage',
         datasource='InfluxDB2',
         fill=1,
@@ -374,7 +410,7 @@ from(bucket: "hosts")
   |> map(fn: (r) => ({ r with host: r.host + " (Write)" }))
 // End')).addSeriesOverride(
         { "alias": "/.*Write.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+      ) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
 
       graph.new(
         title='Server Network Usage',
@@ -417,7 +453,7 @@ from(bucket: "hosts")
   |> map(fn: (r) => ({ r with host: r.host + " (Transmit)" }))
 // End')).addSeriesOverride(
         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 46, w: 24, h: 12 } },
+      ) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
 
       graph.new(
         title='Server Temperature',
@@ -451,7 +487,7 @@ from(bucket: "asystem")
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
 // End'))
-      { gridPos: { x: 0, y: 58, w: 24, h: 12 } },
+      { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
 
     ],
 }
