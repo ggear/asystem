@@ -5,4 +5,4 @@ SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${VERSION
 
 cd ${SERVICE_INSTALL} || exit
 
-
+docker exec influxdb_macmini-liz /root/.influxdbv2/setup.sh
