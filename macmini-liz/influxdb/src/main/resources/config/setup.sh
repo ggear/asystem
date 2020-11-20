@@ -12,7 +12,6 @@ if [ ! -f "/root/.influxdbv2/configs" ]; then
     export BUCKET=${BUCKET}
     export BUCKET_ID=$(influx bucket list -o home -n ${BUCKET} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id')
     influx v1 dbrp create -o home --db ${BUCKET} --rp default --default --bucket-id ${BUCKET_ID} -t ${INFLUXDB_TOKEN}
-    influx v1 auth create -o home --username influxdb_${BUCKET} --read-bucket ${BUCKET_ID} -t ${INFLUXDB_TOKEN}
     expect /root/.influxdbv2/setup_create_auth.exp
     curl -G --silent --request GET "http://influxdb_${BUCKET}:${INFLUXDB_KEY}@localhost:8086/query?db=${BUCKET}" \
       --data-urlencode "q=SELECT count(*) FROM test_metric WHERE time >= now() - 15m"
