@@ -12,7 +12,7 @@ if [ ! -f "/root/.influxdbv2/configs" ]; then
     export BUCKET=${BUCKET}
     export BUCKET_ID=$(influx bucket list -o home -n ${BUCKET} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id')
     influx v1 dbrp create -o home --db ${BUCKET} --rp default --default --bucket-id ${BUCKET_ID} -t ${INFLUXDB_TOKEN}
-    cat <<EOF >>setup_create_auth.exp
+    cat <<EOF >>/root/.influxdbv2/setup_create_auth.exp
 #!/usr/bin/expect -f
 set force_conservative 0
 if {$force_conservative} {
