@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   kafka:
-    container_name: kafka_${HOST_NAME}
+    container_name: kafka
     image: confluentinc/cp-server:6.0.0
     init: true
     restart: ${RESTART}

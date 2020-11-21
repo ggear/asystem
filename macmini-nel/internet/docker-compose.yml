@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   internet:
-    container_name: internet_${HOST_NAME}
+    container_name: internet
     image: internet:${VERSION}
     init: true
     restart: ${RESTART}

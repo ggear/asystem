@@ -397,7 +397,7 @@ from(bucket: "hosts")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
-  |> map(fn: (r) => ({ r with host: r.host + " (Read)" }))
+  |> map(fn: (r) => ({ r with host: r.host + " + Read" }))
 // End')).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -407,7 +407,7 @@ from(bucket: "hosts")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
-  |> map(fn: (r) => ({ r with host: r.host + " (Write)" }))
+  |> map(fn: (r) => ({ r with host: r.host + " - Write" }))
 // End')).addSeriesOverride(
         { "alias": "/.*Write.*/", "transform": "negative-Y" }
       ) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
@@ -440,7 +440,7 @@ from(bucket: "hosts")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
-  |> map(fn: (r) => ({ r with host: r.host + " (Receive)" }))
+  |> map(fn: (r) => ({ r with host: r.host + " + Receive" }))
 // End')).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -450,7 +450,7 @@ from(bucket: "hosts")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
-  |> map(fn: (r) => ({ r with host: r.host + " (Transmit)" }))
+  |> map(fn: (r) => ({ r with host: r.host + " - Transmit" }))
 // End')).addSeriesOverride(
         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
       ) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
