@@ -340,6 +340,34 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
       graph.new(
+        title='Server Swap Usage',
+        datasource='InfluxDB2',
+        fill=1,
+        format='percent',
+        bars=false,
+        lines=true,
+        staircase=true,
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=false,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=425
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "swap")
+  |> filter(fn: (r) => r["_field"] == "used_percent")
+  |> keep(columns: ["_time", "_value", "host"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+  |> fill(column: "_value", usePrevious: true)
+  |> keep(columns: ["_time", "_value", "host"])
+// End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+
+      graph.new(
         title='Server Volume Usage',
         datasource='InfluxDB2',
         fill=1,
@@ -367,7 +395,7 @@ from(bucket: "hosts")
   |> map(fn: (r) => ({ r with path: r.host + " (" + r.path + ")" }))
   |> keep(columns: ["_time", "_value", "path"])
   |> sort(columns: ["_time"])
-// End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+// End')) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
 
       graph.new(
         title='Server IOPS Usage',
@@ -410,7 +438,7 @@ from(bucket: "hosts")
   |> map(fn: (r) => ({ r with host: r.host + " - Write" }))
 // End')).addSeriesOverride(
         { "alias": "/.*Write.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
+      ) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
 
       graph.new(
         title='Server Network Usage',
@@ -453,7 +481,7 @@ from(bucket: "hosts")
   |> map(fn: (r) => ({ r with host: r.host + " - Transmit" }))
 // End')).addSeriesOverride(
         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
+      ) { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
 
       graph.new(
         title='Server Temperature',
@@ -487,7 +515,7 @@ from(bucket: "asystem")
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
 // End'))
-      { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
+      { gridPos: { x: 0, y: 80, w: 24, h: 12 } },
 
     ],
 }
