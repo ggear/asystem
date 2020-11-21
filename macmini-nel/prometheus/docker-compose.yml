@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   prometheus:
-    container_name: prometheus_${HOST_NAME}
+    container_name: prometheus
     image: prom/prometheus:v2.22.0
     init: true
     restart: ${RESTART}

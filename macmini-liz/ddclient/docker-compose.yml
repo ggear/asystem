@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   ddclient:
-    container_name: ddclient_${HOST_NAME}
+    container_name: ddclient
     image: linuxserver/ddclient:v3.9.1-ls40
     init: true
     restart: ${RESTART}

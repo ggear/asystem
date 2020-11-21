@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   timescaledb:
-    container_name: timescaledb_${HOST_NAME}
+    container_name: timescaledb
     image: timescale/timescaledb:2.0.0-rc2-pg12
     init: true
     restart: ${RESTART}

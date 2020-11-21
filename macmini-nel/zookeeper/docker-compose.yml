@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   zookeeper:
-    container_name: zookeeper_${HOST_NAME}
+    container_name: zookeeper
     image: confluentinc/cp-zookeeper:6.0.0
     init: true
     restart: ${RESTART}

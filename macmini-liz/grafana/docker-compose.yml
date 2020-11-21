@@ -1,7 +1,7 @@
 version: '3.7'
 services:
   grafana:
-    container_name: grafana_${HOST_NAME}
+    container_name: grafana
     image: grafana/grafana:7.2.1
     init: true
     restart: ${RESTART}
