@@ -15,9 +15,9 @@ SERVICE_HOST_NAME=$(hostname)
 cd ${SERVICE_INSTALL} || exit
 [ -f "${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${VERSION_ABSOLUTE}.tar.gz
 docker stop "${SERVICE_NAME}" >/dev/null 2>&1
-docker stop "${SERVICE_NAME}_${SERVICE_HOST_NAME}" >/dev/null 2>&1
+docker stop "${SERVICE_NAME}" >/dev/null 2>&1
 docker wait "${SERVICE_NAME}" >/dev/null 2>&1
-docker wait "${SERVICE_NAME}_${SERVICE_HOST_NAME}" >/dev/null 2>&1
+docker wait "${SERVICE_NAME}" >/dev/null 2>&1
 docker system prune --volumes -f 2>&1 >/dev/null
 [ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
 if [ ! -d "$SERVICE_HOME" ]; then
@@ -53,8 +53,8 @@ if [ -f ".env" ]; then
 fi
 docker-compose --compatibility --no-ansi up --force-recreate -d && sleep 2
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
-if [ $(docker ps -f name="${SERVICE_NAME}_${SERVICE_HOST_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
+if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
   echo && echo "Container failed to start" && echo && exit 1
 fi
-echo "----------" && docker ps -f name="${SERVICE_NAME}_${SERVICE_HOST_NAME}" && echo "----------"
-sleep 2 && docker logs "${SERVICE_NAME}_${SERVICE_HOST_NAME}" && echo "----------"
+echo "----------" && docker ps -f name="${SERVICE_NAME}" && echo "----------"
+sleep 2 && docker logs "${SERVICE_NAME}" && echo "----------"
