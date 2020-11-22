@@ -484,15 +484,12 @@ if __name__ == "__main__":
         up_code_network = RUN_CODE_SUCCESS
         run_code_all.append(ping(profile))
         up_code_network += run_code_all[-1]
-
-        # TODO: Disabled temporalily
-        # run_code_all.append(upload(profile))
-        # up_code_network += run_code_all[-1]
-        # run_code_all.append(download(profile))
-        # up_code_network += run_code_all[-1]
-        # run_code_all.append(lookup(profile))
-        # run_code_all.append(certificate(profile))
-
+        run_code_all.append(upload(profile))
+        up_code_network += run_code_all[-1]
+        run_code_all.append(download(profile))
+        up_code_network += run_code_all[-1]
+        run_code_all.append(lookup(profile))
+        run_code_all.append(certificate(profile))
         run_code_uptime = RUN_CODE_FAIL_CONFIG
         uptime_delta = 0
         uptime_new = None
