@@ -8,6 +8,7 @@ services:
     environment:
       - TZ=Australia/Perth
     ports:
+      - 9080:9080
       - 9443:9443
     volumes:
       - ${DATA_DIR}/nginx.conf:/etc/nginx/nginx.conf
