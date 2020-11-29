@@ -142,21 +142,6 @@ class Netatmo(Plugin):
                         data_derived_min=True
                     )
                     self.datum_push(
-                        "carbon_Ddioxide" + module_name,
-                        "current", "point",
-                        self.datum_value(device, ["dashboard_data", "CO2"]),
-                        "ppm",
-                        1,
-                        data_timestamp,
-                        bin_timestamp,
-                        self.config["poll_seconds"],
-                        "second",
-                        data_version="1001",
-                        data_bound_lower=0,
-                        data_derived_max=True,
-                        data_derived_min=True
-                    )
-                    self.datum_push(
                         "noise" + module_name,
                         "current", "point",
                         self.datum_value(device, ["dashboard_data", "Noise"]),
@@ -177,6 +162,22 @@ class Netatmo(Plugin):
                             "current", "point",
                             self.datum_value(device, ["dashboard_data", "health_idx"]),
                             "scalar",
+                            1,
+                            data_timestamp,
+                            bin_timestamp,
+                            self.config["poll_seconds"],
+                            "second",
+                            data_version="1001",
+                            data_bound_lower=0,
+                            data_derived_max=True,
+                            data_derived_min=True
+                        )
+                    if module_name != "ada" and module_name != "laundry":
+                        self.datum_push(
+                            "carbon_Ddioxide" + module_name,
+                            "current", "point",
+                            self.datum_value(device, ["dashboard_data", "CO2"]),
+                            "ppm",
                             1,
                             data_timestamp,
                             bin_timestamp,
