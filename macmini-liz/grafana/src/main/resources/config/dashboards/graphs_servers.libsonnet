@@ -504,7 +504,7 @@ from(bucket: "hosts")
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
-  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "host"])
+  |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
 // End')).addTarget(influxdb.target(query='// Start
 from(bucket: "asystem")
