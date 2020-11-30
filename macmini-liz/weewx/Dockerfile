@@ -1,6 +1,6 @@
 FROM python:3.8.5-slim-buster as image_base
 
-ENV WEEWX_VERSION="4.1.1"
+ENV WEEWX_VERSION="4.2.0"
 ENV WEEWX_HOME="/home/weewx"
 ENV WEEWX_ARCHIVE="weewx-${WEEWX_VERSION}.tar.gz"
 
