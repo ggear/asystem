@@ -1,9 +1,11 @@
-FROM telegraf:1.16.0
+FROM telegraf:1.16.2-alpine
 
-RUN apt-get update && apt-get -y --no-install-recommends install \
-  python2.7=2.7.16-2+deb10u1 \
-  python-pip=18.1-5 \
-  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+ENV PYTHONUNBUFFERED=1
+RUN apk add --no-cache python2=2.7.18-r0 && \
+    python -m ensurepip && \
+    rm -r /usr/lib/python*/ensurepip && \
+    pip install --upgrade pip setuptools && \
+    rm -r /root/.cache
 
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
