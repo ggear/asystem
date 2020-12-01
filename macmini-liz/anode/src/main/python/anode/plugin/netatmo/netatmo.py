@@ -172,7 +172,7 @@ class Netatmo(Plugin):
                             data_derived_max=True,
                             data_derived_min=True
                         )
-                    if module_name != "ada" and module_name != "laundry":
+                    if module_name != "Ada" and module_name != "Laundry":
                         self.datum_push(
                             "carbon_Ddioxide" + module_name,
                             "current", "point",
