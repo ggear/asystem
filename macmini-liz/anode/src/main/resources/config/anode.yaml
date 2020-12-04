@@ -47,7 +47,7 @@ plugin:
     repeat_seconds: 103
     repeat_partition: True
     publish_ticks: -1
-    darksky:
+  darksky:
       poll_seconds: 300
       buffer_ticks: 5
       history_partitions: 8
@@ -63,15 +63,6 @@ plugin:
     history_ticks: 2100000
     history_partition_seconds: 86400
     repeat_seconds: 107
-    repeat_partition: True
-    publish_ticks: -1
-  speedtest:
-    poll_seconds: -1
-    buffer_ticks: 30
-    history_partitions: 8
-    history_ticks: 450000
-    history_partition_seconds: 86400
-    repeat_seconds: 113
     repeat_partition: True
     publish_ticks: -1
   hue:
