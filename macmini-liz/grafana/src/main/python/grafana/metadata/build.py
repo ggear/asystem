@@ -134,7 +134,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-1d',
+        time_from='now-3h',
         refresh='30s',
         graphTooltip='shared_crosshair',
       )

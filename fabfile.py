@@ -142,7 +142,7 @@ def _purge(context, module="asystem"):
 def _backup(context, module="asystem"):
     _print_header(module, "backup")
     _run_local(context, "git check-ignore $(find . -type f -print) | grep -v ./asystem.iml | grep -v ./.idea")
-    _run_local(context, "rsync -vr ../asystem ../asystem-backup")
+    _run_local(context, "rsync -vr ../asystem ../asystem-backup", DIR_ROOT)
     _print_footer(module, "backup")
 
 

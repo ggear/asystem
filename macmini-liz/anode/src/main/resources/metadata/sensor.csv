@@ -106,3 +106,11 @@ Index ID,Unique ID,Entity ID,Entity Filter,Entity Name,Entity Friendly Name,Enti
 105,anode__rise__sun__season__home,rise_sun,Hidden,Rise Sun,Rise,Sun,Season,Home,haas/sensor/config/sensor/anode/anode__rise__sun__season__home/config
 106,anode__set__sun__season__home,set_sun,Hidden,Set Sun,Set,Sun,Season,Home,haas/sensor/config/sensor/anode/anode__set__sun__season__home/config
 107,anode__base__cloud__season__home,base_cloud,Hidden,Base Cloud,Base,Cloud,Season,Home,haas/sensor/config/sensor/anode/anode__base__cloud__season__home/config
+9999999,anode__forecast__description__conditions__home,forecast_description,Hidden,Forecast Description,Forecast,Description,Conditions,Home,haas/sensor/config/sensor/anode/anode__forecast__description__conditions__home/config
+9999999,anode__forecast__humidity__conditions__home,forecast_humidity,Hidden,Forecast Humidity,Forecast,Humidity,Conditions,Home,haas/sensor/config/sensor/anode/anode__forecast__humidity__conditions__home/config
+9999999,anode__probability_Dforecast__rain__water__home,probability_forecast_rain,Hidden,Probability Forecast Rain,Probability Forecast,Rain,Water,Home,haas/sensor/config/sensor/anode/anode__probability_Dforecast__rain__water__home/config
+9999999,anode__rate_Dforecast__rain__water__home,rate_forecast_rain,Hidden,Rate Forecast Rain,Rate Forecast,Rain,Water,Home,haas/sensor/config/sensor/anode/anode__rate_Dforecast__rain__water__home/config
+9999999,anode__day_Dforecast__rain__water__home,day_forecast_rain,Hidden,Day Forecast Rain,Day Forecast,Rain,Water,Home,haas/sensor/config/sensor/anode/anode__day_Dforecast__rain__water__home/config
+9999999,anode__rate_Dmax_Dtime_Dforecast__rain__water__home,rate_max_time_forecast_rain,Hidden,Rate Max Time Forecast Rain,Rate Max Time Forecast,Rain,Water,Home,haas/sensor/config/sensor/anode/anode__rate_Dmax_Dtime_Dforecast__rain__water__home/config
+9999999,anode__forecast__temperature__conditions__home,forecast_temperature,Hidden,Forecast Temperature,Forecast,Temperature,Conditions,Home,haas/sensor/config/sensor/anode/anode__forecast__temperature__conditions__home/config
+9999999,anode__speed_Dforecast__wind__conditions__home,speed_forecast_wind,Hidden,Speed Forecast Wind,Speed Forecast,Wind,Conditions,Home,haas/sensor/config/sensor/anode/anode__speed_Dforecast__wind__conditions__home/config

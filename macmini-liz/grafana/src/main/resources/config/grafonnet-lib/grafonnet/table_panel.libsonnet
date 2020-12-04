@@ -33,6 +33,7 @@
     height=null,
     datasource=null,
     styles=[],
+    default_unit='',
     transform=null,
     transparent=false,
     columns=[],
@@ -57,7 +58,7 @@
 
     // HACK Start: Added default options
     fieldConfig: {
-      defaults: { unit: 'ns' }
+      defaults: { unit: default_unit }
     },
     // HACK End
 

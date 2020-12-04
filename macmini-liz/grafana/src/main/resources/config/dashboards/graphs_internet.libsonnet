@@ -215,7 +215,7 @@ from(bucket: "hosts")
 // End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
 
       graph.new(
-        title='Internet Throughput',
+        title='Internet Total Throughput',
         datasource='InfluxDB2',
         fill=0,
         format='Bps',
@@ -256,7 +256,46 @@ from(bucket: "hosts")
       ) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
 
       graph.new(
-        title='Internet Latency',
+        title='Internet Max Throughput',
+        datasource='InfluxDB2',
+        fill=0,
+        format='Bps',
+        bars=false,
+        lines=true,
+        staircase=true,
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=false,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=425
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "download_mbps")
+  |> keep(columns: ["_time", "_value", "metric"])
+  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
+  |> sort(columns: ["_time"])
+  |> fill(column: "_value", usePrevious: true)
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "upload_mbps")
+  |> keep(columns: ["_time", "_value", "metric"])
+  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
+  |> sort(columns: ["_time"])
+  |> fill(column: "_value", usePrevious: true)
+// End')).addSeriesOverride(
+        { "alias": "upload", "transform": "negative-Y" }
+      ) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
+
+      graph.new(
+        title='Internet Min Latency',
         datasource='InfluxDB2',
         fill=0,
         format='ms',
@@ -273,7 +312,6 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-import "strings"
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -283,7 +321,44 @@ from(bucket: "hosts")
   |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: true)
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
+// End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+
+      table.new(
+        title='Internet Categorised Throughput',
+        datasource='InfluxDB2',
+        default_unit='decbytes'
+      ).addTarget(influxdb.target(query='// Start
+start_bytes = from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "clientdpi")
+  |> filter(fn: (r) => r["mac"] == "TOTAL")
+  |> filter(fn: (r) => r["application"] == "TOTAL")
+  |> filter(fn: (r) => r["_field"] == "rx_bytes" or r["_field"] == "tx_bytes")
+  |> first()
+  |> keep(columns: ["category", "_field", "_value"])
+  |> pivot(rowKey:["category"], columnKey: ["_field"], valueColumn: "_value")
+  |> map(fn: (r) => ({ r with rx_bytes_start: r.rx_bytes }))
+  |> map(fn: (r) => ({ r with tx_bytes_start: r.tx_bytes }))
+  |> keep(columns: ["category", "rx_bytes_start", "tx_bytes_start"])
+finish_bytes = from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "clientdpi")
+  |> filter(fn: (r) => r["mac"] == "TOTAL")
+  |> filter(fn: (r) => r["application"] == "TOTAL")
+  |> filter(fn: (r) => r["_field"] == "rx_bytes" or r["_field"] == "tx_bytes")
+  |> last()
+  |> keep(columns: ["category", "_field", "_value"])
+  |> pivot(rowKey:["category"], columnKey: ["_field"], valueColumn: "_value")
+  |> keep(columns: ["category", "rx_bytes", "tx_bytes"])
+join(tables: {d1: start_bytes, d2: finish_bytes},  on: ["category"])
+  |> map(fn: (r) => ({ r with "Category": r.category }))
+  |> map(fn: (r) => ({ r with "Received": r.rx_bytes - r.rx_bytes_start }))
+  |> map(fn: (r) => ({ r with "Transmitted": r.tx_bytes - r.tx_bytes_start }))
+  |> map(fn: (r) => ({ r with "Received Total": r.rx_bytes }))
+  |> map(fn: (r) => ({ r with "Transmitted Total": r.tx_bytes }))
+  |> keep(columns: ["Category", "Received", "Transmitted", "Received Total", "Transmitted Total"])
+  |> sort(columns: ["Received"], desc: true)
+// End')) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
 
       table.new(
         title='Domain Resolution',
@@ -322,7 +397,7 @@ unknown_ips = from(bucket: "hosts")
   |> sort(columns: ["_time"], desc: true)
 union(tables: [start_ips, finish_ips, unknown_ips])
   |> sort(columns: ["_time"], desc: true)
-// End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+// End')) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
 
     ],
 }
