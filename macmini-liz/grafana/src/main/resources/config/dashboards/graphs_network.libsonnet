@@ -219,50 +219,6 @@ from(bucket: "hosts")
       ) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
 
       graph.new(
-        title='Network Category Throughput',
-        datasource='InfluxDB2',
-        fill=0,
-        decimals=0,
-        format='Bps',
-        bars=false,
-        lines=true,
-        staircase=false,
-        points=true,
-        pointradius=1,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "sitedpi")
-  |> filter(fn: (r) => r["_field"] == "rx_bytes")
-  |> map(fn: (r) => ({ r with category: r.category + " + Receive" }))
-  |> keep(columns: ["_time", "_value", "category"])
-  |> sort(columns: ["_time"])
-  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
-  |> derivative(unit: 1s, nonNegative: true)
-// End')).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "sitedpi")
-  |> filter(fn: (r) => r["_field"] == "tx_bytes")
-  |> map(fn: (r) => ({ r with category: r.category + " - Transmit" }))
-  |> keep(columns: ["_time", "_value", "category"])
-  |> sort(columns: ["_time"])
-  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
-  |> derivative(unit: 1s, nonNegative: true)
-// End')).addSeriesOverride(
-        { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
-
-      graph.new(
         title='Network Clients',
         datasource='InfluxDB2',
         fill=1,
@@ -303,7 +259,7 @@ from(bucket: "hosts")
 //  |> group(columns: ["name"], mode:"by")
 // End')).addSeriesOverride(
         { "alias": "transmit", "transform": "negative-Y" }
-  ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+  ) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
       graph.new(
         title='Network Device CPU Usage',
@@ -330,7 +286,7 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
+// End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
 
       graph.new(
         title='Network Device RAM Usage',
@@ -357,7 +313,7 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
+// End')) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
 
       graph.new(
         title='Network Device Temperature',
@@ -392,7 +348,7 @@ from(bucket: "asystem")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
+// End')) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
 
     ],
 }

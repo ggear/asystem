@@ -57,7 +57,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-1d',
+        time_from='now-3h',
         refresh='30s',
         graphTooltip='shared_crosshair',
       )

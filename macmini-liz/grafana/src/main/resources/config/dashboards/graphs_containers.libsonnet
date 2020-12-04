@@ -476,7 +476,8 @@ from(bucket: "hosts")
 
       table.new(
         title='Container Current Process Status',
-        datasource='InfluxDB2'
+        datasource='InfluxDB2',
+        default_unit='ns'
       ).addTarget(influxdb.target(query='// Start
 status = from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
