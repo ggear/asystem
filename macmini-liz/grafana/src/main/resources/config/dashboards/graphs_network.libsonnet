@@ -350,5 +350,41 @@ from(bucket: "asystem")
   |> fill(column: "_value", usePrevious: true)
 // End')) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
 
+      table.new(
+        title='Wireless Clients',
+        datasource='InfluxDB2',
+        default_unit='decbytes'
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "clients")
+  |> filter(fn: (r) => r["_field"] == "hostname" or r["_field"] == "ip")
+  |> filter(fn: (r) => r["radio"] == "ng" or r["radio"] == "na")
+  |> last()
+  |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+  |> group()
+  |> filter(fn: (r) => exists r.ip and r["ip"] != "" )
+  |> keep(columns: ["name", "ip"])
+  |> sort(columns: ["name"])
+// End')) { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
+
+      table.new(
+        title='Wired Clients',
+        datasource='InfluxDB2',
+        default_unit='decbytes'
+      ).addTarget(influxdb.target(query='// Start
+from(bucket: "hosts")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "clients")
+  |> filter(fn: (r) => r["_field"] == "hostname" or r["_field"] == "ip")
+  |> filter(fn: (r) => not exists r.radio)
+  |> last()
+  |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
+  |> group()
+  |> filter(fn: (r) => exists r.ip and r["ip"] != "" )
+  |> keep(columns: ["name", "ip"])
+  |> sort(columns: ["name"])
+// End')) { gridPos: { x: 0, y: 70, w: 24, h: 12 } },
+
     ],
 }
