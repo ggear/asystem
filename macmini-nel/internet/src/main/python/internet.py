@@ -484,8 +484,9 @@ if __name__ == "__main__":
         up_code_network = RUN_CODE_SUCCESS
         run_code_all.append(ping(profile))
         up_code_network += run_code_all[-1]
-        run_code_all.append(upload(profile))
-        run_code_all.append(download(profile))
+        if up_code_network == RUN_CODE_SUCCESS:
+            run_code_all.append(upload(profile))
+            run_code_all.append(download(profile))
         run_code_all.append(lookup(profile))
         run_code_all.append(certificate(profile))
         run_code_uptime = RUN_CODE_FAIL_CONFIG
