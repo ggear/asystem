@@ -510,10 +510,10 @@ from(bucket: "hosts")
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
-  |> set(key: "host", value: "ambient-rack")
-  |> keep(columns: ["_time", "_value", "host"])
+  |> keep(columns: ["_time", "_value"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> fill(column: "_value", usePrevious: true)
+  |> set(key: "host", value: "ambient-rack")
 // End'))
       { gridPos: { x: 0, y: 80, w: 24, h: 12 } },
 

@@ -353,38 +353,58 @@ from(bucket: "asystem")
       table.new(
         title='Wireless Clients',
         datasource='InfluxDB2',
-        default_unit='decbytes'
+        default_unit=''
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
-  |> filter(fn: (r) => r["_field"] == "hostname" or r["_field"] == "ip")
+  |> filter(fn: (r) => r["_field"] == "hostname" or r["_field"] == "ip" or r["_field"] == "uptime" or r["_field"] == "rx_bytes" or r["_field"] == "tx_bytes")
   |> filter(fn: (r) => r["radio"] == "ng" or r["radio"] == "na")
+  |> filter(fn: (r) => r["is_wired"] == "false")
   |> last()
   |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
   |> group()
-  |> filter(fn: (r) => exists r.ip and r["ip"] != "" )
-  |> keep(columns: ["name", "ip"])
-  |> sort(columns: ["name"])
-// End')) { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
+  |> filter(fn: (r) => exists r.ip and r["ip"] != "")
+  |> map(fn: (r) => ({ r with Host: r.name }))
+  |> map(fn: (r) => ({ r with "Host Vendor": r.oui }))
+  |> map(fn: (r) => ({ r with IP: r.ip }))
+  |> map(fn: (r) => ({ r with "Received Bytes": r.rx_bytes }))
+  |> map(fn: (r) => ({ r with "Transmitted Bytes": r.tx_bytes }))
+  |> map(fn: (r) => ({ r with "Uptime": r.uptime }))
+  |> map(fn: (r) => ({ r with "Wireless Channel": r.channel }))
+  |> map(fn: (r) => ({ r with "Wireless Protocol": r.radio }))
+  |> keep(columns: ["Host", "IP", "Host Vendor", "Wireless Channel", "Wireless Protocol", "Uptime", "Received Bytes", "Transmitted Bytes"])
+  |> sort(columns: ["Host"])
+  |> unique(column: "IP")
+// End')) { gridPos: { x: 0, y: 68, w: 24, h: 36 } },
 
       table.new(
         title='Wired Clients',
         datasource='InfluxDB2',
-        default_unit='decbytes'
+        default_unit=''
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "hosts")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
-  |> filter(fn: (r) => r["_field"] == "hostname" or r["_field"] == "ip")
+  |> filter(fn: (r) => r["_field"] == "hostname" or r["_field"] == "ip" or r["_field"] == "uptime" or r["_field"] == "rx_bytes" or r["_field"] == "tx_bytes")
   |> filter(fn: (r) => not exists r.radio)
+  |> filter(fn: (r) => r["is_wired"] == "true")
   |> last()
   |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
   |> group()
-  |> filter(fn: (r) => exists r.ip and r["ip"] != "" )
-  |> keep(columns: ["name", "ip"])
-  |> sort(columns: ["name"])
-// End')) { gridPos: { x: 0, y: 70, w: 24, h: 12 } },
+  |> filter(fn: (r) => exists r.ip and r["ip"] != "")
+  |> map(fn: (r) => ({ r with Host: r.name }))
+  |> map(fn: (r) => ({ r with "Host Vendor": r.oui }))
+  |> map(fn: (r) => ({ r with IP: r.ip }))
+  |> map(fn: (r) => ({ r with "Received Bytes": r.rx_bytes }))
+  |> map(fn: (r) => ({ r with "Transmitted Bytes": r.tx_bytes }))
+  |> map(fn: (r) => ({ r with "Uptime": r.uptime }))
+  |> map(fn: (r) => ({ r with "Wired Fixed IP": r.use_fixedip }))
+  |> map(fn: (r) => ({ r with "Wired Port": r.sw_port }))
+  |> keep(columns: ["Host", "IP", "Host Vendor", "Wired Fixed IP", "Wired Port", "Uptime", "Received Bytes", "Transmitted Bytes"])
+  |> sort(columns: ["Host"])
+  |> unique(column: "IP")
+// End')) { gridPos: { x: 0, y: 94, w: 24, h: 12 } },
 
     ],
 }
