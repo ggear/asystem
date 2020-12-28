@@ -13,7 +13,7 @@ while :; do
       cp -rvfpL letsencrypt/live/janeandgraham.com/* certificates &&
         cat ./certificates/fullchain.pem ./certificates/privkey.pem >./certificates/fullchain_privkey.pem &&
         logger -t pushcerts "Cached new certificates"
-      if [ -f "${SERVICE_INSTALL}/hosts" ]; then
+      if [ -f ${SERVICE_INSTALL}/hosts ]; then
         while read -r host; do
           NGINX_HOME=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
             "find /home/asystem/nginx -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
@@ -28,7 +28,7 @@ while :; do
               "docker-compose --compatibility -f '${NGINX_INSTALL}/docker-compose.yml' --env-file '${NGINX_INSTALL}/.env' restart"
             logger -t pushcerts "Loaded new nginx certificates on ${host}"
           fi
-        done <"${SERVICE_INSTALL}/hosts"
+        done <${SERVICE_INSTALL}/hosts
       fi
       scp -qo "StrictHostKeyChecking=no" ./certificates/privkey.pem root@udm-rack:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
       scp -qo "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@udm-rack:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
