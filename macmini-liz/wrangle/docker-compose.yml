@@ -2,14 +2,17 @@ version: '3.7'
 services:
   wrangle:
     container_name: wrangle
-    image: telegraf:1.16.2-alpine
+    image: wrangle:${VERSION}
     init: true
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
       - HOST_IP
       - HOST_NAME
+      - INFLUXDB_PORT
+      - INFLUXDB_HOST
     volumes:
+      - ${DATA_DIR}/.profile:/etc/telegraf/.profile:ro
       - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     deploy:
       resources:

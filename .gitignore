@@ -4,6 +4,7 @@
 *.pem
 ~$*.*
 .profile
+.gspread_pandas
 .DS_Store
 .project
 .settings

@@ -1,0 +1,5 @@
+xlrd==1.2.0
+datetime==4.3
+numpy==1.12.0
+pandas==0.20.1
+gspread-pandas==2.2.3

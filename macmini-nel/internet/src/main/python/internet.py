@@ -17,8 +17,6 @@ from requests import post
 from speedtest import Speedtest
 
 DEFAULT_PROFILE_PATH = "../resources/config/.profile"
-DEFAULT_INFLUXDB_HOST = "192.168.1.10"
-DEFAULT_INFLUXDB_PORT = "8086"
 
 HOST_HOME_NAME = "home.janeandgraham.com"
 
@@ -89,8 +87,8 @@ def load_profile(profile_file):
             continue
         profile_key, profile_value = profile_line.split("=", 1)
         profile[profile_key] = profile_value
-    profile["INFLUXDB_HOST"] = os.environ['INFLUXDB_HOST'] if "INFLUXDB_HOST" in os.environ else DEFAULT_INFLUXDB_HOST
-    profile["INFLUXDB_PORT"] = os.environ['INFLUXDB_PORT'] if "INFLUXDB_PORT" in os.environ else DEFAULT_INFLUXDB_PORT
+    profile["INFLUXDB_HOST"] = os.environ['INFLUXDB_HOST'] if "INFLUXDB_HOST" in os.environ else "192.168.1.10"
+    profile["INFLUXDB_PORT"] = os.environ['INFLUXDB_PORT'] if "INFLUXDB_PORT" in os.environ else "8086"
     return profile
 
 
@@ -318,6 +316,7 @@ def lookup(env):
     except Exception as exception:
         print("Error processing DNS lookup - ", end="", file=sys.stderr)
         traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
+        sys.exit(1)
     if home_host_ip is not None and len(home_host_ip) > 0 and len(home_host_ip[0]) > 1 and home_host_ip[0][1] != "":
         run_code_iteration = RUN_CODE_SUCCESS
         run_reply_count += 1
