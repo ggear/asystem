@@ -216,18 +216,18 @@ if __name__ == "__main__":
                                 " GBP/AUD=" + rba_tupple[2]['GBP/AUD'].map(str) + \
                                 ",USD/AUD=" + rba_tupple[2]['USD/AUD'].map(str) + \
                                 ",SGD/AUD=" + rba_tupple[2]['SGD/AUD'].map(str) + \
-                                " GBP/AUD\ Daily\=" + rba_tupple[2]['GBP/AUD Daily'].map(str) + \
-                                " USD/AUD\ Daily\=" + rba_tupple[2]['USD/AUD Daily'].map(str) + \
-                                " SGD/AUD\ Daily\=" + rba_tupple[2]['SGD/AUD Daily'].map(str) + \
-                                " GBP/AUD\ Weekly\=" + rba_tupple[2]['GBP/AUD Weekly'].map(str) + \
-                                " USD/AUD\ Weekly\=" + rba_tupple[2]['USD/AUD Weekly'].map(str) + \
-                                " SGD/AUD\ Weekly\=" + rba_tupple[2]['SGD/AUD Weekly'].map(str) + \
-                                " GBP/AUD\ Monthly\=" + rba_tupple[2]['GBP/AUD Monthly'].map(str) + \
-                                " USD/AUD\ Monthly\=" + rba_tupple[2]['USD/AUD Monthly'].map(str) + \
-                                " SGD/AUD\ Monthly\=" + rba_tupple[2]['SGD/AUD Monthly'].map(str) + \
-                                " GBP/AUD\ Yearly\=" + rba_tupple[2]['GBP/AUD Yearly'].map(str) + \
-                                " USD/AUD\ Yearly\=" + rba_tupple[2]['USD/AUD Yearly'].map(str) + \
-                                " SGD/AUD\ Yearly\=" + rba_tupple[2]['SGD/AUD Yearly'].map(str) + \
+                                ",GBP/AUD\ Daily=" + rba_tupple[2]['GBP/AUD Daily'].map(str) + \
+                                ",USD/AUD\ Daily=" + rba_tupple[2]['USD/AUD Daily'].map(str) + \
+                                ",SGD/AUD\ Daily=" + rba_tupple[2]['SGD/AUD Daily'].map(str) + \
+                                ",GBP/AUD\ Weekly=" + rba_tupple[2]['GBP/AUD Weekly'].map(str) + \
+                                ",USD/AUD\ Weekly=" + rba_tupple[2]['USD/AUD Weekly'].map(str) + \
+                                ",SGD/AUD\ Weekly=" + rba_tupple[2]['SGD/AUD Weekly'].map(str) + \
+                                ",GBP/AUD\ Monthly=" + rba_tupple[2]['GBP/AUD Monthly'].map(str) + \
+                                ",USD/AUD\ Monthly=" + rba_tupple[2]['USD/AUD Monthly'].map(str) + \
+                                ",SGD/AUD\ Monthly=" + rba_tupple[2]['SGD/AUD Monthly'].map(str) + \
+                                ",GBP/AUD\ Yearly=" + rba_tupple[2]['GBP/AUD Yearly'].map(str) + \
+                                ",USD/AUD\ Yearly=" + rba_tupple[2]['USD/AUD Yearly'].map(str) + \
+                                ",SGD/AUD\ Yearly=" + rba_tupple[2]['SGD/AUD Yearly'].map(str) + \
                                 " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
         print(rba_influx)
         print("DEBUG: {} to {} uploaded to InfluxDB with rows [{}]".format(rba_tupple[0], rba_tupple[1], len(rba_tupple[2])))
