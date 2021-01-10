@@ -16,12 +16,10 @@
         title='FX Rates',
         datasource='InfluxDB2',
         fill=0,
-        format='Bps',
+        format='',
         bars=false,
         lines=true,
-        staircase=false,
-        points=true,
-        pointradius=1,
+        staircase=true,
         legend_values=true,
         legend_min=true,
         legend_max=true,
@@ -32,6 +30,9 @@
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "fx")
 // End')).addSeriesOverride(
         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
       ) { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
