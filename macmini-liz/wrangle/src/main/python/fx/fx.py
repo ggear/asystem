@@ -203,7 +203,7 @@ if __name__ == "__main__":
             for fx_period in FX_PERIODS:
                 for fx_pair in FX_PAIRS:
                     data_df['{} {}'.format(fx_pair, fx_period)] = (data_df[fx_pair].pct_change(FX_PERIODS[fx_period])) * 100
-            data_df.fillna(0)
+            data_df = data_df.fillna(0)
             print("DEBUG: {} to {} extrapolated with rows [{}]".format(date_start, date_finish, len(data_df)))
             return (date_start, date_finish, data_df)
 
