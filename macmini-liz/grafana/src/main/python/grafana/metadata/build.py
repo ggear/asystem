@@ -74,6 +74,7 @@ if __name__ == "__main__":
         file.write("""
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
+local graphs_finance = import '../graphs_finance.libsonnet';
 local graphs_servers = import '../graphs_servers.libsonnet';
 local graphs_containers = import '../graphs_containers.libsonnet';
 local graphs_network = import '../graphs_network.libsonnet';
@@ -87,6 +88,19 @@ local graphs_{} = import 'graphs_{}.libsonnet';
 
 {
   grafanaDashboards:: {
+
+    finance_dashboard:
+      dashboard.new(
+        title='Finance',
+        uid='finance',
+        editable=true,
+        tags=['published'],
+        schemaVersion=26,
+        time_from='now-1h',
+        refresh='5m',
+        graphTooltip='shared_crosshair',
+      )
+      .addPanels(graphs_finance.graphs()),
 
     servers_dashboard:
       dashboard.new(
