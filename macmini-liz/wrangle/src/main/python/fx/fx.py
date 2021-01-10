@@ -36,6 +36,9 @@ def load_profile(profile_file):
 DATA_DIR_XLS = os.path.abspath("{}/xls".format(os.path.dirname(os.path.realpath(__file__))))
 DATA_DIR_CSV = os.path.abspath("{}/csv".format(os.path.dirname(os.path.realpath(__file__))))
 
+FX_PAIRS = ['GBP/AUD', 'USD/AUD', 'SGD/AUD']
+FX_PERIODS = {'Daily': 1, 'Weekly': 7, 'Monthly': 30, 'Yearly': 365}
+
 ATO_START_MONTH = 5
 ATO_START_YEAR = 2016
 ATO_FINISH_YEAR = 2020
@@ -138,7 +141,7 @@ if __name__ == "__main__":
                         ato_df.index.name = None
                         ato_df.columns.name = None
                         ato_df['Source'] = 'ATO'
-                        ato_df = ato_df[['Source', 'Date', 'GBP/AUD', 'USD/AUD', 'SGD/AUD']]
+                        ato_df = ato_df[['Source', 'Date'] + FX_PAIRS]
                         merged_df = merged_df.append(ato_df, ignore_index=True, verify_integrity=True)
                         print("DEBUG: {}-{} parsed [{}] with header rows [{}] and data points [{}]".
                               format(year, str(month).zfill(2), 'TRUE', header_rows, len(ato_df)))
@@ -174,7 +177,7 @@ if __name__ == "__main__":
                     rename(columns={'Series ID': 'Date', 'FXRUSD': 'USD/AUD', 'FXRUKPS': 'GBP/AUD', 'FXRSD': 'SGD/AUD'})
                 rba_itr_df['Date'] = rba_itr_df['Date'].dt.strftime("%Y-%m-%d").astype(str)
                 rba_itr_df['Source'] = 'RBA'
-                rba_itr_df = rba_itr_df[['Source', 'Date', 'GBP/AUD', 'USD/AUD', 'SGD/AUD']]
+                rba_itr_df = rba_itr_df[['Source', 'Date'] + FX_PAIRS]
                 rba_df = rba_df.append(rba_itr_df, ignore_index=True, verify_integrity=True)
                 print("DEBUG: {} parsed [{}] with and data points [{}]".format(years_months, 'TRUE', len(rba_itr_df)))
 
@@ -191,13 +194,15 @@ if __name__ == "__main__":
             date_start = "{}-{}".format(data_df.index[0].year, str(data_df.index[0].month).zfill(2))
             date_finish = "{}-{}".format(data_df.index[-1].year, str(data_df.index[-1].month).zfill(2))
             print("DEBUG: {} to {} collated with rows [{}]".format(date_start, date_finish, len(data_df)))
-            data_df = data_df[~data_df['GBP/AUD'].isin(['Closed', 'CLOSED'])]
-            data_df = data_df[~data_df['USD/AUD'].isin(['Closed', 'CLOSED'])]
-            data_df = data_df[~data_df['SGD/AUD'].isin(['Closed', 'CLOSED'])]
+            for fx_pair in FX_PAIRS:
+                data_df = data_df[~data_df[fx_pair].isin(['Closed', 'CLOSED'])]
             data_df = data_df.reindex(
                 pd.date_range(start=data_df.index[0], end=data_df.index[-1])).fillna(method='ffill').fillna(method='bfill')
             data_df['Date'] = data_df.index.strftime("%Y-%m-%d")
-            data_df = data_df[['Source', 'Date', 'GBP/AUD', 'USD/AUD', 'SGD/AUD']]
+            data_df = data_df[['Source', 'Date'] + FX_PAIRS]
+            for fx_period in FX_PERIODS:
+                for fx_pair in FX_PAIRS:
+                    data_df['{} {}'.format(fx_pair, fx_period)] = (data_df[fx_pair].pct_change(FX_PERIODS[fx_period])) * 100
             print("DEBUG: {} to {} extrapolated with rows [{}]".format(date_start, date_finish, len(data_df)))
             return (date_start, date_finish, data_df)
 
@@ -211,6 +216,18 @@ if __name__ == "__main__":
                                 " GBP/AUD=" + rba_tupple[2]['GBP/AUD'].map(str) + \
                                 ",USD/AUD=" + rba_tupple[2]['USD/AUD'].map(str) + \
                                 ",SGD/AUD=" + rba_tupple[2]['SGD/AUD'].map(str) + \
+                                " GBP/AUD\ Daily\=" + rba_tupple[2]['GBP/AUD Daily'].map(str) + \
+                                " USD/AUD\ Daily\=" + rba_tupple[2]['USD/AUD Daily'].map(str) + \
+                                " SGD/AUD\ Daily\=" + rba_tupple[2]['SGD/AUD Daily'].map(str) + \
+                                " GBP/AUD\ Weekly\=" + rba_tupple[2]['GBP/AUD Weekly'].map(str) + \
+                                " USD/AUD\ Weekly\=" + rba_tupple[2]['USD/AUD Weekly'].map(str) + \
+                                " SGD/AUD\ Weekly\=" + rba_tupple[2]['SGD/AUD Weekly'].map(str) + \
+                                " GBP/AUD\ Monthly\=" + rba_tupple[2]['GBP/AUD Monthly'].map(str) + \
+                                " USD/AUD\ Monthly\=" + rba_tupple[2]['USD/AUD Monthly'].map(str) + \
+                                " SGD/AUD\ Monthly\=" + rba_tupple[2]['SGD/AUD Monthly'].map(str) + \
+                                " GBP/AUD\ Yearly\=" + rba_tupple[2]['GBP/AUD Yearly'].map(str) + \
+                                " USD/AUD\ Yearly\=" + rba_tupple[2]['USD/AUD Yearly'].map(str) + \
+                                " SGD/AUD\ Yearly\=" + rba_tupple[2]['SGD/AUD Yearly'].map(str) + \
                                 " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
         print(rba_influx)
         print("DEBUG: {} to {} uploaded to InfluxDB with rows [{}]".format(rba_tupple[0], rba_tupple[1], len(rba_tupple[2])))

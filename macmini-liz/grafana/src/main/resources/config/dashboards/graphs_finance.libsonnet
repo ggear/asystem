@@ -33,9 +33,10 @@
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> keep(columns: ["_time", "_value", "_field"])
 // End')).addSeriesOverride(
         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
+      ) { gridPos: { x: 0, y: 0, w: 24, h: 36 } },
 
     ],
 }
