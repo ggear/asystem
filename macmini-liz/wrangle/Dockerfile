@@ -1,4 +1,4 @@
-FROM telegraf:1.16.2
+FROM telegraf:1.17.0
 
 ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get -y --no-install-recommends install \

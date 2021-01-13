@@ -68,6 +68,8 @@ HTTP_HEADER = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11
 
 DRIVE_SHEET = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
 
+INFLUX_LINEPROTOCOL_VALUE = "fx,source={},type={},period={} {}="
+
 if __name__ == "__main__":
 
     time_start = int(time.time())
@@ -200,8 +202,8 @@ if __name__ == "__main__":
                 pd.date_range(start=data_df.index[0], end=data_df.index[-1])).fillna(method='ffill').fillna(method='bfill')
             data_df['Date'] = data_df.index.strftime("%Y-%m-%d")
             data_df = data_df[['Source', 'Date'] + FX_PAIRS]
-            for fx_period in FX_PERIODS:
-                for fx_pair in FX_PAIRS:
+            for fx_pair in FX_PAIRS:
+                for fx_period in FX_PERIODS:
                     data_df['{} {}'.format(fx_pair, fx_period)] = (data_df[fx_pair].pct_change(FX_PERIODS[fx_period])) * 100
             data_df = data_df.fillna(0)
             print("DEBUG: {} to {} extrapolated with rows [{}]".format(date_start, date_finish, len(data_df)))
@@ -213,24 +215,14 @@ if __name__ == "__main__":
         print("DEBUG: {} to {} uploaded to Drive with rows [{}]".format(merged_tupple[0], merged_tupple[1], len(merged_tupple[2])))
 
         rba_tupple = extrapolate(rba_df)
-        rba_influx = "\n".join(("fx,source=RBA" + \
-                                " GBP/AUD=" + rba_tupple[2]['GBP/AUD'].map(str) + \
-                                ",USD/AUD=" + rba_tupple[2]['USD/AUD'].map(str) + \
-                                ",SGD/AUD=" + rba_tupple[2]['SGD/AUD'].map(str) + \
-                                ",GBP/AUD\ Daily=" + rba_tupple[2]['GBP/AUD Daily'].map(str) + \
-                                ",USD/AUD\ Daily=" + rba_tupple[2]['USD/AUD Daily'].map(str) + \
-                                ",SGD/AUD\ Daily=" + rba_tupple[2]['SGD/AUD Daily'].map(str) + \
-                                ",GBP/AUD\ Weekly=" + rba_tupple[2]['GBP/AUD Weekly'].map(str) + \
-                                ",USD/AUD\ Weekly=" + rba_tupple[2]['USD/AUD Weekly'].map(str) + \
-                                ",SGD/AUD\ Weekly=" + rba_tupple[2]['SGD/AUD Weekly'].map(str) + \
-                                ",GBP/AUD\ Monthly=" + rba_tupple[2]['GBP/AUD Monthly'].map(str) + \
-                                ",USD/AUD\ Monthly=" + rba_tupple[2]['USD/AUD Monthly'].map(str) + \
-                                ",SGD/AUD\ Monthly=" + rba_tupple[2]['SGD/AUD Monthly'].map(str) + \
-                                ",GBP/AUD\ Yearly=" + rba_tupple[2]['GBP/AUD Yearly'].map(str) + \
-                                ",USD/AUD\ Yearly=" + rba_tupple[2]['USD/AUD Yearly'].map(str) + \
-                                ",SGD/AUD\ Yearly=" + rba_tupple[2]['SGD/AUD Yearly'].map(str) + \
+        for fx_pair in FX_PAIRS:
+            print("\n".join(INFLUX_LINEPROTOCOL_VALUE.format("RBA", "snapshot", "daily", fx_pair) +
+                            rba_tupple[2][fx_pair].map(str) +
+                            " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
+            for fx_period in FX_PERIODS:
+                print("\n".join(INFLUX_LINEPROTOCOL_VALUE.format("RBA", "percentage", fx_period.lower(), fx_pair) +
+                                rba_tupple[2]["{} {}".format(fx_pair, fx_period)].map(str) +
                                 " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
-        print(rba_influx)
         print("DEBUG: {} to {} uploaded to InfluxDB with rows [{}]".format(rba_tupple[0], rba_tupple[1], len(rba_tupple[2])))
 
     print("DEBUG: Completed in [{}] secs".format(int(time.time()) - time_start))
