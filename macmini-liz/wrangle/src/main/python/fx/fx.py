@@ -220,7 +220,7 @@ if __name__ == "__main__":
                             rba_tupple[2][fx_pair].map(str) +
                             " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
             for fx_period in FX_PERIODS:
-                print("\n".join(INFLUX_LINEPROTOCOL_VALUE.format("RBA", "percentage", fx_period.lower(), fx_pair) +
+                print("\n".join(INFLUX_LINEPROTOCOL_VALUE.format("RBA", "delta", fx_period.lower(), fx_pair) +
                                 rba_tupple[2]["{} {}".format(fx_pair, fx_period)].map(str) +
                                 " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
         print("DEBUG: {} to {} uploaded to InfluxDB with rows [{}]".format(rba_tupple[0], rba_tupple[1], len(rba_tupple[2])))

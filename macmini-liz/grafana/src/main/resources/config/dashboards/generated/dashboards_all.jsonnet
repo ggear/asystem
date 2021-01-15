@@ -1,6 +1,6 @@
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
-local graphs_finance = import '../graphs_finance.libsonnet';
+local graphs_currency = import '../graphs_currency.libsonnet';
 local graphs_servers = import '../graphs_servers.libsonnet';
 local graphs_containers = import '../graphs_containers.libsonnet';
 local graphs_network = import '../graphs_network.libsonnet';
@@ -12,18 +12,18 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
 {
   grafanaDashboards:: {
 
-    finance_dashboard:
+    currency_dashboard:
       dashboard.new(
-        title='Finance',
-        uid='finance',
+        title='Currency',
+        uid='currency',
         editable=true,
         tags=['published'],
         schemaVersion=26,
-        time_from='now-11y',
+        time_from='now-6M',
         refresh='5m',
         graphTooltip='shared_crosshair',
       )
-      .addPanels(graphs_finance.graphs()),
+      .addPanels(graphs_currency.graphs()),
 
     servers_dashboard:
       dashboard.new(

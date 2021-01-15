@@ -61,7 +61,7 @@ from(bucket: "asystem")
   |> timeShift(duration: 16h)
   |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)
   |> set(key: "name", value: "Forecast Low")
-      ')) { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
+// End')) { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
       graph.new(
         title='Temperature',
         datasource='InfluxDB2',
