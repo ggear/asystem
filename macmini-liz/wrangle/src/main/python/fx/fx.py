@@ -36,7 +36,7 @@ def load_profile(profile_file):
 DATA_DIR_XLS = os.path.abspath("{}/xls".format(os.path.dirname(os.path.realpath(__file__))))
 DATA_DIR_CSV = os.path.abspath("{}/csv".format(os.path.dirname(os.path.realpath(__file__))))
 
-FX_PAIRS = ['GBP/AUD', 'USD/AUD', 'SGD/AUD']
+FX_PAIRS = ['AUD/GBP', 'AUD/USD', 'AUD/SGD']
 FX_PERIODS = {'Daily': 1, 'Weekly': 7, 'Monthly': 30, 'Yearly': 365}
 
 ATO_START_MONTH = 5
@@ -139,7 +139,7 @@ if __name__ == "__main__":
                         ato_df = ato_df.melt('Country', var_name='Date', value_name='Rate'). \
                             pivot_table('Rate', ['Date'], 'Country', aggfunc='first'). \
                             fillna(method='ffill').fillna(method='bfill').reset_index()
-                        ato_df.rename(columns={'USA': 'USD/AUD', 'UK': 'GBP/AUD', 'SINGAPORE': 'SGD/AUD'}, inplace=True)
+                        ato_df.rename(columns={'USA': 'AUD/USD', 'UK': 'AUD/GBP', 'SINGAPORE': 'AUD/SGD'}, inplace=True)
                         ato_df.index.name = None
                         ato_df.columns.name = None
                         ato_df['Source'] = 'ATO'
@@ -176,7 +176,7 @@ if __name__ == "__main__":
             rba_itr_df = pd.read_excel(years_file, skiprows=10)
             if rba_itr_df.columns[0] == 'Series ID':
                 rba_itr_df = rba_itr_df.filter(['Series ID', 'FXRUSD', 'FXRUKPS', 'FXRSD']). \
-                    rename(columns={'Series ID': 'Date', 'FXRUSD': 'USD/AUD', 'FXRUKPS': 'GBP/AUD', 'FXRSD': 'SGD/AUD'})
+                    rename(columns={'Series ID': 'Date', 'FXRUSD': 'AUD/USD', 'FXRUKPS': 'AUD/GBP', 'FXRSD': 'AUD/SGD'})
                 rba_itr_df['Date'] = rba_itr_df['Date'].dt.strftime("%Y-%m-%d").astype(str)
                 rba_itr_df['Source'] = 'RBA'
                 rba_itr_df = rba_itr_df[['Source', 'Date'] + FX_PAIRS]

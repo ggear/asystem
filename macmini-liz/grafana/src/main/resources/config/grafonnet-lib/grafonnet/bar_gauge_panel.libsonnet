@@ -18,6 +18,8 @@
     description=null,
     datasource=null,
     unit=null,
+    min=null,
+    max=null,
     thresholds=[],
   ):: {
     type: 'bargauge',
@@ -29,6 +31,8 @@
     fieldConfig: {
       defaults: {
         unit: unit,
+        [if min != null then 'min']: min,
+        [if max != null then 'max']: max,
         thresholds: {
           mode: 'absolute',
           steps: thresholds,
@@ -40,8 +44,8 @@
    options: {
       orientation: 'horizontal',
       displayMode: 'basic'
-    },
-    // HACK End
+   },
+   // HACK End
 
     _nextTarget:: 0,
     addTarget(target):: self {

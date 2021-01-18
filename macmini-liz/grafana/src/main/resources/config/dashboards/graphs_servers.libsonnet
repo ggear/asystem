@@ -275,9 +275,7 @@ from(bucket: "hosts")
   |> keep(columns: ["_time", "_value"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> mean()
-
   |> map(fn: (r) => ({ r with _value: 130.0 - r._value }))
-
   |> keep(columns: ["_value"])
 // End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
 
