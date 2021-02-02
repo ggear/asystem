@@ -33,18 +33,18 @@ def load_profile(profile_file):
     return profile
 
 
-DATA_DIR_XLS = os.path.abspath("{}/xls".format(os.path.dirname(os.path.realpath(__file__))))
-DATA_DIR_CSV = os.path.abspath("{}/csv".format(os.path.dirname(os.path.realpath(__file__))))
+FX_DIR_XLS = os.path.abspath("{}/xls".format(os.path.dirname(os.path.realpath(__file__))))
+FX_DIR_CSV = os.path.abspath("{}/csv".format(os.path.dirname(os.path.realpath(__file__))))
 
 FX_PAIRS = ['AUD/GBP', 'AUD/USD', 'AUD/SGD']
 FX_PERIODS = {'Daily': 1, 'Weekly': 7, 'Monthly': 30, 'Yearly': 365}
 
-ATO_START_MONTH = 5
-ATO_START_YEAR = 2016
-ATO_FINISH_YEAR = 2020
-ATO_XLS_HEADER_ROWS = [5, 3, 2, 1, 4, 0, 6]
-ATO_URL_PREFIX = "https://www.ato.gov.au/uploadedFiles/Content/TPALS/downloads/"
-ATO_URL_SUFFIX = [
+FX_ATO_START_MONTH = 5
+FX_ATO_START_YEAR = 2016
+FX_ATO_FINISH_YEAR = 2020
+FX_ATO_XLS_HEADER_ROWS = [5, 3, 2, 1, 4, 0, 6]
+FX_ATO_URL_PREFIX = "https://www.ato.gov.au/uploadedFiles/Content/TPALS/downloads/"
+FX_ATO_URL_SUFFIX = [
     "{}_{}_daily_rates.xlsx",
     "{}_{}_daily_input.xlsx",
     "{}{}dailyinput.xlsx",
@@ -55,20 +55,31 @@ ATO_URL_SUFFIX = [
     "{}%20{}%20daily%20input.xls.xlsx"
 ]
 
-RBA_YEARS = [
-    "1983-1986", "1987-1990", "1991-1994", "1995-1998", "1999-2002", "2003-2006", "2007-2009", "2010-2013", "2014-2017", "2018-current"]
-RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
+FX_RBA_YEARS = [
+    "1983-1986",
+    "1987-1990",
+    "1991-1994",
+    "1995-1998",
+    "1999-2002",
+    "2003-2006",
+    "2007-2009",
+    "2010-2013",
+    "2014-2017",
+    "2018-current"
+]
+FX_RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
+FX_LINE_PROTOCOL = "fx,source={},type={},period={} {}="
 
-HTTP_HEADER = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
-               'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-               'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
-               'Accept-Encoding': 'none',
-               'Accept-Language': 'en-US,en;q=0.8',
-               'Connection': 'keep-alive'}
+RATES_DRIVE_SHEET = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
 
-DRIVE_SHEET = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
-
-INFLUX_LINEPROTOCOL_VALUE = "fx,source={},type={},period={} {}="
+HTTP_HEADER = {
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.3',
+    'Accept-Encoding': 'none',
+    'Accept-Language': 'en-US,en;q=0.8',
+    'Connection': 'keep-alive'
+}
 
 if __name__ == "__main__":
 
@@ -86,28 +97,28 @@ if __name__ == "__main__":
         sys.exit(1)
     if profile is not None:
 
-        if not os.path.exists(DATA_DIR_XLS):
-            os.makedirs(DATA_DIR_XLS)
-        if not os.path.exists(DATA_DIR_CSV):
-            os.makedirs(DATA_DIR_CSV)
+        if not os.path.exists(FX_DIR_XLS):
+            os.makedirs(FX_DIR_XLS)
+        if not os.path.exists(FX_DIR_CSV):
+            os.makedirs(FX_DIR_CSV)
 
         rba_df = pd.DataFrame()
         ato_df = pd.DataFrame()
         merged_df = pd.DataFrame()
 
-        for year in range(ATO_START_YEAR, ATO_FINISH_YEAR):
-            for month in range(1 if year != ATO_START_YEAR else ATO_START_MONTH,
+        for year in range(FX_ATO_START_YEAR, FX_ATO_FINISH_YEAR):
+            for month in range(1 if year != FX_ATO_START_YEAR else FX_ATO_START_MONTH,
                                13 if year < datetime.datetime.now().year else datetime.datetime.now().month):
                 month_string = datetime.date(2000, month, 1).strftime('%B')
-                year_month_file = os.path.join(DATA_DIR_XLS, "ato_fx_{}-{}.xls".format(year, str(month).zfill(2)))
+                year_month_file = os.path.join(FX_DIR_XLS, "ato_fx_{}-{}.xls".format(year, str(month).zfill(2)))
                 available = False
                 if os.path.isfile(year_month_file):
                     print("DEBUG: {}-{} cached [{}]".format(year, str(month).zfill(2), 'TRUE'))
                     available = True
                 else:
                     print("DEBUG: {}-{} cached [{}]".format(year, str(month).zfill(2), 'FALSE'))
-                    for suffix in ATO_URL_SUFFIX:
-                        url = (ATO_URL_PREFIX + suffix).format(month_string, year)
+                    for suffix in FX_ATO_URL_SUFFIX:
+                        url = (FX_ATO_URL_PREFIX + suffix).format(month_string, year)
                         try:
                             month_xls = urllib2.urlopen(urllib2.Request(url, headers=HTTP_HEADER), context=ssl._create_unverified_context())
                             with open(year_month_file, 'wb') as output:
@@ -119,7 +130,7 @@ if __name__ == "__main__":
                             print("DEBUG: {}-{} downloaded [{}] from [{}]".format(year, str(month).zfill(2), 'FALSE', url))
                             continue
                 print("DEBUG: {}-{} available [{}]".format(year, str(month).zfill(2), 'TRUE' if available else 'FALSE'))
-                for header_rows in ATO_XLS_HEADER_ROWS:
+                for header_rows in FX_ATO_XLS_HEADER_ROWS:
                     ato_df = pd.read_excel(year_month_file, skiprows=header_rows)
                     if ato_df.columns[0] == 'Country':
                         ato_df = ato_df[ato_df['Country'].isin(['USA', 'UK', 'SINGAPORE'])]
@@ -153,16 +164,16 @@ if __name__ == "__main__":
                 else:
                     print("DEBUG: {}-{} processed [{}]".format(year, str(month).zfill(2), 'FALSE'))
 
-        for years in RBA_YEARS:
+        for years in FX_RBA_YEARS:
             available = False
             years_months = (years.replace("-", "-01 to ") + ("2021-01" if years.endswith("current") else "-12")).replace("current", "")
-            years_file = os.path.join(DATA_DIR_XLS, "rba_fx_{}.xls".format(years))
+            years_file = os.path.join(FX_DIR_XLS, "rba_fx_{}.xls".format(years))
             if 'current' not in years and os.path.isfile(years_file):
                 print("DEBUG: {} cached [{}]".format(years_months, 'TRUE'))
                 available = True
             else:
                 print("DEBUG: {} cached [{}]".format(years_months, 'FALSE'))
-                url = RBA_URL.format(years)
+                url = FX_RBA_URL.format(years)
                 try:
                     month_xls = urllib2.urlopen(urllib2.Request(url, headers=HTTP_HEADER), context=ssl._create_unverified_context())
                     with open(years_file, 'wb') as output:
@@ -211,16 +222,16 @@ if __name__ == "__main__":
 
 
         merged_tupple = extrapolate(merged_df)
-        Spread(DRIVE_SHEET).df_to_sheet(merged_tupple[2], index=False, sheet='FX', start='A1', replace=True)
+        Spread(RATES_DRIVE_SHEET).df_to_sheet(merged_tupple[2], index=False, sheet='FX', start='A1', replace=True)
         print("DEBUG: {} to {} uploaded to Drive with rows [{}]".format(merged_tupple[0], merged_tupple[1], len(merged_tupple[2])))
 
         rba_tupple = extrapolate(rba_df)
         for fx_pair in FX_PAIRS:
-            print("\n".join(INFLUX_LINEPROTOCOL_VALUE.format("RBA", "snapshot", "daily", fx_pair) +
+            print("\n".join(FX_LINE_PROTOCOL.format("RBA", "snapshot", "daily", fx_pair) +
                             rba_tupple[2][fx_pair].map(str) +
                             " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
             for fx_period in FX_PERIODS:
-                print("\n".join(INFLUX_LINEPROTOCOL_VALUE.format("RBA", "delta", fx_period.lower(), fx_pair) +
+                print("\n".join(FX_LINE_PROTOCOL.format("RBA", "delta", fx_period.lower(), fx_pair) +
                                 rba_tupple[2]["{} {}".format(fx_pair, fx_period)].map(str) +
                                 " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
         print("DEBUG: {} to {} uploaded to InfluxDB with rows [{}]".format(rba_tupple[0], rba_tupple[1], len(rba_tupple[2])))

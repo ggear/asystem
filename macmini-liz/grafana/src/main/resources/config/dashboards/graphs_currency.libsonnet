@@ -114,12 +114,19 @@ from(bucket: "asystem")
         thresholds=[
           { 'color': 'red', 'value': -9999 },
           { 'color': 'yellow', 'value': -0.5 },
-          { 'color': 'gree', 'value': 0.5 },
+          { 'color': 'green', 'value': 0.5 },
         ],
       ).addTarget(influxdb.target(query='// Start
+import "regexp"
+import "experimental"
+normalizeTime = (t) => {
+  normalized =
+    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
+    else time(v: t)
+  return normalized
+}
 first_snapshot = from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "fx")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> filter(fn: (r) => r["period"] == "daily")
   |> filter(fn: (r) => r["type"] == "snapshot")
@@ -137,9 +144,16 @@ from(bucket: "asystem")
   |> map(fn: (r) => ({ r with "AUD/GBP": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
   |> keep(columns: ["AUD/GBP"])
 // End')).addTarget(influxdb.target(query='// Start
+import "regexp"
+import "experimental"
+normalizeTime = (t) => {
+  normalized =
+    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
+    else time(v: t)
+  return normalized
+}
 first_snapshot = from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "fx")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> filter(fn: (r) => r["period"] == "daily")
   |> filter(fn: (r) => r["type"] == "snapshot")
@@ -157,9 +171,16 @@ from(bucket: "asystem")
   |> map(fn: (r) => ({ r with "AUD/USD": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
   |> keep(columns: ["AUD/USD"])
 // End')).addTarget(influxdb.target(query='// Start
+import "regexp"
+import "experimental"
+normalizeTime = (t) => {
+  normalized =
+    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
+    else time(v: t)
+  return normalized
+}
 first_snapshot = from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "fx")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> filter(fn: (r) => r["period"] == "daily")
   |> filter(fn: (r) => r["type"] == "snapshot")
@@ -421,8 +442,27 @@ from(bucket: "asystem")
   |> filter(fn: (r) => r["_measurement"] == "fx")
   |> filter(fn: (r) => r["period"] == "daily")
   |> filter(fn: (r) => r["type"] == "delta")
-  |> keep(columns: ["_time", "_value", "_field"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
+  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+  |> map(fn: (r) => ({ r with "GBP/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "GBP/AUD", "_field"])
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> filter(fn: (r) => r["period"] == "daily")
+  |> filter(fn: (r) => r["type"] == "delta")
+  |> filter(fn: (r) => r["_field"] == "AUD/USD")
+  |> map(fn: (r) => ({ r with "USD/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "USD/AUD", "_field"])
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> filter(fn: (r) => r["period"] == "daily")
+  |> filter(fn: (r) => r["type"] == "delta")
+  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
+  |> map(fn: (r) => ({ r with "SGD/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "SGD/AUD", "_field"])
 // End')) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
 
       graph.new(
@@ -449,8 +489,27 @@ from(bucket: "asystem")
   |> filter(fn: (r) => r["_measurement"] == "fx")
   |> filter(fn: (r) => r["period"] == "weekly")
   |> filter(fn: (r) => r["type"] == "delta")
-  |> keep(columns: ["_time", "_value", "_field"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
+  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+  |> map(fn: (r) => ({ r with "GBP/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "GBP/AUD", "_field"])
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> filter(fn: (r) => r["period"] == "weekly")
+  |> filter(fn: (r) => r["type"] == "delta")
+  |> filter(fn: (r) => r["_field"] == "AUD/USD")
+  |> map(fn: (r) => ({ r with "USD/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "USD/AUD", "_field"])
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> filter(fn: (r) => r["period"] == "weekly")
+  |> filter(fn: (r) => r["type"] == "delta")
+  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
+  |> map(fn: (r) => ({ r with "SGD/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "SGD/AUD", "_field"])
 // End')) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
 
       graph.new(
@@ -477,8 +536,27 @@ from(bucket: "asystem")
   |> filter(fn: (r) => r["_measurement"] == "fx")
   |> filter(fn: (r) => r["period"] == "monthly")
   |> filter(fn: (r) => r["type"] == "delta")
-  |> keep(columns: ["_time", "_value", "_field"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
+  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+  |> map(fn: (r) => ({ r with "GBP/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "GBP/AUD", "_field"])
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> filter(fn: (r) => r["period"] == "monthly")
+  |> filter(fn: (r) => r["type"] == "delta")
+  |> filter(fn: (r) => r["_field"] == "AUD/USD")
+  |> map(fn: (r) => ({ r with "USD/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "USD/AUD", "_field"])
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> filter(fn: (r) => r["period"] == "monthly")
+  |> filter(fn: (r) => r["type"] == "delta")
+  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
+  |> map(fn: (r) => ({ r with "SGD/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "SGD/AUD", "_field"])
 // End')) { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
 
       graph.new(
@@ -505,8 +583,27 @@ from(bucket: "asystem")
   |> filter(fn: (r) => r["_measurement"] == "fx")
   |> filter(fn: (r) => r["period"] == "yearly")
   |> filter(fn: (r) => r["type"] == "delta")
-  |> keep(columns: ["_time", "_value", "_field"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
+  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+  |> map(fn: (r) => ({ r with "GBP/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "GBP/AUD", "_field"])
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> filter(fn: (r) => r["period"] == "yearly")
+  |> filter(fn: (r) => r["type"] == "delta")
+  |> filter(fn: (r) => r["_field"] == "AUD/USD")
+  |> map(fn: (r) => ({ r with "USD/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "USD/AUD", "_field"])
+// End')).addTarget(influxdb.target(query='// Start
+from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "fx")
+  |> filter(fn: (r) => r["period"] == "yearly")
+  |> filter(fn: (r) => r["type"] == "delta")
+  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
+  |> map(fn: (r) => ({ r with "SGD/AUD": -1.0 * r._value }))
+  |> keep(columns: ["_time", "SGD/AUD", "_field"])
 // End')) { gridPos: { x: 0, y: 80, w: 24, h: 12 } },
 
     ],
