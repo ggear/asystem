@@ -78,7 +78,7 @@ def do_interest(profile_loaded):
 
     interest_df = pd.DataFrame()
     retail_file = os.path.join(INT_DIR_DATA, "retail.xls")
-    if download_file("Retail", retail_file, "retail-f04", INT_RETAIL_URL):
+    if download_file("Retail", retail_file, "retail-f04", INT_RETAIL_URL, True):
         retail_raw_df = pd.read_excel(retail_file, skiprows=11, header=None)
         interest_df['Date'] = pd.to_datetime(retail_raw_df.iloc[:, [0]][0].dt.strftime('%Y-%m-01'))
         interest_df['Retail'] = retail_raw_df.iloc[:, [14]]
@@ -87,7 +87,7 @@ def do_interest(profile_loaded):
             interest_df.first_valid_index().strftime('%Y-%m'), interest_df.last_valid_index().strftime('%Y-%m'), len(interest_df)))
 
     inflation_file = os.path.join(INT_DIR_DATA, "inflation.xls")
-    if download_file("Inflation", inflation_file, "inflation-g01", INT_INFLATION_URL):
+    if download_file("Inflation", inflation_file, "inflation-g01", INT_INFLATION_URL, True):
         inflation_df = pd.DataFrame()
         inflation_raw_df = pd.read_excel(inflation_file, skiprows=11, header=None)
         inflation_df['Date'] = pd.to_datetime(inflation_raw_df.iloc[:, [0]][0].dt.strftime('%Y-%m-01'))
@@ -206,7 +206,7 @@ def do_currency(profile_loaded):
     for years in CCY_RBA_YEARS:
         years_months = (years.replace("-", "-01 to ") + ("2021-01" if years.endswith("current") else "-12")).replace("current", "")
         years_file = os.path.join(CCY_DIR_DATA, "rba_fx_{}.xls".format(years))
-        download_file("Currency", years_file, years_months, CCY_RBA_URL.format(years), force='current' in years)
+        download_file("Currency", years_file, years_months, CCY_RBA_URL.format(years), 'current' in years)
         rba_itr_df = pd.read_excel(years_file, skiprows=10)
         if rba_itr_df.columns[0] == 'Series ID':
             rba_itr_df = rba_itr_df.filter(['Series ID', 'FXRUSD', 'FXRUKPS', 'FXRSD']). \
