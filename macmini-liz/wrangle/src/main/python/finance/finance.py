@@ -107,11 +107,11 @@ def do_interest(profile_loaded):
         interest_df.first_valid_index().strftime('%Y-%m'), interest_df.last_valid_index().strftime('%Y-%m'), len(interest_df)))
 
     for int_rate in ['Retail', 'Inflation', 'Net']:
-        print("\n".join(INT_LINE_PROTOCOL.format("RBA", "snapshot", "monthly", int_rate) +
+        print("\n".join(INT_LINE_PROTOCOL.format("RBA", "snapshot", "monthly", int_rate.lower()) +
                         interest_df[int_rate].map(str) +
                         " " + (pd.to_datetime(interest_df.index).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
         for int_period in INT_PERIODS:
-            print("\n".join(INT_LINE_PROTOCOL.format("RBA", "mean", int_period.lower(), int_rate) +
+            print("\n".join(INT_LINE_PROTOCOL.format("RBA", "mean", int_period.lower(), int_rate.lower()) +
                             interest_df["{} {}".format(int_rate, int_period)].map(str) +
                             " " + (pd.to_datetime(interest_df.index).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
     print("DEBUG [Interest]: {} to {} output with rows [{}]".format(

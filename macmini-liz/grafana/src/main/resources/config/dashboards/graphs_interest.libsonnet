@@ -13,7 +13,7 @@
     [
 
       stat.new(
-        title='GBP/AUD Last Snapshot',
+        title='Retail Rate Last Snapshot',
         datasource='InfluxDB2',
         unit='',
         decimals=3,
@@ -33,18 +33,17 @@
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "retail")
   |> filter(fn: (r) => r["period"] == "daily")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: false)
   |> last()
-  |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
 // End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
       stat.new(
-        title='USD/AUD Last Snapshot',
+        title='Inflation Rate Last Snapshot',
         datasource='InfluxDB2',
         unit='',
         decimals=3,
@@ -75,7 +74,7 @@ from(bucket: "asystem")
 // End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
       stat.new(
-        title='SGD/AUD Last Snapshot',
+        title='Net Rate Last Snapshot',
         datasource='InfluxDB2',
         unit='',
         decimals=3,
@@ -106,7 +105,7 @@ from(bucket: "asystem")
 // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
       bar.new(
-        title='CCY Ranged Deltas',
+        title='Rates Ranged Means',
         datasource='InfluxDB2',
         unit='percent',
         min=-30,
@@ -132,7 +131,7 @@ first_snapshot = from(bucket: "asystem")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: true)
   |> last()
-  |> findColumn(fn: (key) => key._measurement == "currency", column: "_value")
+  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -159,7 +158,7 @@ first_snapshot = from(bucket: "asystem")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: true)
   |> last()
-  |> findColumn(fn: (key) => key._measurement == "currency", column: "_value")
+  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -186,7 +185,7 @@ first_snapshot = from(bucket: "asystem")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: true)
   |> last()
-  |> findColumn(fn: (key) => key._measurement == "currency", column: "_value")
+  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -200,7 +199,7 @@ from(bucket: "asystem")
 // End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
       gauge.new(
-        title='GBP/AUD Last Delta',
+        title='Retail Rate 5-Year Mean',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
@@ -231,7 +230,7 @@ from(bucket: "asystem")
 // End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
 
       gauge.new(
-        title='USD/AUD Last Delta',
+        title='Inflation Rate 5-Year Mean',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
@@ -262,7 +261,7 @@ from(bucket: "asystem")
 // End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
 
       gauge.new(
-        title='SGD/AUD Last Delta',
+        title='Net Rate 5-Year Mean',
         datasource='InfluxDB2',
         reducerFunction='last',
         showThresholdLabels=false,
