@@ -183,6 +183,11 @@
     bars: bars,
     stack: stack,
     percentage: percentage,
+
+    // HACK Start: Increased default
+    maxDataPoints: 100000,
+    // HACK Finish
+
     legend: {
       show: legend_show,
       values: legend_values,
