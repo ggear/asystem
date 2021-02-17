@@ -12,6 +12,7 @@ services:
       - INFLUXDB_PORT
       - INFLUXDB_HOST
     volumes:
+      - ${DATA_DIR}:/asystem/runtime
       - ${DATA_DIR}/.profile:/etc/telegraf/.profile:ro
       - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     deploy:

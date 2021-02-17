@@ -1,5 +1,10 @@
 xlrd==1.2.0
+wheel==0.36.2
 datetime==4.3
 numpy==1.12.0
 pandas==0.20.1
+pdftotext==2.1.5
 gspread-pandas==2.2.3
+google-auth-httplib2==0.0.4
+google-auth-oauthlib==0.4.1
+google-api-python-client==1.12.8

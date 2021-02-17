@@ -1672,5 +1672,5 @@ HTTP_GETS = {
 }
 
 if __name__ == '__main__':
-    sys.argv.extend([__file__, "-v", "--durations=50", "--cov=anode", "-o", "cache_dir=../target/.pytest_cache"])
+    sys.argv.extend([__file__, "-v", "--durations=50", "--cov=anode", "-o", "cache_dir=../../../../target/.pytest_cache"])
     sys.exit(pytest.main())

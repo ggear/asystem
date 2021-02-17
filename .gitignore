@@ -5,6 +5,7 @@
 ~$*.*
 .profile
 .gspread_pandas
+.google_service_account.json
 .DS_Store
 .project
 .settings
@@ -32,6 +33,7 @@
 *.pyc
 *egg-info
 *.pipeout
+58861*
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup

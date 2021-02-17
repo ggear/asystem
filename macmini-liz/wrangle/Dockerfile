@@ -3,7 +3,11 @@ FROM telegraf:1.17.0
 ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get -y --no-install-recommends install \
   python=2.7.16-1 \
-  python-pip=18.1-5 && \
+  python-dev=2.7.16-1 \
+  python-pip=18.1-5 \
+  build-essential=12.6 \
+  poppler-utils=0.71.0-5 \
+  libpoppler-cpp-dev=0.71.0-5 && \
   apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN mkdir -p /asystem/runtime
