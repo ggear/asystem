@@ -30,12 +30,14 @@ def main(arguments=[]):
                 module.run()
                 module.print_counters()
                 runtime_errors += (
+                        module.get_counter(script.CTR_SRC_RESOURCES, script.CTR_ACT_ERRORED) +
                         module.get_counter(script.CTR_SRC_FILES, script.CTR_ACT_ERRORED) +
                         module.get_counter(script.CTR_SRC_DATA, script.CTR_ACT_ERRORED)
                 )
                 script.print_log(module_name.title(), "Completed in [{}] secs".format(int(time.time()) - time_start_module))
     script.print_log("Wrangle", "Completed in [{}] secs".format(int(time.time()) - time_start))
     return runtime_errors
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

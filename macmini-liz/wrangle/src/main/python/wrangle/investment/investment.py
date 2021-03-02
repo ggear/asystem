@@ -9,8 +9,6 @@ import pdftotext
 
 from .. import script
 
-DIR_DRIVE = "1TQ6Ky5sB_5Xn1lp8W6Us-OFfvEct6g4x"
-
 STATUS_FAILURE = "failure"
 STATUS_SKIPPED = "skipped"
 STATUS_SUCCESS = "success"
@@ -20,10 +18,11 @@ ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 PERIODS = {'Monthly': 1, 'Quarterly': 3, 'Yearly': 12, 'Five-Yearly': 5 * 12, 'Decennially': 10 * 12}
 
 
-class Fund(script.Script):
+class Investment(script.Script):
 
     def run(self):
-        if len(self.drive_sync(DIR_DRIVE, self.input)) > 0:
+        files = self.drive_sync(self.input_drive, self.input)
+        if all([status[0] for status in files.values()]) and any([status[1] for status in files.values()]):
             statement_data = {}
             for statement_file_name in glob.glob("{}/*.pdf".format(self.input)):
                 with open(statement_file_name, "rb") as statement_file:
@@ -117,8 +116,6 @@ class Fund(script.Script):
                             statement_data[statement_file_name]["Errors"] \
                                 .append("Statement parse failed to resolve all keys {} in {}".format(ATTRIBUTES, statement_position))
 
-            statements_success = 0
-            statements_skipped = 0
             statements_postions = []
             for file_name in statement_data:
                 if statement_data[file_name]['Status'] == STATUS_SUCCESS:
@@ -158,7 +155,8 @@ class Fund(script.Script):
                             statement_df.groupby(['Type', 'Currency'],
                                                  sort=False)[key].apply(lambda x: x.pct_change(PERIODS[period]) * 100)
                 statement_df = statement_df.set_index('Date').sort_index(ascending=False)
-            self.fs_write(statement_df, "{}/58861_consolidated.csv".format(self.output))
+
+            statement_df = self.drive_sync_delta(statement_df, "58861")
 
     def __init__(self):
-        super(Fund, self).__init__("Fund")
+        super(Investment, self).__init__("investment", "1TQ6Ky5sB_5Xn1lp8W6Us-OFfvEct6g4x", "1SqlVPcdzLuHAOw4kh4JfmA9AOu7_KZIY")

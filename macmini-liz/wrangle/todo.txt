@@ -8,3 +8,9 @@
 - http://www.bom.gov.au/jsp/ncc/cdio/weatherData/av?p_nccObsCode=122&p_display_type=dailyDataFile&p_startYear=&p_c=&p_stn_num=009021
 - http://www.bom.gov.au/jsp/ncc/cdio/weatherData/av?p_nccObsCode=38&p_display_type=dataFile&p_startYear=&p_c=&p_stn_num=009021
 
+http://www.bom.gov.au/tmp/cdio/IDCJAC0010_009021_2021.zip
+http://www.bom.gov.au/tmp/cdio/IDCJAC0010_009021_1800.zip
+http://www.bom.gov.au/jsp/ncc/cdio/weatherData/av?p_display_type=dailyZippedDataFile&p_stn_num=009021&p_c=-16275141&p_nccObsCode=122&p_startYear=2021
+http://www.bom.gov.au/jsp/ncc/cdio/weatherData/av?p_display_type=dailyZippedDataFile&p_stn_num=009021&p_c=-16278031&p_nccObsCode=136&p_startYear=2021
+http://www.bom.gov.au/jsp/ncc/cdio/weatherData/av?p_display_type=dailyZippedDataFile&p_stn_num=009021&p_c=-16278031&p_nccObsCode=136&p_startYear=2021
+

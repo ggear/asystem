@@ -32,6 +32,7 @@ lvdisplay /dev/$(hostname)-vg/var
 apt-get update
 apt-get install -y \
   vim=2:8.1.0875-5 \
+  smartmontools=6.6-1 \
   curl=7.64.0-4+deb10u1 \
   fswatch=1.14.0+repack-8 \
   net-tools=1.60+git20180626.aebd88e-1

@@ -9,8 +9,6 @@ import pandas as pd
 
 from .. import script
 
-DIR_DRIVE = ""
-
 PAIRS = ['AUD/GBP', 'AUD/USD', 'AUD/SGD']
 PERIODS = {'Daily': 1, 'Weekly': 7, 'Monthly': 30, 'Yearly': 365}
 
@@ -48,16 +46,10 @@ DRIVE_RATES_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G
 LINE_PROTOCOL = "currency,source={},type={},period={} {}="
 
 
-# TODO:
-#  - Update HTTP to check update timestamps
-#  - Only push if there are new files
-#  - Convert print statements
-#  - Update influx/gsheet uploads to use script functions
-#  - Push files to Drive
-
 class Currency(script.Script):
 
     def run(self):
+        new_data = False
         rba_df = pd.DataFrame()
         ato_df = pd.DataFrame()
         merged_df = pd.DataFrame()
@@ -66,64 +58,63 @@ class Currency(script.Script):
                                13 if year < datetime.datetime.now().year else datetime.datetime.now().month):
                 month_string = datetime.date(2000, month, 1).strftime('%B')
                 year_month_file = os.path.join(self.input, "ato_fx_{}-{}.xls".format(year, str(month).zfill(2)))
+                year_month_file_downloaded = False
                 for url_suffix in ATO_URL_SUFFIX:
-                    if self.http_download((ATO_URL_PREFIX + url_suffix).format(month_string, year), year_month_file):
+                    file_status = self.http_download((ATO_URL_PREFIX + url_suffix)
+                                                     .format(month_string, year), year_month_file, check=False, ignore=True)
+                    if file_status[0]:
+                        new_data = file_status[1]
+                        for header_rows in ATO_XLS_HEADER_ROWS:
+                            ato_df = pd.read_excel(year_month_file, skiprows=header_rows)
+                            if ato_df.columns[0] == 'Country':
+                                ato_df = ato_df[ato_df['Country'].isin(['USA', 'UK', 'SINGAPORE'])]
+                                for column in ato_df.columns:
+                                    if isinstance(column, basestring) and column != 'Country':
+                                        if column[0].isdigit():
+                                            match = re.compile("(.*)-(.*)").match(column)
+                                            ato_df.rename(columns={column: "{}-{}-{}".format(
+                                                year,
+                                                str(list(calendar.month_abbr).index(match.group(2))).zfill(2),
+                                                match.group(1).zfill(2)
+                                            )}, inplace=True)
+                                        else:
+                                            ato_df.drop(column, axis=1, inplace=True)
+                                    elif isinstance(column, datetime.datetime):
+                                        ato_df.rename(columns={column: column.strftime("{}-%m-%d".format(year))}, inplace=True)
+                                ato_df = ato_df.melt('Country', var_name='Date', value_name='Rate'). \
+                                    pivot_table('Rate', ['Date'], 'Country', aggfunc='first'). \
+                                    fillna(method='ffill').fillna(method='bfill').reset_index()
+                                ato_df.rename(columns={'USA': 'AUD/USD', 'UK': 'AUD/GBP', 'SINGAPORE': 'AUD/SGD'}, inplace=True)
+                                ato_df.index.name = None
+                                ato_df.columns.name = None
+                                ato_df['Source'] = 'ATO'
+                                ato_df = ato_df[['Source', 'Date'] + PAIRS]
+                                merged_df = merged_df.append(ato_df, ignore_index=True, verify_integrity=True)
+                                year_month_file_downloaded = True
+                                break
                         break
-                for header_rows in ATO_XLS_HEADER_ROWS:
-                    ato_df = pd.read_excel(year_month_file, skiprows=header_rows)
-                    if ato_df.columns[0] == 'Country':
-                        ato_df = ato_df[ato_df['Country'].isin(['USA', 'UK', 'SINGAPORE'])]
-                        for column in ato_df.columns:
-                            if isinstance(column, basestring) and column != 'Country':
-                                if column[0].isdigit():
-                                    match = re.compile("(.*)-(.*)").match(column)
-                                    ato_df.rename(columns={column: "{}-{}-{}".format(
-                                        year,
-                                        str(list(calendar.month_abbr).index(match.group(2))).zfill(2),
-                                        match.group(1).zfill(2)
-                                    )}, inplace=True)
-                                else:
-                                    ato_df.drop(column, axis=1, inplace=True)
-                            elif isinstance(column, datetime.datetime):
-                                ato_df.rename(columns={column: column.strftime("{}-%m-%d".format(year))}, inplace=True)
-                        ato_df = ato_df.melt('Country', var_name='Date', value_name='Rate'). \
-                            pivot_table('Rate', ['Date'], 'Country', aggfunc='first'). \
-                            fillna(method='ffill').fillna(method='bfill').reset_index()
-                        ato_df.rename(columns={'USA': 'AUD/USD', 'UK': 'AUD/GBP', 'SINGAPORE': 'AUD/SGD'}, inplace=True)
-                        ato_df.index.name = None
-                        ato_df.columns.name = None
-                        ato_df['Source'] = 'ATO'
-                        ato_df = ato_df[['Source', 'Date'] + PAIRS]
-                        merged_df = merged_df.append(ato_df, ignore_index=True, verify_integrity=True)
-                        print("DEBUG [Currency]: {}-{} parsed [{}] with header rows [{}] and data points [{}]".
-                              format(year, str(month).zfill(2), 'TRUE', header_rows, len(ato_df)))
-                        break
-                if ato_df is not None:
-                    print("DEBUG [Currency]: {}-{} processed [{}]".format(year, str(month).zfill(2), 'TRUE'))
-                else:
-                    print("DEBUG [Currency]: {}-{} processed [{}]".format(year, str(month).zfill(2), 'FALSE'))
+                if not year_month_file_downloaded:
+                    self.print_log("Error downloading file [{}]".format(os.path.basename(year_month_file)))
+                    self.add_counter(script.CTR_SRC_FILES, script.CTR_ACT_ERRORED)
 
         for years in RBA_YEARS:
-            years_months = (years.replace("-", "-01 to ") + ("2021-01" if years.endswith("current") else "-12")).replace("current", "")
             years_file = os.path.join(self.input, "rba_fx_{}.xls".format(years))
-            self.http_download(RBA_URL.format(years), years_file, 'current' in years)
-            rba_itr_df = pd.read_excel(years_file, skiprows=10)
-            if rba_itr_df.columns[0] == 'Series ID':
-                rba_itr_df = rba_itr_df.filter(['Series ID', 'FXRUSD', 'FXRUKPS', 'FXRSD']). \
-                    rename(columns={'Series ID': 'Date', 'FXRUSD': 'AUD/USD', 'FXRUKPS': 'AUD/GBP', 'FXRSD': 'AUD/SGD'})
-                rba_itr_df['Date'] = rba_itr_df['Date'].dt.strftime("%Y-%m-%d").astype(str)
-                rba_itr_df['Source'] = 'RBA'
-                rba_itr_df = rba_itr_df[['Source', 'Date'] + PAIRS]
-                rba_df = rba_df.append(rba_itr_df, ignore_index=True, verify_integrity=True)
-                print("DEBUG [Currency]: {} parsed [{}] with and data points [{}]".format(years_months, 'TRUE', len(rba_itr_df)))
+            file_status = self.http_download(RBA_URL.format(years), years_file, check='current' in years)
+            if file_status[0]:
+                new_data = file_status[1]
+                rba_itr_df = pd.read_excel(years_file, skiprows=10)
+                if rba_itr_df.columns[0] == 'Series ID':
+                    rba_itr_df = rba_itr_df.filter(['Series ID', 'FXRUSD', 'FXRUKPS', 'FXRSD']). \
+                        rename(columns={'Series ID': 'Date', 'FXRUSD': 'AUD/USD', 'FXRUKPS': 'AUD/GBP', 'FXRSD': 'AUD/SGD'})
+                    rba_itr_df['Date'] = rba_itr_df['Date'].dt.strftime("%Y-%m-%d").astype(str)
+                    rba_itr_df['Source'] = 'RBA'
+                    rba_itr_df = rba_itr_df[['Source', 'Date'] + PAIRS]
+                    rba_df = rba_df.append(rba_itr_df, ignore_index=True, verify_integrity=True)
 
         def extrapolate(data_df):
             data_df = data_df.drop_duplicates(subset='Date', keep="first").copy()
             data_df['Date'] = pd.to_datetime(data_df['Date'])
             data_df = data_df.set_index('Date').sort_index()
-            date_start = "{}-{}".format(data_df.index[0].year, str(data_df.index[0].month).zfill(2))
-            date_finish = "{}-{}".format(data_df.index[-1].year, str(data_df.index[-1].month).zfill(2))
-            print("DEBUG [Currency]: {} to {} collated with rows [{}]".format(date_start, date_finish, len(data_df)))
             for fx_pair in PAIRS:
                 data_df = data_df[~data_df[fx_pair].isin(['Closed', 'CLOSED'])]
             data_df = data_df.reindex(
@@ -134,30 +125,42 @@ class Currency(script.Script):
                 for fx_period in PERIODS:
                     data_df['{} {}'.format(fx_pair, fx_period)] = (data_df[fx_pair].pct_change(PERIODS[fx_period])) * 100
             data_df = data_df.fillna(0)
-            print("DEBUG [Currency]: {} to {} extrapolated with rows [{}]".format(date_start, date_finish, len(data_df)))
-            return date_start, date_finish, data_df
+            return data_df
 
         if datetime.datetime.now().year > 2021:
-            print("DEBUG [Currency]: {}-{} processed [{}], update [RBA_YEARS]".format(2022, '01', 'FALSE'))
-        merged_df = rba_df.append(ato_df, ignore_index=True, verify_integrity=True)
-        merged_tupple = extrapolate(merged_df)
+            self.print_log("Error processing RBA data, need to increment RBA_YEARS for new current file")
+            self.add_counter(script.CTR_SRC_FILES, script.CTR_ACT_ERRORED, 1)
+            return
 
-        # TODO: Uncomment
-        # Spread(DRIVE_RATES_URL).df_to_sheet(merged_tupple[2], index=False, sheet='FX', start='A1', replace=True)
+        if new_data:
+            self.print_log("Files from [ATO] produced raw data from [{}] to [{}] in [{}] rows"
+                           .format(merged_df['Date'].iloc[0], merged_df['Date'].iloc[-1], len(merged_df)))
+            self.print_log("Files from [RBA] produced raw data from [{}] to [{}] in [{}] rows"
+                           .format(rba_df['Date'].iloc[0], rba_df['Date'].iloc[-1], len(rba_df)))
+            rba_df = extrapolate(rba_df)
+            self.print_log("Files from [RBA] produced processed data from [{}] to [{}] in [{}] rows"
+                           .format(rba_df['Date'].iloc[0], rba_df['Date'].iloc[-1], len(rba_df)))
+            ato_rba_df = extrapolate(rba_df.append(ato_df, ignore_index=True, verify_integrity=True))
+            self.print_log("Files from [ATO + RBA] produced processed data from [{}] to [{}] in [{}] rows"
+                           .format(ato_rba_df['Date'].iloc[0], ato_rba_df['Date'].iloc[-1], len(ato_rba_df)))
+            rba_df = self.drive_sync_delta(rba_df, "currency")
+            if len(rba_df):
+                self.write_googlesheet(ato_rba_df, DRIVE_RATES_URL, {'index': False, 'sheet': 'FX', 'start': 'A1', 'replace': True})
+                for fx_pair in PAIRS:
+                    self.write_lineprotocol("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "daily", fx_pair) +
+                                                      rba_df[fx_pair].map(str) +
+                                                      " " + (pd.to_datetime(rba_df['Date']).astype(int) +
+                                                             6 * 60 * 60 * 1000000000).map(str)))
+                    for fx_period in PERIODS:
+                        self.write_lineprotocol("\n".join(LINE_PROTOCOL.format("RBA", "delta", fx_period.lower(), fx_pair) +
+                                                          rba_df["{} {}".format(fx_pair, fx_period)].map(str) +
+                                                          " " + (pd.to_datetime(rba_df['Date']).astype(int) +
+                                                                 6 * 60 * 60 * 1000000000).map(str)))
+            else:
+                new_data = False
 
-        print(
-            "DEBUG [Currency]: {} to {} uploaded to Drive with rows [{}]".format(merged_tupple[0], merged_tupple[1], len(merged_tupple[2])))
-
-        rba_tupple = extrapolate(rba_df)
-        for fx_pair in PAIRS:
-            print("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "daily", fx_pair) +
-                            rba_tupple[2][fx_pair].map(str) +
-                            " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
-            for fx_period in PERIODS:
-                print("\n".join(LINE_PROTOCOL.format("RBA", "delta", fx_period.lower(), fx_pair) +
-                                rba_tupple[2]["{} {}".format(fx_pair, fx_period)].map(str) +
-                                " " + (pd.to_datetime(rba_tupple[2]['Date']).astype(int) + 6 * 60 * 60 * 1000000000).map(str)))
-        print("DEBUG [Currency]: {} to {} output with rows [{}]".format(rba_tupple[0], rba_tupple[1], len(rba_tupple[2])))
+        if not new_data:
+            self.print_log("No new data found")
 
     def __init__(self):
-        super(Currency, self).__init__("Currency")
+        super(Currency, self).__init__("Currency", "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE", "1hIsXqfvH7TGC5yP7BUoRDbZoYIk0IQAK")
