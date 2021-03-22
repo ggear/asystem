@@ -7,7 +7,7 @@ import os
 import pandas as pd
 import pdftotext
 
-from .. import script
+from .. import library
 
 STATUS_FAILURE = "failure"
 STATUS_SKIPPED = "skipped"
@@ -17,8 +17,10 @@ CURRENCIES = ["GBP", "USD", "SGD"]
 ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 PERIODS = {'Monthly': 1, 'Quarterly': 3, 'Yearly': 12, 'Five-Yearly': 5 * 12, 'Decennially': 10 * 12}
 
+DRIVE_URL = "https://docs.google.com/spreadsheets/d/1K4noNiJ2VAqvyVc1FQw5DufN6LWQYEAE1F1jpGuQTA4"
 
-class Investment(script.Script):
+
+class Investment(library.Library):
 
     def run(self):
         files = self.drive_sync(self.input_drive, self.input)
@@ -123,10 +125,10 @@ class Investment(script.Script):
                     statements_postions.extend(statement_postion.values())
                     self.print_log("File [{}] processed as [{}] with positions {}"
                                    .format(os.path.basename(file_name), STATUS_SUCCESS, statement_postion.keys()))
-                    self.add_counter(script.CTR_SRC_FILES, script.CTR_ACT_PROCESSED)
+                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                 elif statement_data[file_name]['Status'] == STATUS_SKIPPED:
                     self.print_log("File [{}] processed as [{}]".format(os.path.basename(file_name), STATUS_SKIPPED))
-                    self.add_counter(script.CTR_SRC_FILES, script.CTR_ACT_SKIPPED)
+                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
                 else:
                     self.print_log("File [{}] processed as [{}] at parsing point:"
                                    .format(os.path.basename(file_name), STATUS_FAILURE))
@@ -138,9 +140,9 @@ class Investment(script.Script):
                     while error_index < len(statement_data[file_name]["Errors"]):
                         self.print_log(" {:2d}: {}".format(error_index, statement_data[file_name]["Errors"][error_index]))
                         error_index += 1
-            self.add_counter(script.CTR_SRC_FILES, script.CTR_ACT_ERRORED, len(statement_data)
-                             - self.get_counter(script.CTR_SRC_FILES, script.CTR_ACT_PROCESSED)
-                             - self.get_counter(script.CTR_SRC_FILES, script.CTR_ACT_SKIPPED))
+            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, len(statement_data)
+                             - self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
+                             - self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED))
 
             statement_df = pd.DataFrame(statements_postions)
             if len(statement_df) > 0:
@@ -155,8 +157,9 @@ class Investment(script.Script):
                             statement_df.groupby(['Type', 'Currency'],
                                                  sort=False)[key].apply(lambda x: x.pct_change(PERIODS[period]) * 100)
                 statement_df = statement_df.set_index('Date').sort_index(ascending=False)
-
-            statement_df = self.drive_sync_delta(statement_df, "58861")
+                statement_delta_df = self.drive_sync_delta(statement_df, "58861")
+                self.write_sheet(statement_df, DRIVE_URL,
+                                 {'index': True, 'sheet': 'History', 'start': 'A1', 'replace': True})
 
     def __init__(self):
-        super(Investment, self).__init__("investment", "1TQ6Ky5sB_5Xn1lp8W6Us-OFfvEct6g4x", "1SqlVPcdzLuHAOw4kh4JfmA9AOu7_KZIY")
+        super(Investment, self).__init__("Investment", "1TQ6Ky5sB_5Xn1lp8W6Us-OFfvEct6g4x", "1SqlVPcdzLuHAOw4kh4JfmA9AOu7_KZIY")

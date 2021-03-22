@@ -1,4 +1,4 @@
-FROM telegraf:1.17.0-alpine
+FROM telegraf:1.17.3-alpine
 
 ENV PYTHONUNBUFFERED=1
 RUN apk add --no-cache python2=2.7.18-r0 && \

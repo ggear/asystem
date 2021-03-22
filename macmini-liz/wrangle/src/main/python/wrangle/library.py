@@ -14,8 +14,10 @@ import urllib2
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from datetime import datetime
+from ftplib import FTP
 
 import pandas as pd
+from dateutil import parser
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -30,6 +32,9 @@ CTR_SRC_RESOURCES = "Resources"
 CTR_ACT_PREVIOUS = "Previous"
 CTR_ACT_CURRENT = "Current"
 CTR_ACT_DELTA = "Delta"
+CTR_ACT_SHEET = "Sheet"
+CTR_ACT_DATABASE = "Database"
+CTR_ACT_QUEUE = "Queue"
 CTR_ACT_ERRORED = "Errored"
 CTR_ACT_PROCESSED = "Processed"
 CTR_ACT_SKIPPED = "Skipped"
@@ -53,6 +58,7 @@ def print_log(process, message, exception=None):
 def get_file(file_name):
     working = os.path.dirname(__file__)
     paths = [
+        "/root/{}".format(file_name),
         "{}/../../resources/{}".format(working, file_name),
         "{}/../../resources/config/{}".format(working, file_name),
     ]
@@ -90,7 +96,7 @@ def load_profile(file_name):
     return profile
 
 
-class Script(object):
+class Library(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
@@ -134,6 +140,9 @@ class Script(object):
                 (CTR_ACT_PREVIOUS, 0),
                 (CTR_ACT_CURRENT, 0),
                 (CTR_ACT_DELTA, 0),
+                (CTR_ACT_QUEUE, 0),
+                (CTR_ACT_SHEET, 0),
+                (CTR_ACT_DATABASE, 0),
                 (CTR_ACT_ERRORED, 0),
             ])),
         ])
@@ -185,6 +194,40 @@ class Script(object):
                 self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
                 return True, True
             except Exception as exception:
+                self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file, exception))
+                if not ignore:
+                    self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
+        return False, None
+
+    def ftp_download(self, url_file, local_file, check=True, force=False, ignore=False):
+        if not force and not check and os.path.isfile(local_file):
+            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
+            self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+            return True, False
+        else:
+            url_server = url_file.replace("ftp://", "").split("/")[0]
+            url_path = url_file.split(url_server)[-1]
+            try:
+                client = FTP(url_server)
+                client.login()
+                modified_timestamp = int((parser.parse(client.voidcmd("MDTM {}".format(url_path))[4:].strip()) -
+                                          datetime.utcfromtimestamp(0)).total_seconds())
+                if not force and check and os.path.isfile(local_file):
+                    modified_timestamp_cached = int(os.path.getmtime(local_file))
+                    if modified_timestamp_cached == modified_timestamp:
+                        self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
+                        self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+                        client.quit()
+                        return True, False
+                client.retrbinary("RETR {}".format(url_path), open(local_file, 'wb').write)
+                os.utime(local_file, (modified_timestamp, modified_timestamp))
+                self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
+                self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
+                client.quit()
+                return True, True
+            except Exception as exception:
+                if client is not None:
+                    client.quit()
                 self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file, exception))
                 if not ignore:
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
@@ -292,12 +335,14 @@ class Script(object):
         self.drive_sync(self.output_drive, self.output, check=False, download=False, upload=True)
         return data_df_delta
 
-    def write_googlesheet(self, data_df, drive_url, sheet_params={}):
+    def write_sheet(self, data_df, drive_url, sheet_params={}):
         Spread(drive_url).df_to_sheet(data_df, **sheet_params)
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_SHEET, len(data_df))
 
-    def write_lineprotocol(self, line):
+    def write_database(self, line):
         if line.strip():
             print(line)
+            self.add_counter(CTR_SRC_DATA, CTR_ACT_DATABASE)
 
     def __init__(self, name, input_drive, output_drive):
         self.name = name

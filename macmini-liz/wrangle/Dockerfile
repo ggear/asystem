@@ -1,4 +1,4 @@
-FROM telegraf:1.17.0
+FROM telegraf:1.17.3
 
 ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get -y --no-install-recommends install \
@@ -16,6 +16,7 @@ COPY src/reqs_run.txt /asystem
 RUN cat /asystem/reqs_run.txt | xargs -n 1 pip install && rm -rf /asystem/reqs_run.txt
 RUN mkdir -p /root/.config
 COPY src/main/resources/.gspread_pandas /root/.config/gspread_pandas
+COPY src/main/resources/.google_service_account.json /root
 COPY src/main/python/ /asystem/
 
 ENTRYPOINT ["/entrypoint.sh"]

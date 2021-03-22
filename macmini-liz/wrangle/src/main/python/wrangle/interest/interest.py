@@ -4,16 +4,19 @@ import os
 
 import pandas as pd
 
-from .. import script
+from .. import library
 
-PERIODS = {'Yearly': 12, 'Five-Yearly': 5 * 12, 'Decennially': 10 * 12}
+PERIODS = {'Yearly Test': 12, 'Quinquennialy': 5 * 12, 'Decennialy': 10 * 12, 'Vicennialy': 20 * 12}
 
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xls"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xls"
+
+DRIVE_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
+
 LINE_PROTOCOL = "interest,source={},type={},period={} {}="
 
 
-class Interest(script.Script):
+class Interest(library.Library):
 
     def run(self):
         new_data = False
@@ -53,18 +56,20 @@ class Interest(script.Script):
                                    len(inflation_df)))
             self.print_log("Files for [Retail + Inflation] produced processed data from [{}] to [{}] in [{}] rows"
                            .format(interest_df.index[0].strftime('%d-%m-%Y'), interest_df.index[-1].strftime('%d-%m-%Y'), len(interest_df)))
-            interest_df = self.drive_sync_delta(interest_df, "interest")
-            if len(interest_df):
+            interest_delta_df = self.drive_sync_delta(interest_df, "interest")
+            if len(interest_delta_df):
+                self.write_sheet(interest_df.iloc[::-1], DRIVE_URL,
+                                 {'index': True, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
                 for int_rate in ['Retail', 'Inflation', 'Net']:
-                    self.write_lineprotocol("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "monthly", int_rate.lower()) +
-                                                      interest_df[int_rate].map(str) +
-                                                      " " + (pd.to_datetime(interest_df.index).astype(int) +
-                                                             6 * 60 * 60 * 1000000000).map(str)))
+                    self.write_database("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "monthly", int_rate.lower()) +
+                                                  interest_delta_df[int_rate].map(str) +
+                                                  " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
+                                                         6 * 60 * 60 * 1000000000).map(str)))
                     for int_period in PERIODS:
-                        self.write_lineprotocol("\n".join(LINE_PROTOCOL.format("RBA", "mean", int_period.lower(), int_rate.lower()) +
-                                                          interest_df["{} {}".format(int_rate, int_period)].map(str) +
-                                                          " " + (pd.to_datetime(interest_df.index).astype(int) +
-                                                                 6 * 60 * 60 * 1000000000).map(str)))
+                        self.write_database("\n".join(LINE_PROTOCOL.format("RBA", "mean", int_period.lower(), int_rate.lower()) +
+                                                      interest_delta_df["{} {}".format(int_rate, int_period)].map(str) +
+                                                      " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
+                                                             6 * 60 * 60 * 1000000000).map(str)))
             else:
                 new_data = False
         if not new_data:

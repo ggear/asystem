@@ -7,7 +7,7 @@ import re
 
 import pandas as pd
 
-from .. import script
+from .. import library
 
 PAIRS = ['AUD/GBP', 'AUD/USD', 'AUD/SGD']
 PERIODS = {'Daily': 1, 'Weekly': 7, 'Monthly': 30, 'Yearly': 365}
@@ -42,11 +42,12 @@ RBA_YEARS = [
 ]
 RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
-DRIVE_RATES_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
+DRIVE_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
+
 LINE_PROTOCOL = "currency,source={},type={},period={} {}="
 
 
-class Currency(script.Script):
+class Currency(library.Library):
 
     def run(self):
         new_data = False
@@ -95,7 +96,7 @@ class Currency(script.Script):
                         break
                 if not year_month_file_downloaded:
                     self.print_log("Error downloading file [{}]".format(os.path.basename(year_month_file)))
-                    self.add_counter(script.CTR_SRC_FILES, script.CTR_ACT_ERRORED)
+                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
 
         for years in RBA_YEARS:
             years_file = os.path.join(self.input, "rba_fx_{}.xls".format(years))
@@ -129,7 +130,7 @@ class Currency(script.Script):
 
         if datetime.datetime.now().year > 2021:
             self.print_log("Error processing RBA data, need to increment RBA_YEARS for new current file")
-            self.add_counter(script.CTR_SRC_FILES, script.CTR_ACT_ERRORED, 1)
+            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, 1)
             return
 
         if new_data:
@@ -143,18 +144,19 @@ class Currency(script.Script):
             ato_rba_df = extrapolate(rba_df.append(ato_df, ignore_index=True, verify_integrity=True))
             self.print_log("Files from [ATO + RBA] produced processed data from [{}] to [{}] in [{}] rows"
                            .format(ato_rba_df['Date'].iloc[0], ato_rba_df['Date'].iloc[-1], len(ato_rba_df)))
-            rba_df = self.drive_sync_delta(rba_df, "currency")
-            if len(rba_df):
-                self.write_googlesheet(ato_rba_df, DRIVE_RATES_URL, {'index': False, 'sheet': 'FX', 'start': 'A1', 'replace': True})
+            rba_delta_df = self.drive_sync_delta(rba_df, "currency")
+            if len(rba_delta_df):
+                self.write_sheet(ato_rba_df, DRIVE_URL,
+                                 {'index': False, 'sheet': 'FX', 'start': 'A1', 'replace': True})
                 for fx_pair in PAIRS:
-                    self.write_lineprotocol("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "daily", fx_pair) +
-                                                      rba_df[fx_pair].map(str) +
-                                                      " " + (pd.to_datetime(rba_df['Date']).astype(int) +
+                    self.write_database("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "daily", fx_pair) +
+                                                  rba_delta_df[fx_pair].map(str) +
+                                                      " " + (pd.to_datetime(rba_delta_df['Date']).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
                     for fx_period in PERIODS:
-                        self.write_lineprotocol("\n".join(LINE_PROTOCOL.format("RBA", "delta", fx_period.lower(), fx_pair) +
-                                                          rba_df["{} {}".format(fx_pair, fx_period)].map(str) +
-                                                          " " + (pd.to_datetime(rba_df['Date']).astype(int) +
+                        self.write_database("\n".join(LINE_PROTOCOL.format("RBA", "delta", fx_period.lower(), fx_pair) +
+                                                      rba_delta_df["{} {}".format(fx_pair, fx_period)].map(str) +
+                                                          " " + (pd.to_datetime(rba_delta_df['Date']).astype(int) +
                                                                  6 * 60 * 60 * 1000000000).map(str)))
             else:
                 new_data = False
