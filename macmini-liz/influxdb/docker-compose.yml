@@ -16,6 +16,7 @@ services:
 
     volumes:
       - ${DATA_DIR}:/root/.influxdbv2
+      - ${DATA_DIR}/config.yml:/etc/influxdb2/config.yml
     ports:
       - 8086:8086
     deploy:
