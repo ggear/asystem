@@ -8,13 +8,13 @@ influxql-max-select-buckets: 0
 influxql-max-select-point: 0
 influxql-max-select-series: 0
 key-name: ""
-log-level: "debug"
+log-level: debug
 nats-max-payload-bytes: 1048576
 nats-port: -1
 no-tasks: false
-query-concurrency: 1
+query-concurrency: 2
 query-initial-memory-bytes: 0
-query-max-memory-bytes: 1000000000
+query-max-memory-bytes: 0
 query-memory-bytes: 1000000000
 query-queue-size: 20
 reporting-disabled: true
