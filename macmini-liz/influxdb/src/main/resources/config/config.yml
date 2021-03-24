@@ -12,11 +12,11 @@ log-level: warn
 nats-max-payload-bytes: 1048576
 nats-port: -1
 no-tasks: false
-query-concurrency: 2
+query-concurrency: 1
 query-initial-memory-bytes: 0
-query-max-memory-bytes: 2000000000
+query-max-memory-bytes: 1000000000
 query-memory-bytes: 1000000000
-query-queue-size: 10
+query-queue-size: 2
 reporting-disabled: true
 secret-store: bolt
 session-length: 60
