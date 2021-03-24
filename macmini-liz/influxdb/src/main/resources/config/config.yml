@@ -15,7 +15,7 @@ no-tasks: false
 query-concurrency: 2
 query-initial-memory-bytes: 0
 query-max-memory-bytes: 0
-query-memory-bytes: 1073741824
+query-memory-bytes: 536870912
 query-queue-size: 20
 reporting-disabled: true
 secret-store: bolt
