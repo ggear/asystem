@@ -22,4 +22,4 @@ services:
     deploy:
       resources:
         limits:
-          memory: 6G
+          memory: 5G
