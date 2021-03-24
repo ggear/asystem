@@ -14,7 +14,7 @@ nats-port: -1
 no-tasks: false
 query-concurrency: 2
 query-initial-memory-bytes: 0
-query-max-memory-bytes: 0
+query-max-memory-bytes: 2000000000
 query-memory-bytes: 1000000000
 query-queue-size: 10
 reporting-disabled: true
