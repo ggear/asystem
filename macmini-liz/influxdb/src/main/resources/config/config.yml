@@ -8,7 +8,7 @@ influxql-max-select-buckets: 0
 influxql-max-select-point: 0
 influxql-max-select-series: 0
 key-name: ""
-log-level: warn
+log-level: debug
 nats-max-payload-bytes: 1048576
 nats-port: -1
 no-tasks: false
@@ -16,7 +16,7 @@ query-concurrency: 1
 query-initial-memory-bytes: 0
 query-max-memory-bytes: 1000000000
 query-memory-bytes: 1000000000
-query-queue-size: 1
+query-queue-size: 20
 reporting-disabled: true
 secret-store: bolt
 session-length: 60
