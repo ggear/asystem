@@ -13,8 +13,8 @@ nats-max-payload-bytes: 1048576
 nats-port: -1
 no-tasks: false
 query-concurrency: 2
-query-initial-memory-bytes: 0
-query-max-memory-bytes: 0
+query-initial-memory-bytes: 268435456
+query-max-memory-bytes: 536870912
 query-memory-bytes: 268435456
 query-queue-size: 20
 reporting-disabled: true

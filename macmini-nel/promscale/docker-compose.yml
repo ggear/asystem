@@ -10,4 +10,4 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4G
+          memory: 5G
