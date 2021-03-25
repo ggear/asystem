@@ -39,7 +39,8 @@ RUN_CODE_REPEAT = -1
 RUN_CODE_SUCCESS = 0
 RUN_CODE_FAIL_CONFIG = 1
 RUN_CODE_FAIL_NETWORK = 2
-RUN_CODE_FAIL_ZEROED = 3
+RUN_CODE_FAIL_SPEEDTEST = 3
+RUN_CODE_FAIL_ZEROED = 4
 
 DATE_TLS = r'%b %d %H:%M:%S %Y %Z'
 
@@ -134,6 +135,9 @@ def ping(env):
             try:
                 speedtest = Speedtest()
                 speedtest.get_servers([host_speedtest_id])
+
+                raise NoMatchedServers()
+
                 host_speedtest = speedtest.best
                 speedtest_results = speedtest.results.dict()
                 pings.append(speedtest_results["ping"])
@@ -141,7 +145,7 @@ def ping(env):
                     time.sleep(PING_SLEEP_SECONDS)
                     time_start += PING_SLEEP_SECONDS * 1000
             except NoMatchedServers:
-                None
+                run_code_iteration = RUN_CODE_FAIL_SPEEDTEST
             except Exception as exception:
                 print("Error processing speedtest ping - ", end="", file=sys.stderr)
                 traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
@@ -211,7 +215,7 @@ def upload(env):
                 speedtest.upload()
                 results_speedtest = speedtest.results.dict()
             except NoMatchedServers:
-                None
+                run_code_iteration = RUN_CODE_FAIL_SPEEDTEST
             except Exception as exception:
                 print("Error processing speedtest upload - ", end="", file=sys.stderr)
                 traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
@@ -282,7 +286,7 @@ def download(env):
                 speedtest.download()
                 results_speedtest = speedtest.results.dict()
             except NoMatchedServers:
-                None
+                run_code_iteration = RUN_CODE_FAIL_SPEEDTEST
             except Exception as exception:
                 print("Error processing speedtest download - ", end="", file=sys.stderr)
                 traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
@@ -487,10 +491,10 @@ if __name__ == "__main__":
         traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
     if profile is not None:
         run_code_all = []
-        up_code_network = RUN_CODE_SUCCESS
+        up_code_network = True
         run_code_all.append(ping(profile))
-        up_code_network += run_code_all[-1]
-        if up_code_network == RUN_CODE_SUCCESS:
+        up_code_network = run_code_all[-1] == RUN_CODE_SUCCESS or run_code_all[-1] == RUN_CODE_FAIL_SPEEDTEST
+        if up_code_network:
             run_code_all.append(upload(profile))
             run_code_all.append(download(profile))
         run_code_all.append(lookup(profile))
@@ -502,7 +506,7 @@ if __name__ == "__main__":
         uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
         try:
             uptime_rows = query(profile, QUERY_UPTIME.format("uptime_s", "network"))
-            if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or up_code_network > RUN_CODE_SUCCESS:
+            if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or not up_code_network:
                 uptime_new = 0
             else:
                 uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
@@ -512,7 +516,7 @@ if __name__ == "__main__":
             traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
         if uptime_new is not None and uptime_epoch is not None:
             run_code_uptime = RUN_CODE_SUCCESS
-        if up_code_network > RUN_CODE_SUCCESS:
+        if not up_code_network:
             network_stats = {
                 "ping": [
                     """ r["_field"] == "ping_min_ms" """,
