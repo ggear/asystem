@@ -98,7 +98,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-6M',
-        refresh='5m',
+        refresh='',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_currency.graphs()),
@@ -111,7 +111,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-10y',
-        refresh='5m',
+        refresh='',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_interest.graphs()),
@@ -124,7 +124,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-1h',
-        refresh='5m',
+        refresh='',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_servers.graphs()),
@@ -137,7 +137,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-1h',
-        refresh='5m',
+        refresh='',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_containers.graphs()),
@@ -150,7 +150,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-1h',
-        refresh='30s',
+        refresh='',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_network.graphs()),
@@ -163,7 +163,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-3h',
-        refresh='30s',
+        refresh='',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_internet.graphs()),
@@ -178,7 +178,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         tags=['published'],
         schemaVersion=26,
         time_from='now-7d',
-        refresh='90s',
+        refresh='',
         graphTooltip='shared_crosshair',
       )
       .addPanels(graphs_{}.graphs()),
