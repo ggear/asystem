@@ -210,6 +210,8 @@ def upload(env):
                 host_speedtest = speedtest.best
                 speedtest.upload()
                 results_speedtest = speedtest.results.dict()
+            except NoMatchedServers:
+                None
             except Exception as exception:
                 print("Error processing speedtest upload - ", end="", file=sys.stderr)
                 traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
@@ -279,6 +281,8 @@ def download(env):
                 host_speedtest = speedtest.best
                 speedtest.download()
                 results_speedtest = speedtest.results.dict()
+            except NoMatchedServers:
+                None
             except Exception as exception:
                 print("Error processing speedtest download - ", end="", file=sys.stderr)
                 traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
