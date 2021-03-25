@@ -59,6 +59,7 @@
    * @param value_type (default `'individual'`) Type of tooltip value
    * @param shared_tooltip (default `true`) Allow to group or spit tooltips on mouseover within a chart
    * @param percentage (defaut: false) show as percentages
+   * @param maxDataPoints (optional)
    *
    * @method addTarget(target) Adds a target object.
    * @method addTargets(targets) Adds an array of targets.
@@ -132,6 +133,7 @@
     percentage=false,
     time_from=null,
     time_shift=null,
+    maxDataPoints=null,
   ):: {
     title: title,
     [if span != null then 'span']: span,
@@ -184,8 +186,8 @@
     stack: stack,
     percentage: percentage,
 
-    // HACK Start: Increased default
-    maxDataPoints: 100000,
+    // HACK Start: Add a maxDataPoints paramater
+    [if maxDataPoints != null then 'maxDataPoints']: maxDataPoints,
     // HACK Finish
 
     legend: {
