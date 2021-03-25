@@ -135,9 +135,6 @@ def ping(env):
             try:
                 speedtest = Speedtest()
                 speedtest.get_servers([host_speedtest_id])
-
-                raise NoMatchedServers()
-
                 host_speedtest = speedtest.best
                 speedtest_results = speedtest.results.dict()
                 pings.append(speedtest_results["ping"])
