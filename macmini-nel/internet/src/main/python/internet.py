@@ -14,6 +14,7 @@ import pytz
 from dateutil.parser import parse
 from dns.resolver import Resolver
 from requests import post
+from speedtest import NoMatchedServers
 from speedtest import Speedtest
 
 DEFAULT_PROFILE_PATH = "../resources/config/.profile"
@@ -139,6 +140,8 @@ def ping(env):
                 if i < PING_COUNT - 1:
                     time.sleep(PING_SLEEP_SECONDS)
                     time_start += PING_SLEEP_SECONDS * 1000
+            except NoMatchedServers:
+                None
             except Exception as exception:
                 print("Error processing speedtest ping - ", end="", file=sys.stderr)
                 traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
