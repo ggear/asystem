@@ -17,10 +17,10 @@ CURRENCIES = ["GBP", "USD", "SGD"]
 ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 PERIODS = {'Monthly': 1, 'Quarterly': 3, 'Yearly': 12, 'Five-Yearly': 5 * 12, 'Decennially': 10 * 12}
 
-DRIVE_URL = "https://docs.google.com/spreadsheets/d/1K4noNiJ2VAqvyVc1FQw5DufN6LWQYEAE1F1jpGuQTA4"
+DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
 
 
-class Investment(library.Library):
+class Equity(library.Library):
 
     def run(self):
         files = self.drive_sync(self.input_drive, self.input)
@@ -146,20 +146,39 @@ class Investment(library.Library):
 
             statement_df = pd.DataFrame(statements_postions)
             if len(statement_df) > 0:
-                statement_df["Price (Reporting)"] = statement_df["Value"] / statement_df["Units"]
-                statement_df["Value (Original)"] = statement_df["Value"] / statement_df["Rate"]
-                statement_df["Price (Original)"] = statement_df["Value"] / statement_df["Units"] / statement_df["Rate"]
-                statement_df = statement_df.rename(columns={'Value': 'Value (Reporting)'})
-                statement_df = statement_df.sort_values(['Date']).reset_index(drop=True)
-                for key in ["Price (Reporting)", "Price (Original)"]:
-                    for period in PERIODS:
-                        statement_df['{} {}'.format(key, period)] = \
-                            statement_df.groupby(['Type', 'Currency'],
-                                                 sort=False)[key].apply(lambda x: x.pct_change(PERIODS[period]) * 100)
-                statement_df = statement_df.set_index('Date').sort_index(ascending=False)
+                statement_df["Price Base Currency"] = statement_df["Value"] / statement_df["Units"]
+                statement_df["Price"] = statement_df["Value"] / statement_df["Units"] / statement_df["Rate"]
+
+                def ticker(df):
+                    return \
+                        'MCK' if df['Owner'] == 'Jane' and df['Currency'] == 'USD' else \
+                            'MUS' if df['Owner'] == 'Joint' and df['Currency'] == 'USD' else \
+                                'MUK' if df['Owner'] == 'Joint' and df['Currency'] == 'GBP' else \
+                                    'MSG' if df['Owner'] == 'Joint' and df['Currency'] == 'SGD' else \
+                                        'UNKOWN'
+
+                statement_df['Ticker'] = statement_df.apply(ticker, axis=1)
+                statement_df = statement_df.set_index('Date')
+                statement_df = pd.concat([
+                    statement_df.pivot(columns='Ticker', values='Currency').add_suffix(' Currency'),
+                    statement_df.pivot(columns='Ticker', values='Price').add_suffix(' Price'),
+                    statement_df.pivot(columns='Ticker', values='Price Base Currency').add_suffix(' Price Base Currency')
+                ], axis=1)
+
+                statement_df = statement_df.resample('D')
+                statement_df = statement_df.interpolate().fillna(method='ffill')
+                statement_df['Date'] = statement_df.index.strftime("%Y-%m-%d").astype(str)
+                statement_df = statement_df[sorted(statement_df.columns)].sort_index(ascending=False)
+
+                # for key in ["Price Base Currency", "Price"]:
+                #     for period in PERIODS:
+                #         statement_df['{} {}'.format(key, period)] = \
+                #             statement_df.groupby(['Type', 'Currency'],
+                #                                  sort=False)[key].apply(lambda x: x.pct_change(PERIODS[period]) * 100)
+
                 statement_delta_df = self.drive_sync_delta(statement_df, "58861")
                 self.write_sheet(statement_df, DRIVE_URL,
-                                 {'index': True, 'sheet': 'History', 'start': 'A1', 'replace': True})
+                                 {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
 
     def __init__(self):
-        super(Investment, self).__init__("Investment", "1TQ6Ky5sB_5Xn1lp8W6Us-OFfvEct6g4x", "1SqlVPcdzLuHAOw4kh4JfmA9AOu7_KZIY")
+        super(Equity, self).__init__("Equity", "1TQ6Ky5sB_5Xn1lp8W6Us-OFfvEct6g4x", "1SqlVPcdzLuHAOw4kh4JfmA9AOu7_KZIY")

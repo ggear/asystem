@@ -21,7 +21,7 @@ class WrangleTest(unittest.TestCase):
     def test_all(self):
         self.run_module("currency", prepare_only=True)
         self.run_module("interest", prepare_only=True)
-        self.run_module("investment", prepare_only=True)
+        self.run_module("equity", prepare_only=True)
         print("")
         self.assertEqual(main.main(), 0, "Main script ran with errors on first run")
         self.assertEqual(main.main(), 0, "Main script ran with errors on second re-run")
@@ -54,9 +54,9 @@ class WrangleTest(unittest.TestCase):
                 },
             })
 
-    def test_investment(self):
+    def test_equity(self):
         self.run_module(
-            "investment", counter_equals={
+            "equity", counter_equals={
                 library.CTR_SRC_RESOURCES: {
                     library.CTR_ACT_ERRORED: 0
                 },

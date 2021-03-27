@@ -19,7 +19,7 @@ MONTHLY_STATS_URL = "http://www.bom.gov.au/clim_data/cdio/tables/text/IDCJCM0039
 
 WEEKLY_FORECAST_URL = "ftp://ftp.bom.gov.au/anon/gen/fwo/IDW12300.xml"
 
-LINE_PROTOCOL = "interest,source={},type={},period={} {}="
+LINE_PROTOCOL = "weather,source={},type={},period={} {}="
 
 
 class Weather(library.Library):
