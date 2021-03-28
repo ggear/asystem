@@ -22,7 +22,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         schemaVersion=26,
         time_from='now-6M',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_currency.graphs()),
 
@@ -35,7 +35,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         schemaVersion=26,
         time_from='now-10y',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_interest.graphs()),
 
@@ -48,7 +48,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         schemaVersion=26,
         time_from='now-1h',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_servers.graphs()),
 
@@ -61,7 +61,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         schemaVersion=26,
         time_from='now-1h',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_containers.graphs()),
 
@@ -74,7 +74,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         schemaVersion=26,
         time_from='now-1h',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_network.graphs()),
 
@@ -87,7 +87,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         schemaVersion=26,
         time_from='now-3h',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_internet.graphs()),
 
@@ -100,7 +100,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         schemaVersion=26,
         time_from='now-7d',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_conditions.graphs()),
 
@@ -114,7 +114,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         schemaVersion=26,
         time_from='now-7d',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_water.graphs()),
 
@@ -128,7 +128,7 @@ local graphs_electricity = import 'graphs_electricity.libsonnet';
         schemaVersion=26,
         time_from='now-7d',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_electricity.graphs()),
 

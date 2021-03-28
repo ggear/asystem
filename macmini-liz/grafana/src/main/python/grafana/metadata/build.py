@@ -99,7 +99,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         schemaVersion=26,
         time_from='now-6M',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_currency.graphs()),
 
@@ -112,7 +112,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         schemaVersion=26,
         time_from='now-10y',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_interest.graphs()),
 
@@ -125,7 +125,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         schemaVersion=26,
         time_from='now-1h',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_servers.graphs()),
 
@@ -138,7 +138,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         schemaVersion=26,
         time_from='now-1h',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_containers.graphs()),
 
@@ -151,7 +151,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         schemaVersion=26,
         time_from='now-1h',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_network.graphs()),
 
@@ -164,7 +164,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         schemaVersion=26,
         time_from='now-3h',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_internet.graphs()),
         """.strip() + "\n")
@@ -179,7 +179,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
         schemaVersion=26,
         time_from='now-7d',
         refresh='',
-        graphTooltip='shared_crosshair',
+        graphTooltip='shared_tooltip',
       )
       .addPanels(graphs_{}.graphs()),
             """.format(group.lower(), group, group.lower(), group.lower()).strip() + "\n\n")

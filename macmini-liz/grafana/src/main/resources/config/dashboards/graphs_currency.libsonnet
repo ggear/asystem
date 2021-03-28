@@ -106,7 +106,7 @@ from(bucket: "asystem")
 // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
       bar.new(
-        title='CCY Ranged Deltas',
+        title='CCY/AUD Range Deltas',
         datasource='InfluxDB2',
         unit='percent',
         min=-30,
@@ -117,86 +117,53 @@ from(bucket: "asystem")
           { 'color': 'green', 'value': 0.5 },
         ],
       ).addTarget(influxdb.target(query='// Start
-import "regexp"
-import "experimental"
-normalizeTime = (t) => {
-  normalized =
-    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
-    else time(v: t)
-  return normalized
-}
-first_snapshot = from(bucket: "asystem")
-  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> filter(fn: (r) => r["period"] == "daily")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: true)
-  |> last()
-  |> findColumn(fn: (key) => key._measurement == "currency", column: "_value")
-from(bucket: "asystem")
+field = "AUD/GBP"
+series = from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> filter(fn: (r) => r["period"] == "daily")
   |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: false)
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
   |> last()
-  |> map(fn: (r) => ({ r with "AUD/GBP": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
-  |> keep(columns: ["AUD/GBP"])
+  |> keep(columns: ["_time", "_value", "_field"])
 // End')).addTarget(influxdb.target(query='// Start
-import "regexp"
-import "experimental"
-normalizeTime = (t) => {
-  normalized =
-    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
-    else time(v: t)
-  return normalized
-}
-first_snapshot = from(bucket: "asystem")
-  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> filter(fn: (r) => r["period"] == "daily")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: true)
-  |> last()
-  |> findColumn(fn: (key) => key._measurement == "currency", column: "_value")
-from(bucket: "asystem")
+field = "AUD/USD"
+series = from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> filter(fn: (r) => r["period"] == "daily")
   |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: false)
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
   |> last()
-  |> map(fn: (r) => ({ r with "AUD/USD": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
-  |> keep(columns: ["AUD/USD"])
+  |> keep(columns: ["_time", "_value", "_field"])
 // End')).addTarget(influxdb.target(query='// Start
-import "regexp"
-import "experimental"
-normalizeTime = (t) => {
-  normalized =
-    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
-    else time(v: t)
-  return normalized
-}
-first_snapshot = from(bucket: "asystem")
-  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> filter(fn: (r) => r["period"] == "daily")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: true)
-  |> last()
-  |> findColumn(fn: (key) => key._measurement == "currency", column: "_value")
-from(bucket: "asystem")
+field = "AUD/SGD"
+series = from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> filter(fn: (r) => r["period"] == "daily")
   |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: false)
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
   |> last()
-  |> map(fn: (r) => ({ r with "AUD/SGD": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
-  |> keep(columns: ["AUD/SGD"])
+  |> keep(columns: ["_time", "_value", "_field"])
 // End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
       gauge.new(
@@ -293,6 +260,69 @@ from(bucket: "asystem")
 // End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
 
       graph.new(
+        title='CCY/AUD Deltas',
+        datasource='InfluxDB2',
+        fill=0,
+        format='',
+        bars=false,
+        lines=true,
+        staircase=false,
+        formatY1='percent',
+        legend_values=true,
+        legend_min=true,
+        legend_max=true,
+        legend_current=true,
+        legend_total=false,
+        legend_avg=false,
+        legend_alignAsTable=true,
+        legend_rightSide=true,
+        legend_sideWidth=425,
+        maxDataPoints=10000
+      ).addTarget(influxdb.target(query='// Start
+field = "AUD/GBP"
+series = from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["period"] == "daily")
+  |> filter(fn: (r) => r["type"] == "snapshot")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+// End')).addTarget(influxdb.target(query='// Start
+field = "AUD/USD"
+series = from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["period"] == "daily")
+  |> filter(fn: (r) => r["type"] == "snapshot")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+// End')).addTarget(influxdb.target(query='// Start
+field = "AUD/SGD"
+series = from(bucket: "asystem")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["period"] == "daily")
+  |> filter(fn: (r) => r["type"] == "snapshot")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+// End')) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
+
+      graph.new(
         title='GBP/AUD Dailies',
         datasource='InfluxDB2',
         fill=0,
@@ -332,8 +362,10 @@ from(bucket: "asystem")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
 // End')).addSeriesOverride(
-        { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 2 }
-      ) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
+        { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
+      ).addSeriesOverride(
+        { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
+      ) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
       graph.new(
         title='USD/AUD Dailies',
@@ -375,8 +407,10 @@ from(bucket: "asystem")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
 // End')).addSeriesOverride(
-        { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 2 }
-      ) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
+        { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
+      ).addSeriesOverride(
+        { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
+      ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
 
       graph.new(
         title='SGD/AUD Dailies',
@@ -418,200 +452,10 @@ from(bucket: "asystem")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
 // End')).addSeriesOverride(
-        { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 2 }
-      ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
-
-      graph.new(
-        title='CCY Daily Deltas',
-        datasource='InfluxDB2',
-        fill=0,
-        format='',
-        bars=false,
-        lines=true,
-        staircase=true,
-        formatY1='percent',
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425,
-        maxDataPoints=10000
-      ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "daily")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> map(fn: (r) => ({ r with "GBP/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "GBP/AUD", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "daily")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> map(fn: (r) => ({ r with "USD/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "USD/AUD", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "daily")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> map(fn: (r) => ({ r with "SGD/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "SGD/AUD", "_field"])
-// End')) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
-
-      graph.new(
-        title='CCY Weekly Deltas',
-        datasource='InfluxDB2',
-        fill=0,
-        format='',
-        bars=false,
-        lines=true,
-        staircase=true,
-        formatY1='percent',
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425,
-        maxDataPoints=10000
-      ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "weekly")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> map(fn: (r) => ({ r with "GBP/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "GBP/AUD", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "weekly")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> map(fn: (r) => ({ r with "USD/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "USD/AUD", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "weekly")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> map(fn: (r) => ({ r with "SGD/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "SGD/AUD", "_field"])
-// End')) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
-
-      graph.new(
-        title='CCY Monthly Deltas',
-        datasource='InfluxDB2',
-        fill=0,
-        format='',
-        bars=false,
-        lines=true,
-        staircase=true,
-        formatY1='percent',
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425,
-        maxDataPoints=10000
-      ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "monthly")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> map(fn: (r) => ({ r with "GBP/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "GBP/AUD", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "monthly")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> map(fn: (r) => ({ r with "USD/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "USD/AUD", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "monthly")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> map(fn: (r) => ({ r with "SGD/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "SGD/AUD", "_field"])
-// End')) { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
-
-      graph.new(
-        title='CCY Yearly Deltas',
-        datasource='InfluxDB2',
-        fill=0,
-        format='',
-        bars=false,
-        lines=true,
-        staircase=true,
-        formatY1='percent',
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425,
-        maxDataPoints=10000
-      ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "yearly")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> map(fn: (r) => ({ r with "GBP/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "GBP/AUD", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "yearly")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> map(fn: (r) => ({ r with "USD/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "USD/AUD", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "yearly")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> map(fn: (r) => ({ r with "SGD/AUD": -1.0 * r._value }))
-  |> keep(columns: ["_time", "SGD/AUD", "_field"])
-// End')) { gridPos: { x: 0, y: 80, w: 24, h: 12 } },
+        { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
+      ).addSeriesOverride(
+        { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
+      ) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
 
     ],
 }
