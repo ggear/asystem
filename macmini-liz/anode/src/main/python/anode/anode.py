@@ -449,6 +449,7 @@ class Log:
                                           "" if not self.time_tracked else "user [{}] ms".format(self.time_user)])))
             if exception is not None:
                 logging.exception(exception)
+            sys.stdout.flush()
 
 
 def get_local_ip():

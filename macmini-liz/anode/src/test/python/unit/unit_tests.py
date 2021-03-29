@@ -22,7 +22,6 @@ import urlparse
 from StringIO import StringIO
 from random import randint
 import pytest
-
 import ilio
 import pandas
 import requests
@@ -1219,7 +1218,7 @@ class ANodeTest(TestCase):
                                               anode,
                                               "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history"
                                               "&format=csv&print=pretty",
-                                              True)[0]["Grid (1 Day)"].iloc([[-1]])[-1])
+                                              True)[0]["Grid (1 Day)"].values[-1])
             global test_repeats
             test_repeats = True
             self.clock_tick(anode, 1, 60 * 60 * 24 - iterations * period, skip_all=True)
@@ -1236,7 +1235,7 @@ class ANodeTest(TestCase):
                                               anode,
                                               "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history"
                                               "&format=csv&print=pretty",
-                                              True)[0]["Grid (1 Day)"].iloc([[-1]])[-1])
+                                              True)[0]["Grid (1 Day)"].values[-1])
             self.clock_tick(anode, 1, 1, skip_all=True)
             self.assertRest(iterations + (1 if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else 2),
                             anode,
@@ -1251,7 +1250,7 @@ class ANodeTest(TestCase):
                                               anode,
                                               "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history"
                                               "&format=csv&print=pretty",
-                                              True)[0]["Grid (1 Day)"].iloc([[-1]])[-1])
+                                              True)[0]["Grid (1 Day)"].values[-1])
             self.clock_tick(anode, 1, period - 1, skip_all=True)
             self.assertRest(iterations + (1 if config != FILE_CONFIG_FRONIUS_REPEAT_DAY else 3),
                             anode,
@@ -1266,7 +1265,7 @@ class ANodeTest(TestCase):
                                               anode,
                                               "/rest/?metrics=energy-consumption.electricity.grid&types=integral&bins=1day&scope=history"
                                               "&format=csv&print=pretty",
-                                              True)[0]["Grid (1 Day)"].iloc([[-1]])[-1])
+                                              True)[0]["Grid (1 Day)"].values[-1])
             anode.stop_server()
 
     def test_filter(self):

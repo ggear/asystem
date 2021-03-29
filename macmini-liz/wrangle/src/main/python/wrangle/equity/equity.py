@@ -3,9 +3,12 @@ from __future__ import print_function
 import datetime
 import glob
 import os
+from datetime import datetime
 
 import pandas as pd
 import pdftotext
+from pandas.tseries.offsets import BDay
+from pandas.tseries.offsets import BMonthEnd
 
 from .. import library
 
@@ -17,12 +20,31 @@ CURRENCIES = ["GBP", "USD", "SGD"]
 ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 PERIODS = {'Monthly': 1, 'Quarterly': 3, 'Yearly': 12, 'Five-Yearly': 5 * 12, 'Decennially': 10 * 12}
 
+STOCK = {
+    "VAS.AX": "2021-03",
+    "WPL.AX": "2021-02",
+}
+
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
 
 
 class Equity(library.Library):
 
     def run(self):
+        equities = pd.DataFrame()
+
+        for stock in STOCK:
+            today = datetime.today()
+            start = map(int, STOCK[stock].split('-'))
+            for year in range(start[0], today.year + 1):
+                for month in range(start[1] if year == start[0] else 1, today.month + 1 if year == today.year else 13):
+                    year_month_start = "{}-{:02}-01".format(year, month)
+                    year_month_end = "{}-{:02}-{:02}".format(
+                        year, month, (BDay().rollback(today).day + 1) if month == today.month else
+                        (BMonthEnd().rollforward(datetime.strptime("{}-{:02}-01".format(year, month), '%Y-%m-%d').date()).day + 1))
+                    local_file = "{}/{}_{}-{:02}.csv".format(self.input, stock.split('.')[0], year, month)
+                    self.stock_download(local_file, stock, year_month_start, year_month_end, check=month == today.month)
+
         files = self.drive_sync(self.input_drive, self.input)
         if all([status[0] for status in files.values()]) and any([status[1] for status in files.values()]):
             statement_data = {}
@@ -169,13 +191,6 @@ class Equity(library.Library):
                 statement_df = statement_df.interpolate().fillna(method='ffill')
                 statement_df['Date'] = statement_df.index.strftime("%Y-%m-%d").astype(str)
                 statement_df = statement_df[sorted(statement_df.columns)].sort_index(ascending=False)
-
-                # for key in ["Price Base Currency", "Price"]:
-                #     for period in PERIODS:
-                #         statement_df['{} {}'.format(key, period)] = \
-                #             statement_df.groupby(['Type', 'Currency'],
-                #                                  sort=False)[key].apply(lambda x: x.pct_change(PERIODS[period]) * 100)
-
                 statement_delta_df = self.drive_sync_delta(statement_df, "58861")
                 self.write_sheet(statement_df, DRIVE_URL,
                                  {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})

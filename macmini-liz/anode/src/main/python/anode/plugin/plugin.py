@@ -27,7 +27,6 @@ from decimal import Decimal
 from functools import reduce
 from importlib import import_module
 from uuid import getnode as get_mac
-
 import avro
 import avro.io
 import avro.schema
@@ -717,9 +716,10 @@ class Plugin(object):
         datums_dict_df = Plugin.datums_df_unindex(datum_df["data_df"].copy(deep=False))
         datums_dict = datums_dict_df.to_dict(orient="records")
         for datum_dict in datums_dict:
-            datum_dict["data_value"] = numpy.asscalar(datum_dict["data_value"])
-            datum_dict["bin_timestamp"] = numpy.asscalar(datum_dict["bin_timestamp"])
-            datum_dict["data_timestamp"] = numpy.asscalar(datum_dict["data_timestamp"])
+            # datum_dict["data_value"] = numpy.asscalar(datum_dict["data_value"])
+            # datum_dict["bin_timestamp"] = numpy.asscalar(datum_dict["bin_timestamp"])
+            # datum_dict["data_timestamp"] = numpy.asscalar(datum_dict["data_timestamp"])
+
             datum_dict.update(datum_df)
             del datum_dict["data_df"]
         return datums_dict
@@ -1079,7 +1079,7 @@ class Plugin(object):
             datum_df.index = datum_df.index.astype(numpy.int64) // 10 ** 9
             datum_df.index.name = "bin_timestamp"
             datum_df.reset_index(inplace=True)
-            datum_df.reindex_axis(sorted(datum_df.columns), axis=1)
+            datum_df.reindex(sorted(datum_df.columns), axis=1)
         Plugin.datums_df_title(datum_df, datum_df_title)
         return datum_df
 

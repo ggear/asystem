@@ -15,6 +15,7 @@ from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from datetime import datetime
 from ftplib import FTP
+import yfinance as yf
 
 import pandas as pd
 from dateutil import parser
@@ -229,6 +230,23 @@ class Library(object):
                 if client is not None:
                     client.quit()
                 self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file, exception))
+                if not ignore:
+                    self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
+        return False, None
+
+    def stock_download(self, local_file, ticker, start, end, check=True, force=False, ignore=False):
+        if not force and not check and os.path.isfile(local_file):
+            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
+            self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+            return True, False
+        else:
+            try:
+                yf.Ticker(ticker).history(start=start,end=end).to_csv(local_file)
+                self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
+                self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
+                return True, True
+            except Exception as exception:
+                self.print_log("Data not available for [{}] between [{}] and [{}]".format(ticker, start, end))
                 if not ignore:
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
         return False, None
