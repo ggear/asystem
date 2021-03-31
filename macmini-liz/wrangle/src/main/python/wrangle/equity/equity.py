@@ -40,10 +40,13 @@ class Equity(library.Library):
                 for month in range(start[1] if year == start[0] else 1, today.month + 1 if year == today.year else 13):
                     year_month_start = "{}-{:02}-01".format(year, month)
                     year_month_end = "{}-{:02}-{:02}".format(
-                        year, month, (BDay().rollback(today).day + 1) if month == today.month else
-                        (BMonthEnd().rollforward(datetime.strptime("{}-{:02}-01".format(year, month), '%Y-%m-%d').date()).day + 1))
+                        year, month, BDay().rollback(today).day if month == today.month else
+                        BMonthEnd().rollforward(datetime.strptime("{}-{:02}-01".format(year, month), '%Y-%m-%d').date()).day)
                     local_file = "{}/{}_{}-{:02}.csv".format(self.input, stock.split('.')[0], year, month)
                     self.stock_download(local_file, stock, year_month_start, year_month_end, check=month == today.month)
+
+        # TODO: Remove once completed testing
+        return
 
         files = self.drive_sync(self.input_drive, self.input)
         if all([status[0] for status in files.values()]) and any([status[1] for status in files.values()]):

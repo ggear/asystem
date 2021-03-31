@@ -14,10 +14,11 @@ import urllib2
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from datetime import datetime
+from datetime import timedelta
 from ftplib import FTP
-import yfinance as yf
 
 import pandas as pd
+import yfinance as yf
 from dateutil import parser
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -241,12 +242,23 @@ class Library(object):
             return True, False
         else:
             try:
-                yf.Ticker(ticker).history(start=start,end=end).to_csv(local_file)
+                if not force and check and os.path.isfile(local_file):
+                    if pd.read_csv(local_file).values[-1][0] == end:
+                        self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
+                        self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+                        return True, False
+                yf.Ticker(ticker).history(start=start, end=(
+                    (datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1))
+                    if datetime.today().month == int(end.split('-')[1]) else end
+                )).to_csv(local_file)
+                modified_timestamp = int((datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d') +
+                                          timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
+                os.utime(local_file, (modified_timestamp, modified_timestamp))
                 self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
                 self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
                 return True, True
             except Exception as exception:
-                self.print_log("Data not available for [{}] between [{}] and [{}]".format(ticker, start, end))
+                self.print_log("Data not available for [{}] between [{}] and [{}] with error [{}]".format(ticker, start, end, exception))
                 if not ignore:
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
         return False, None
