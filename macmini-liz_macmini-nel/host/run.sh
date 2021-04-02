@@ -11,7 +11,7 @@
 # Guided entire disk and setup LVM create partitions at 450GB, /tmp, /var, /home, max, force UEFI
 # Install SSH server, standard sys utils
 # Enable remote root login : /etc/ssh/sshd_config PermitRootLogin yes
-# Second HDD 1.9TB, single partition with defaults (fdisk /dev/sdb) and formatted as ext4 (mkfs.ext4 /dev/sdb1)
+# Second HDD (1.9TB), single partition with defaults (fdisk /dev/sdb) and formatted as ext4 (mkfs.ext4 /dev/sdb1)
 
 ################################################################################
 # Volumes
