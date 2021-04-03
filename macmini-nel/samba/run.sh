@@ -52,3 +52,4 @@ cat <<EOF >/etc/samba/smb.conf
   vfs objects = fruit streams_xattr
 EOF
 systemctl restart smbd
+systemctl enable smbd

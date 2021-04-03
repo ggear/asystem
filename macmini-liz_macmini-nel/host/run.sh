@@ -134,6 +134,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   cifs-utils=2:6.8-2 \
   samba=2:4.9.5+dfsg-5+deb10u1 \
   smbclient=2:4.9.5+dfsg-5+deb10u1
+systemctl stop smbd
+systemctl disable smbd
 
 ################################################################################
 # Upgrade
