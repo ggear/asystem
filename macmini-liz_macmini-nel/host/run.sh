@@ -55,7 +55,7 @@ fi
 ################################################################################
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
   smartmontools=6.6-1 \
-  avahi-daemon=0.7-4+b1 \
+  avahi-daemon=0.7-4+deb10u1 \
   net-tools=1.60+git20180626.aebd88e-1
 cat <<EOF >/etc/avahi/avahi-daemon.conf
 # See avahi-daemon.conf(5) for more information
