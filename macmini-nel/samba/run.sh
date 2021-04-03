@@ -3,7 +3,8 @@
 ################################################################################
 # Samba
 ################################################################################
-mkdir -p /data/media /data/backup/timemachine
+mkdir -vp /data/media /data/backup/timemachine
+chmod -vR a+rwX /data
 cat <<EOF >/etc/samba/smb.conf
 [global]
   min protocol = SMB2
