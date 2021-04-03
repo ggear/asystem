@@ -149,6 +149,7 @@ cat <<EOF >/etc/samba/smb.conf
    pam password change = yes
    map to guest = bad user
    usershare allow guests = yes
+   mdns name = mdns
 
 [media]
     comment = Media Files
