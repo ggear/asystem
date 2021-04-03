@@ -120,8 +120,8 @@ apt-get install -y \
   containerd.io=1.4.4-1
 curl -sL "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
-[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)
-docker system prune --volumes -f
+[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
+docker system prune --volumes -f 2>/dev/null
 if [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq 0 ]; then
   sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="cdgroup_enable=memory swapaccount=1"/' /etc/default/grub
   update-grub
@@ -241,5 +241,5 @@ DEBIAN_FRONTEND=noninteractive apt-get install -y \
   systemd-sysv=241-7~deb10u7 \
   systemd=241-7~deb10u7 \
   tzdata=2021a-0+deb10u1 \
-  udev=241-7~deb10u7 \
-&& apt -y autoremove
+  udev=241-7~deb10u7 &&
+  apt -y autoremove
