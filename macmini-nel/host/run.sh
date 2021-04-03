@@ -6,12 +6,16 @@
 mkdir -p /data/media /data/backup/timemachine
 cat <<EOF >/etc/samba/smb.conf
 [global]
+  min protocol = SMB2
+  server role = standalone server
   workgroup = WORKGROUP
   log file = /var/log/samba/log.%m
-  max log size = 1000
   logging = file
+  max log size = 1000
+  load printers = no
+  access based share enum = no
+  hide unreadable = no
   panic action = /usr/share/samba/panic-action %d
-  server role = standalone server
   obey pam restrictions = yes
   unix password sync = yes
   passwd program = /usr/bin/passwd %u
@@ -20,14 +24,13 @@ cat <<EOF >/etc/samba/smb.conf
   map to guest = bad user
   usershare allow guests = yes
   mdns name = mdns
-  min protocol = SMB2
   vfs objects = fruit streams_xattr
+  fruit:delete_empty_adfiles = yes
   fruit:metadata = stream
-  fruit:model = MacSamba
+  fruit:model = TimeCapsule9,119
   fruit:posix_rename = yes
   fruit:veto_appledouble = no
   fruit:wipe_intentionally_left_blank_rfork = yes
-  fruit:delete_empty_adfiles = yes
 
 [Media]
   comment = Media Files
@@ -40,9 +43,12 @@ cat <<EOF >/etc/samba/smb.conf
   comment = Backup Files
   path = /data/backup/timemachine
   browseable = yes
+  writable = yes
   read only = no
   guest ok = yes
-  vfs objects = fruit streams_xattr
+  fruit:aapl = yes
   fruit:time machine = yes
+  fruit:time machine max size = "4 T"
+  vfs objects = fruit streams_xattr
 EOF
 systemctl restart smbd
