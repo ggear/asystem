@@ -12,6 +12,7 @@
    * @param datasource (optional) Datasource
    * @param min_span (optional)  Min span
    * @param styles (optional) Array of styles for the panel
+   * @param default_unit (optional) Default unit for the panel
    * @param columns (optional) Array of columns for the panel
    * @param sort (optional) Sorting instruction for the panel
    * @param transform (optional) Allow table manipulation to present data as desired
@@ -24,6 +25,8 @@
    * @method addColumn(field, style) Adds a column
    * @method hideColumn(field) Hides a column
    * @method addLink(link) Adds a link
+   * @method addTransformation(transformation) Adds a transformation object
+   * @method addTransformations(transformations) Adds an array of transformations
    */
   new(
     title,
@@ -55,13 +58,9 @@
     timeFrom: time_from,
     timeShift: time_shift,
     links: links,
-
-    // HACK Start: Added default options
     fieldConfig: {
       defaults: { unit: default_unit }
     },
-    // HACK End
-
     [if sort != null then 'sort']: sort,
     [if description != null then 'description']: description,
     [if transform != null then 'transform']: transform,
@@ -89,5 +88,9 @@
     addLink(link):: self {
       links+: [link],
     },
+    addTransformation(transformation):: self {
+      transformations+: [transformation],
+    },
+    addTransformations(transformations):: std.foldl(function(p, t) p.addTransformation(t), transformations, self),
   },
 }

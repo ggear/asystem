@@ -144,20 +144,20 @@ class Currency(library.Library):
             ato_rba_df = extrapolate(rba_df.append(ato_df, ignore_index=True, verify_integrity=True))
             self.print_log("Files from [ATO + RBA] produced processed data from [{}] to [{}] in [{}] rows"
                            .format(ato_rba_df['Date'].iloc[0], ato_rba_df['Date'].iloc[-1], len(ato_rba_df)))
-            rba_delta_df = self.drive_sync_delta(rba_df, "currency")
+            rba_delta_df = self.delta_cache(rba_df, "currency")
             if len(rba_delta_df):
-                self.write_sheet(ato_rba_df, DRIVE_URL,
-                                 {'index': False, 'sheet': 'FX', 'start': 'A1', 'replace': True})
+                self.sheet_write(ato_rba_df, DRIVE_URL, {'index': False, 'sheet': 'FX', 'start': 'A1', 'replace': True})
                 for fx_pair in PAIRS:
-                    self.write_database("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "daily", fx_pair) +
+                    self.database_write("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "daily", fx_pair) +
                                                   rba_delta_df[fx_pair].map(str) +
+                                                  " " + (pd.to_datetime(rba_delta_df['Date']).astype(int) +
+                                                         6 * 60 * 60 * 1000000000).map(str)))
+                    for fx_period in PERIODS:
+                        self.database_write("\n".join(LINE_PROTOCOL.format("RBA", "delta", fx_period.lower(), fx_pair) +
+                                                      rba_delta_df["{} {}".format(fx_pair, fx_period)].map(str) +
                                                       " " + (pd.to_datetime(rba_delta_df['Date']).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
-                    for fx_period in PERIODS:
-                        self.write_database("\n".join(LINE_PROTOCOL.format("RBA", "delta", fx_period.lower(), fx_pair) +
-                                                      rba_delta_df["{} {}".format(fx_pair, fx_period)].map(str) +
-                                                          " " + (pd.to_datetime(rba_delta_df['Date']).astype(int) +
-                                                                 6 * 60 * 60 * 1000000000).map(str)))
+                self.delta_write()
             else:
                 new_data = False
 

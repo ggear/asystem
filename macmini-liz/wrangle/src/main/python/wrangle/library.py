@@ -52,7 +52,7 @@ def print_log(process, message, exception=None):
         message = [message]
     for line in message:
         if len(line) > 0:
-            print("{}{}".format(prefix, line))
+            print(u"{}{}".format(prefix, line))
     if exception is not None:
         print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc(limit=2).splitlines())))
 
@@ -196,10 +196,10 @@ class Library(object):
                 self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
                 return True, True
             except Exception as exception:
-                self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file, exception))
+                self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file), exception)
                 if not ignore:
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
-        return False, None
+        return False, False
 
     def ftp_download(self, url_file, local_file, check=True, force=False, ignore=False):
         if not force and not check and os.path.isfile(local_file):
@@ -230,38 +230,51 @@ class Library(object):
             except Exception as exception:
                 if client is not None:
                     client.quit()
-                self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file, exception))
+                self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file), exception)
                 if not ignore:
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
-        return False, None
+        return False, False
 
-    def stock_download(self, local_file, ticker, start, end, check=True, force=False, ignore=False):
-        if not force and not check and os.path.isfile(local_file):
-            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
-            self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
-            return True, False
-        else:
-            try:
-                if not force and check and os.path.isfile(local_file):
-                    if pd.read_csv(local_file).values[-1][0] == end:
-                        self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
-                        self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
-                        return True, False
-                yf.Ticker(ticker).history(start=start, end=(
-                    (datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1))
-                    if datetime.today().month == int(end.split('-')[1]) else end
-                )).to_csv(local_file)
-                modified_timestamp = int((datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d') +
-                                          timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
-                os.utime(local_file, (modified_timestamp, modified_timestamp))
-                self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
-                self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
-                return True, True
-            except Exception as exception:
-                self.print_log("Data not available for [{}] between [{}] and [{}] with error [{}]".format(ticker, start, end, exception))
-                if not ignore:
-                    self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
-        return False, None
+    def stock_download(self, local_file, ticker, start, end, end_of_day_hour=17, check=True, force=False, ignore=False):
+        now = datetime.now()
+
+        end_exclusive = (datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)) \
+            if (now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) and
+                now > now.replace(hour=end_of_day_hour, minute=0, second=0, microsecond=0) or
+                now.year != int(end.split('-')[0]) or
+                now.month != int(end.split('-')[1])) else end
+
+        if start != end_exclusive:
+            if not force and not check and os.path.isfile(local_file):
+                self.print_log("File [{}: {} {}] cached at [{}]"
+                               .format(os.path.basename(local_file), start, end_exclusive, local_file))
+                self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+                return True, False
+            else:
+                try:
+                    if not force and check and os.path.isfile(local_file):
+                        if pd.read_csv(local_file).values[-1][0] == end:
+                            self.print_log("File [{}: {} {}] cached at [{}]"
+                                           .format(os.path.basename(local_file), start, end_exclusive, local_file))
+                            self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+                            return True, False
+                    data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, debug=False)
+                    if len(data_df) == 0:
+                        raise Exception("No data returned from Yahoo! Finance history service")
+                    data_df.to_csv(local_file)
+                    modified_timestamp = int((datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d') +
+                                              timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
+                    os.utime(local_file, (modified_timestamp, modified_timestamp))
+                    self.print_log("File [{}: {} {}] downloaded to [{}]"
+                                   .format(os.path.basename(local_file), start, end_exclusive, local_file))
+                    self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
+                    return True, True
+                except Exception as exception:
+                    self.print_log("File not available for [{} - {} {}]"
+                                   .format(ticker, start, end_exclusive), exception)
+                    if not ignore:
+                        self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
+        return False, False
 
     def drive_sync(self, drive_dir, local_dir, check=True, download=True, upload=False):
         def file_hash(file_name):
@@ -343,7 +356,7 @@ class Library(object):
                 actioned_files[local_file] = True, file_actioned
         return actioned_files
 
-    def drive_sync_delta(self, data_df_current, file_prefix):
+    def delta_cache(self, data_df_current, file_prefix):
         file_delta = "{}/{}_delta.csv".format(self.output, file_prefix)
         file_current = "{}/{}_current.csv".format(self.output, file_prefix)
         file_previous = "{}/{}_previous.csv".format(self.output, file_prefix)
@@ -361,15 +374,17 @@ class Library(object):
         self.counters[CTR_SRC_DATA][CTR_ACT_PREVIOUS] = len(data_df_previous)
         self.counters[CTR_SRC_DATA][CTR_ACT_CURRENT] = len(data_df_current)
         self.counters[CTR_SRC_DATA][CTR_ACT_DELTA] = len(data_df_delta)
-        self.drive_sync(self.input_drive, self.input, check=True, download=False, upload=True)
-        self.drive_sync(self.output_drive, self.output, check=False, download=False, upload=True)
         return data_df_delta
 
-    def write_sheet(self, data_df, drive_url, sheet_params={}):
+    def delta_write(self):
+        self.drive_sync(self.input_drive, self.input, check=True, download=False, upload=True)
+        self.drive_sync(self.output_drive, self.output, check=False, download=False, upload=True)
+
+    def sheet_write(self, data_df, drive_url, sheet_params={}):
         Spread(drive_url).df_to_sheet(data_df, **sheet_params)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_SHEET, len(data_df))
 
-    def write_database(self, line):
+    def database_write(self, line):
         if line.strip():
             print(line)
             self.add_counter(CTR_SRC_DATA, CTR_ACT_DATABASE)

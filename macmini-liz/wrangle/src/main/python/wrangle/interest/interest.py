@@ -56,20 +56,21 @@ class Interest(library.Library):
                                    len(inflation_df)))
             self.print_log("Files for [Retail + Inflation] produced processed data from [{}] to [{}] in [{}] rows"
                            .format(interest_df.index[0].strftime('%d-%m-%Y'), interest_df.index[-1].strftime('%d-%m-%Y'), len(interest_df)))
-            interest_delta_df = self.drive_sync_delta(interest_df, "interest")
+            interest_delta_df = self.delta_cache(interest_df, "interest")
             if len(interest_delta_df):
-                self.write_sheet(interest_df.iloc[::-1], DRIVE_URL,
-                                 {'index': True, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
+                interest_df.insert(0, 'Date', interest_df.index.strftime("%Y-%m-%d").astype(str))
+                self.sheet_write(interest_df.iloc[::-1], DRIVE_URL, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
                 for int_rate in ['Retail', 'Inflation', 'Net']:
-                    self.write_database("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "monthly", int_rate.lower()) +
+                    self.database_write("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "monthly", int_rate.lower()) +
                                                   interest_delta_df[int_rate].map(str) +
                                                   " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
                                                          6 * 60 * 60 * 1000000000).map(str)))
                     for int_period in PERIODS:
-                        self.write_database("\n".join(LINE_PROTOCOL.format("RBA", "mean", int_period.lower(), int_rate.lower()) +
+                        self.database_write("\n".join(LINE_PROTOCOL.format("RBA", "mean", int_period.lower(), int_rate.lower()) +
                                                       interest_delta_df["{} {}".format(int_rate, int_period)].map(str) +
                                                       " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
+                self.delta_write()
             else:
                 new_data = False
         if not new_data:

@@ -9,7 +9,6 @@ import importlib
 import pytest
 import main
 from wrangle import library
-from gspread_pandas import Spread
 from mock import patch
 
 DIR_TARGET = "../../../../target"
@@ -19,6 +18,11 @@ DIR_RESOURCES = "../../resources"
 class WrangleTest(unittest.TestCase):
 
     def test_all(self):
+        with patch.object(library.Library, "sheet_write"):
+            with patch.object(library.Library, "delta_write"):
+                self.test_all_write()
+
+    def test_all_write(self):
         self.run_module("currency", prepare_only=True)
         self.run_module("interest", prepare_only=True)
         self.run_module("equity", prepare_only=True)
@@ -27,6 +31,11 @@ class WrangleTest(unittest.TestCase):
         self.assertEqual(main.main(), 0, "Main script ran with errors on second re-run")
 
     def test_currency(self):
+        with patch.object(library.Library, "sheet_write"):
+            with patch.object(library.Library, "delta_write"):
+                self.test_currency_write()
+
+    def test_currency_write(self):
         self.run_module(
             "currency", counter_equals={
                 library.CTR_SRC_RESOURCES: {
@@ -41,6 +50,12 @@ class WrangleTest(unittest.TestCase):
             })
 
     def test_interest(self):
+        with patch.object(library.Library, "sheet_write"):
+            with patch.object(library.Library, "delta_write"):
+                self.test_interest_write()
+
+
+    def test_interest_write(self):
         self.run_module(
             "interest", counter_equals={
                 library.CTR_SRC_RESOURCES: {
@@ -55,6 +70,11 @@ class WrangleTest(unittest.TestCase):
             })
 
     def test_equity(self):
+        with patch.object(library.Library, "sheet_write"):
+            with patch.object(library.Library, "delta_write"):
+                self.test_equity_write()
+
+    def test_equity_write(self):
         self.run_module(
             "equity", counter_equals={
                 library.CTR_SRC_RESOURCES: {
@@ -69,6 +89,11 @@ class WrangleTest(unittest.TestCase):
             })
 
     def test_weather(self):
+        with patch.object(library.Library, "sheet_write"):
+            with patch.object(library.Library, "delta_write"):
+                self.test_weather_write()
+
+    def test_weather_write(self):
         self.run_module(
             "weather", counter_equals={
                 library.CTR_SRC_RESOURCES: {
@@ -97,10 +122,6 @@ class WrangleTest(unittest.TestCase):
         load_caches("{}{}".format(DIR_RESOURCES, module.output.split("target")[-1]), module.output)
         counters = {}
         if not prepare_only:
-
-            # TODO: Uncomment and indent
-            # with patch.object(Spread, "df_to_sheet"):
-
             print("")
             module.run()
             module.print_counters()

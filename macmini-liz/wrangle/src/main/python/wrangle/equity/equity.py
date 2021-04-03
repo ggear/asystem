@@ -3,6 +3,7 @@ from __future__ import print_function
 import datetime
 import glob
 import os
+from collections import OrderedDict
 from datetime import datetime
 
 import pandas as pd
@@ -20,10 +21,40 @@ CURRENCIES = ["GBP", "USD", "SGD"]
 ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 PERIODS = {'Monthly': 1, 'Quarterly': 3, 'Yearly': 12, 'Five-Yearly': 5 * 12, 'Decennially': 10 * 12}
 
-STOCK = {
-    "VAS.AX": "2021-03",
-    "WPL.AX": "2021-02",
-}
+STOCK = OrderedDict([
+    ('S32.AX', {
+        "start": "2018-01",
+        "end of day hour": 15
+    }),
+    ('WPL.AX', {
+        "start": "2018-01",
+        "end of day hour": 15
+    }),
+    ('SIG.AX', {
+        "start": "2018-01",
+        "end of day hour": 15
+    }),
+    ('OZL.AX', {
+        "start": "2018-01",
+        "end of day hour": 15
+    }),
+    ('VAS.AX', {
+        "start": "2018-01",
+        "end of day hour": 15
+    }),
+    ('VAE.AX', {
+        "start": "2018-01",
+        "end of day hour": 15
+    }),
+    ('VGE.AX', {
+        "start": "2018-01",
+        "end of day hour": 15
+    }),
+    ('VGS.AX', {
+        "start": "2018-01",
+        "end of day hour": 15
+    }),
+])
 
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
 
@@ -31,27 +62,42 @@ DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJ
 class Equity(library.Library):
 
     def run(self):
-        equities = pd.DataFrame()
+        new_data = False
+        equity_df = pd.DataFrame()
 
         for stock in STOCK:
             today = datetime.today()
-            start = map(int, STOCK[stock].split('-'))
-            for year in range(start[0], today.year + 1):
-                for month in range(start[1] if year == start[0] else 1, today.month + 1 if year == today.year else 13):
-                    year_month_start = "{}-{:02}-01".format(year, month)
-                    year_month_end = "{}-{:02}-{:02}".format(
-                        year, month, BDay().rollback(today).day if month == today.month else
+            stock_start = map(int, STOCK[stock]["start"].split('-'))
+            for year in range(stock_start[0], today.year + 1):
+                for month in range(stock_start[1] if year == stock_start[0] else 1, today.month + 1 if year == today.year else 13):
+                    stock_year = "{}-{:02}-01".format(year, month)
+                    stock_month = "{}-{:02}-{:02}".format(
+                        year, month, BDay().rollback(today).day if year == today.year and month == today.month else
                         BMonthEnd().rollforward(datetime.strptime("{}-{:02}-01".format(year, month), '%Y-%m-%d').date()).day)
-                    local_file = "{}/{}_{}-{:02}.csv".format(self.input, stock.split('.')[0], year, month)
-                    self.stock_download(local_file, stock, year_month_start, year_month_end, check=month == today.month)
-
-        # TODO: Remove once completed testing
-        return
+                    stock_file = "{}/Yahoo_{}_{}-{:02}.csv".format(self.input, stock.split('.')[0], year, month)
+                    new_data = \
+                        self.stock_download(stock_file, stock, stock_year, stock_month, STOCK[stock]["end of day hour"],
+                                            check=year == today.year and month == today.month)[1] or new_data
 
         files = self.drive_sync(self.input_drive, self.input)
-        if all([status[0] for status in files.values()]) and any([status[1] for status in files.values()]):
+        new_data = new_data or all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
+
+        if new_data:
+
+            for stock in STOCK:
+                stock_df = pd.DataFrame()
+                stock_ticker = stock.split('.')[0]
+                for stock_file_name in glob.glob("{}/Yahoo_{}_*.csv".format(self.input, stock_ticker)):
+                    stock_month_df = pd.read_csv(stock_file_name) \
+                        .add_prefix("{} ".format(stock_ticker)).rename({"{} Date".format(stock_ticker): 'Date'}, axis=1)
+                    stock_month_df["{} FX Rate".format(stock_ticker)] = 1.0
+                    stock_df = pd.concat([stock_df, stock_month_df])
+                stock_df = stock_df.set_index('Date')
+                equity_df = stock_df if len(equity_df) == 0 else \
+                    equity_df.merge(stock_df, left_index=True, right_index=True, how='outer')
+
             statement_data = {}
-            for statement_file_name in glob.glob("{}/*.pdf".format(self.input)):
+            for statement_file_name in glob.glob("{}/58861*.pdf".format(self.input)):
                 with open(statement_file_name, "rb") as statement_file:
                     statement_date = None
                     statement_type = None
@@ -100,7 +146,7 @@ class Equity(library.Library):
                                                     .append("Could not determine statement type or owner from line [{}]"
                                                             .format(statement_line))
                                         if statement_line.startswith("Statement date"):
-                                            statement_date = datetime.datetime.strptime(statement_line.split()[2], '%d-%b-%y')
+                                            statement_date = datetime.strptime(statement_line.split()[2], '%d-%b-%y')
                                         if statement_type:
                                             for currency in CURRENCIES:
                                                 if statement_line.startswith(currency):
@@ -171,8 +217,7 @@ class Equity(library.Library):
 
             statement_df = pd.DataFrame(statements_postions)
             if len(statement_df) > 0:
-                statement_df["Price Base Currency"] = statement_df["Value"] / statement_df["Units"]
-                statement_df["Price"] = statement_df["Value"] / statement_df["Units"] / statement_df["Rate"]
+                statement_df["Price"] = statement_df["Value"] / statement_df["Units"]
 
                 def ticker(df):
                     return \
@@ -183,20 +228,43 @@ class Equity(library.Library):
                                         'UNKOWN'
 
                 statement_df['Ticker'] = statement_df.apply(ticker, axis=1)
+                statement_df['Rate'] = 1.0 / statement_df['Rate']
+                statement_df['Zero'] = 0
                 statement_df = statement_df.set_index('Date')
                 statement_df = pd.concat([
-                    statement_df.pivot(columns='Ticker', values='Currency').add_suffix(' Currency'),
-                    statement_df.pivot(columns='Ticker', values='Price').add_suffix(' Price'),
-                    statement_df.pivot(columns='Ticker', values='Price Base Currency').add_suffix(' Price Base Currency')
+                    statement_df.pivot(columns='Ticker', values='Price').add_suffix(' Open'),
+                    statement_df.pivot(columns='Ticker', values='Price').add_suffix(' High'),
+                    statement_df.pivot(columns='Ticker', values='Price').add_suffix(' Low'),
+                    statement_df.pivot(columns='Ticker', values='Price').add_suffix(' Close'),
+                    statement_df.pivot(columns='Ticker', values='Zero').add_suffix(' Volume'),
+                    statement_df.pivot(columns='Ticker', values='Zero').add_suffix(' Dividends'),
+                    statement_df.pivot(columns='Ticker', values='Zero').add_suffix(' Stock Splits'),
+                    statement_df.pivot(columns='Ticker', values='Rate').add_suffix(' FX Rate'),
                 ], axis=1)
+                columns = []
+                tickers = set()
+                for column in statement_df.columns:
+                    tickers.add(column.split(" ")[0])
+                for ticker in sorted(tickers, reverse=True):
+                    columns.append("{} Open".format(ticker))
+                    columns.append("{} High".format(ticker))
+                    columns.append("{} Low".format(ticker))
+                    columns.append("{} Close".format(ticker))
+                    columns.append("{} Volume".format(ticker))
+                    columns.append("{} Dividends".format(ticker))
+                    columns.append("{} FX Rate".format(ticker))
+                statement_df = statement_df[columns]
+                equity_df = statement_df if len(equity_df) == 0 else \
+                    equity_df.merge(statement_df, left_index=True, right_index=True, how='outer')
 
-                statement_df = statement_df.resample('D')
-                statement_df = statement_df.interpolate().fillna(method='ffill')
-                statement_df['Date'] = statement_df.index.strftime("%Y-%m-%d").astype(str)
-                statement_df = statement_df[sorted(statement_df.columns)].sort_index(ascending=False)
-                statement_delta_df = self.drive_sync_delta(statement_df, "58861")
-                self.write_sheet(statement_df, DRIVE_URL,
-                                 {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
+            equity_df = equity_df.resample('D')
+            equity_df = equity_df.interpolate().fillna(method='ffill')
+            equity_df = equity_df.sort_index(ascending=False)
+            equity__delta_df = self.delta_cache(equity_df, "equity")
+            if len(equity__delta_df):
+                equity_df.insert(0, 'Date', equity_df.index.strftime("%Y-%m-%d").astype(str))
+                self.sheet_write(equity_df, DRIVE_URL, {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
+                self.delta_write()
 
     def __init__(self):
         super(Equity, self).__init__("Equity", "1TQ6Ky5sB_5Xn1lp8W6Us-OFfvEct6g4x", "1SqlVPcdzLuHAOw4kh4JfmA9AOu7_KZIY")
