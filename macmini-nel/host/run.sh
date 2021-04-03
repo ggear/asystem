@@ -28,5 +28,21 @@ cat <<EOF >/etc/samba/smb.conf
   fruit:veto_appledouble = no
   fruit:wipe_intentionally_left_blank_rfork = yes
   fruit:delete_empty_adfiles = yes
+
+[Media]
+  comment = Media Files
+  path = /data/media
+  browseable = yes
+  read only = no
+  guest ok = yes
+
+[Time Machine]
+  comment = Backup Files
+  path = /data/backup/timemachine
+  browseable = yes
+  read only = no
+  guest ok = yes
+  vfs objects = fruit streams_xattr
+  fruit:time machine = yes
 EOF
 systemctl restart smbd
