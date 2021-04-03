@@ -105,8 +105,8 @@ systemctl enable mbpfan.service
 # Docker
 ################################################################################
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
-  apt-transport-https=1.8.2.1 \
-  ca-certificates=20200601~deb10u1 \
+  apt-transport-https=1.8.2.2 \
+  ca-certificates=20200601~deb10u2 \
   gnupg-agent=2.2.12-1+deb10u1 \
   software-properties-common=0.96.20.2-2
 curl -sfsSL https://download.docker.com/linux/debian/gpg | APT_KEY_DONT_WARN_ON_DANGEROUS_USAGE=1 apt-key add -
