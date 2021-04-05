@@ -4,6 +4,7 @@
 # Samba
 ################################################################################
 mkdir -vp /data/media /data/backup/timemachine
+find /data -type f -name .DS_Store -exec rm -f {} \;
 chmod -vR a+rwX /data
 cat <<EOF >/etc/samba/smb.conf
 [global]
