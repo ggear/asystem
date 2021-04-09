@@ -1,10 +1,10 @@
 from __future__ import print_function
 
 import calendar
-import datetime
 import os
 import re
 
+import datetime
 import pandas as pd
 
 from .. import library
@@ -164,5 +164,5 @@ class Currency(library.Library):
         if not new_data:
             self.print_log("No new data found")
 
-    def __init__(self):
-        super(Currency, self).__init__("Currency", "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE", "1hIsXqfvH7TGC5yP7BUoRDbZoYIk0IQAK")
+    def __init__(self, profile_path=".profile"):
+        super(Currency, self).__init__("Currency", "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE", "1hIsXqfvH7TGC5yP7BUoRDbZoYIk0IQAK", profile_path)

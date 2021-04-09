@@ -1,12 +1,20 @@
 from __future__ import print_function
 
 import os
+from collections import OrderedDict
 
 import pandas as pd
 
 from .. import library
 
-PERIODS = {'Yearly Test': 12, 'Quinquennialy': 5 * 12, 'Decennialy': 10 * 12, 'Vicennialy': 20 * 12}
+LABELS = ['Retail', 'Inflation', 'Net']
+PERIODS = OrderedDict([
+    ('1 YR MA', 12),
+    ('5 YR MA', 5 * 12),
+    ('10 YR MA', 10 * 12),
+    ('20 YR MA', 20 * 12),
+])
+COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + PERIODS.keys())]
 
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xls"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xls"
@@ -44,10 +52,12 @@ class Interest(library.Library):
             interest_df = retail_df.merge(inflation_df, left_index=True, right_index=True, how='outer')
             interest_df = interest_df.dropna(subset=['Retail', 'Inflation'], how='all').fillna(method='ffill').fillna(method='bfill')
             interest_df['Net'] = interest_df['Retail'] - interest_df['Inflation']
-            for int_rate in ['Retail', 'Inflation', 'Net']:
+            for int_rate in LABELS:
                 for int_period in PERIODS:
                     interest_df['{} {}'.format(int_rate, int_period)] = interest_df[int_rate].rolling(PERIODS[int_period]).mean()
             interest_df = interest_df.fillna(0)
+            interest_df = interest_df.reindex(columns=COLUMNS)
+            interest_df = interest_df[interest_df.index > '1982-03-01']
 
             self.print_log("Files for [Retail] produced raw data from [{}] to [{}] in [{}] rows"
                            .format(retail_df.index[0].strftime('%d-%m-%Y'), retail_df.index[-1].strftime('%d-%m-%Y'), len(retail_df)))
@@ -60,7 +70,7 @@ class Interest(library.Library):
             if len(interest_delta_df):
                 interest_df.insert(0, 'Date', interest_df.index.strftime("%Y-%m-%d").astype(str))
                 self.sheet_write(interest_df.iloc[::-1], DRIVE_URL, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
-                for int_rate in ['Retail', 'Inflation', 'Net']:
+                for int_rate in LABELS:
                     self.database_write("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "monthly", int_rate.lower()) +
                                                   interest_delta_df[int_rate].map(str) +
                                                   " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
@@ -76,5 +86,5 @@ class Interest(library.Library):
         if not new_data:
             self.print_log("No new data found")
 
-    def __init__(self):
-        super(Interest, self).__init__("Interest", "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ", "1RSp8wFfHQX9qHebFArQRuWZs34Lq46r8")
+    def __init__(self, profile_path=".profile"):
+        super(Interest, self).__init__("Interest", "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ", "1RSp8wFfHQX9qHebFArQRuWZs34Lq46r8", profile_path)

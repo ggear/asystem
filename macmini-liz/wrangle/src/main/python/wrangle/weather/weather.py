@@ -1,8 +1,8 @@
 from __future__ import print_function
 
-import datetime
 import os
 
+import datetime
 import pandas as pd
 
 from .. import library
@@ -50,5 +50,5 @@ class Weather(library.Library):
         if not new_data:
             self.print_log("No new data found")
 
-    def __init__(self):
-        super(Weather, self).__init__("Weather", "1SiOrwMf-DgNQ19wRNbE7itzd4RWT829v", "")
+    def __init__(self, profile_path=".profile"):
+        super(Weather, self).__init__("Weather", "1SiOrwMf-DgNQ19wRNbE7itzd4RWT829v", "1UeIHON2ONO8I24j0vZtvh9QXwIGKn3-s", profile_path)

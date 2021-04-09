@@ -1,13 +1,13 @@
 from __future__ import print_function
 
-import datetime
 import glob
 import os
 from collections import OrderedDict
-from datetime import datetime
 
+import datetime
 import pandas as pd
 import pdftotext
+from datetime import datetime
 from pandas.tseries.offsets import BDay
 from pandas.tseries.offsets import BMonthEnd
 
@@ -23,35 +23,35 @@ PERIODS = {'Monthly': 1, 'Quarterly': 3, 'Yearly': 12, 'Five-Yearly': 5 * 12, 'D
 
 STOCK = OrderedDict([
     ('S32.AX', {
-        "start": "2018-01",
+        "start": "2016",
         "end of day hour": 15
     }),
     ('WPL.AX', {
-        "start": "2018-01",
+        "start": "2009",
         "end of day hour": 15
     }),
     ('SIG.AX', {
-        "start": "2018-01",
+        "start": "2006",
         "end of day hour": 15
     }),
     ('OZL.AX', {
-        "start": "2018-01",
+        "start": "2009",
         "end of day hour": 15
     }),
     ('VAS.AX', {
-        "start": "2018-01",
+        "start": "2010",
         "end of day hour": 15
     }),
     ('VAE.AX', {
-        "start": "2018-01",
+        "start": "2016",
         "end of day hour": 15
     }),
     ('VGE.AX', {
-        "start": "2018-01",
+        "start": "2014",
         "end of day hour": 15
     }),
     ('VGS.AX', {
-        "start": "2018-01",
+        "start": "2015",
         "end of day hour": 15
     }),
 ])
@@ -67,17 +67,32 @@ class Equity(library.Library):
 
         for stock in STOCK:
             today = datetime.today()
-            stock_start = map(int, STOCK[stock]["start"].split('-'))
-            for year in range(stock_start[0], today.year + 1):
-                for month in range(stock_start[1] if year == stock_start[0] else 1, today.month + 1 if year == today.year else 13):
-                    stock_year = "{}-{:02}-01".format(year, month)
-                    stock_month = "{}-{:02}-{:02}".format(
-                        year, month, BDay().rollback(today).day if year == today.year and month == today.month else
-                        BMonthEnd().rollforward(datetime.strptime("{}-{:02}-01".format(year, month), '%Y-%m-%d').date()).day)
-                    stock_file = "{}/Yahoo_{}_{}-{:02}.csv".format(self.input, stock.split('.')[0], year, month)
-                    new_data = \
-                        self.stock_download(stock_file, stock, stock_year, stock_month, STOCK[stock]["end of day hour"],
-                                            check=year == today.year and month == today.month)[1] or new_data
+            stock_start_year = int(STOCK[stock]["start"])
+            for year in range(stock_start_year, today.year + 1):
+                if year == today.year:
+                    for month in range(1 if year == stock_start_year else 1, today.month + 1):
+                        new_data = self.stock_download(
+                            "{}/Yahoo_{}_{}-{:02}.csv".format(self.input, stock.split('.')[0], year, month),
+                            stock,
+                            "{}-{:02}-01".format(year, month),
+                            "{}-{:02}-{:02}".format(
+                                year,
+                                month,
+                                BDay().rollback(today).day if month == today.month else
+                                BMonthEnd().rollforward(datetime.strptime("{}-{:02}-01".format(year, month), '%Y-%m-%d').date()).day),
+                            STOCK[stock]["end of day hour"], check=year == today.year and month == today.month)[1] \
+                                   or new_data
+                else:
+                    new_data = self.stock_download(
+                        "{}/Yahoo_{}_{}.csv".format(self.input, stock.split('.')[0], year),
+                        stock,
+                        "{}-{:02}-01".format(year, 1),
+                        "{}-{:02}-{:02}".format(
+                            year,
+                            12,
+                            BMonthEnd().rollforward(datetime.strptime("{}-12-31".format(year), '%Y-%m-%d').date()).day),
+                        STOCK[stock]["end of day hour"], check=year == today.year and month == today.month)[1] \
+                               or new_data
 
         files = self.drive_sync(self.input_drive, self.input)
         new_data = new_data or all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
@@ -266,5 +281,5 @@ class Equity(library.Library):
                 self.sheet_write(equity_df, DRIVE_URL, {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
                 self.delta_write()
 
-    def __init__(self):
-        super(Equity, self).__init__("Equity", "1TQ6Ky5sB_5Xn1lp8W6Us-OFfvEct6g4x", "1SqlVPcdzLuHAOw4kh4JfmA9AOu7_KZIY")
+    def __init__(self, profile_path=".profile"):
+        super(Equity, self).__init__("Equity", "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-", "1SqlVPcdzLuHAOw4kh4JfmA9AOu7_KZIY", profile_path)

@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import copy
-import datetime
 import glob
 import hashlib
 import io
@@ -13,12 +12,14 @@ import traceback
 import urllib2
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
-from datetime import datetime
-from datetime import timedelta
 from ftplib import FTP
 
+import datetime
+import dropbox
 import pandas as pd
 import yfinance as yf
+from datetime import datetime
+from datetime import timedelta
 from dateutil import parser
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -85,16 +86,17 @@ def get_dir(dir_name):
     raise IOError("Could not find path in the usual places {}".format(parent_paths))
 
 
-def load_profile(file_name):
+def load_profile(profile_path):
     profile = {}
-    for profile_line in file_name:
-        profile_line = profile_line.replace("export ", "").rstrip()
-        if "=" not in profile_line:
-            continue
-        if profile_line.startswith("#"):
-            continue
-        profile_key, profile_value = profile_line.split("=", 1)
-        profile[profile_key] = profile_value
+    with open(get_file(profile_path), 'r') as profile_file:
+        for profile_line in profile_file:
+            profile_line = profile_line.replace("export ", "").rstrip()
+            if "=" not in profile_line:
+                continue
+            if profile_line.startswith("#"):
+                continue
+            profile_key, profile_value = profile_line.split("=", 1)
+            profile[profile_key] = profile_value
     return profile
 
 
@@ -235,15 +237,105 @@ class Library(object):
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
         return False, False
 
+    def dropbox_download(self, dropbox_dir, local_dir, check=True):
+
+        class DropboxContentHasher(object):
+            BLOCK_SIZE = 4 * 1024 * 1024
+
+            def __init__(self):
+                self._overall_hasher = hashlib.sha256()
+                self._block_hasher = hashlib.sha256()
+                self._block_pos = 0
+                self.digest_size = self._overall_hasher.digest_size
+
+            def update(self, new_data):
+                new_data_pos = 0
+                while new_data_pos < len(new_data):
+                    if self._block_pos == self.BLOCK_SIZE:
+                        self._overall_hasher.update(self._block_hasher.digest())
+                        self._block_hasher = hashlib.sha256()
+                        self._block_pos = 0
+                    space_in_block = self.BLOCK_SIZE - self._block_pos
+                    part = new_data[new_data_pos:(new_data_pos + space_in_block)]
+                    self._block_hasher.update(part)
+                    self._block_pos += len(part)
+                    new_data_pos += len(part)
+
+            def _finish(self):
+                if self._block_pos > 0:
+                    self._overall_hasher.update(self._block_hasher.digest())
+                    self._block_hasher = None
+                h = self._overall_hasher
+                self._overall_hasher = None
+                return h
+
+            def hexdigest(self):
+                return self._finish().hexdigest()
+
+        def file_hash(file_name):
+            hasher = DropboxContentHasher()
+            with open(file_name, 'rb') as f:
+                while True:
+                    chunk = f.read(1024)
+                    if len(chunk) == 0:
+                        break
+                    hasher.update(chunk)
+            return hasher.hexdigest()
+
+        local_files = {}
+        for local_file in glob.glob("{}/*".format(local_dir)):
+            local_files[os.path.basename(local_file)] = {
+                "hash": file_hash(local_file) if check else None,
+                "modified": int(os.path.getmtime(local_file)) if check else None
+            }
+        dropbox_files = {}
+        service = dropbox.Dropbox(self.profile['DROPBOX_TOKEN'])
+        cursor = None
+        while True:
+            response = service.files_list_folder(dropbox_dir) if cursor is None else service.files_list_folder_continue(cursor)
+            for dropbox_file in response.entries:
+                dropbox_files[dropbox_file.name] = {
+                    "id": dropbox_file.id.encode('ascii'),
+                    "hash": dropbox_file.content_hash.encode('ascii'),
+                    "modified": int((dropbox_file.client_modified - datetime.utcfromtimestamp(0)).total_seconds()),
+                }
+            if response.has_more:
+                cursor = response.cursor
+            else:
+                break
+        actioned_files = {}
+        for dropbox_file in dropbox_files:
+            file_actioned = False
+            local_path = "{}/{}".format(local_dir, dropbox_file)
+            if dropbox_file not in local_files or (check and (
+                    dropbox_files[dropbox_file]["modified"] != local_files[dropbox_file]["modified"] or
+                    dropbox_files[dropbox_file]["hash"] != local_files[dropbox_file]["hash"]
+            )):
+                with open(local_path, "wb") as local_file:
+                    metadata, response = service.files_download(path="{}/{}".format(dropbox_dir, dropbox_file))
+                    local_file.write(response.content)
+
+                os.utime(local_path, (dropbox_files[dropbox_file]["modified"], dropbox_files[dropbox_file]["modified"]))
+                local_files[dropbox_file] = {
+                    "hash": dropbox_files[dropbox_file]["hash"],
+                    "modified": dropbox_files[dropbox_file]["modified"]
+                }
+                file_actioned = True
+                self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
+                self.print_log("File [{}] downloaded to [{}]".format(dropbox_file, local_path))
+            else:
+                self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+                self.print_log("File [{}] cached at [{}]".format(dropbox_file, local_path))
+            actioned_files[dropbox_file] = True, file_actioned
+        return actioned_files
+
     def stock_download(self, local_file, ticker, start, end, end_of_day_hour=17, check=True, force=False, ignore=False):
         now = datetime.now()
-
         end_exclusive = (datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)) \
             if (now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) and
                 now > now.replace(hour=end_of_day_hour, minute=0, second=0, microsecond=0) or
                 now.year != int(end.split('-')[0]) or
                 now.month != int(end.split('-')[1])) else end
-
         if start != end_exclusive:
             if not force and not check and os.path.isfile(local_file):
                 self.print_log("File [{}: {} {}] cached at [{}]"
@@ -287,8 +379,8 @@ class Library(object):
         local_files = {}
         for local_file in glob.glob("{}/*".format(local_dir)):
             local_files[os.path.basename(local_file)] = {
-                "hash": file_hash(local_file),
-                "modified": int(os.path.getmtime(local_file))
+                "hash": file_hash(local_file) if check else None,
+                "modified": int(os.path.getmtime(local_file)) if check else None
             }
         drive_files = {}
         credentials = service_account.Credentials.from_service_account_file(
@@ -313,9 +405,10 @@ class Library(object):
             for drive_file in drive_files:
                 file_actioned = False
                 local_path = "{}/{}".format(local_dir, drive_file)
-                if drive_file not in local_files or \
-                        drive_files[drive_file]["hash"] != local_files[drive_file]["hash"] or \
-                        (check and drive_files[drive_file]["modified"] != local_files[drive_file]["modified"]):
+                if drive_file not in local_files or (check and (
+                        drive_files[drive_file]["modified"] != local_files[drive_file]["modified"] or
+                        drive_files[drive_file]["hash"] != local_files[drive_file]["hash"]
+                )):
                     request = service.files().get_media(fileId=drive_files[drive_file]["id"])
                     buffer_file = io.BytesIO()
                     downloader = MediaIoBaseDownload(buffer_file, request)
@@ -340,16 +433,12 @@ class Library(object):
             for local_file in local_files:
                 file_actioned = False
                 local_path = "{}/{}".format(local_dir, local_file)
-                if local_file not in drive_files or \
-                        drive_files[local_file]["hash"] != local_files[local_file]["hash"] or \
-                        (check and drive_files[local_file]["modified"] != local_files[local_file]["modified"]):
-                    request = service.files().create(
-                        body={'name': local_file, 'parents': [drive_dir], 'modifiedTime':
-                            datetime.utcfromtimestamp(local_files[local_file]["modified"]).strftime('%Y-%m-%dT%H:%M:%S.%fZ')},
-                        media_body=MediaFileUpload(local_path)).execute()
+                if local_file not in drive_files or (check and (
+                        drive_files[local_file]["modified"] != local_files[local_file]["modified"] or
+                        drive_files[local_file]["hash"] != local_files[local_file]["hash"]
+                )):
+                    self.drive_write(local_path, drive_dir, local_files[local_file]["modified"])
                     file_actioned = True
-                    self.counters[CTR_SRC_RESOURCES][CTR_ACT_UPLOADED] += 1
-                    self.print_log("File [{}] uploaded to [{}]".format(local_file, request.get('id')))
                 else:
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_PERSISTED] += 1
                     self.print_log("File [{}] persisted at [{}]".format(local_file, drive_files[local_file]["id"]))
@@ -378,21 +467,36 @@ class Library(object):
 
     def delta_write(self):
         self.drive_sync(self.input_drive, self.input, check=True, download=False, upload=True)
+        self.print_log("Directory [{}] uploaded to [{}]".format(self.input, self.input_drive))
         self.drive_sync(self.output_drive, self.output, check=False, download=False, upload=True)
+        self.print_log("Directory [{}] uploaded to [{}]".format(self.output, self.output_drive))
 
     def sheet_write(self, data_df, drive_url, sheet_params={}):
         Spread(drive_url).df_to_sheet(data_df, **sheet_params)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_SHEET, len(data_df))
+        self.print_log("Dataframe uploaded to [{}]".format(drive_url))
+
+    def drive_write(self, local_file, drive_dir, modified_time):
+        credentials = service_account.Credentials.from_service_account_file(
+            get_file(".google_service_account.json"), scopes=['https://www.googleapis.com/auth/drive'])
+        service = build('drive', 'v3', credentials=credentials)
+        request = service.files().create(
+            body={'name': os.path.basename(local_file), 'parents': [drive_dir], 'modifiedTime':
+                datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')},
+            media_body=MediaFileUpload(local_file)).execute()
+        self.counters[CTR_SRC_RESOURCES][CTR_ACT_UPLOADED] += 1
+        self.print_log("File [{}] uploaded to [{}] with ID [{}]".format(local_file, drive_dir, request.get('id')))
 
     def database_write(self, line):
         if line.strip():
             print(line)
             self.add_counter(CTR_SRC_DATA, CTR_ACT_DATABASE)
 
-    def __init__(self, name, input_drive, output_drive):
+    def __init__(self, name, input_drive, output_drive, profile_path):
         self.name = name
         self.reset_counters()
         self.input_drive = input_drive
         self.output_drive = output_drive
+        self.profile = load_profile(profile_path)
         self.input = get_dir("data/{}/input".format(name.lower()))
         self.output = get_dir("data/{}/output".format(name.lower()))
