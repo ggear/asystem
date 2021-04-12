@@ -11,23 +11,14 @@ import main
 from wrangle import library
 from mock import patch
 import contextlib
+import glob
 
 DIR_TARGET = "../../../../target"
 DIR_RESOURCES = "../../resources"
+DIR_SRC = "../../../../src/main/python"
 
 
 class WrangleTest(unittest.TestCase):
-
-    def test_all(self):
-        self.test_all_write(False)
-
-    def test_all_write(self, write=True):
-        self.run_module("currency", prepare_only=True, write=write)
-        self.run_module("interest", prepare_only=True, write=write)
-        self.run_module("equity", prepare_only=True, write=write)
-        print("")
-        self.assertEqual(main.main(), 0, "Main script ran with errors on first run")
-        self.assertEqual(main.main(), 0, "Main script ran with errors on second re-run")
 
     def test_currency(self):
         self.test_currency_write(False)
@@ -113,6 +104,21 @@ class WrangleTest(unittest.TestCase):
                     library.CTR_ACT_ERRORED: 0
                 },
             }, write=write)
+
+    def test_all(self):
+        self.test_all_write(False)
+
+    def test_all_write(self, write=True):
+        for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
+            if not module_path.endswith("__init__.py"):
+                self.run_module(os.path.basename(os.path.dirname(module_path)), prepare_only=True, write=write)
+        print("")
+        with patch.object(library.Library, "delta_write") if not write else no_op():
+            with patch.object(library.Library, "sheet_write") if not write else no_op():
+                with patch.object(library.Library, "drive_write") if not write else no_op():
+                    with patch.object(library.Library, "database_write") if not write else no_op():
+                        self.assertEqual(main.main(), 0, "Main script ran with errors on first run")
+                        self.assertEqual(main.main(), 0, "Main script ran with errors on second re-run")
 
     def run_module(self, module_name, load_cache=True,
                    counter_equals={}, counter_less={}, counter_greater={}, prepare_only=False, write=False):

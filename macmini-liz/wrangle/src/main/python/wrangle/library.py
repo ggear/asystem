@@ -59,6 +59,9 @@ def print_log(process, message, exception=None):
 
 
 def get_file(file_name):
+    if os.path.isfile(file_name):
+        return file_name
+    file_name = os.path.basename(file_name)
     working = os.path.dirname(__file__)
     paths = [
         "/root/{}".format(file_name),
@@ -326,7 +329,7 @@ class Library(object):
             else:
                 self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
                 self.print_log("File [{}] cached at [{}]".format(dropbox_file, local_path))
-            actioned_files[dropbox_file] = True, file_actioned
+            actioned_files[local_path] = True, file_actioned
         return actioned_files
 
     def stock_download(self, local_file, ticker, start, end, end_of_day_hour=17, check=True, force=False, ignore=False):
@@ -428,7 +431,7 @@ class Library(object):
                 else:
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
                     self.print_log("File [{}] cached at [{}]".format(drive_file, local_path))
-                actioned_files[drive_file] = True, file_actioned
+                actioned_files[local_path] = True, file_actioned
         if upload:
             for local_file in local_files:
                 file_actioned = False
@@ -442,7 +445,7 @@ class Library(object):
                 else:
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_PERSISTED] += 1
                     self.print_log("File [{}] persisted at [{}]".format(local_file, drive_files[local_file]["id"]))
-                actioned_files[local_file] = True, file_actioned
+                actioned_files[local_path] = True, file_actioned
         return actioned_files
 
     def delta_cache(self, data_df_current, file_prefix):

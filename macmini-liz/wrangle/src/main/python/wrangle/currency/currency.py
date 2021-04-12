@@ -90,7 +90,7 @@ class Currency(library.Library):
                                 ato_df.columns.name = None
                                 ato_df['Source'] = 'ATO'
                                 ato_df = ato_df[['Source', 'Date'] + PAIRS]
-                                merged_df = merged_df.append(ato_df, ignore_index=True, verify_integrity=True)
+                                merged_df = merged_df.append(ato_df, ignore_index=True, verify_integrity=True, sort=True)
                                 year_month_file_downloaded = True
                                 break
                         break
@@ -110,7 +110,7 @@ class Currency(library.Library):
                     rba_itr_df['Date'] = rba_itr_df['Date'].dt.strftime("%Y-%m-%d").astype(str)
                     rba_itr_df['Source'] = 'RBA'
                     rba_itr_df = rba_itr_df[['Source', 'Date'] + PAIRS]
-                    rba_df = rba_df.append(rba_itr_df, ignore_index=True, verify_integrity=True)
+                    rba_df = rba_df.append(rba_itr_df, ignore_index=True, verify_integrity=True, sort=True)
 
         def extrapolate(data_df):
             data_df = data_df.drop_duplicates(subset='Date', keep="first").copy()
@@ -141,7 +141,7 @@ class Currency(library.Library):
             rba_df = extrapolate(rba_df)
             self.print_log("Files from [RBA] produced processed data from [{}] to [{}] in [{}] rows"
                            .format(rba_df['Date'].iloc[0], rba_df['Date'].iloc[-1], len(rba_df)))
-            ato_rba_df = extrapolate(rba_df.append(ato_df, ignore_index=True, verify_integrity=True))
+            ato_rba_df = extrapolate(rba_df.append(ato_df, ignore_index=True, verify_integrity=True, sort=True))
             self.print_log("Files from [ATO + RBA] produced processed data from [{}] to [{}] in [{}] rows"
                            .format(ato_rba_df['Date'].iloc[0], ato_rba_df['Date'].iloc[-1], len(ato_rba_df)))
             rba_delta_df = self.delta_cache(rba_df, "currency")
