@@ -12,13 +12,12 @@ sys.path.insert(0, DIR_MODULE_ROOT)
 
 from anode.metadata.build import load
 
-DIR_DASHBOARD_MOBILE_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards/mobile"
-DIR_DASHBOARD_DESKTOP_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards/desktop"
+DIR_DASHBOARDS_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards"
 
 if __name__ == "__main__":
     sensors = load()
     for group in sensors:
-        with open(DIR_DASHBOARD_DESKTOP_ROOT + "/generated/graphs_{}.libsonnet".format(group.lower()), "w") as file:
+        with open(DIR_DASHBOARDS_ROOT + "/template/generated/graphs_{}.libsonnet".format(group.lower()), "w") as file:
             file.write("""
 {
   graphs()::
@@ -30,7 +29,7 @@ if __name__ == "__main__":
     
     [
             """.strip() + "\n\n")
-            snip_path = DIR_DASHBOARD_DESKTOP_ROOT + "/" + os.path.basename(file.name).replace(".libsonnet", ".snipsonnet")
+            snip_path = DIR_DASHBOARDS_ROOT + "/template/" + os.path.basename(file.name).replace(".libsonnet", ".snipsonnet")
             if os.path.isfile(snip_path):
                 with open(snip_path, 'r') as snip_file:
                     file.write(snip_file.read())
@@ -71,7 +70,7 @@ if __name__ == "__main__":
 }
             """.strip() + "\n")
     print("Metadata script [grafana] graphs saved")
-    with open(DIR_DASHBOARD_DESKTOP_ROOT + "/generated/dashboards_all.jsonnet", "w") as file:
+    with open(DIR_DASHBOARDS_ROOT + "/template/generated/dashboards_all.jsonnet", "w") as file:
         file.write("""
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
@@ -189,6 +188,7 @@ local graphs_{} = import 'graphs_{}.libsonnet';
 }
         """.strip() + "\n")
 
-
+    # TODO: Generate public/private (unique dashbaords_all, perhaps using snipsonnet's, public subset, private all) x
+    # desktop/mobile (copy line by line, comment/uncomment MOBILE/DESKTOP lines) dashbaords
 
     print("Metadata script [grafana] dashboards saved")
