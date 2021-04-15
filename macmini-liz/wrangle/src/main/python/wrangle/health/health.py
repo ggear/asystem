@@ -92,7 +92,7 @@ class Health(library.Library):
                                         'Sleep Heart Rate Waking Baseline',
                                         'Sleep Readiness Rating',
                                     ])
-                                    sleep_yesterday_df = pd.concat([sleep_yesterday_df, file_df], axis=1)
+                                    sleep_yesterday_df = pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True)
                     elif os.path.basename(file_name).startswith("_SleepRings-"):
                         if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 12:
                             with open(file_name) as data_file:
@@ -125,7 +125,9 @@ class Health(library.Library):
                                         'Sleep Deep Goal (%)',
                                         'Sleep Rating (%)',
                                     ])
-                                    sleep_df = pd.concat([sleep_df, normalise(pd.concat([sleep_yesterday_df, file_df], axis=1))])
+                                    sleep_df = pd.concat([sleep_df,
+                                                          normalise(pd.concat([sleep_yesterday_df, file_df],
+                                                                              axis=1, sort=True))], sort=True)
                     elif os.path.basename(file_name).startswith("Sleep-"):
 
                         def duration_normalise(df, column):
@@ -141,12 +143,13 @@ class Health(library.Library):
                             return df[column]
 
                         sleep_history_df = pd.DataFrame()
-                        file_df = pd.read_csv(file_name)
+                        file_df = pd.read_csv(file_name, skipinitialspace=True)
                         file_df['Start'] = file_df['Fell asleep in'].replace('--', 0)
                         file_df['Start'] = duration_decimalise(file_df, 'Start', 1)
                         file_df['Start'] = pd.to_timedelta(file_df['Start'], 's')
                         sleep_history_df['Date'] = pd.to_datetime(file_df['Until'], format='%Y-%m-%d %H:%M:%S')
-                        sleep_history_df['Sleep Start (dt)'] = pd.to_datetime(file_df['In bed at'], format='%Y-%m-%d %H:%M:%S') + file_df['Start']
+                        sleep_history_df['Sleep Start (dt)'] = pd.to_datetime(file_df['In bed at'], format='%Y-%m-%d %H:%M:%S') + file_df[
+                            'Start']
                         sleep_history_df['Sleep Finish (dt)'] = sleep_history_df['Date']
                         sleep_history_df['Sleep Recharge (%)'] = np.NaN
                         sleep_history_df['Sleep Debt (%)'] = np.NaN
@@ -175,12 +178,25 @@ class Health(library.Library):
                         sleep_history_df['Sleep Quality Goal (%)'] = sleep_history_df['Sleep Quality (hr)'] / 0.06
                         sleep_history_df['Sleep Deep Goal (%)'] = sleep_history_df['Sleep Deep (hr)'] / 0.024
                         sleep_history_df['Sleep Rating (%)'] = np.NaN
-                        sleep_df = pd.concat([sleep_df, normalise(sleep_history_df)])
+                        sleep_df = pd.concat([sleep_df, normalise(sleep_history_df)], sort=True)
+                    elif os.path.basename(file_name).startswith("_Health-") or os.path.basename(file_name).startswith("Health-"):
+                        file_df = pd.read_csv(file_name, skipinitialspace=True)
+                        file_df = file_df.dropna(how='all', thresh=2).dropna(axis=1, how='all')
+                        health_df = pd.concat([health_df, normalise(file_df)], sort=True)
+                    elif os.path.basename(file_name).startswith("_Workout-") or os.path.basename(file_name).startswith("Workout-"):
+                        file_df = pd.read_csv(file_name, skipinitialspace=True)
+                        file_df['Start'] = pd.to_datetime(file_df['Start'], format='%Y-%m-%d %H:%M')
+                        file_df['End'] = pd.to_datetime(file_df['End'], format='%Y-%m-%d %H:%M')
+                        file_df = file_df.add_prefix("Workout ")
+                        file_df.insert(0, 'Date', pd.to_datetime(file_df['Workout Start'], format='%Y-%m-%d %H:%M'))
+                        workout_df = pd.concat([workout_df, normalise(file_df)], sort=True)
+                    else:
+                        raise Exception("Unknown file format [{}]".format(file_name))
             data_df = pd.concat([
                 sleep_df[~sleep_df.index.duplicated(keep='last')],
                 health_df[~health_df.index.duplicated(keep='last')],
                 workout_df[~workout_df.index.duplicated(keep='last')]
-            ], axis=1).dropna(how='all', thresh=2).dropna(axis=1, how='all')
+            ], axis=1, sort=True).dropna(how='all', thresh=2).dropna(axis=1, how='all')
             data_delta_df = self.delta_cache(data_df, "health")
         else:
             self.print_log("No new data found")
