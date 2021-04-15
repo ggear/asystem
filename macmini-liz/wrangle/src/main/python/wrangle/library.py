@@ -12,14 +12,13 @@ import traceback
 import urllib2
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from datetime import datetime
+from datetime import timedelta
 from ftplib import FTP
-
-import datetime
+import collections
 import dropbox
 import pandas as pd
 import yfinance as yf
-from datetime import datetime
-from datetime import timedelta
 from dateutil import parser
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -53,7 +52,11 @@ def print_log(process, message, exception=None):
         message = [message]
     for line in message:
         if len(line) > 0:
-            print(u"{}{}".format(prefix, line))
+
+            # TODO
+            None
+            # print(u"{}{}".format(prefix, line))
+
     if exception is not None:
         print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc(limit=2).splitlines())))
 
@@ -330,7 +333,7 @@ class Library(object):
                 self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
                 self.print_log("File [{}] cached at [{}]".format(dropbox_file, local_path))
             actioned_files[local_path] = True, file_actioned
-        return actioned_files
+        return collections.OrderedDict(sorted(actioned_files.items()))
 
     def stock_download(self, local_file, ticker, start, end, end_of_day_hour=17, check=True, force=False, ignore=False):
         now = datetime.now()
@@ -446,7 +449,7 @@ class Library(object):
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_PERSISTED] += 1
                     self.print_log("File [{}] persisted at [{}]".format(local_file, drive_files[local_file]["id"]))
                 actioned_files[local_path] = True, file_actioned
-        return actioned_files
+        return collections.OrderedDict(sorted(actioned_files.items()))
 
     def delta_cache(self, data_df_current, file_prefix):
         file_delta = "{}/{}_delta.csv".format(self.output, file_prefix)
