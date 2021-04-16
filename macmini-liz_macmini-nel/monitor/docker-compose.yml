@@ -19,6 +19,7 @@ services:
       - HOST_MOUNT_PREFIX=/hostfs
     volumes:
       - /:/hostfs:ro
+      - /run/utmp:/hostfs/var/run/utmp
       - /var/run/docker.sock:/var/run/docker.sock
       - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     deploy:
