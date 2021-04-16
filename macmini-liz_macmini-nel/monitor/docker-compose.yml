@@ -5,6 +5,7 @@ services:
     image: telegraf:1.18.1-alpine
     init: true
     restart: ${RESTART}
+    privileged: true
     environment:
       - TZ=Australia/Perth
       - HOST_IP
