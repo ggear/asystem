@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import collections
 import copy
 import glob
 import hashlib
@@ -15,7 +16,7 @@ from collections import OrderedDict
 from datetime import datetime
 from datetime import timedelta
 from ftplib import FTP
-import collections
+
 import dropbox
 import pandas as pd
 import yfinance as yf
@@ -52,10 +53,7 @@ def print_log(process, message, exception=None):
         message = [message]
     for line in message:
         if len(line) > 0:
-
-            # TODO
-            None
-            # print(u"{}{}".format(prefix, line))
+            print(u"{}{}".format(prefix, line))
 
     if exception is not None:
         print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc(limit=2).splitlines())))

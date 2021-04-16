@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import print_function
 
 import json
@@ -10,25 +12,6 @@ import pandas as pd
 from .. import library
 
 LINE_PROTOCOL = "health,source={},type={},period={} {}="
-
-
-# Health metrics that seem to have values:
-# active_energy
-# apple_exercise_time
-# apple_stand_hour
-# apple_stand_time
-# basal_energy_burned
-# flights_climbed
-# headphone_audio_exposure
-# heart_rate
-# heart_rate_variability
-# resting_heart_rate
-# stair_speed:_up
-# stair_speed:_down
-# walking_running_distance
-# walking_double_support_percentage
-# walking_speed
-# walking_step_length
 
 
 class Health(library.Library):
@@ -148,8 +131,8 @@ class Health(library.Library):
                         file_df['Start'] = duration_decimalise(file_df, 'Start', 1)
                         file_df['Start'] = pd.to_timedelta(file_df['Start'], 's')
                         sleep_history_df['Date'] = pd.to_datetime(file_df['Until'], format='%Y-%m-%d %H:%M:%S')
-                        sleep_history_df['Sleep Start (dt)'] = pd.to_datetime(file_df['In bed at'], format='%Y-%m-%d %H:%M:%S') + file_df[
-                            'Start']
+                        sleep_history_df['Sleep Start (dt)'] = pd.to_datetime(file_df['In bed at'], format='%Y-%m-%d %H:%M:%S') + \
+                                                               file_df['Start']
                         sleep_history_df['Sleep Finish (dt)'] = sleep_history_df['Date']
                         sleep_history_df['Sleep Recharge (%)'] = np.NaN
                         sleep_history_df['Sleep Debt (%)'] = np.NaN
@@ -182,21 +165,72 @@ class Health(library.Library):
                     elif os.path.basename(file_name).startswith("_Health-") or os.path.basename(file_name).startswith("Health-"):
                         file_df = pd.read_csv(file_name, skipinitialspace=True)
                         file_df = file_df.dropna(how='all', thresh=2).dropna(axis=1, how='all')
+                        if 'Sleep Analysis [Asleep] (hours)' in file_df:
+                            del file_df['Sleep Analysis [Asleep] (hours)']
+                        if 'Sleep Analysis [Asleep] (hr)' in file_df:
+                            del file_df['Sleep Analysis [Asleep] (hr)']
+                        if 'Sleep Analysis [In Bed] (hours)' in file_df:
+                            del file_df['Sleep Analysis [In Bed] (hours)']
+                        if 'Sleep Analysis [In Bed] (hr)' in file_df:
+                            del file_df['Sleep Analysis [In Bed] (hr)']
+                        file_df = file_df.rename(columns={
+                            'Apple Stand Time (min)': 'Stand Time (min)',
+                            'Apple Stand Hour (count)': 'Stand Sessions (count)',
+                            'Active Energy (kJ)': 'Energy Active Burned (kJ)',
+                            'Basal Energy Burned (kJ)': 'Energy Basal Burned (kJ)',
+                            'Mindful Minutes (min)': 'Mindful Breathing Time (min)',
+                            'Headphone Audio Exposure (dBASPL)': 'Hearing Headphone Exposure (dBASPL)',
+                            'Heart Rate Variability (ms)': 'Heart Rate Variability (ms)',
+                            'Heart Rate [Avg] (count/min)': 'Heart Rate Average (bpm)',
+                            'Heart Rate [Max] (count/min)': 'Heart Rate Maximum (bpm)',
+                            'Heart Rate [Min] (count/min)': 'Heart Rate Minimum (bpm)',
+                            'Resting Heart Rate (count/min)': 'Heart Rate Resting (bpm)',
+                            'Apple Exercise Time (min)': 'Exercise Time (min)',
+                            'Step Count (count)': 'Exercise Steps Taken (count)',
+                            'Flights Climbed (count)': 'Exercise Flights Climbed (count)',
+                            'VO2 Max (ml/(kg·min))': 'Exercise VO2 Max (mL/kg/min)',
+                            'Walking + Running Distance (km)': 'Walking Distance (km)',
+                            'Walking Asymmetry Percentage (%)': 'Walking Asymmetry (%)',
+                            'Walking Double Support Percentage (%)': 'Walking Double Support Percentage (%)',
+                            'Walking Heart Rate Average (count/min)': 'Walking Heart Rate Average (bpm)',
+                            'Walking Speed (km/hr)': 'Walking Speed (km/hr)',
+                            'Walking Step Length (cm)': 'Physical Walking Step Length (cm)',
+                            'Height (m)': 'Physical Height (m)',
+                            'Body Mass Index (count)': 'Physical Body Mass Index (count)',
+                            'Weight & Body Mass (kg)': 'Physical Weight & Body Mass (kg)',
+                            'Cycling Distance (km)': 'Workout Cycling Distance (km)',
+                        })
+                        file_df = file_df.reindex(sorted(file_df.columns), axis=1)
                         health_df = pd.concat([health_df, normalise(file_df)], sort=True)
                     elif os.path.basename(file_name).startswith("_Workout-") or os.path.basename(file_name).startswith("Workout-"):
                         file_df = pd.read_csv(file_name, skipinitialspace=True)
                         file_df['Start'] = pd.to_datetime(file_df['Start'], format='%Y-%m-%d %H:%M')
                         file_df['End'] = pd.to_datetime(file_df['End'], format='%Y-%m-%d %H:%M')
+                        file_df['Duration'] = file_df['Duration'].apply(lambda x: datetime.strptime(x, '%H:%M:%S'))
+                        file_df['Duration'] = file_df['Duration'] - datetime.strptime('00:00', '%M:%S')
+                        file_df['Duration'] = file_df['Duration'].apply(lambda x: x / np.timedelta64(1, 's') * 60)
                         file_df = file_df.add_prefix("Workout ")
                         file_df.insert(0, 'Date', pd.to_datetime(file_df['Workout Start'], format='%Y-%m-%d %H:%M'))
+                        file_df = file_df.rename(columns={
+                            'Workout Start': 'Workout Start (dt)',
+                            'Workout End': 'Workout Finish (dt)',
+                            'Workout Duration': 'Workout Duration (sec)',
+                            'Workout Total Energy (kJ)': 'Workout Energy Total (kJ)',
+                            'Workout Active Energy (kJ)': 'Workout Energy Active (kJ)',
+                            'Workout Avg Speed(km/hr)': 'Workout Speed Average (km/hr)',
+                            'Workout Avg Heart Rate (bpm)': 'Workout Heart Rate Average (bpm)',
+                            'Workout Max Heart Rate (bpm)': 'Workout Heart Rate Maximum (bpm)',
+                            'Workout Flights Climbed (count)': 'Workout Flights Climbed (count)',
+                        })
+                        file_df = file_df.reindex(sorted(file_df.columns), axis=1)
                         workout_df = pd.concat([workout_df, normalise(file_df)], sort=True)
                     else:
                         raise Exception("Unknown file format [{}]".format(file_name))
             data_df = pd.concat([
-                sleep_df[~sleep_df.index.duplicated(keep='last')],
                 health_df[~health_df.index.duplicated(keep='last')],
-                workout_df[~workout_df.index.duplicated(keep='last')]
-            ], axis=1, sort=True).dropna(how='all', thresh=2).dropna(axis=1, how='all')
+                workout_df[~workout_df.index.duplicated(keep='last')],
+                sleep_df[~sleep_df.index.duplicated(keep='last')],
+            ], axis=1, sort=True)
             data_delta_df = self.delta_cache(data_df, "health")
         else:
             self.print_log("No new data found")
