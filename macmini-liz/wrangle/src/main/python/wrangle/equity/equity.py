@@ -1,13 +1,13 @@
 from __future__ import print_function
 
+import datetime
 import glob
 import os
 from collections import OrderedDict
+from datetime import datetime
 
-import datetime
 import pandas as pd
 import pdftotext
-from datetime import datetime
 from pandas.tseries.offsets import BDay
 from pandas.tseries.offsets import BMonthEnd
 
@@ -117,6 +117,7 @@ class Equity(library.Library):
                     statement_date = None
                     statement_type = None
                     statement_owner = None
+                    statement_rates = {}
                     statement_data[statement_file_name] = {}
                     statement_data[statement_file_name]['Status'] = STATUS_FAILURE
                     statement_data[statement_file_name]["Errors"] = []
@@ -165,29 +166,38 @@ class Equity(library.Library):
                                         if statement_type:
                                             for currency in CURRENCIES:
                                                 if statement_line.startswith(currency):
-                                                    statement_data[statement_file_name]["Positions"][statement_type + currency] = {}
-                                                    file_name = statement_data[statement_file_name]["Positions"][statement_type + currency]
-                                                    file_name["Date"] = statement_date
-                                                    file_name["Type"] = statement_type.strip()
-                                                    file_name["Owner"] = statement_owner
-                                                    file_name["Currency"] = currency
-                                                    file_name["Rate"] = \
-                                                        float(statement_line.split()[4].replace(',', ''))
+                                                    statement_rates[currency] = float(statement_line.split()[4].replace(',', ''))
+
                                     if statement_type:
                                         for indexes in [
-                                            (2, "Special Situations", CURRENCIES, 5, 10),
-                                            (3, "Special Situations", CURRENCIES, 5, 9),
-                                            (2, "Required Shares", ["USD"], 2, 7),
-                                            (3, "Required Shares", ["USD"], 2, 6),
+                                            (2, "Situations", CURRENCIES, 5, 10),
+                                            (3, "Situations", CURRENCIES, 5, 9),
+                                            (2, "Shares", ["USD"], 2, 7),
+                                            (3, "Shares", ["USD"], 2, 6),
                                         ]:
                                             if page_index == indexes[0] and indexes[1] in statement_line:
                                                 for currency in indexes[2]:
-                                                    if currency == "USD" or currency in statement_line:
+                                                    if indexes[1] == "Shares" or currency in statement_line:
                                                         try:
-                                                            file_name = \
-                                                                statement_data[statement_file_name]["Positions"][statement_type + currency]
-                                                            file_name["Units"] = float(statement_line.split()[indexes[3]].replace(',', ''))
-                                                            file_name["Value"] = float(statement_line.split()[indexes[4]].replace(',', ''))
+                                                            statement_position = {
+                                                                "Date": statement_date,
+                                                                "Type": statement_type.strip(),
+                                                                "Owner": statement_owner,
+                                                                "Currency": currency,
+                                                                "Rate": statement_rates[currency],
+                                                                "Units": float(statement_line.split()[indexes[3]].replace(',', '')),
+                                                                "Value": float(statement_line.split()[indexes[4]].replace(',', ''))
+                                                            }
+                                                            if indexes[1] == "Situations" and line_index < (len(statement_lines) - 1):
+                                                                currency = statement_lines[line_index + 1].split()[2]
+                                                            statement_position["Ticker"] = \
+                                                                'MCK' if statement_owner == 'Jane' and currency == 'USD' else \
+                                                                    'MUS' if statement_owner == 'Joint' and currency == 'USD' else \
+                                                                        'MUK' if statement_owner == 'Joint' and currency == 'GBP' else \
+                                                                            'MSG' if statement_owner == 'Joint' and currency == 'SGD' else \
+                                                                                'UNKOWN'
+                                                            statement_data[statement_file_name]["Positions"][statement_type + currency] = \
+                                                                statement_position
                                                         except Exception:
                                                             None
                             except Exception as exception:
@@ -204,13 +214,13 @@ class Equity(library.Library):
                             statement_data[statement_file_name]["Errors"] \
                                 .append("Statement parse failed to resolve all keys {} in {}".format(ATTRIBUTES, statement_position))
 
-            statements_postions = []
+            statements_positions = []
             for file_name in statement_data:
                 if statement_data[file_name]['Status'] == STATUS_SUCCESS:
-                    statement_postion = statement_data[file_name]["Positions"]
-                    statements_postions.extend(statement_postion.values())
+                    statement_position = statement_data[file_name]["Positions"]
+                    statements_positions.extend(statement_position.values())
                     self.print_log("File [{}] processed as [{}] with positions {}"
-                                   .format(os.path.basename(file_name), STATUS_SUCCESS, statement_postion.keys()))
+                                   .format(os.path.basename(file_name), STATUS_SUCCESS, statement_position.keys()))
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                 elif statement_data[file_name]['Status'] == STATUS_SKIPPED:
                     self.print_log("File [{}] processed as [{}]".format(os.path.basename(file_name), STATUS_SKIPPED))
@@ -230,19 +240,9 @@ class Equity(library.Library):
                              - self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                              - self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED))
 
-            statement_df = pd.DataFrame(statements_postions)
+            statement_df = pd.DataFrame(statements_positions)
             if len(statement_df) > 0:
                 statement_df["Price"] = statement_df["Value"] / statement_df["Units"]
-
-                def ticker(df):
-                    return \
-                        'MCK' if df['Owner'] == 'Jane' and df['Currency'] == 'USD' else \
-                            'MUS' if df['Owner'] == 'Joint' and df['Currency'] == 'USD' else \
-                                'MUK' if df['Owner'] == 'Joint' and df['Currency'] == 'GBP' else \
-                                    'MSG' if df['Owner'] == 'Joint' and df['Currency'] == 'SGD' else \
-                                        'UNKOWN'
-
-                statement_df['Ticker'] = statement_df.apply(ticker, axis=1)
                 statement_df['Rate'] = 1.0 / statement_df['Rate']
                 statement_df['Zero'] = 0
                 statement_df = statement_df.set_index('Date')

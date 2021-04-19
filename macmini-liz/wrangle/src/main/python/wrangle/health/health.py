@@ -34,83 +34,97 @@ class Health(library.Library):
                         df = df.set_index('Date')
                         return df
 
+                    def get(list, label):
+                        for item in list:
+                            if item[0] == label:
+                                return item[1]
+                        raise Exception("Health label [{}] not found in list {}".format(label, list))
+
                     if os.path.basename(file_name).startswith("_Sleep-"):
                         if len(sleep_yesterday_df) == 0:
                             with open(file_name) as data_file:
                                 file_objs = json.load(data_file).items()
                                 if len(file_objs) > 0:
-                                    file_df = pd.DataFrame([[
-                                        datetime.strptime(file_objs[6][1], '%a, %d/%m/%y, %I:%M %p'),
-                                        datetime.strptime(file_objs[3][1], '%a, %d/%m/%y, %I:%M %p'),
-                                        datetime.strptime(file_objs[6][1], '%a, %d/%m/%y, %I:%M %p'),
-                                        file_objs[1][1],
-                                        file_objs[2][1],
-                                        file_objs[0][1],
-                                        file_objs[5][1],
-                                    ]], columns=[
-                                        'Date',
-                                        'Sleep Start (dt)',
-                                        'Sleep Finish (dt)',
-                                        'Sleep Recharge (%)',
-                                        'Sleep Debt (%)',
-                                        'Sleep Credit (%)',
-                                        'Sleep Balance (hr)',
-                                    ])
-                                    sleep_yesterday_df = file_df
+                                    try:
+                                        file_df = pd.DataFrame([[
+                                            datetime.strptime(get(file_objs, 'Until'), '%a, %d/%m/%y, %I:%M %p'),
+                                            datetime.strptime(get(file_objs, 'Start'), '%a, %d/%m/%y, %I:%M %p'),
+                                            datetime.strptime(get(file_objs, 'Until'), '%a, %d/%m/%y, %I:%M %p'),
+                                            get(file_objs, 'Recharge%'),
+                                            get(file_objs, 'Debt%'),
+                                            get(file_objs, 'Credit%'),
+                                            get(file_objs, 'Balance'),
+                                        ]], columns=[
+                                            'Date',
+                                            'Sleep Start (dt)',
+                                            'Sleep Finish (dt)',
+                                            'Sleep Recharge (%)',
+                                            'Sleep Debt (%)',
+                                            'Sleep Credit (%)',
+                                            'Sleep Balance (hr)',
+                                        ])
+                                        sleep_yesterday_df = file_df
+                                    except Exception as exception:
+                                        self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                     elif os.path.basename(file_name).startswith("_SleepReadiness-"):
                         if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 7:
                             with open(file_name) as data_file:
                                 file_objs = json.load(data_file).items()
                                 if len(file_objs) > 0:
-                                    file_df = pd.DataFrame([[
-                                        file_objs[1][1],
-                                        file_objs[0][1],
-                                        file_objs[2][1],
-                                        file_objs[3][1],
-                                        float(file_objs[4][1]) / 5 * 100,
-                                    ]], columns=[
-                                        'Sleep Heart Rate Variability (ms)',
-                                        'Sleep Heart Rate Variability Baseline (ms)',
-                                        'Sleep Heart Rate Waking',
-                                        'Sleep Heart Rate Waking Baseline',
-                                        'Sleep Readiness Rating',
-                                    ])
-                                    sleep_yesterday_df = pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True)
+                                    try:
+                                        file_df = pd.DataFrame([[
+                                            get(file_objs, 'HRV'),
+                                            get(file_objs, 'BaselineHRV'),
+                                            get(file_objs, 'bpm'),
+                                            get(file_objs, 'BaselineWakingBPM'),
+                                            float(get(file_objs, 'Stars')) / 5 * 100,
+                                        ]], columns=[
+                                            'Sleep Heart Rate Variability (ms)',
+                                            'Sleep Heart Rate Variability Baseline (ms)',
+                                            'Sleep Heart Rate Waking (bpm)',
+                                            'Sleep Heart Rate Waking Baseline (bpm)',
+                                            'Sleep Readiness Rating (%)',
+                                        ])
+                                        sleep_yesterday_df = pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True)
+                                    except Exception as exception:
+                                        self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                     elif os.path.basename(file_name).startswith("_SleepRings-"):
                         if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 12:
                             with open(file_name) as data_file:
                                 file_objs = json.load(data_file).items()
                                 if len(file_objs) > 0:
-                                    awake = float(sleep_yesterday_df['Sleep Finish (dt)'].values[-1] -
-                                                  sleep_yesterday_df['Sleep Start (dt)'].values[-1]) / (60 * 60 * 1000000000) - \
-                                            float(file_objs[5][1])
-                                    efficiency = (1 - awake / float(file_objs[5][1])) * 100
-                                    file_df = pd.DataFrame([[
-                                        file_objs[5][1],
-                                        awake if awake >= 0 else None,
-                                        file_objs[7][1],
-                                        file_objs[3][1],
-                                        efficiency if awake >= 0 else None,
-                                        file_objs[0][1],
-                                        file_objs[4][1],
-                                        file_objs[1][1],
-                                        file_objs[8][1],
-                                        file_objs[6][1],
-                                    ]], columns=[
-                                        'Sleep Duration (hr)',
-                                        'Sleep Awake (hr)',
-                                        'Sleep Quality (hr)',
-                                        'Sleep Deep (hr)',
-                                        'Sleep Efficiency (%)',
-                                        'Sleep Heart Rate (bpm)',
-                                        'Sleep Duration Goal (%)',
-                                        'Sleep Quality Goal (%)',
-                                        'Sleep Deep Goal (%)',
-                                        'Sleep Rating (%)',
-                                    ])
-                                    sleep_df = pd.concat([sleep_df,
-                                                          normalise(pd.concat([sleep_yesterday_df, file_df],
-                                                                              axis=1, sort=True))], sort=True)
+                                    try:
+                                        awake = float(sleep_yesterday_df['Sleep Finish (dt)'].values[-1] -
+                                                      sleep_yesterday_df['Sleep Start (dt)'].values[-1]) / (60 * 60 * 1000000000) - \
+                                                float(get(file_objs, 'Sleep'))
+                                        efficiency = (1 - awake / float(get(file_objs, 'Sleep'))) * 100
+                                        file_df = pd.DataFrame([[
+                                            get(file_objs, 'Sleep'),
+                                            awake if awake >= 0 else None,
+                                            get(file_objs, 'Quality'),
+                                            get(file_objs, 'Deep'),
+                                            efficiency if awake >= 0 else None,
+                                            get(file_objs, 'bpm'),
+                                            get(file_objs, 'Sleep%'),
+                                            get(file_objs, 'Quality%'),
+                                            get(file_objs, 'Deep%'),
+                                            get(file_objs, 'SleepRating'),
+                                        ]], columns=[
+                                            'Sleep Duration (hr)',
+                                            'Sleep Awake (hr)',
+                                            'Sleep Quality (hr)',
+                                            'Sleep Deep (hr)',
+                                            'Sleep Efficiency (%)',
+                                            'Sleep Heart Rate (bpm)',
+                                            'Sleep Duration Goal (%)',
+                                            'Sleep Quality Goal (%)',
+                                            'Sleep Deep Goal (%)',
+                                            'Sleep Rating (%)',
+                                        ])
+                                        sleep_df = pd.concat([sleep_df, normalise(
+                                            pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True))], sort=True)
+                                    except Exception as exception:
+                                        self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                     elif os.path.basename(file_name).startswith("Sleep-"):
 
                         def duration_normalise(df, column):
@@ -194,11 +208,6 @@ class Health(library.Library):
                             'Walking Double Support Percentage (%)': 'Walking Double Support Percentage (%)',
                             'Walking Heart Rate Average (count/min)': 'Walking Heart Rate Average (bpm)',
                             'Walking Speed (km/hr)': 'Walking Speed (km/hr)',
-                            'Walking Step Length (cm)': 'Physical Walking Step Length (cm)',
-                            'Height (m)': 'Physical Height (m)',
-                            'Body Mass Index (count)': 'Physical Body Mass Index (count)',
-                            'Weight & Body Mass (kg)': 'Physical Weight & Body Mass (kg)',
-                            'Cycling Distance (km)': 'Workout Cycling Distance (km)',
                         })
                         file_df = file_df.reindex(sorted(file_df.columns), axis=1)
                         health_df = pd.concat([health_df, normalise(file_df)], sort=True)
@@ -221,16 +230,79 @@ class Health(library.Library):
                             'Workout Avg Heart Rate (bpm)': 'Workout Heart Rate Average (bpm)',
                             'Workout Max Heart Rate (bpm)': 'Workout Heart Rate Maximum (bpm)',
                             'Workout Flights Climbed (count)': 'Workout Flights Climbed (count)',
+                            'Workout Type': 'Workout Type (string)',
                         })
                         file_df = file_df.reindex(sorted(file_df.columns), axis=1)
                         workout_df = pd.concat([workout_df, normalise(file_df)], sort=True)
                     else:
                         raise Exception("Unknown file format [{}]".format(file_name))
-            data_df = pd.concat([
-                health_df[~health_df.index.duplicated(keep='last')],
-                workout_df[~workout_df.index.duplicated(keep='last')],
-                sleep_df[~sleep_df.index.duplicated(keep='last')],
-            ], axis=1, sort=True)
+            health_df = health_df[~health_df.index.duplicated(keep='last')]
+            health_df = health_df[[
+                'Energy Basal Burned (kJ)',
+                'Energy Active Burned (kJ)',
+                'Stand Time (min)',
+                'Stand Sessions (count)',
+                'Exercise Time (min)',
+                'Exercise Steps Taken (count)',
+                'Exercise Flights Climbed (count)',
+                'Walking Asymmetry (%)',
+                'Walking Distance (km)',
+                'Walking Double Support Percentage (%)',
+                'Walking Heart Rate Average (bpm)',
+                'Walking Speed (km/hr)',
+                'Mindful Breathing Time (min)',
+                'Hearing Headphone Exposure (dBASPL)',
+                'Heart Rate Average (bpm)',
+                'Heart Rate Maximum (bpm)',
+                'Heart Rate Minimum (bpm)',
+                'Heart Rate Resting (bpm)',
+                'Heart Rate Variability (ms)',
+            ]]
+            workout_df = workout_df[~workout_df.index.duplicated(keep='last')]
+            workout_df = workout_df[[
+                'Workout Distance (km)',
+                'Workout Duration (sec)',
+                'Workout Elevation Ascended (m)',
+                'Workout Elevation Descended (m)',
+                'Workout Energy Active (kJ)',
+                'Workout Energy Total (kJ)',
+                'Workout Finish (dt)',
+                'Workout Flights Climbed (count)',
+                'Workout Heart Rate Average (bpm)',
+                'Workout Heart Rate Maximum (bpm)',
+                'Workout Speed Average (km/hr)',
+                'Workout Start (dt)',
+                'Workout Step Cadence (spm)',
+                'Workout Step Count (count)',
+                'Workout Swim Stoke Cadence (spm)',
+                'Workout Swimming Stroke Count (count)',
+                'Workout Type (string)',
+            ]]
+            sleep_df = sleep_df[~sleep_df.index.duplicated(keep='last')]
+            sleep_df = sleep_df[[
+                'Sleep Start (dt)',
+                'Sleep Finish (dt)',
+                'Sleep Balance (hr)',
+                'Sleep Recharge (%)',
+                'Sleep Debt (%)',
+                'Sleep Credit (%)',
+                'Sleep Duration (hr)',
+                'Sleep Duration Goal (%)',
+                'Sleep Quality (hr)',
+                'Sleep Quality Goal (%)',
+                'Sleep Deep (hr)',
+                'Sleep Deep Goal (%)',
+                'Sleep Awake (hr)',
+                'Sleep Efficiency (%)',
+                'Sleep Readiness Rating (%)',
+                'Sleep Rating (%)',
+                'Sleep Heart Rate (bpm)',
+                'Sleep Heart Rate Variability (ms)',
+                'Sleep Heart Rate Variability Baseline (ms)',
+                'Sleep Heart Rate Waking (bpm)',
+                'Sleep Heart Rate Waking Baseline (bpm)',
+            ]]
+            data_df = pd.concat([health_df, workout_df, sleep_df, ], axis=1, sort=True)
             data_delta_df = self.delta_cache(data_df, "health")
         else:
             self.print_log("No new data found")

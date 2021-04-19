@@ -46,6 +46,10 @@ CTR_ACT_CACHED = "Cached"
 CTR_ACT_PERSISTED = "Persisted"
 CTR_ACT_UPLOADED = "Uploaded"
 
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
+pd.set_option('display.width', None)
+
 
 def print_log(process, message, exception=None):
     prefix = "WRANGLE_DEBUG [{}] [{}]: ".format(process, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
