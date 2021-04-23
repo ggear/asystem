@@ -21,7 +21,6 @@ class Health(library.Library):
         files = self.dropbox_download("/Data/Health", self.input)
         new_data = new_data or all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
         if new_data:
-            data_df = pd.DataFrame()
             sleep_df = pd.DataFrame()
             health_df = pd.DataFrame()
             workout_df = pd.DataFrame()
@@ -66,6 +65,7 @@ class Health(library.Library):
                                         sleep_yesterday_df = file_df
                                     except Exception as exception:
                                         self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     elif os.path.basename(file_name).startswith("_SleepReadiness-"):
                         if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 7:
                             with open(file_name) as data_file:
@@ -88,6 +88,7 @@ class Health(library.Library):
                                         sleep_yesterday_df = pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True)
                                     except Exception as exception:
                                         self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     elif os.path.basename(file_name).startswith("_SleepRings-"):
                         if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 12:
                             with open(file_name) as data_file:
@@ -125,6 +126,7 @@ class Health(library.Library):
                                             pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True))], sort=True)
                                     except Exception as exception:
                                         self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     elif os.path.basename(file_name).startswith("Sleep-"):
 
                         def duration_normalise(df, column):
@@ -139,171 +141,188 @@ class Health(library.Library):
                             df[column] = df[column].apply(lambda x: x / np.timedelta64(1, 's') * 60 * scale)
                             return df[column]
 
-                        sleep_history_df = pd.DataFrame()
-                        file_df = pd.read_csv(file_name, skipinitialspace=True)
-                        file_df['Start'] = file_df['Fell asleep in'].replace('--', 0)
-                        file_df['Start'] = duration_decimalise(file_df, 'Start', 1)
-                        file_df['Start'] = pd.to_timedelta(file_df['Start'], 's')
-                        sleep_history_df['Date'] = pd.to_datetime(file_df['Until'], format='%Y-%m-%d %H:%M:%S')
-                        sleep_history_df['Sleep Start (dt)'] = pd.to_datetime(file_df['In bed at'], format='%Y-%m-%d %H:%M:%S') + \
-                                                               file_df['Start']
-                        sleep_history_df['Sleep Finish (dt)'] = sleep_history_df['Date']
-                        sleep_history_df['Sleep Recharge (%)'] = np.NaN
-                        sleep_history_df['Sleep Debt (%)'] = np.NaN
-                        sleep_history_df['Sleep Credit (%)'] = np.NaN
-                        sleep_history_df['Sleep Balance (hr)'] = np.NaN
-                        sleep_history_df['Sleep Heart Rate Variability (ms)'] = np.NaN
-                        sleep_history_df['Sleep Heart Rate Variability Baseline (ms)'] = np.NaN
-                        sleep_history_df['Sleep Heart Rate Waking'] = np.NaN
-                        sleep_history_df['Sleep Heart Rate Waking Baseline'] = np.NaN
-                        sleep_history_df['Sleep Readiness Rating'] = np.NaN
-                        sleep_history_df['Sleep Duration (hr)'] = duration_decimalise(file_df, 'Asleep')
-                        sleep_history_df['Sleep Awake (hr)'] = (sleep_history_df['Sleep Finish (dt)'] -
-                                                                sleep_history_df['Sleep Start (dt)']
-                                                                ).astype('timedelta64[s]') / (60 * 60) - \
-                                                               sleep_history_df['Sleep Duration (hr)']
-                        sleep_history_df['Sleep Awake (hr)'] = sleep_history_df['Sleep Awake (hr)'] \
-                            .mask(sleep_history_df['Sleep Awake (hr)'] < 0, np.NaN)
-                        sleep_history_df['Sleep Quality (hr)'] = duration_decimalise(file_df, 'Quality sleep')
-                        sleep_history_df['Sleep Deep (hr)'] = duration_decimalise(file_df, 'Deep sleep')
-                        sleep_history_df['Sleep Efficiency (%)'] = (1 - sleep_history_df['Sleep Awake (hr)'] /
-                                                                    sleep_history_df['Sleep Duration (hr)']) * 100
-                        sleep_history_df['Sleep Efficiency (%)'] = sleep_history_df['Sleep Efficiency (%)'] \
-                            .mask(sleep_history_df['Sleep Efficiency (%)'] > 100, np.NaN)
-                        sleep_history_df['Sleep Heart Rate (bpm)'] = file_df['Heartrate']
-                        sleep_history_df['Sleep Duration Goal (%)'] = sleep_history_df['Sleep Duration (hr)'] / 0.08
-                        sleep_history_df['Sleep Quality Goal (%)'] = sleep_history_df['Sleep Quality (hr)'] / 0.06
-                        sleep_history_df['Sleep Deep Goal (%)'] = sleep_history_df['Sleep Deep (hr)'] / 0.024
-                        sleep_history_df['Sleep Rating (%)'] = np.NaN
-                        sleep_df = pd.concat([sleep_df, normalise(sleep_history_df)], sort=True)
+                        try:
+                            sleep_history_df = pd.DataFrame()
+                            file_df = pd.read_csv(file_name, skipinitialspace=True)
+                            file_df['Start'] = file_df['Fell asleep in'].replace('--', 0)
+                            file_df['Start'] = duration_decimalise(file_df, 'Start', 1)
+                            file_df['Start'] = pd.to_timedelta(file_df['Start'], 's')
+                            sleep_history_df['Date'] = pd.to_datetime(file_df['Until'], format='%Y-%m-%d %H:%M:%S')
+                            sleep_history_df['Sleep Start (dt)'] = pd.to_datetime(file_df['In bed at'], format='%Y-%m-%d %H:%M:%S') + \
+                                                                   file_df['Start']
+                            sleep_history_df['Sleep Finish (dt)'] = sleep_history_df['Date']
+                            sleep_history_df['Sleep Recharge (%)'] = np.NaN
+                            sleep_history_df['Sleep Debt (%)'] = np.NaN
+                            sleep_history_df['Sleep Credit (%)'] = np.NaN
+                            sleep_history_df['Sleep Balance (hr)'] = np.NaN
+                            sleep_history_df['Sleep Heart Rate Variability (ms)'] = np.NaN
+                            sleep_history_df['Sleep Heart Rate Variability Baseline (ms)'] = np.NaN
+                            sleep_history_df['Sleep Heart Rate Waking'] = np.NaN
+                            sleep_history_df['Sleep Heart Rate Waking Baseline'] = np.NaN
+                            sleep_history_df['Sleep Readiness Rating'] = np.NaN
+                            sleep_history_df['Sleep Duration (hr)'] = duration_decimalise(file_df, 'Asleep')
+                            sleep_history_df['Sleep Awake (hr)'] = (sleep_history_df['Sleep Finish (dt)'] -
+                                                                    sleep_history_df['Sleep Start (dt)']
+                                                                    ).astype('timedelta64[s]') / (60 * 60) - \
+                                                                   sleep_history_df['Sleep Duration (hr)']
+                            sleep_history_df['Sleep Awake (hr)'] = sleep_history_df['Sleep Awake (hr)'] \
+                                .mask(sleep_history_df['Sleep Awake (hr)'] < 0, np.NaN)
+                            sleep_history_df['Sleep Quality (hr)'] = duration_decimalise(file_df, 'Quality sleep')
+                            sleep_history_df['Sleep Deep (hr)'] = duration_decimalise(file_df, 'Deep sleep')
+                            sleep_history_df['Sleep Efficiency (%)'] = (1 - sleep_history_df['Sleep Awake (hr)'] /
+                                                                        sleep_history_df['Sleep Duration (hr)']) * 100
+                            sleep_history_df['Sleep Efficiency (%)'] = sleep_history_df['Sleep Efficiency (%)'] \
+                                .mask(sleep_history_df['Sleep Efficiency (%)'] > 100, np.NaN)
+                            sleep_history_df['Sleep Heart Rate (bpm)'] = file_df['Heartrate']
+                            sleep_history_df['Sleep Duration Goal (%)'] = sleep_history_df['Sleep Duration (hr)'] / 0.08
+                            sleep_history_df['Sleep Quality Goal (%)'] = sleep_history_df['Sleep Quality (hr)'] / 0.06
+                            sleep_history_df['Sleep Deep Goal (%)'] = sleep_history_df['Sleep Deep (hr)'] / 0.024
+                            sleep_history_df['Sleep Rating (%)'] = np.NaN
+                            sleep_df = pd.concat([sleep_df, normalise(sleep_history_df)], sort=True)
+                        except Exception as exception:
+                            self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     elif os.path.basename(file_name).startswith("_Health-") or os.path.basename(file_name).startswith("Health-"):
-                        file_df = pd.read_csv(file_name, skipinitialspace=True)
-                        file_df = file_df.dropna(how='all', thresh=2).dropna(axis=1, how='all')
-                        if 'Sleep Analysis [Asleep] (hours)' in file_df:
-                            del file_df['Sleep Analysis [Asleep] (hours)']
-                        if 'Sleep Analysis [Asleep] (hr)' in file_df:
-                            del file_df['Sleep Analysis [Asleep] (hr)']
-                        if 'Sleep Analysis [In Bed] (hours)' in file_df:
-                            del file_df['Sleep Analysis [In Bed] (hours)']
-                        if 'Sleep Analysis [In Bed] (hr)' in file_df:
-                            del file_df['Sleep Analysis [In Bed] (hr)']
-                        file_df = file_df.rename(columns={
-                            'Apple Stand Time (min)': 'Stand Time (min)',
-                            'Apple Stand Hour (count)': 'Stand Sessions (count)',
-                            'Active Energy (kJ)': 'Energy Active Burned (kJ)',
-                            'Basal Energy Burned (kJ)': 'Energy Basal Burned (kJ)',
-                            'Mindful Minutes (min)': 'Mindful Breathing Time (min)',
-                            'Headphone Audio Exposure (dBASPL)': 'Hearing Headphone Exposure (dBASPL)',
-                            'Heart Rate Variability (ms)': 'Heart Rate Variability (ms)',
-                            'Heart Rate [Avg] (count/min)': 'Heart Rate Average (bpm)',
-                            'Heart Rate [Max] (count/min)': 'Heart Rate Maximum (bpm)',
-                            'Heart Rate [Min] (count/min)': 'Heart Rate Minimum (bpm)',
-                            'Resting Heart Rate (count/min)': 'Heart Rate Resting (bpm)',
-                            'Apple Exercise Time (min)': 'Exercise Time (min)',
-                            'Step Count (count)': 'Exercise Steps Taken (count)',
-                            'Flights Climbed (count)': 'Exercise Flights Climbed (count)',
-                            'VO2 Max (ml/(kg·min))': 'Exercise VO2 Max (mL/kg/min)',
-                            'Walking + Running Distance (km)': 'Walking Distance (km)',
-                            'Walking Asymmetry Percentage (%)': 'Walking Asymmetry (%)',
-                            'Walking Double Support Percentage (%)': 'Walking Double Support Percentage (%)',
-                            'Walking Heart Rate Average (count/min)': 'Walking Heart Rate Average (bpm)',
-                            'Walking Speed (km/hr)': 'Walking Speed (km/hr)',
-                        })
-                        file_df = file_df.reindex(sorted(file_df.columns), axis=1)
-                        health_df = pd.concat([health_df, normalise(file_df)], sort=True)
+                        try:
+                            file_df = pd.read_csv(file_name, skipinitialspace=True)
+                            file_df = file_df.dropna(how='all', thresh=2).dropna(axis=1, how='all')
+                            if 'Sleep Analysis [Asleep] (hours)' in file_df:
+                                del file_df['Sleep Analysis [Asleep] (hours)']
+                            if 'Sleep Analysis [Asleep] (hr)' in file_df:
+                                del file_df['Sleep Analysis [Asleep] (hr)']
+                            if 'Sleep Analysis [In Bed] (hours)' in file_df:
+                                del file_df['Sleep Analysis [In Bed] (hours)']
+                            if 'Sleep Analysis [In Bed] (hr)' in file_df:
+                                del file_df['Sleep Analysis [In Bed] (hr)']
+                            file_df = file_df.rename(columns={
+                                'Apple Stand Time (min)': 'Stand Time (min)',
+                                'Apple Stand Hour (count)': 'Stand Sessions (count)',
+                                'Active Energy (kJ)': 'Energy Active Burned (kJ)',
+                                'Basal Energy Burned (kJ)': 'Energy Basal Burned (kJ)',
+                                'Mindful Minutes (min)': 'Mindful Breathing Time (min)',
+                                'Headphone Audio Exposure (dBASPL)': 'Hearing Headphone Exposure (dBASPL)',
+                                'Heart Rate Variability (ms)': 'Heart Rate Variability (ms)',
+                                'Heart Rate [Avg] (count/min)': 'Heart Rate Average (bpm)',
+                                'Heart Rate [Max] (count/min)': 'Heart Rate Maximum (bpm)',
+                                'Heart Rate [Min] (count/min)': 'Heart Rate Minimum (bpm)',
+                                'Resting Heart Rate (count/min)': 'Heart Rate Resting (bpm)',
+                                'Apple Exercise Time (min)': 'Exercise Time (min)',
+                                'Step Count (count)': 'Exercise Steps Taken (count)',
+                                'Flights Climbed (count)': 'Exercise Flights Climbed (count)',
+                                'VO2 Max (ml/(kg·min))': 'Exercise VO2 Max (mL/kg/min)',
+                                'Walking + Running Distance (km)': 'Walking Distance (km)',
+                                'Walking Asymmetry Percentage (%)': 'Walking Asymmetry (%)',
+                                'Walking Double Support Percentage (%)': 'Walking Double Support Percentage (%)',
+                                'Walking Heart Rate Average (count/min)': 'Walking Heart Rate Average (bpm)',
+                                'Walking Speed (km/hr)': 'Walking Speed (km/hr)',
+                            })
+                            file_df = file_df.reindex(sorted(file_df.columns), axis=1)
+                            health_df = pd.concat([health_df, normalise(file_df)], sort=True)
+                        except Exception as exception:
+                            self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     elif os.path.basename(file_name).startswith("_Workout-") or os.path.basename(file_name).startswith("Workout-"):
-                        file_df = pd.read_csv(file_name, skipinitialspace=True)
-                        file_df['Start'] = pd.to_datetime(file_df['Start'], format='%Y-%m-%d %H:%M')
-                        file_df['End'] = pd.to_datetime(file_df['End'], format='%Y-%m-%d %H:%M')
-                        file_df['Duration'] = file_df['Duration'].apply(lambda x: datetime.strptime(x, '%H:%M:%S'))
-                        file_df['Duration'] = file_df['Duration'] - datetime.strptime('00:00', '%M:%S')
-                        file_df['Duration'] = file_df['Duration'].apply(lambda x: x / np.timedelta64(1, 's') * 60)
-                        file_df = file_df.add_prefix("Workout ")
-                        file_df.insert(0, 'Date', pd.to_datetime(file_df['Workout Start'], format='%Y-%m-%d %H:%M'))
-                        file_df = file_df.rename(columns={
-                            'Workout Start': 'Workout Start (dt)',
-                            'Workout End': 'Workout Finish (dt)',
-                            'Workout Duration': 'Workout Duration (sec)',
-                            'Workout Total Energy (kJ)': 'Workout Energy Total (kJ)',
-                            'Workout Active Energy (kJ)': 'Workout Energy Active (kJ)',
-                            'Workout Avg Speed(km/hr)': 'Workout Speed Average (km/hr)',
-                            'Workout Avg Heart Rate (bpm)': 'Workout Heart Rate Average (bpm)',
-                            'Workout Max Heart Rate (bpm)': 'Workout Heart Rate Maximum (bpm)',
-                            'Workout Flights Climbed (count)': 'Workout Flights Climbed (count)',
-                            'Workout Type': 'Workout Type (string)',
-                        })
-                        file_df = file_df.reindex(sorted(file_df.columns), axis=1)
-                        workout_df = pd.concat([workout_df, normalise(file_df)], sort=True)
+                        try:
+                            file_df = pd.read_csv(file_name, skipinitialspace=True)
+                            file_df['Start'] = pd.to_datetime(file_df['Start'], format='%Y-%m-%d %H:%M')
+                            file_df['End'] = pd.to_datetime(file_df['End'], format='%Y-%m-%d %H:%M')
+                            file_df['Duration'] = file_df['Duration'].apply(lambda x: datetime.strptime(x, '%H:%M:%S'))
+                            file_df['Duration'] = file_df['Duration'] - datetime.strptime('00:00', '%M:%S')
+                            file_df['Duration'] = file_df['Duration'].apply(lambda x: x / np.timedelta64(1, 's') * 60)
+                            file_df = file_df.add_prefix("Workout ")
+                            file_df.insert(0, 'Date', pd.to_datetime(file_df['Workout Start'], format='%Y-%m-%d %H:%M'))
+                            file_df = file_df.rename(columns={
+                                'Workout Start': 'Workout Start (dt)',
+                                'Workout End': 'Workout Finish (dt)',
+                                'Workout Duration': 'Workout Duration (sec)',
+                                'Workout Total Energy (kJ)': 'Workout Energy Total (kJ)',
+                                'Workout Active Energy (kJ)': 'Workout Energy Active (kJ)',
+                                'Workout Avg Speed(km/hr)': 'Workout Speed Average (km/hr)',
+                                'Workout Avg Heart Rate (bpm)': 'Workout Heart Rate Average (bpm)',
+                                'Workout Max Heart Rate (bpm)': 'Workout Heart Rate Maximum (bpm)',
+                                'Workout Flights Climbed (count)': 'Workout Flights Climbed (count)',
+                                'Workout Type': 'Workout Type (string)',
+                            })
+                            file_df = file_df.reindex(sorted(file_df.columns), axis=1)
+                            workout_df = pd.concat([workout_df, normalise(file_df)], sort=True)
+                        except Exception as exception:
+                            self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     else:
-                        raise Exception("Unknown file format [{}]".format(file_name))
-            health_df = health_df[~health_df.index.duplicated(keep='last')]
-            health_df = health_df[[
-                'Energy Basal Burned (kJ)',
-                'Energy Active Burned (kJ)',
-                'Stand Time (min)',
-                'Stand Sessions (count)',
-                'Exercise Time (min)',
-                'Exercise Steps Taken (count)',
-                'Exercise Flights Climbed (count)',
-                'Walking Asymmetry (%)',
-                'Walking Distance (km)',
-                'Walking Double Support Percentage (%)',
-                'Walking Heart Rate Average (bpm)',
-                'Walking Speed (km/hr)',
-                'Mindful Breathing Time (min)',
-                'Hearing Headphone Exposure (dBASPL)',
-                'Heart Rate Average (bpm)',
-                'Heart Rate Maximum (bpm)',
-                'Heart Rate Minimum (bpm)',
-                'Heart Rate Resting (bpm)',
-                'Heart Rate Variability (ms)',
-            ]]
-            workout_df = workout_df[~workout_df.index.duplicated(keep='last')]
-            workout_df = workout_df[[
-                'Workout Distance (km)',
-                'Workout Duration (sec)',
-                'Workout Elevation Ascended (m)',
-                'Workout Elevation Descended (m)',
-                'Workout Energy Active (kJ)',
-                'Workout Energy Total (kJ)',
-                'Workout Finish (dt)',
-                'Workout Flights Climbed (count)',
-                'Workout Heart Rate Average (bpm)',
-                'Workout Heart Rate Maximum (bpm)',
-                'Workout Speed Average (km/hr)',
-                'Workout Start (dt)',
-                'Workout Step Cadence (spm)',
-                'Workout Step Count (count)',
-                'Workout Swim Stoke Cadence (spm)',
-                'Workout Swimming Stroke Count (count)',
-                'Workout Type (string)',
-            ]]
-            sleep_df = sleep_df[~sleep_df.index.duplicated(keep='last')]
-            sleep_df = sleep_df[[
-                'Sleep Start (dt)',
-                'Sleep Finish (dt)',
-                'Sleep Balance (hr)',
-                'Sleep Recharge (%)',
-                'Sleep Debt (%)',
-                'Sleep Credit (%)',
-                'Sleep Duration (hr)',
-                'Sleep Duration Goal (%)',
-                'Sleep Quality (hr)',
-                'Sleep Quality Goal (%)',
-                'Sleep Deep (hr)',
-                'Sleep Deep Goal (%)',
-                'Sleep Awake (hr)',
-                'Sleep Efficiency (%)',
-                'Sleep Readiness Rating (%)',
-                'Sleep Rating (%)',
-                'Sleep Heart Rate (bpm)',
-                'Sleep Heart Rate Variability (ms)',
-                'Sleep Heart Rate Variability Baseline (ms)',
-                'Sleep Heart Rate Waking (bpm)',
-                'Sleep Heart Rate Waking Baseline (bpm)',
-            ]]
-            data_df = pd.concat([health_df, workout_df, sleep_df, ], axis=1, sort=True)
-            data_delta_df = self.delta_cache(data_df, "health")
+                        self.print_log("Error: Unknown file format [{}]".format(file_name))
+                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+            try:
+                health_df = health_df[~health_df.index.duplicated(keep='last')]
+                health_df = health_df[[
+                    'Energy Basal Burned (kJ)',
+                    'Energy Active Burned (kJ)',
+                    'Stand Time (min)',
+                    'Stand Sessions (count)',
+                    'Exercise Time (min)',
+                    'Exercise Steps Taken (count)',
+                    'Exercise Flights Climbed (count)',
+                    'Walking Asymmetry (%)',
+                    'Walking Distance (km)',
+                    'Walking Double Support Percentage (%)',
+                    'Walking Heart Rate Average (bpm)',
+                    'Walking Speed (km/hr)',
+                    'Mindful Breathing Time (min)',
+                    'Hearing Headphone Exposure (dBASPL)',
+                    'Heart Rate Average (bpm)',
+                    'Heart Rate Maximum (bpm)',
+                    'Heart Rate Minimum (bpm)',
+                    'Heart Rate Resting (bpm)',
+                    'Heart Rate Variability (ms)',
+                ]]
+                workout_df = workout_df[~workout_df.index.duplicated(keep='last')]
+                workout_df = workout_df[[
+                    'Workout Distance (km)',
+                    'Workout Duration (sec)',
+                    'Workout Elevation Ascended (m)',
+                    'Workout Elevation Descended (m)',
+                    'Workout Energy Active (kJ)',
+                    'Workout Energy Total (kJ)',
+                    'Workout Finish (dt)',
+                    'Workout Flights Climbed (count)',
+                    'Workout Heart Rate Average (bpm)',
+                    'Workout Heart Rate Maximum (bpm)',
+                    'Workout Speed Average (km/hr)',
+                    'Workout Start (dt)',
+                    'Workout Step Cadence (spm)',
+                    'Workout Step Count (count)',
+                    'Workout Swim Stoke Cadence (spm)',
+                    'Workout Swimming Stroke Count (count)',
+                    'Workout Type (string)',
+                ]]
+                sleep_df = sleep_df[~sleep_df.index.duplicated(keep='last')]
+                sleep_df = sleep_df[[
+                    'Sleep Start (dt)',
+                    'Sleep Finish (dt)',
+                    'Sleep Balance (hr)',
+                    'Sleep Recharge (%)',
+                    'Sleep Debt (%)',
+                    'Sleep Credit (%)',
+                    'Sleep Duration (hr)',
+                    'Sleep Duration Goal (%)',
+                    'Sleep Quality (hr)',
+                    'Sleep Quality Goal (%)',
+                    'Sleep Deep (hr)',
+                    'Sleep Deep Goal (%)',
+                    'Sleep Awake (hr)',
+                    'Sleep Efficiency (%)',
+                    'Sleep Readiness Rating (%)',
+                    'Sleep Rating (%)',
+                    'Sleep Heart Rate (bpm)',
+                    'Sleep Heart Rate Variability (ms)',
+                    'Sleep Heart Rate Variability Baseline (ms)',
+                    'Sleep Heart Rate Waking (bpm)',
+                    'Sleep Heart Rate Waking Baseline (bpm)',
+                ]]
+                data_df = pd.concat([health_df, workout_df, sleep_df, ], axis=1, sort=True)
+                data_delta_df = self.delta_cache(data_df, "health")
+            except Exception as exception:
+                self.print_log("Unexpected error processing health data", exception)
+                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, len(files))
         else:
             self.print_log("No new data found")
 
