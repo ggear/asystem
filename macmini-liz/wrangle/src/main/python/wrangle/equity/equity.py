@@ -282,4 +282,4 @@ class Equity(library.Library):
                 self.delta_write()
 
     def __init__(self, profile_path=".profile"):
-        super(Equity, self).__init__("Equity", "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-", "1SqlVPcdzLuHAOw4kh4JfmA9AOu7_KZIY", profile_path)
+        super(Equity, self).__init__("Equity", "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-", profile_path)

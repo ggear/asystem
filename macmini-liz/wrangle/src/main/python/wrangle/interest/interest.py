@@ -87,4 +87,4 @@ class Interest(library.Library):
             self.print_log("No new data found")
 
     def __init__(self, profile_path=".profile"):
-        super(Interest, self).__init__("Interest", "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ", "1RSp8wFfHQX9qHebFArQRuWZs34Lq46r8", profile_path)
+        super(Interest, self).__init__("Interest", "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ", profile_path)

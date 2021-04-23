@@ -165,4 +165,4 @@ class Currency(library.Library):
             self.print_log("No new data found")
 
     def __init__(self, profile_path=".profile"):
-        super(Currency, self).__init__("Currency", "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE", "1hIsXqfvH7TGC5yP7BUoRDbZoYIk0IQAK", profile_path)
+        super(Currency, self).__init__("Currency", "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE", profile_path)

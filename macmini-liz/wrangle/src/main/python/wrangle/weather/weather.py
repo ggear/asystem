@@ -51,4 +51,4 @@ class Weather(library.Library):
             self.print_log("No new data found")
 
     def __init__(self, profile_path=".profile"):
-        super(Weather, self).__init__("Weather", "1SiOrwMf-DgNQ19wRNbE7itzd4RWT829v", "1UeIHON2ONO8I24j0vZtvh9QXwIGKn3-s", profile_path)
+        super(Weather, self).__init__("Weather", "1SiOrwMf-DgNQ19wRNbE7itzd4RWT829v", profile_path)

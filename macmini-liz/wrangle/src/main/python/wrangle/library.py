@@ -453,31 +453,36 @@ class Library(object):
                 actioned_files[local_path] = True, file_actioned
         return collections.OrderedDict(sorted(actioned_files.items()))
 
-    def delta_cache(self, data_df_current, file_prefix):
-        file_delta = "{}/{}_delta.csv".format(self.output, file_prefix)
-        file_current = "{}/{}_current.csv".format(self.output, file_prefix)
-        file_previous = "{}/{}_previous.csv".format(self.output, file_prefix)
-        if not os.path.isdir(self.output):
-            os.makedirs(self.output)
+    def state_cache(self, data_df_input, file_prefix):
+        data_df_current = pd.DataFrame()
+        file_delta = "{}/__{}_Delta.csv".format(self.input, file_prefix)
+        file_input = "{}/__{}_Input.csv".format(self.input, file_prefix)
+        file_current = "{}/__{}_Current.csv".format(self.input, file_prefix)
+        file_previous = "{}/__{}_Previous.csv".format(self.input, file_prefix)
+        if not os.path.isdir(self.input):
+            os.makedirs(self.input)
         if os.path.isfile(file_current):
+            data_df_current = pd.read_csv(file_current, index_col=0)
             shutil.move(file_current, file_previous)
+        data_df_input.to_csv(file_input)
+        data_df_input = pd.read_csv(file_input, index_col=0)
+        data_df_current = pd.concat([data_df_current, data_df_input], sort=True)
+        data_df_current = data_df_current[~data_df_current.index.duplicated(keep='last')]
         data_df_current.to_csv(file_current)
-        data_df_previous = pd.read_csv(file_previous, index_col=0) if os.path.isfile(file_previous) else pd.DataFrame()
         data_df_current = pd.read_csv(file_current, index_col=0)
+        data_df_previous = pd.read_csv(file_previous, index_col=0) if os.path.isfile(file_previous) else pd.DataFrame()
         data_df_delta = data_df_current if len(data_df_previous) == 0 else \
-            data_df_current.merge(data_df_previous, how='outer', indicator=True) \
-                .loc[lambda x: x['_merge'] == 'left_only'].drop('_merge', 1)
+            data_df_current.merge(data_df_previous, how='left', left_index=True, right_index=True, indicator=True) \
+                .loc[lambda x: x['_merge'] != 'both'].drop('_merge', 1)
         data_df_delta.to_csv(file_delta)
         self.counters[CTR_SRC_DATA][CTR_ACT_PREVIOUS] = len(data_df_previous)
         self.counters[CTR_SRC_DATA][CTR_ACT_CURRENT] = len(data_df_current)
         self.counters[CTR_SRC_DATA][CTR_ACT_DELTA] = len(data_df_delta)
-        return data_df_delta
+        return data_df_delta, data_df_current, data_df_previous
 
-    def delta_write(self):
+    def state_write(self):
         self.drive_sync(self.input_drive, self.input, check=True, download=False, upload=True)
         self.print_log("Directory [{}] uploaded to [{}]".format(self.input, self.input_drive))
-        self.drive_sync(self.output_drive, self.output, check=False, download=False, upload=True)
-        self.print_log("Directory [{}] uploaded to [{}]".format(self.output, self.output_drive))
 
     def sheet_write(self, data_df, drive_url, sheet_params={}):
         Spread(drive_url).df_to_sheet(data_df, **sheet_params)
@@ -500,11 +505,9 @@ class Library(object):
             print(line)
             self.add_counter(CTR_SRC_DATA, CTR_ACT_DATABASE)
 
-    def __init__(self, name, input_drive, output_drive, profile_path):
+    def __init__(self, name, input_drive, profile_path):
         self.name = name
         self.reset_counters()
         self.input_drive = input_drive
-        self.output_drive = output_drive
+        self.input = get_dir("data/{}".format(name.lower()))
         self.profile = load_profile(profile_path)
-        self.input = get_dir("data/{}/input".format(name.lower()))
-        self.output = get_dir("data/{}/output".format(name.lower()))

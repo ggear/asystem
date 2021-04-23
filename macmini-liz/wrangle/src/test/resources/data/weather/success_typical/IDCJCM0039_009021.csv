@@ -1,0 +1,69 @@
+"Monthly Climate Statistics for 'PERTH AIRPORT' [009021]"
+"Created on [ 24 Feb 2021 15:08:52 GMT+00:00]"
+
+"009021 PERTH AIRPORT"
+"Commenced: 1944"
+"Last Record: 2021"
+"Latitude:   31.93 Degrees South"
+"Longitude:  115.98 Degrees East"
+"Elevation:      15 m"
+"State: WA"
+
+"Statistic Element","January","February","March","April","May","June","July","August","September","October","November","December","Annual","Number of Years","Start Year","End Year"
+"Mean maximum temperature (Degrees C) for years 1944 to 2021 ",31.8,32.0,29.7,25.6,21.8,19.0,18.0,18.6,20.2,22.8,26.1,29.2,24.6,77,1944,2021
+"Highest temperature (Degrees C) for years 1944 to 2021 ",46.0,46.7,43.8,39.6,35.3,27.8,25.7,29.9,34.5,37.7,41.1,44.5,46.7,77,1944,2021
+"Date of Highest temperature for years 1944 to 2021 ",31 Jan  1991,23 Feb  1991,10 Mar  2003,11 Apr  2020,01 May  2002,05 Jun  1975,21 Jul  1994,28 Aug  2019,20 Sep  2014,26 Oct  1961,16 Nov  2019,26 Dec  2007,23 Feb  1991,N/A,1944,2021
+"Lowest maximum temperature (Degrees C) for years 1944 to 2021 ",19.7,17.1,15.8,13.9,11.7,9.4,10.7,9.9,12.7,12.3,14.2,15.2,9.4,77,1944,2021
+"Date of Lowest maximum temperature for years 1944 to 2021 ",30 Jan  2017,09 Feb  2017,27 Mar  1968,20 Apr  1970,23 May  1995,26 Jun  1956,21 Jul  1978,05 Aug  1951,24 Sep  1971,18 Oct  1947,19 Nov  1992,17 Dec  1952,26 Jun  1956,N/A,1944,2021
+"Decile 1 maximum temperature (Degrees C) for years 1944 to 2016 ",25.4,25.7,24.3,21.1,18.2,16.1,15.4,15.8,16.9,18.5,20.7,23.0, ,73,1944,2016
+"Decile 9 maximum temperature (Degrees C) for years 1944 to 2016 ",38.5,38.2,35.6,31.0,25.8,21.9,20.6,21.7,24.3,28.3,32.7,36.3, ,73,1944,2016
+"Mean number of days >= 30 Degrees C for years 1944 to 2021 ",18.9,18.5,14.1,4.4,0.4,0.0,0.0,0.0,0.2,2.0,6.5,12.3,77.3,77,1944,2021
+"Mean number of days >= 35 Degrees C for years 1944 to 2021 ",9.0,7.7,4.2,0.5,0.0,0.0,0.0,0.0,0.0,0.2,1.5,4.8,27.9,77,1944,2021
+"Mean number of days >= 40 Degrees C for years 1944 to 2021 ",1.7,1.1,0.4,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.1,0.8,4.1,77,1944,2021
+"Mean minimum temperature (Degrees C) for years 1944 to 2021 ",17.1,17.5,16.0,13.0,10.4,9.0,8.0,8.1,8.9,10.3,12.8,15.0,12.2,77,1944,2021
+"Lowest temperature (Degrees C) for years 1944 to 2021 ",6.0,5.7,3.1,1.2,-0.4,-1.3,-1.0,0.1,-0.2,1.2,3.2,4.8,-1.3,77,1944,2021
+"Date of Lowest temperature for years 1944 to 2021 ",25 Jan  2001,13 Feb  1981,27 Mar  2007,27 Apr  1960,29 May  1964,17 Jun  2006,03 Jul  2010,15 Aug  2004,01 Sep  1956,10 Oct  2005,18 Nov  2004,02 Dec  2002,17 Jun  2006,N/A,1944,2021
+"Highest minimum temperature (Degrees C) for years 1944 to 2021 ",28.5,28.7,28.6,23.9,20.8,17.7,16.2,16.7,19.2,21.3,26.3,27.5,28.7,77,1944,2021
+"Date of Highest minimum temperature for years 1944 to 2021 ",12 Jan  2014,26 Feb  1997,12 Mar  2010,14 Apr  1999,08 May  1998,15 Jun  1947,02 Jul  2014,07 Aug  2006,30 Sep  2010,29 Oct  1979,12 Nov  2003,29 Dec  2012,26 Feb  1997,N/A,1944,2021
+"Decile 1 minimum temperature (Degrees C) for years 1944 to 2016 ",12.6,13.0,11.3,7.9,6.1,4.6,3.7,3.9,5.0,6.2,8.6,10.5, ,72,1944,2016
+"Decile 9 minimum temperature (Degrees C) for years 1944 to 2016 ",21.8,21.9,20.4,17.7,14.8,13.0,11.9,12.0,12.7,14.5,16.8,19.4, ,72,1944,2016
+"Mean number of days <= 2 Degrees C for years 1944 to 2021 ",0.0,0.0,0.0,0.0,0.2,0.6,0.9,0.6,0.2,0.0,0.0,0.0,2.5,77,1944,2021
+"Mean number of days <= 0 Degrees C for years 1944 to 2021 ",0.0,0.0,0.0,0.0,0.0,0.1,0.1,0.0,0.0,0.0,0.0,0.0,0.2,77,1944,2021
+"Mean daily ground minimum temperature Degrees C for years 1965 to 2017 ",14.9,15.6,13.7,10.8,8.3,6.8,6.2,6.3,7.1,8.4,10.7,12.7,10.1,52,1965,2017
+"Lowest ground temperature Degrees C for years 1965 to 2017 ",1.7,2.5,-1.0,-0.1,-1.1,-3.6,-2.4,-2.1,-0.5,-1.6,0.2,1.3,-3.6,52,1965,2017
+"Date of Lowest ground temperature  for years 1965 to 2017 ",14 Jan  1988,15 Feb  1986,25 Mar  1991,24 Apr  1971,12 May  1996,27 Jun  1990,02 Jul  1990,18 Aug  1966,11 Sep  2004,06 Oct  1994,08 Nov  1992,06 Dec  1996,27 Jun  1990,N/A,1965,2017
+"Mean number of days ground min. temp. <= -1 Degrees C for years 1965 to 2017 ",0.0,0.0,0.0,0.0,0.0,0.3,0.5,0.1,0.0,0.0,0.0,0.0,0.9,52,1965,2017
+"Mean rainfall (mm) for years 1944 to 2021 ",10.8,15.0,16.2,39.7,97.6,155.1,154.2,118.7,72.3,42.6,26.3,11.1,760.4,76,1944,2021
+"Highest rainfall (mm) for years 1944 to 2021 ",102.4,150.4,61.9,135.0,229.0,424.1,446.7,340.3,172.4,124.8,88.8,67.4,1164.7,77,1944,2021
+"Date of Highest rainfall for years 1944 to 2021 ",2000,1992,1968,2008,1967,1945,1958,1955,2013,1971,2020,2011,1955,N/A,1944,2021
+"Lowest rainfall (mm) for years 1944 to 2021 ",0.0,0.0,0.0,0.0,12.4,23.0,30.6,19.0,11.5,1.3,1.3,0.0,479.6,77,1944,2021
+"Date of Lowest rainfall for years 1944 to 2021 ",2021,2014,2012,2017,2019,2013,2012,2008,1969,1969,1957,2009,2006,N/A,1944,2021
+"Decile 1 monthly rainfall (mm) for years 1944 to 2021 ",0.0,0.0,0.4,5.5,37.4,72.6,83.8,65.5,32.8,15.7,5.1,0.3,605.0,77,1944,2021
+"Decile 5 (median) monthly rainfall (mm) for years 1944 to 2021 ",2.3,5.1,9.7,32.6,88.6,145.2,154.2,119.2,66.8,36.4,19.8,7.8,743.6,77,1944,2021
+"Decile 9 monthly rainfall (mm) for years 1944 to 2021 ",27.7,34.0,43.3,76.5,166.6,232.1,217.1,162.7,108.1,76.6,54.5,25.4,951.1,77,1944,2021
+"Highest daily rainfall (mm) for years 1944 to 2021 ",90.2,132.0,43.2,61.0,57.4,78.2,99.0,66.4,59.6,60.2,41.1,36.0,132.0,77,1944,2021
+"Date of Highest daily rainfall for years 1944 to 2021 ",16 Jan  2018,09 Feb  1992,23 Mar  2010,17 Apr  2002,03 May  1947,10 Jun  1945,30 Jul  2001,08 Aug  1977,14 Sep  1984,18 Oct  1995,15 Nov  1948,13 Dec  2011,09 Feb  1992,N/A,1944,2021
+"Mean number of days of rain for years 1944 to 2021 ",2.5,2.8,3.9,7.3,12.1,16.1,17.5,15.7,13.2,9.2,6.5,3.9,110.7,77,1944,2021
+"Mean number of days of rain >= 1 mm for years 1944 to 2021 ",1.4,1.5,2.3,5.3,9.8,13.8,14.8,13.0,10.2,6.6,4.2,2.2,85.1,77,1944,2021
+"Mean number of days of rain >= 10 mm for years 1944 to 2021 ",0.2,0.5,0.5,1.2,3.5,5.4,5.8,4.2,2.4,1.2,0.8,0.3,26.0,77,1944,2021
+"Mean number of days of rain >= 25 mm for years 1944 to 2021 ",0.1,0.1,0.1,0.3,0.8,1.5,1.2,0.6,0.3,0.1,0.1,0.0,5.2,77,1944,2021
+"Mean daily wind run (km) for years 1994 to 2020 ",483,473,443,370,324,325,329,335,368,410,454,481,400,24,1994,2020
+"Maximum wind gust speed (km/h) for years 1944 to 2021 ",113,100,113,115,122,106,124,109,113,98,113,108,124,75,1944,2021
+"Date of Maximum wind gust speed for years 1944 to 2021 ",26 Jan  1949,21 Feb  2006,12 Mar  1969,08 Apr  1987,28 May  1946,28 Jun  1983,22 Jul  1990,21 Aug  1965,24 Sep  1971,03 Oct  1962,15 Nov  1965,16 Dec  1991,22 Jul  1990,N/A,1944,2021
+"Mean daily sunshine (hours) for years 1993 to 2021 ",11.5,11.0,9.5,8.1,6.9,6.0,6.1,7.1,7.8,9.6,10.7,11.5,8.8,26,1993,2021
+"Mean daily solar exposure (MJ/(m*m)) for years 1990 to 2021 ",28.9,25.5,20.7,15.1,11.2,9.2,9.8,12.7,16.6,22.2,26.4,29.6,19.0,31,1990,2021
+"Mean number of clear days for years 1944 to 2010 ",18.0,16.0,15.5,10.7,8.3,6.9,6.7,8.1,9.2,11.0,11.8,16.5,138.7,66,1944,2010
+"Mean number of cloudy days for years 1944 to 2010 ",4.6,4.8,6.0,10.0,12.0,12.7,12.8,11.3,10.2,9.3,7.8,5.4,106.9,66,1944,2010
+"Mean daily evaporation (mm) for years 1981 to 2020 ",10.2,9.6,7.7,5.0,3.0,2.2,2.1,2.6,3.7,5.4,7.6,9.1,5.7,37,1981,2020
+"Mean 9am temperature (Degrees C) for years 1944 to 2010 ",23.8,23.5,21.7,18.4,15.0,12.7,11.7,12.4,14.5,17.1,20.0,22.3,17.8,66,1944,2010
+"Mean 9am wet bulb temperature (Degrees C) for years 1944 to 2010 ",17.3,17.4,16.4,14.6,12.5,11.0,10.2,10.5,11.8,13.2,14.8,16.2,13.8,66,1944,2010
+"Mean 9am dew point temperature (Degrees C) for years 1944 to 2010 ",12.2,12.7,12.1,11.2,10.0,9.2,8.5,8.4,9.1,9.4,10.1,11.2,10.3,66,1944,2010
+"Mean 9am relative humidity (%) for years 1944 to 2010 ",51,53,57,66,74,81,82,78,71,62,55,52,65,66,1944,2010
+"Mean 9am cloud cover (okas) for years 1944 to 2010 ",2.6,2.7,2.9,3.8,4.2,4.4,4.4,4.0,3.8,3.7,3.5,2.9,3.6,66,1944,2010
+"Mean 9am wind speed (km/h) for years 1944 to 2010 ",17.7,17.8,16.1,13.1,11.0,10.9,10.9,11.4,13.0,14.9,16.8,16.6,14.2,67,1944,2010
+"Mean 3pm temperature (Degrees C) for years 1944 to 2010 ",29.9,30.2,28.1,24.2,20.6,17.8,16.8,17.3,18.8,21.1,24.2,27.1,23.0,66,1944,2010
+"Mean 3pm wet bulb temperature (Degrees C) for years 1944 to 2010 ",19.7,19.9,18.7,16.8,14.9,13.5,12.7,12.7,13.6,14.8,16.5,18.2,16.0,66,1944,2010
+"Mean 3pm dew point temperature (Degrees C) for years 1944 to 2010 ",12.2,12.3,11.5,10.8,9.7,9.4,8.5,8.0,8.6,9.2,10.0,11.3,10.1,66,1944,2010
+"Mean 3pm relative humidity (%) for years 1944 to 2010 ",37,37,39,46,53,60,60,56,54,49,44,41,48,66,1944,2010
+"Mean 3pm cloud cover (oktas) for years 1944 to 2010 ",2.2,2.4,3.0,4.1,4.5,4.9,5.0,4.6,4.3,3.7,3.4,2.6,3.7,66,1944,2010
+"Mean 3pm wind speed (km/h) for years 1944 to 2010 ",21.7,20.3,18.6,16.3,14.7,15.5,16.0,16.9,18.7,20.9,22.0,22.7,18.7,67,1944,2010

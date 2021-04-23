@@ -319,7 +319,7 @@ class Health(library.Library):
                     'Sleep Heart Rate Waking Baseline (bpm)',
                 ]]
                 data_df = pd.concat([health_df, workout_df, sleep_df, ], axis=1, sort=True)
-                data_delta_df = self.delta_cache(data_df, "health")
+                data_df_delta, _, _ = self.state_cache(data_df, "Health")
             except Exception as exception:
                 self.print_log("Unexpected error processing health data", exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, len(files))
@@ -327,4 +327,4 @@ class Health(library.Library):
             self.print_log("No new data found")
 
     def __init__(self, profile_path=".profile"):
-        super(Health, self).__init__("Health", "1oI-jGTGsaYJgvj--v0q0B4Q_42OR21E2", "161A72NTU5CZWiGCDkrCCTl3fjG2N4E6S", profile_path)
+        super(Health, self).__init__("Health", "1oI-jGTGsaYJgvj--v0q0B4Q_42OR21E2", profile_path)
