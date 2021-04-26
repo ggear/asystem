@@ -454,7 +454,9 @@ class Library(object):
         return collections.OrderedDict(sorted(actioned_files.items()))
 
     def state_cache(self, data_df_input, file_prefix):
-        data_df_current = pd.DataFrame()
+        column_names = data_df_input.columns.get_values().tolist()
+        data_df_current = pd.DataFrame(columns=column_names)
+        data_df_current.index.name = 'Date'
         file_delta = "{}/__{}_Delta.csv".format(self.input, file_prefix)
         file_input = "{}/__{}_Input.csv".format(self.input, file_prefix)
         file_current = "{}/__{}_Current.csv".format(self.input, file_prefix)
@@ -468,12 +470,13 @@ class Library(object):
         data_df_input = pd.read_csv(file_input, index_col=0)
         data_df_current = pd.concat([data_df_current, data_df_input], sort=True)
         data_df_current = data_df_current[~data_df_current.index.duplicated(keep='last')]
+        data_df_current = data_df_current[column_names]
         data_df_current.to_csv(file_current)
         data_df_current = pd.read_csv(file_current, index_col=0)
-        data_df_previous = pd.read_csv(file_previous, index_col=0) if os.path.isfile(file_previous) else pd.DataFrame()
+        data_df_previous = pd.read_csv(file_previous, index_col=0) if os.path.isfile(file_previous) else pd.DataFrame(columns=column_names)
         data_df_delta = data_df_current if len(data_df_previous) == 0 else \
-            data_df_current.merge(data_df_previous, how='left', left_index=True, right_index=True, indicator=True) \
-                .loc[lambda x: x['_merge'] != 'both'].drop('_merge', 1)
+            data_df_current.merge(data_df_previous, on=column_names, how='outer', left_index=True, right_index=True, indicator=True) \
+                .loc[lambda x: x['_merge'] != 'both'].drop('_merge', 1).drop_duplicates()
         data_df_delta.to_csv(file_delta)
         self.counters[CTR_SRC_DATA][CTR_ACT_PREVIOUS] = len(data_df_previous)
         self.counters[CTR_SRC_DATA][CTR_ACT_CURRENT] = len(data_df_current)

@@ -11,7 +11,7 @@ import pandas as pd
 
 from .. import library
 
-LINE_PROTOCOL = "health,source={},type={},period={} {}="
+LINE_PROTOCOL = "health,type={},unit={} {}="
 
 
 class Health(library.Library):
@@ -319,7 +319,18 @@ class Health(library.Library):
                     'Sleep Heart Rate Waking Baseline (bpm)',
                 ]]
                 data_df = pd.concat([health_df, workout_df, sleep_df, ], axis=1, sort=True)
-                data_df_delta, _, _ = self.state_cache(data_df, "Health")
+                data_delta_df, _, _ = self.state_cache(data_df, "Health")
+
+                if len(data_delta_df):
+                    for dimension in data_delta_df.columns.get_values().tolist():
+                        dimension_value = data_delta_df[dimension].dropna()
+                        dimension_type = dimension.split(' ')[0].lower()
+                        dimension_metric = dimension.split('(')[0].replace(dimension.split(' ')[0], '').strip().replace(' ', '-').lower()
+                        dimension_unit = dimension.split('(')[-1].replace(')', '').strip()
+                        self.database_write("\n".join(LINE_PROTOCOL.format(dimension_type, dimension_unit, dimension_metric) +
+                                                      dimension_value.map(str) +
+                                                      " " + (pd.to_datetime(dimension_value.index).astype(int) +
+                                                             6 * 60 * 60 * 1000000000).map(str)))
             except Exception as exception:
                 self.print_log("Unexpected error processing health data", exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, len(files))

@@ -33,39 +33,39 @@ TEST_ASSERT_DEFAULT = {
 class WrangleTest(unittest.TestCase):
 
     def test_currency(self):
-        self.run_module("currency", {"success_typical": ASSERT_DEFAULT, })
+        self.run_module("currency", {"success_typical": ASSERT_DEFAULT, }, write=False)
 
     def test_currency_all(self):
-        self.run_module("currency", TEST_ASSERT_DEFAULT, write=True)
+        self.run_module("currency", TEST_ASSERT_DEFAULT, write=False)
 
     def test_health(self):
-        self.run_module("health", {"success_typical": ASSERT_DEFAULT, })
+        self.run_module("health", {"success_typical": ASSERT_DEFAULT, }, write=False)
 
     def test_health_all(self):
-        self.run_module("health", TEST_ASSERT_DEFAULT, write=True)
+        self.run_module("health", TEST_ASSERT_DEFAULT, write=False)
 
     def test_equity(self):
-        self.run_module("equity", {"success_typical": ASSERT_DEFAULT, })
+        self.run_module("equity", {"success_typical": ASSERT_DEFAULT, }, write=False)
 
     def test_equity_all(self):
-        self.run_module("equity", TEST_ASSERT_DEFAULT, write=True)
+        self.run_module("equity", TEST_ASSERT_DEFAULT, write=False)
 
     def test_interest(self):
-        self.run_module("interest", {"success_typical": ASSERT_DEFAULT, })
+        self.run_module("interest", {"success_typical": ASSERT_DEFAULT, }, write=False)
 
     def test_interest_all(self):
-        self.run_module("interest", TEST_ASSERT_DEFAULT, write=True)
+        self.run_module("interest", TEST_ASSERT_DEFAULT, write=False)
 
     def test_weather(self):
-        self.run_module("weather", {"success_typical": ASSERT_DEFAULT, })
+        self.run_module("weather", {"success_typical": ASSERT_DEFAULT, }, write=False)
 
     def test_weather_all(self):
-        self.run_module("weather", TEST_ASSERT_DEFAULT, write=True)
+        self.run_module("weather", TEST_ASSERT_DEFAULT, write=False)
 
     def test_all(self):
         for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
             if not module_path.endswith("__init__.py"):
-                self.run_module(os.path.basename(os.path.dirname(module_path)), {"success_typical": {}, }, prepare_only=True, write=True)
+                self.run_module(os.path.basename(os.path.dirname(module_path)), {"success_fresh": {}, }, prepare_only=True, write=True)
         print("")
         self.assertEqual(main.main(), 0, "Main script ran with errors on first run")
         print("")
@@ -90,7 +90,7 @@ class WrangleTest(unittest.TestCase):
                     with patch.object(library.Library, "sheet_write") if not write else no_op():
                         with patch.object(library.Library, "drive_write") if not write else no_op():
                             with patch.object(library.Library, "database_write") if not write else no_op():
-                                print("RUNNING [{}.{}]".format(module_name.title(), test))
+                                print("RUNNING    [{}]   [{}]".format(module_name.title(), test))
                                 module.run()
                                 module.print_counters()
                                 counters = module.get_counters()
@@ -124,7 +124,7 @@ class WrangleTest(unittest.TestCase):
                                                                        counters[counter_source][counter_action],
                                                                        counter_greater[counter_source][counter_action]))
                                 module.reset_counters()
-                                print("RE-RUNNING [{}.{}]".format(module_name.title(), test))
+                                print("RE-RUNNING    [{}]   [{}]".format(module_name.title(), test))
                                 module.run()
                                 module.print_counters()
         return counters
