@@ -2,8 +2,15 @@
 
 name = "hello_world"
 version = "0.0.1"
-authors = [ "Your name <you@example.com>" ]
+authors = ["Your name <you@example.com>"]
 
 [dependencies]
 chrono = "0.4"
 
+[[bin]]
+name = "hello_world"
+path = "src/main/rust/main.rs"
+
+[[test]]
+name = "hello_word_test"
+path = "src/test/rust/unit_tests.rs"
