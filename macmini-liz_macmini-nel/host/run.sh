@@ -16,6 +16,7 @@
 ################################################################################
 # Shell
 ################################################################################
+apt-get update
 if [ $(grep "history-search" /etc/bash.bashrc | wc -l) -eq 0 ]; then
   echo "" >>/etc/bash.bashrc
   echo "bind '\"\e[A\":history-search-backward'" >>/etc/bash.bashrc
@@ -25,6 +26,8 @@ fi
 ################################################################################
 # Volumes
 ################################################################################
+DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  ntfs-3g=1:2017.3.23AR.3-3
 vgdisplay
 df -h /var
 lvdisplay /dev/$(hostname)-vg/var
@@ -44,10 +47,11 @@ fi
 ################################################################################
 # Utilities
 ################################################################################
-apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
+  acl=2.2.53-4 \
   rsync=3.1.3-6 \
   vim=2:8.1.0875-5 \
+  rename=1.10-1 \
   curl=7.64.0-4+deb10u2 \
   fswatch=1.14.0+repack-8
 if [ ! -d /usr/local/go ]; then

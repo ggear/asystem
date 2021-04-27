@@ -165,6 +165,7 @@ def _clean(context):
     _run_local(context, "find . -name *.pyc -prune -exec rm -rf {} \;")
     _run_local(context, "find . -name __pycache__ -prune -exec rm -rf {} \;")
     _run_local(context, "find . -name .coverage -prune -exec rm -rf {} \;")
+    _run_local(context, "find . -name Cargo.lock -prune -exec rm -rf {} \;")
     _run_local(context, "find . -name .DS_Store -prune -exec rm -rf {} \;")
     _print_footer("asystem", "clean")
     for module in _get_modules(context, "target", False):
@@ -227,6 +228,16 @@ def _build(context):
                                        join(module, "target/package"))
         if isfile(join(DIR_ROOT, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
+        cargo_file = join(DIR_ROOT, module, "Cargo.toml")
+        if isfile(cargo_file):
+            _run_local(context, "mkdir -p target/package && cp -rvfp Cargo.toml target/package", module, hide='err', warn=True)
+            with open(cargo_file, 'r') as cargo_file_source:
+                cargo_file_text = cargo_file_source.read()
+                cargo_file_text = cargo_file_text.replace('version = "0.0.0-SNAPSHOT"', 'version = "{}"'.format(_get_versions()[0]))
+                cargo_file_text = cargo_file_text.replace('path = "src/', 'path = "')
+                with open('target/package/Cargo.toml', 'w') as cargo_file_destination:
+                    cargo_file_destination.write(cargo_file_text)
+            _run_local(context, "cargo update && cargo build --release", join(module, "target/package"))
         _print_footer(module, "build")
 
 

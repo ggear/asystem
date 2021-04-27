@@ -1,16 +1,15 @@
 [package]
 
-name = "hello_world"
-version = "0.0.1"
-authors = ["Your name <you@example.com>"]
+name = "gateway"
+version = "0.0.0-SNAPSHOT"
 
 [dependencies]
 chrono = "0.4"
 
 [[bin]]
-name = "hello_world"
+name = "gateway"
 path = "src/main/rust/main.rs"
 
 [[test]]
-name = "hello_word_test"
+name = "gateway_test"
 path = "src/test/rust/unit_tests.rs"
