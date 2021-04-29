@@ -26,7 +26,7 @@ LINE_PROTOCOL = "interest,source={},type={},period={} {}="
 
 class Interest(library.Library):
 
-    def run(self):
+    def _run(self):
         new_data = False
         retail_df = pd.DataFrame()
         retail_file = os.path.join(self.input, "retail.xls")

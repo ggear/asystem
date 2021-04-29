@@ -16,9 +16,10 @@ LINE_PROTOCOL = "health,type={},unit={} {}="
 
 class Health(library.Library):
 
-    def run(self):
+    def _run(self):
         new_data = False
         files = self.dropbox_download("/Data/Health", self.input)
+        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, sum([not status[1] for status in files.values()]))
         new_data = new_data or all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
         if new_data:
             sleep_df = pd.DataFrame()
@@ -63,6 +64,7 @@ class Health(library.Library):
                                             'Sleep Balance (hr)',
                                         ])
                                         sleep_yesterday_df = file_df
+                                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                                     except Exception as exception:
                                         self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
@@ -86,6 +88,7 @@ class Health(library.Library):
                                             'Sleep Readiness Rating (%)',
                                         ])
                                         sleep_yesterday_df = pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True)
+                                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                                     except Exception as exception:
                                         self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
@@ -124,6 +127,7 @@ class Health(library.Library):
                                         ])
                                         sleep_df = pd.concat([sleep_df, normalise(
                                             pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True))], sort=True)
+                                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                                     except Exception as exception:
                                         self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
@@ -179,6 +183,7 @@ class Health(library.Library):
                             sleep_history_df['Sleep Deep Goal (%)'] = sleep_history_df['Sleep Deep (hr)'] / 0.024
                             sleep_history_df['Sleep Rating (%)'] = np.NaN
                             sleep_df = pd.concat([sleep_df, normalise(sleep_history_df)], sort=True)
+                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
@@ -218,6 +223,7 @@ class Health(library.Library):
                             })
                             file_df = file_df.reindex(sorted(file_df.columns), axis=1)
                             health_df = pd.concat([health_df, normalise(file_df)], sort=True)
+                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
@@ -245,6 +251,7 @@ class Health(library.Library):
                             })
                             file_df = file_df.reindex(sorted(file_df.columns), axis=1)
                             workout_df = pd.concat([workout_df, normalise(file_df)], sort=True)
+                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
@@ -320,17 +327,18 @@ class Health(library.Library):
                 ]]
                 data_df = pd.concat([health_df, workout_df, sleep_df, ], axis=1, sort=True)
                 data_delta_df, _, _ = self.state_cache(data_df, "Health")
-
                 if len(data_delta_df):
                     for dimension in data_delta_df.columns.get_values().tolist():
-                        dimension_value = data_delta_df[dimension].dropna()
                         dimension_type = dimension.split(' ')[0].lower()
-                        dimension_metric = dimension.split('(')[0].replace(dimension.split(' ')[0], '').strip().replace(' ', '-').lower()
                         dimension_unit = dimension.split('(')[-1].replace(')', '').strip()
+                        dimension_metric = dimension.split('(')[0].replace(dimension.split(' ')[0], '').strip().replace(' ', '-').lower()
+                        dimension_value = data_delta_df[dimension].dropna() if dimension_unit != 'dt' else \
+                            pd.to_datetime(data_delta_df[dimension].dropna(), format='%Y-%m-%d %H:%M:%S').astype(int) // 10 ** 9
                         self.database_write("\n".join(LINE_PROTOCOL.format(dimension_type, dimension_unit, dimension_metric) +
                                                       dimension_value.map(str) +
                                                       " " + (pd.to_datetime(dimension_value.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
+                    self.state_write()
             except Exception as exception:
                 self.print_log("Unexpected error processing health data", exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, len(files))

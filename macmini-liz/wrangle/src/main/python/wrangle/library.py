@@ -9,6 +9,7 @@ import os
 import os.path
 import shutil
 import ssl
+import time
 import traceback
 import urllib2
 from abc import ABCMeta, abstractmethod
@@ -31,9 +32,11 @@ CTR_LBL_PAD = '.'
 CTR_LBL_WIDTH = 24
 CTR_SRC_DATA = "Data"
 CTR_SRC_FILES = "Files"
+CTR_SRC_EXPORT = "Export"
 CTR_SRC_RESOURCES = "Resources"
 CTR_ACT_PREVIOUS = "Previous"
 CTR_ACT_CURRENT = "Current"
+CTR_ACT_INPUT = "Input"
 CTR_ACT_DELTA = "Delta"
 CTR_ACT_SHEET = "Sheet"
 CTR_ACT_DATABASE = "Database"
@@ -112,8 +115,15 @@ class Library(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def run(self):
+    def _run(self):
         pass
+
+    def run(self):
+        time_now = time.time()
+        self.print_log("Starting ...")
+        self._run()
+        self.print_counters()
+        self.print_log("Finished in [{:.3f}] sec".format(time.time() - time_now))
 
     def print_log(self, message, exception=None):
         print_log(self.name, message, exception)
@@ -122,8 +132,8 @@ class Library(object):
         self.print_log("Execution Summary:")
         for source in self.counters:
             for action in self.counters[source]:
-                self.print_log("  {} {:3}"
-                               .format("{} {} ".format(source, action).ljust(CTR_LBL_WIDTH, CTR_LBL_PAD), self.counters[source][action]))
+                self.print_log("  {} {:8}".format("{} {} ".format(source, action)
+                                                  .ljust(CTR_LBL_WIDTH, CTR_LBL_PAD), self.counters[source][action]))
 
     def add_counter(self, source, action, count=1):
         self.counters[source][action] += count
@@ -151,7 +161,11 @@ class Library(object):
             (CTR_SRC_DATA, OrderedDict([
                 (CTR_ACT_PREVIOUS, 0),
                 (CTR_ACT_CURRENT, 0),
+                (CTR_ACT_INPUT, 0),
                 (CTR_ACT_DELTA, 0),
+                (CTR_ACT_ERRORED, 0),
+            ])),
+            (CTR_SRC_EXPORT, OrderedDict([
                 (CTR_ACT_QUEUE, 0),
                 (CTR_ACT_SHEET, 0),
                 (CTR_ACT_DATABASE, 0),
@@ -439,18 +453,19 @@ class Library(object):
                 actioned_files[local_path] = True, file_actioned
         if upload:
             for local_file in local_files:
-                file_actioned = False
-                local_path = "{}/{}".format(local_dir, local_file)
-                if local_file not in drive_files or (check and (
-                        drive_files[local_file]["modified"] != local_files[local_file]["modified"] or
-                        drive_files[local_file]["hash"] != local_files[local_file]["hash"]
-                )):
-                    self.drive_write(local_path, drive_dir, local_files[local_file]["modified"])
-                    file_actioned = True
-                else:
-                    self.counters[CTR_SRC_RESOURCES][CTR_ACT_PERSISTED] += 1
-                    self.print_log("File [{}] persisted at [{}]".format(local_file, drive_files[local_file]["id"]))
-                actioned_files[local_path] = True, file_actioned
+                if not local_file.startswith("_"):
+                    file_actioned = False
+                    local_path = "{}/{}".format(local_dir, local_file)
+                    if local_file not in drive_files or (check and (
+                            drive_files[local_file]["modified"] != local_files[local_file]["modified"] or
+                            drive_files[local_file]["hash"] != local_files[local_file]["hash"]
+                    )):
+                        self.drive_write(local_path, drive_dir, local_files[local_file]["modified"])
+                        file_actioned = True
+                    else:
+                        self.counters[CTR_SRC_RESOURCES][CTR_ACT_PERSISTED] += 1
+                        self.print_log("File [{}] persisted at [{}]".format(local_file, drive_files[local_file]["id"]))
+                    actioned_files[local_path] = True, file_actioned
         return collections.OrderedDict(sorted(actioned_files.items()))
 
     def state_cache(self, data_df_input, file_prefix):
@@ -480,33 +495,50 @@ class Library(object):
         data_df_delta.to_csv(file_delta)
         self.counters[CTR_SRC_DATA][CTR_ACT_PREVIOUS] = len(data_df_previous)
         self.counters[CTR_SRC_DATA][CTR_ACT_CURRENT] = len(data_df_current)
+        self.counters[CTR_SRC_DATA][CTR_ACT_INPUT] = len(data_df_input)
         self.counters[CTR_SRC_DATA][CTR_ACT_DELTA] = len(data_df_delta)
         return data_df_delta, data_df_current, data_df_previous
 
     def state_write(self):
-        self.drive_sync(self.input_drive, self.input, check=True, download=False, upload=True)
-        self.print_log("Directory [{}] uploaded to [{}]".format(self.input, self.input_drive))
-
-    def sheet_write(self, data_df, drive_url, sheet_params={}):
-        Spread(drive_url).df_to_sheet(data_df, **sheet_params)
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_SHEET, len(data_df))
-        self.print_log("Dataframe uploaded to [{}]".format(drive_url))
+        try:
+            self.drive_sync(self.input_drive, self.input, check=True, download=False, upload=True)
+            self.print_log("Directory [{}] uploaded to [{}]".format(self.input, self.input_drive))
+        except Exception as exception:
+            self.print_log("Directory [{}] failed to upload to [{}]".format(self.input, self.input_drive))
 
     def drive_write(self, local_file, drive_dir, modified_time):
-        credentials = service_account.Credentials.from_service_account_file(
-            get_file(".google_service_account.json"), scopes=['https://www.googleapis.com/auth/drive'])
-        service = build('drive', 'v3', credentials=credentials)
-        request = service.files().create(
-            body={'name': os.path.basename(local_file), 'parents': [drive_dir], 'modifiedTime':
-                datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')},
-            media_body=MediaFileUpload(local_file)).execute()
-        self.counters[CTR_SRC_RESOURCES][CTR_ACT_UPLOADED] += 1
-        self.print_log("File [{}] uploaded to [{}] with ID [{}]".format(local_file, drive_dir, request.get('id')))
+        try:
+            credentials = service_account.Credentials.from_service_account_file(
+                get_file(".google_service_account.json"), scopes=['https://www.googleapis.com/auth/drive'])
+            service = build('drive', 'v3', credentials=credentials)
+            request = service.files().create(
+                body={'name': os.path.basename(local_file), 'parents': [drive_dir], 'modifiedTime':
+                    datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')},
+                media_body=MediaFileUpload(local_file)).execute()
+            self.counters[CTR_SRC_RESOURCES][CTR_ACT_UPLOADED] += 1
+            self.print_log("File [{}] uploaded to [{}] with ID [{}]".format(local_file, drive_dir, request.get('id')))
+        except Exception as exception:
+            self.print_log("File [{}] failed to upload to [{}]".format(local_file, drive_dir), exception)
+            self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_ERRORED)
 
-    def database_write(self, line):
-        if line.strip():
-            print(line)
-            self.add_counter(CTR_SRC_DATA, CTR_ACT_DATABASE)
+    def sheet_write(self, data_df, drive_url, sheet_params={}):
+        try:
+            Spread(drive_url).df_to_sheet(data_df, **sheet_params)
+            self.add_counter(CTR_SRC_EXPORT, CTR_ACT_SHEET, len(data_df))
+            self.print_log("Dataframe uploaded to [{}]".format(drive_url))
+        except Exception as exception:
+            self.print_log("Dataframe failed to upload", exception)
+            self.add_counter(CTR_SRC_EXPORT, CTR_ACT_ERRORED)
+
+    def database_write(self, lines):
+        if lines.strip():
+            for line in lines.split('\n'):
+                tokens = line.split(' ')
+                if len(tokens) == 3:
+                    print(line)
+                    self.add_counter(CTR_SRC_EXPORT, CTR_ACT_DATABASE)
+                else:
+                    self.add_counter(CTR_SRC_EXPORT, CTR_ACT_ERRORED)
 
     def __init__(self, name, input_drive, profile_path):
         self.name = name

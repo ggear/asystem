@@ -24,7 +24,7 @@ LINE_PROTOCOL = "weather,source={},type={},period={} {}="
 
 class Weather(library.Library):
 
-    def run(self):
+    def _run(self):
         new_data = False
         weather_df = pd.DataFrame()
         now = datetime.datetime.now()

@@ -21,7 +21,6 @@ def main(arguments=[]):
             module = getattr(importlib.import_module("wrangle.{}".format(module_name)), module_name.title()) \
                 (library.get_file(".profile") if len(arguments) <= 1 else arguments[1])
             module.run()
-            module.print_counters()
             runtime_errors += (
                     module.get_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_ERRORED) +
                     module.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED) +

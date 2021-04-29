@@ -235,9 +235,9 @@ def _build(context):
                 cargo_file_text = cargo_file_source.read()
                 cargo_file_text = cargo_file_text.replace('version = "0.0.0-SNAPSHOT"', 'version = "{}"'.format(_get_versions()[0]))
                 cargo_file_text = cargo_file_text.replace('path = "src/', 'path = "')
-                with open('target/package/Cargo.toml', 'w') as cargo_file_destination:
+                with open(join(DIR_ROOT, module, 'target/package/Cargo.toml'), 'w') as cargo_file_destination:
                     cargo_file_destination.write(cargo_file_text)
-            _run_local(context, "cargo update && cargo build --release", join(module, "target/package"))
+            _run_local(context, "cargo update && cargo build", join(module, "target/package"))
         _print_footer(module, "build")
 
 
@@ -246,6 +246,11 @@ def _unittest(context):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
         _run_local(context, "python unit_tests.py", join(module, "src/test/python/unit"))
+        _print_footer(module, "unittest")
+    for module in _get_modules(context, "src/test/rust/unit/unit_tests.rs"):
+        _print_header(module, "unittest")
+        _print_line("Running unit tests ...")
+        _run_local(context, "cargo test", join(module, "target/package"))
         _print_footer(module, "unittest")
 
 

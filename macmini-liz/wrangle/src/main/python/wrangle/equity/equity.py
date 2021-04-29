@@ -61,7 +61,7 @@ DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJ
 
 class Equity(library.Library):
 
-    def run(self):
+    def _run(self):
         new_data = False
         equity_df = pd.DataFrame()
 

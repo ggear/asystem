@@ -49,7 +49,7 @@ LINE_PROTOCOL = "currency,source={},type={},period={} {}="
 
 class Currency(library.Library):
 
-    def run(self):
+    def _run(self):
         new_data = False
         rba_df = pd.DataFrame()
         ato_df = pd.DataFrame()
