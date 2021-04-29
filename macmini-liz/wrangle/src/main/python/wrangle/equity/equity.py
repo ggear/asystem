@@ -275,11 +275,11 @@ class Equity(library.Library):
             equity_df = equity_df.resample('D')
             equity_df = equity_df.interpolate().fillna(method='ffill')
             equity_df = equity_df.sort_index(ascending=False)
-            equity__delta_df = self.delta_cache(equity_df, "equity")
+            equity__delta_df = self.state_cache(equity_df, "Equity")
             if len(equity__delta_df):
                 equity_df.insert(0, 'Date', equity_df.index.strftime("%Y-%m-%d").astype(str))
                 self.sheet_write(equity_df, DRIVE_URL, {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
-                self.delta_write()
+                self.state_write()
 
     def __init__(self, profile_path=".profile"):
         super(Equity, self).__init__("Equity", "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-", profile_path)

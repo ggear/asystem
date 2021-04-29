@@ -341,7 +341,10 @@ class Health(library.Library):
                     self.state_write()
             except Exception as exception:
                 self.print_log("Unexpected error processing health data", exception)
-                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, len(files))
+                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
+                                 self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
+                                 self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
+                                 self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         else:
             self.print_log("No new data found")
 

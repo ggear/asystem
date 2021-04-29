@@ -220,8 +220,8 @@ class Library(object):
                 self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
                 return True, True
             except Exception as exception:
-                self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file), exception)
                 if not ignore:
+                    self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file), exception)
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
         return False, False
 

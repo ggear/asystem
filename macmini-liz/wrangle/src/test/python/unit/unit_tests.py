@@ -24,31 +24,31 @@ class WrangleTest(unittest.TestCase):
         self.run_module("currency", {"success_typical": ASSERT_RUN, }, write=False)
 
     def test_currency_all(self):
-        self.run_module("currency", TEST_ASSERT_NOERR)
+        self.run_module("currency", TEST_ASSERT_RUN)
 
     def test_health(self):
-        self.run_module("health", {"success_typical": ASSERT_RUN, }, write=True)
+        self.run_module("health", {"success_typical": ASSERT_RUN, }, write=False)
 
     def test_health_all(self):
-        self.run_module("health", TEST_ASSERT_NOERR)
+        self.run_module("health", TEST_ASSERT_RUN)
 
     def test_equity(self):
         self.run_module("equity", {"success_typical": ASSERT_RUN, }, write=False)
 
     def test_equity_all(self):
-        self.run_module("equity", TEST_ASSERT_NOERR)
+        self.run_module("equity", TEST_ASSERT_RUN)
 
     def test_interest(self):
         self.run_module("interest", {"success_typical": ASSERT_RUN, }, write=False)
 
     def test_interest_all(self):
-        self.run_module("interest", TEST_ASSERT_NOERR)
+        self.run_module("interest", TEST_ASSERT_RUN)
 
     def test_weather(self):
         self.run_module("weather", {"success_typical": ASSERT_RUN, }, write=False)
 
     def test_weather_all(self):
-        self.run_module("weather", TEST_ASSERT_NOERR)
+        self.run_module("weather", TEST_ASSERT_RUN)
 
     def test_all(self):
         for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
@@ -191,7 +191,7 @@ ASSERT_RERUN = {
     },
 }
 
-TEST_ASSERT_NOERR = {
+TEST_ASSERT_RUN = {
     "success_fresh": ASSERT_RUN,
     "success_partial": ASSERT_RUN,
     "success_typical": ASSERT_RUN,

@@ -66,7 +66,7 @@ class Interest(library.Library):
                                    len(inflation_df)))
             self.print_log("Files for [Retail + Inflation] produced processed data from [{}] to [{}] in [{}] rows"
                            .format(interest_df.index[0].strftime('%d-%m-%Y'), interest_df.index[-1].strftime('%d-%m-%Y'), len(interest_df)))
-            interest_delta_df = self.delta_cache(interest_df, "interest")
+            interest_delta_df = self.state_cache(interest_df, "Interest")
             if len(interest_delta_df):
                 interest_df.insert(0, 'Date', interest_df.index.strftime("%Y-%m-%d").astype(str))
                 self.sheet_write(interest_df.iloc[::-1], DRIVE_URL, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
@@ -80,7 +80,7 @@ class Interest(library.Library):
                                                       interest_delta_df["{} {}".format(int_rate, int_period)].map(str) +
                                                       " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
-                self.delta_write()
+                self.state_write()
             else:
                 new_data = False
         if not new_data:
