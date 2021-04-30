@@ -29,7 +29,7 @@ class Weather(library.Library):
             for month in range(DAILY_START_MONTH if year == DAILY_START_YEAR else 1, (now.month + 1) if year == now.year else 13):
                 daily_url = DAILY_URL.format(year, month)
                 daily_file = os.path.join(self.input, daily_url.split("/")[-1])
-                file_status = self.ftp_download(daily_url, daily_file, check=False, force=year == now.year and month == now.month)
+                file_status = self.ftp_download(daily_url, daily_file, check=year == now.year and month == now.month)
                 if file_status[0]:
                     if file_status[1]:
                         try:

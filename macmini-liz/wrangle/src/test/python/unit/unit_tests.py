@@ -44,12 +44,11 @@ class WrangleTest(unittest.TestCase):
     def test_interest_all(self):
         self.run_module("interest", TEST_ASSERT_RUN)
 
-    # TODO: Re-enable once weather has been implemented
-    # def test_weather(self):
-    #     self.run_module("weather", {"success_typical": ASSERT_RUN, }, write=False)
-    #
-    # def test_weather_all(self):
-    #     self.run_module("weather", TEST_ASSERT_RUN)
+    def test_weather(self):
+        self.run_module("weather", {"success_typical": ASSERT_RUN, }, write=False)
+
+    def test_weather_all(self):
+        self.run_module("weather", TEST_ASSERT_RUN)
 
     def test_all(self):
         for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
