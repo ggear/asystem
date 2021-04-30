@@ -304,7 +304,8 @@ class Equity(library.Library):
                 equity_df = equity_df.interpolate().fillna(method='ffill')
                 equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, "Equity")
                 if len(equity_delta_df):
-                    self.sheet_write(equity_current_df.sort_index(ascending=False), DRIVE_URL, {'index': True, 'sheet': 'History', 'start': 'A1', 'replace': True})
+                    self.sheet_write(equity_current_df.sort_index(ascending=False), DRIVE_URL,
+                                     {'index': True, 'sheet': 'History', 'start': 'A1', 'replace': True})
 
                     # TODO: Provide a database_write implementation
 
