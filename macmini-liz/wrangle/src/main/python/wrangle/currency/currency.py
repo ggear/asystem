@@ -44,7 +44,7 @@ RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
 
-LINE_PROTOCOL = "currency,source={},type={},period={} {}="
+LINE_PROTOCOL = "currency,type={},period={} {}="
 
 
 class Currency(library.Library):
@@ -125,6 +125,8 @@ class Currency(library.Library):
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
+            else:
+                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
 
         def extrapolate(data_df):
             data_df = data_df.drop_duplicates(subset='Date', keep="first").copy()
@@ -157,12 +159,12 @@ class Currency(library.Library):
                 if len(rba_delta_df):
                     self.sheet_write(rba_current_df, DRIVE_URL, {'index': False, 'sheet': 'FX', 'start': 'A1', 'replace': True})
                     for fx_pair in PAIRS:
-                        self.database_write("\n".join(LINE_PROTOCOL.format("RBA", "snapshot", "daily", fx_pair) +
+                        self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "daily", fx_pair) +
                                                       rba_delta_df[fx_pair].map(str) +
                                                       " " + (pd.to_datetime(rba_delta_df.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
                         for fx_period in PERIODS:
-                            self.database_write("\n".join(LINE_PROTOCOL.format("RBA", "delta", fx_period.lower(), fx_pair) +
+                            self.database_write("\n".join(LINE_PROTOCOL.format("delta", fx_period.lower(), fx_pair) +
                                                           rba_delta_df["{} {}".format(fx_pair, fx_period)].map(str) +
                                                           " " + (pd.to_datetime(rba_delta_df.index).astype(int) +
                                                                  6 * 60 * 60 * 1000000000).map(str)))

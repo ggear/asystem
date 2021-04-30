@@ -27,6 +27,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.http import MediaIoBaseDownload
 from gspread_pandas import Spread
+from pandas.tseries.offsets import BDay
 
 CTR_LBL_PAD = '.'
 CTR_LBL_WIDTH = 24
@@ -259,6 +260,46 @@ class Library(object):
                     self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
         return False, False
 
+    def stock_download(self, local_file, ticker, start, end, end_of_day='17:00', check=True, force=False, ignore=False):
+        now = datetime.now()
+        end_exclusive = datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)
+        if start != end_exclusive:
+            if not force and not check and os.path.isfile(local_file):
+                self.print_log("File [{}: {} {}] cached at [{}]".format(os.path.basename(local_file), start, end, local_file))
+                self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+                return True, False
+            else:
+                try:
+                    if not force and check and os.path.isfile(local_file):
+                        end_data = datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d').date()
+                        end_expected = BDay().rollback(datetime.strptime(end, '%Y-%m-%d')).date()
+                        if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) \
+                                and now.strftime('%H:%M') < end_of_day:
+                            end_expected = end_expected - timedelta(days=1)
+                        if end_data == end_expected:
+                            self.print_log("File [{}: {} {}] cached at [{}]".format(os.path.basename(local_file), start, end, local_file))
+                            self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+                            return True, False
+                    data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, debug=False)
+                    if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) \
+                            and data_df.index[-1].date() == now.date() and now.strftime('%H:%M') < end_of_day:
+                        data_df = data_df[:-1]
+                    if len(data_df) == 0:
+                        raise Exception("No data returned from Yahoo! Finance history service")
+                    data_df.to_csv(local_file)
+                    modified_timestamp = int((datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d') +
+                                              timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
+                    os.utime(local_file, (modified_timestamp, modified_timestamp))
+                    self.print_log("File [{}: {} {}] downloaded to [{}]".format(os.path.basename(local_file), start, end, local_file))
+                    self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
+                    return True, True
+                except Exception as exception:
+                    self.print_log("File not available for [{} - {} {}]"
+                                   .format(ticker, start, end_exclusive), exception)
+                    if not ignore:
+                        self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
+        return False, False
+
     def dropbox_download(self, dropbox_dir, local_dir, check=True):
 
         class DropboxContentHasher(object):
@@ -351,45 +392,6 @@ class Library(object):
             actioned_files[local_path] = True, file_actioned
         return collections.OrderedDict(sorted(actioned_files.items()))
 
-    def stock_download(self, local_file, ticker, start, end, end_of_day_hour=17, check=True, force=False, ignore=False):
-        now = datetime.now()
-        end_exclusive = (datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)) \
-            if (now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) and
-                now > now.replace(hour=end_of_day_hour, minute=0, second=0, microsecond=0) or
-                now.year != int(end.split('-')[0]) or
-                now.month != int(end.split('-')[1])) else end
-        if start != end_exclusive:
-            if not force and not check and os.path.isfile(local_file):
-                self.print_log("File [{}: {} {}] cached at [{}]"
-                               .format(os.path.basename(local_file), start, end_exclusive, local_file))
-                self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
-                return True, False
-            else:
-                try:
-                    if not force and check and os.path.isfile(local_file):
-                        if pd.read_csv(local_file).values[-1][0] == end:
-                            self.print_log("File [{}: {} {}] cached at [{}]"
-                                           .format(os.path.basename(local_file), start, end_exclusive, local_file))
-                            self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
-                            return True, False
-                    data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, debug=False)
-                    if len(data_df) == 0:
-                        raise Exception("No data returned from Yahoo! Finance history service")
-                    data_df.to_csv(local_file)
-                    modified_timestamp = int((datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d') +
-                                              timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
-                    os.utime(local_file, (modified_timestamp, modified_timestamp))
-                    self.print_log("File [{}: {} {}] downloaded to [{}]"
-                                   .format(os.path.basename(local_file), start, end_exclusive, local_file))
-                    self.counters[CTR_SRC_RESOURCES][CTR_ACT_DOWNLOADED] += 1
-                    return True, True
-                except Exception as exception:
-                    self.print_log("File not available for [{} - {} {}]"
-                                   .format(ticker, start, end_exclusive), exception)
-                    if not ignore:
-                        self.counters[CTR_SRC_RESOURCES][CTR_ACT_ERRORED] += 1
-        return False, False
-
     def drive_sync(self, drive_dir, local_dir, check=True, download=True, upload=False):
         def file_hash(file_name):
             hash_md5 = hashlib.md5()
@@ -481,18 +483,18 @@ class Library(object):
         if os.path.isfile(file_current):
             data_df_current = pd.read_csv(file_current, index_col=0)
             shutil.move(file_current, file_previous)
-        data_df_input.to_csv(file_input)
+        data_df_input.sort_index().to_csv(file_input)
         data_df_input = pd.read_csv(file_input, index_col=0)
         data_df_current = pd.concat([data_df_current, data_df_input], sort=True)
         data_df_current = data_df_current[~data_df_current.index.duplicated(keep='last')]
         data_df_current = data_df_current[column_names]
-        data_df_current.to_csv(file_current)
+        data_df_current.sort_index().to_csv(file_current)
         data_df_current = pd.read_csv(file_current, index_col=0)
         data_df_previous = pd.read_csv(file_previous, index_col=0) if os.path.isfile(file_previous) else pd.DataFrame(columns=column_names)
         data_df_delta = data_df_current if len(data_df_previous) == 0 else \
             data_df_current.merge(data_df_previous, on=column_names, how='outer', left_index=True, right_index=True, indicator=True) \
                 .loc[lambda x: x['_merge'] != 'both'].drop('_merge', 1).drop_duplicates()
-        data_df_delta.to_csv(file_delta)
+        data_df_delta.sort_index().to_csv(file_delta)
         self.counters[CTR_SRC_DATA][CTR_ACT_PREVIOUS] = len(data_df_previous)
         self.counters[CTR_SRC_DATA][CTR_ACT_CURRENT] = len(data_df_current)
         self.counters[CTR_SRC_DATA][CTR_ACT_INPUT] = len(data_df_input)

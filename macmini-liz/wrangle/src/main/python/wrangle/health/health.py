@@ -13,7 +13,6 @@ from .. import library
 
 LINE_PROTOCOL = "health,type={},unit={} {}="
 
-
 class Health(library.Library):
 
     def _run(self):

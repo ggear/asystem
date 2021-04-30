@@ -26,17 +26,17 @@ class WrangleTest(unittest.TestCase):
     def test_currency_all(self):
         self.run_module("currency", TEST_ASSERT_RUN)
 
-    def test_health(self):
-        self.run_module("health", {"success_typical": ASSERT_RUN, }, write=False)
-
-    def test_health_all(self):
-        self.run_module("health", TEST_ASSERT_RUN)
-
     def test_equity(self):
         self.run_module("equity", {"success_typical": ASSERT_RUN, }, write=False)
 
     def test_equity_all(self):
         self.run_module("equity", TEST_ASSERT_RUN)
+
+    def test_health(self):
+        self.run_module("health", {"success_typical": ASSERT_RUN, }, write=False)
+
+    def test_health_all(self):
+        self.run_module("health", TEST_ASSERT_RUN)
 
     def test_interest(self):
         self.run_module("interest", {"success_typical": ASSERT_RUN, }, write=False)
