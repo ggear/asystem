@@ -50,14 +50,15 @@ class WrangleTest(unittest.TestCase):
     def test_weather_all(self):
         self.run_module("weather", TEST_ASSERT_RUN)
 
-    def test_all(self):
-        for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
-            if not module_path.endswith("__init__.py"):
-                self.run_module(os.path.basename(os.path.dirname(module_path)), {"success_fresh": {}, }, prepare_only=True, write=True)
-        print("")
-        self.assertEqual(main.main(), 0, "Main script ran with errors on first run")
-        print("")
-        self.assertEqual(main.main(), 0, "Main script ran with errors on second re-run")
+    # TODO: Re-enable once write tests have all been verified
+    # def test_all(self):
+    #     for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
+    #         if not module_path.endswith("__init__.py"):
+    #             self.run_module(os.path.basename(os.path.dirname(module_path)), {"success_fresh": {}, }, prepare_only=True, write=True)
+    #     print("")
+    #     self.assertEqual(main.main(), 0, "Main script ran with errors on first run")
+    #     print("")
+    #     self.assertEqual(main.main(), 0, "Main script ran with errors on second re-run")
 
     def run_module(self, module_name, tests_asserts, prepare_only=False, write=False):
         if not os.path.isdir(DIR_TARGET):
@@ -105,19 +106,18 @@ class WrangleTest(unittest.TestCase):
             load_caches("{}{}/{}".format(DIR_RESOURCES, module.input.split("target")[-1], test), module.input)
             counters = {}
             if not prepare_only:
-                with patch.object(library.Library, "state_write") if not write else no_op():
-                    with patch.object(library.Library, "sheet_write") if not write else no_op():
+                with patch.object(library.Library, "sheet_write") if not write else no_op():
+                    with patch.object(library.Library, "database_write") if not write else no_op():
                         with patch.object(library.Library, "drive_write") if not write else no_op():
-                            with patch.object(library.Library, "database_write") if not write else no_op():
-                                print("STARTING           [{}]   [{}]".format(module_name.title(), test))
-                                module.run()
-                                print("FINISHED           [{}]   [{}]\n".format(module_name.title(), test))
-                                assert_counters(module.get_counters(), tests_asserts[test])
-                                module.reset_counters()
-                                print("STARTING (re-run)  [{}]   [{}]".format(module_name.title(), test))
-                                module.run()
-                                print("FINISHED  (re-run) [{}]   [{}]\n\n".format(module_name.title(), test))
-                                assert_counters(module.get_counters(), ASSERT_RERUN)
+                            print("STARTING           [{}]   [{}]".format(module_name.title(), test))
+                            module.run()
+                            print("FINISHED           [{}]   [{}]\n".format(module_name.title(), test))
+                            assert_counters(module.get_counters(), tests_asserts[test])
+                            module.reset_counters()
+                            print("STARTING (re-run)  [{}]   [{}]".format(module_name.title(), test))
+                            module.run()
+                            print("FINISHED  (re-run) [{}]   [{}]\n\n".format(module_name.title(), test))
+                            assert_counters(module.get_counters(), ASSERT_RERUN)
         return counters
 
     def setUp(self):

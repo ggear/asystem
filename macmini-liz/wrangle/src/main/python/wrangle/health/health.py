@@ -11,28 +11,6 @@ import pandas as pd
 
 from .. import library
 
-DIMENSIONS_HEALTH = [
-    'Energy Basal Burned (kJ)',
-    'Energy Active Burned (kJ)',
-    'Stand Time (min)',
-    'Stand Sessions (count)',
-    'Exercise Time (min)',
-    'Exercise Steps Taken (count)',
-    'Exercise Flights Climbed (count)',
-    'Walking Asymmetry (%)',
-    'Walking Distance (km)',
-    'Walking Double Support Percentage (%)',
-    'Walking Heart Rate Average (bpm)',
-    'Walking Speed (km/hr)',
-    'Mindful Breathing Time (min)',
-    'Hearing Headphone Exposure (dBSPL)',
-    'Heart Rate Average (bpm)',
-    'Heart Rate Maximum (bpm)',
-    'Heart Rate Minimum (bpm)',
-    'Heart Rate Resting (bpm)',
-    'Heart Rate Variability (ms)',
-]
-
 DIMENSIONS_SLEEP = [
     'Sleep Start (dt)',
     'Sleep Finish (dt)',
@@ -55,6 +33,28 @@ DIMENSIONS_SLEEP = [
     'Sleep Heart Rate Variability Baseline (ms)',
     'Sleep Heart Rate Waking (bpm)',
     'Sleep Heart Rate Waking Baseline (bpm)',
+]
+
+DIMENSIONS_HEALTH = [
+    'Energy Basal Burned (kJ)',
+    'Energy Active Burned (kJ)',
+    'Stand Time (min)',
+    'Stand Sessions (count)',
+    'Exercise Time (min)',
+    'Exercise Steps Taken (count)',
+    'Exercise Flights Climbed (count)',
+    'Walking Asymmetry (%)',
+    'Walking Distance (km)',
+    'Walking Double Support Percentage (%)',
+    'Walking Heart Rate Average (bpm)',
+    'Walking Speed (km/hr)',
+    'Mindful Breathing Time (min)',
+    'Hearing Headphone Exposure (dBSPL)',
+    'Heart Rate Average (bpm)',
+    'Heart Rate Maximum (bpm)',
+    'Heart Rate Minimum (bpm)',
+    'Heart Rate Resting (bpm)',
+    'Heart Rate Variability (ms)',
 ]
 
 DIMENSIONS_WORKOUT = [
@@ -88,10 +88,10 @@ class Health(library.Library):
         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, sum([not status[1] for status in files.values()]))
         new_data = new_data or all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
         if new_data:
+            sleep_yesterday_df = pd.DataFrame()
             sleep_df = pd.DataFrame(columns=DIMENSIONS_SLEEP)
             health_df = pd.DataFrame(columns=DIMENSIONS_HEALTH)
             workout_df = pd.DataFrame(columns=DIMENSIONS_WORKOUT)
-            sleep_yesterday_df = pd.DataFrame()
             for file_name in files:
                 if files[file_name][0] and files[file_name][1]:
 
@@ -326,15 +326,15 @@ class Health(library.Library):
                         self.print_log("Error: Unknown file format [{}]".format(file_name))
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
             try:
+                sleep_df = sleep_df[~sleep_df.index.duplicated(keep='last')]
+                if len(sleep_df) > 0:
+                    sleep_df = sleep_df[DIMENSIONS_SLEEP]
                 health_df = health_df[~health_df.index.duplicated(keep='last')]
                 if len(health_df) > 0:
                     health_df = health_df[DIMENSIONS_HEALTH]
                 workout_df = workout_df[~workout_df.index.duplicated(keep='last')]
                 if len(workout_df) > 0:
                     workout_df = workout_df[DIMENSIONS_WORKOUT]
-                sleep_df = sleep_df[~sleep_df.index.duplicated(keep='last')]
-                if len(sleep_df) > 0:
-                    sleep_df = sleep_df[DIMENSIONS_SLEEP]
                 data_df = pd.concat([health_df, workout_df, sleep_df], axis=1, sort=True)
                 data_df.index.name = 'Date'
                 data_delta_df, _, _ = self.state_cache(data_df, "Health")

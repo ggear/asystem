@@ -271,15 +271,16 @@ class Library(object):
             else:
                 try:
                     if not force and check and os.path.isfile(local_file):
-                        end_data = datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d').date()
-                        end_expected = BDay().rollback(datetime.strptime(end, '%Y-%m-%d')).date()
-                        if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) \
-                                and now.strftime('%H:%M') < end_of_day:
-                            end_expected = end_expected - timedelta(days=1)
-                        if end_data == end_expected:
-                            self.print_log("File [{}: {} {}] cached at [{}]".format(os.path.basename(local_file), start, end, local_file))
-                            self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
-                            return True, False
+                        if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]):
+                            end_data = datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d').date()
+                            end_expected = BDay().rollback(now).date()
+                            if now.strftime('%H:%M') < end_of_day:
+                                end_expected = end_expected - timedelta(days=1)
+                            if end_data == end_expected:
+                                self.print_log("File [{}: {} {}] cached at [{}]"
+                                               .format(os.path.basename(local_file), start, end, local_file))
+                                self.counters[CTR_SRC_RESOURCES][CTR_ACT_CACHED] += 1
+                                return True, False
                     data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, debug=False)
                     if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) \
                             and data_df.index[-1].date() == now.date() and now.strftime('%H:%M') < end_of_day:
@@ -462,7 +463,8 @@ class Library(object):
                             drive_files[local_file]["modified"] != local_files[local_file]["modified"] or
                             drive_files[local_file]["hash"] != local_files[local_file]["hash"]
                     )):
-                        self.drive_write(local_path, drive_dir, local_files[local_file]["modified"])
+                        self.drive_write(local_path, drive_dir, local_files[local_file]["modified"], service,
+                                         drive_files[local_file]["id"] if local_file in drive_files else None)
                         file_actioned = True
                     else:
                         self.counters[CTR_SRC_RESOURCES][CTR_ACT_PERSISTED] += 1
@@ -508,17 +510,19 @@ class Library(object):
         except Exception as exception:
             self.print_log("Directory [{}] failed to upload to [{}]".format(self.input, self.input_drive))
 
-    def drive_write(self, local_file, drive_dir, modified_time):
+    def drive_write(self, local_file, drive_dir, modified_time, service, drive_id=None):
         try:
-            credentials = service_account.Credentials.from_service_account_file(
-                get_file(".google_service_account.json"), scopes=['https://www.googleapis.com/auth/drive'])
-            service = build('drive', 'v3', credentials=credentials)
-            request = service.files().create(
-                body={'name': os.path.basename(local_file), 'parents': [drive_dir], 'modifiedTime':
-                    datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')},
-                media_body=MediaFileUpload(local_file)).execute()
+            data = MediaFileUpload(local_file)
+            metadata = {'modifiedTime': datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
+            if drive_id is None:
+                metadata['name'] = os.path.basename(local_file)
+                metadata['parents'] = [drive_dir]
+                request = service.files().create(body=metadata, media_body=data).execute()
+            else:
+                request = service.files().update(fileId=drive_id, body=metadata, media_body=data).execute()
             self.counters[CTR_SRC_RESOURCES][CTR_ACT_UPLOADED] += 1
-            self.print_log("File [{}] uploaded to [{}] with ID [{}]".format(local_file, drive_dir, request.get('id')))
+            self.print_log("File [{}] uploaded to [{}] with ID [{}]"
+                           .format(local_file, drive_dir, request.get('id') if drive_id is None else drive_id))
         except Exception as exception:
             self.print_log("File [{}] failed to upload to [{}]".format(local_file, drive_dir), exception)
             self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_ERRORED)
