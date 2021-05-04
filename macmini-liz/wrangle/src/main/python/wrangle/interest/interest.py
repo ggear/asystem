@@ -79,7 +79,7 @@ class Interest(library.Library):
                 interest_df = interest_df[interest_df.index > '1982-03-01']
                 interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, "Interest")
                 if len(interest_delta_df):
-                    self.sheet_write(interest_current_df.iloc[::-1].sort_index(ascending=False), DRIVE_URL,
+                    self.sheet_write(interest_current_df.sort_index(ascending=False), DRIVE_URL,
                                      {'index': True, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
                     for int_rate in LABELS:
                         self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "monthly", int_rate.lower()) +
