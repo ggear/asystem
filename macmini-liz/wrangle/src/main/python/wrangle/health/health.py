@@ -77,7 +77,7 @@ DIMENSIONS_WORKOUT = [
     'Workout Type (string)',
 ]
 
-LINE_PROTOCOL = "health,type={},unit={} {}="
+LINE_PROTOCOL = "health,type={},period={},unit={} {}="
 
 
 class Health(library.Library):
@@ -345,7 +345,7 @@ class Health(library.Library):
                         dimension_metric = dimension.split('(')[0].replace(dimension.split(' ')[0], '').strip().replace(' ', '-').lower()
                         dimension_value = data_delta_df[dimension].dropna() if dimension_unit != 'dt' else \
                             pd.to_datetime(data_delta_df[dimension].dropna(), format='%Y-%m-%d %H:%M:%S').astype(int) // 10 ** 9
-                        self.database_write("\n".join(LINE_PROTOCOL.format(dimension_type, dimension_unit, dimension_metric) +
+                        self.database_write("\n".join(LINE_PROTOCOL.format(dimension_type, "1-hour", dimension_unit, dimension_metric) +
                                                       dimension_value.map(str) +
                                                       " " + (pd.to_datetime(dimension_value.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))

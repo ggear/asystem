@@ -15,8 +15,8 @@ STATUS_FAILURE = "failure"
 STATUS_SKIPPED = "skipped"
 STATUS_SUCCESS = "success"
 
-CURRENCIES = ["GBP", "USD", "SGD"]
-ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
+STATEMENT_CURRENCIES = ["GBP", "USD", "SGD"]
+STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 
 STOCK = OrderedDict([
     ('S32', {
@@ -61,6 +61,18 @@ STOCK = OrderedDict([
     }),
 ])
 
+DIMENSIONS = [
+    "Open",
+    "High",
+    "Low",
+    "Close",
+    "Volume",
+    "Dividends",
+    "Stock Splits",
+    "FX Rate",
+    "Base Currency",
+]
+
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
 
 
@@ -95,7 +107,14 @@ class Equity(library.Library):
                             12,
                             31),
                         STOCK[stock]["end of day"], check=False)
-        statement_files = self.drive_sync(self.input_drive, self.input)
+        statement_files = {}
+        files = self.drive_sync(self.input_drive, self.input)
+        for file_name in files:
+            if os.path.basename(file_name).startswith("58861"):
+                statement_files[file_name] = files[file_name]
+            elif os.path.basename(file_name).startswith("Yahoo"):
+                if files[file_name][0] and files[file_name][1]:
+                    stock_files[file_name] = files[file_name]
         new_data = (all([status[0] for status in stock_files.values()]) and any([status[1] for status in stock_files.values()])) or \
                    (all([status[0] for status in statement_files.values()]) and any([status[1] for status in statement_files.values()]))
         stocks_df = {}
@@ -107,6 +126,7 @@ class Equity(library.Library):
                         stock_df = pd.read_csv(stock_file_name) \
                             .add_prefix("{} ".format(stock_ticker)).rename({"{} Date".format(stock_ticker): 'Date'}, axis=1)
                         stock_df["{} FX Rate".format(stock_ticker)] = 1.0
+                        stock_df["{} Base Currency".format(stock_ticker)] = "AUD"
                         stock_df = stock_df.set_index('Date')
                         if stock_ticker in stocks_df:
                             stocks_df[stock_ticker] = pd.concat([stocks_df[stock_ticker], stock_df], sort=True)
@@ -125,39 +145,39 @@ class Equity(library.Library):
             if statement_files[statement_file_name][0]:
                 if statement_files[statement_file_name][1]:
                     with open(statement_file_name, "rb") as statement_file:
-                        statement_date = None
-                        statement_type = None
-                        statement_owner = None
-                        statement_rates = {}
                         statement_data[statement_file_name] = {}
-                        statement_data[statement_file_name]['Status'] = STATUS_FAILURE
-                        statement_data[statement_file_name]["Errors"] = []
-                        statement_data[statement_file_name]["Positions"] = {}
-                        statement_data[statement_file_name]['Parse'] = ""
-                        statement_pages = pdftotext.PDF(statement_file)
-                        page_index = 0
-                        while page_index < len(statement_pages):
-                            line_index = 0
-                            statement_lines = statement_pages[page_index].split("\n")
-                            if page_index == 0:
-                                if len(statement_lines) > 1 and statement_lines[0].startswith("Consolidated Statement"):
-                                    statement_data[statement_file_name]['Status'] = STATUS_SUCCESS
-                                elif len(statement_lines) > 1 and "Administration Services" in statement_lines[0]:
-                                    statement_data[statement_file_name]['Status'] = STATUS_SKIPPED
-                                else:
-                                    statement_data[statement_file_name]["Errors"].append("File missing required heading")
-                            while line_index < len(statement_lines):
-                                statement_data[statement_file_name]['Parse'] += "File [{}]: Page [{:02d}]: Line [{:02d}]:  " \
-                                    .format(os.path.basename(statement_file_name), page_index, line_index)
-                                statement_line = statement_lines[line_index]
-                                statement_tokens = statement_line.split()
-                                token_index = 0
-                                while token_index < len(statement_tokens):
-                                    statement_data[statement_file_name]['Parse'] += u"{:02d}:{} " \
-                                        .format(token_index, statement_tokens[token_index])
-                                    token_index += 1
-                                statement_data[statement_file_name]['Parse'] += "\n"
-                                try:
+                        try:
+                            statement_date = None
+                            statement_type = None
+                            statement_owner = None
+                            statement_rates = {}
+                            statement_data[statement_file_name]['Status'] = STATUS_FAILURE
+                            statement_data[statement_file_name]["Errors"] = []
+                            statement_data[statement_file_name]["Positions"] = {}
+                            statement_data[statement_file_name]['Parse'] = ""
+                            statement_pages = pdftotext.PDF(statement_file)
+                            page_index = 0
+                            while page_index < len(statement_pages):
+                                line_index = 0
+                                statement_lines = statement_pages[page_index].split("\n")
+                                if page_index == 0:
+                                    if len(statement_lines) > 1 and statement_lines[0].startswith("Consolidated Statement"):
+                                        statement_data[statement_file_name]['Status'] = STATUS_SUCCESS
+                                    elif len(statement_lines) > 1 and "Administration Services" in statement_lines[0]:
+                                        statement_data[statement_file_name]['Status'] = STATUS_SKIPPED
+                                    else:
+                                        statement_data[statement_file_name]["Errors"].append("File missing required heading")
+                                while line_index < len(statement_lines):
+                                    statement_data[statement_file_name]['Parse'] += "File [{}]: Page [{:02d}]: Line [{:02d}]:  " \
+                                        .format(os.path.basename(statement_file_name), page_index, line_index)
+                                    statement_line = statement_lines[line_index]
+                                    statement_tokens = statement_line.split()
+                                    token_index = 0
+                                    while token_index < len(statement_tokens):
+                                        statement_data[statement_file_name]['Parse'] += u"{:02d}:{} " \
+                                            .format(token_index, statement_tokens[token_index])
+                                        token_index += 1
+                                    statement_data[statement_file_name]['Parse'] += "\n"
                                     if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
                                         if page_index == 0:
                                             if statement_line.startswith("Account name"):
@@ -175,14 +195,14 @@ class Equity(library.Library):
                                             if statement_line.startswith("Statement date"):
                                                 statement_date = datetime.strptime(statement_line.split()[2], '%d-%b-%y')
                                             if statement_type:
-                                                for currency in CURRENCIES:
+                                                for currency in STATEMENT_CURRENCIES:
                                                     if statement_line.startswith(currency):
                                                         statement_rates[currency] = \
                                                             float(statement_line.split()[4].replace(',', ''))
                                         if statement_type:
                                             for indexes in [
-                                                (2, "Situations", CURRENCIES, 5, 10),
-                                                (3, "Situations", CURRENCIES, 5, 9),
+                                                (2, "Situations", STATEMENT_CURRENCIES, 5, 10),
+                                                (3, "Situations", STATEMENT_CURRENCIES, 5, 9),
                                                 (2, "Shares", ["USD"], 2, 7),
                                                 (3, "Shares", ["USD"], 2, 6),
                                             ]:
@@ -215,24 +235,24 @@ class Equity(library.Library):
                                                                                          and currency == 'SGD' else \
                                                                                     'UNKOWN'
                                                                 statement_data[statement_file_name]["Positions"] \
-                                                                    [statement_type + currency] = statement_position
+                                                                    [str(statement_type + currency)] = statement_position
                                                             except Exception:
                                                                 None
-                                except Exception as exception:
-                                    statement_data[statement_file_name]['Status'] = STATUS_FAILURE
-                                    statement_data[statement_file_name]["Errors"].append(
-                                        "Statement parse failed with exception [{}: {}]"
-                                            .format(type(exception).__name__, exception))
-                                line_index += 1
-                            page_index += 1
+                                    line_index += 1
+                                page_index += 1
+                        except Exception as exception:
+                            statement_data[statement_file_name]['Status'] = STATUS_FAILURE
+                            statement_data[statement_file_name]["Errors"].append(
+                                "Statement parse failed with exception [{}: {}]"
+                                    .format(type(exception).__name__, exception))
                     if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
                         statement_positions = statement_data[statement_file_name]["Positions"]
                         for statement_position in statement_positions.values():
-                            if len(statement_positions) == 0 or not all(key in statement_position for key in ATTRIBUTES):
+                            if len(statement_positions) == 0 or not all(key in statement_position for key in STATEMENT_ATTRIBUTES):
                                 statement_data[statement_file_name]['Status'] = STATUS_FAILURE
                                 statement_data[statement_file_name]["Errors"] \
                                     .append("Statement parse failed to resolve all keys {} in {}"
-                                            .format(ATTRIBUTES, statement_position))
+                                            .format(STATEMENT_ATTRIBUTES, statement_position))
         if new_data:
             try:
                 statements_positions = []
@@ -278,30 +298,26 @@ class Equity(library.Library):
                         statement_df.pivot(columns='Ticker', values='Zero').add_suffix(' Dividends'),
                         statement_df.pivot(columns='Ticker', values='Zero').add_suffix(' Stock Splits'),
                         statement_df.pivot(columns='Ticker', values='Rate').add_suffix(' FX Rate'),
+                        statement_df.pivot(columns='Ticker', values='Currency').add_suffix(' Base Currency'),
                     ], axis=1)
-                    columns = []
-                    tickers = set()
-                    for column in statement_df.columns:
-                        tickers.add(column.split(" ")[0])
-                    for ticker in sorted(tickers, reverse=True):
-                        columns.append("{} Open".format(ticker))
-                        columns.append("{} High".format(ticker))
-                        columns.append("{} Low".format(ticker))
-                        columns.append("{} Close".format(ticker))
-                        columns.append("{} Volume".format(ticker))
-                        columns.append("{} Dividends".format(ticker))
-                        columns.append("{} FX Rate".format(ticker))
-                    statement_df = statement_df[columns]
                 equity_df = pd.DataFrame()
                 for stock in STOCK:
                     if stock in stocks_df:
-                        equity_df = stocks_df[stock] if len(equity_df) == 0 else \
-                            equity_df.merge(stocks_df[stock], left_index=True, right_index=True, how='outer')
-                equity_df = statement_df if len(equity_df) == 0 else \
-                    equity_df.merge(statement_df, left_index=True, right_index=True, how='outer')
+                        equity_df = pd.concat([equity_df, stocks_df[stock]], axis=1, sort=True)
+                equity_df = pd.concat([equity_df, statement_df], axis=1, sort=True)
                 equity_df.index = pd.to_datetime(equity_df.index)
+                equity_df = equity_df[~equity_df.index.duplicated(keep='last')]
                 equity_df = equity_df.resample('D')
                 equity_df = equity_df.interpolate().fillna(method='ffill')
+                columns = []
+                tickers = set()
+                for column in equity_df.columns:
+                    ticker = column.split(" ")[0]
+                    if ticker not in tickers:
+                        tickers.add(ticker)
+                        for dimension in DIMENSIONS:
+                            columns.append("{} {}".format(ticker, dimension))
+                equity_df = equity_df[columns]
                 equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, "Equity")
                 if len(equity_delta_df):
                     self.sheet_write(equity_current_df.sort_index(ascending=False), DRIVE_URL,
@@ -313,7 +329,7 @@ class Equity(library.Library):
                 else:
                     new_data = False
             except Exception as exception:
-                self.print_log("Unexpected error processing currency data", exception)
+                self.print_log("Unexpected error processing equity data", exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -

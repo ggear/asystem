@@ -80,7 +80,7 @@ class Weather(library.Library):
         else:
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
         if new_data:
-            weather_delta_df, weather_current_df, _ = self.state_cache(pd.DataFrame({"a": [1.0]}), "Weather")
+            weather_delta_df, weather_current_df, _ = self.state_cache(pd.DataFrame({"some_dummy_data": [1.0]}), "Weather")
 
             # TODO: Provide Implementation
 

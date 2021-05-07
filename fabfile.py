@@ -181,7 +181,7 @@ def _build(context):
             _print_line("Compiling resources ...")
 
             # TODO: Re-enable once I have cleaned up anode codebase
-            _run_local(context, "pylint --disable=all src/main/python/*", module)
+            # _run_local(context, "pylint --disable=all src/main/python/*", module)
 
         _print_line("Preparing resources ...")
         _run_local(context, "mkdir -p target/package && cp -rvfp src/* run* target/package", module, hide='err', warn=True)

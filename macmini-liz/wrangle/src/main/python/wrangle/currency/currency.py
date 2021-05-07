@@ -1,16 +1,25 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import print_function
 
 import calendar
 import datetime
 import os
 import re
+from collections import OrderedDict
 
 import pandas as pd
 
 from .. import library
 
 PAIRS = ['AUD/GBP', 'AUD/USD', 'AUD/SGD']
-PERIODS = {'Daily': 1, 'Weekly': 7, 'Monthly': 30, 'Yearly': 365}
+PERIODS = OrderedDict([
+    ('1 Day Delta', 1),
+    ('1 Week Delta', 7),
+    ('1 Month Delta', 30),
+    ('1 Year Delta', 365),
+])
+COLUMNS = ["{} {}".format(pair, period).strip() for pair in PAIRS for period in ([""] + PERIODS.keys())]
 
 ATO_START_MONTH = 5
 ATO_START_YEAR = 2016
@@ -44,7 +53,7 @@ RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
 
-LINE_PROTOCOL = "currency,type={},period={} {}="
+LINE_PROTOCOL = "currency,type={},period={},unit={} {}="
 
 
 class Currency(library.Library):
@@ -155,16 +164,20 @@ class Currency(library.Library):
                 # ato_rba_df = extrapolate(rba_df.append(ato_df, ignore_index=True, verify_integrity=True, sort=True))
 
                 rba_df = extrapolate(rba_df)
+                del rba_df['Source']
+                rba_df = rba_df.reindex(columns=COLUMNS)
                 rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, "Currency")
                 if len(rba_delta_df):
-                    self.sheet_write(rba_current_df, DRIVE_URL, {'index': False, 'sheet': 'FX', 'start': 'A1', 'replace': True})
+                    self.sheet_write(rba_current_df, DRIVE_URL, {'index': True, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
                     for fx_pair in PAIRS:
-                        self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "daily", fx_pair) +
+                        self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "1-day",
+                                                                           "$/£" if "GBP" in fx_pair else "$/$", fx_pair) +
                                                       rba_delta_df[fx_pair].map(str) +
                                                       " " + (pd.to_datetime(rba_delta_df.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
                         for fx_period in PERIODS:
-                            self.database_write("\n".join(LINE_PROTOCOL.format("delta", fx_period.lower(), fx_pair) +
+                            self.database_write("\n".join(LINE_PROTOCOL.format("delta", "{}-day".format(PERIODS[fx_period]),
+                                                                               "%", fx_pair) +
                                                           rba_delta_df["{} {}".format(fx_pair, fx_period)].map(str) +
                                                           " " + (pd.to_datetime(rba_delta_df.index).astype(int) +
                                                                  6 * 60 * 60 * 1000000000).map(str)))

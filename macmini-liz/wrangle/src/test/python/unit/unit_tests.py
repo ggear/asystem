@@ -20,45 +20,45 @@ DIR_SRC = "../../../../src/main/python"
 
 class WrangleTest(unittest.TestCase):
 
-    def test_currency(self):
-        self.run_module("currency", {"success_typical": ASSERT_RUN, }, write=False)
+    def test_currency_typical(self):
+        self.run_module("currency", {"success_typical": ASSERT_RUN}, write=False)
 
-    def test_currency_all(self):
-        self.run_module("currency", TEST_ASSERT_RUN)
+    def test_currency_partial(self):
+        self.run_module("currency", {"success_partial": ASSERT_RUN, })
 
-    def test_equity(self):
-        self.run_module("equity", {"success_typical": ASSERT_RUN, }, write=False)
+    def test_equity_typical(self):
+        self.run_module("equity", {"success_typical": ASSERT_RUN}, write=False)
 
-    def test_equity_all(self):
-        self.run_module("equity", TEST_ASSERT_RUN)
+    def test_equity_partial(self):
+        self.run_module("equity", {"success_partial": ASSERT_RUN, })
 
-    def test_health(self):
-        self.run_module("health", {"success_typical": ASSERT_RUN, }, write=False)
+    def test_health_typical(self):
+        self.run_module("health", {"success_typical": ASSERT_RUN}, write=False)
 
-    def test_health_all(self):
-        self.run_module("health", TEST_ASSERT_RUN)
+    def test_health_partial(self):
+        self.run_module("health", {"success_partial": ASSERT_RUN, })
 
-    def test_interest(self):
-        self.run_module("interest", {"success_typical": ASSERT_RUN, }, write=False)
+    def test_interest_typical(self):
+        self.run_module("interest", {"success_typical": ASSERT_RUN}, write=False)
 
-    def test_interest_all(self):
-        self.run_module("interest", TEST_ASSERT_RUN)
+    def test_interest_partial(self):
+        self.run_module("interest", {"success_partial": ASSERT_RUN, })
 
-    def test_weather(self):
-        self.run_module("weather", {"success_typical": ASSERT_RUN, }, write=False)
+    def test_weather_typical(self):
+        self.run_module("weather", {"success_typical": ASSERT_RUN}, write=False)
 
-    def test_weather_all(self):
-        self.run_module("weather", TEST_ASSERT_RUN)
+    def test_weather_partial(self):
+        self.run_module("weather", {"success_partial": ASSERT_RUN, })
 
-    # TODO: Re-enable once write tests have all been verified
-    # def test_all(self):
-    #     for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
-    #         if not module_path.endswith("__init__.py"):
-    #             self.run_module(os.path.basename(os.path.dirname(module_path)), {"success_fresh": {}, }, prepare_only=True, write=True)
-    #     print("")
-    #     self.assertEqual(main.main(), 0, "Main script ran with errors on first run")
-    #     print("")
-    #     self.assertEqual(main.main(), 0, "Main script ran with errors on second re-run")
+    def test_all_fresh(self):
+        for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
+            if not module_path.endswith("__init__.py"):
+                self.run_module(os.path.basename(os.path.dirname(module_path)), {"success_fresh": {}, }, prepare_only=True)
+        with patch.object(library.Library, "stdout_write"):
+            print("")
+            self.assertEqual(main.main(), 0, "Main script ran with errors on first run")
+            print("")
+            self.assertEqual(main.main(), 0, "Main script ran with errors on second re-run")
 
     def run_module(self, module_name, tests_asserts, prepare_only=False, write=False):
         if not os.path.isdir(DIR_TARGET):
@@ -109,15 +109,16 @@ class WrangleTest(unittest.TestCase):
                 with patch.object(library.Library, "sheet_write") if not write else no_op():
                     with patch.object(library.Library, "database_write") if not write else no_op():
                         with patch.object(library.Library, "drive_write") if not write else no_op():
-                            print("STARTING           [{}]   [{}]".format(module_name.title(), test))
-                            module.run()
-                            print("FINISHED           [{}]   [{}]\n".format(module_name.title(), test))
-                            assert_counters(module.get_counters(), tests_asserts[test])
-                            module.reset_counters()
-                            print("STARTING (re-run)  [{}]   [{}]".format(module_name.title(), test))
-                            module.run()
-                            print("FINISHED  (re-run) [{}]   [{}]\n\n".format(module_name.title(), test))
-                            assert_counters(module.get_counters(), ASSERT_RERUN)
+                            with patch.object(library.Library, "stdout_write"):
+                                print("STARTING           [{}]   [{}]".format(module_name.title(), test))
+                                module.run()
+                                print("FINISHED           [{}]   [{}]\n".format(module_name.title(), test))
+                                assert_counters(module.get_counters(), tests_asserts[test])
+                                module.reset_counters()
+                                print("STARTING (re-run)  [{}]   [{}]".format(module_name.title(), test))
+                                module.run()
+                                print("FINISHED  (re-run) [{}]   [{}]\n\n".format(module_name.title(), test))
+                                assert_counters(module.get_counters(), ASSERT_RERUN)
         return counters
 
     def setUp(self):
@@ -138,7 +139,7 @@ ASSERT_RUN = {
         library.CTR_SRC_DATA: {
             library.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_EXPORT: {
+        library.CTR_SRC_EGRESS: {
             library.CTR_ACT_ERRORED: 0,
         },
     },
@@ -150,9 +151,9 @@ ASSERT_RUN = {
             library.CTR_ACT_PROCESSED: 0,
         },
         library.CTR_SRC_DATA: {
-            library.CTR_ACT_CURRENT: 0,
-            library.CTR_ACT_INPUT: 0,
-            library.CTR_ACT_DELTA: 0,
+            library.CTR_ACT_CURRENT_ROWS: 0,
+            library.CTR_ACT_INPUT_ROWS: 0,
+            library.CTR_ACT_DELTA_ROWS: 0,
         },
     },
 }
@@ -170,16 +171,16 @@ ASSERT_RERUN = {
             library.CTR_ACT_ERRORED: 0,
         },
         library.CTR_SRC_DATA: {
-            library.CTR_ACT_PREVIOUS: 0,
-            library.CTR_ACT_CURRENT: 0,
-            library.CTR_ACT_INPUT: 0,
-            library.CTR_ACT_DELTA: 0,
+            library.CTR_ACT_PREVIOUS_ROWS: 0,
+            library.CTR_ACT_CURRENT_ROWS: 0,
+            library.CTR_ACT_INPUT_ROWS: 0,
+            library.CTR_ACT_DELTA_ROWS: 0,
             library.CTR_ACT_ERRORED: 0,
         },
-        library.CTR_SRC_EXPORT: {
-            library.CTR_ACT_QUEUE: 0,
-            library.CTR_ACT_SHEET: 0,
-            library.CTR_ACT_DATABASE: 0,
+        library.CTR_SRC_EGRESS: {
+            library.CTR_ACT_QUEUE_ROWS: 0,
+            library.CTR_ACT_SHEET_ROWS: 0,
+            library.CTR_ACT_DATABASE_ROWS: 0,
             library.CTR_ACT_ERRORED: 0,
         },
     },
@@ -193,12 +194,6 @@ ASSERT_RERUN = {
     },
 }
 
-TEST_ASSERT_RUN = {
-    "success_fresh": ASSERT_RUN,
-    "success_partial": ASSERT_RUN,
-    "success_typical": ASSERT_RUN,
-}
-
 
 @contextlib.contextmanager
 def no_op():
@@ -206,5 +201,6 @@ def no_op():
 
 
 if __name__ == '__main__':
-    sys.argv.extend([__file__, "-v", "--durations=50", "--cov=../../../main/python", "-o", "cache_dir=../../../../target/.pytest_cache"])
+    sys.argv.extend([__file__, "-s", "-v", "--durations=50",
+                     "--cov=../../../main/python", "-o", "cache_dir=../../../../target/.pytest_cache"])
     pytest.main()

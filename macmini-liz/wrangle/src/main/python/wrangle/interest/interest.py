@@ -9,10 +9,10 @@ from .. import library
 
 LABELS = ['Retail', 'Inflation', 'Net']
 PERIODS = OrderedDict([
-    ('1 YR MA', 12),
-    ('5 YR MA', 5 * 12),
-    ('10 YR MA', 10 * 12),
-    ('20 YR MA', 20 * 12),
+    ('1 Year Mean', 12),
+    ('5 Year Mean', 5 * 12),
+    ('10 Year Mean', 10 * 12),
+    ('20 Year Mean', 20 * 12),
 ])
 COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + PERIODS.keys())]
 
@@ -21,7 +21,7 @@ INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xls"
 
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
 
-LINE_PROTOCOL = "interest,type={},period={} {}="
+LINE_PROTOCOL = "interest,type={},period={},unit={} {}="
 
 
 class Interest(library.Library):
@@ -82,12 +82,14 @@ class Interest(library.Library):
                     self.sheet_write(interest_current_df.sort_index(ascending=False), DRIVE_URL,
                                      {'index': True, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
                     for int_rate in LABELS:
-                        self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "monthly", int_rate.lower()) +
+                        self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "1-month",
+                                                                           "%", int_rate.lower()) +
                                                       interest_delta_df[int_rate].map(str) +
                                                       " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
                         for int_period in PERIODS:
-                            self.database_write("\n".join(LINE_PROTOCOL.format("mean", int_period.lower(), int_rate.lower()) +
+                            self.database_write("\n".join(LINE_PROTOCOL.format("mean", "{}-month".format(PERIODS[int_period]),
+                                                                               "%", int_rate.lower()) +
                                                           interest_delta_df["{} {}".format(int_rate, int_period)].map(str) +
                                                           " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
                                                                  6 * 60 * 60 * 1000000000).map(str)))
@@ -95,7 +97,7 @@ class Interest(library.Library):
                 else:
                     new_data = False
             except Exception as exception:
-                self.print_log("Unexpected error processing currency data", exception)
+                self.print_log("Unexpected error processing interest data", exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -

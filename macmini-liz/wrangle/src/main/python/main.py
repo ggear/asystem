@@ -24,7 +24,8 @@ def main(arguments=[]):
             runtime_errors += (
                     module.get_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_ERRORED) +
                     module.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED) +
-                    module.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_ERRORED)
+                    module.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_ERRORED) +
+                    module.get_counter(library.CTR_SRC_EGRESS, library.CTR_ACT_ERRORED)
             )
             library.print_log(module_name.title(), "Completed in [{}] secs".format(int(time.time()) - time_start_module))
     library.print_log("Wrangle", "Completed in [{}] secs".format(int(time.time()) - time_start))
