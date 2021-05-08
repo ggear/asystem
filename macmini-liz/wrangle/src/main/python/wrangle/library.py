@@ -144,8 +144,8 @@ class Library(object):
         self.print_log("Execution Summary:")
         for source in self.counters:
             for action in self.counters[source]:
-                self.print_log("  {} {:8}".format("{} {} ".format(source, action)
-                                                  .ljust(CTR_LBL_WIDTH, CTR_LBL_PAD), self.counters[source][action]))
+                self.print_log("     {} {:8}".format("{} {} ".format(source, action)
+                                                     .ljust(CTR_LBL_WIDTH, CTR_LBL_PAD), self.counters[source][action]))
 
     def add_counter(self, source, action, count=1):
         self.counters[source][action] += count
@@ -295,7 +295,7 @@ class Library(object):
                         if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]):
                             end_data = datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d').date()
                             end_expected = BDay().rollback(now).date()
-                            if now.strftime('%H:%M') < end_of_day:
+                            if now.date() == end_expected and now.strftime('%H:%M') < end_of_day:
                                 end_expected = end_expected - timedelta(days=1)
                             if end_data == end_expected:
                                 self.print_log("File [{}: {} {}] cached at [{}]"
@@ -500,7 +500,6 @@ class Library(object):
         file_previous = os.path.abspath("{}/__{}_Previous.csv".format(self.input, file_prefix))
         if not os.path.isdir(self.input):
             os.makedirs(self.input)
-
         data_df_current = pd.read_csv(file_current, index_col=0, dtype=str) if os.path.isfile(file_current) else pd.DataFrame()
         data_df_current.index = pd.to_datetime(data_df_current.index)
         data_df_current.index.name = 'Date'
@@ -511,49 +510,41 @@ class Library(object):
         for data_column in data_columns:
             if data_column not in data_df_current:
                 data_df_current[data_column] = np.nan
-            # if data_column not in data_df_input:
-            #     data_df_input[data_column] = np.nan
-
         data_df_input.index.name = 'Date'
         data_df_input.index = pd.to_datetime(data_df_input.index)
-        # data_df_input = data_df_input[data_columns]
         data_df_input.sort_index().to_csv(file_input)
         data_df_input = pd.read_csv(file_input, index_col=0, dtype=str)
         data_df_input.index = pd.to_datetime(data_df_input.index)
-
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_INPUT_COLUMNS, len(data_df_input.columns))
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_INPUT_ROWS, len(data_df_input))
         if os.path.isfile(file_current):
             shutil.move(file_current, file_previous)
         data_df_previous = pd.read_csv(file_previous, index_col=0, dtype=str) if os.path.isfile(file_previous) else pd.DataFrame()
         data_df_previous.index = pd.to_datetime(data_df_previous.index)
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns))
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, len(data_df_previous))
         for data_column in data_columns:
             if data_column not in data_df_previous:
                 data_df_previous[data_column] = ""
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_previous), file_previous))
-
         data_df_current = pd.concat([data_df_current, data_df_input], sort=True)
         data_df_current = data_df_current[~data_df_current.index.duplicated(keep='last')]
         data_df_current = data_df_current[data_columns]
         data_df_current.sort_index().to_csv(file_current)
         data_df_current = pd.read_csv(file_current, index_col=0, dtype=str)
         data_df_current.index = pd.to_datetime(data_df_current.index)
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns))
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_current), file_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_input), file_input))
-
         data_df_delta = data_df_current if len(data_df_previous) == 0 else \
             data_df_current.merge(data_df_previous, on=data_columns, how='outer', left_index=True, right_index=True, indicator=True) \
                 .loc[lambda x: x['_merge'] != 'both'].drop('_merge', 1).drop_duplicates()
         data_df_delta = data_df_delta[data_columns]
         data_df_delta.sort_index().to_csv(file_delta)
-        self.print_log("File [{}] written to [{}]".format(os.path.basename(file_delta), file_delta))
-
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns) + 1)
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, len(data_df_previous))
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns) + 1)
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_INPUT_COLUMNS, len(data_df_input.columns) + 1)
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_INPUT_ROWS, len(data_df_input))
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_COLUMNS, len(data_df_delta.columns) + 1)
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_COLUMNS, len(data_df_delta.columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_ROWS, len(data_df_delta))
+        self.print_log("File [{}] written to [{}]".format(os.path.basename(file_delta), file_delta))
         return data_df_delta, data_df_current, data_df_previous
 
     def state_write(self):
@@ -586,7 +577,7 @@ class Library(object):
     def sheet_write(self, data_df, drive_url, sheet_params={}):
         try:
             Spread(drive_url).df_to_sheet(data_df, **sheet_params)
-            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df.columns) + 1)
+            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
             self.print_log("Dataframe uploaded to [{}]".format(drive_url))
         except Exception as exception:
@@ -599,11 +590,13 @@ class Library(object):
                 tokens = line.split(' ')
                 if len(tokens) == 3:
                     self.stdout_write(line)
-                    self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(tokens[1].split(',')))
-                    self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS)
+                    self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(tokens[1].split(',')))
                 else:
                     self.print_log("Database write failed with invalid line format [{}]".format(line))
                     self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
+        if self.get_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS) > 0 and \
+                self.get_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS) == 0:
+            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS)
 
     def stdout_write(self, line):
         print(line)

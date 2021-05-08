@@ -1,7 +1,7 @@
 import sys
 
 sys.path.append('../../../main/python')
-
+import copy
 import os
 import shutil
 import unittest
@@ -20,35 +20,128 @@ DIR_SRC = "../../../../src/main/python"
 
 class WrangleTest(unittest.TestCase):
 
+    def test_adhoc(self):
+        self.run_module("interest", {"success_fresh": ASSERT_RUN}, write=False)
+
     def test_currency_typical(self):
-        self.run_module("currency", {"success_typical": ASSERT_RUN}, write=False)
+        self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                    library.CTR_ACT_CURRENT_COLUMNS: 15,
+                    library.CTR_ACT_INPUT_COLUMNS: 15,
+                    library.CTR_ACT_DELTA_COLUMNS: 15,
+                },
+            },
+        })})
 
     def test_currency_partial(self):
-        self.run_module("currency", {"success_partial": ASSERT_RUN, })
+        self.run_module("currency", {"success_partial": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                    library.CTR_ACT_CURRENT_COLUMNS: 15,
+                    library.CTR_ACT_INPUT_COLUMNS: 15,
+                    library.CTR_ACT_DELTA_COLUMNS: 15,
+                },
+            },
+        })})
 
     def test_equity_typical(self):
-        self.run_module("equity", {"success_typical": ASSERT_RUN}, write=False)
+        self.run_module("equity", {"success_typical": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 108,
+                    library.CTR_ACT_CURRENT_COLUMNS: 108,
+                    library.CTR_ACT_INPUT_COLUMNS: 72,
+                    library.CTR_ACT_DELTA_COLUMNS: 108,
+                },
+            },
+        })})
 
     def test_equity_partial(self):
-        self.run_module("equity", {"success_partial": ASSERT_RUN, })
+        self.run_module("equity", {"success_partial": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 99,
+                    library.CTR_ACT_CURRENT_COLUMNS: 108,
+                    library.CTR_ACT_INPUT_COLUMNS: 108,
+                    library.CTR_ACT_DELTA_COLUMNS: 108,
+                },
+            },
+        })})
 
     def test_health_typical(self):
-        self.run_module("health", {"success_typical": ASSERT_RUN}, write=False)
+        self.run_module("health", {"success_typical": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 57,
+                    library.CTR_ACT_CURRENT_COLUMNS: 57,
+                    library.CTR_ACT_INPUT_COLUMNS: 57,
+                    library.CTR_ACT_DELTA_COLUMNS: 57,
+                },
+            },
+        })})
 
     def test_health_partial(self):
-        self.run_module("health", {"success_partial": ASSERT_RUN, })
+        self.run_module("health", {"success_partial": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 57,
+                    library.CTR_ACT_CURRENT_COLUMNS: 57,
+                    library.CTR_ACT_INPUT_COLUMNS: 57,
+                    library.CTR_ACT_DELTA_COLUMNS: 57,
+                },
+            },
+        })})
 
     def test_interest_typical(self):
-        self.run_module("interest", {"success_typical": ASSERT_RUN}, write=False)
+        self.run_module("interest", {"success_typical": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                    library.CTR_ACT_CURRENT_COLUMNS: 15,
+                    library.CTR_ACT_INPUT_COLUMNS: 15,
+                    library.CTR_ACT_DELTA_COLUMNS: 15,
+                },
+            },
+        })})
 
     def test_interest_partial(self):
-        self.run_module("interest", {"success_partial": ASSERT_RUN, })
+        self.run_module("interest", {"success_partial": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 15,
+                    library.CTR_ACT_CURRENT_COLUMNS: 15,
+                    library.CTR_ACT_INPUT_COLUMNS: 15,
+                    library.CTR_ACT_DELTA_COLUMNS: 15,
+                },
+            },
+        })})
 
     def test_weather_typical(self):
-        self.run_module("weather", {"success_typical": ASSERT_RUN}, write=False)
+        self.run_module("weather", {"success_typical": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 0,
+                    library.CTR_ACT_CURRENT_COLUMNS: 1,
+                    library.CTR_ACT_INPUT_COLUMNS: 1,
+                    library.CTR_ACT_DELTA_COLUMNS: 1,
+                },
+            },
+        })})
 
     def test_weather_partial(self):
-        self.run_module("weather", {"success_partial": ASSERT_RUN, })
+        self.run_module("weather", {"success_partial": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 0,
+                    library.CTR_ACT_CURRENT_COLUMNS: 1,
+                    library.CTR_ACT_INPUT_COLUMNS: 1,
+                    library.CTR_ACT_DELTA_COLUMNS: 1,
+                },
+            },
+        })})
 
     def test_all_fresh(self):
         for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
@@ -128,6 +221,20 @@ class WrangleTest(unittest.TestCase):
         pass
 
 
+def merge_asserts(base, addition):
+    merged = copy.deepcopy(base)
+    for test in addition:
+        if test not in merged:
+            merged[test] = addition[test]
+        else:
+            for source in addition[test]:
+                if source not in merged[test]:
+                    merged[test][source] = addition[test][source]
+                else:
+                    merged[test][source].update(addition[test][source])
+    return merged
+
+
 ASSERT_RUN = {
     "counter_equals": {
         library.CTR_SRC_RESOURCES: {
@@ -171,15 +278,22 @@ ASSERT_RERUN = {
             library.CTR_ACT_ERRORED: 0,
         },
         library.CTR_SRC_DATA: {
+            library.CTR_ACT_PREVIOUS_COLUMNS: 0,
             library.CTR_ACT_PREVIOUS_ROWS: 0,
+            library.CTR_ACT_CURRENT_COLUMNS: 0,
             library.CTR_ACT_CURRENT_ROWS: 0,
+            library.CTR_ACT_INPUT_COLUMNS: 0,
             library.CTR_ACT_INPUT_ROWS: 0,
+            library.CTR_ACT_DELTA_COLUMNS: 0,
             library.CTR_ACT_DELTA_ROWS: 0,
             library.CTR_ACT_ERRORED: 0,
         },
         library.CTR_SRC_EGRESS: {
+            library.CTR_ACT_QUEUE_COLUMNS: 0,
             library.CTR_ACT_QUEUE_ROWS: 0,
+            library.CTR_ACT_SHEET_COLUMNS: 0,
             library.CTR_ACT_SHEET_ROWS: 0,
+            library.CTR_ACT_DATABASE_COLUMNS: 0,
             library.CTR_ACT_DATABASE_ROWS: 0,
             library.CTR_ACT_ERRORED: 0,
         },

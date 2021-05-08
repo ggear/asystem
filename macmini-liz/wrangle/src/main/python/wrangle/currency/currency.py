@@ -107,9 +107,9 @@ class Currency(library.Library):
                                         break
                                 except Exception as exception:
                                     self.print_log("Unexpected error processing file [{}]".format(year_month_file), exception)
-                            break
                         else:
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
+                        break
                 if not year_month_file_downloaded:
                     self.print_log("Error downloading file [{}]".format(os.path.basename(year_month_file)))
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
