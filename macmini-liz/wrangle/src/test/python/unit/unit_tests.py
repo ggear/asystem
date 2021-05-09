@@ -21,7 +21,7 @@ DIR_SRC = "../../../../src/main/python"
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("interest", {"success_fresh": ASSERT_RUN}, write=False)
+        self.run_module("health", {"success_fresh": ASSERT_RUN}, write=False)
 
     def test_currency_typical(self):
         self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {
@@ -75,10 +75,10 @@ class WrangleTest(unittest.TestCase):
         self.run_module("health", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 57,
-                    library.CTR_ACT_CURRENT_COLUMNS: 57,
-                    library.CTR_ACT_INPUT_COLUMNS: 57,
-                    library.CTR_ACT_DELTA_COLUMNS: 57,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 88,
+                    library.CTR_ACT_CURRENT_COLUMNS: 88,
+                    library.CTR_ACT_INPUT_COLUMNS: 56,
+                    library.CTR_ACT_DELTA_COLUMNS: 88,
                 },
             },
         })})
@@ -87,10 +87,10 @@ class WrangleTest(unittest.TestCase):
         self.run_module("health", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 57,
-                    library.CTR_ACT_CURRENT_COLUMNS: 57,
-                    library.CTR_ACT_INPUT_COLUMNS: 57,
-                    library.CTR_ACT_DELTA_COLUMNS: 57,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 88,
+                    library.CTR_ACT_CURRENT_COLUMNS: 88,
+                    library.CTR_ACT_INPUT_COLUMNS: 64,
+                    library.CTR_ACT_DELTA_COLUMNS: 88,
                 },
             },
         })})

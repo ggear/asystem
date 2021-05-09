@@ -11,72 +11,6 @@ import pandas as pd
 
 from .. import library
 
-DIMENSIONS_SLEEP = [
-    'Sleep Start (dt)',
-    'Sleep Finish (dt)',
-    'Sleep Balance (hr)',
-    'Sleep Recharge (%)',
-    'Sleep Debt (%)',
-    'Sleep Credit (%)',
-    'Sleep Duration (hr)',
-    'Sleep Duration Goal (%)',
-    'Sleep Quality (hr)',
-    'Sleep Quality Goal (%)',
-    'Sleep Deep (hr)',
-    'Sleep Deep Goal (%)',
-    'Sleep Awake (hr)',
-    'Sleep Efficiency (%)',
-    'Sleep Readiness Rating (%)',
-    'Sleep Rating (%)',
-    'Sleep Heart Rate (bpm)',
-    'Sleep Heart Rate Variability (ms)',
-    'Sleep Heart Rate Variability Baseline (ms)',
-    'Sleep Heart Rate Waking (bpm)',
-    'Sleep Heart Rate Waking Baseline (bpm)',
-]
-
-DIMENSIONS_HEALTH = [
-    'Energy Basal Burned (kJ)',
-    'Energy Active Burned (kJ)',
-    'Stand Time (min)',
-    'Stand Sessions (count)',
-    'Exercise Time (min)',
-    'Exercise Steps Taken (count)',
-    'Exercise Flights Climbed (count)',
-    'Walking Asymmetry (%)',
-    'Walking Distance (km)',
-    'Walking Double Support Percentage (%)',
-    'Walking Heart Rate Average (bpm)',
-    'Walking Speed (km/hr)',
-    'Mindful Breathing Time (min)',
-    'Hearing Headphone Exposure (dBSPL)',
-    'Heart Rate Average (bpm)',
-    'Heart Rate Maximum (bpm)',
-    'Heart Rate Minimum (bpm)',
-    'Heart Rate Resting (bpm)',
-    'Heart Rate Variability (ms)',
-]
-
-DIMENSIONS_WORKOUT = [
-    'Workout Distance (km)',
-    'Workout Duration (sec)',
-    'Workout Elevation Ascended (m)',
-    'Workout Elevation Descended (m)',
-    'Workout Energy Active (kJ)',
-    'Workout Energy Total (kJ)',
-    'Workout Finish (dt)',
-    'Workout Flights Climbed (count)',
-    'Workout Heart Rate Average (bpm)',
-    'Workout Heart Rate Maximum (bpm)',
-    'Workout Speed Average (km/hr)',
-    'Workout Start (dt)',
-    'Workout Step Cadence (spm)',
-    'Workout Step Count (count)',
-    'Workout Swim Stoke Cadence (spm)',
-    'Workout Swimming Stroke Count (count)',
-    'Workout Type (string)',
-]
-
 LINE_PROTOCOL = "health,type={},period={},unit={} {}="
 
 
@@ -89,9 +23,9 @@ class Health(library.Library):
         new_data = new_data or all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
         if new_data:
             sleep_yesterday_df = pd.DataFrame()
-            sleep_df = pd.DataFrame(columns=DIMENSIONS_SLEEP)
-            health_df = pd.DataFrame(columns=DIMENSIONS_HEALTH)
-            workout_df = pd.DataFrame(columns=DIMENSIONS_WORKOUT)
+            sleep_df = pd.DataFrame()
+            health_df = pd.DataFrame()
+            workout_df = pd.DataFrame()
             for file_name in files:
                 if files[file_name][0] and files[file_name][1]:
 
@@ -288,7 +222,6 @@ class Health(library.Library):
                                 'Walking Heart Rate Average (count/min)': 'Walking Heart Rate Average (bpm)',
                                 'Walking Speed (km/hr)': 'Walking Speed (km/hr)',
                             })
-                            file_df = file_df.reindex(sorted(file_df.columns), axis=1)
                             health_df = pd.concat([health_df, normalise(file_df)], sort=True)
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
@@ -302,20 +235,31 @@ class Health(library.Library):
                             file_df['Duration'] = file_df['Duration'].apply(lambda x: datetime.strptime(x, '%H:%M:%S'))
                             file_df['Duration'] = file_df['Duration'] - datetime.strptime('00:00', '%M:%S')
                             file_df['Duration'] = file_df['Duration'].apply(lambda x: x / np.timedelta64(1, 's') * 60)
-                            file_df = file_df.add_prefix("Workout ")
-                            file_df.insert(0, 'Date', pd.to_datetime(file_df['Workout Start'], format='%Y-%m-%d %H:%M'))
-                            file_df = file_df.rename(columns={
-                                'Workout Start': 'Workout Start (dt)',
-                                'Workout End': 'Workout Finish (dt)',
-                                'Workout Duration': 'Workout Duration (sec)',
-                                'Workout Total Energy (kJ)': 'Workout Energy Total (kJ)',
-                                'Workout Active Energy (kJ)': 'Workout Energy Active (kJ)',
-                                'Workout Avg Speed(km/hr)': 'Workout Speed Average (km/hr)',
-                                'Workout Avg Heart Rate (bpm)': 'Workout Heart Rate Average (bpm)',
-                                'Workout Max Heart Rate (bpm)': 'Workout Heart Rate Maximum (bpm)',
-                                'Workout Flights Climbed (count)': 'Workout Flights Climbed (count)',
-                                'Workout Type': 'Workout Type (string)',
-                            })
+                            file_df = pd.concat([
+                                file_df.pivot(columns='Type', values='Start')
+                                    .add_prefix('Workout-').add_suffix(' Start (dt)'),
+                                file_df.pivot(columns='Type', values='End')
+                                    .add_prefix('Workout-').add_suffix(' Finish (dt)'),
+                                file_df.pivot(columns='Type', values='Duration')
+                                    .add_prefix('Workout-').add_suffix(' Duration (sec)'),
+                                file_df.pivot(columns='Type', values='Total Energy (kJ)')
+                                    .add_prefix('Workout-').add_suffix(' Energy Total (kJ)'),
+                                file_df.pivot(columns='Type', values='Active Energy (kJ)')
+                                    .add_prefix('Workout-').add_suffix(' Energy Active (kJ)'),
+                                file_df.pivot(columns='Type', values='Avg Speed(km/hr)')
+                                    .add_prefix('Workout-').add_suffix(' Speed Average (km/hr)'),
+                                file_df.pivot(columns='Type', values='Avg Heart Rate (bpm)')
+                                    .add_prefix('Workout-').add_suffix(' Heart Rate Average (bpm)'),
+                                file_df.pivot(columns='Type', values='Max Heart Rate (bpm)')
+                                    .add_prefix('Workout-').add_suffix(' Heart Rate Maximum (bpm)'),
+                            ], axis=1)
+                            start_columns = ['Date']
+                            for start_column in file_df.columns.get_values().tolist():
+                                if start_column.endswith('Start (dt)'):
+                                    start_columns.append(start_column)
+                            file_df['Date'] = np.NaN
+                            file_df = file_df.assign(Date=file_df[start_columns].bfill(axis=1)['Date'])
+                            file_df['Date'] = pd.to_datetime(file_df['Date'], format='%Y-%m-%d %H:%M')
                             file_df = file_df.reindex(sorted(file_df.columns), axis=1)
                             workout_df = pd.concat([workout_df, normalise(file_df)], sort=True)
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
@@ -326,15 +270,73 @@ class Health(library.Library):
                         self.print_log("Error: Unknown file format [{}]".format(file_name))
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
             try:
-                sleep_df = sleep_df[~sleep_df.index.duplicated(keep='last')]
                 if len(sleep_df) > 0:
-                    sleep_df = sleep_df[DIMENSIONS_SLEEP]
-                health_df = health_df[~health_df.index.duplicated(keep='last')]
+                    sleep_df = sleep_df[[
+                        'Sleep Start (dt)',
+                        'Sleep Finish (dt)',
+                        'Sleep Balance (hr)',
+                        'Sleep Recharge (%)',
+                        'Sleep Debt (%)',
+                        'Sleep Credit (%)',
+                        'Sleep Duration (hr)',
+                        'Sleep Duration Goal (%)',
+                        'Sleep Quality (hr)',
+                        'Sleep Quality Goal (%)',
+                        'Sleep Deep (hr)',
+                        'Sleep Deep Goal (%)',
+                        'Sleep Awake (hr)',
+                        'Sleep Efficiency (%)',
+                        'Sleep Readiness Rating (%)',
+                        'Sleep Rating (%)',
+                        'Sleep Heart Rate (bpm)',
+                        'Sleep Heart Rate Variability (ms)',
+                        'Sleep Heart Rate Variability Baseline (ms)',
+                        'Sleep Heart Rate Waking (bpm)',
+                        'Sleep Heart Rate Waking Baseline (bpm)',
+                    ]]
+                    sleep_df = sleep_df[~sleep_df.index.duplicated(keep='last')]
                 if len(health_df) > 0:
-                    health_df = health_df[DIMENSIONS_HEALTH]
-                workout_df = workout_df[~workout_df.index.duplicated(keep='last')]
+                    health_df = health_df[[
+                        'Energy Basal Burned (kJ)',
+                        'Energy Active Burned (kJ)',
+                        'Stand Time (min)',
+                        'Stand Sessions (count)',
+                        'Exercise Time (min)',
+                        'Exercise Steps Taken (count)',
+                        'Exercise Flights Climbed (count)',
+                        'Walking Asymmetry (%)',
+                        'Walking Distance (km)',
+                        'Walking Double Support Percentage (%)',
+                        'Walking Heart Rate Average (bpm)',
+                        'Walking Speed (km/hr)',
+                        'Mindful Breathing Time (min)',
+                        'Hearing Headphone Exposure (dBSPL)',
+                        'Heart Rate Average (bpm)',
+                        'Heart Rate Maximum (bpm)',
+                        'Heart Rate Minimum (bpm)',
+                        'Heart Rate Resting (bpm)',
+                        'Heart Rate Variability (ms)',
+                    ]]
+                    health_df = health_df[~health_df.index.duplicated(keep='last')]
                 if len(workout_df) > 0:
-                    workout_df = workout_df[DIMENSIONS_WORKOUT]
+                    workout_columns = []
+                    workout_types = set()
+                    for workout_column in workout_df.columns.get_values().tolist():
+                        workout_types.add(workout_column.split(' ')[0].split('-')[1])
+                    for workout_type in workout_types:
+                        for workout_dimension in [
+                            'Start (dt)',
+                            'Finish (dt)',
+                            'Duration (sec)',
+                            'Energy Total (kJ)',
+                            'Energy Active (kJ)',
+                            'Speed Average (km/hr)',
+                            'Heart Rate Average (bpm)',
+                            'Heart Rate Maximum (bpm)',
+                        ]:
+                            workout_columns.append("Workout-{} {}".format(workout_type, workout_dimension))
+                    workout_df = workout_df[workout_columns]
+                    workout_df = workout_df[~workout_df.index.duplicated(keep='last')]
                 data_df = pd.concat([health_df, workout_df, sleep_df], axis=1, sort=True)
                 data_df.index.name = 'Date'
                 data_delta_df, _, _ = self.state_cache(data_df, "Health")
