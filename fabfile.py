@@ -327,9 +327,9 @@ def _release(context):
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in modules:
+        _print_header(module, "release")
         group_path = Path(join(DIR_ROOT, module, ".group"))
         if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) > 0:
-            _print_header(module, "release")
             print("Preparing release ... ")
             _run_local(context, "mkdir -p target/release", module)
             _run_local(context, "cp -rvfp .env_prod target/release/.env", module, hide='err', warn=True)
@@ -364,7 +364,9 @@ def _release(context):
                            .format(ssh_pass, host, install, install), hide='err', warn=True)
                 _run_local(context, "{}ssh -q root@{} 'echo && df -h /root /tmp /var /home && echo'".format(ssh_pass, host, install, install))
                 _print_footer("{}/{}".format(host, _name(module)), "release")
-            _print_footer(module, "release")
+        else:
+            print("Module ignored")
+        _print_footer(module, "release")
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
