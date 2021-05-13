@@ -155,6 +155,25 @@ def _pull(context, module="asystem"):
     _print_header(module, "pull")
     _run_local(context, "git pull --all")
     _print_footer(module, "pull")
+    for module in _get_modules(context, "docker-compose.yml", False):
+        _run_local(context, "echo 'RESTART=no' > .env", module)
+        _run_local(context, "echo 'VERSION=latest' >> .env", module)
+        _run_local(context, "echo 'DATA_DIR=./target/runtime-system' >> .env", module)
+        config_dir = os.path.join(DIR_ROOT, module, "src/main/resources/config")
+        profile = "{}/.profile".format(config_dir)
+        _run_local(context, "mkdir -p {}".format(config_dir))
+        if isfile(profile):
+            _run_local(context, "rm -rvf {}".format(profile))
+        for dependency in _get_dependencies(context, module):
+            dependency_env_dev = "{}/{}/.env_dev".format(DIR_ROOT, dependency)
+            if isfile(dependency_env_dev):
+                _run_local(context, "echo '' >> .env", module)
+                _run_local(context, "cat {} >> .env".format(dependency_env_dev), module)
+            dependency_profile = "{}/{}/src/main/resources/config/.profile_base".format(DIR_ROOT, dependency)
+            if isfile(dependency_profile):
+                _run_local(context, "cat {} >> {}".format(dependency_profile, profile))
+                _run_local(context, "echo '' >> {}".format(profile))
+        _run_local(context, "touch {}".format(profile))
     for module in _get_modules(context, "pull.sh", False):
         _print_header(module, "pull")
         _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), DIR_ROOT)
@@ -335,6 +354,11 @@ def _release(context):
             print("Preparing release ... ")
             _run_local(context, "mkdir -p target/release", module)
             _run_local(context, "cp -rvfp .env_prod target/release/.env", module, hide='err', warn=True)
+            for dependency in _get_dependencies(context, module):
+                dependency_env_prod = "{}/{}/.env_prod".format(DIR_ROOT, dependency)
+                if isfile(dependency_env_prod):
+                    _run_local(context, "echo '' >> target/release/.env", module)
+                    _run_local(context, "cat {} >> target/release/.env".format(dependency_env_prod), module)
             _run_local(context, "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
             if isfile(join(DIR_ROOT, module, "Dockerfile")):
                 file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])

@@ -10,8 +10,8 @@ services:
       - HOST_IP
       - ANODE_HOST
       - ANODE_PORT
-      - MQTT_HOST
-      - MQTT_PORT
+      - VERNEMQ_HOST
+      - VERNEMQ_PORT
       - INFLUXDB_PORT
       - INFLUXDB_HOST
     ports:

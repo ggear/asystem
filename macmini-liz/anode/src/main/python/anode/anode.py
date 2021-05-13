@@ -75,8 +75,8 @@ class ANode:
         self.publish = "publish_host" in self.config and len(self.config["publish_host"]) > 0 and \
                        "publish_port" in self.config and self.config["publish_port"] > 0
         if self.publish:
-            access_key = config["profile"]["MQTT_ACCESS_KEY"] if "MQTT_ACCESS_KEY" in config["profile"] else None
-            secret_key = config["profile"]["MQTT_SECRET_KEY"] if "MQTT_SECRET_KEY" in config["profile"] else None
+            access_key = config["profile"]["VERNEMQ_ACCESS_KEY"] if "VERNEMQ_ACCESS_KEY" in config["profile"] else None
+            secret_key = config["profile"]["VERNEMQ_SECRET_KEY"] if "VERNEMQ_SECRET_KEY" in config["profile"] else None
             mqtt_client_string = clientFromString(reactor, "tcp:" + self.config["publish_host"] + ":" + str(self.config["publish_port"]))
             self.publish_service = MqttPublishService(mqtt_client_string, MQTTFactory(profile=MQTTFactory.PUBLISHER),
                                                       KEEPALIVE_DEFAULT_SECONDS, access_key, secret_key)

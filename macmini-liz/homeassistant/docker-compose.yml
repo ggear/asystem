@@ -7,9 +7,9 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
-      - DB_URL
-      - MQTT_HOST
-      - MQTT_PORT
+      - POSTGRES_URL
+      - VERNEMQ_HOST
+      - VERNEMQ_PORT
       - INFLUXDB_TOKEN
     volumes:
       - ${DATA_DIR}:/config

@@ -3,7 +3,9 @@
 .git/
 *.pem
 ~$*.*
+.env
 .profile
+.profile_base
 .gspread_pandas
 .google_service_account.json
 .DS_Store

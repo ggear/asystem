@@ -19,7 +19,7 @@ tts:
   - platform: google_translate
 
 recorder:
-  db_url: !env_var DB_URL
+  db_url: !env_var POSTGRES_URL
   purge_keep_days: 1
 
 
@@ -40,8 +40,8 @@ influxdb:
   default_measurement: state
 
 mqtt:
-  broker: !env_var MQTT_HOST
-  port: !env_var MQTT_PORT
+  broker: !env_var VERNEMQ_HOST
+  port: !env_var VERNEMQ_PORT
   client_id: 'hass'
   discovery: true
   discovery_prefix: 'haas/sensor/config'

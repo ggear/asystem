@@ -1,7 +1,7 @@
 host: ${ANODE_HOST}
 port: ${ANODE_PORT}
-publish_host: ${MQTT_HOST}
-publish_port: ${MQTT_PORT}
+publish_host: ${VERNEMQ_HOST}
+publish_port: ${VERNEMQ_PORT}
 publish_batch_seconds: 10
 publish_status_topic: 'anode/status'
 publish_push_data_topic: 'haas/sensor/state'

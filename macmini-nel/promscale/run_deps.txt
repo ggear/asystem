@@ -1,0 +1,2 @@
+macmini-nel/kafka
+macmini-nel/zookeeper
