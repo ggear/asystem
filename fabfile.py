@@ -143,10 +143,11 @@ def _purge(context, module="asystem"):
 
 def _backup(context, module="asystem"):
     _print_header(module, "backup")
-    _run_local(context, "mkdir -p target && "
-                        "git check-ignore $(find . -type f -print) | grep -v ./asystem.iml | grep -v ./.git > target/.gitexternal")
     _run_local(context, "mkdir -p /Users/graham/_/doc/bup/asystem && "
-                        "rsync -vr --files-from=target/.gitexternal . /Users/graham/_/doc/bup/asystem", DIR_ROOT)
+                        "git check-ignore $(find . -type f -print) | grep -v ./asystem.iml | grep -v ./.git "
+                        "> /Users/graham/_/doc/bup/asystem/.gitexternal", DIR_ROOT)
+    _run_local(context, "mkdir -p /Users/graham/_/doc/bup/asystem && "
+                        "rsync -vr --files-from=/Users/graham/_/doc/bup/asystem/.gitexternal . /Users/graham/_/doc/bup/asystem", DIR_ROOT)
     _print_footer(module, "backup")
 
 
