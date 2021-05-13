@@ -143,9 +143,10 @@ def _purge(context, module="asystem"):
 
 def _backup(context, module="asystem"):
     _print_header(module, "backup")
-    _run_local(context, "mkdir -p target && git check-ignore $(find . -type f -print) "
-                        "| grep -v ./asystem.iml | grep -v ./.git > target/.gitexternal")
-    _run_local(context, "mkdir -p ../asystem-backup && rsync -vr --files-from=target/.gitexternal . ../asystem-backup", DIR_ROOT)
+    _run_local(context, "mkdir -p target && "
+                        "git check-ignore $(find . -type f -print) | grep -v ./asystem.iml | grep -v ./.git > target/.gitexternal")
+    _run_local(context, "mkdir -p /Users/graham/_/doc/bup/asystem && "
+                        "rsync -vr --files-from=target/.gitexternal . /Users/graham/_/doc/bup/asystem", DIR_ROOT)
     _print_footer(module, "backup")
 
 
@@ -354,7 +355,8 @@ def _release(context):
                 install = "/var/lib/asystem/install/{}/{}".format(module, _get_versions()[0])
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'".format(ssh_pass, host, install, install))
-                _run_local(context, "{}scp -qpr $(find target/release -maxdepth 1 -type f) root@{}:{}".format(ssh_pass, host, install), module)
+                _run_local(context, "{}scp -qpr $(find target/release -maxdepth 1 -type f) root@{}:{}".format(ssh_pass, host, install),
+                           module)
                 _run_local(context, "{}scp -qpr target/release/config root@{}:{}".format(ssh_pass, host, install), module)
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh_pass, host, install, install))
@@ -362,7 +364,8 @@ def _release(context):
                 _run_local(context, "{}ssh -q root@{} 'find $(dirname {}) -maxdepth 1 -mindepth 1 2>/dev/null | sort | "
                                     "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 2>/dev/null | wc -l) - 2)) | xargs rm -rf'"
                            .format(ssh_pass, host, install, install), hide='err', warn=True)
-                _run_local(context, "{}ssh -q root@{} 'echo && df -h /root /tmp /var /home && echo'".format(ssh_pass, host, install, install))
+                _run_local(context,
+                           "{}ssh -q root@{} 'echo && df -h /root /tmp /var /home && echo'".format(ssh_pass, host, install, install))
                 _print_footer("{}/{}".format(host, _name(module)), "release")
         else:
             print("Module ignored")
