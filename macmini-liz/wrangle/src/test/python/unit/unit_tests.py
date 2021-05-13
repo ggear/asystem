@@ -21,7 +21,7 @@ DIR_SRC = "../../../../src/main/python"
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("health", {"success_fresh": ASSERT_RUN}, write=False)
+        self.run_module("health", {"success_typical": ASSERT_RUN}, write=False)
 
     def test_currency_typical(self):
         self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {
@@ -317,4 +317,4 @@ def no_op():
 if __name__ == '__main__':
     sys.argv.extend([__file__, "-s", "-v", "--durations=50",
                      "--cov=../../../main/python", "-o", "cache_dir=../../../../target/.pytest_cache"])
-    pytest.main()
+    sys.exit(pytest.main())
