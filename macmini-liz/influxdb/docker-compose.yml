@@ -8,13 +8,6 @@ services:
     environment:
       - TZ=Australia/Perth
       - INFLUXD_CONFIG_PATH=/root/.influxdbv2/config.yml
-
-      # TODO: Automate setup as per https://github.com/influxdata/influxdb/pull/17946/commits/996ba9a65c68005ab1f8f64377af97be7550d010#diff-c43edca80239cb76564c11e503856bc9
-      - INFLUXDB_USER
-      - INFLUXDB_PASSWORD=${INFLUXDB_KEY}
-      - INFLUXDB_ORG=home
-      - INFLUXDB_BUCKET=asystem
-
     volumes:
       - ${DATA_DIR}:/root/.influxdbv2
     ports:
@@ -23,3 +16,16 @@ services:
       resources:
         limits:
           memory: 5G
+  influxdb_setup:
+    container_name: influxdb_setup
+    image: quay.io/influxdb/influxdb:v2.0.6
+    environment:
+      - INFLUXDB_HOST
+      - INFLUXDB_PORT
+    volumes:
+      - ${DATA_DIR}:/root/.influxdbv2
+      - ${DATA_DIR}/setup.sh:/setup.sh
+    command:
+      - /setup.sh
+    depends_on:
+      - influxdb

@@ -19,7 +19,7 @@ tts:
   - platform: google_translate
 
 recorder:
-  db_url: !env_var POSTGRES_URL
+  db_url: !env_var HOMEASSISTANT_DB
   purge_keep_days: 1
 
 

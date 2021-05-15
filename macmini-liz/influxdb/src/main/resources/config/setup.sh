@@ -1,32 +1,77 @@
 #!/bin/sh
 
+echo "--------------------------------------------------------------------------------"
+echo "Influx custom setup initialising ..."
+echo "--------------------------------------------------------------------------------"
+
 . /root/.influxdbv2/.profile
 
+apt-get install -y jq=1.5+dfsg-2+b1 curl=7.64.0-4+deb10u2 expect=5.45.4-2 netcat=1.10-41.1
+while ! nc -z $INFLUXDB_HOST $INFLUXDB_PORT; do
+  sleep 1
+done
+
+while ! influx ping --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT}; do
+  sleep 1
+done
+
+echo "--------------------------------------------------------------------------------"
+echo "Influx custom setup starting ..."
+echo "--------------------------------------------------------------------------------"
+
 if [ ! -f "/root/.influxdbv2/configs" ]; then
-  echo "Setup InfluxDB for first time ..."
-  sleep 5
-  influx setup -o home -b asystem -u influxdb -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN} -f >/dev/null 2>&1
-  apt-get install -y jq=1.5+dfsg-2+b1 curl=7.64.0-4+deb10u1 expect=5.45.4-2
-  influx bucket create -o home -n hosts -r 90d -t ${INFLUXDB_TOKEN}
-  for BUCKET in asystem hosts; do
-    export BUCKET=${BUCKET}
-    export BUCKET_ID=$(influx bucket list -o home -n ${BUCKET} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id')
-    influx v1 dbrp create -o home --db ${BUCKET} --rp default --default --bucket-id ${BUCKET_ID} -t ${INFLUXDB_TOKEN}
-    cat <<EOF >>/root/.influxdbv2/setup_create_auth.exp
-#!/usr/bin/expect -f
-set timeout -1
-spawn influx v1 auth create -o home --username "influxdb_\$env(BUCKET)" --read-bucket "\$env(BUCKET_ID)" --write-bucket "\$env(BUCKET_ID)" -t "\$env(INFLUXDB_TOKEN)"
-match_max 100000
-expect -re {.*password.*}
-send -- "\$env(INFLUXDB_KEY)\r"
-expect -re {.*password.*}
-send -- "\$env(INFLUXDB_KEY)\r"
-expect eof
-EOF
-    expect /root/.influxdbv2/setup_create_auth.exp
-    curl -G --silent --request GET "http://influxdb_${BUCKET}:${INFLUXDB_KEY}@localhost:8086/query?db=${BUCKET}" \
-      --data-urlencode "q=SELECT count(*) FROM test_metric WHERE time >= now() - 15m"
-  done
-else
-  echo "InfluxDB already setup  ..."
+  influx config create -a -n remote -u http://${INFLUXDB_HOST}:${INFLUXDB_PORT} -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN}
+  influx setup -f -n default --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT} -o ${INFLUXDB_ORG} -b ${INFLUXDB_BUCKET_HOME_PUBLIC} -u ${INFLUXDB_USER} -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN}
 fi
+
+BUCKET_ID_HOME_PUBLIC=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PUBLIC} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
+if [ "${BUCKET_ID_HOME_PUBLIC}" = "" ]; then
+  influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PUBLIC} -r 0 -t ${INFLUXDB_TOKEN}
+  BUCKET_ID_HOME_PUBLIC=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PUBLIC} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
+fi
+if [ $(influx v1 dbrp list -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOME_PUBLIC} --rp default --default --bucket-id ${BUCKET_ID_HOME_PUBLIC} -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
+  influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOME_PUBLIC} --rp default --default --bucket-id ${BUCKET_ID_HOME_PUBLIC} -t ${INFLUXDB_TOKEN}
+fi
+
+BUCKET_ID_HOME_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
+if [ "${BUCKET_ID_HOME_PRIVATE}" = "" ]; then
+  influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PRIVATE} -r 0 -t ${INFLUXDB_TOKEN}
+  BUCKET_ID_HOME_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
+fi
+if [ $(influx v1 dbrp list -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOME_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOME_PRIVATE} -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
+  influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOME_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOME_PRIVATE} -t ${INFLUXDB_TOKEN}
+fi
+
+BUCKET_ID_HOST_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
+if [ "${BUCKET_ID_HOST_PRIVATE}" = "" ]; then
+  influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -r 0 -t ${INFLUXDB_TOKEN}
+  BUCKET_ID_HOST_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
+fi
+if [ $(influx v1 dbrp list -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOST_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOST_PRIVATE} -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
+  influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOST_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOST_PRIVATE} -t ${INFLUXDB_TOKEN}
+fi
+
+if [ $(influx auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep "Read public buckets" | wc -l) -eq 0 ]; then
+  influx auth create -o ${INFLUXDB_ORG} \
+    --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
+    -d "Read public buckets" -t ${INFLUXDB_TOKEN}
+fi
+if [ $(influx v1 auth list -o ${INFLUXDB_ORG} --username influxdb_public -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
+  influx v1 auth create -o ${INFLUXDB_ORG} --username influxdb_public \
+    --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
+    --password ${INFLUXDB_TOKEN_PUBLIC_V1} -d "Read public buckets" -t ${INFLUXDB_TOKEN}
+fi
+if [ $(influx v1 auth list -o ${INFLUXDB_ORG} --username influxdb_all -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
+  influx v1 auth create -o ${INFLUXDB_ORG} --username influxdb_all \
+    --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
+    --read-bucket ${BUCKET_ID_HOME_PRIVATE} \
+    --read-bucket ${BUCKET_ID_HOST_PRIVATE} \
+    --write-bucket ${BUCKET_ID_HOME_PUBLIC} \
+    --write-bucket ${BUCKET_ID_HOME_PRIVATE} \
+    --write-bucket ${BUCKET_ID_HOST_PRIVATE} \
+    --password ${INFLUXDB_TOKEN} -d "Read/Write all buckets" -t ${INFLUXDB_TOKEN}
+fi
+
+echo "--------------------------------------------------------------------------------"
+echo "Influx custom setup finished"
+echo "--------------------------------------------------------------------------------"

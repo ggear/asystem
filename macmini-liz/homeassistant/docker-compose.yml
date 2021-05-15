@@ -7,7 +7,7 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
-      - POSTGRES_URL
+      - HOMEASSISTANT_DB
       - VERNEMQ_HOST
       - VERNEMQ_PORT
       - INFLUXDB_TOKEN
