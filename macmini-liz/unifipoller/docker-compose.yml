@@ -7,8 +7,7 @@ services:
     restart: ${RESTART}
     environment:
       - TZ=Australia/Perth
-      - INFLUXDB_HOST
-      - INFLUXDB_PORT
+      - INFLUXDB_URL
       - INFLUXDB_USER_ALL
       - INFLUXDB_TOKEN
       - INFLUXDB_BUCKET_HOST_PRIVATE
