@@ -26,11 +26,11 @@ recorder:
 influxdb:
   api_version: 2
   ssl: false
-  host: macmini-liz
-  port: 8086
+  host: !env_var INFLUXDB_HOST
+  port: !env_var INFLUXDB_PORT
   token: !env_var INFLUXDB_TOKEN
-  organization: home
-  bucket: asystem
+  organization: !env_var INFLUXDB_ORG
+  bucket: !env_var INFLUXDB_BUCKET_HOME_PUBLIC
   precision: ns
   tags:
     instance: production

@@ -10,7 +10,12 @@ services:
       - HOMEASSISTANT_DB
       - VERNEMQ_HOST
       - VERNEMQ_PORT
+      - INFLUXDB_HOST
+      - INFLUXDB_PORT
+      - INFLUXDB_ORG
       - INFLUXDB_TOKEN
+      - INFLUXDB_BUCKET_HOME_PUBLIC\
+      -
     volumes:
       - ${DATA_DIR}:/config
     network_mode: host
