@@ -8,6 +8,6 @@ influx ping --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT}
 
 curl --get http://localhost:8086/query \
   --user "${INFLUXDB_USER_PUBLIC}:${INFLUXDB_TOKEN_PUBLIC_V1}" \
-  --data-urlencode "db=${BUCKET_ID_HOME_PUBLIC}" \
+  --data-urlencode "db=${INFLUXDB_BUCKET_HOME_PUBLIC}" \
   --data-urlencode "q=SELECT count(*) FROM a_non_existent_metric WHERE time >= now() - 15m" \
   && echo ""

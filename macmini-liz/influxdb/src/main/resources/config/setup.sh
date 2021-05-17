@@ -58,12 +58,12 @@ if [ $(influx auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep "Read pub
     --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
     -d "Read public buckets" -t ${INFLUXDB_TOKEN}
 fi
-if [ $(influx v1 auth list -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_PUBLIC} -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
+if [ $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_USER_PUBLIC} | wc -l) -ne 1 ]; then
   influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_PUBLIC} \
     --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
     --password ${INFLUXDB_TOKEN_PUBLIC_V1} -d "Read public buckets" -t ${INFLUXDB_TOKEN}
 fi
-if [ $(influx v1 auth list -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_ALL} -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
+if [ $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_USER_ALL} | wc -l) -ne 1 ]; then
   influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_ALL} \
     --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
     --read-bucket ${BUCKET_ID_HOME_PRIVATE} \
