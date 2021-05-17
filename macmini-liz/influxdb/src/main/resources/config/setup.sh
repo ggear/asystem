@@ -31,8 +31,8 @@ if [ "${BUCKET_ID_HOME_PUBLIC}" = "" ]; then
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PUBLIC} -r 0 -t ${INFLUXDB_TOKEN}
   BUCKET_ID_HOME_PUBLIC=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PUBLIC} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
 fi
-if [ $(influx v1 dbrp list -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOME_PUBLIC} --rp default --default --bucket-id ${BUCKET_ID_HOME_PUBLIC} -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
-  influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOME_PUBLIC} --rp default --default --bucket-id ${BUCKET_ID_HOME_PUBLIC} -t ${INFLUXDB_TOKEN}
+if [ $(influx v1 dbrp list -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_BUCKET_HOME_PUBLIC} | grep ${BUCKET_ID_HOME_PUBLIC} | wc -l) -ne 1 ]; then
+  influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_HOME_PUBLIC} --rp default --default --bucket-id ${BUCKET_ID_HOME_PUBLIC} -t ${INFLUXDB_TOKEN}
 fi
 
 BUCKET_ID_HOME_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
@@ -40,8 +40,8 @@ if [ "${BUCKET_ID_HOME_PRIVATE}" = "" ]; then
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PRIVATE} -r 0 -t ${INFLUXDB_TOKEN}
   BUCKET_ID_HOME_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
 fi
-if [ $(influx v1 dbrp list -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOME_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOME_PRIVATE} -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
-  influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOME_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOME_PRIVATE} -t ${INFLUXDB_TOKEN}
+if [ $(influx v1 dbrp list -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_BUCKET_HOME_PRIVATE} | grep ${BUCKET_ID_HOME_PRIVATE} | wc -l) -ne 1 ]; then
+  influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_HOME_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOME_PRIVATE} -t ${INFLUXDB_TOKEN}
 fi
 
 BUCKET_ID_HOST_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
@@ -49,8 +49,8 @@ if [ "${BUCKET_ID_HOST_PRIVATE}" = "" ]; then
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -r 0 -t ${INFLUXDB_TOKEN}
   BUCKET_ID_HOST_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
 fi
-if [ $(influx v1 dbrp list -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOST_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOST_PRIVATE} -t ${INFLUXDB_TOKEN} | wc -l) -ne 2 ]; then
-  influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${BUCKET_ID_HOST_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOST_PRIVATE} -t ${INFLUXDB_TOKEN}
+if [ $(influx v1 dbrp list -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_BUCKET_HOST_PRIVATE} | grep ${BUCKET_ID_HOST_PRIVATE} | wc -l) -ne 1 ]; then
+  influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_HOST_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOST_PRIVATE} -t ${INFLUXDB_TOKEN}
 fi
 
 if [ $(influx auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep "Read public buckets" | wc -l) -eq 0 ]; then

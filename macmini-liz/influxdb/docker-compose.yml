@@ -8,6 +8,8 @@ services:
     environment:
       - TZ=Australia/Perth
       - INFLUXD_CONFIG_PATH=/root/.influxdbv2/config.yml
+      - INFLUXDB_HOST
+      - INFLUXDB_PORT
     volumes:
       - ${DATA_DIR}:/root/.influxdbv2
     ports:
