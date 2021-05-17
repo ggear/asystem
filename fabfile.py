@@ -493,7 +493,7 @@ def _down_module(context, module, down_this=True):
 
 def _run_local(context, command, working=".", **kwargs):
     with context.cd(join("./" if working == "." else DIR_ROOT, working)):
-        return context.run(". {} && {}".format(FILE_PROFILE, command), **kwargs)
+        return context.run(". {} && {}".format(FILE_ENV, command), **kwargs)
 
 
 def _run_remote(context, command, **kwargs):
@@ -546,7 +546,7 @@ def _print_footer(module, stage):
 
 
 DIR_ROOT = dirname(abspath(__file__))
-FILE_PROFILE = join(dirname(abspath(__file__)), ".profile")
+FILE_ENV = join(dirname(abspath(__file__)), ".env_fab")
 
 DOCKER_VARIABLES = \
     "HOST_IP=$([[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1) HOST_NAME=$(hostname)"
