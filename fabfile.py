@@ -293,7 +293,7 @@ def _release(context):
     for module in modules:
         _print_header(module, "release")
         group_path = Path(join(DIR_ROOT, module, ".group"))
-        if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) > 0:
+        if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0:
             _run_local(context, "mkdir -p target/release", module)
             _run_local(context, "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
             if isfile(join(DIR_ROOT, module, "Dockerfile")):
