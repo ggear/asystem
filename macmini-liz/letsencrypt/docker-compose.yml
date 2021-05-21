@@ -5,6 +5,7 @@ services:
     image: adferrand/dnsrobocert:3.7.0
     init: true
     environment:
+      - TZ=Australia/Perth
       - CLOUDFLARE_TOKEN
       - LETSENCRYPT_STAGING
     volumes:
