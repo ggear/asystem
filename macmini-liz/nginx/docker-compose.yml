@@ -8,8 +8,8 @@ services:
     environment:
       - TZ=Australia/Perth
     ports:
-      - 9080:9080
-      - 9443:9443
+      - ${NGINX_PORT_HTTP}:${NGINX_PORT_HTTP}
+      - ${NGINX_PORT_HTTPS}:${NGINX_PORT_HTTPS}
     volumes:
       - ${SERVICE_DATA_DIR}/nginx.conf:/etc/nginx/nginx.conf
       - ${SERVICE_DATA_DIR}/.key.pem:/etc/nginx/.key.pem

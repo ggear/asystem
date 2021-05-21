@@ -9,8 +9,6 @@ services:
       - TZ=Australia/Perth
     volumes:
       - ${SERVICE_DATA_DIR}/data:/prometheus
-    ports:
-      - 9090:9090
     deploy:
       resources:
         limits:

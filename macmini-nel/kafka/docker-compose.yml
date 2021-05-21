@@ -24,9 +24,6 @@ services:
       - CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS=1
       - CONFLUENT_METRICS_ENABLE='true'
       - CONFLUENT_SUPPORT_CUSTOMER_ID='anonymous'
-    ports:
-      - "9092:9092"
-      - "9101:9101"
     deploy:
       resources:
         limits:
