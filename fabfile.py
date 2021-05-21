@@ -157,7 +157,7 @@ def _pull(context, filter_module=None, is_release=False):
     # _run_local(context, "git pull --all")
     # _print_footer("asystem", "pull git")
 
-    for module in _get_modules(context, "docker-compose.yml", filter_module=filter_module):
+    for module in _get_modules(context, filter_module=filter_module):
         _print_header(module, "pull env")
         _write_env(context, module, join(DIR_ROOT, module, "target/release") if is_release else join(DIR_ROOT, module), is_release)
         _print_footer(module, "pull env")
