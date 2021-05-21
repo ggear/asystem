@@ -87,6 +87,7 @@ def get_file(file_name):
         "/root/{}".format(file_name),
         "{}/../../resources/{}".format(working, file_name),
         "{}/../../resources/config/{}".format(working, file_name),
+        "{}/../../../../{}".format(working, file_name),
     ]
     for path in paths:
         if os.path.isfile(path):
@@ -98,7 +99,7 @@ def get_dir(dir_name):
     working = os.path.dirname(__file__)
     parent_paths = [
         "/asystem/runtime",
-        "{}/../../../../target".format(working),
+        "{}/../../../../../wrangle/target".format(working),
     ]
     for parent_path in parent_paths:
         if os.path.isdir(parent_path):
@@ -374,7 +375,7 @@ class Library(object):
                 "modified": int(os.path.getmtime(local_file)) if check else None
             }
         dropbox_files = {}
-        service = dropbox.Dropbox(self.profile['DROPBOX_TOKEN'])
+        service = dropbox.Dropbox(os.getenv('DROPBOX_TOKEN'))
         cursor = None
         while True:
             response = service.files_list_folder(dropbox_dir) if cursor is None else service.files_list_folder_continue(cursor)
@@ -601,9 +602,8 @@ class Library(object):
     def stdout_write(self, line):
         print(line)
 
-    def __init__(self, name, input_drive, profile_path):
+    def __init__(self, name, input_drive):
         self.name = name
         self.reset_counters()
         self.input_drive = input_drive
         self.input = os.path.abspath(get_dir("data/{}".format(name.lower())))
-        self.profile = load_profile(profile_path)

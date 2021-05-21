@@ -4,7 +4,7 @@ services:
     container_name: promscale
     image: timescale/promscale:0.1.0
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
     deploy:

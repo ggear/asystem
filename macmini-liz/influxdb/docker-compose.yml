@@ -4,14 +4,14 @@ services:
     container_name: influxdb
     image: quay.io/influxdb/influxdb:v2.0.6
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
       - INFLUXD_CONFIG_PATH=/root/.influxdbv2/config.yml
       - INFLUXDB_HOST
       - INFLUXDB_PORT
     volumes:
-      - ${DATA_DIR}:/root/.influxdbv2
+      - ${SERVICE_DATA_DIR}:/root/.influxdbv2
     ports:
       - 8086:8086
     deploy:
@@ -25,8 +25,8 @@ services:
       - INFLUXDB_HOST
       - INFLUXDB_PORT
     volumes:
-      - ${DATA_DIR}:/root/.influxdbv2
-      - ${DATA_DIR}/setup.sh:/setup.sh
+      - ${SERVICE_DATA_DIR}:/root/.influxdbv2
+      - ${SERVICE_DATA_DIR}/setup.sh:/setup.sh
     command:
       - /setup.sh
     depends_on:

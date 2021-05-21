@@ -1,4 +1,4 @@
-host: ${ANODE_HOST}
+host: ${ANODE_IP}
 port: ${ANODE_PORT}
 save_on_exit: True
 save_seconds: -1

@@ -4,7 +4,7 @@ services:
     container_name: unifipoller
     image: golift/unifi-poller:2.0.1
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
       - INFLUXDB_URL
@@ -12,7 +12,7 @@ services:
       - INFLUXDB_TOKEN
       - INFLUXDB_BUCKET_HOST_PRIVATE
     volumes:
-      - ${DATA_DIR}:/config
+      - ${SERVICE_DATA_DIR}:/config
     deploy:
       resources:
         limits:

@@ -4,7 +4,7 @@ services:
     container_name: homeassistant
     image: homeassistant/home-assistant:0.116.4
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
       - HOMEASSISTANT_DB
@@ -16,7 +16,7 @@ services:
       - INFLUXDB_TOKEN
       - INFLUXDB_BUCKET_HOME_PUBLIC
     volumes:
-      - ${DATA_DIR}:/config
+      - ${SERVICE_DATA_DIR}:/config
     network_mode: host
     deploy:
       resources:

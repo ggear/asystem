@@ -4,7 +4,7 @@ services:
     container_name: vernemq
     image: vernemq/vernemq:1.11.0-alpine
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
       - DOCKER_VERNEMQ_ACCEPT_EULA=yes
@@ -12,7 +12,7 @@ services:
 
     # TODO: Get permission denied?
     #    volumes:
-    #      - ${DATA_DIR}:/var/lib/vernemq
+    #      - ${SERVICE_DATA_DIR}:/var/lib/vernemq
 
     ports:
       - 1883:1883

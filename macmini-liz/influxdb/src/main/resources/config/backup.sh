@@ -1,7 +1,5 @@
 #!/bin/sh
 
-. /root/.influxdbv2/.profile
-
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 influx backup -b asystem /root/.influxdbv2/backup/${TIMESTAMP} -t $INFLUXDB_TOKEN

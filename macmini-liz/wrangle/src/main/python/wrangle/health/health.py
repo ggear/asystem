@@ -361,5 +361,5 @@ class Health(library.Library):
         else:
             self.print_log("No new data found")
 
-    def __init__(self, profile_path=".profile"):
-        super(Health, self).__init__("Health", "1oI-jGTGsaYJgvj--v0q0B4Q_42OR21E2", profile_path)
+    def __init__(self):
+        super(Health, self).__init__("Health", "1oI-jGTGsaYJgvj--v0q0B4Q_42OR21E2")

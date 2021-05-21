@@ -89,7 +89,7 @@ def load_profile(profile_file):
             continue
         profile_key, profile_value = profile_line.split("=", 1)
         profile[profile_key] = profile_value
-    profile["INFLUXDB_HOST"] = os.environ['INFLUXDB_HOST'] if "INFLUXDB_HOST" in os.environ else "192.168.1.10"
+    profile["INFLUXDB_IP"] = os.environ['INFLUXDB_IP'] if "INFLUXDB_IP" in os.environ else "192.168.1.10"
     profile["INFLUXDB_PORT"] = os.environ['INFLUXDB_PORT'] if "INFLUXDB_PORT" in os.environ else "8086"
     return profile
 
@@ -110,7 +110,7 @@ def med(data):
 
 def query(env, flux):
     response = post(
-        url="http://{}:{}/api/v2/query?org=home".format(env["INFLUXDB_HOST"], env["INFLUXDB_PORT"]),
+        url="http://{}:{}/api/v2/query?org=home".format(env["INFLUXDB_IP"], env["INFLUXDB_PORT"]),
         headers={
             'Accept': 'application/csv',
             'Content-type': 'application/vnd.flux',

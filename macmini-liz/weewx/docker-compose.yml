@@ -2,9 +2,9 @@ version: '3.7'
 services:
   weewx:
     container_name: weewx
-    image: weewx:${VERSION}
+    image: weewx:${SERVICE_VERSION_ABSOLUTE}
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
       - WEEWX_UID=weewx
@@ -12,7 +12,7 @@ services:
     ports:
       - 8092:80
     volumes:
-      - ${DATA_DIR}:/data
+      - ${SERVICE_DATA_DIR}:/data
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
     deploy:

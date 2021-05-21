@@ -478,10 +478,12 @@ def load_profile(profile_file):
 
 
 def load_config(config_path, profile_path):
+    profile = {}
     with open(config_path, "r") as config_file:
         config = yaml.safe_load(config_file)
-    with open(profile_path, 'r') as profile_file:
-        profile = load_profile(profile_file)
+    if os.path.isfile(profile_path):
+        with open(profile_path, 'r') as profile_file:
+            profile = load_profile(profile_file)
     substitution_pattern = re.compile(r'\${([^}]+)}')
     if "HOST_IP" not in profile:
         profile["HOST_IP"] = get_local_ip()

@@ -2,22 +2,21 @@ version: '3.7'
 services:
   anode:
     container_name: anode
-    image: anode:${VERSION}
+    image: anode:${SERVICE_VERSION_ABSOLUTE}
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
-      - HOST_IP
-      - ANODE_HOST
+      - ANODE_IP
       - ANODE_PORT
-      - VERNEMQ_HOST
+      - VERNEMQ_IP
       - VERNEMQ_PORT
+      - INFLUXDB_IP
       - INFLUXDB_PORT
-      - INFLUXDB_HOST
     ports:
       - 8091:8091
     volumes:
-      - ${DATA_DIR}:/etc/anode
+      - ${SERVICE_DATA_DIR}:/etc/anode
     deploy:
       resources:
         limits:

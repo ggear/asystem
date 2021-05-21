@@ -1,21 +1,20 @@
 #!/bin/sh
 
-SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${VERSION_ABSOLUTE}
-SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${VERSION_ABSOLUTE}
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
 cd ${SERVICE_INSTALL} || exit
 . ./.env
-. ./config/.profile
 cd config/grizzly
 GOPATH=$SERVICE_HOME/.go make dev
-if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}/api/datasources/name/InfluxDB2" | grep "InfluxDB2" | wc -l) -eq 0 ]; then
-  curl -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}/api/datasources" \
+if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_IP}:${GRAFANA_PORT}/api/datasources/name/InfluxDB2" | grep "InfluxDB2" | wc -l) -eq 0 ]; then
+  curl -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_IP}:${GRAFANA_PORT}/api/datasources" \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
           "name": "InfluxDB2",
           "type": "influxdb",
-          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "url": "http://'"${INFLUXDB_IP}:${INFLUXDB_PORT}"'",
           "access": "proxy",
           "isDefault": true,
           "jsonData": {
@@ -31,14 +30,14 @@ if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GR
           }
         }'
 fi
-if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}/api/datasources/name/InfluxDB1" | grep "InfluxDB1" | wc -l) -eq 0 ]; then
-  curl -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}/api/datasources" \
+if [ $(curl --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_IP}:${GRAFANA_PORT}/api/datasources/name/InfluxDB1" | grep "InfluxDB1" | wc -l) -eq 0 ]; then
+  curl -XPOST --silent "http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_IP}:${GRAFANA_PORT}/api/datasources" \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
           "name": "InfluxDB1",
           "type": "influxdb",
-          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "url": "http://'"${INFLUXDB_IP}:${INFLUXDB_PORT}"'",
           "access": "proxy",
           "isDefault": false,
           "database": "hosts",

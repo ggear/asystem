@@ -168,6 +168,7 @@ class Currency(library.Library):
                 rba_df = rba_df.reindex(columns=COLUMNS)
                 rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, "Currency")
                 if len(rba_delta_df):
+                    rba_current_df.index = rba_current_df.index.strftime('%Y-%m-%d')
                     self.sheet_write(rba_current_df, DRIVE_URL, {'index': True, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
                     for fx_pair in PAIRS:
                         self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "1-day",
@@ -193,5 +194,5 @@ class Currency(library.Library):
         if not new_data:
             self.print_log("No new data found")
 
-    def __init__(self, profile_path=".profile"):
-        super(Currency, self).__init__("Currency", "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE", profile_path)
+    def __init__(self):
+        super(Currency, self).__init__("Currency", "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE")

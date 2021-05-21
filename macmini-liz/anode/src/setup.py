@@ -6,7 +6,7 @@ from setuptools import setup
 
 setup(
     name="anode",
-    version="10.100.1000.dev0" if "$" in "$VERSION_ABSOLUTE" else "$VERSION_ABSOLUTE".replace("-SNAPSHOT", ".dev0"),
+    version="10.100.1000.dev0" if "$" in "$SERVICE_VERSION_ABSOLUTE" else "$SERVICE_VERSION_ABSOLUTE".replace("-SNAPSHOT", ".dev0"),
     description=" asystem anode",
     classifiers=[
         "Development Status :: 3 - Alpha",

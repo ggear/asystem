@@ -13,8 +13,7 @@ def main(arguments=[]):
     for module_path in glob.glob("{}/wrangle/*/*.py".format(os.path.dirname(os.path.realpath(__file__)))):
         if not module_path.endswith("__init__.py"):
             module_name = os.path.basename(os.path.dirname(module_path))
-            module = getattr(importlib.import_module("wrangle.{}".format(module_name)), module_name.title()) \
-                (library.get_file(".profile") if len(arguments) <= 1 else arguments[1])
+            module = getattr(importlib.import_module("wrangle.{}".format(module_name)), module_name.title())()
             module.run()
             runtime_errors += (
                     module.get_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_ERRORED) +

@@ -4,7 +4,7 @@ cd src/main/resources/config
 . ./.profile
 . ../../../../.env_prod
 
-export GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST}:${GRAFANA_PORT}
+export GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_IP}:${GRAFANA_PORT}
 
 echo $GRAFANA_URL
 

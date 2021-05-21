@@ -2,19 +2,17 @@ version: '3.7'
 services:
   wrangle:
     container_name: wrangle
-    image: wrangle:${VERSION}
+    image: wrangle:${SERVICE_VERSION_ABSOLUTE}
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
-      - HOST_IP
-      - HOST_NAME
       - INFLUXDB_PORT
       - INFLUXDB_HOST
+      - DROPBOX_TOKEN
     volumes:
-      - ${DATA_DIR}:/asystem/runtime
-      - ${DATA_DIR}/.profile:/etc/telegraf/.profile:ro
-      - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${SERVICE_DATA_DIR}:/asystem/runtime
+      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     deploy:
       resources:
         limits:

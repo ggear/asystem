@@ -4,11 +4,11 @@ services:
     container_name: prometheus
     image: prom/prometheus:v2.22.0
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
     volumes:
-      - ${DATA_DIR}/data:/prometheus
+      - ${SERVICE_DATA_DIR}/data:/prometheus
     ports:
       - 9090:9090
     deploy:

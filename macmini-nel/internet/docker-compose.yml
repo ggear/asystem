@@ -2,9 +2,9 @@ version: '3.7'
 services:
   internet:
     container_name: internet
-    image: internet:${VERSION}
+    image: internet:${SERVICE_VERSION_ABSOLUTE}
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
       - HOST_IP
@@ -12,8 +12,7 @@ services:
       - INFLUXDB_PORT
       - INFLUXDB_HOST
     volumes:
-      - ${DATA_DIR}/.profile:/etc/telegraf/.profile:ro
-      - ${DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     deploy:
       resources:
         limits:

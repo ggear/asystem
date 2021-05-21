@@ -1,6 +1,6 @@
-host: ${ANODE_HOST}
+host: ${ANODE_IP}
 port: ${ANODE_PORT}
-publish_host: ${VERNEMQ_HOST}
+publish_host: ${VERNEMQ_IP}
 publish_port: ${VERNEMQ_PORT}
 publish_batch_seconds: 10
 publish_status_topic: 'anode/status'

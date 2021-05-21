@@ -17,11 +17,14 @@ DIR_TARGET = "../../../../target"
 DIR_RESOURCES = "../../resources"
 DIR_SRC = "../../../../src/main/python"
 
+for key, value in library.load_profile(library.get_file(".env")).iteritems():
+    os.environ[key] = value
+
 
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("health", {"success_typical": ASSERT_RUN}, write=False)
+        self.run_module("weather", {"success_typical": ASSERT_RUN}, write=False)
 
     def test_currency_typical(self):
         self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {

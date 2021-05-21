@@ -4,14 +4,14 @@ services:
     container_name: postgres
     image: postgres:12.5-alpine
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_KEY}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
-      - ${DATA_DIR}:/var/lib/postgresql/data
+      - ${SERVICE_DATA_DIR}:/var/lib/postgresql/data
     ports:
       - 5432:5432
     deploy:

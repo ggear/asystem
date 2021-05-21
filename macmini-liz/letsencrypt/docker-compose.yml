@@ -8,8 +8,8 @@ services:
       - CLOUDFLARE_TOKEN
       - LETSENCRYPT_STAGING
     volumes:
-      - ${DATA_DIR}/letsencrypt:/etc/letsencrypt
-      - ${DATA_DIR}/dnsrobocert:/etc/dnsrobocert
+      - ${SERVICE_DATA_DIR}/letsencrypt:/etc/letsencrypt
+      - ${SERVICE_DATA_DIR}/dnsrobocert:/etc/dnsrobocert
     deploy:
       resources:
         limits:

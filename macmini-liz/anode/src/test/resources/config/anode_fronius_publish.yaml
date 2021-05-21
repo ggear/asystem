@@ -1,4 +1,4 @@
-host: ${ANODE_HOST}
+host: ${ANODE_IP}
 port: ${ANODE_PORT}
 publish_host: 5.196.95.208
 publish_port: 1883

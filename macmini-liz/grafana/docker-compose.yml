@@ -4,14 +4,14 @@ services:
     container_name: grafana
     image: grafana/grafana:7.5.5
     init: true
-    restart: ${RESTART}
+    restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
     volumes:
-      - ${DATA_DIR}/custom.ini:/etc/grafana/grafana.ini
-      - ${DATA_DIR}/dashboards/dashboard_home.json:/etc/grafana/dashboard_home.json
+      - ${SERVICE_DATA_DIR}/custom.ini:/etc/grafana/grafana.ini
+      - ${SERVICE_DATA_DIR}/dashboards/dashboard_home.json:/etc/grafana/dashboard_home.json
     ports:
       - ${GRAFANA_PORT}:${GRAFANA_PORT}
     deploy:

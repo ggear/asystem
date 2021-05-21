@@ -300,15 +300,24 @@ class Equity(library.Library):
                         statement_df.pivot(columns='Ticker', values='Rate').add_suffix(' FX Rate'),
                         statement_df.pivot(columns='Ticker', values='Currency').add_suffix(' Base Currency'),
                     ], axis=1)
+                    statement_df.index = pd.to_datetime(statement_df.index)
+                    statement_df = statement_df.resample('D')
+                    statement_df = statement_df.interpolate()
+                    for column in statement_df.columns:
+                        if column.endswith('Base Currency'):
+                            last = statement_df[column].last_valid_index()
+                            statement_df[column].loc[:last] = statement_df[column].loc[:last].ffill()
                 equity_df = pd.DataFrame()
                 for stock in STOCK:
                     if stock in stocks_df:
                         equity_df = pd.concat([equity_df, stocks_df[stock]], axis=1, sort=True)
+                equity_df.index = pd.to_datetime(equity_df.index)
+                equity_df = equity_df.resample('D')
+                equity_df = equity_df.fillna(method='backfill')
                 equity_df = pd.concat([equity_df, statement_df], axis=1, sort=True)
                 equity_df.index = pd.to_datetime(equity_df.index)
                 equity_df = equity_df[~equity_df.index.duplicated(keep='last')]
-                equity_df = equity_df.resample('D')
-                equity_df = equity_df.interpolate().fillna(method='ffill')
+                equity_df.index = pd.to_datetime(equity_df.index)
                 columns = []
                 tickers = set()
                 for column in equity_df.columns:
@@ -320,6 +329,7 @@ class Equity(library.Library):
                 equity_df = equity_df[columns]
                 equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, "Equity")
                 if len(equity_delta_df):
+                    equity_current_df.index = equity_current_df.index.strftime('%Y-%m-%d')
                     self.sheet_write(equity_current_df.sort_index(ascending=False), DRIVE_URL,
                                      {'index': True, 'sheet': 'History', 'start': 'A1', 'replace': True})
 
@@ -339,5 +349,5 @@ class Equity(library.Library):
         if not new_data:
             self.print_log("No new data found")
 
-    def __init__(self, profile_path=".profile"):
-        super(Equity, self).__init__("Equity", "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-", profile_path)
+    def __init__(self):
+        super(Equity, self).__init__("Equity", "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-")

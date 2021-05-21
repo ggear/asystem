@@ -79,6 +79,7 @@ class Interest(library.Library):
                 interest_df = interest_df[interest_df.index > '1982-03-01']
                 interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, "Interest")
                 if len(interest_delta_df):
+                    interest_current_df.index = interest_current_df.index.strftime('%Y-%m-%d')
                     self.sheet_write(interest_current_df.sort_index(ascending=False), DRIVE_URL,
                                      {'index': True, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
                     for int_rate in LABELS:
@@ -105,5 +106,5 @@ class Interest(library.Library):
         if not new_data:
             self.print_log("No new data found")
 
-    def __init__(self, profile_path=".profile"):
-        super(Interest, self).__init__("Interest", "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ", profile_path)
+    def __init__(self):
+        super(Interest, self).__init__("Interest", "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ")
