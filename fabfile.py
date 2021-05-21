@@ -133,7 +133,7 @@ def _purge(context):
     _print_header("asystem", "purge docker")
     _run_local(context, "[ $(docker ps -a -q | wc -l) -gt 0 ] && docker rm -vf $(docker ps -a -q)", warn=True)
     _run_local(context, "[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)", warn=True)
-    _run_local(context, "docker system prune --volumes -f -a")
+    _run_local(context, "docker system prune --volumes -f")
     _print_footer("asystem", "purge docker")
     _print_header("asystem", "purge conda")
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) > 0:
