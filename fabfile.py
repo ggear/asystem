@@ -133,7 +133,7 @@ def _purge(context):
     _print_header("asystem", "purge docker")
     _run_local(context, "[ $(docker ps -a -q | wc -l) -gt 0 ] && docker rm -vf $(docker ps -a -q)", warn=True)
     _run_local(context, "[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)", warn=True)
-    _run_local(context, "docker system prune --volumes -f")
+    _run_local(context, "docker system prune --volumes -f -a")
     _print_footer("asystem", "purge docker")
     _print_header("asystem", "purge conda")
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) > 0:
@@ -231,8 +231,7 @@ def _unittest(context):
 def _package(context, filter_module=None):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package")
-        _run_local(context, "docker image build -t {}:{} ."
-                   .format(_name(module), _name(module), _get_versions()[0]), module)
+        _run_local(context, "docker image build -t {}:{} .".format(_name(module), _get_versions()[0]), module)
         _print_footer(module, "package")
 
 
@@ -413,7 +412,6 @@ def _get_dependencies(context, module):
 
 
 def _write_env(context, module, working_path=".", is_release=False):
-    version = _get_versions()[0]
     service = _get_service(context, module)
     _run_local(context, "mkdir -p {}".format(working_path), module)
     _run_local(context, "echo 'SERVICE_NAME={}' > {}/.env"
@@ -428,7 +426,7 @@ def _write_env(context, module, working_path=".", is_release=False):
                .format("always" if is_release else
                        "no", working_path), module)
     _run_local(context, "echo 'SERVICE_DATA_DIR={}' >> {}/.env"
-               .format("{}/{}/{}".format(DIR_HOME, service, version) if is_release else
+               .format("{}/{}/{}".format(DIR_HOME, service, _get_versions()[0]) if is_release else
                        "{}/{}/target/runtime-system".format(DIR_ROOT, module), working_path), module)
     for dependency in _get_dependencies(context, module):
         if is_release:
