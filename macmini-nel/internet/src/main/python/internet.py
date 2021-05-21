@@ -17,8 +17,6 @@ from requests import post
 from speedtest import NoMatchedServers
 from speedtest import Speedtest
 
-DEFAULT_PROFILE_PATH = "../resources/config/.profile"
-
 HOST_HOME_NAME = "home.janeandgraham.com"
 
 HOST_SPEEDTEST_PING_IDS = ["2225", "10438", "23374"]
@@ -79,21 +77,6 @@ from(bucket: "hosts")
 """
 
 
-def load_profile(profile_file):
-    profile = {}
-    for profile_line in profile_file:
-        profile_line = profile_line.replace("export ", "").rstrip()
-        if "=" not in profile_line:
-            continue
-        if profile_line.startswith("#"):
-            continue
-        profile_key, profile_value = profile_line.split("=", 1)
-        profile[profile_key] = profile_value
-    profile["INFLUXDB_IP"] = os.environ['INFLUXDB_IP'] if "INFLUXDB_IP" in os.environ else "192.168.1.10"
-    profile["INFLUXDB_PORT"] = os.environ['INFLUXDB_PORT'] if "INFLUXDB_PORT" in os.environ else "8086"
-    return profile
-
-
 def time_ms():
     return int(time.time() * 1000)
 
@@ -108,13 +91,13 @@ def med(data):
     return (data[mid] + data[~mid]) / 2
 
 
-def query(env, flux):
+def query(flux):
     response = post(
-        url="http://{}:{}/api/v2/query?org=home".format(env["INFLUXDB_IP"], env["INFLUXDB_PORT"]),
+        url="http://{}:{}/api/v2/query?org=home".format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_PORT"]),
         headers={
             'Accept': 'application/csv',
             'Content-type': 'application/vnd.flux',
-            'Authorization': 'Token {}'.format(env["INFLUXDB_TOKEN"])
+            'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
         }, data=flux)
     rows = []
     for row in response.content.strip().split("\n")[1:]:
@@ -124,7 +107,7 @@ def query(env, flux):
     return rows
 
 
-def ping(env):
+def ping():
     run_code = RUN_CODE_FAIL_CONFIG
     for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS + HOST_SPEEDTEST_PING_IDS:
         pings = []
@@ -170,7 +153,7 @@ def ping(env):
     return run_code
 
 
-def upload(env):
+def upload():
     run_code = RUN_CODE_SUCCESS
     run_host_ids = set()
     network_stats = {
@@ -184,7 +167,7 @@ def upload(env):
         time_start = time_ms()
         try:
             for network_stat_reply in \
-                    query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
+                    query(QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
                 if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
                     if network_stat_reply[2].replace("speedtest-", "") in HOST_SPEEDTEST_THROUGHPUT_IDS:
                         run_host_ids.add(network_stat_reply[2].replace("speedtest-", ""))
@@ -241,7 +224,7 @@ def upload(env):
     return run_code
 
 
-def download(env):
+def download():
     run_code = RUN_CODE_SUCCESS
     run_host_ids = set()
     network_stats = {
@@ -255,7 +238,7 @@ def download(env):
         time_start = time_ms()
         try:
             for network_stat_reply in \
-                    query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
+                    query(QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
                 if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
                     if network_stat_reply[2].replace("speedtest-", "") in HOST_SPEEDTEST_THROUGHPUT_IDS:
                         run_host_ids.add(network_stat_reply[2].replace("speedtest-", ""))
@@ -312,7 +295,7 @@ def download(env):
     return run_code
 
 
-def lookup(env):
+def lookup():
     time_start = time_ms()
     run_replies = set()
     run_reply_count = 0
@@ -320,7 +303,7 @@ def lookup(env):
     run_code_iteration = RUN_CODE_FAIL_NETWORK
     time_start_iteration = time_ms()
     try:
-        home_host_ip = query(env, QUERY_IP)
+        home_host_ip = query(QUERY_IP)
     except Exception as exception:
         print("Error processing DNS lookup - ", end="", file=sys.stderr)
         traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
@@ -402,7 +385,7 @@ def lookup(env):
     uptime_now = datetime.now(pytz.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
-        uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "lookup"))
+        uptime_rows = query(QUERY_UPTIME.format("uptime_delta_s", "lookup"))
         if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
             uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
     except Exception as exception:
@@ -427,7 +410,7 @@ def lookup(env):
     return run_code
 
 
-def certificate(env):
+def certificate():
     time_start = time_ms()
     run_code = RUN_CODE_FAIL_CONFIG
     home_host_certificate_expiry = None
@@ -448,10 +431,10 @@ def certificate(env):
     uptime_now = datetime.now(pytz.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
-        uptime_rows = query(profile, QUERY_UPTIME.format("uptime_delta_s", "certificate"))
+        uptime_rows = query(QUERY_UPTIME.format("uptime_delta_s", "certificate"))
         if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
             uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
-            uptime_rows = query(profile, QUERY_UPTIME.format("uptime_s", "certificate"))
+            uptime_rows = query(QUERY_UPTIME.format("uptime_s", "certificate"))
             if len(uptime_rows) > 0 and len(uptime_rows[0]) > 1 and run_code == RUN_CODE_SUCCESS:
                 uptime_new = uptime_delta + int(uptime_rows[0][1])
     except Exception as exception:
@@ -478,88 +461,79 @@ def certificate(env):
 
 if __name__ == "__main__":
     time_start_all = time_ms()
-    profile_path = DEFAULT_PROFILE_PATH if len(sys.argv) == 1 else sys.argv[1]
-    profile = None
+    run_code_all = []
+    up_code_network = True
+    run_code_all.append(ping())
+    up_code_network = run_code_all[-1] == RUN_CODE_SUCCESS or run_code_all[-1] == RUN_CODE_FAIL_SPEEDTEST
+    if up_code_network:
+        run_code_all.append(upload())
+        run_code_all.append(download())
+    run_code_all.append(lookup())
+    run_code_all.append(certificate())
+    run_code_uptime = RUN_CODE_FAIL_CONFIG
+    uptime_delta = 0
+    uptime_new = None
+    uptime_now = datetime.now(pytz.utc)
+    uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
-        with open(profile_path, 'r') as profile_file:
-            profile = load_profile(profile_file)
+        uptime_rows = query(QUERY_UPTIME.format("uptime_s", "network"))
+        if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or not up_code_network:
+            uptime_new = 0
+        else:
+            uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
+            uptime_new = uptime_delta + int(uptime_rows[0][1])
     except Exception as exception:
-        print("Error processing profile - ", end="", file=sys.stderr)
+        print("Error processing network - ", end="", file=sys.stderr)
         traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
-    if profile is not None:
-        run_code_all = []
-        up_code_network = True
-        run_code_all.append(ping(profile))
-        up_code_network = run_code_all[-1] == RUN_CODE_SUCCESS or run_code_all[-1] == RUN_CODE_FAIL_SPEEDTEST
-        if up_code_network:
-            run_code_all.append(upload(profile))
-            run_code_all.append(download(profile))
-        run_code_all.append(lookup(profile))
-        run_code_all.append(certificate(profile))
-        run_code_uptime = RUN_CODE_FAIL_CONFIG
-        uptime_delta = 0
-        uptime_new = None
-        uptime_now = datetime.now(pytz.utc)
-        uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
-        try:
-            uptime_rows = query(profile, QUERY_UPTIME.format("uptime_s", "network"))
-            if len(uptime_rows) == 0 or len(uptime_rows[0]) < 2 or not up_code_network:
-                uptime_new = 0
-            else:
-                uptime_delta = int(round((uptime_now - uptime_rows[0][0]).total_seconds()))
-                uptime_new = uptime_delta + int(uptime_rows[0][1])
-        except Exception as exception:
-            print("Error processing network - ", end="", file=sys.stderr)
-            traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
-        if uptime_new is not None and uptime_epoch is not None:
-            run_code_uptime = RUN_CODE_SUCCESS
-        if not up_code_network:
-            network_stats = {
-                "ping": [
-                    """ r["_field"] == "ping_min_ms" """,
-                    "",
-                    ",host_location={},host_name={} ping_min_ms=0,ping_max_ms=0,ping_med_ms=0,"
-                ],
-                "upload": [
-                    """ r["_field"] == "upload_mbps" """,
-                    "",
-                    ",host_location={},host_name={} upload_mbps=0,upload_b=0,"
-                ],
-                "download": [
-                    """ r["_field"] == "download_mbps" """,
-                    "",
-                    ",host_location={},host_name={} download_mbps=0,download_b=0,"
-                ],
-            }
-            for network_stat in network_stats:
-                time_start = time_ms()
-                try:
-                    for network_stat_reply in \
-                            query(profile, QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
-                        print(FORMAT_TEMPLATE.format(
-                            network_stat,
-                            network_stat_reply[2],
-                            RUN_CODE_FAIL_ZEROED,
-                            network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4]),
-                            time_ms() - time_start,
-                            time_ns()))
-                except Exception as exception:
-                    print("Error processing network - ", end="", file=sys.stderr)
-                    traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
-        print(FORMAT_TEMPLATE.format(
-            "network",
-            HOST_INTERNET_INTERFACE_ID,
-            run_code_uptime,
-            ",host_location={},host_name={}{}metrics_suceeded={},metrics_failed={},".format(
-                HOST_INTERNET_LOCATION,
-                HOST_HOME_NAME,
-                " uptime_delta_s={}{}".format(
-                    uptime_delta,
-                    ",uptime_s={},".format(
-                        uptime_new
-                    ) if uptime_new is not None else ","
-                ),
-                run_code_all.count(0) + (1 if run_code_uptime == RUN_CODE_SUCCESS else 0),
-                len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)),
-            time_ms() - time_start_all,
-            uptime_epoch))
+    if uptime_new is not None and uptime_epoch is not None:
+        run_code_uptime = RUN_CODE_SUCCESS
+    if not up_code_network:
+        network_stats = {
+            "ping": [
+                """ r["_field"] == "ping_min_ms" """,
+                "",
+                ",host_location={},host_name={} ping_min_ms=0,ping_max_ms=0,ping_med_ms=0,"
+            ],
+            "upload": [
+                """ r["_field"] == "upload_mbps" """,
+                "",
+                ",host_location={},host_name={} upload_mbps=0,upload_b=0,"
+            ],
+            "download": [
+                """ r["_field"] == "download_mbps" """,
+                "",
+                ",host_location={},host_name={} download_mbps=0,download_b=0,"
+            ],
+        }
+        for network_stat in network_stats:
+            time_start = time_ms()
+            try:
+                for network_stat_reply in \
+                        query(QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
+                    print(FORMAT_TEMPLATE.format(
+                        network_stat,
+                        network_stat_reply[2],
+                        RUN_CODE_FAIL_ZEROED,
+                        network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4]),
+                        time_ms() - time_start,
+                        time_ns()))
+            except Exception as exception:
+                print("Error processing network - ", end="", file=sys.stderr)
+                traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
+    print(FORMAT_TEMPLATE.format(
+        "network",
+        HOST_INTERNET_INTERFACE_ID,
+        run_code_uptime,
+        ",host_location={},host_name={}{}metrics_suceeded={},metrics_failed={},".format(
+            HOST_INTERNET_LOCATION,
+            HOST_HOME_NAME,
+            " uptime_delta_s={}{}".format(
+                uptime_delta,
+                ",uptime_s={},".format(
+                    uptime_new
+                ) if uptime_new is not None else ","
+            ),
+            run_code_all.count(0) + (1 if run_code_uptime == RUN_CODE_SUCCESS else 0),
+            len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)),
+        time_ms() - time_start_all,
+        uptime_epoch))

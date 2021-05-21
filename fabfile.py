@@ -262,6 +262,7 @@ def _run(context):
         else:
             _run_local(context, "docker-compose --ansi never up --force-recreate", module)
         _print_footer(module, "run")
+        break
 
 
 def _deploy(context):
