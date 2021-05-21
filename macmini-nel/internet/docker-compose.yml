@@ -7,10 +7,11 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
-      - HOST_IP
-      - HOST_NAME
+      - INFLUXDB_IP
       - INFLUXDB_PORT
-      - INFLUXDB_HOST
+      - INFLUXDB_ORG
+      - INFLUXDB_BUCKET_HOST_PRIVATE
+      - INFLUXDB_TOKEN
     volumes:
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
     deploy:
