@@ -108,19 +108,23 @@ class Equity(library.Library):
                             31),
                         STOCK[stock]["end of day"], check=False)
         statement_files = {}
+        files_cached = self.get_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_CACHED)
+        files_downloaded = self.get_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_DOWNLOADED)
         files = self.drive_sync(self.input_drive, self.input)
+        self.add_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
         for file_name in files:
             if os.path.basename(file_name).startswith("58861"):
                 statement_files[file_name] = files[file_name]
             elif os.path.basename(file_name).startswith("Yahoo"):
-                if files[file_name][0] and files[file_name][1]:
+                if files[file_name][0] and (os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or files[file_name][1]):
                     stock_files[file_name] = files[file_name]
-        new_data = (all([status[0] for status in stock_files.values()]) and any([status[1] for status in stock_files.values()])) or \
+        new_data = os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or \
+                   (all([status[0] for status in stock_files.values()]) and any([status[1] for status in stock_files.values()])) or \
                    (all([status[0] for status in statement_files.values()]) and any([status[1] for status in statement_files.values()]))
         stocks_df = {}
         for stock_file_name in stock_files:
             if stock_files[stock_file_name][0]:
-                if stock_files[stock_file_name][1]:
+                if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or stock_files[stock_file_name][1]:
                     try:
                         stock_ticker = os.path.basename(stock_file_name).split('_')[1]
                         stock_df = pd.read_csv(stock_file_name) \
@@ -143,7 +147,7 @@ class Equity(library.Library):
         statement_data = {}
         for statement_file_name in statement_files:
             if statement_files[statement_file_name][0]:
-                if statement_files[statement_file_name][1]:
+                if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or statement_files[statement_file_name][1]:
                     with open(statement_file_name, "rb") as statement_file:
                         statement_data[statement_file_name] = {}
                         try:
@@ -240,11 +244,13 @@ class Equity(library.Library):
                                                                 None
                                     line_index += 1
                                 page_index += 1
+                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             statement_data[statement_file_name]['Status'] = STATUS_FAILURE
                             statement_data[statement_file_name]["Errors"].append(
                                 "Statement parse failed with exception [{}: {}]"
                                     .format(type(exception).__name__, exception))
+                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
                         statement_positions = statement_data[statement_file_name]["Positions"]
                         for statement_position in statement_positions.values():
@@ -253,20 +259,20 @@ class Equity(library.Library):
                                 statement_data[statement_file_name]["Errors"] \
                                     .append("Statement parse failed to resolve all keys {} in {}"
                                             .format(STATEMENT_ATTRIBUTES, statement_position))
+
+                else:
+                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
         if new_data:
             try:
                 statements_positions = []
-                counter_files_processed = self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                 for file_name in statement_data:
                     if statement_data[file_name]['Status'] == STATUS_SUCCESS:
                         statement_position = statement_data[file_name]["Positions"]
                         statements_positions.extend(statement_position.values())
                         self.print_log("File [{}] processed as [{}] with positions {}"
                                        .format(os.path.basename(file_name), STATUS_SUCCESS, statement_position.keys()))
-                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                     elif statement_data[file_name]['Status'] == STATUS_SKIPPED:
                         self.print_log("File [{}] processed as [{}]".format(os.path.basename(file_name), STATUS_SKIPPED))
-                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                     else:
                         self.print_log("File [{}] processed as [{}] at parsing point:"
                                        .format(os.path.basename(file_name), STATUS_FAILURE))
@@ -278,11 +284,6 @@ class Equity(library.Library):
                         while error_index < len(statement_data[file_name]["Errors"]):
                             self.print_log(" {:2d}: {}".format(error_index, statement_data[file_name]["Errors"][error_index]))
                             error_index += 1
-                counter_files_skipped = sum([not status[1] for status in statement_files.values()])
-                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, counter_files_skipped)
-                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, len(statement_files) -
-                                 (self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
-                                  - counter_files_processed + counter_files_skipped))
                 statement_df = pd.DataFrame(statements_positions)
                 if len(statement_df) > 0:
                     statement_df["Price"] = statement_df["Value"] / statement_df["Units"]
@@ -344,8 +345,6 @@ class Equity(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
-        else:
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, len(statement_files))
         if not new_data:
             self.print_log("No new data found")
 

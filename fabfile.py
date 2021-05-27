@@ -26,7 +26,6 @@ def default(context):
     _pull(context)
     _build(context)
     _unittest(context)
-    _package(context)
     _systest(context)
 
 
@@ -85,10 +84,6 @@ def package(context):
 @task
 def systest(context):
     _setup(context)
-    _clean(context)
-    _pull(context)
-    _build(context)
-    _package(context)
     _systest(context)
 
 
@@ -249,7 +244,7 @@ def _systest(context):
 
 def _run(context):
     for module in _get_modules(context, "docker-compose.yml"):
-        _up_module(context, module, run_package=True, up_this=False)
+        _up_module(context, module, up_this=False)
         _print_header(module, "run")
 
         def server_stop(signal, frame):
@@ -277,7 +272,6 @@ def _release(context):
         _pull(context)
         _build(context)
         _unittest(context)
-        _package(context)
         _systest(context)
     _get_versions_next_release()
     _clean(context)
@@ -435,7 +429,7 @@ def _write_env(context, module, working_path=".", is_release=False):
             host_ip = ",".join(host_ips)
             host_name = ",".join(_get_hosts(context, dependency))
         else:
-            host_name = _run_local(context, "hostname", hide='out').stdout.strip()
+            host_name = "host.docker.internal"
             host_ip = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
                                  hide='out').stdout.strip()
         if host_name == "" or host_ip == "":
@@ -446,7 +440,7 @@ def _write_env(context, module, working_path=".", is_release=False):
                    .format(dependency_service, host_name, working_path), module)
         _run_local(context, "echo '{}_IP={}' >> {}/.env"
                    .format(dependency_service, host_ip, working_path), module)
-        for dependency_env_file in [".env_all", ".env_prod" if is_release else ".env_dev", ".env_key"]:
+        for dependency_env_file in [".env_all", ".env_prod" if is_release else ".env_dev", ".env_all_key"]:
             dependency_env_dev = "{}/{}/{}".format(DIR_ROOT, dependency, dependency_env_file)
             if isfile(dependency_env_dev):
                 _run_local(context, "cat {} >> {}/.env".format(dependency_env_dev, working_path), module)
@@ -503,16 +497,15 @@ def _process_target(context, module, is_release=False):
                     #     _run_local(context, "cp -rvf {}/{} {}".format(package_resource_source, package_resource, runtime_resource))
 
 
-def _up_module(context, module, run_package=False, up_this=True):
+def _up_module(context, module, up_this=True):
     if isfile(join(DIR_ROOT, module, "docker-compose.yml")):
         for run_dep in _get_dependencies(context, module):
-            if run_package:
-                _clean(context, filter_module=run_dep)
-                _pull(context, filter_module=run_dep)
-                _build(context, filter_module=run_dep)
-                _package(context, filter_module=run_dep)
+            _clean(context, filter_module=run_dep)
+            _pull(context, filter_module=run_dep)
+            _build(context, filter_module=run_dep)
+            _package(context, filter_module=run_dep)
             _print_header(run_dep, "run prepare")
-            _run_local(context, "rm -rvf target/runtime-system && mkdir -p target/runtime-system", run_dep)
+            _run_local(context, "mkdir -p target/runtime-system", run_dep)
             dir_config = join(DIR_ROOT, run_dep, "target/package/main/resources/config")
             if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
                 _run_local(context, "cp -rvfp $(find {} -mindepth 1 -maxdepth 1) target/runtime-system".format(dir_config), run_dep)

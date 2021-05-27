@@ -32,7 +32,7 @@ class Interest(library.Library):
         retail_file = os.path.join(self.input, "retail.xls")
         file_status = self.http_download(RETAIL_URL, retail_file)
         if file_status[0]:
-            if file_status[1]:
+            if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or file_status[1]:
                 try:
                     new_data = True
                     retail_raw_df = pd.read_excel(retail_file, skiprows=11, header=None)
@@ -51,7 +51,7 @@ class Interest(library.Library):
         inflation_file = os.path.join(self.input, "inflation.xls")
         file_status = self.http_download(INFLATION_URL, inflation_file)
         if file_status[0]:
-            if file_status[1]:
+            if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or file_status[1]:
                 try:
                     new_data = True
                     inflation_raw_df = pd.read_excel(inflation_file, skiprows=11, header=None)

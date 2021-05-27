@@ -10,6 +10,7 @@ import os
 import os.path
 import shutil
 import ssl
+import sys
 import time
 import traceback
 import urllib2
@@ -63,19 +64,21 @@ pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', None)
 
+pd.options.mode.chained_assignment = None
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
 
-def print_log(process, message, exception=None):
-    prefix = "WRANGLE_DEBUG [{}] [{}]: ".format(process, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
-    if type(message) is not list:
-        message = [message]
-    for line in message:
-        if len(line) > 0:
-            print(u"{}{}".format(prefix, line))
-
-    if exception is not None:
-        print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc(limit=2).splitlines())))
+def print_log(process, message, exception=None, level="debug"):
+    if os.getenv('WRANGLE_ENABLE_LOG') == 'true':
+        prefix = "{} [{}] [{}]: " \
+            .format(level.upper() if exception is None else 'ERROR', process, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
+        if type(message) is not list:
+            message = [message]
+        for line in message:
+            if len(line) > 0:
+                print(u"{}{}".format(prefix, line))
+        if exception is not None:
+            print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc(limit=2).splitlines())))
 
 
 def get_file(file_name):
@@ -487,8 +490,20 @@ class Library(object):
                         self.drive_write(local_path, drive_dir, local_files[local_file]["modified"], service,
                                          drive_files[local_file]["id"] if local_file in drive_files else None)
                         file_actioned = True
+
+                        # TODO: Remove!
+                        self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_UPLOADED)
+                        # print("\nUPLOAD {} {}\n".format(local_file, self.get_counter(CTR_SRC_RESOURCES, CTR_ACT_UPLOADED)))
+
+
+
+
                     else:
                         self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_PERSISTED)
+
+                        # TODO: Remove!
+                        # print("\nNOLOAD {} {}\n".format(local_file, self.get_counter(CTR_SRC_RESOURCES, CTR_ACT_PERSISTED)))
+
                         self.print_log("File [{}] verified at [https://drive.google.com/file/d/{}]"
                                        .format(local_file, drive_files[local_file]["id"]))
                     actioned_files[local_path] = True, file_actioned
@@ -501,6 +516,9 @@ class Library(object):
         file_previous = os.path.abspath("{}/__{}_Previous.csv".format(self.input, file_prefix))
         if not os.path.isdir(self.input):
             os.makedirs(self.input)
+        if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true":
+            if os.path.isfile(file_current):
+                os.remove(file_current)
         data_df_current = pd.read_csv(file_current, index_col=0, dtype=str) if os.path.isfile(file_current) else pd.DataFrame()
         data_df_current.index = pd.to_datetime(data_df_current.index)
         data_df_current.index.name = 'Date'
@@ -520,6 +538,8 @@ class Library(object):
         self.add_counter(CTR_SRC_DATA, CTR_ACT_INPUT_ROWS, len(data_df_input))
         if os.path.isfile(file_current):
             shutil.move(file_current, file_previous)
+        elif os.path.isfile(file_previous):
+            os.remove(file_previous)
         data_df_previous = pd.read_csv(file_previous, index_col=0, dtype=str) if os.path.isfile(file_previous) else pd.DataFrame()
         data_df_previous.index = pd.to_datetime(data_df_previous.index)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns))
@@ -561,15 +581,16 @@ class Library(object):
         try:
             data = MediaFileUpload(local_file)
             metadata = {'modifiedTime': datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
-            if drive_id is None:
-                metadata['name'] = os.path.basename(local_file)
-                metadata['parents'] = [drive_dir]
-                request = service.files().create(body=metadata, media_body=data).execute()
-            else:
-                request = service.files().update(fileId=drive_id, body=metadata, media_body=data).execute()
-            self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_UPLOADED)
-            self.print_log("File [{}] uploaded to [https://drive.google.com/file/d/{}]"
-                           .format(os.path.basename(local_file), request.get('id') if drive_id is None else drive_id))
+            if os.getenv('WRANGLE_DISABLE_EXTERNAL_SERVICES') is None or os.getenv('WRANGLE_DISABLE_EXTERNAL_SERVICES') == "false":
+                if drive_id is None:
+                    metadata['name'] = os.path.basename(local_file)
+                    metadata['parents'] = [drive_dir]
+                    request = service.files().create(body=metadata, media_body=data).execute()
+                else:
+                    request = service.files().update(fileId=drive_id, body=metadata, media_body=data).execute()
+                self.print_log("File [{}] uploaded to [https://drive.google.com/file/d/{}]"
+                               .format(os.path.basename(local_file), request.get('id') if drive_id is None else drive_id))
+                self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_UPLOADED)
         except Exception as exception:
             self.print_log("File [{}] failed to upload to [https://drive.google.com/drive/folders/{}]"
                            .format(local_file, drive_dir), exception)
@@ -577,10 +598,11 @@ class Library(object):
 
     def sheet_write(self, data_df, drive_url, sheet_params={}):
         try:
-            Spread(drive_url).df_to_sheet(data_df, **sheet_params)
-            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
-            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
-            self.print_log("Dataframe uploaded to [{}]".format(drive_url))
+            if os.getenv('WRANGLE_DISABLE_EXTERNAL_SERVICES') is None or os.getenv('WRANGLE_DISABLE_EXTERNAL_SERVICES') == "false":
+                Spread(drive_url).df_to_sheet(data_df, **sheet_params)
+                self.print_log("Dataframe uploaded to [{}]".format(drive_url))
+                self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
+                self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_ROWS, len(data_df))
         except Exception as exception:
             self.print_log("Dataframe failed to upload to [{}]".format(drive_url), exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
@@ -595,6 +617,7 @@ class Library(object):
                 else:
                     self.print_log("Database write failed with invalid line format [{}]".format(line))
                     self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
+        sys.stdout.flush()
         if self.get_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS) > 0 and \
                 self.get_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS) == 0:
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS)

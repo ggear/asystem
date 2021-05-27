@@ -4,7 +4,7 @@
 *.pem
 ~$*.*
 .env
-.env_key
+.env_all_key
 .gspread_pandas
 .google_service_account.json
 .DS_Store

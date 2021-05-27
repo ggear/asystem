@@ -7,11 +7,9 @@ import shutil
 import unittest
 import importlib
 import pytest
-import main
 from wrangle import library
 from mock import patch
 import contextlib
-import glob
 
 DIR_TARGET = "../../../../target"
 DIR_RESOURCES = "../../resources"
@@ -19,6 +17,7 @@ DIR_SRC = "../../../../src/main/python"
 
 for key, value in library.load_profile(library.get_file(".env")).iteritems():
     os.environ[key] = value
+os.environ['WRANGLE_ENABLE_LOG'] = 'true'
 
 
 class WrangleTest(unittest.TestCase):
@@ -146,16 +145,6 @@ class WrangleTest(unittest.TestCase):
             },
         })})
 
-    def test_all_fresh(self):
-        for module_path in glob.glob("{}/wrangle/*/*.py".format(DIR_SRC)):
-            if not module_path.endswith("__init__.py"):
-                self.run_module(os.path.basename(os.path.dirname(module_path)), {"success_fresh": {}, }, prepare_only=True)
-        with patch.object(library.Library, "stdout_write"):
-            print("")
-            self.assertEqual(main.main(), 0, "Main script ran with errors on first run")
-            print("")
-            self.assertEqual(main.main(), 0, "Main script ran with errors on second re-run")
-
     def run_module(self, module_name, tests_asserts, prepare_only=False, write=False):
         if not os.path.isdir(DIR_TARGET):
             os.makedirs(DIR_TARGET)
@@ -203,18 +192,24 @@ class WrangleTest(unittest.TestCase):
             counters = {}
             if not prepare_only:
                 with patch.object(library.Library, "sheet_write") if not write else no_op():
-                    with patch.object(library.Library, "database_write") if not write else no_op():
-                        with patch.object(library.Library, "drive_write") if not write else no_op():
-                            with patch.object(library.Library, "stdout_write"):
-                                print("STARTING           [{}]   [{}]".format(module_name.title(), test))
-                                module.run()
-                                print("FINISHED           [{}]   [{}]\n".format(module_name.title(), test))
-                                assert_counters(module.get_counters(), tests_asserts[test])
-                                module.reset_counters()
-                                print("STARTING (re-run)  [{}]   [{}]".format(module_name.title(), test))
-                                module.run()
-                                print("FINISHED  (re-run) [{}]   [{}]\n\n".format(module_name.title(), test))
-                                assert_counters(module.get_counters(), ASSERT_RERUN)
+                    with patch.object(library.Library, "drive_write") if not write else no_op():
+                        with patch.object(library.Library, "stdout_write"):
+                            print("STARTING (run)     [{}]   [{}]".format(module_name.title(), test))
+                            module.run()
+                            print("FINISHED (run)     [{}]   [{}]\n".format(module_name.title(), test))
+                            assert_counters(module.get_counters(), tests_asserts[test])
+                            module.reset_counters()
+                            print("STARTING (no-op)   [{}]   [{}]".format(module_name.title(), test))
+                            module.run()
+                            print("FINISHED (no-op)   [{}]   [{}]\n\n".format(module_name.title(), test))
+                            assert_counters(module.get_counters(), ASSERT_NOOP)
+                            module.reset_counters()
+                            print("STARTING (reload)   [{}]   [{}]".format(module_name.title(), test))
+                            os.environ['WRANGLE_REPROCESS_ALL_FILES'] = 'true'
+                            module.run()
+                            os.environ['WRANGLE_REPROCESS_ALL_FILES'] = 'false'
+                            print("FINISHED (reload)   [{}]   [{}]\n\n".format(module_name.title(), test))
+                            assert_counters(module.get_counters(), ASSERT_RELOAD)
         return counters
 
     def setUp(self):
@@ -268,7 +263,7 @@ ASSERT_RUN = {
     },
 }
 
-ASSERT_RERUN = {
+ASSERT_NOOP = {
     "counter_equals": {
         library.CTR_SRC_RESOURCES: {
             library.CTR_ACT_DOWNLOADED: 0,
@@ -307,6 +302,35 @@ ASSERT_RERUN = {
         },
         library.CTR_SRC_FILES: {
             library.CTR_ACT_SKIPPED: 0,
+        },
+    },
+}
+
+ASSERT_RELOAD = {
+    "counter_equals": {
+        library.CTR_SRC_RESOURCES: {
+            library.CTR_ACT_DOWNLOADED: 0,
+            library.CTR_ACT_ERRORED: 0,
+        },
+        library.CTR_SRC_FILES: {
+            library.CTR_ACT_ERRORED: 0,
+        },
+        library.CTR_SRC_DATA: {
+            library.CTR_ACT_PREVIOUS_ROWS: 0,
+            library.CTR_ACT_ERRORED: 0,
+        },
+        library.CTR_SRC_EGRESS: {
+            library.CTR_ACT_ERRORED: 0,
+        },
+    },
+    "counter_greater": {
+        library.CTR_SRC_FILES: {
+            library.CTR_ACT_PROCESSED: 0,
+        },
+        library.CTR_SRC_DATA: {
+            library.CTR_ACT_CURRENT_ROWS: 0,
+            library.CTR_ACT_INPUT_ROWS: 0,
+            library.CTR_ACT_DELTA_ROWS: 0,
         },
     },
 }

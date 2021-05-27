@@ -45,7 +45,7 @@ DATE_TLS = r'%b %d %H:%M:%S %Y %Z'
 FORMAT_TEMPLATE = "internet,metric={},host_id={},run_code={}{}run_ms={} {}"
 
 QUERY_IP = """
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: -10m, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "ip")
@@ -55,7 +55,7 @@ from(bucket: "hosts")
 """
 
 QUERY_UPTIME = """
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: -10m, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "{}")
@@ -66,7 +66,7 @@ from(bucket: "hosts")
 """
 
 QUERY_LAST = """
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: -8h, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => {})
@@ -93,7 +93,7 @@ def med(data):
 
 def query(flux):
     response = post(
-        url="http://{}:{}/api/v2/query?org=home".format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_PORT"]),
+        url="http://{}:{}/api/v2/query?org={}".format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_PORT"], os.environ["INFLUXDB_ORG"]),
         headers={
             'Accept': 'application/csv',
             'Content-type': 'application/vnd.flux',

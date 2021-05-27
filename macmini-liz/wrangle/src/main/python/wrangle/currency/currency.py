@@ -74,7 +74,7 @@ class Currency(library.Library):
                                                      .format(month_string, year), year_month_file, check=False, ignore=True)
                     if file_status[0]:
                         year_month_file_downloaded = True
-                        if file_status[1]:
+                        if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or file_status[1]:
                             new_data = True
                             for header_rows in ATO_XLS_HEADER_ROWS:
                                 try:
@@ -117,7 +117,7 @@ class Currency(library.Library):
             years_file = os.path.join(self.input, "rba_fx_{}.xls".format(years))
             file_status = self.http_download(RBA_URL.format(years), years_file, check='current' in years)
             if file_status[0]:
-                if file_status[1]:
+                if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or file_status[1]:
                     new_data = True
                     try:
                         rba_itr_df = pd.read_excel(years_file, skiprows=10)

@@ -8,11 +8,13 @@ services:
     environment:
       - TZ=Australia/Perth
       - INFLUXD_CONFIG_PATH=/root/.influxdbv2/config.yml
-      - INFLUXDB_IP
+      - INFLUXDB_HOST
       - INFLUXDB_PORT
       - INFLUXDB_ORG
       - INFLUXDB_BUCKET_HOME_PUBLIC
       - INFLUXDB_BUCKET_HOME_PRIVATE
+      - INFLUXDB_BUCKET_DATA_PUBLIC
+      - INFLUXDB_BUCKET_DATA_PRIVATE
       - INFLUXDB_BUCKET_HOST_PRIVATE
       - INFLUXDB_USER
       - INFLUXDB_USER_ALL
@@ -22,7 +24,7 @@ services:
       - INFLUXDB_TOKEN_PUBLIC_V1
       - INFLUXDB_TOKEN_PUBLIC_V2
     volumes:
-      - ${SERVICE_DATA_DIR}:/root/.influxdbv2
+      - ${SERVICE_DATA_DIR}:/root/.influxdbv2:${INFLUXDB_MOUNT}
     ports:
       - ${INFLUXDB_PORT}:${INFLUXDB_PORT}
     deploy:
@@ -33,11 +35,13 @@ services:
     container_name: influxdb_setup
     image: quay.io/influxdb/influxdb:v2.0.6
     environment:
-      - INFLUXDB_IP
+      - INFLUXDB_HOST
       - INFLUXDB_PORT
       - INFLUXDB_ORG
       - INFLUXDB_BUCKET_HOME_PUBLIC
       - INFLUXDB_BUCKET_HOME_PRIVATE
+      - INFLUXDB_BUCKET_DATA_PUBLIC
+      - INFLUXDB_BUCKET_DATA_PRIVATE
       - INFLUXDB_BUCKET_HOST_PRIVATE
       - INFLUXDB_USER
       - INFLUXDB_USER_ALL
@@ -47,7 +51,7 @@ services:
       - INFLUXDB_TOKEN_PUBLIC_V1
       - INFLUXDB_TOKEN_PUBLIC_V2
     volumes:
-      - ${SERVICE_DATA_DIR}:/root/.influxdbv2
+      - ${SERVICE_DATA_DIR}:/root/.influxdbv2:default
       - ${SERVICE_DATA_DIR}/setup.sh:/setup.sh
     command:
       - /setup.sh

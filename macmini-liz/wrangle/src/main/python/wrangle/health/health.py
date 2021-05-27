@@ -17,17 +17,18 @@ LINE_PROTOCOL = "health,type={},period={},unit={} {}="
 class Health(library.Library):
 
     def _run(self):
-        new_data = False
         files = self.dropbox_download("/Data/Health", self.input)
-        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, sum([not status[1] for status in files.values()]))
-        new_data = new_data or all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
+        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, 0 if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" else \
+            sum([not status[1] for status in files.values()]))
+        new_data = os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or \
+                   all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
         if new_data:
             sleep_yesterday_df = pd.DataFrame()
             sleep_df = pd.DataFrame()
             health_df = pd.DataFrame()
             workout_df = pd.DataFrame()
             for file_name in files:
-                if files[file_name][0] and files[file_name][1]:
+                if files[file_name][0] and (os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or files[file_name][1]):
 
                     def normalise(df):
                         df['Date'] = pd.to_datetime(df['Date'])
