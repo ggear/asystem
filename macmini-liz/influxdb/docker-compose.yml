@@ -35,6 +35,7 @@ services:
     container_name: influxdb_setup
     image: quay.io/influxdb/influxdb:v2.0.6
     environment:
+      - TZ=Australia/Perth
       - INFLUXDB_HOST
       - INFLUXDB_PORT
       - INFLUXDB_ORG
@@ -53,6 +54,7 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}:/root/.influxdbv2:${INFLUXDB_MOUNT}
       - ${SERVICE_DATA_DIR}/setup.sh:/setup.sh
+    entrypoint: /bin/bash
     command:
       - /setup.sh
     depends_on:

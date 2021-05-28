@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Influx custom setup initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-apt-get install -y jq=1.5+dfsg-2+b1 curl=7.64.0-4+deb10u2 expect=5.45.4-2 netcat=1.10-41.1
+apt-get install -y jq=1.5+dfsg-2+b1 netcat=1.10-41.1
 while ! nc -z ${INFLUXDB_HOST} ${INFLUXDB_PORT} >>/dev/null 2>&1; do
   echo "Waiting for influxdb to come up ..." && sleep 1
 done

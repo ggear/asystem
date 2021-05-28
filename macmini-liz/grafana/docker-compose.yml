@@ -7,8 +7,24 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
+      - GRAFANA_HOST
+      - GRAFANA_PORT
+      - GRAFANA_URL
       - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
+      - INFLUXDB_HOST
+      - INFLUXDB_PORT
+      - INFLUXDB_ORG
+      - INFLUXDB_BUCKET_HOME_PUBLIC
+      - INFLUXDB_BUCKET_HOME_PRIVATE
+      - INFLUXDB_BUCKET_DATA_PUBLIC
+      - INFLUXDB_BUCKET_DATA_PRIVATE
+      - INFLUXDB_BUCKET_HOST_PRIVATE
+      - INFLUXDB_USER_ALL
+      - INFLUXDB_USER_PUBLIC
+      - INFLUXDB_TOKEN
+      - INFLUXDB_TOKEN_PUBLIC_V1
+      - INFLUXDB_TOKEN_PUBLIC_V2
     volumes:
       - ${SERVICE_DATA_DIR}/custom.ini:/etc/grafana/grafana.ini
       - ${SERVICE_DATA_DIR}/dashboards/dashboard_home.json:/etc/grafana/dashboard_home.json
@@ -18,3 +34,37 @@ services:
       resources:
         limits:
           memory: 5G
+  grafana_setup:
+    container_name: grafana_setup
+    image: grafana/grafana:7.5.5
+    init: true
+    restart: ${SERVICE_RESTART}
+    user: root
+    environment:
+      - TZ=Australia/Perth
+      - GRAFANA_HOST
+      - GRAFANA_PORT
+      - GRAFANA_URL
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
+      - INFLUXDB_HOST
+      - INFLUXDB_PORT
+      - INFLUXDB_ORG
+      - INFLUXDB_BUCKET_HOME_PUBLIC
+      - INFLUXDB_BUCKET_HOME_PRIVATE
+      - INFLUXDB_BUCKET_DATA_PUBLIC
+      - INFLUXDB_BUCKET_DATA_PRIVATE
+      - INFLUXDB_BUCKET_HOST_PRIVATE
+      - INFLUXDB_USER_ALL
+      - INFLUXDB_USER_PUBLIC
+      - INFLUXDB_TOKEN
+      - INFLUXDB_TOKEN_PUBLIC_V1
+      - INFLUXDB_TOKEN_PUBLIC_V2
+    volumes:
+      - ${SERVICE_DATA_DIR}/setup.sh:/setup.sh
+      - ${SERVICE_DATA_DIR}:/bootstrap
+    entrypoint: /bin/bash
+    command:
+      - /setup.sh
+    depends_on:
+      - grafana
