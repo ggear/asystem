@@ -51,7 +51,7 @@ services:
       - INFLUXDB_TOKEN_PUBLIC_V1
       - INFLUXDB_TOKEN_PUBLIC_V2
     volumes:
-      - ${SERVICE_DATA_DIR}:/root/.influxdbv2:default
+      - ${SERVICE_DATA_DIR}:/root/.influxdbv2:${INFLUXDB_MOUNT}
       - ${SERVICE_DATA_DIR}/setup.sh:/setup.sh
     command:
       - /setup.sh
