@@ -14,7 +14,7 @@
 
       stat.new(
         title='Gateway Uptime',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -31,7 +31,7 @@
       ).addThreshold(
         { color: 'green', value: 86400 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "uptime")
@@ -41,7 +41,7 @@ from(bucket: "hosts")
 
       stat.new(
         title='Network Clients',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='clients',
         decimals=0,
         reducerFunction='last',
@@ -58,7 +58,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 5 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
   |> filter(fn: (r) => r["_field"] == "hostname")
@@ -69,7 +69,7 @@ from(bucket: "hosts")
 
       bar.new(
         title='Wireless Performance',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
@@ -78,7 +78,7 @@ from(bucket: "hosts")
         ],
       ).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap_vaps")
   |> filter(fn: (r) => r["_field"] == "tx_packets" or r["_field"] == "tx_combined_retries")
@@ -95,7 +95,7 @@ from(bucket: "hosts")
   |> map(fn: (r) => ({ r with radio: if r.radio == "ng" then "No Retries (2.4 GHz)" else (if r.radio == "na" then "No Retries (5 GHz)" else r.radio) }))
 // End')).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap_vaps")
   |> filter(fn: (r) => r["_field"] == "rx_packets" or r["_field"] == "rx_errors" or r["_field"] == "rx_dropped" or r["_field"] == "rx_crypts" or r["_field"] == "rx_frags" or r["_field"] == "rx_nwids")
@@ -118,7 +118,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Wireless Quality Score (5GHz)',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -136,7 +136,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 30 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap_vaps")
   |> filter(fn: (r) => r["_field"] == "ccq")
@@ -148,7 +148,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Wireless Quality Score (2.4GHz)',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -166,7 +166,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 70 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap_vaps")
   |> filter(fn: (r) => r["_field"] == "ccq")
@@ -178,7 +178,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Network Throughput',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         decimals=0,
         format='Bps',
@@ -195,7 +195,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-rx_bytes")
@@ -205,7 +205,7 @@ from(bucket: "hosts")
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-tx_bytes")
@@ -220,7 +220,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Network Clients',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='short',
         bars=false,
@@ -236,7 +236,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
   |> filter(fn: (r) => r["_field"] == "hostname")
@@ -247,7 +247,7 @@ from(bucket: "hosts")
   |> group()
   |> set(key: "name", value: "clients")
 // TODO: Separate wired/wireless, unfortunately data quality is poor coming from unifi, so many wireless devices show up as wired!
-//from(bucket: "hosts")
+//from(bucket: "host_private")
 //  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
 //  |> filter(fn: (r) => r["_measurement"] == "clients")
 //  |> filter(fn: (r) => r["_field"] == "hostname")
@@ -263,7 +263,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Network Device CPU Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='percent',
         bars=false,
@@ -279,7 +279,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap" or r["_measurement"] == "usw" or r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "cpu")
@@ -290,7 +290,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Network Device RAM Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='percent',
         bars=false,
@@ -306,7 +306,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap" or r["_measurement"] == "usw" or r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "mem")
@@ -317,7 +317,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Network Device Temperature',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         format='ºC',
         bars=false,
@@ -333,7 +333,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap" or r["_measurement"] == "usw" or r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "temp_CPU")
@@ -352,10 +352,10 @@ from(bucket: "asystem")
 
       table.new(
         title='Wireless Clients',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         default_unit=''
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
   |> filter(fn: (r) => r["_field"] == "hostname" or r["_field"] == "ip" or r["_field"] == "uptime" or r["_field"] == "rx_bytes" or r["_field"] == "tx_bytes")
@@ -380,10 +380,10 @@ from(bucket: "hosts")
 
       table.new(
         title='Wired Clients',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         default_unit=''
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
   |> filter(fn: (r) => r["_field"] == "hostname" or r["_field"] == "ip" or r["_field"] == "uptime" or r["_field"] == "rx_bytes" or r["_field"] == "tx_bytes")

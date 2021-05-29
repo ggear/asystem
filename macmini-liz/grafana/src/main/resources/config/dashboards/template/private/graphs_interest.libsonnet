@@ -14,7 +14,7 @@
 
       stat.new(
         title='Retail Rate Last Snapshot',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='percent',
         decimals=2,
         reducerFunction='last',
@@ -43,7 +43,7 @@ from(bucket: "asystem")
 
       stat.new(
         title='Inflation Rate Last Snapshot',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='',
         decimals=3,
         reducerFunction='last',
@@ -74,7 +74,7 @@ from(bucket: "asystem")
 
       stat.new(
         title='Net Rate Last Snapshot',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='',
         decimals=3,
         reducerFunction='last',
@@ -105,7 +105,7 @@ from(bucket: "asystem")
 
       bar.new(
         title='Rates Ranged Means',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='percent',
         min=-30,
         max=30,
@@ -199,7 +199,7 @@ from(bucket: "asystem")
 
       gauge.new(
         title='Retail Rate 5-Year Mean',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -230,7 +230,7 @@ from(bucket: "asystem")
 
       gauge.new(
         title='Inflation Rate 5-Year Mean',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -261,7 +261,7 @@ from(bucket: "asystem")
 
       gauge.new(
         title='Net Rate 5-Year Mean',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -292,7 +292,7 @@ from(bucket: "asystem")
 
       graph.new(
         title='Interest Rate Monthly Means',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         format='',
         bars=true,

@@ -29,16 +29,7 @@ curl -XPUT --silent ${GRAFANA_URL}/api/orgs/1 \
   -d '{
         "name": "Public Portal"
       }' | jq
-if [ $(curl --silent ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/orgs \
-    -H "Accept: application/json" \
-    -H "Content-Type: application/json" \
-    -d '{
-          "name": "Private Portal"
-        }' | jq
-fi
-curl --silent ${GRAFANA_URL}/api/orgs | jq
-
+curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1
 if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB2Public?orgId=1 | jq -r '.name' | grep InfluxDB2Public | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=1 \
     -H "Accept: application/json" \
@@ -79,8 +70,18 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB1Public?orgId=1
 fi
 curl --silent ${GRAFANA_URL}/api/datasources?orgId=1 | jq
 
-/bootstrap/grizzly/grr apply ../dashboards/template/generated/dashboards_all.jsonnet
+# TODO
+#/bootstrap/grizzly/grr apply ../dashboards/template/generated/dashboards_all.jsonnet
 
+if [ $(curl --silent ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -eq 0 ]; then
+  curl -XPOST --silent ${GRAFANA_URL}/api/orgs \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "name": "Private Portal"
+        }' | jq
+fi
+curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2
 if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB2Private?orgId=2 | jq -r '.name' | grep InfluxDB2Private | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=2 \
     -H "Accept: application/json" \
@@ -97,7 +98,7 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB2Private?orgId=
             "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'"
           },
           "secureJsonData": {
-            "token": "'"${INFLUXDB_TOKEN_PUBLIC_V2}"'"
+            "token": "'"${INFLUXDB_TOKEN}"'"
           },
           "secureJsonFields": {
             "token": true
@@ -116,12 +117,13 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB1Private?orgId=
           "isDefault": false,
           "database": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
           "user": "'"${INFLUXDB_USER_PUBLIC}"'",
-          "password": "'"${INFLUXDB_TOKEN_PUBLIC_V1}"'"
+          "password": "'"${INFLUXDB_TOKEN}"'"
         }' | jq
 fi
 curl --silent ${GRAFANA_URL}/api/datasources?orgId=2 | jq
 
-/bootstrap/grizzly/grr apply ../dashboards/template/generated/dashboards_all.jsonnet
+# TODO
+#/bootstrap/grizzly/grr apply ../dashboards/template/generated/dashboards_all.jsonnet
 
 # TODO: Delete
 sleep 10000

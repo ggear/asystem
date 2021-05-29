@@ -14,7 +14,7 @@
 
       stat.new(
         title='Internet Uptime',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -31,7 +31,7 @@
       ).addThreshold(
         { color: 'green', value: 86400 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "uptime_s")
@@ -43,7 +43,7 @@ from(bucket: "hosts")
 
       stat.new(
         title='Domain Uptime',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -60,7 +60,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 12000 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "uptime_s")
@@ -72,7 +72,7 @@ from(bucket: "hosts")
 
       stat.new(
         title='Certificate Expiry',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -89,7 +89,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 864000 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "expiry_s")
@@ -101,7 +101,7 @@ from(bucket: "hosts")
 
       bar.new(
         title='Service Availability',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
@@ -110,7 +110,7 @@ from(bucket: "hosts")
         ],
       ).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
  |> filter(fn: (r) => r["_measurement"] == "internet")
  |> filter(fn: (r) => r["_field"] == "uptime_delta_s")
@@ -123,7 +123,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Internet Max Upload',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -141,7 +141,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 70 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "upload_mbps")
@@ -153,7 +153,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Internet Max Download',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -171,7 +171,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 70 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "download_mbps")
@@ -183,7 +183,7 @@ from(bucket: "hosts")
 
       stat.new(
         title='Internet Mean Latency',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='ms',
         decimals=1,
         reducerFunction='last',
@@ -202,7 +202,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'red', value: 30 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "ping_min_ms")
@@ -216,7 +216,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Internet Total Throughput',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         format='Bps',
         bars=true,
@@ -232,7 +232,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
   |> filter(fn: (r) => r["_field"] == "rx_bytes")
@@ -242,7 +242,7 @@ from(bucket: "hosts")
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
   |> filter(fn: (r) => r["_field"] == "tx_bytes")
@@ -257,7 +257,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Internet Max Throughput',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         format='Bps',
         bars=false,
@@ -273,7 +273,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "download_mbps")
@@ -282,7 +282,7 @@ from(bucket: "hosts")
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "upload_mbps")
@@ -296,7 +296,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Internet Min Latency',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         format='ms',
         bars=false,
@@ -312,7 +312,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "ping_min_ms")
@@ -325,10 +325,10 @@ from(bucket: "hosts")
 
       table.new(
         title='Internet Categorised Throughput',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         default_unit='decbytes'
       ).addTarget(influxdb.target(query='// Start
-start_bytes = from(bucket: "hosts")
+start_bytes = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clientdpi")
   |> filter(fn: (r) => r["mac"] == "TOTAL")
@@ -340,7 +340,7 @@ start_bytes = from(bucket: "hosts")
   |> map(fn: (r) => ({ r with rx_bytes_start: r.rx_bytes }))
   |> map(fn: (r) => ({ r with tx_bytes_start: r.tx_bytes }))
   |> keep(columns: ["category", "rx_bytes_start", "tx_bytes_start"])
-finish_bytes = from(bucket: "hosts")
+finish_bytes = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clientdpi")
   |> filter(fn: (r) => r["mac"] == "TOTAL")
@@ -362,9 +362,9 @@ join(tables: {d1: start_bytes, d2: finish_bytes},  on: ["category"])
 
       table.new(
         title='Domain Resolution',
-        datasource='InfluxDB2'
+        datasource='InfluxDB2Private'
       ).addTarget(influxdb.target(query='// Start
-start_ips = from(bucket: "hosts")
+start_ips = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "ip")
@@ -375,7 +375,7 @@ start_ips = from(bucket: "hosts")
   |> sort(columns: ["_time"], desc: false)
   |> unique(column: "*.*.*.*")
   |> sort(columns: ["_time"], desc: true)
-finish_ips = from(bucket: "hosts")
+finish_ips = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "ip")
@@ -386,7 +386,7 @@ finish_ips = from(bucket: "hosts")
   |> sort(columns: ["_time"], desc: true)
   |> unique(column: "*.*.*.*")
   |> sort(columns: ["_time"], desc: true)
-unknown_ips = from(bucket: "hosts")
+unknown_ips = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "ip")

@@ -422,24 +422,26 @@ def _write_env(context, module, working_path=".", is_release=False):
                .format("{}/{}/{}".format(DIR_HOME, service, _get_versions()[0]) if is_release else
                        "{}/{}/target/runtime-system".format(DIR_ROOT, module), working_path), module)
     for dependency in _get_dependencies(context, module):
-        if is_release:
-            host_ips = []
-            for host in _get_hosts(context, dependency):
-                host_ips.append(_run_local(context, "dig +short {}".format(host), hide='out').stdout.strip())
-            host_ip = ",".join(host_ips)
-            host_name = ",".join(_get_hosts(context, dependency))
-        else:
-            host_name = "host.docker.internal"
-            host_ip = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
+        host_ips_prod = []
+        for host in _get_hosts(context, dependency):
+            host_ips_prod.append(_run_local(context, "dig +short {}".format(host), hide='out').stdout.strip())
+        host_ip_prod = ",".join(host_ips_prod)
+        host_name_prod = ",".join(_get_hosts(context, dependency))
+        host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
                                  hide='out').stdout.strip()
-        if host_name == "" or host_ip == "":
-            raise Exception("Cannot resolve service host and or IP")
+        host_name_dev = "host.docker.internal"
+        if host_ip_prod == "" or host_ip_prod == "":
+            raise Exception("Cannot resolve service production and or development IP's")
         dependency_service = _get_service(context, dependency).upper()
         _run_local(context, "echo '' >> {}/.env".format(working_path))
         _run_local(context, "echo '{}_HOST={}' >> {}/.env"
-                   .format(dependency_service, host_name, working_path), module)
+                   .format(dependency_service, host_name_prod if is_release else host_name_dev, working_path), module)
         _run_local(context, "echo '{}_IP={}' >> {}/.env"
-                   .format(dependency_service, host_ip, working_path), module)
+                   .format(dependency_service, host_ip_prod if is_release else host_ip_dev, working_path), module)
+        _run_local(context, "echo '{}_HOST_PROD={}' >> {}/.env"
+                   .format(dependency_service, host_name_prod, working_path), module)
+        _run_local(context, "echo '{}_IP_PROD={}' >> {}/.env"
+                   .format(dependency_service, host_ip_prod, working_path), module)
         for dependency_env_file in [".env_all", ".env_prod" if is_release else ".env_dev", ".env_all_key"]:
             dependency_env_dev = "{}/{}/{}".format(DIR_ROOT, dependency, dependency_env_file)
             if isfile(dependency_env_dev):

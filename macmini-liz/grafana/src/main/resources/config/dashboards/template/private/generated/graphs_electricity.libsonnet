@@ -9,8 +9,8 @@
     [
 
       graph.new(
-        title='Rain',
-        datasource='InfluxDB2',
+        title='Power Consumption',
+        datasource='InfluxDB2Private',
         fill=0,
         format='short',
         bars=false,
@@ -26,9 +26,9 @@
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "last_30_min_rain")
+  |> filter(fn: (r) => r["entity_id"] == "office_power_consumption" or r["entity_id"] == "servers_power_consumption" or r["entity_id"] == "towelrails_power_consumption")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 // End'))

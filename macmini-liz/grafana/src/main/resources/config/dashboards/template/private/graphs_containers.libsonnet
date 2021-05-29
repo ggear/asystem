@@ -14,7 +14,7 @@
 
       stat.new(
         title='Containers Currently Running',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -33,7 +33,7 @@
       ).addTarget(influxdb.target(query='// Start
 // TODO: Averaging all values is very slow
 // import "math"
-// from(bucket: "hosts")
+// from(bucket: "host_private")
 //   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
 //   |> filter(fn: (r) => r["_measurement"] == "docker")
 //   |> filter(fn: (r) => r["_field"] == "n_containers_running")
@@ -43,7 +43,7 @@
 //   |> group()
 //   |> mean()
 //   |> map(fn: (r) => ({ r with _value: math.ceil(x: r._value) }))
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker")
   |> filter(fn: (r) => r["_field"] == "n_containers_running")
@@ -55,7 +55,7 @@ from(bucket: "hosts")
 
       stat.new(
         title='Containers Currently Not Running',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -72,7 +72,7 @@ from(bucket: "hosts")
       ).addTarget(influxdb.target(query='// Start
 // TODO: Averaging all values is very slow
 // import "math"
-// from(bucket: "hosts")
+// from(bucket: "host_private")
 //   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
 //   |> filter(fn: (r) => r["_measurement"] == "docker")
 //   |> filter(fn: (r) => r["_field"] == "n_containers_paused" or r["_field"] == "n_containers_stopped" )
@@ -82,7 +82,7 @@ from(bucket: "hosts")
 //   |> group()
 //   |> mean()
 //   |> map(fn: (r) => ({ r with _value: math.ceil(x: r._value) }))
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker")
   |> filter(fn: (r) => r["_field"] == "n_containers_paused" or r["_field"] == "n_containers_stopped" )
@@ -94,7 +94,7 @@ from(bucket: "hosts")
 
       stat.new(
         title='Container Images Currently Installed',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -113,7 +113,7 @@ from(bucket: "hosts")
       ).addTarget(influxdb.target(query='// Start
 // TODO: Averaging all values is very slow
 // import "math"
-// from(bucket: "hosts")
+// from(bucket: "host_private")
 //   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
 //   |> filter(fn: (r) => r["_measurement"] == "docker")
 //   |> filter(fn: (r) => r["_field"] == "n_images" )
@@ -123,7 +123,7 @@ from(bucket: "hosts")
 //   |> group()
 //   |> mean()
 //   |> map(fn: (r) => ({ r with _value: math.ceil(x: r._value) }))
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker")
   |> filter(fn: (r) => r["_field"] == "n_images" )
@@ -135,7 +135,7 @@ from(bucket: "hosts")
 
       bar.new(
         title='Containers with Peak Usage <50%',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
@@ -145,7 +145,7 @@ from(bucket: "hosts")
       ).addTarget(influxdb.target(query='// Start
 import "math"
 import "strings"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_cpu")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
@@ -162,7 +162,7 @@ from(bucket: "hosts")
   |> keep(columns: ["CPU"])
 // End')).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_mem")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
@@ -178,7 +178,7 @@ from(bucket: "hosts")
   |> keep(columns: ["RAM"])
 // End')).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
   |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_read")
@@ -197,7 +197,7 @@ from(bucket: "hosts")
   |> keep(columns: ["IOPS"])
 // End')).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
   |> filter(fn: (r) => r["_field"] == "rx_bytes" or r["_field"] == "tx_bytes")
@@ -218,7 +218,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Container Mean Running Rate',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -237,7 +237,7 @@ from(bucket: "hosts")
         { color: 'green', value: 99 }
       ).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker")
   |> filter(fn: (r) => r["_field"] == "n_containers" or r["_field"] == "n_containers_running")
@@ -255,7 +255,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Container Mean Healthy Rate',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -274,7 +274,7 @@ from(bucket: "hosts")
         { color: 'green', value: 99 }
       ).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_health")
   |> filter(fn: (r) => r["_field"] == "health_status")
@@ -295,7 +295,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Container Image Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -314,7 +314,7 @@ from(bucket: "hosts")
         { color: 'green', value: 99 }
       ).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker")
   |> filter(fn: (r) => r["_field"] == "n_containers" or r["_field"] == "n_images")
@@ -332,7 +332,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Container CPU Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='percent',
         bars=false,
@@ -349,7 +349,7 @@ from(bucket: "hosts")
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
 import "strings"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_cpu")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
@@ -362,7 +362,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Container RAM Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='percent',
         bars=false,
@@ -378,7 +378,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_mem")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
@@ -390,7 +390,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Container IOPS Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         format='Bps',
         bars=false,
@@ -408,7 +408,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
   |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_read")
@@ -418,7 +418,7 @@ from(bucket: "hosts")
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
   |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_write")
@@ -433,7 +433,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Container Network Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         format='Bps',
         bars=false,
@@ -451,7 +451,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
   |> filter(fn: (r) => r["_field"] == "rx_bytes")
@@ -461,7 +461,7 @@ from(bucket: "hosts")
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
   |> filter(fn: (r) => r["_field"] == "tx_bytes")
@@ -476,10 +476,10 @@ from(bucket: "hosts")
 
       table.new(
         title='Container Current Process Status',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         default_unit='ns'
       ).addTarget(influxdb.target(query='// Start
-status = from(bucket: "hosts")
+status = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_status")
   |> filter(fn: (r) => r["_field"] == "uptime_ns")
@@ -490,7 +490,7 @@ status = from(bucket: "hosts")
   |> map(fn: (r) => ({ r with "Host": r.host }))
   |> keep(columns: ["Name", "Status", "Uptime", "Host"])
   |> group()
-health = from(bucket: "hosts")
+health = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_health")
   |> filter(fn: (r) => r["_field"] == "health_status")

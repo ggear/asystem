@@ -17,7 +17,7 @@ DIR_DASHBOARDS_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards
 if __name__ == "__main__":
     sensors = load()
     for group in sensors:
-        with open(DIR_DASHBOARDS_ROOT + "/template/generated/graphs_{}.libsonnet".format(group.lower()), "w") as file:
+        with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/graphs_{}.libsonnet".format(group.lower()), "w") as file:
             file.write("""
 {
   graphs()::
@@ -29,14 +29,14 @@ if __name__ == "__main__":
     
     [
             """.strip() + "\n\n")
-            snip_path = DIR_DASHBOARDS_ROOT + "/template/" + os.path.basename(file.name).replace(".libsonnet", ".snipsonnet")
+            snip_path = DIR_DASHBOARDS_ROOT + "/template/private/" + os.path.basename(file.name).replace(".libsonnet", ".snipsonnet")
             if os.path.isfile(snip_path):
                 with open(snip_path, 'r') as snip_file:
                     file.write(snip_file.read())
             for domain in sensors[group]:
                 filter = " or ".join([sub + '"'
                                       for sub in ['r["entity_id"] == "' + sub for sub in [sensor[2] for sensor in sensors[group][domain]]]])
-                flux = """from(bucket: "asystem")
+                flux = """from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => {})
   |> keep(columns: ["_time", "_value", "friendly_name"])
@@ -45,7 +45,7 @@ if __name__ == "__main__":
                 file.write("      " + """
       graph.new(
         title='{}',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         format='{}',
         bars=false,
@@ -70,7 +70,7 @@ if __name__ == "__main__":
 }
             """.strip() + "\n")
     print("Metadata script [grafana] graphs saved")
-    with open(DIR_DASHBOARDS_ROOT + "/template/generated/dashboards_all.jsonnet", "w") as file:
+    with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/dashboards_all.jsonnet", "w") as file:
         file.write("""
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;

@@ -14,7 +14,7 @@
 
       stat.new(
         title='Servers Min Uptime',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -31,7 +31,7 @@
       ).addThreshold(
         { color: 'green', value: 86400 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "system")
   |> filter(fn: (r) => r["_field"] == "uptime")
@@ -43,7 +43,7 @@ from(bucket: "hosts")
 
       stat.new(
         title='Servers OS Volumes >80%',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -60,7 +60,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'red', value: 2 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "disk")
   |> filter(fn: (r) => r["_field"] == "used_percent")
@@ -74,7 +74,7 @@ from(bucket: "hosts")
 
       stat.new(
         title='Servers Data Volumes >80%',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -91,7 +91,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'red', value: 2 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "disk")
   |> filter(fn: (r) => r["_field"] == "used_percent")
@@ -105,7 +105,7 @@ from(bucket: "hosts")
 
       bar.new(
         title='Servers with Peak Usage <50%',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
@@ -114,7 +114,7 @@ from(bucket: "hosts")
         ],
       ).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "cpu")
   |> filter(fn: (r) => r["_field"] == "usage_idle")
@@ -132,7 +132,7 @@ from(bucket: "hosts")
   |> keep(columns: ["CPU"])
 // End')).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "mem")
   |> filter(fn: (r) => r["_field"] == "used_percent")
@@ -148,7 +148,7 @@ from(bucket: "hosts")
   |> keep(columns: ["RAM"])
 // End')).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "diskio")
   |> filter(fn: (r) => r["_field"] == "read_bytes")
@@ -167,7 +167,7 @@ from(bucket: "hosts")
   |> keep(columns: ["IOPS"])
 // End')).addTarget(influxdb.target(query='// Start
 import "math"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "net")
   |> filter(fn: (r) => r["_field"] == "bytes_recv")
@@ -188,7 +188,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Server Mean CPU Availability',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -206,7 +206,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 65 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "cpu")
   |> filter(fn: (r) => r["_field"] == "usage_idle")
@@ -220,7 +220,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Server Mean Memory Availability',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -238,7 +238,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 65 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "mem")
   |> filter(fn: (r) => r["_field"] == "used_percent")
@@ -251,7 +251,7 @@ from(bucket: "hosts")
 
       gauge.new(
         title='Server Mean 30< Temperature >100ºC',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -269,7 +269,7 @@ from(bucket: "hosts")
       ).addThreshold(
         { color: 'green', value: 65 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
   |> keep(columns: ["_time", "_value"])
@@ -281,7 +281,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Server CPU Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='percent',
         bars=false,
@@ -297,7 +297,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "cpu")
   |> filter(fn: (r) => r["_field"] == "usage_idle")
@@ -311,7 +311,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Server RAM Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='percent',
         bars=false,
@@ -327,7 +327,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "mem")
   |> filter(fn: (r) => r["_field"] == "used_percent")
@@ -339,7 +339,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Server Swap Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='percent',
         bars=false,
@@ -355,7 +355,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "swap")
   |> filter(fn: (r) => r["_field"] == "used_percent")
@@ -367,7 +367,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Server Volume Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='percent',
         bars=false,
@@ -384,7 +384,7 @@ from(bucket: "hosts")
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
 import "strings"
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "disk")
   |> filter(fn: (r) => r["_field"] == "used_percent")
@@ -397,7 +397,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Server IOPS Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='Bps',
         bars=false,
@@ -415,7 +415,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "diskio")
   |> filter(fn: (r) => r["_field"] == "read_bytes")
@@ -425,7 +425,7 @@ from(bucket: "hosts")
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with host: r.host + " + Read" }))
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "diskio")
   |> filter(fn: (r) => r["_field"] == "write_bytes")
@@ -440,7 +440,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Server Network Usage',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=1,
         format='Bps',
         bars=false,
@@ -458,7 +458,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "net")
   |> filter(fn: (r) => r["_field"] == "bytes_recv")
@@ -468,7 +468,7 @@ from(bucket: "hosts")
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with host: r.host + " + Receive" }))
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "net")
   |> filter(fn: (r) => r["_field"] == "bytes_sent")
@@ -483,7 +483,7 @@ from(bucket: "hosts")
 
       graph.new(
         title='Server Temperature',
-        datasource='InfluxDB2',
+        datasource='InfluxDB2Private',
         fill=0,
         format='ºC',
         bars=false,
@@ -499,7 +499,7 @@ from(bucket: "hosts")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "hosts")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
   |> keep(columns: ["_time", "_value", "host"])

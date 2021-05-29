@@ -21,42 +21,42 @@ STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "V
 STOCK = OrderedDict([
     ('S32', {
         "start": "2016",
-        "end of day": "15:00",
+        "end of day": "16:00",
         "exchange": "AX",
     }),
     ('WPL', {
         "start": "2009",
-        "end of day": "15:00",
+        "end of day": "16:00",
         "exchange": "AX",
     }),
     ('SIG', {
         "start": "2006",
-        "end of day": "15:00",
+        "end of day": "16:00",
         "exchange": "AX",
     }),
     ('OZL', {
         "start": "2009",
-        "end of day": "15:00",
+        "end of day": "16:00",
         "exchange": "AX",
     }),
     ('VAS', {
         "start": "2010",
-        "end of day": "15:00",
+        "end of day": "16:00",
         "exchange": "AX",
     }),
     ('VAE', {
         "start": "2016",
-        "end of day": "15:00",
+        "end of day": "16:00",
         "exchange": "AX",
     }),
     ('VGE', {
         "start": "2014",
-        "end of day": "15:00",
+        "end of day": "16:00",
         "exchange": "AX",
     }),
     ('VGS', {
         "start": "2015",
-        "end of day": "15:00",
+        "end of day": "16:00",
         "exchange": "AX",
     }),
 ])
