@@ -23,6 +23,9 @@ echo "--------------------------------------------------------------------------
 echo "Grafana custom setup starting ..."
 echo "--------------------------------------------------------------------------------"
 
+# TODO: Delete
+sleep 10000
+
 curl -XPUT --silent ${GRAFANA_URL}/api/orgs/1 \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
