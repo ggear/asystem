@@ -27,6 +27,8 @@ services:
       - INFLUXDB_TOKEN_PUBLIC_V2
     volumes:
       - ${SERVICE_DATA_DIR}/custom.ini:/etc/grafana/grafana.ini
+      - ${SERVICE_DATA_DIR}/setup.sh:/setup.sh
+      - ${SERVICE_DATA_DIR}:/bootstrap
       - ${SERVICE_DATA_DIR}/dashboards/dashboard_home.json:/etc/grafana/dashboard_home.json
     ports:
       - ${GRAFANA_PORT}:${GRAFANA_PORT}
