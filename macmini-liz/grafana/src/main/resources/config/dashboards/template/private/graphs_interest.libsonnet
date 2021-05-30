@@ -31,7 +31,7 @@
       ).addThreshold(
         { color: 'green', value: 2.07 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "retail")
@@ -60,7 +60,7 @@ from(bucket: "asystem")
       ).addThreshold(
         { color: 'green', value: 1.8 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
@@ -91,7 +91,7 @@ from(bucket: "asystem")
       ).addThreshold(
         { color: 'green', value: 1.23 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
@@ -123,7 +123,7 @@ normalizeTime = (t) => {
     else time(v: t)
   return normalized
 }
-first_snapshot = from(bucket: "asystem")
+first_snapshot = from(bucket: "data_public")
   |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -131,7 +131,7 @@ first_snapshot = from(bucket: "asystem")
   |> sort(columns: ["_time"], desc: true)
   |> last()
   |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
@@ -150,7 +150,7 @@ normalizeTime = (t) => {
     else time(v: t)
   return normalized
 }
-first_snapshot = from(bucket: "asystem")
+first_snapshot = from(bucket: "data_public")
   |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -158,7 +158,7 @@ first_snapshot = from(bucket: "asystem")
   |> sort(columns: ["_time"], desc: true)
   |> last()
   |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
@@ -177,7 +177,7 @@ normalizeTime = (t) => {
     else time(v: t)
   return normalized
 }
-first_snapshot = from(bucket: "asystem")
+first_snapshot = from(bucket: "data_public")
   |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -185,7 +185,7 @@ first_snapshot = from(bucket: "asystem")
   |> sort(columns: ["_time"], desc: true)
   |> last()
   |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
@@ -216,7 +216,7 @@ from(bucket: "asystem")
       ).addThreshold(
         { color: 'green', value: 0.5 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
@@ -247,7 +247,7 @@ from(bucket: "asystem")
       ).addThreshold(
         { color: 'green', value: 0.5 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
@@ -278,7 +278,7 @@ from(bucket: "asystem")
       ).addThreshold(
         { color: 'green', value: 0.5 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
@@ -309,21 +309,21 @@ from(bucket: "asystem")
         legend_rightSide=true,
         legend_sideWidth=425
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "net")
   |> filter(fn: (r) => r["period"] == "1-month")
   |> keep(columns: ["_time", "_value", "_field"])
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "retail")
   |> filter(fn: (r) => r["period"] == "1-month")
   |> keep(columns: ["_time", "_value", "_field"])
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "inflation")

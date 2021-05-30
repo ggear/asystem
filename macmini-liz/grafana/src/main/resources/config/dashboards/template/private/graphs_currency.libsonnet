@@ -31,7 +31,7 @@
       ).addThreshold(
         { color: 'green', value: 2.07 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
@@ -62,7 +62,7 @@ from(bucket: "asystem")
       ).addThreshold(
         { color: 'green', value: 1.8 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
@@ -93,7 +93,7 @@ from(bucket: "asystem")
       ).addThreshold(
         { color: 'green', value: 1.23 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
@@ -118,7 +118,7 @@ from(bucket: "asystem")
         ],
       ).addTarget(influxdb.target(query='// Start
 field = "AUD/GBP"
-series = from(bucket: "asystem")
+series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -134,7 +134,7 @@ series
   |> keep(columns: ["_time", "_value", "_field"])
 // End')).addTarget(influxdb.target(query='// Start
 field = "AUD/USD"
-series = from(bucket: "asystem")
+series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -150,7 +150,7 @@ series
   |> keep(columns: ["_time", "_value", "_field"])
 // End')).addTarget(influxdb.target(query='// Start
 field = "AUD/SGD"
-series = from(bucket: "asystem")
+series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -185,7 +185,7 @@ series
       ).addThreshold(
         { color: 'green', value: 0.5 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
@@ -216,7 +216,7 @@ from(bucket: "asystem")
       ).addThreshold(
         { color: 'green', value: 0.5 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
@@ -247,7 +247,7 @@ from(bucket: "asystem")
       ).addThreshold(
         { color: 'green', value: 0.5 }
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
@@ -280,7 +280,7 @@ from(bucket: "asystem")
         maxDataPoints=10000
       ).addTarget(influxdb.target(query='// Start
 field = "AUD/GBP"
-series = from(bucket: "asystem")
+series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -294,7 +294,7 @@ series
   |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
 // End')).addTarget(influxdb.target(query='// Start
 field = "AUD/USD"
-series = from(bucket: "asystem")
+series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -308,7 +308,7 @@ series
   |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
 // End')).addTarget(influxdb.target(query='// Start
 field = "AUD/SGD"
-series = from(bucket: "asystem")
+series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -344,7 +344,7 @@ series
         legend_sideWidth=425,
         maxDataPoints=10000
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -353,7 +353,7 @@ from(bucket: "asystem")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -389,7 +389,7 @@ from(bucket: "asystem")
         legend_sideWidth=425,
         maxDataPoints=10000
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -398,7 +398,7 @@ from(bucket: "asystem")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -434,7 +434,7 @@ from(bucket: "asystem")
         legend_sideWidth=425,
         maxDataPoints=10000
       ).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
@@ -443,7 +443,7 @@ from(bucket: "asystem")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1-day")
