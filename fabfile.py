@@ -426,7 +426,7 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
                        "{}/{}/target/runtime-system".format(DIR_ROOT, module), working_path), module)
     for dependency in _get_dependencies(context, module):
         host_ips_prod = []
-        host_names_prod = _get_hosts(context, dependency) if filter_host is None else [filter_host]
+        host_names_prod = _get_hosts(context, dependency) if _name(module) != _name(dependency) or filter_host is None else [filter_host]
         for host in host_names_prod:
             host_ips_prod.append(_run_local(context, "dig +short {}".format(host), hide='out').stdout.strip())
         host_ip_prod = ",".join(host_ips_prod)
