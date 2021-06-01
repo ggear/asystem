@@ -1,20 +1,15 @@
 #!/bin/sh
 
 echo "--------------------------------------------------------------------------------"
-echo "Influx custom setup initialising ..."
+echo "Influx bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
-
-apt-get install -y jq=1.5+dfsg-2+b1 netcat=1.10-41.1
-while ! nc -z ${INFLUXDB_HOST} ${INFLUXDB_PORT} >>/dev/null 2>&1; do
-  echo "Waiting for influxdb to come up ..." && sleep 1
-done
 
 while ! influx ping --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT} >>/dev/null 2>&1; do
   echo "Waiting for influxdb to come up ..." && sleep 1
 done
 
 echo "--------------------------------------------------------------------------------"
-echo "Influx custom setup starting ..."
+echo "Influx bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
 if [ ! -f "/root/.influxdbv2/configs" ] || [ $(grep remote /root/.influxdbv2/configs | wc -l) -ne 1 ]; then
@@ -64,7 +59,7 @@ if [ $(influx bucket list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLU
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -r 0 -t ${INFLUXDB_TOKEN}
 fi
 BUCKET_ID_HOST_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id')
-influx bucket update --id ${INFLUXDB_BUCKET_HOST_PRIVATE} --shard-group-duration 1d -t ${INFLUXDB_TOKEN}
+influx bucket update --id ${BUCKET_ID_HOST_PRIVATE} --shard-group-duration 1d -t ${INFLUXDB_TOKEN}
 if [ $(influx v1 dbrp list -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_BUCKET_HOST_PRIVATE} | grep ${BUCKET_ID_HOST_PRIVATE} | wc -l) -ne 1 ]; then
   influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_HOST_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOST_PRIVATE} -t ${INFLUXDB_TOKEN}
 fi
@@ -97,5 +92,5 @@ if [ $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFL
 fi
 
 echo "--------------------------------------------------------------------------------"
-echo "Influx custom setup finished"
+echo "Influx bootstrap finished"
 echo "--------------------------------------------------------------------------------"

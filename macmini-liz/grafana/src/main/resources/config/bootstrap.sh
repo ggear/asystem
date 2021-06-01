@@ -1,26 +1,15 @@
 #!/bin/sh
 
 echo "--------------------------------------------------------------------------------"
-echo "Grafana custom setup initialising ..."
+echo "Grafana bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
-
-apk add curl==7.77.0-r0 jq==1.6-r1 git==2.26.3-r0 make==4.3-r0 musl-dev==1.1.24-r10 go==1.13.15-r0
-
-export GOROOT=/usr/lib/go
-export GOPATH=/go
-export PATH=/go/bin:$PATH
-mkdir -p ${GOPATH}/src ${GOPATH}/bin
-go get -u github.com/Masterminds/glide/...
-cd /bootstrap/grizzly
-make dev
-cd /bootstrap/grafonnet-lib
 
 while ! nc -z ${GRAFANA_HOST} ${GRAFANA_PORT} >>/dev/null 2>&1; do
   echo "Waiting for grafana to come up ..." && sleep 1
 done
 
 echo "--------------------------------------------------------------------------------"
-echo "Grafana custom setup starting ..."
+echo "Grafana bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
 curl -XPUT --silent ${GRAFANA_URL}/api/orgs/1 \
@@ -126,5 +115,5 @@ curl --silent ${GRAFANA_URL}/api/datasources?orgId=2 | jq
 #/bootstrap/grizzly/grr apply ../dashboards/template/generated/dashboards_all.jsonnet
 
 echo "--------------------------------------------------------------------------------"
-echo "Grafana custom setup finished"
+echo "Grafana bootstrap finished"
 echo "--------------------------------------------------------------------------------"

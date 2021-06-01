@@ -2,7 +2,7 @@ version: '3.7'
 services:
   grafana:
     container_name: grafana
-    image: grafana/grafana:7.5.5
+    image: grafana:${SERVICE_VERSION_ABSOLUTE}
     init: true
     restart: ${SERVICE_RESTART}
     environment:
@@ -26,9 +26,8 @@ services:
       - INFLUXDB_TOKEN_PUBLIC_V1
       - INFLUXDB_TOKEN_PUBLIC_V2
     volumes:
+      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}/custom.ini:/etc/grafana/grafana.ini
-      - ${SERVICE_DATA_DIR}/setup.sh:/setup.sh
-      - ${SERVICE_DATA_DIR}:/bootstrap
       - ${SERVICE_DATA_DIR}/dashboards/dashboard_home.json:/etc/grafana/dashboard_home.json
     ports:
       - ${GRAFANA_PORT}:${GRAFANA_PORT}
@@ -36,9 +35,9 @@ services:
       resources:
         limits:
           memory: 5G
-  grafana_setup:
-    container_name: grafana_setup
-    image: grafana/grafana:7.5.5
+  grafana_bootstrap:
+    container_name: grafana_bootstrap
+    image: grafana:${SERVICE_VERSION_ABSOLUTE}
     init: true
     restart: ${SERVICE_RESTART}
     user: root
@@ -63,10 +62,9 @@ services:
       - INFLUXDB_TOKEN_PUBLIC_V1
       - INFLUXDB_TOKEN_PUBLIC_V2
     volumes:
-      - ${SERVICE_DATA_DIR}/setup.sh:/setup.sh
-      - ${SERVICE_DATA_DIR}:/bootstrap
+      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
     entrypoint: /bin/bash
     command:
-      - /setup.sh
+      - /bootstrap/bootstrap.sh
     depends_on:
       - grafana

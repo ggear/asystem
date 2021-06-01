@@ -505,7 +505,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
 // End')).addTarget(influxdb.target(query='// Start
-from(bucket: "asystem")
+from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
   |> keep(columns: ["_time", "_value"])
