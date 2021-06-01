@@ -155,7 +155,7 @@ def _pull(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, filter_module=filter_module):
         _print_header(module, "pull env")
         _write_env(context, module, join(DIR_ROOT, module, "target/release") if is_release else join(DIR_ROOT, module),
-                   filter_host=None, is_release=is_release)
+                   filter_host=filter_host, is_release=is_release)
         _print_footer(module, "pull env")
     if filter_module is None:
         for module in _get_modules(context, "pull.sh", filter_changes=False):
@@ -324,9 +324,9 @@ def _release(context):
                                     "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 2>/dev/null | wc -l) - 2)) | xargs rm -rf'"
                            .format(ssh_pass, host, install, install), hide='err', warn=True)
                 _print_footer("{}/{}".format(host, _name(module)), "release")
-        else:
-            print("Module ignored")
-        _print_footer(module, "release")
+            else:
+                print("Module ignored")
+            _print_footer(module, "release")
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
@@ -426,12 +426,11 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
                        "{}/{}/target/runtime-system".format(DIR_ROOT, module), working_path), module)
     for dependency in _get_dependencies(context, module):
         host_ips_prod = []
-        host_names_prod = _get_hosts(context, dependency) if filter_host is None else filter_host
+        host_names_prod = _get_hosts(context, dependency) if filter_host is None else [filter_host]
         for host in host_names_prod:
             host_ips_prod.append(_run_local(context, "dig +short {}".format(host), hide='out').stdout.strip())
         host_ip_prod = ",".join(host_ips_prod)
         host_name_prod = ",".join(host_names_prod)
-
         host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
                                  hide='out').stdout.strip()
         host_name_dev = "host.docker.internal"
