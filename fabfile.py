@@ -146,7 +146,7 @@ def _backup(context):
     _print_footer("asystem", "backup")
 
 
-def _pull(context, filter_module=None, is_release=False):
+def _pull(context, filter_module=None, filter_host=None, is_release=False):
     # TODO: Re-enable when I start contributing on multiple machines
     # _print_header("asystem", "pull git")
     # _run_local(context, "git pull --all")
@@ -154,7 +154,8 @@ def _pull(context, filter_module=None, is_release=False):
 
     for module in _get_modules(context, filter_module=filter_module):
         _print_header(module, "pull env")
-        _write_env(context, module, join(DIR_ROOT, module, "target/release") if is_release else join(DIR_ROOT, module), is_release)
+        _write_env(context, module, join(DIR_ROOT, module, "target/release") if is_release else join(DIR_ROOT, module),
+                   filter_host=None, is_release=is_release)
         _print_footer(module, "pull env")
     if filter_module is None:
         for module in _get_modules(context, "pull.sh", filter_changes=False):
@@ -210,13 +211,13 @@ def _build(context, filter_module=None, is_release=False):
         _print_footer(module, "build compile")
 
 
-def _unittest(context):
-    for module in _get_modules(context, "src/test/python/unit/unit_tests.py"):
+def _unittest(context, filter_module=None):
+    for module in _get_modules(context, "src/test/python/unit/unit_tests.py", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
         _run_local(context, "python unit_tests.py", join(module, "src/test/python/unit"))
         _print_footer(module, "unittest")
-    for module in _get_modules(context, "src/test/rust/unit/unit_tests.rs"):
+    for module in _get_modules(context, "src/test/rust/unit/unit_tests.rs", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
         _run_local(context, "cargo test", join(module, "target/package"))
@@ -230,8 +231,8 @@ def _package(context, filter_module=None):
         _print_footer(module, "package")
 
 
-def _systest(context):
-    for module in _get_modules(context, "src/test/python/system/system_tests.py"):
+def _systest(context, filter_module=None):
+    for module in _get_modules(context, "src/test/python/system/system_tests.py", filter_module=filter_module):
         _up_module(context, module)
         _print_header(module, "systest")
         test_exit_code = _run_local(context, "python system_tests.py", join(module, "src/test/python/system"), warn=True).exited
@@ -268,44 +269,46 @@ def _deploy(context):
 
 
 def _release(context):
-    if FAB_SKIP_TESTS not in os.environ:
-        _pull(context)
-        _build(context)
-        _unittest(context)
-        _systest(context)
+    modules = _get_modules(context, "docker-compose.yml")
+    for module in modules:
+        if FAB_SKIP_TESTS not in os.environ:
+            _pull(context, filter_module=module)
+            _build(context, filter_module=module)
+            _unittest(context, filter_module=module)
+            _systest(context, filter_module=module)
     _get_versions_next_release()
-    _clean(context)
-    _pull(context, is_release=True)
-    _build(context, is_release=True)
-    _package(context)
-    modules = _get_modules(context, "src")
-    hosts = set(filter(len, _run_local(context, "find {} -type d ! -name '.*' -mindepth 1 -maxdepth 1"
-                                       .format(DIR_ROOT), hide='out').stdout.replace(DIR_ROOT + "/", "").replace("_", "\n").split("\n")))
     if FAB_SKIP_GIT not in os.environ:
         print("Tagging repository ...")
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in modules:
-        _print_header(module, "release")
-        group_path = Path(join(DIR_ROOT, module, ".group"))
-        if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0:
-            _run_local(context, "mkdir -p target/release", module)
-            _run_local(context, "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
-            if isfile(join(DIR_ROOT, module, "Dockerfile")):
-                file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
-                print("docker -> target/release/{}".format(file_image))
-                _run_local(context, "docker image save -o {} {}:{}"
-                           .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
-            if glob.glob(join(DIR_ROOT, module, "target/package/main/resources/*")):
-                _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
-            else:
-                _run_local(context, "mkdir -p target/release/config", module)
-            Path(join(DIR_ROOT, module, "target/release/hosts")).write_text("\n".join(hosts) + "\n")
-            if glob.glob(join(DIR_ROOT, module, "target/package/run*")):
-                _run_local(context, "cp -rvfp target/package/run* target/release", module)
-            else:
-                _run_local(context, "touch target/release/run.sh", module)
-            for host in _get_hosts(context, module):
+        for host in _get_hosts(context, module):
+            _clean(context, filter_module=module)
+            _pull(context, filter_module=module, filter_host=host, is_release=True)
+            _build(context, filter_module=module, is_release=True)
+            _package(context, filter_module=module)
+            _print_header(module, "release")
+            group_path = Path(join(DIR_ROOT, module, ".group"))
+            if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0:
+                _run_local(context, "mkdir -p target/release", module)
+                _run_local(context, "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
+                if isfile(join(DIR_ROOT, module, "Dockerfile")):
+                    file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
+                    print("docker -> target/release/{}".format(file_image))
+                    _run_local(context, "docker image save -o {} {}:{}"
+                               .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
+                if glob.glob(join(DIR_ROOT, module, "target/package/main/resources/*")):
+                    _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
+                else:
+                    _run_local(context, "mkdir -p target/release/config", module)
+                hosts = set(filter(len, _run_local(context, "find {} -type d ! -name '.*' -mindepth 1 -maxdepth 1"
+                                                   .format(DIR_ROOT), hide='out').stdout.replace(DIR_ROOT + "/", "")
+                                   .replace("_", "\n").split("\n")))
+                Path(join(DIR_ROOT, module, "target/release/hosts")).write_text("\n".join(hosts) + "\n")
+                if glob.glob(join(DIR_ROOT, module, "target/package/run*")):
+                    _run_local(context, "cp -rvfp target/package/run* target/release", module)
+                else:
+                    _run_local(context, "touch target/release/run.sh", module)
                 _print_header("{}/{}".format(host, _name(module)), "release")
                 ssh_pass = _ssh_pass(context, host)
                 install = "{}/{}/{}".format(DIR_INSTALL, module, _get_versions()[0])
@@ -404,7 +407,7 @@ def _get_dependencies(context, module):
     return run_deps + [module]
 
 
-def _write_env(context, module, working_path=".", is_release=False):
+def _write_env(context, module, working_path=".", filter_host=None, is_release=False):
     service = _get_service(context, module)
     _run_local(context, "mkdir -p {}".format(working_path), module)
     _run_local(context, "echo 'SERVICE_NAME={}' > {}/.env"
@@ -423,10 +426,12 @@ def _write_env(context, module, working_path=".", is_release=False):
                        "{}/{}/target/runtime-system".format(DIR_ROOT, module), working_path), module)
     for dependency in _get_dependencies(context, module):
         host_ips_prod = []
-        for host in _get_hosts(context, dependency):
+        host_names_prod = _get_hosts(context, dependency) if filter_host is None else filter_host
+        for host in host_names_prod:
             host_ips_prod.append(_run_local(context, "dig +short {}".format(host), hide='out').stdout.strip())
         host_ip_prod = ",".join(host_ips_prod)
-        host_name_prod = ",".join(_get_hosts(context, dependency))
+        host_name_prod = ",".join(host_names_prod)
+
         host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
                                  hide='out').stdout.strip()
         host_name_dev = "host.docker.internal"
