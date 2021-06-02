@@ -1,28 +1,30 @@
 version: '3.7'
+x-common: &common
+  image: influxdb:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  restart: ${SERVICE_RESTART}
+  environment:
+    - TZ=Australia/Perth
+    - INFLUXD_CONFIG_PATH=/root/.influxdbv2/config.yml
+    - INFLUXDB_HOST
+    - INFLUXDB_PORT
+    - INFLUXDB_ORG
+    - INFLUXDB_BUCKET_HOME_PUBLIC
+    - INFLUXDB_BUCKET_HOME_PRIVATE
+    - INFLUXDB_BUCKET_DATA_PUBLIC
+    - INFLUXDB_BUCKET_DATA_PRIVATE
+    - INFLUXDB_BUCKET_HOST_PRIVATE
+    - INFLUXDB_USER
+    - INFLUXDB_USER_ALL
+    - INFLUXDB_USER_PUBLIC
+    - INFLUXDB_KEY
+    - INFLUXDB_TOKEN
+    - INFLUXDB_TOKEN_PUBLIC_V1
+    - INFLUXDB_TOKEN_PUBLIC_V2
 services:
   influxdb:
     container_name: influxdb
-    image: influxdb:${SERVICE_VERSION_ABSOLUTE}
-    init: true
-    restart: ${SERVICE_RESTART}
-    environment:
-      - TZ=Australia/Perth
-      - INFLUXD_CONFIG_PATH=/root/.influxdbv2/config.yml
-      - INFLUXDB_HOST
-      - INFLUXDB_PORT
-      - INFLUXDB_ORG
-      - INFLUXDB_BUCKET_HOME_PUBLIC
-      - INFLUXDB_BUCKET_HOME_PRIVATE
-      - INFLUXDB_BUCKET_DATA_PUBLIC
-      - INFLUXDB_BUCKET_DATA_PRIVATE
-      - INFLUXDB_BUCKET_HOST_PRIVATE
-      - INFLUXDB_USER
-      - INFLUXDB_USER_ALL
-      - INFLUXDB_USER_PUBLIC
-      - INFLUXDB_KEY
-      - INFLUXDB_TOKEN
-      - INFLUXDB_TOKEN_PUBLIC_V1
-      - INFLUXDB_TOKEN_PUBLIC_V2
+    <<: *common
     volumes:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}:/root/.influxdbv2:${INFLUXDB_MOUNT}
@@ -34,24 +36,7 @@ services:
           memory: 5G
   influxdb_bootstrap:
     container_name: influxdb_bootstrap
-    image: influxdb:${SERVICE_VERSION_ABSOLUTE}
-    environment:
-      - TZ=Australia/Perth
-      - INFLUXDB_HOST
-      - INFLUXDB_PORT
-      - INFLUXDB_ORG
-      - INFLUXDB_BUCKET_HOME_PUBLIC
-      - INFLUXDB_BUCKET_HOME_PRIVATE
-      - INFLUXDB_BUCKET_DATA_PUBLIC
-      - INFLUXDB_BUCKET_DATA_PRIVATE
-      - INFLUXDB_BUCKET_HOST_PRIVATE
-      - INFLUXDB_USER
-      - INFLUXDB_USER_ALL
-      - INFLUXDB_USER_PUBLIC
-      - INFLUXDB_KEY
-      - INFLUXDB_TOKEN
-      - INFLUXDB_TOKEN_PUBLIC_V1
-      - INFLUXDB_TOKEN_PUBLIC_V2
+    <<: *common
     volumes:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}:/root/.influxdbv2:${INFLUXDB_MOUNT}

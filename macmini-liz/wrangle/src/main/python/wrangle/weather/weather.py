@@ -68,23 +68,25 @@ class Weather(library.Library):
         # else:
         #     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
 
-        weekly_forecast_file = os.path.join(self.input, WEEKLY_FORECAST_URL.split("/")[-1])
-        file_status = self.ftp_download(WEEKLY_FORECAST_URL, weekly_forecast_file)
-        if file_status[0]:
-            if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or file_status[1]:
-                try:
-                    new_data = True
+        # TODO: FTP site seems to be down now too?
+        # weekly_forecast_file = os.path.join(self.input, WEEKLY_FORECAST_URL.split("/")[-1])
+        # file_status = self.ftp_download(WEEKLY_FORECAST_URL, weekly_forecast_file)
+        # if file_status[0]:
+        #     if os.getenv('WRANGLE_REPROCESS_ALL_FILES') == "true" or file_status[1]:
+        #         try:
+        #             new_data = True
+        #
+        #             # TODO: Provide Implementation
+        #
+        #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
+        #         except Exception as exception:
+        #             self.print_log("Unexpected error processing file [{}]".format(weekly_forecast_file), exception)
+        #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+        #     else:
+        #         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
+        # else:
+        #     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
 
-                    # TODO: Provide Implementation
-
-                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
-                except Exception as exception:
-                    self.print_log("Unexpected error processing file [{}]".format(weekly_forecast_file), exception)
-                    self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-            else:
-                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
-        else:
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
         if new_data:
             weather_delta_df, weather_current_df, _ = self.state_cache(pd.DataFrame({"some_dummy_data": [1.0]}), "Weather")
 

@@ -256,7 +256,7 @@ def _run(context):
         if isfile(run_dev_path):
             _run_local(context, "run_dev.sh", module)
         else:
-            _run_local(context, "docker-compose --ansi never up --force-recreate", module)
+            _run_local(context, "docker-compose --ansi never up --force-recreate --remove-orphans", module)
         _print_footer(module, "run")
         break
 
@@ -518,7 +518,7 @@ def _up_module(context, module, up_this=True):
             _print_footer(run_dep, "run prepare")
             if run_dep != module or up_this:
                 _print_header(run_dep, "run")
-                _run_local(context, "docker-compose --ansi never up --force-recreate -d", run_dep)
+                _run_local(context, "docker-compose --ansi never up --force-recreate --remove-orphans -d", run_dep)
                 _print_footer(run_dep, "run")
 
 

@@ -1,5 +1,6 @@
-FROM telegraf:1.18.2-alpine
+FROM telegraf:1.18.2-alpine as image_base
 
+FROM image_base as image_package
 ENV PYTHONUNBUFFERED=1
 RUN apk add --no-cache python2=2.7.18-r0 && \
     python -m ensurepip && \
@@ -7,6 +8,9 @@ RUN apk add --no-cache python2=2.7.18-r0 && \
     pip install --upgrade pip setuptools && \
     rm -r /root/.cache
 
+FROM image_package as image_install
+
+FROM image_install as image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem

@@ -1,30 +1,33 @@
 version: '3.7'
+x-common: &common
+  image: grafana:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  restart: ${SERVICE_RESTART}
+  user: root
+  environment:
+    - TZ=Australia/Perth
+    - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
+    - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
+    - GRAFANA_HOST
+    - GRAFANA_PORT
+    - GRAFANA_URL
+    - INFLUXDB_HOST
+    - INFLUXDB_PORT
+    - INFLUXDB_ORG
+    - INFLUXDB_BUCKET_HOME_PUBLIC
+    - INFLUXDB_BUCKET_HOME_PRIVATE
+    - INFLUXDB_BUCKET_DATA_PUBLIC
+    - INFLUXDB_BUCKET_DATA_PRIVATE
+    - INFLUXDB_BUCKET_HOST_PRIVATE
+    - INFLUXDB_USER_ALL
+    - INFLUXDB_USER_PUBLIC
+    - INFLUXDB_TOKEN
+    - INFLUXDB_TOKEN_PUBLIC_V1
+    - INFLUXDB_TOKEN_PUBLIC_V2
 services:
   grafana:
     container_name: grafana
-    image: grafana:${SERVICE_VERSION_ABSOLUTE}
-    init: true
-    restart: ${SERVICE_RESTART}
-    environment:
-      - TZ=Australia/Perth
-      - GRAFANA_HOST
-      - GRAFANA_PORT
-      - GRAFANA_URL
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
-      - INFLUXDB_HOST
-      - INFLUXDB_PORT
-      - INFLUXDB_ORG
-      - INFLUXDB_BUCKET_HOME_PUBLIC
-      - INFLUXDB_BUCKET_HOME_PRIVATE
-      - INFLUXDB_BUCKET_DATA_PUBLIC
-      - INFLUXDB_BUCKET_DATA_PRIVATE
-      - INFLUXDB_BUCKET_HOST_PRIVATE
-      - INFLUXDB_USER_ALL
-      - INFLUXDB_USER_PUBLIC
-      - INFLUXDB_TOKEN
-      - INFLUXDB_TOKEN_PUBLIC_V1
-      - INFLUXDB_TOKEN_PUBLIC_V2
+    <<: *common
     volumes:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}/custom.ini:/etc/grafana/grafana.ini
@@ -37,30 +40,7 @@ services:
           memory: 5G
   grafana_bootstrap:
     container_name: grafana_bootstrap
-    image: grafana:${SERVICE_VERSION_ABSOLUTE}
-    init: true
-    restart: ${SERVICE_RESTART}
-    user: root
-    environment:
-      - TZ=Australia/Perth
-      - GRAFANA_HOST
-      - GRAFANA_PORT
-      - GRAFANA_URL
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
-      - INFLUXDB_HOST
-      - INFLUXDB_PORT
-      - INFLUXDB_ORG
-      - INFLUXDB_BUCKET_HOME_PUBLIC
-      - INFLUXDB_BUCKET_HOME_PRIVATE
-      - INFLUXDB_BUCKET_DATA_PUBLIC
-      - INFLUXDB_BUCKET_DATA_PRIVATE
-      - INFLUXDB_BUCKET_HOST_PRIVATE
-      - INFLUXDB_USER_ALL
-      - INFLUXDB_USER_PUBLIC
-      - INFLUXDB_TOKEN
-      - INFLUXDB_TOKEN_PUBLIC_V1
-      - INFLUXDB_TOKEN_PUBLIC_V2
+    <<: *common
     volumes:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
     entrypoint: /bin/bash

@@ -10,13 +10,13 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   tk=8.6.0+9 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-FROM image_package as image_runtime
+FROM image_package as image_install
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem
 RUN cat /asystem/reqs_run.txt | xargs -n 1 pip install --no-deps --prefix=/asystem/runtime && rm -rf /asystem/reqs_run.txt
 
-FROM image_runtime as image_install
+FROM image_install as image_runtime
 RUN mkdir /asystem/install
 WORKDIR /asystem/install
 COPY src/reqs_dev.txt /asystem
