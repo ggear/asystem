@@ -14,11 +14,16 @@ from anode.metadata.build import load
 
 DIR_DASHBOARDS_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards"
 
+PREFIX = "// GRAPH_"
+PREFIX_MOBILE = PREFIX + "MOBILE: "
+PREFIX_DESKTOP = PREFIX + "DESKTOP: "
+PREFIX_DASHBOARD_DEFAULTS = PREFIX + "DASHBOARD_DEFAULTS: "
+
 if __name__ == "__main__":
     sensors = load()
     for group in sensors:
-        with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/graphs_{}.libsonnet".format(group.lower()), "w") as file:
-            file.write("""
+        with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/graph_{}.jsonnet".format(group.lower()), "w") as file:
+            file.write((PREFIX_DASHBOARD_DEFAULTS + "time_from='now-7d', refresh=''" + """
 {
   graphs()::
   
@@ -28,8 +33,8 @@ if __name__ == "__main__":
     local influxdb = grafana.influxdb;
     
     [
-            """.strip() + "\n\n")
-            snip_path = DIR_DASHBOARDS_ROOT + "/template/private/" + os.path.basename(file.name).replace(".libsonnet", ".snipsonnet")
+            """).strip() + "\n\n")
+            snip_path = DIR_DASHBOARDS_ROOT + "/template/private/" + os.path.basename(file.name).replace("graph_", "graphsnip_")
             if os.path.isfile(snip_path):
                 with open(snip_path, 'r') as snip_file:
                     file.write(snip_file.read())
@@ -70,125 +75,101 @@ if __name__ == "__main__":
 }
             """.strip() + "\n")
     print("Metadata script [grafana] graphs saved")
-    with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/dashboards_all.jsonnet", "w") as file:
-        file.write("""
+
+    graphs = {"public": {}, "private": {}}
+    for scope in ["public", "private"]:
+        for graph in glob.glob("{}/template/{}/graph_*.jsonnet".format(DIR_DASHBOARDS_ROOT, scope)):
+            graphs[scope][os.path.basename(graph).replace(".jsonnet", "").replace("graph_", "")] = \
+                "../../config/dashboards/template/{}/".format(scope)
+        for graph in glob.glob("{}/template/{}/generated/graph_*.jsonnet".format(DIR_DASHBOARDS_ROOT, scope)):
+            graphs[scope][os.path.basename(graph).replace(".jsonnet", "").replace("graph_", "")] = \
+                "../../config/dashboards/template/{}/generated/".format(scope)
+    graphs["private"].update(graphs["public"])
+    for scope in ["public", "private"]:
+        with open(DIR_DASHBOARDS_ROOT + "/template/{}/generated/dashboards_all.jsonnet".format(scope), "w") as file:
+            file.write("""
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
-local graphs_currency = import '../graphs_currency.libsonnet';
-local graphs_interest = import '../graphs_interest.libsonnet';
-local graphs_servers = import '../graphs_servers.libsonnet';
-local graphs_containers = import '../graphs_containers.libsonnet';
-local graphs_network = import '../graphs_network.libsonnet';
-local graphs_internet = import '../graphs_internet.libsonnet';
-        """.strip() + "\n")
-        for group in sensors:
-            file.write("""
-local graphs_{} = import 'graphs_{}.libsonnet';
-            """.format(group.lower(), group.lower()).strip() + "\n")
-        file.write("\n" + """
+            """.strip() + "\n")
+            for graph in graphs[scope]:
+                file.write("""
+local graph_{} = import 'graph_{}.jsonnet';
+                """.format(graph, graph).strip() + "\n")
+            file.write("\n" + """
 
 {
   grafanaDashboards:: {
 
-    currency_dashboard:
-      dashboard.new(
-        title='Currency',
-        uid='currency',
-        editable=true,
-        tags=['published'],
-        schemaVersion=26,
-        time_from='now-6M',
-        refresh='',
-        graphTooltip='shared_tooltip',
-      )
-      .addPanels(graphs_currency.graphs()),
-
-    interest_dashboard:
-      dashboard.new(
-        title='Interest',
-        uid='interest',
-        editable=true,
-        tags=['published'],
-        schemaVersion=26,
-        time_from='now-10y',
-        refresh='',
-        graphTooltip='shared_tooltip',
-      )
-      .addPanels(graphs_interest.graphs()),
-
-    servers_dashboard:
-      dashboard.new(
-        title='Servers',
-        uid='servers',
-        editable=true,
-        tags=['published'],
-        schemaVersion=26,
-        time_from='now-1h',
-        refresh='',
-        graphTooltip='shared_tooltip',
-      )
-      .addPanels(graphs_servers.graphs()),
-
-    containers_dashboard:
-      dashboard.new(
-        title='Containers',
-        uid='containers',
-        editable=true,
-        tags=['published'],
-        schemaVersion=26,
-        time_from='now-1h',
-        refresh='',
-        graphTooltip='shared_tooltip',
-      )
-      .addPanels(graphs_containers.graphs()),
-
-    network_dashboard:
-      dashboard.new(
-        title='Network',
-        uid='network',
-        editable=true,
-        tags=['published'],
-        schemaVersion=26,
-        time_from='now-1h',
-        refresh='',
-        graphTooltip='shared_tooltip',
-      )
-      .addPanels(graphs_network.graphs()),
-
-    internet_dashboard:
-      dashboard.new(
-        title='Internet',
-        uid='internet',
-        editable=true,
-        tags=['published'],
-        schemaVersion=26,
-        time_from='now-3h',
-        refresh='',
-        graphTooltip='shared_tooltip',
-      )
-      .addPanels(graphs_internet.graphs()),
-        """.strip() + "\n")
-        for group in sensors:
-            file.write("\n    " + """
+            """.strip() + "\n")
+            for graph in graphs[scope]:
+                defaults = open(os.path.join(DIR_DASHBOARDS_ROOT, graphs[scope][graph], "graph_{}.jsonnet".format(graph))) \
+                    .readline().rstrip()
+                if defaults.startswith(PREFIX_DASHBOARD_DEFAULTS):
+                    defaults = defaults.replace(PREFIX_DASHBOARD_DEFAULTS, "")
+                else:
+                    defaults = "time_from='now-7d', refresh=''"
+                file.write("\n    " + """
     {}_dashboard:
       dashboard.new(
-        title='{}',
-        uid='{}',
-        editable=true,
-        tags=['published'],
         schemaVersion=26,
-        time_from='now-7d',
-        refresh='',
+{}        title='{} (Desktop)',
+{}        title='{} (Mobile)',
+{}        uid='{}-dekstop',
+{}        uid='{}-mobile',
+        editable=true,
         graphTooltip='shared_tooltip',
+{}        tags=['published', 'desktop'],
+{}        tags=['published', 'mobile'],
+        {}
       )
-      .addPanels(graphs_{}.graphs()),
-            """.format(group.lower(), group, group.lower(), group.lower()).strip() + "\n\n")
-        file.write("  " + """
+      .addPanels(graph_{}.graphs()),
+                """.format(
+                    graph,
+                    PREFIX_DESKTOP,
+                    graph.title(),
+                    PREFIX_MOBILE,
+                    graph.title(),
+                    PREFIX_DESKTOP,
+                    graph,
+                    PREFIX_MOBILE,
+                    graph,
+                    PREFIX_DESKTOP,
+                    PREFIX_MOBILE,
+                    defaults,
+                    graph).strip() + "\n\n")
+            file.write("  " + """
   },
 }
-        """.strip() + "\n")
+            """.strip() + "\n")
+    print("Metadata script [grafana] dashboard templates saved")
 
-    # TODO: Generate public/private (unique dashbaords_all, perhaps using snipsonnet's, public subset, private all) x
-    # desktop/mobile (copy line by line, comment/uncomment MOBILE/DESKTOP lines) dashbaords
+    for scope in ["public", "private"]:
+        for form in ["desktop", "mobile"]:
+            for files in os.walk("{}/template/{}".format(DIR_DASHBOARDS_ROOT, scope)):
+                for file_name in files[2]:
+                    if not file_name.startswith("graphsnip_"):
+                        with open("{}/{}".format(files[0], file_name), "r") as file_source:
+                            file_destination_path = "{}/{}/{}/{}".format(files[0].replace("template", "instance").replace("generated", ""),
+                                                                         "generated", form, file_name)
+                            private_copy = scope == "public" and file_name.startswith("graph_")
+                            if private_copy:
+                                destination_path_copy = file_destination_path.replace("public", "private")
+                                if not os.path.exists(os.path.dirname(destination_path_copy)):
+                                    os.makedirs(os.path.dirname(destination_path_copy))
+                                destination_file_copy = open(destination_path_copy, "w")
+                            if not os.path.exists(os.path.dirname(file_destination_path)):
+                                os.makedirs(os.path.dirname(file_destination_path))
+                            with open(file_destination_path, "w") as destination_file:
+                                for line in file_source:
+                                    if not line.startswith(PREFIX) or \
+                                            line.startswith(PREFIX_MOBILE) and form == "mobile" or \
+                                            line.startswith(PREFIX_DESKTOP) and form == "desktop":
+                                        if not line.startswith(PREFIX_DASHBOARD_DEFAULTS):
+                                            line = line.replace(PREFIX_MOBILE, "").replace(PREFIX_DESKTOP, "")
+                                            destination_file.write(line)
+                                            if private_copy:
+                                                destination_file_copy.write(line)
+                            if private_copy:
+                                destination_file_copy.close()
 
-    print("Metadata script [grafana] dashboards saved")
+    print("Metadata script [grafana] dashboard specialisations saved")

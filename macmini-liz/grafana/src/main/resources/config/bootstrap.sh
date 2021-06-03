@@ -58,9 +58,9 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB1Public?orgId=1
         }' | jq
 fi
 curl --silent ${GRAFANA_URL}/api/datasources?orgId=1 | jq
-
-# TODO
-#/bootstrap/grizzly/grr apply ../dashboards/template/generated/dashboards_all.jsonnet
+cd /bootstrap/grafonnet-lib
+../grizzly/grr apply ../dashboards//public/generated/desktop/dashboards_all.jsonnet
+../grizzly/grr apply ../dashboards//public/generated/mobile/dashboards_all.jsonnet
 
 if [ $(curl --silent ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/orgs \
@@ -110,9 +110,9 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB1Private?orgId=
         }' | jq
 fi
 curl --silent ${GRAFANA_URL}/api/datasources?orgId=2 | jq
-
-# TODO
-#/bootstrap/grizzly/grr apply ../dashboards/template/generated/dashboards_all.jsonnet
+cd /bootstrap/grafonnet-lib
+../grizzly/grr apply ../dashboards//private/generated/desktop/dashboards_all.jsonnet
+../grizzly/grr apply ../dashboards//private/generated/mobile/dashboards_all.jsonnet
 
 echo "--------------------------------------------------------------------------------"
 echo "Grafana bootstrap finished"

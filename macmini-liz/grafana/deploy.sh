@@ -6,8 +6,12 @@ cd src/main/resources/libraries/grizzly
 make dev
 cd ../grafonnet-lib
 
-#curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 | jq
-#./../grizzly/grr apply ./../dashboards/template/generated/dashboards_all.jsonnet
+echo "---" && echo "Setting up [PUBLIC] organisation"
+curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 | jq
+./../grizzly/grr apply ./../../config/dashboards/instance/public/generated/desktop/dashboards_all.jsonnet
+./../grizzly/grr apply ./../../config/dashboards/instance/public/generated/mobile/dashboards_all.jsonnet
 
+echo "---" && echo "Setting up [PRIVATE] organisation"
 curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 | jq
-./../grizzly/grr apply ./../../config/dashboards/template/private/generated/dashboards_all.jsonnet
+./../grizzly/grr apply ./../../config/dashboards/instance/private/generated/desktop/dashboards_all.jsonnet
+./../grizzly/grr apply ./../../config/dashboards/instance/private/generated/mobile/dashboards_all.jsonnet

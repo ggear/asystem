@@ -22,6 +22,6 @@ RUN mkdir -p /bootstrap
 COPY src/main/resources/libraries /bootstrap
 WORKDIR /bootstrap/grizzly
 RUN make dev
-COPY src/main/resources/config/dashboards/template/private /bootstrap/dashboards
+COPY src/main/resources/config/dashboards/instance /bootstrap/dashboards
 
 ENTRYPOINT [ "/run.sh" ]
