@@ -50,7 +50,7 @@ if __name__ == "__main__":
                 file.write("      " + """
       graph.new(
         title='{}',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='{}',
         bars=false,

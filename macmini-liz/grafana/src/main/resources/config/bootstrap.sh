@@ -19,12 +19,12 @@ curl -XPUT --silent ${GRAFANA_URL}/api/orgs/1 \
         "name": "Public Portal"
       }' | jq
 curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1
-if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB2Public?orgId=1 | jq -r '.name' | grep InfluxDB2Public | wc -l) -eq 0 ]; then
+if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V2?orgId=1 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "name": "InfluxDB2Public",
+          "name": "InfluxDB_V2",
           "type": "influxdb",
           "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
           "access": "proxy",
@@ -42,12 +42,12 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB2Public?orgId=1
           }
         }' | jq
 fi
-if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB1Public?orgId=1 | grep InfluxDB1Public | wc -l) -eq 0 ]; then
+if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V1?orgId=1 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "name": "InfluxDB1Public",
+          "name": "InfluxDB_V1",
           "type": "influxdb",
           "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
           "access": "proxy",
@@ -71,12 +71,12 @@ if [ $(curl --silent ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -
         }' | jq
 fi
 curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2
-if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB2Private?orgId=2 | jq -r '.name' | grep InfluxDB2Private | wc -l) -eq 0 ]; then
+if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V2?orgId=2 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=2 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "name": "InfluxDB2Private",
+          "name": "InfluxDB_V2",
           "type": "influxdb",
           "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
           "access": "proxy",
@@ -94,12 +94,12 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB2Private?orgId=
           }
         }' | jq
 fi
-if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB1Private?orgId=2 | grep InfluxDB1Private | wc -l) -eq 0 ]; then
+if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V1?orgId=2 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=2 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "name": "InfluxDB1Private",
+          "name": "InfluxDB_V1",
           "type": "influxdb",
           "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
           "access": "proxy",

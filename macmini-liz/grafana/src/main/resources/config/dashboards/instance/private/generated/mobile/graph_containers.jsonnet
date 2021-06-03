@@ -14,7 +14,7 @@
 
       stat.new(
         title='Containers Currently Running',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -55,7 +55,7 @@ from(bucket: "host_private")
 
       stat.new(
         title='Containers Currently Not Running',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -94,7 +94,7 @@ from(bucket: "host_private")
 
       stat.new(
         title='Container Images Currently Installed',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -135,7 +135,7 @@ from(bucket: "host_private")
 
       bar.new(
         title='Containers with Peak Usage <50%',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
@@ -218,7 +218,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Container Mean Running Rate',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -255,7 +255,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Container Mean Healthy Rate',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -295,7 +295,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Container Image Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -332,7 +332,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Container CPU Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='percent',
         bars=false,
@@ -362,7 +362,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Container RAM Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='percent',
         bars=false,
@@ -390,7 +390,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Container IOPS Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='Bps',
         bars=false,
@@ -433,7 +433,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Container Network Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='Bps',
         bars=false,
@@ -476,7 +476,7 @@ from(bucket: "host_private")
 
       table.new(
         title='Container Current Process Status',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         default_unit='ns'
       ).addTarget(influxdb.target(query='// Start
 status = from(bucket: "host_private")

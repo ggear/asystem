@@ -15,7 +15,7 @@
 
       stat.new(
         title='Retail Rate Last Snapshot',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='percent',
         decimals=2,
         reducerFunction='last',
@@ -44,7 +44,7 @@ from(bucket: "data_public")
 
       stat.new(
         title='Inflation Rate Last Snapshot',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=3,
         reducerFunction='last',
@@ -75,7 +75,7 @@ from(bucket: "data_public")
 
       stat.new(
         title='Net Rate Last Snapshot',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=3,
         reducerFunction='last',
@@ -106,7 +106,7 @@ from(bucket: "data_public")
 
 //      bar.new(
 //        title='Rates Ranged Means',
-//        datasource='InfluxDB2Private',
+//        datasource='InfluxDB_V2',
 //        unit='percent',
 //        min=-30,
 //        max=30,
@@ -200,7 +200,7 @@ from(bucket: "data_public")
 
       gauge.new(
         title='Retail Rate 5-Year Mean',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -231,7 +231,7 @@ from(bucket: "data_public")
 
       gauge.new(
         title='Inflation Rate 5-Year Mean',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -262,7 +262,7 @@ from(bucket: "data_public")
 
       gauge.new(
         title='Net Rate 5-Year Mean',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -293,7 +293,7 @@ from(bucket: "data_public")
 
       graph.new(
         title='Interest Rate Monthly Means',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='',
         bars=true,

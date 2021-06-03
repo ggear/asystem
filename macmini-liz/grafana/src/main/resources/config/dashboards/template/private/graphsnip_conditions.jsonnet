@@ -1,6 +1,6 @@
       graph.new(
         title='Temperature Dailies',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=3,
         format='ºC',
         bars=false,

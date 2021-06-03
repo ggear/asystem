@@ -10,7 +10,7 @@
 
       graph.new(
         title='Temperature Dailies',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=3,
         format='ºC',
         bars=false,
@@ -64,7 +64,7 @@ from(bucket: "asystem")
 // End')) { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
       graph.new(
         title='Temperature',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='short',
         bars=false,
@@ -90,7 +90,7 @@ from(bucket: "home_private")
 
       graph.new(
         title='Carbon Dioxide',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='short',
         bars=false,
@@ -116,7 +116,7 @@ from(bucket: "home_private")
 
       graph.new(
         title='Noise',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='short',
         bars=false,
@@ -142,7 +142,7 @@ from(bucket: "home_private")
 
       graph.new(
         title='Pressure',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='short',
         bars=false,
@@ -168,7 +168,7 @@ from(bucket: "home_private")
 
       graph.new(
         title='Humidity',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='short',
         bars=false,
@@ -194,7 +194,7 @@ from(bucket: "home_private")
 
       graph.new(
         title='Dew Point',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='short',
         bars=false,

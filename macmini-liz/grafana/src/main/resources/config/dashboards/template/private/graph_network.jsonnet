@@ -15,7 +15,7 @@
 
       stat.new(
         title='Gateway Uptime',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -42,7 +42,7 @@ from(bucket: "host_private")
 
       stat.new(
         title='Network Clients',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='clients',
         decimals=0,
         reducerFunction='last',
@@ -70,7 +70,7 @@ from(bucket: "host_private")
 
       bar.new(
         title='Wireless Performance',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
@@ -119,7 +119,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Wireless Quality Score (5GHz)',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -149,7 +149,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Wireless Quality Score (2.4GHz)',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -179,7 +179,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Network Throughput',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         decimals=0,
         format='Bps',
@@ -221,7 +221,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Network Clients',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='short',
         bars=false,
@@ -264,7 +264,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Network Device CPU Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='percent',
         bars=false,
@@ -291,7 +291,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Network Device RAM Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='percent',
         bars=false,
@@ -318,7 +318,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Network Device Temperature',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='ºC',
         bars=false,
@@ -353,7 +353,7 @@ from(bucket: "asystem")
 
       table.new(
         title='Wireless Clients',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         default_unit=''
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
@@ -381,7 +381,7 @@ from(bucket: "host_private")
 
       table.new(
         title='Wired Clients',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         default_unit=''
       ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")

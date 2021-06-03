@@ -11,7 +11,7 @@
 
       graph.new(
         title='Power Consumption',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='short',
         bars=false,

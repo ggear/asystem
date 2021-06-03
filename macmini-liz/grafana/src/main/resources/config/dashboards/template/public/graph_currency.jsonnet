@@ -15,7 +15,7 @@
 
       stat.new(
         title='GBP/AUD Last Snapshot',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=3,
         reducerFunction='last',
@@ -46,7 +46,7 @@ from(bucket: "data_public")
 
       stat.new(
         title='USD/AUD Last Snapshot',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=3,
         reducerFunction='last',
@@ -77,7 +77,7 @@ from(bucket: "data_public")
 
       stat.new(
         title='SGD/AUD Last Snapshot',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=3,
         reducerFunction='last',
@@ -108,7 +108,7 @@ from(bucket: "data_public")
 
       bar.new(
         title='CCY/AUD Range Deltas',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='percent',
         min=-30,
         max=30,
@@ -169,7 +169,7 @@ series
 
       gauge.new(
         title='GBP/AUD Last Delta',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -200,7 +200,7 @@ from(bucket: "data_public")
 
       gauge.new(
         title='USD/AUD Last Delta',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -231,7 +231,7 @@ from(bucket: "data_public")
 
       gauge.new(
         title='SGD/AUD Last Delta',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -262,7 +262,7 @@ from(bucket: "data_public")
 
       graph.new(
         title='CCY/AUD Deltas',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='',
         bars=false,
@@ -325,7 +325,7 @@ series
 
       graph.new(
         title='GBP/AUD Dailies',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='',
         bars=true,
@@ -370,7 +370,7 @@ from(bucket: "data_public")
 
       graph.new(
         title='USD/AUD Dailies',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='',
         bars=true,
@@ -415,7 +415,7 @@ from(bucket: "data_public")
 
       graph.new(
         title='SGD/AUD Dailies',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='',
         bars=true,

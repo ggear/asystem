@@ -15,7 +15,7 @@
 
       stat.new(
         title='Internet Uptime',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -44,7 +44,7 @@ from(bucket: "host_private")
 
       stat.new(
         title='Domain Uptime',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -73,7 +73,7 @@ from(bucket: "host_private")
 
       stat.new(
         title='Certificate Expiry',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -102,7 +102,7 @@ from(bucket: "host_private")
 
       bar.new(
         title='Service Availability',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
@@ -124,7 +124,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Internet Max Upload',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -154,7 +154,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Internet Max Download',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -184,7 +184,7 @@ from(bucket: "host_private")
 
       stat.new(
         title='Internet Mean Latency',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='ms',
         decimals=1,
         reducerFunction='last',
@@ -217,7 +217,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Internet Total Throughput',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='Bps',
         bars=true,
@@ -258,7 +258,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Internet Max Throughput',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='Bps',
         bars=false,
@@ -297,7 +297,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Internet Min Latency',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='ms',
         bars=false,
@@ -326,7 +326,7 @@ from(bucket: "host_private")
 
       table.new(
         title='Internet Categorised Throughput',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         default_unit='decbytes'
       ).addTarget(influxdb.target(query='// Start
 start_bytes = from(bucket: "host_private")
@@ -363,7 +363,7 @@ join(tables: {d1: start_bytes, d2: finish_bytes},  on: ["category"])
 
       table.new(
         title='Domain Resolution',
-        datasource='InfluxDB2Private'
+        datasource='InfluxDB_V2'
       ).addTarget(influxdb.target(query='// Start
 start_ips = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

@@ -14,7 +14,7 @@
 
       stat.new(
         title='Retail Rate Last Snapshot',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='percent',
         decimals=2,
         reducerFunction='last',
@@ -43,7 +43,7 @@ from(bucket: "data_public")
 
       stat.new(
         title='Inflation Rate Last Snapshot',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=3,
         reducerFunction='last',
@@ -74,7 +74,7 @@ from(bucket: "data_public")
 
       stat.new(
         title='Net Rate Last Snapshot',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=3,
         reducerFunction='last',
@@ -103,103 +103,103 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
 // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
-      bar.new(
-        title='Rates Ranged Means',
-        datasource='InfluxDB2Private',
-        unit='percent',
-        min=-30,
-        max=30,
-        thresholds=[
-          { 'color': 'red', 'value': -9999 },
-          { 'color': 'yellow', 'value': -0.5 },
-          { 'color': 'green', 'value': 0.5 },
-        ],
-      ).addTarget(influxdb.target(query='// Start
-import "regexp"
-import "experimental"
-normalizeTime = (t) => {
-  normalized =
-    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
-    else time(v: t)
-  return normalized
-}
-first_snapshot = from(bucket: "data_public")
-  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: true)
-  |> last()
-  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: false)
-  |> last()
-  |> map(fn: (r) => ({ r with "AUD/GBP": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
-  |> keep(columns: ["AUD/GBP"])
-// End')).addTarget(influxdb.target(query='// Start
-import "regexp"
-import "experimental"
-normalizeTime = (t) => {
-  normalized =
-    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
-    else time(v: t)
-  return normalized
-}
-first_snapshot = from(bucket: "data_public")
-  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: true)
-  |> last()
-  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: false)
-  |> last()
-  |> map(fn: (r) => ({ r with "AUD/USD": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
-  |> keep(columns: ["AUD/USD"])
-// End')).addTarget(influxdb.target(query='// Start
-import "regexp"
-import "experimental"
-normalizeTime = (t) => {
-  normalized =
-    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
-    else time(v: t)
-  return normalized
-}
-first_snapshot = from(bucket: "data_public")
-  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: true)
-  |> last()
-  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: false)
-  |> last()
-  |> map(fn: (r) => ({ r with "AUD/SGD": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
-  |> keep(columns: ["AUD/SGD"])
-// End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+//      bar.new(
+//        title='Rates Ranged Means',
+//        datasource='InfluxDB_V2',
+//        unit='percent',
+//        min=-30,
+//        max=30,
+//        thresholds=[
+//          { 'color': 'red', 'value': -9999 },
+//          { 'color': 'yellow', 'value': -0.5 },
+//          { 'color': 'green', 'value': 0.5 },
+//        ],
+//      ).addTarget(influxdb.target(query='// Start
+//import "regexp"
+//import "experimental"
+//normalizeTime = (t) => {
+//  normalized =
+//    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
+//    else time(v: t)
+//  return normalized
+//}
+//first_snapshot = from(bucket: "data_public")
+//  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
+//  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+//  |> filter(fn: (r) => r["period"] == "1-day")
+//  |> filter(fn: (r) => r["type"] == "snapshot")
+//  |> sort(columns: ["_time"], desc: true)
+//  |> last()
+//  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
+//from(bucket: "data_public")
+//  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+//  |> filter(fn: (r) => r["_measurement"] == "currency")
+//  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+//  |> filter(fn: (r) => r["period"] == "1-day")
+//  |> filter(fn: (r) => r["type"] == "snapshot")
+//  |> sort(columns: ["_time"], desc: false)
+//  |> last()
+//  |> map(fn: (r) => ({ r with "AUD/GBP": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
+//  |> keep(columns: ["AUD/GBP"])
+//// End')).addTarget(influxdb.target(query='// Start
+//import "regexp"
+//import "experimental"
+//normalizeTime = (t) => {
+//  normalized =
+//    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
+//    else time(v: t)
+//  return normalized
+//}
+//first_snapshot = from(bucket: "data_public")
+//  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
+//  |> filter(fn: (r) => r["_field"] == "AUD/USD")
+//  |> filter(fn: (r) => r["period"] == "1-day")
+//  |> filter(fn: (r) => r["type"] == "snapshot")
+//  |> sort(columns: ["_time"], desc: true)
+//  |> last()
+//  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
+//from(bucket: "data_public")
+//  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+//  |> filter(fn: (r) => r["_measurement"] == "currency")
+//  |> filter(fn: (r) => r["_field"] == "AUD/USD")
+//  |> filter(fn: (r) => r["period"] == "1-day")
+//  |> filter(fn: (r) => r["type"] == "snapshot")
+//  |> sort(columns: ["_time"], desc: false)
+//  |> last()
+//  |> map(fn: (r) => ({ r with "AUD/USD": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
+//  |> keep(columns: ["AUD/USD"])
+//// End')).addTarget(influxdb.target(query='// Start
+//import "regexp"
+//import "experimental"
+//normalizeTime = (t) => {
+//  normalized =
+//    if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
+//    else time(v: t)
+//  return normalized
+//}
+//first_snapshot = from(bucket: "data_public")
+//  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
+//  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
+//  |> filter(fn: (r) => r["period"] == "1-day")
+//  |> filter(fn: (r) => r["type"] == "snapshot")
+//  |> sort(columns: ["_time"], desc: true)
+//  |> last()
+//  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
+//from(bucket: "data_public")
+//  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+//  |> filter(fn: (r) => r["_measurement"] == "currency")
+//  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
+//  |> filter(fn: (r) => r["period"] == "1-day")
+//  |> filter(fn: (r) => r["type"] == "snapshot")
+//  |> sort(columns: ["_time"], desc: false)
+//  |> last()
+//  |> map(fn: (r) => ({ r with "AUD/SGD": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
+//  |> keep(columns: ["AUD/SGD"])
+//// End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
       gauge.new(
         title='Retail Rate 5-Year Mean',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -230,7 +230,7 @@ from(bucket: "data_public")
 
       gauge.new(
         title='Inflation Rate 5-Year Mean',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -261,7 +261,7 @@ from(bucket: "data_public")
 
       gauge.new(
         title='Net Rate 5-Year Mean',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -292,7 +292,7 @@ from(bucket: "data_public")
 
       graph.new(
         title='Interest Rate Monthly Means',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='',
         bars=true,

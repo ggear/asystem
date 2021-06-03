@@ -14,7 +14,7 @@
 
       stat.new(
         title='Servers Min Uptime',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='s',
         decimals=1,
         reducerFunction='last',
@@ -43,7 +43,7 @@ from(bucket: "host_private")
 
       stat.new(
         title='Servers OS Volumes >80%',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -74,7 +74,7 @@ from(bucket: "host_private")
 
       stat.new(
         title='Servers Data Volumes >80%',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='',
         decimals=0,
         reducerFunction='last',
@@ -105,7 +105,7 @@ from(bucket: "host_private")
 
       bar.new(
         title='Servers with Peak Usage <50%',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         unit='percent',
         thresholds=[
           { 'color': 'red', 'value': null },
@@ -188,7 +188,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Server Mean CPU Availability',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -220,7 +220,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Server Mean Memory Availability',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -251,7 +251,7 @@ from(bucket: "host_private")
 
       gauge.new(
         title='Server Mean 30< Temperature >100ºC',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         reducerFunction='last',
         showThresholdLabels=false,
         showThresholdMarkers=true,
@@ -281,7 +281,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Server CPU Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='percent',
         bars=false,
@@ -311,7 +311,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Server RAM Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='percent',
         bars=false,
@@ -339,7 +339,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Server Swap Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='percent',
         bars=false,
@@ -367,7 +367,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Server Volume Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='percent',
         bars=false,
@@ -397,7 +397,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Server IOPS Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='Bps',
         bars=false,
@@ -440,7 +440,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Server Network Usage',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=1,
         format='Bps',
         bars=false,
@@ -483,7 +483,7 @@ from(bucket: "host_private")
 
       graph.new(
         title='Server Temperature',
-        datasource='InfluxDB2Private',
+        datasource='InfluxDB_V2',
         fill=0,
         format='ºC',
         bars=false,
