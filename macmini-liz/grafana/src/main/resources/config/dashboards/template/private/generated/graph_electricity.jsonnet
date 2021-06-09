@@ -1,4 +1,4 @@
-// GRAPH_DASHBOARD_DEFAULTS: time_from='now-7d', refresh=''
+//ASDASHBOARD_DEFAULTS time_from='now-7d', refresh=''
 {
   graphs()::
   

@@ -31,7 +31,7 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}/custom.ini:/etc/grafana/grafana.ini
-      - ${SERVICE_DATA_DIR}/dashboards/instance/private/generated/desktop/dashboard_home.json:/etc/grafana/dashboard_home.json
+      - ${SERVICE_DATA_DIR}/dashboards/dashboard_home.json:/etc/grafana/dashboard_home.json
     ports:
       - ${GRAFANA_PORT}:${GRAFANA_PORT}
     deploy:

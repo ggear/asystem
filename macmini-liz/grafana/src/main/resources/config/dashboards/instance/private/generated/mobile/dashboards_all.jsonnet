@@ -11,12 +11,15 @@ local graph_conditions = import 'graph_conditions.jsonnet';
 local graph_containers = import 'graph_containers.jsonnet';
 
 {
+            
+       grafanaDashboardFolder:: 'Mobile',
+            
   grafanaDashboards:: {
 
     network_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Network (Mobile)',
+        title='Network',
         uid='network-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
@@ -29,7 +32,7 @@ local graph_containers = import 'graph_containers.jsonnet';
     electricity_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Electricity (Mobile)',
+        title='Electricity',
         uid='electricity-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
@@ -42,7 +45,7 @@ local graph_containers = import 'graph_containers.jsonnet';
     servers_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Servers (Mobile)',
+        title='Servers',
         uid='servers-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
@@ -55,7 +58,7 @@ local graph_containers = import 'graph_containers.jsonnet';
     water_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Water (Mobile)',
+        title='Water',
         uid='water-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
@@ -68,7 +71,7 @@ local graph_containers = import 'graph_containers.jsonnet';
     currency_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Currency (Mobile)',
+        title='Currency',
         uid='currency-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
@@ -81,7 +84,7 @@ local graph_containers = import 'graph_containers.jsonnet';
     interest_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Interest (Mobile)',
+        title='Interest',
         uid='interest-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
@@ -94,7 +97,7 @@ local graph_containers = import 'graph_containers.jsonnet';
     internet_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Internet (Mobile)',
+        title='Internet',
         uid='internet-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
@@ -107,7 +110,7 @@ local graph_containers = import 'graph_containers.jsonnet';
     conditions_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Conditions (Mobile)',
+        title='Conditions',
         uid='conditions-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
@@ -120,7 +123,7 @@ local graph_containers = import 'graph_containers.jsonnet';
     containers_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Containers (Mobile)',
+        title='Containers',
         uid='containers-mobile',
         editable=true,
         graphTooltip='shared_tooltip',

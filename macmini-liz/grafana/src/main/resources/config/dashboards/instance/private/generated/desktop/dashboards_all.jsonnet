@@ -11,13 +11,16 @@ local graph_conditions = import 'graph_conditions.jsonnet';
 local graph_containers = import 'graph_containers.jsonnet';
 
 {
+            
+       grafanaDashboardFolder:: 'Desktop',
+            
   grafanaDashboards:: {
 
     network_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Network (Desktop)',
-        uid='network-dekstop',
+        title='Network',
+        uid='network-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],
@@ -29,8 +32,8 @@ local graph_containers = import 'graph_containers.jsonnet';
     electricity_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Electricity (Desktop)',
-        uid='electricity-dekstop',
+        title='Electricity',
+        uid='electricity-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],
@@ -42,8 +45,8 @@ local graph_containers = import 'graph_containers.jsonnet';
     servers_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Servers (Desktop)',
-        uid='servers-dekstop',
+        title='Servers',
+        uid='servers-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],
@@ -55,8 +58,8 @@ local graph_containers = import 'graph_containers.jsonnet';
     water_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Water (Desktop)',
-        uid='water-dekstop',
+        title='Water',
+        uid='water-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],
@@ -68,8 +71,8 @@ local graph_containers = import 'graph_containers.jsonnet';
     currency_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Currency (Desktop)',
-        uid='currency-dekstop',
+        title='Currency',
+        uid='currency-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],
@@ -81,8 +84,8 @@ local graph_containers = import 'graph_containers.jsonnet';
     interest_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Interest (Desktop)',
-        uid='interest-dekstop',
+        title='Interest',
+        uid='interest-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],
@@ -94,8 +97,8 @@ local graph_containers = import 'graph_containers.jsonnet';
     internet_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Internet (Desktop)',
-        uid='internet-dekstop',
+        title='Internet',
+        uid='internet-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],
@@ -107,8 +110,8 @@ local graph_containers = import 'graph_containers.jsonnet';
     conditions_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Conditions (Desktop)',
-        uid='conditions-dekstop',
+        title='Conditions',
+        uid='conditions-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],
@@ -120,8 +123,8 @@ local graph_containers = import 'graph_containers.jsonnet';
     containers_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Containers (Desktop)',
-        uid='containers-dekstop',
+        title='Containers',
+        uid='containers-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],

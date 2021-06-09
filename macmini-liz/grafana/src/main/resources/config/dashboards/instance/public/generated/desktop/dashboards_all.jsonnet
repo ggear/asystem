@@ -4,13 +4,16 @@ local graph_currency = import 'graph_currency.jsonnet';
 local graph_interest = import 'graph_interest.jsonnet';
 
 {
+            
+       grafanaDashboardFolder:: 'Desktop',
+            
   grafanaDashboards:: {
 
     currency_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Currency (Desktop)',
-        uid='currency-dekstop',
+        title='Currency',
+        uid='currency-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],
@@ -22,8 +25,8 @@ local graph_interest = import 'graph_interest.jsonnet';
     interest_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Interest (Desktop)',
-        uid='interest-dekstop',
+        title='Interest',
+        uid='interest-desktop',
         editable=true,
         graphTooltip='shared_tooltip',
         tags=['published', 'desktop'],

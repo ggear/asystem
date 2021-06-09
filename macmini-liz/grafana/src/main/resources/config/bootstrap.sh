@@ -58,9 +58,42 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V1?orgId=1 | g
         }' | jq
 fi
 curl --silent ${GRAFANA_URL}/api/datasources?orgId=1 | jq
-cd /bootstrap/grafonnet-lib
-../grizzly/grr apply ../dashboards//public/generated/desktop/dashboards_all.jsonnet
-../grizzly/grr apply ../dashboards//public/generated/mobile/dashboards_all.jsonnet
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/default?orgId=1 | grep default | wc -l) -eq 0 ]; then
+  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Default",
+          "title": "Default"
+        }' | jq
+fi
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/mobile?orgId=1 | grep mobile | wc -l) -eq 0 ]; then
+  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Mobile",
+          "title": "Mobile"
+        }' | jq
+fi
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/desktop?orgId=1 | grep desktop | wc -l) -eq 0 ]; then
+  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Desktop",
+          "title": "Desktop"
+        }' | jq
+fi
+curl --silent ${GRAFANA_URL}/api/folders?orgId=1 | jq
+if [ -d /bootstrap/grafonnet-lib ]; then
+  cd /bootstrap/grafonnet-lib
+  ../grizzly/grr apply ../dashboards//public/generated/desktop/dashboard_home.jsonnet
+  ../grizzly/grr apply ../dashboards//public/generated/desktop/dashboards_all.jsonnet
+  ../grizzly/grr apply ../dashboards//public/generated/mobile/dashboard_home.jsonnet
+  ../grizzly/grr apply ../dashboards//public/generated/mobile/dashboards_all.jsonnet
+  ../grizzly/grr apply ../dashboards//public/generated/mobile/dashboard_default.jsonnet
+fi
 
 if [ $(curl --silent ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/orgs \
@@ -110,9 +143,41 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V1?orgId=2 | g
         }' | jq
 fi
 curl --silent ${GRAFANA_URL}/api/datasources?orgId=2 | jq
-cd /bootstrap/grafonnet-lib
-../grizzly/grr apply ../dashboards//private/generated/desktop/dashboards_all.jsonnet
-../grizzly/grr apply ../dashboards//private/generated/mobile/dashboards_all.jsonnet
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/default?orgId=2 | grep default | wc -l) -eq 0 ]; then
+  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=2 \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Default",
+          "title": "Default"
+        }' | jq
+fi
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/mobile?orgId=2 | grep mobile | wc -l) -eq 0 ]; then
+  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=2 \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Mobile",
+          "title": "Mobile"
+        }' | jq
+fi
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/desktop?orgId=2 | grep desktop | wc -l) -eq 0 ]; then
+  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=2 \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Desktop",
+          "title": "Desktop"
+        }' | jq
+fi
+curl --silent ${GRAFANA_URL}/api/folders?orgId=2 | jq
+if [ -d /bootstrap/grafonnet-lib ]; then
+  cd /bootstrap/grafonnet-lib
+  ../grizzly/grr apply ../dashboards//private/generated/desktop/dashboard_home.jsonnet
+  ../grizzly/grr apply ../dashboards//private/generated/desktop/dashboards_all.jsonnet
+  ../grizzly/grr apply ../dashboards//private/generated/mobile/dashboard_home.jsonnet
+  ../grizzly/grr apply ../dashboards//private/generated/mobile/dashboards_all.jsonnet
+fi
 
 echo "--------------------------------------------------------------------------------"
 echo "Grafana bootstrap finished"

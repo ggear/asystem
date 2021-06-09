@@ -1,275 +1,291 @@
 package grizzly
 
 import (
-	"encoding/json"
+	_ "embed"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
-	"sort"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
-	rulefmt "github.com/cortexproject/cortex/pkg/ruler/legacy_rulefmt"
-	"github.com/fatih/color"
-	"github.com/google/go-jsonnet"
 	"github.com/grafana/grizzly/pkg/term"
-	"github.com/kylelemons/godebug/diff"
+	"github.com/pmezard/go-difflib/difflib"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/fsnotify.v1"
-	"gopkg.in/yaml.v2"
 )
 
 var interactive = terminal.IsTerminal(int(os.Stdout.Fd()))
 
-var (
-	red    = color.New(color.FgRed).SprintFunc()
-	yellow = color.New(color.FgYellow).SprintFunc()
-	green  = color.New(color.FgGreen).SprintFunc()
-)
+// Get retrieves a resource from a remote endpoint using its UID
+func Get(registry Registry, UID string) error {
+	count := strings.Count(UID, ".")
+	var handlerName, resourceID string
+	if count == 1 {
+		parts := strings.SplitN(UID, ".", 2)
+		handlerName = parts[0]
+		resourceID = parts[1]
+	} else if count == 2 {
+		parts := strings.SplitN(UID, ".", 3)
+		handlerName = parts[0] + "." + parts[1]
+		resourceID = parts[2]
 
-// Get retrieves JSON for a dashboard from Grafana, using the dashboard's UID
-func Get(config Config, dashboardUID string) error {
-	board, err := getDashboard(config, dashboardUID)
-	if err != nil {
-		return fmt.Errorf("Error retrieving dashboard %s: %v", dashboardUID, err)
+	} else {
+		return fmt.Errorf("UID must be <provider>.<uid>: %s", UID)
 	}
-	dashboardJSON, _ := board.GetDashboardJSON()
-	fmt.Println(dashboardJSON)
-	return nil
-}
 
-// List outputs the keys of the grafanaDashboards object.
-func List(jsonnetFile string) error {
-	res, err := parse(jsonnetFile)
+	handler, err := registry.GetHandler(handlerName)
 	if err != nil {
 		return err
 	}
 
-	f := "%s\t%s\n"
+	resource, err := handler.GetByUID(resourceID)
+	if err != nil {
+		return err
+	}
+
+	resource = handler.Unprepare(*resource)
+	rep, err := resource.YAML()
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(rep)
+	return nil
+}
+
+// List outputs the keys resources found in resulting json.
+func List(registry Registry, resources Resources) error {
+	f := "%s\t%s\t%s\n"
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)
 
-	fmt.Fprintf(w, f, "KIND", "NAME")
-	for _, r := range res {
-		fmt.Fprintf(w, f, r.Kind(), r.UID())
-	}
-
-	return w.Flush()
-}
-
-type Group rulefmt.RuleGroup
-
-func (g Group) Kind() string {
-	return "Group"
-}
-
-func (g Group) UID() string {
-	return g.Name
-}
-
-// UnmarshalJSON uses the YAML parser for this specific type, because the
-// embedded prometheus types require this.
-func (g *Group) UnmarshalJSON(data []byte) error {
-	return yaml.Unmarshal(data, g)
-}
-
-type Rules struct {
-	Groups []Group `json:"groups"`
-}
-
-type Mixin struct {
-	Dashboards Boards `json:"grafanaDashboards"`
-	Rules      Rules  `json:"prometheusRules"`
-	Alerts     Rules  `json:"prometheusAlerts"`
-}
-
-func eval(jsonnetFile string) ([]byte, error) {
-	data, err := ioutil.ReadFile(jsonnetFile)
-	if err != nil {
-		return nil, err
-	}
-
-	vm := jsonnet.MakeVM()
-	vm.Importer(newExtendedImporter([]string{"vendor", "lib", "."}))
-
-	result, err := vm.EvaluateSnippet(jsonnetFile, string(data))
-	if err != nil {
-		return nil, err
-	}
-
-	return []byte(result), nil
-}
-
-func parse(jsonnetFile string) (Resources, error) {
-	data, err := eval(jsonnetFile)
-	if err != nil {
-		return nil, err
-	}
-
-	var m Mixin
-	if err := json.Unmarshal([]byte(data), &m); err != nil {
-		return nil, err
-	}
-
-	// Destructure Mixin into Resources slice
-	var r Resources
-	for _, b := range m.Dashboards {
-		r = append(r, b)
-	}
-
-	for _, g := range m.Rules.Groups {
-		r = append(r, g)
-	}
-
-	for _, g := range m.Alerts.Groups {
-		r = append(r, g)
-	}
-
-	return r, nil
-}
-
-// Show renders a Jsonnet dashboard as JSON, consuming a jsonnet filename
-func Show(config Config, jsonnetFile string, targets []string) error {
-	res, err := parse(jsonnetFile)
-	if err != nil {
-		return err
-	}
-
-	if interactive && len(res) >= 2 {
-		var items []term.PageItem
-		for _, r := range res {
-			items = append(items, term.PageItem{
-				Name:    fmt.Sprintf("%s/%s", r.Kind(), r.UID()),
-				Content: mustYAML(r),
-			})
-		}
-		return term.Page(items)
-	}
-
-	fmt.Print(res.String())
-	return nil
-}
-
-func mustYAML(i interface{}) string {
-	data, err := yaml.Marshal(i)
-	if err != nil {
-		panic(err)
-	}
-	return string(data)
-}
-
-// Diff renders a Jsonnet dashboard and compares it with what is found in Grafana
-func Diff(config Config, jsonnetFile string, targets []string) error {
-	boards, err := renderDashboards(jsonnetFile, targets, 0)
-	if err != nil {
-		return err
-	}
-
-	for _, board := range boards {
-		uid := board.UID()
-		existingBoard, err := getDashboard(config, board.UID())
-		if err == ErrNotFound {
-			log.Println(uid, yellow("not present in Grafana"))
-			continue
-		}
-		if err != nil {
-			return fmt.Errorf("Error retrieving dashboard %s: %v", uid, err)
-		}
-
-		boardJSON, _ := board.GetDashboardJSON()
-		existingBoardJSON, _ := existingBoard.GetDashboardJSON()
-
-		if boardJSON == existingBoardJSON {
-			fmt.Println(uid, yellow("no differences"))
-		} else {
-			fmt.Println(uid, red("changes detected:"))
-			difference := diff.Diff(existingBoardJSON, boardJSON)
-			fmt.Println(difference)
-		}
-	}
-	return nil
-}
-
-// Apply renders Jsonnet dashboards then pushes them to Grafana via the API
-func Apply(config Config, jsonnetFile string, targets []string) error {
-	folderID, err := folderId(config, jsonnetFile)
-	if err != nil {
-		var fID int64 = 0
-		folderID = &fID
-		fmt.Println("Folder not found and/or configured. Applying to \"General\" folder.")
-	}
-	boards, err := renderDashboards(jsonnetFile, targets, *folderID)
-	if err != nil {
-		return err
-	}
-	for _, k := range boardKeys(boards) {
-		board := boards[k]
-
-		uid := board.UID()
-		existingBoard, err := getDashboard(config, uid)
-
-		switch err {
-		case ErrNotFound: // create new
-			fmt.Println(uid, green("added"))
-			if err := postDashboard(config, board); err != nil {
-				return err
-			}
-		case nil: // update
-			boardJSON, _ := board.GetDashboardJSON()
-			existingBoardJSON, _ := existingBoard.GetDashboardJSON()
-
-			if boardJSON == existingBoardJSON {
-				fmt.Println(uid, yellow("unchanged"))
-				continue
-			}
-
-			if err = postDashboard(config, board); err != nil {
-				return err
-			}
-			log.Println(uid, green("updated"))
-
-		default: // failed
-			return fmt.Errorf("Error retrieving dashboard %s: %v", uid, err)
-		}
-	}
-	return nil
-}
-
-func boardKeys(b Boards) (keys []string) {
-	for k := range b {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
-}
-
-// Preview renders Jsonnet dashboards then pushes them to Grafana via the Snapshot API
-func Preview(config Config, jsonnetFile string, targets []string, opts *PreviewOpts) error {
-	//folderID is not used in snapshots
-	folderID := int64(0)
-	boards, err := renderDashboards(jsonnetFile, targets, folderID)
-	if err != nil {
-		return err
-	}
-	for _, board := range boards {
-		uid := board.UID()
-		s, err := postSnapshot(config, board, opts)
+	fmt.Fprintf(w, f, "API VERSION", "KIND", "UID")
+	for _, resource := range resources {
+		handler, err := registry.GetHandler(resource.Kind())
 		if err != nil {
 			return err
 		}
-		fmt.Println("View", uid, green(s.URL))
-		fmt.Println("Delete", uid, yellow(s.DeleteURL))
+		fmt.Fprintf(w, f, handler.APIVersion(), handler.Kind(), resource.Name())
 	}
-	if opts.ExpiresSeconds > 0 {
-		fmt.Print(yellow(fmt.Sprintf("Previews will expire and be deleted automatically in %d seconds\n", opts.ExpiresSeconds)))
+	return w.Flush()
+}
+
+// ListRetmote outputs the keys of remote resources
+func ListRemote(registry Registry, opts Opts) error {
+	f := "%s\t%s\t%s\n"
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 4, ' ', 0)
+
+	fmt.Fprintf(w, f, "API VERSION", "KIND", "UID")
+	for _, handler := range registry.Handlers {
+		if !registry.HandlerMatchesTarget(handler, opts.Targets) {
+			continue
+		}
+		IDs, err := handler.ListRemote()
+		if err != nil {
+			return err
+		}
+		for _, id := range IDs {
+			if registry.ResourceMatchesTarget(handler, id, opts.Targets) {
+				fmt.Fprintf(w, f, handler.APIVersion(), handler.Kind(), id)
+			}
+		}
+	}
+	return w.Flush()
+}
+
+// Pulls remote resources
+func Pull(registry Registry, resourcePath string, opts Opts) error {
+
+	if !(opts.Directory) {
+		return fmt.Errorf("pull only works with -d option")
+	}
+
+	for _, handler := range registry.Handlers {
+		if !registry.HandlerMatchesTarget(handler, opts.Targets) {
+			registry.Notifier().Info(SimpleString(handler.Kind()), "skipped")
+			continue
+		}
+		UIDs, err := handler.ListRemote()
+		if err != nil {
+			return err
+		}
+		if len(UIDs) == 0 {
+			registry.Notifier().Info(nil, "No resources found")
+		}
+		registry.Notifier().Warn(nil, fmt.Sprintf("Pulling %d resources", len(UIDs)))
+		for _, UID := range UIDs {
+			if !registry.ResourceMatchesTarget(handler, UID, opts.Targets) {
+				continue
+			}
+			resource, err := handler.GetByUID(UID)
+			if errors.As(err, &ErrNotFound) {
+				registry.Notifier().NotFound(SimpleString(UID))
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+
+			path := filepath.Join(resourcePath, handler.ResourceFilePath(*resource, "yaml"))
+			err = MarshalYAML(*resource, path)
+			if err != nil {
+				return err
+			}
+			registry.Notifier().Info(resource, "pulled")
+		}
 	}
 	return nil
 }
 
-// Watch watches a directory for changes then pushes Jsonnet dashboards to Grafana
+// Show displays resources
+func Show(registry Registry, resources Resources) error {
+
+	var items []term.PageItem
+	for _, resource := range resources {
+		handler, err := registry.GetHandler(resource.Kind())
+		if err != nil {
+			return nil
+		}
+		resource = *(handler.Unprepare(resource))
+
+		rep, err := resource.YAML()
+		if err != nil {
+			return err
+		}
+		if interactive {
+			items = append(items, term.PageItem{
+				Name:    fmt.Sprintf("%s/%s", resource.Kind(), resource.Name()),
+				Content: rep,
+			})
+		} else {
+			fmt.Printf("%s/%s:\n", resource.Kind(), resource.Name())
+			fmt.Println(rep)
+		}
+	}
+	if interactive {
+		return term.Page(items)
+	}
+	return nil
+}
+
+// Diff compares resources to those at the endpoints
+func Diff(registry Registry, resources Resources) error {
+
+	for _, resource := range resources {
+		handler, err := registry.GetHandler(resource.Kind())
+		if err != nil {
+			return nil
+		}
+		local, err := resource.YAML()
+		if err != nil {
+			return nil
+		}
+		resource = *handler.Unprepare(resource)
+		uid := resource.Name()
+		remote, err := handler.GetRemote(resource)
+		if err == ErrNotFound {
+			registry.Notifier().NotFound(resource)
+			continue
+		}
+		if err != nil {
+			return fmt.Errorf("Error retrieving resource from %s %s: %v", resource.Kind(), uid, err)
+		}
+		remote = handler.Unprepare(*remote)
+		remoteRepresentation, err := (*remote).YAML()
+		if err != nil {
+			return err
+		}
+
+		if local == remoteRepresentation {
+			registry.Notifier().NoChanges(resource)
+		} else {
+			diff := difflib.UnifiedDiff{
+				A:        difflib.SplitLines(remoteRepresentation),
+				B:        difflib.SplitLines(local),
+				FromFile: "Remote",
+				ToFile:   "Local",
+				Context:  3,
+			}
+			difference, _ := difflib.GetUnifiedDiffString(diff)
+			registry.Notifier().HasChanges(resource, difference)
+		}
+	}
+	return nil
+}
+
+// Apply pushes resources to endpoints
+func Apply(registry Registry, resources Resources) error {
+	for _, resource := range resources {
+		handler, err := registry.GetHandler(resource.Kind())
+		if err != nil {
+			return nil
+		}
+		existingResource, err := handler.GetRemote(resource)
+		if err == ErrNotFound {
+
+			err := handler.Add(resource)
+			if err != nil {
+				return err
+			}
+			registry.Notifier().Added(resource)
+			continue
+		} else if err != nil {
+			return err
+		}
+		resourceRepresentation, err := resource.YAML()
+		if err != nil {
+			return err
+		}
+		resource = *handler.Prepare(*existingResource, resource)
+		existingResource = handler.Unprepare(*existingResource)
+		existingResourceRepresentation, err := existingResource.YAML()
+		if err != nil {
+			return nil
+		}
+		if resourceRepresentation == existingResourceRepresentation {
+			registry.Notifier().NoChanges(resource)
+		} else {
+			err = handler.Update(*existingResource, resource)
+			if err != nil {
+				return err
+			}
+			registry.Notifier().Updated(resource)
+		}
+	}
+	return nil
+}
+
+// Preview pushes resources to endpoints as previews, if supported
+func Preview(registry Registry, resources Resources, opts *PreviewOpts) error {
+	for _, resource := range resources {
+		handler, err := registry.GetHandler(resource.Kind())
+		if err != nil {
+			return nil
+		}
+		previewHandler, ok := handler.(PreviewHandler)
+		if !ok {
+			registry.Notifier().NotSupported(resource, "preview")
+			return nil
+		}
+		err = previewHandler.Preview(resource, *registry.Notifier(), opts)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// WatchParser encapsulates the action of parsing a resource (jsonnet or otherwise)
+type WatchParser interface {
+	Name() string
+	Parse(registry Registry) (Resources, error)
+}
+
+// Watch watches a directory for changes then pushes Jsonnet resource to endpoints
 // when changes are noticed
-func Watch(config Config, watchDir, jsonnetFile string, targets []string) error {
+func Watch(registry Registry, watchDir string, parser WatchParser) error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -278,6 +294,7 @@ func Watch(config Config, watchDir, jsonnetFile string, targets []string) error 
 
 	done := make(chan bool)
 	go func() {
+		log.Println("Watching for changes")
 		for {
 			select {
 			case event, ok := <-watcher.Events:
@@ -285,13 +302,14 @@ func Watch(config Config, watchDir, jsonnetFile string, targets []string) error 
 					return
 				}
 				if event.Op&fsnotify.Write == fsnotify.Write {
-					config, err := ParseEnvironment()
+					log.Println("Changes detected. Applying", parser.Name())
+					resources, err := parser.Parse(registry)
 					if err != nil {
-						log.Println("error:", err)
+						log.Println("Error: ", err)
 					}
-					log.Println("Changes detected. Applying", jsonnetFile)
-					if err := Apply(*config, jsonnetFile, targets); err != nil {
-						log.Println("error:", err)
+					err = Apply(registry, resources)
+					if err != nil {
+						log.Println("Error: ", err)
 					}
 				}
 			case err, ok := <-watcher.Errors:
@@ -311,109 +329,83 @@ func Watch(config Config, watchDir, jsonnetFile string, targets []string) error 
 	return nil
 }
 
-// Export renders Jsonnet dashboards then saves them to a directory
-func Export(config Config, jsonnetFile, dashboardDir string, targets []string) error {
-	boards, err := renderDashboards(jsonnetFile, targets, 0)
+// Listen waits for remote changes to a resource and saves them to disk
+func Listen(registry Registry, UID, filename string) error {
+	count := strings.Count(UID, ".")
+	var handlerName, resourceID string
+	if count == 1 {
+		parts := strings.SplitN(UID, ".", 2)
+		handlerName = parts[0]
+		resourceID = parts[1]
+	} else if count == 2 {
+		parts := strings.SplitN(UID, ".", 3)
+		handlerName = parts[0] + "." + parts[1]
+		resourceID = parts[2]
+
+	} else {
+		return fmt.Errorf("UID must be <provider>.<uid>: %s", UID)
+	}
+
+	handler, err := registry.GetHandler(handlerName)
 	if err != nil {
 		return err
 	}
+	listenHandler, ok := handler.(ListenHandler)
+	if !ok {
+		uid := fmt.Sprintf("%s.%s", handler.Kind(), resourceID)
+		registry.Notifier().NotSupported(SimpleString(uid), "listen")
+		return nil
+	}
+	return listenHandler.Listen(*registry.Notifier(), resourceID, filename)
+}
 
-	for _, board := range boards {
-		uid := board.UID()
-		boardJSON, err := board.GetDashboardJSON()
+// Export renders Jsonnet resources then saves them to a directory
+func Export(registry Registry, exportDir string, resources Resources) error {
+	if _, err := os.Stat(exportDir); os.IsNotExist(err) {
+		err = os.Mkdir(exportDir, 0755)
 		if err != nil {
 			return err
 		}
-		boardPath := path.Join(dashboardDir, uid)
-		if !strings.HasSuffix(uid, ".json") {
-			boardPath += ".json"
+	}
+
+	for _, resource := range resources {
+		handler, err := registry.GetHandler(resource.Kind())
+		if err != nil {
+			return nil
 		}
-		existingBoardJSONBytes, err := ioutil.ReadFile(boardPath)
+		updatedResource, err := resource.YAML()
+		if err != nil {
+			return err
+		}
+		extension := handler.GetExtension()
+		dir := fmt.Sprintf("%s/%s", exportDir, resource.Kind())
+		if _, err := os.Stat(dir); os.IsNotExist(err) {
+			err = os.Mkdir(dir, 0755)
+			if err != nil {
+				return err
+			}
+		}
+		path := fmt.Sprintf("%s/%s.%s", dir, resource.Name(), extension)
+
+		existingResourceBytes, err := ioutil.ReadFile(path)
 		isNotExist := os.IsNotExist(err)
 		if err != nil && !isNotExist {
 			return err
 		}
-		existingBoardJSON := string(existingBoardJSONBytes)
-
-		err = ioutil.WriteFile(boardPath, []byte(boardJSON), 0644)
-		if err != nil {
-			return err
-		}
-
-		if isNotExist {
-			fmt.Println(uid, green("added"))
-		} else if boardJSON == existingBoardJSON {
-			fmt.Println(uid, yellow("unchanged"))
+		existingResource := string(existingResourceBytes)
+		if existingResource == updatedResource {
+			registry.Notifier().NoChanges(resource)
 		} else {
-			fmt.Println(uid, green("updated"))
+			err = ioutil.WriteFile(path, []byte(updatedResource), 0644)
+			if err != nil {
+				return err
+			}
+			if isNotExist {
+				registry.Notifier().Added(resource)
+			} else {
+				registry.Notifier().Updated(resource)
+			}
 		}
 	}
 	return nil
-}
-
-func dashboardKeys(jsonnetFile string) ([]string, error) {
-	jsonnet := fmt.Sprintf(`
-local f = import "%s";
-std.objectFields(f.grafanaDashboards)`, jsonnetFile)
-	output, err := evalToString(jsonnet)
-	if err != nil {
-		return nil, err
-	}
-	var keys []string
-	err = json.Unmarshal([]byte(output), &keys)
-	if err != nil {
-		return nil, err
-	}
-	return keys, nil
-}
-
-func folderId(config Config, jsonnetFile string) (*int64, error) {
-	jsonnet := fmt.Sprintf(`
-local f = import "%s";
-f.grafanaDashboardFolder`, jsonnetFile)
-	output, err := evalToString(jsonnet)
-	if err != nil {
-		return nil, err
-	}
-	var name string
-	err = json.Unmarshal([]byte(output), &name)
-	if err != nil {
-		return nil, err
-	}
-	folder, err := searchFolder(config, strings.TrimSpace(name))
-	if err != nil {
-		return nil, err
-	}
-	return &folder.Id, nil
-}
-
-func renderDashboards(jsonnetFile string, targets []string, folderId int64) (Boards, error) {
-	jsonnet := fmt.Sprintf(`(import "%s").grafanaDashboards`, jsonnetFile)
-	data, err := evalToString(jsonnet)
-	if err != nil {
-		return nil, err
-	}
-
-	var boards Boards
-	if err := json.Unmarshal([]byte(data), &boards); err != nil {
-		return nil, err
-	}
-
-	if len(targets) == 0 {
-		return boards, nil
-	}
-
-	// TODO(sh0rez): use process.Matcher of Tanka instead
-Outer:
-	for key, b := range boards {
-		uid := b.UID()
-		for _, t := range targets {
-			if t == uid {
-				continue Outer
-			}
-		}
-		delete(boards, key)
-	}
-
-	return boards, nil
 }

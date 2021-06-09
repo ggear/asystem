@@ -1,2 +1,4 @@
 /grr
-/test
+/dist
+.envrc
+.vscode

@@ -1,4 +1,4 @@
-local golang = 'golang:1.13';
+local golang = 'golang:1.16.2';
 
 local volumes = [{ name: 'gopath', temp: {} }];
 local mounts = [{ name: 'gopath', path: '/go' }];
@@ -54,6 +54,15 @@ local docker(arch) = pipeline('docker-' + arch) {
   ],
 };
 
+local vault_secret(name, vault_path, key) = {
+  kind: 'secret',
+  name: name,
+  get: {
+    path: vault_path,
+    name: key,
+  },
+};
+
 [
   pipeline('check') {
     steps: [
@@ -73,7 +82,7 @@ local docker(arch) = pipeline('docker-' + arch) {
         settings: {
           title: '${DRONE_TAG}',
           note: importstr 'release-note.md',
-          api_key: { from_secret: 'GITHUB_TOKEN' },
+          api_key: { from_secret: 'github_token' },
           files: 'dist/*',
           draft: true,
         },
@@ -104,4 +113,9 @@ local docker(arch) = pipeline('docker-' + arch) {
       'docker-arm64',
     ],
   } + constraints.onlyTagOrMaster,
+]
++ [
+  vault_secret('github_token', 'infra/data/ci/github/grafanabot', 'pat'),
+  vault_secret('docker_username', 'infra/data/ci/docker_hub', 'username'),
+  vault_secret('docker_password', 'infra/data/ci/docker_hub', 'password'),
 ]

@@ -11,11 +11,15 @@ RUN apk add --no-cache \
   go==1.13.15-r0
 
 FROM image_package as image_install
-ENV GOROOT /usr/lib/go
+ARG GOLANG_VERSION=1.16.4
+ENV GOROOT /usr/local/go
 ENV GOPATH /go
-ENV PATH /go/bin:$PATH
+ENV PATH=/usr/local/go/bin:$PATH
+RUN wget https://dl.google.com/go/go$GOLANG_VERSION.src.tar.gz && tar -C /usr/local -xzf go$GOLANG_VERSION.src.tar.gz
+RUN cd /usr/local/go/src && ./make.bash
 RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin
-RUN go get -u github.com/Masterminds/glide/...
+RUN rm go$GOLANG_VERSION.src.tar.gz
+RUN apk del go
 
 FROM image_install as image_runtime
 RUN mkdir -p /bootstrap

@@ -2,6 +2,7 @@
 
 import glob
 import os
+import shutil
 import sys
 
 DIR_MODULE_ROOT = os.path.abspath("{}/../..".format(os.path.dirname(os.path.realpath(__file__))))
@@ -14,10 +15,10 @@ from anode.metadata.build import load
 
 DIR_DASHBOARDS_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards"
 
-PREFIX = "// GRAPH_"
-PREFIX_MOBILE = PREFIX + "MOBILE: "
-PREFIX_DESKTOP = PREFIX + "DESKTOP: "
-PREFIX_DASHBOARD_DEFAULTS = PREFIX + "DASHBOARD_DEFAULTS: "
+PREFIX = "//AS"
+PREFIX_MOBILE = PREFIX + "M"
+PREFIX_DESKTOP = PREFIX + "D"
+PREFIX_DASHBOARD_DEFAULTS = PREFIX + "DASHBOARD_DEFAULTS "
 
 if __name__ == "__main__":
     sensors = load()
@@ -95,12 +96,16 @@ local dashboard = grafana.dashboard;
                 file.write("""
 local graph_{} = import 'graph_{}.jsonnet';
                 """.format(graph, graph).strip() + "\n")
-            file.write("\n" + """
+            file.write("\n" + ("""
 
 {
+            """ + """
+//ASD  grafanaDashboardFolder:: 'Desktop',
+//ASM  grafanaDashboardFolder:: 'Mobile',
+            """ + """
   grafanaDashboards:: {
 
-            """.strip() + "\n")
+            """).strip() + "\n")
             for graph in graphs[scope]:
                 defaults = open(os.path.join(DIR_DASHBOARDS_ROOT, graphs[scope][graph], "graph_{}.jsonnet".format(graph))) \
                     .readline().rstrip()
@@ -112,29 +117,21 @@ local graph_{} = import 'graph_{}.jsonnet';
     {}_dashboard:
       dashboard.new(
         schemaVersion=26,
-{}        title='{} (Desktop)',
-{}        title='{} (Mobile)',
-{}        uid='{}-dekstop',
-{}        uid='{}-mobile',
+        title='{}',
+//ASD   uid='{}-desktop',
+//ASM   uid='{}-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-{}        tags=['published', 'desktop'],
-{}        tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         {}
       )
       .addPanels(graph_{}.graphs()),
                 """.format(
                     graph,
-                    PREFIX_DESKTOP,
                     graph.title(),
-                    PREFIX_MOBILE,
-                    graph.title(),
-                    PREFIX_DESKTOP,
                     graph,
-                    PREFIX_MOBILE,
                     graph,
-                    PREFIX_DESKTOP,
-                    PREFIX_MOBILE,
                     defaults,
                     graph).strip() + "\n\n")
             file.write("  " + """
@@ -143,15 +140,16 @@ local graph_{} = import 'graph_{}.jsonnet';
             """.strip() + "\n")
     print("Metadata script [grafana] dashboard templates saved")
 
+    shutil.rmtree(os.path.join(DIR_DASHBOARDS_ROOT, "instance"), ignore_errors=True)
     for scope in ["public", "private"]:
         for form in ["desktop", "mobile"]:
             for files in os.walk("{}/template/{}".format(DIR_DASHBOARDS_ROOT, scope)):
                 for file_name in files[2]:
                     if not file_name.startswith("graphsnip_"):
                         with open("{}/{}".format(files[0], file_name), "r") as file_source:
-                            file_destination_path = "{}/{}/{}/{}".format(files[0].replace("template", "instance").replace("generated", ""),
-                                                                         "generated", form, file_name)
-                            private_copy = scope == "public" and file_name.startswith("graph_")
+                            file_destination_path = "{}/{}/{}/{}".format(files[0].replace("template", "instance")
+                                                                         .replace("generated", ""), "generated", form, file_name)
+                            private_copy = scope == "public" and (file_name.startswith("graph_") or file_name.startswith("dashboard_"))
                             if private_copy:
                                 destination_path_copy = file_destination_path.replace("public", "private")
                                 if not os.path.exists(os.path.dirname(destination_path_copy)):
@@ -165,7 +163,7 @@ local graph_{} = import 'graph_{}.jsonnet';
                                             line.startswith(PREFIX_MOBILE) and form == "mobile" or \
                                             line.startswith(PREFIX_DESKTOP) and form == "desktop":
                                         if not line.startswith(PREFIX_DASHBOARD_DEFAULTS):
-                                            line = line.replace(PREFIX_MOBILE, "").replace(PREFIX_DESKTOP, "")
+                                            line = line.replace(PREFIX_MOBILE, "     ").replace(PREFIX_DESKTOP, "     ")
                                             destination_file.write(line)
                                             if private_copy:
                                                 destination_file_copy.write(line)

@@ -1,4 +1,4 @@
-// GRAPH_DASHBOARD_DEFAULTS: time_from='now-5y', refresh=''
+//ASDASHBOARD_DEFAULTS time_from='now-5y', refresh=''
 {
   graphs()::
   

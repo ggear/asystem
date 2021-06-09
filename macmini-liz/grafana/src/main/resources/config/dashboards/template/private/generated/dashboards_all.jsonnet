@@ -11,19 +11,22 @@ local graph_conditions = import 'graph_conditions.jsonnet';
 local graph_containers = import 'graph_containers.jsonnet';
 
 {
+            
+//ASD  grafanaDashboardFolder:: 'Desktop',
+//ASM  grafanaDashboardFolder:: 'Mobile',
+            
   grafanaDashboards:: {
 
     network_dashboard:
       dashboard.new(
         schemaVersion=26,
-// GRAPH_DESKTOP:         title='Network (Desktop)',
-// GRAPH_MOBILE:         title='Network (Mobile)',
-// GRAPH_DESKTOP:         uid='network-dekstop',
-// GRAPH_MOBILE:         uid='network-mobile',
+        title='Network',
+//ASD   uid='network-desktop',
+//ASM   uid='network-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-// GRAPH_DESKTOP:         tags=['published', 'desktop'],
-// GRAPH_MOBILE:         tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         time_from='now-2d', refresh=''
       )
       .addPanels(graph_network.graphs()),
@@ -32,14 +35,13 @@ local graph_containers = import 'graph_containers.jsonnet';
     electricity_dashboard:
       dashboard.new(
         schemaVersion=26,
-// GRAPH_DESKTOP:         title='Electricity (Desktop)',
-// GRAPH_MOBILE:         title='Electricity (Mobile)',
-// GRAPH_DESKTOP:         uid='electricity-dekstop',
-// GRAPH_MOBILE:         uid='electricity-mobile',
+        title='Electricity',
+//ASD   uid='electricity-desktop',
+//ASM   uid='electricity-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-// GRAPH_DESKTOP:         tags=['published', 'desktop'],
-// GRAPH_MOBILE:         tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         time_from='now-7d', refresh=''
       )
       .addPanels(graph_electricity.graphs()),
@@ -48,14 +50,13 @@ local graph_containers = import 'graph_containers.jsonnet';
     servers_dashboard:
       dashboard.new(
         schemaVersion=26,
-// GRAPH_DESKTOP:         title='Servers (Desktop)',
-// GRAPH_MOBILE:         title='Servers (Mobile)',
-// GRAPH_DESKTOP:         uid='servers-dekstop',
-// GRAPH_MOBILE:         uid='servers-mobile',
+        title='Servers',
+//ASD   uid='servers-desktop',
+//ASM   uid='servers-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-// GRAPH_DESKTOP:         tags=['published', 'desktop'],
-// GRAPH_MOBILE:         tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         time_from='now-2d', refresh=''
       )
       .addPanels(graph_servers.graphs()),
@@ -64,14 +65,13 @@ local graph_containers = import 'graph_containers.jsonnet';
     water_dashboard:
       dashboard.new(
         schemaVersion=26,
-// GRAPH_DESKTOP:         title='Water (Desktop)',
-// GRAPH_MOBILE:         title='Water (Mobile)',
-// GRAPH_DESKTOP:         uid='water-dekstop',
-// GRAPH_MOBILE:         uid='water-mobile',
+        title='Water',
+//ASD   uid='water-desktop',
+//ASM   uid='water-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-// GRAPH_DESKTOP:         tags=['published', 'desktop'],
-// GRAPH_MOBILE:         tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         time_from='now-7d', refresh=''
       )
       .addPanels(graph_water.graphs()),
@@ -80,14 +80,13 @@ local graph_containers = import 'graph_containers.jsonnet';
     currency_dashboard:
       dashboard.new(
         schemaVersion=26,
-// GRAPH_DESKTOP:         title='Currency (Desktop)',
-// GRAPH_MOBILE:         title='Currency (Mobile)',
-// GRAPH_DESKTOP:         uid='currency-dekstop',
-// GRAPH_MOBILE:         uid='currency-mobile',
+        title='Currency',
+//ASD   uid='currency-desktop',
+//ASM   uid='currency-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-// GRAPH_DESKTOP:         tags=['published', 'desktop'],
-// GRAPH_MOBILE:         tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         time_from='now-5y', refresh=''
       )
       .addPanels(graph_currency.graphs()),
@@ -96,14 +95,13 @@ local graph_containers = import 'graph_containers.jsonnet';
     interest_dashboard:
       dashboard.new(
         schemaVersion=26,
-// GRAPH_DESKTOP:         title='Interest (Desktop)',
-// GRAPH_MOBILE:         title='Interest (Mobile)',
-// GRAPH_DESKTOP:         uid='interest-dekstop',
-// GRAPH_MOBILE:         uid='interest-mobile',
+        title='Interest',
+//ASD   uid='interest-desktop',
+//ASM   uid='interest-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-// GRAPH_DESKTOP:         tags=['published', 'desktop'],
-// GRAPH_MOBILE:         tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         time_from='now-5y', refresh=''
       )
       .addPanels(graph_interest.graphs()),
@@ -112,14 +110,13 @@ local graph_containers = import 'graph_containers.jsonnet';
     internet_dashboard:
       dashboard.new(
         schemaVersion=26,
-// GRAPH_DESKTOP:         title='Internet (Desktop)',
-// GRAPH_MOBILE:         title='Internet (Mobile)',
-// GRAPH_DESKTOP:         uid='internet-dekstop',
-// GRAPH_MOBILE:         uid='internet-mobile',
+        title='Internet',
+//ASD   uid='internet-desktop',
+//ASM   uid='internet-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-// GRAPH_DESKTOP:         tags=['published', 'desktop'],
-// GRAPH_MOBILE:         tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         time_from='now-2d', refresh=''
       )
       .addPanels(graph_internet.graphs()),
@@ -128,14 +125,13 @@ local graph_containers = import 'graph_containers.jsonnet';
     conditions_dashboard:
       dashboard.new(
         schemaVersion=26,
-// GRAPH_DESKTOP:         title='Conditions (Desktop)',
-// GRAPH_MOBILE:         title='Conditions (Mobile)',
-// GRAPH_DESKTOP:         uid='conditions-dekstop',
-// GRAPH_MOBILE:         uid='conditions-mobile',
+        title='Conditions',
+//ASD   uid='conditions-desktop',
+//ASM   uid='conditions-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-// GRAPH_DESKTOP:         tags=['published', 'desktop'],
-// GRAPH_MOBILE:         tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         time_from='now-7d', refresh=''
       )
       .addPanels(graph_conditions.graphs()),
@@ -144,14 +140,13 @@ local graph_containers = import 'graph_containers.jsonnet';
     containers_dashboard:
       dashboard.new(
         schemaVersion=26,
-// GRAPH_DESKTOP:         title='Containers (Desktop)',
-// GRAPH_MOBILE:         title='Containers (Mobile)',
-// GRAPH_DESKTOP:         uid='containers-dekstop',
-// GRAPH_MOBILE:         uid='containers-mobile',
+        title='Containers',
+//ASD   uid='containers-desktop',
+//ASM   uid='containers-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
-// GRAPH_DESKTOP:         tags=['published', 'desktop'],
-// GRAPH_MOBILE:         tags=['published', 'mobile'],
+//ASD   tags=['published', 'desktop'],
+//ASM   tags=['published', 'mobile'],
         time_from='now-1h', refresh=''
       )
       .addPanels(graph_containers.graphs()),

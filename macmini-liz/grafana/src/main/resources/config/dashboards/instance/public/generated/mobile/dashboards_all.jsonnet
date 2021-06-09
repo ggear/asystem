@@ -4,12 +4,15 @@ local graph_currency = import 'graph_currency.jsonnet';
 local graph_interest = import 'graph_interest.jsonnet';
 
 {
+            
+       grafanaDashboardFolder:: 'Mobile',
+            
   grafanaDashboards:: {
 
     currency_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Currency (Mobile)',
+        title='Currency',
         uid='currency-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
@@ -22,7 +25,7 @@ local graph_interest = import 'graph_interest.jsonnet';
     interest_dashboard:
       dashboard.new(
         schemaVersion=26,
-        title='Interest (Mobile)',
+        title='Interest',
         uid='interest-mobile',
         editable=true,
         graphTooltip='shared_tooltip',
