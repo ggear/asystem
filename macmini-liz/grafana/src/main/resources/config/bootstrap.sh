@@ -8,6 +8,10 @@ while ! nc -z ${GRAFANA_HOST} ${GRAFANA_PORT} >>/dev/null 2>&1; do
   echo "Waiting for grafana to come up ..." && sleep 1
 done
 
+if [ -d /bootstrap/grafonnet-lib ]; then
+  sleep 5
+fi
+
 echo "--------------------------------------------------------------------------------"
 echo "Grafana bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
@@ -18,9 +22,8 @@ curl -XPUT --silent ${GRAFANA_URL}/api/orgs/1 \
   -d '{
         "name": "Public Portal"
       }' | jq
-curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1
 if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V2?orgId=1 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=1 \
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -43,7 +46,7 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V2?orgId=1 | j
         }' | jq
 fi
 if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V1?orgId=1 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=1 \
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -59,7 +62,7 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V1?orgId=1 | g
 fi
 curl --silent ${GRAFANA_URL}/api/datasources?orgId=1 | jq
 if [ $(curl --silent ${GRAFANA_URL}/api/folders/default?orgId=1 | grep default | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -68,7 +71,7 @@ if [ $(curl --silent ${GRAFANA_URL}/api/folders/default?orgId=1 | grep default |
         }' | jq
 fi
 if [ $(curl --silent ${GRAFANA_URL}/api/folders/mobile?orgId=1 | grep mobile | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -77,7 +80,7 @@ if [ $(curl --silent ${GRAFANA_URL}/api/folders/mobile?orgId=1 | grep mobile | w
         }' | jq
 fi
 if [ $(curl --silent ${GRAFANA_URL}/api/folders/desktop?orgId=1 | grep desktop | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -88,8 +91,8 @@ fi
 curl --silent ${GRAFANA_URL}/api/folders?orgId=1 | jq
 if [ -d /bootstrap/grafonnet-lib ]; then
   cd /bootstrap/grafonnet-lib
-  find ../dashboards/public -name dashboard_* -exec ../grizzly/grr apply {} \;
-  find ../dashboards/default -name dashboard_* -exec ../grizzly/grr apply {} \;
+  find ../dashboards/public -name dashboard_* -exec sh -c 'curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 >/dev/null && ../grizzly/grr apply $1' sh {} \;
+  find ../dashboards/default -name dashboard_* -exec sh -c 'curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 >/dev/null && ../grizzly/grr apply $1' sh {} \;
 
 fi
 
@@ -101,9 +104,8 @@ if [ $(curl --silent ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -
           "name": "Private Portal"
         }' | jq
 fi
-curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2
 if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V2?orgId=2 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=2 \
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=2 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -126,7 +128,7 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V2?orgId=2 | j
         }' | jq
 fi
 if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V1?orgId=2 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=2 \
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/datasources?orgId=2 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -142,7 +144,7 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V1?orgId=2 | g
 fi
 curl --silent ${GRAFANA_URL}/api/datasources?orgId=2 | jq
 if [ $(curl --silent ${GRAFANA_URL}/api/folders/mobile?orgId=2 | grep mobile | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=2 \
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=2 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -151,7 +153,7 @@ if [ $(curl --silent ${GRAFANA_URL}/api/folders/mobile?orgId=2 | grep mobile | w
         }' | jq
 fi
 if [ $(curl --silent ${GRAFANA_URL}/api/folders/desktop?orgId=2 | grep desktop | wc -l) -eq 0 ]; then
-  curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=2 \
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=2 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -162,7 +164,7 @@ fi
 curl --silent ${GRAFANA_URL}/api/folders?orgId=2 | jq
 if [ -d /bootstrap/grafonnet-lib ]; then
   cd /bootstrap/grafonnet-lib
-  find ../dashboards/private -name dashboard_* -exec ../grizzly/grr apply {} \;
+  find ../dashboards/private -name dashboard_* -exec sh -c 'curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 >/dev/null && ../grizzly/grr apply $1' sh {} \;
 fi
 
 echo "--------------------------------------------------------------------------------"

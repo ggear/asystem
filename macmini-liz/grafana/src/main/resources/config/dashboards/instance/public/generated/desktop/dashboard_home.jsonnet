@@ -30,7 +30,7 @@ local dashboard = grafana.dashboard;
                                     starred=false,
                                     headings=false,
                                     limit=100,
-                              ) { gridPos: { x: 0, y: 0, w: 3, h: 12 } },
+                              ) { gridPos: { x: 0, y: 0, w: 3, h: 20 } },
 
                         ],
 

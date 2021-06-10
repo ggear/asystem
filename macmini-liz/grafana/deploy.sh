@@ -15,10 +15,8 @@ make dev
 cd ../grafonnet-lib
 
 echo "---" && echo "Setting up [PUBLIC] organisation"
-curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 | jq
-find ../../config/dashboards/instance/public -name dashboard_* -exec ../grizzly/grr apply {} \;
-find ../../config/dashboards/instance/default -name dashboard_* -exec ../grizzly/grr apply {} \;
+find ../../config/dashboards/instance/public -name dashboard_* -exec sh -c 'curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 >/dev/null && ../grizzly/grr apply $1' sh {} \;
+find ../../config/dashboards/instance/default -name dashboard_* -exec sh -c 'curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 >/dev/null && ../grizzly/grr apply $1' sh {} \;
 
 echo "---" && echo "Setting up [PRIVATE] organisation"
-curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 | jq
-find ../../config/dashboards/instance/private -name dashboard_* -exec ../grizzly/grr apply {} \;
+find ../../config/dashboards/instance/private -name dashboard_* -exec sh -c 'curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 >/dev/null && ../grizzly/grr apply $1' sh {} \;
