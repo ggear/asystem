@@ -147,25 +147,27 @@ def _backup(context):
 
 
 def _pull(context, filter_module=None, filter_host=None, is_release=False):
-    # TODO: Re-enable when I start contributing on multiple machines
+    # TODO: Re-enable when I start developing on multiple machines
     # _print_header("asystem", "pull git")
     # _run_local(context, "git pull --all")
     # _print_footer("asystem", "pull git")
 
-    for module in _get_modules(context, filter_module=filter_module):
+    modules_env = _get_modules(context, filter_module=filter_module)
+    modules_pull = [] if filter_module is None else _get_modules(context, "pull.sh", filter_changes=False)
+    modules_build = [] if filter_module is None else _get_modules(context, "src/main/python/*/metadata/build.py", filter_changes=False)
+    for module in set(modules_env + modules_pull + modules_build):
         _print_header(module, "pull env")
         _write_env(context, module, join(DIR_ROOT, module, "target/release") if is_release else join(DIR_ROOT, module),
                    filter_host=filter_host, is_release=is_release)
         _print_footer(module, "pull env")
-    if filter_module is None:
-        for module in _get_modules(context, "pull.sh", filter_changes=False):
-            _print_header(module, "pull resources")
-            _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), DIR_ROOT)
-            _print_footer(module, "pull resources")
-        for module in _get_modules(context, "src/main/python/*/metadata/build.py", filter_changes=False):
-            _print_header(module, "pull process")
-            _run_local(context, "python {}/{}/src/main/python/{}/metadata/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
-            _print_footer(module, "pull process")
+    for module in modules_pull:
+        _print_header(module, "pull resources")
+        _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), DIR_ROOT)
+        _print_footer(module, "pull resources")
+    for module in modules_build:
+        _print_header(module, "pull process")
+        _run_local(context, "python {}/{}/src/main/python/{}/metadata/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
+        _print_footer(module, "pull process")
 
 
 def _clean(context, filter_module=None):
