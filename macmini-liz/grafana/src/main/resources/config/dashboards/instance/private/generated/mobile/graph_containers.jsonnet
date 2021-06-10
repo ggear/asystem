@@ -1,36 +1,36 @@
 {
-  graphs()::
-  
-    local grafana = import 'grafonnet/grafana.libsonnet';
-    local dashboard = grafana.dashboard;
-    local stat = grafana.statPanel;
-    local graph = grafana.graphPanel;
-    local table = grafana.tablePanel;
-    local gauge = grafana.gaugePanel;
-    local bar = grafana.barGaugePanel;
-    local influxdb = grafana.influxdb;
-    
-    [
+      graphs()::
 
-      stat.new(
-        title='Containers Currently Running',
-        datasource='InfluxDB_V2',
-        unit='',
-        decimals=0,
-        reducerFunction='last',
-        colorMode='value',
-        graphMode='none',
-        justifyMode='auto',
-        thresholdsMode='absolute',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 5 }
-      ).addThreshold(
-        { color: 'green', value: 10 }
-      ).addTarget(influxdb.target(query='// Start
+            local grafana = import 'grafonnet/grafana.libsonnet';
+            local dashboard = grafana.dashboard;
+            local stat = grafana.statPanel;
+            local graph = grafana.graphPanel;
+            local table = grafana.tablePanel;
+            local gauge = grafana.gaugePanel;
+            local bar = grafana.barGaugePanel;
+            local influxdb = grafana.influxdb;
+
+            [
+
+                  stat.new(
+                        title='Containers Currently Running',
+                        datasource='InfluxDB_V2',
+                        unit='',
+                        decimals=0,
+                        reducerFunction='last',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 5 }
+                  ).addThreshold(
+                        { color: 'green', value: 10 }
+                  ).addTarget(influxdb.target(query='// Start
 // TODO: Averaging all values is very slow
 // import "math"
 // from(bucket: "host_private")
@@ -53,23 +53,23 @@ from(bucket: "host_private")
   |> sum()
 // End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
-      stat.new(
-        title='Containers Currently Not Running',
-        datasource='InfluxDB_V2',
-        unit='',
-        decimals=0,
-        reducerFunction='last',
-        colorMode='value',
-        graphMode='none',
-        justifyMode='auto',
-        thresholdsMode='absolute',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'green', value: 0 }
-      ).addThreshold(
-        { color: 'red', value: 1 }
-      ).addTarget(influxdb.target(query='// Start
+                  stat.new(
+                        title='Containers Currently Not Running',
+                        datasource='InfluxDB_V2',
+                        unit='',
+                        decimals=0,
+                        reducerFunction='last',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addThreshold(
+                        { color: 'red', value: 1 }
+                  ).addTarget(influxdb.target(query='// Start
 // TODO: Averaging all values is very slow
 // import "math"
 // from(bucket: "host_private")
@@ -92,25 +92,25 @@ from(bucket: "host_private")
   |> sum()
 // End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
-      stat.new(
-        title='Container Images Currently Installed',
-        datasource='InfluxDB_V2',
-        unit='',
-        decimals=0,
-        reducerFunction='last',
-        colorMode='value',
-        graphMode='none',
-        justifyMode='auto',
-        thresholdsMode='absolute',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 5 }
-      ).addThreshold(
-        { color: 'green', value: 10 }
-      ).addTarget(influxdb.target(query='// Start
+                  stat.new(
+                        title='Container Images Currently Installed',
+                        datasource='InfluxDB_V2',
+                        unit='',
+                        decimals=0,
+                        reducerFunction='last',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 5 }
+                  ).addThreshold(
+                        { color: 'green', value: 10 }
+                  ).addTarget(influxdb.target(query='// Start
 // TODO: Averaging all values is very slow
 // import "math"
 // from(bucket: "host_private")
@@ -133,16 +133,16 @@ from(bucket: "host_private")
   |> sum()
 // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
-      bar.new(
-        title='Containers with Peak Usage <50%',
-        datasource='InfluxDB_V2',
-        unit='percent',
-        thresholds=[
-          { 'color': 'red', 'value': null },
-          { 'color': 'yellow', 'value': 50 },
-          { 'color': 'green', 'value': 90 }
-        ],
-      ).addTarget(influxdb.target(query='// Start
+                  bar.new(
+                        title='Containers with Peak Usage <50%',
+                        datasource='InfluxDB_V2',
+                        unit='percent',
+                        thresholds=[
+                              { 'color': 'red', 'value': null },
+                              { 'color': 'yellow', 'value': 50 },
+                              { 'color': 'green', 'value': 90 }
+                        ],
+                  ).addTarget(influxdb.target(query='// Start
 import "math"
 import "strings"
 from(bucket: "host_private")
@@ -154,7 +154,7 @@ from(bucket: "host_private")
   |> group()
   |> map(fn: (r) => ({ r with index: 1 }))
   |> cumulativeSum(columns: ["index"])
-  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)  then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)  then r._value / 8.0 else r._value) }))
+  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)      then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)      then r._value / 8.0 else r._value) }))
   |> map(fn: (r) => ({ r with _value: if r._value > 50.0 then 1 else 0 }))
   |> cumulativeSum(columns: ["_value"])
   |> last()
@@ -216,26 +216,26 @@ from(bucket: "host_private")
   |> keep(columns: ["Network"])
 // End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
-      gauge.new(
-        title='Container Mean Running Rate',
-        datasource='InfluxDB_V2',
-        reducerFunction='last',
-        showThresholdLabels=false,
-        showThresholdMarkers=true,
-        unit='percent',
-        min=0,
-        max=100,
-        decimals=0,
-        thresholdsMode='percentage',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 95 }
-      ).addThreshold(
-        { color: 'green', value: 99 }
-      ).addTarget(influxdb.target(query='// Start
+                  gauge.new(
+                        title='Container Mean Running Rate',
+                        datasource='InfluxDB_V2',
+                        reducerFunction='last',
+                        showThresholdLabels=false,
+                        showThresholdMarkers=true,
+                        unit='percent',
+                        min=0,
+                        max=100,
+                        decimals=0,
+                        thresholdsMode='percentage',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 95 }
+                  ).addThreshold(
+                        { color: 'green', value: 99 }
+                  ).addTarget(influxdb.target(query='// Start
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -253,26 +253,26 @@ from(bucket: "host_private")
   |> mean()
 // End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
 
-      gauge.new(
-        title='Container Mean Healthy Rate',
-        datasource='InfluxDB_V2',
-        reducerFunction='last',
-        showThresholdLabels=false,
-        showThresholdMarkers=true,
-        unit='percent',
-        min=0,
-        max=100,
-        decimals=0,
-        thresholdsMode='percentage',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 95 }
-      ).addThreshold(
-        { color: 'green', value: 99 }
-      ).addTarget(influxdb.target(query='// Start
+                  gauge.new(
+                        title='Container Mean Healthy Rate',
+                        datasource='InfluxDB_V2',
+                        reducerFunction='last',
+                        showThresholdLabels=false,
+                        showThresholdMarkers=true,
+                        unit='percent',
+                        min=0,
+                        max=100,
+                        decimals=0,
+                        thresholdsMode='percentage',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 95 }
+                  ).addThreshold(
+                        { color: 'green', value: 99 }
+                  ).addTarget(influxdb.target(query='// Start
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -293,26 +293,26 @@ from(bucket: "host_private")
   |> mean()
 // End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
 
-      gauge.new(
-        title='Container Image Usage',
-        datasource='InfluxDB_V2',
-        reducerFunction='last',
-        showThresholdLabels=false,
-        showThresholdMarkers=true,
-        unit='percent',
-        min=0,
-        max=100,
-        decimals=0,
-        thresholdsMode='percentage',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 95 }
-      ).addThreshold(
-        { color: 'green', value: 99 }
-      ).addTarget(influxdb.target(query='// Start
+                  gauge.new(
+                        title='Container Image Usage',
+                        datasource='InfluxDB_V2',
+                        reducerFunction='last',
+                        showThresholdLabels=false,
+                        showThresholdMarkers=true,
+                        unit='percent',
+                        min=0,
+                        max=100,
+                        decimals=0,
+                        thresholdsMode='percentage',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 95 }
+                  ).addThreshold(
+                        { color: 'green', value: 99 }
+                  ).addTarget(influxdb.target(query='// Start
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -330,24 +330,24 @@ from(bucket: "host_private")
   |> mean()
 // End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
 
-      graph.new(
-        title='Container CPU Usage',
-        datasource='InfluxDB_V2',
-        fill=1,
-        format='percent',
-        bars=false,
-        lines=true,
-        staircase=true,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Container CPU Usage',
+                        datasource='InfluxDB_V2',
+                        fill=1,
+                        format='percent',
+                        bars=false,
+                        lines=true,
+                        staircase=true,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 import "strings"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -355,29 +355,29 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
   |> keep(columns: ["_time", "_value", "container_name", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)  then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)  then r._value / 8.0 else r._value) }))
+  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)      then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)      then r._value / 8.0 else r._value) }))
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (" + r.host + ")" }))
   |> keep(columns: ["_time", "_value", "container_name"])
 // End')) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
 
-      graph.new(
-        title='Container RAM Usage',
-        datasource='InfluxDB_V2',
-        fill=1,
-        format='percent',
-        bars=false,
-        lines=true,
-        staircase=true,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Container RAM Usage',
+                        datasource='InfluxDB_V2',
+                        fill=1,
+                        format='percent',
+                        bars=false,
+                        lines=true,
+                        staircase=true,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_mem")
@@ -388,26 +388,26 @@ from(bucket: "host_private")
   |> fill(column: "_value", usePrevious: true)
 // End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
-      graph.new(
-        title='Container IOPS Usage',
-        datasource='InfluxDB_V2',
-        fill=0,
-        format='Bps',
-        bars=false,
-        lines=true,
-        staircase=false,
-        points=true,
-        pointradius=1,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Container IOPS Usage',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='Bps',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        points=true,
+                        pointradius=1,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
@@ -428,29 +428,29 @@ from(bucket: "host_private")
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addSeriesOverride(
-        { "alias": "/.*Write.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+                        { "alias": "/.*Write.*/", "transform": "negative-Y" }
+                  ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
 
-      graph.new(
-        title='Container Network Usage',
-        datasource='InfluxDB_V2',
-        fill=0,
-        format='Bps',
-        bars=false,
-        lines=true,
-        staircase=false,
-        points=true,
-        pointradius=1,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Container Network Usage',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='Bps',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        points=true,
+                        pointradius=1,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
@@ -471,14 +471,14 @@ from(bucket: "host_private")
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
 // End')).addSeriesOverride(
-        { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 46, w: 24, h: 12 } },
+                        { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
+                  ) { gridPos: { x: 0, y: 46, w: 24, h: 12 } },
 
-      table.new(
-        title='Container Current Process Status',
-        datasource='InfluxDB_V2',
-        default_unit='ns'
-      ).addTarget(influxdb.target(query='// Start
+                  table.new(
+                        title='Container Current Process Status',
+                        datasource='InfluxDB_V2',
+                        default_unit='ns'
+                  ).addTarget(influxdb.target(query='// Start
 status = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_status")
@@ -512,5 +512,5 @@ union(tables: [status, health])
   |> group()
 // End')) { gridPos: { x: 0, y: 60, w: 24, h: 18 } },
 
-    ],
+            ],
 }

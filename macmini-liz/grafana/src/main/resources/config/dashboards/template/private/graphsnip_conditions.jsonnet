@@ -1,21 +1,21 @@
-      graph.new(
-        title='Temperature Dailies',
-        datasource='InfluxDB_V2',
-        fill=3,
-        format='ºC',
-        bars=false,
-        lines=true,
-        staircase=true,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Temperature Dailies',
+                        datasource='InfluxDB_V2',
+                        fill=3,
+                        format='ºC',
+                        bars=false,
+                        lines=true,
+                        staircase=true,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "roof_temperature")

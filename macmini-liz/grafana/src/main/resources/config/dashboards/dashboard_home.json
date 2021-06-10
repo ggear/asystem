@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 546,
+  "id": 75,
   "links": [],
   "panels": [
     {
@@ -61,8 +61,8 @@
       "gridPos": {
         "h": 12,
         "w": 3,
-        "x": 0,
-        "y": 12
+        "x": 3,
+        "y": 0
       },
       "id": 3,
       "options": {
@@ -126,5 +126,5 @@
   "timezone": "browser",
   "title": "Home",
   "uid": "home-default",
-  "version": 2
+  "version": 176
 }

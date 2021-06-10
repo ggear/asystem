@@ -3,7 +3,7 @@ local dashboard = grafana.dashboard;
 
 {
 
-      grafanaDashboardFolder:: 'Mobile',
+      grafanaDashboardFolder:: 'Default',
 
       grafanaDashboards:: {
 
@@ -11,7 +11,7 @@ local dashboard = grafana.dashboard;
                   dashboard.new(
                         schemaVersion=26,
                         title='Home',
-                        uid='home-mobile',
+                        uid='home-default',
                         editable=true,
                   )
                   .addPanels(
@@ -31,6 +31,16 @@ local dashboard = grafana.dashboard;
                                     headings=false,
                                     limit=100,
                               ) { gridPos: { x: 0, y: 0, w: 3, h: 12 } },
+
+                              dashlist.new(
+                                    title='Desktop Dashbaords',
+                                    tags=['desktop', 'published'],
+                                    recent=false,
+                                    search=true,
+                                    starred=false,
+                                    headings=false,
+                                    limit=100,
+                              ) { gridPos: { x: 3, y: 0, w: 3, h: 12 } },
 
                         ],
 

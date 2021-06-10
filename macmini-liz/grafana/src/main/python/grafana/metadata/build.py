@@ -26,14 +26,14 @@ if __name__ == "__main__":
         with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/graph_{}.jsonnet".format(group.lower()), "w") as file:
             file.write((PREFIX_DASHBOARD_DEFAULTS + "time_from='now-7d', refresh=''" + """
 {
-  graphs()::
-  
-    local grafana = import 'grafonnet/grafana.libsonnet';
-    local dashboard = grafana.dashboard;
-    local graph = grafana.graphPanel;
-    local influxdb = grafana.influxdb;
-    
-    [
+      graphs()::
+      
+            local grafana = import 'grafonnet/grafana.libsonnet';
+            local dashboard = grafana.dashboard;
+            local graph = grafana.graphPanel;
+            local influxdb = grafana.influxdb;
+            
+            [
             """).strip() + "\n\n")
             snip_path = DIR_DASHBOARDS_ROOT + "/template/private/" + os.path.basename(file.name).replace("graph_", "graphsnip_")
             if os.path.isfile(snip_path):
@@ -48,31 +48,31 @@ if __name__ == "__main__":
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                 """.format(filter).strip()
-                file.write("      " + """
-      graph.new(
-        title='{}',
-        datasource='InfluxDB_V2',
-        fill=0,
-        format='{}',
-        bars=false,
-        lines=true,
-        staircase=false,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                file.write("                  " + """
+              graph.new(
+                        title='{}',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='{}',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 {}
 // End'))
-      {{ gridPos: {{ x: 0, y: 0, w: 24, h: 12 }} }},
+                  {{ gridPos: {{ x: 0, y: 0, w: 24, h: 12 }} }},
                 """.format(domain, "short", flux).strip() + "\n\n")
-            file.write("    " + """
-    ],
+            file.write("            " + """
+            ],
 }
             """.strip() + "\n")
     print("Metadata script [grafana] graphs saved")
@@ -87,7 +87,7 @@ if __name__ == "__main__":
                 "../../config/dashboards/template/{}/generated/".format(scope)
     graphs["private"].update(graphs["public"])
     for scope in ["public", "private"]:
-        with open(DIR_DASHBOARDS_ROOT + "/template/{}/generated/dashboards_all.jsonnet".format(scope), "w") as file:
+        with open(DIR_DASHBOARDS_ROOT + "/template/{}/generated/dashboard_graphs.jsonnet".format(scope), "w") as file:
             file.write("""
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
@@ -100,10 +100,10 @@ local graph_{} = import 'graph_{}.jsonnet';
 
 {
             """ + """
-//ASD  grafanaDashboardFolder:: 'Desktop',
-//ASM  grafanaDashboardFolder:: 'Mobile',
+//ASD grafanaDashboardFolder:: 'Desktop',
+//ASM grafanaDashboardFolder:: 'Mobile',
             """ + """
-  grafanaDashboards:: {
+      grafanaDashboards:: {
 
             """).strip() + "\n")
             for graph in graphs[scope]:
@@ -113,20 +113,20 @@ local graph_{} = import 'graph_{}.jsonnet';
                     defaults = defaults.replace(PREFIX_DASHBOARD_DEFAULTS, "")
                 else:
                     defaults = "time_from='now-7d', refresh=''"
-                file.write("\n    " + """
-    {}_dashboard:
-      dashboard.new(
-        schemaVersion=26,
-        title='{}',
-//ASD   uid='{}-desktop',
-//ASM   uid='{}-mobile',
-        editable=true,
-        graphTooltip='shared_tooltip',
-//ASD   tags=['published', 'desktop'],
-//ASM   tags=['published', 'mobile'],
-        {}
-      )
-      .addPanels(graph_{}.graphs()),
+                file.write("\n            " + """
+            {}_dashboard:
+                  dashboard.new(
+                        schemaVersion=26,
+                        title='{}',
+//ASD                   uid='{}-desktop',
+//ASM                   uid='{}-mobile',
+                        editable=true,
+                        graphTooltip='shared_tooltip',
+//ASD                   tags=['published', 'desktop'],
+//ASM                   tags=['published', 'mobile'],
+                        {}
+                  )
+                  .addPanels(graph_{}.graphs()),
                 """.format(
                     graph,
                     graph.title(),
@@ -135,20 +135,22 @@ local graph_{} = import 'graph_{}.jsonnet';
                     defaults,
                     graph).strip() + "\n\n")
             file.write("  " + """
-  },
+      },
 }
             """.strip() + "\n")
     print("Metadata script [grafana] dashboard templates saved")
 
     shutil.rmtree(os.path.join(DIR_DASHBOARDS_ROOT, "instance"), ignore_errors=True)
-    for scope in ["public", "private"]:
+    for scope in ["default", "public", "private"]:
         for form in ["desktop", "mobile"]:
             for files in os.walk("{}/template/{}".format(DIR_DASHBOARDS_ROOT, scope)):
                 for file_name in files[2]:
                     if not file_name.startswith("graphsnip_"):
                         with open("{}/{}".format(files[0], file_name), "r") as file_source:
-                            file_destination_path = "{}/{}/{}/{}".format(files[0].replace("template", "instance")
-                                                                         .replace("generated", ""), "generated", form, file_name)
+                            file_destination_path = "{}/{}/{}{}".format(files[0].replace("template", "instance")
+                                                                        .replace("generated", ""), "generated",
+                                                                        "" if scope == "default" else (form + "/"),
+                                                                        file_name)
                             private_copy = scope == "public" and (file_name.startswith("graph_") or file_name.startswith("dashboard_"))
                             if private_copy:
                                 destination_path_copy = file_destination_path.replace("public", "private")
@@ -167,7 +169,15 @@ local graph_{} = import 'graph_{}.jsonnet';
                                             destination_file.write(line)
                                             if private_copy:
                                                 destination_file_copy.write(line)
+                                print("{} -> {}".format(
+                                    os.path.abspath(file_source.name),
+                                    os.path.abspath(file_destination_path)
+                                ))
                             if private_copy:
+                                print("{} -> {}".format(
+                                    os.path.abspath(file_source.name),
+                                    os.path.abspath(destination_path_copy)
+                                ))
                                 destination_file_copy.close()
 
     print("Metadata script [grafana] dashboard specialisations saved")

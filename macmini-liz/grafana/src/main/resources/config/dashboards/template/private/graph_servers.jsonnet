@@ -1,37 +1,37 @@
 //ASDASHBOARD_DEFAULTS time_from='now-2d', refresh=''
 {
-  graphs()::
-  
-    local grafana = import 'grafonnet/grafana.libsonnet';
-    local dashboard = grafana.dashboard;
-    local stat = grafana.statPanel;
-    local graph = grafana.graphPanel;
-    local table = grafana.tablePanel;
-    local gauge = grafana.gaugePanel;
-    local bar = grafana.barGaugePanel;
-    local influxdb = grafana.influxdb;
-    
-    [
+      graphs()::
 
-      stat.new(
-        title='Servers Min Uptime',
-        datasource='InfluxDB_V2',
-        unit='s',
-        decimals=1,
-        reducerFunction='last',
-        colorMode='value',
-        graphMode='none',
-        justifyMode='auto',
-        thresholdsMode='absolute',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 43200 }
-      ).addThreshold(
-        { color: 'green', value: 86400 }
-      ).addTarget(influxdb.target(query='// Start
+            local grafana = import 'grafonnet/grafana.libsonnet';
+            local dashboard = grafana.dashboard;
+            local stat = grafana.statPanel;
+            local graph = grafana.graphPanel;
+            local table = grafana.tablePanel;
+            local gauge = grafana.gaugePanel;
+            local bar = grafana.barGaugePanel;
+            local influxdb = grafana.influxdb;
+
+            [
+
+                  stat.new(
+                        title='Servers Min Uptime',
+                        datasource='InfluxDB_V2',
+                        unit='s',
+                        decimals=1,
+                        reducerFunction='last',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 43200 }
+                  ).addThreshold(
+                        { color: 'green', value: 86400 }
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "system")
@@ -42,25 +42,25 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
 // End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
-      stat.new(
-        title='Servers OS Volumes >80%',
-        datasource='InfluxDB_V2',
-        unit='',
-        decimals=0,
-        reducerFunction='last',
-        colorMode='value',
-        graphMode='none',
-        justifyMode='auto',
-        thresholdsMode='absolute',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'green', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 1 }
-      ).addThreshold(
-        { color: 'red', value: 2 }
-      ).addTarget(influxdb.target(query='// Start
+                  stat.new(
+                        title='Servers OS Volumes >80%',
+                        datasource='InfluxDB_V2',
+                        unit='',
+                        decimals=0,
+                        reducerFunction='last',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 1 }
+                  ).addThreshold(
+                        { color: 'red', value: 2 }
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "disk")
@@ -73,25 +73,25 @@ from(bucket: "host_private")
   |> sum()
 // End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
-      stat.new(
-        title='Servers Data Volumes >80%',
-        datasource='InfluxDB_V2',
-        unit='',
-        decimals=0,
-        reducerFunction='last',
-        colorMode='value',
-        graphMode='none',
-        justifyMode='auto',
-        thresholdsMode='absolute',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'green', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 1 }
-      ).addThreshold(
-        { color: 'red', value: 2 }
-      ).addTarget(influxdb.target(query='// Start
+                  stat.new(
+                        title='Servers Data Volumes >80%',
+                        datasource='InfluxDB_V2',
+                        unit='',
+                        decimals=0,
+                        reducerFunction='last',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 1 }
+                  ).addThreshold(
+                        { color: 'red', value: 2 }
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "disk")
@@ -104,16 +104,16 @@ from(bucket: "host_private")
   |> sum()
 // End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
-      bar.new(
-        title='Servers with Peak Usage <50%',
-        datasource='InfluxDB_V2',
-        unit='percent',
-        thresholds=[
-          { 'color': 'red', 'value': null },
-          { 'color': 'yellow', 'value': 50 },
-          { 'color': 'green', 'value': 90 }
-        ],
-      ).addTarget(influxdb.target(query='// Start
+                  bar.new(
+                        title='Servers with Peak Usage <50%',
+                        datasource='InfluxDB_V2',
+                        unit='percent',
+                        thresholds=[
+                              { 'color': 'red', 'value': null },
+                              { 'color': 'yellow', 'value': 50 },
+                              { 'color': 'green', 'value': 90 }
+                        ],
+                  ).addTarget(influxdb.target(query='// Start
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -187,26 +187,26 @@ from(bucket: "host_private")
   |> keep(columns: ["Network"])
 // End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
-      gauge.new(
-        title='Server Mean CPU Availability',
-        datasource='InfluxDB_V2',
-        reducerFunction='last',
-        showThresholdLabels=false,
-        showThresholdMarkers=true,
-        unit='percent',
-        min=0,
-        max=100,
-        decimals=0,
-        thresholdsMode='percentage',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 35 }
-      ).addThreshold(
-        { color: 'green', value: 65 }
-      ).addTarget(influxdb.target(query='// Start
+                  gauge.new(
+                        title='Server Mean CPU Availability',
+                        datasource='InfluxDB_V2',
+                        reducerFunction='last',
+                        showThresholdLabels=false,
+                        showThresholdMarkers=true,
+                        unit='percent',
+                        min=0,
+                        max=100,
+                        decimals=0,
+                        thresholdsMode='percentage',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 35 }
+                  ).addThreshold(
+                        { color: 'green', value: 65 }
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "cpu")
@@ -219,26 +219,26 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
 // End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
 
-      gauge.new(
-        title='Server Mean Memory Availability',
-        datasource='InfluxDB_V2',
-        reducerFunction='last',
-        showThresholdLabels=false,
-        showThresholdMarkers=true,
-        unit='percent',
-        min=0,
-        max=100,
-        decimals=0,
-        thresholdsMode='percentage',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 35 }
-      ).addThreshold(
-        { color: 'green', value: 65 }
-      ).addTarget(influxdb.target(query='// Start
+                  gauge.new(
+                        title='Server Mean Memory Availability',
+                        datasource='InfluxDB_V2',
+                        reducerFunction='last',
+                        showThresholdLabels=false,
+                        showThresholdMarkers=true,
+                        unit='percent',
+                        min=0,
+                        max=100,
+                        decimals=0,
+                        thresholdsMode='percentage',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 35 }
+                  ).addThreshold(
+                        { color: 'green', value: 65 }
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "mem")
@@ -250,26 +250,26 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
 // End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
 
-      gauge.new(
-        title='Server Mean 30< Temperature >100ºC',
-        datasource='InfluxDB_V2',
-        reducerFunction='last',
-        showThresholdLabels=false,
-        showThresholdMarkers=true,
-        unit='ºC',
-        min=0,
-        max=100,
-        decimals=0,
-        thresholdsMode='percentage',
-        repeatDirection='h',
-        pluginVersion='7',
-      ).addThreshold(
-        { color: 'red', value: 0 }
-      ).addThreshold(
-        { color: 'yellow', value: 35 }
-      ).addThreshold(
-        { color: 'green', value: 65 }
-      ).addTarget(influxdb.target(query='// Start
+                  gauge.new(
+                        title='Server Mean 30< Temperature >100ºC',
+                        datasource='InfluxDB_V2',
+                        reducerFunction='last',
+                        showThresholdLabels=false,
+                        showThresholdMarkers=true,
+                        unit='ºC',
+                        min=0,
+                        max=100,
+                        decimals=0,
+                        thresholdsMode='percentage',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 35 }
+                  ).addThreshold(
+                        { color: 'green', value: 65 }
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
@@ -280,24 +280,24 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
 // End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
 
-      graph.new(
-        title='Server CPU Usage',
-        datasource='InfluxDB_V2',
-        fill=1,
-        format='percent',
-        bars=false,
-        lines=true,
-        staircase=true,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Server CPU Usage',
+                        datasource='InfluxDB_V2',
+                        fill=1,
+                        format='percent',
+                        bars=false,
+                        lines=true,
+                        staircase=true,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "cpu")
@@ -310,24 +310,24 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "host"])
 // End')) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
 
-      graph.new(
-        title='Server RAM Usage',
-        datasource='InfluxDB_V2',
-        fill=1,
-        format='percent',
-        bars=false,
-        lines=true,
-        staircase=true,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Server RAM Usage',
+                        datasource='InfluxDB_V2',
+                        fill=1,
+                        format='percent',
+                        bars=false,
+                        lines=true,
+                        staircase=true,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "mem")
@@ -338,24 +338,24 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "host"])
 // End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
 
-      graph.new(
-        title='Server Swap Usage',
-        datasource='InfluxDB_V2',
-        fill=1,
-        format='percent',
-        bars=false,
-        lines=true,
-        staircase=true,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Server Swap Usage',
+                        datasource='InfluxDB_V2',
+                        fill=1,
+                        format='percent',
+                        bars=false,
+                        lines=true,
+                        staircase=true,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "swap")
@@ -366,24 +366,24 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "host"])
 // End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
 
-      graph.new(
-        title='Server Volume Usage',
-        datasource='InfluxDB_V2',
-        fill=1,
-        format='percent',
-        bars=false,
-        lines=true,
-        staircase=true,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Server Volume Usage',
+                        datasource='InfluxDB_V2',
+                        fill=1,
+                        format='percent',
+                        bars=false,
+                        lines=true,
+                        staircase=true,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 import "strings"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -396,26 +396,26 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
 // End')) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
 
-      graph.new(
-        title='Server IOPS Usage',
-        datasource='InfluxDB_V2',
-        fill=1,
-        format='Bps',
-        bars=false,
-        lines=true,
-        staircase=true,
-        points=false,
-        pointradius=1,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Server IOPS Usage',
+                        datasource='InfluxDB_V2',
+                        fill=1,
+                        format='Bps',
+                        bars=false,
+                        lines=true,
+                        staircase=true,
+                        points=false,
+                        pointradius=1,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "diskio")
@@ -436,29 +436,29 @@ from(bucket: "host_private")
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with host: r.host + " - Write" }))
 // End')).addSeriesOverride(
-        { "alias": "/.*Write.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
+                        { "alias": "/.*Write.*/", "transform": "negative-Y" }
+                  ) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
 
-      graph.new(
-        title='Server Network Usage',
-        datasource='InfluxDB_V2',
-        fill=1,
-        format='Bps',
-        bars=false,
-        lines=true,
-        staircase=true,
-        points=false,
-        pointradius=1,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Server Network Usage',
+                        datasource='InfluxDB_V2',
+                        fill=1,
+                        format='Bps',
+                        bars=false,
+                        lines=true,
+                        staircase=true,
+                        points=false,
+                        pointradius=1,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "net")
@@ -479,27 +479,27 @@ from(bucket: "host_private")
   |> derivative(unit: 1s, nonNegative: true)
   |> map(fn: (r) => ({ r with host: r.host + " - Transmit" }))
 // End')).addSeriesOverride(
-        { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
+                        { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
+                  ) { gridPos: { x: 0, y: 68, w: 24, h: 12 } },
 
-      graph.new(
-        title='Server Temperature',
-        datasource='InfluxDB_V2',
-        fill=0,
-        format='ºC',
-        bars=false,
-        lines=true,
-        staircase=false,
-        legend_values=true,
-        legend_min=true,
-        legend_max=true,
-        legend_current=true,
-        legend_total=false,
-        legend_avg=false,
-        legend_alignAsTable=true,
-        legend_rightSide=true,
-        legend_sideWidth=425
-      ).addTarget(influxdb.target(query='// Start
+                  graph.new(
+                        title='Server Temperature',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='ºC',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='// Start
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
@@ -514,7 +514,7 @@ from(bucket: "host_private")
   |> fill(column: "_value", usePrevious: true)
   |> set(key: "host", value: "ambient-rack")
 // End'))
-      { gridPos: { x: 0, y: 80, w: 24, h: 12 } },
+                  { gridPos: { x: 0, y: 80, w: 24, h: 12 } },
 
-    ],
+            ],
 }
