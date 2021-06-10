@@ -11,8 +11,7 @@ local dashboard = grafana.dashboard;
             interest_dashboard:
                   dashboard.new(
                         schemaVersion=26,
-//ASD                   title='Home',
-//ASM                   title='Home',
+                        title='Home',
 //ASD                   uid='home-desktop',
 //ASM                   uid='home-mobile',
                         editable=true,
@@ -21,13 +20,23 @@ local dashboard = grafana.dashboard;
 
                         local grafana = import 'grafonnet/grafana.libsonnet';
                         local dashboard = grafana.dashboard;
+                        local text = grafana.text;
                         local dashlist = grafana.dashlist;
 
                         [
 
+                              text.new(
+                                    title='Portals',
+                                    span=null,
+                                    mode='markdown',
+                                    content='
+- [Public Dashbaords](https://grafana.janeandgraham.com?orgId=1)
+- [Private Dashbaords](https://grafana.janeandgraham.com?orgId=2)
+                                    ',
+                              ) { gridPos: { x: 0, y: 0, w: 6, h: 3 } },
+
                               dashlist.new(
-//ASM                               title='Mobile Dashbaords',
-//ASD                               title='Desktop Dashbaords',
+                                    title='Dashbaords',
 //ASM                               tags=['mobile', 'published'],
 //ASD                               tags=['desktop', 'published'],
                                     recent=false,
@@ -35,7 +44,7 @@ local dashboard = grafana.dashboard;
                                     starred=false,
                                     headings=false,
                                     limit=100,
-                              ) { gridPos: { x: 0, y: 0, w: 3, h: 20 } },
+                              ) { gridPos: { x: 0, y: 3, w: 3, h: 20 } },
 
                         ],
 

@@ -41,7 +41,7 @@ services:
   grafana_bootstrap:
     container_name: grafana_bootstrap
     <<: *common
-    restart: no
+    restart: 'no'
     volumes:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
     entrypoint: /bin/bash
