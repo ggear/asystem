@@ -3,7 +3,8 @@ local dashboard = grafana.dashboard;
 
 {
 
-      grafanaDashboardFolder:: 'Private_Mobile',
+//ASD grafanaDashboardFolder:: 'Private_Desktop',
+//ASM grafanaDashboardFolder:: 'Private_Mobile',
 
       grafanaDashboards:: {
 
@@ -11,7 +12,8 @@ local dashboard = grafana.dashboard;
                   dashboard.new(
                         schemaVersion=26,
                         title='Home',
-                        uid='home-mobile',
+//ASD                   uid='home-desktop',
+//ASM                   uid='home-mobile',
                         editable=true,
                   )
                   .addPanels(
@@ -35,7 +37,8 @@ local dashboard = grafana.dashboard;
 
                               dashlist.new(
                                     title='Dashbaords',
-                                    tags=['mobile', 'private'],
+//ASM                               tags=['mobile', 'private'],
+//ASD                               tags=['desktop', 'private'],
                                     recent=false,
                                     search=true,
                                     starred=false,

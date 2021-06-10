@@ -5,7 +5,7 @@ local graph_interest = import 'graph_interest.jsonnet';
 
 {
             
-      grafanaDashboardFolder:: 'Desktop',
+      grafanaDashboardFolder:: 'Public_Desktop',
             
       grafanaDashboards:: {
 
@@ -16,7 +16,7 @@ local graph_interest = import 'graph_interest.jsonnet';
                         uid='currency-desktop',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'desktop'],
+                        tags=['public', 'desktop'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_currency.graphs()),
@@ -29,7 +29,7 @@ local graph_interest = import 'graph_interest.jsonnet';
                         uid='interest-desktop',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'desktop'],
+                        tags=['public', 'desktop'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),

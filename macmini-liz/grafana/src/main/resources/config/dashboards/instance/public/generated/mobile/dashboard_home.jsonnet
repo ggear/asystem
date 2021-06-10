@@ -3,7 +3,7 @@ local dashboard = grafana.dashboard;
 
 {
 
-      grafanaDashboardFolder:: 'Mobile',
+      grafanaDashboardFolder:: 'Public_Mobile',
 
       grafanaDashboards:: {
 
@@ -31,11 +31,11 @@ local dashboard = grafana.dashboard;
 - [Public Dashbaords](https://grafana.janeandgraham.com?orgId=1)
 - [Private Dashbaords](https://grafana.janeandgraham.com?orgId=2)
                                     ',
-                              ) { gridPos: { x: 0, y: 0, w: 6, h: 3 } },
+                              ) { gridPos: { x: 0, y: 0, w: 3, h: 3 } },
 
                               dashlist.new(
                                     title='Dashbaords',
-                                    tags=['mobile', 'published'],
+                                    tags=['mobile', 'public'],
                                     recent=false,
                                     search=true,
                                     starred=false,

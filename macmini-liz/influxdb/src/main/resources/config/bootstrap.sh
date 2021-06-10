@@ -76,8 +76,8 @@ if [ $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFL
     --read-bucket ${BUCKET_ID_DATA_PUBLIC} \
     --password ${INFLUXDB_TOKEN_PUBLIC_V1} -d "Read public buckets" -t ${INFLUXDB_TOKEN}
 fi
-if [ $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_USER_ALL} | wc -l) -ne 1 ]; then
-  influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_ALL} \
+if [ $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_USER_PRIVATE} | wc -l) -ne 1 ]; then
+  influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_PRIVATE} \
     --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
     --read-bucket ${BUCKET_ID_HOME_PRIVATE} \
     --read-bucket ${BUCKET_ID_DATA_PUBLIC} \

@@ -5,8 +5,8 @@ local graph_interest = import 'graph_interest.jsonnet';
 
 {
             
-//ASD grafanaDashboardFolder:: 'Desktop',
-//ASM grafanaDashboardFolder:: 'Mobile',
+//ASD grafanaDashboardFolder:: 'Public_Desktop',
+//ASM grafanaDashboardFolder:: 'Public_Mobile',
             
       grafanaDashboards:: {
 
@@ -18,8 +18,8 @@ local graph_interest = import 'graph_interest.jsonnet';
 //ASM                   uid='currency-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['public', 'desktop'],
+//ASM                   tags=['public', 'mobile'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_currency.graphs()),
@@ -33,8 +33,8 @@ local graph_interest = import 'graph_interest.jsonnet';
 //ASM                   uid='interest-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['public', 'desktop'],
+//ASM                   tags=['public', 'mobile'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),

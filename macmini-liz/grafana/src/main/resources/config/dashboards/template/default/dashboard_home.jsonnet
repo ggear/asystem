@@ -34,8 +34,8 @@ local dashboard = grafana.dashboard;
                               ) { gridPos: { x: 0, y: 0, w: 6, h: 3 } },
 
                               dashlist.new(
-                                    title='Mobile Dashbaords',
-                                    tags=['mobile', 'published'],
+                                    title='Dashbaords',
+                                    tags=['mobile'],
                                     recent=false,
                                     search=true,
                                     starred=false,
@@ -44,8 +44,8 @@ local dashboard = grafana.dashboard;
                               ) { gridPos: { x: 0, y: 0, w: 3, h: 20 } },
 
                               dashlist.new(
-                                    title='Desktop Dashbaords',
-                                    tags=['desktop', 'published'],
+                                    title='Dashbaords',
+                                    tags=['desktop'],
                                     recent=false,
                                     search=true,
                                     starred=false,

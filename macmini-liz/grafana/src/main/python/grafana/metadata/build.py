@@ -100,9 +100,12 @@ local graph_{} = import 'graph_{}.jsonnet';
 
 {
             """ + """
-//ASD grafanaDashboardFolder:: 'Desktop',
-//ASM grafanaDashboardFolder:: 'Mobile',
-            """ + """
+//ASD grafanaDashboardFolder:: '{}_Desktop',
+//ASM grafanaDashboardFolder:: '{}_Mobile',
+            """.format(
+                scope.title(),
+                scope.title()
+            ) + """
       grafanaDashboards:: {
 
             """).strip() + "\n")
@@ -122,8 +125,8 @@ local graph_{} = import 'graph_{}.jsonnet';
 //ASM                   uid='{}-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['{}', 'desktop'],
+//ASM                   tags=['{}', 'mobile'],
                         {}
                   )
                   .addPanels(graph_{}.graphs()),
@@ -132,6 +135,8 @@ local graph_{} = import 'graph_{}.jsonnet';
                     graph.title(),
                     graph,
                     graph,
+                    scope,
+                    scope,
                     defaults,
                     graph).strip() + "\n\n")
             file.write("  " + """
@@ -151,7 +156,7 @@ local graph_{} = import 'graph_{}.jsonnet';
                                                                         .replace("generated", ""), "generated",
                                                                         "" if scope == "default" else (form + "/"),
                                                                         file_name)
-                            private_copy = scope == "public" and (file_name.startswith("graph_") or file_name.startswith("dashboard_"))
+                            private_copy = scope == "public" and file_name.startswith("graph_")
                             if private_copy:
                                 destination_path_copy = file_destination_path.replace("public", "private")
                                 if not os.path.exists(os.path.dirname(destination_path_copy)):

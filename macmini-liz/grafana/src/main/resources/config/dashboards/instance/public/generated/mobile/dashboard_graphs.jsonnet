@@ -5,7 +5,7 @@ local graph_interest = import 'graph_interest.jsonnet';
 
 {
             
-      grafanaDashboardFolder:: 'Mobile',
+      grafanaDashboardFolder:: 'Public_Mobile',
             
       grafanaDashboards:: {
 
@@ -16,7 +16,7 @@ local graph_interest = import 'graph_interest.jsonnet';
                         uid='currency-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['public', 'mobile'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_currency.graphs()),
@@ -29,7 +29,7 @@ local graph_interest = import 'graph_interest.jsonnet';
                         uid='interest-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['public', 'mobile'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),

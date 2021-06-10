@@ -9,7 +9,7 @@ services:
       - TZ=Australia/Perth
       - INFLUXDB_IP
       - INFLUXDB_PORT
-      - INFLUXDB_USER_ALL
+      - INFLUXDB_USER_PRIVATE
       - INFLUXDB_TOKEN
       - INFLUXDB_BUCKET_HOST_PRIVATE
     volumes:

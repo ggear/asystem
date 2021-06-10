@@ -16,6 +16,7 @@ echo "--------------------------------------------------------------------------
 echo "Grafana bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
+curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 | jq
 curl -XPUT --silent ${GRAFANA_URL}/api/orgs/1 \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
@@ -70,22 +71,22 @@ if [ $(curl --silent ${GRAFANA_URL}/api/folders/default?orgId=1 | grep default |
           "title": "Default"
         }' | jq
 fi
-if [ $(curl --silent ${GRAFANA_URL}/api/folders/mobile?orgId=1 | grep mobile | wc -l) -eq 0 ]; then
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/public_mobile?orgId=1 | grep public_mobile | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "uid": "Mobile",
-          "title": "Mobile"
+          "uid": "Public_Mobile",
+          "title": "Public _Mobile"
         }' | jq
 fi
-if [ $(curl --silent ${GRAFANA_URL}/api/folders/desktop?orgId=1 | grep desktop | wc -l) -eq 0 ]; then
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/public_desktop?orgId=1 | grep public_desktop | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "uid": "Desktop",
-          "title": "Desktop"
+          "uid": "Public_Desktop",
+          "title": "Public_Desktop"
         }' | jq
 fi
 curl --silent ${GRAFANA_URL}/api/folders?orgId=1 | jq
@@ -96,6 +97,7 @@ if [ -d /bootstrap/grafonnet-lib ]; then
 
 fi
 
+curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 | jq
 if [ $(curl --silent ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/orgs \
     -H "Accept: application/json" \
@@ -143,22 +145,22 @@ if [ $(curl --silent ${GRAFANA_URL}/api/datasources/name/InfluxDB_V1?orgId=2 | g
         }' | jq
 fi
 curl --silent ${GRAFANA_URL}/api/datasources?orgId=2 | jq
-if [ $(curl --silent ${GRAFANA_URL}/api/folders/mobile?orgId=2 | grep mobile | wc -l) -eq 0 ]; then
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/private_mobile?orgId=2 | grep private_mobile | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=2 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "uid": "Mobile",
-          "title": "Mobile"
+          "uid": "Private_Mobile",
+          "title": "Private_Mobile"
         }' | jq
 fi
-if [ $(curl --silent ${GRAFANA_URL}/api/folders/desktop?orgId=2 | grep desktop | wc -l) -eq 0 ]; then
+if [ $(curl --silent ${GRAFANA_URL}/api/folders/private_desktop?orgId=2 | grep private_desktop | wc -l) -eq 0 ]; then
   curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 > /dev/null && curl -XPOST --silent ${GRAFANA_URL}/api/folders?orgId=2 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "uid": "Desktop",
-          "title": "Desktop"
+          "uid": "Private_Desktop",
+          "title": "Private_Desktop"
         }' | jq
 fi
 curl --silent ${GRAFANA_URL}/api/folders?orgId=2 | jq

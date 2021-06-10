@@ -3,8 +3,8 @@ local dashboard = grafana.dashboard;
 
 {
 
-//ASD grafanaDashboardFolder:: 'Desktop',
-//ASM grafanaDashboardFolder:: 'Mobile',
+//ASD grafanaDashboardFolder:: 'Public_Desktop',
+//ASM grafanaDashboardFolder:: 'Public_Mobile',
 
       grafanaDashboards:: {
 
@@ -33,12 +33,12 @@ local dashboard = grafana.dashboard;
 - [Public Dashbaords](https://grafana.janeandgraham.com?orgId=1)
 - [Private Dashbaords](https://grafana.janeandgraham.com?orgId=2)
                                     ',
-                              ) { gridPos: { x: 0, y: 0, w: 6, h: 3 } },
+                              ) { gridPos: { x: 0, y: 0, w: 3, h: 3 } },
 
                               dashlist.new(
                                     title='Dashbaords',
-//ASM                               tags=['mobile', 'published'],
-//ASD                               tags=['desktop', 'published'],
+//ASM                               tags=['mobile', 'public'],
+//ASD                               tags=['desktop', 'public'],
                                     recent=false,
                                     search=true,
                                     starred=false,

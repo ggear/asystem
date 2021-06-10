@@ -12,8 +12,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 
 {
             
-//ASD grafanaDashboardFolder:: 'Desktop',
-//ASM grafanaDashboardFolder:: 'Mobile',
+//ASD grafanaDashboardFolder:: 'Private_Desktop',
+//ASM grafanaDashboardFolder:: 'Private_Mobile',
             
       grafanaDashboards:: {
 
@@ -25,8 +25,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   uid='network-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
+//ASM                   tags=['private', 'mobile'],
                         time_from='now-2d', refresh=''
                   )
                   .addPanels(graph_network.graphs()),
@@ -40,8 +40,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   uid='electricity-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
+//ASM                   tags=['private', 'mobile'],
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_electricity.graphs()),
@@ -55,8 +55,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   uid='servers-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
+//ASM                   tags=['private', 'mobile'],
                         time_from='now-2d', refresh=''
                   )
                   .addPanels(graph_servers.graphs()),
@@ -70,8 +70,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   uid='water-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
+//ASM                   tags=['private', 'mobile'],
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_water.graphs()),
@@ -85,8 +85,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   uid='currency-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
+//ASM                   tags=['private', 'mobile'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_currency.graphs()),
@@ -100,8 +100,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   uid='interest-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
+//ASM                   tags=['private', 'mobile'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),
@@ -115,8 +115,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   uid='internet-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
+//ASM                   tags=['private', 'mobile'],
                         time_from='now-2d', refresh=''
                   )
                   .addPanels(graph_internet.graphs()),
@@ -130,8 +130,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   uid='conditions-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
+//ASM                   tags=['private', 'mobile'],
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_conditions.graphs()),
@@ -145,8 +145,8 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   uid='containers-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['published', 'desktop'],
-//ASM                   tags=['published', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
+//ASM                   tags=['private', 'mobile'],
                         time_from='now-1h', refresh=''
                   )
                   .addPanels(graph_containers.graphs()),

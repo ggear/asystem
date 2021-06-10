@@ -12,7 +12,7 @@ local graph_containers = import 'graph_containers.jsonnet';
 
 {
             
-      grafanaDashboardFolder:: 'Mobile',
+      grafanaDashboardFolder:: 'Private_Mobile',
             
       grafanaDashboards:: {
 
@@ -23,7 +23,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         uid='network-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['private', 'mobile'],
                         time_from='now-2d', refresh=''
                   )
                   .addPanels(graph_network.graphs()),
@@ -36,7 +36,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         uid='electricity-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['private', 'mobile'],
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_electricity.graphs()),
@@ -49,7 +49,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         uid='servers-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['private', 'mobile'],
                         time_from='now-2d', refresh=''
                   )
                   .addPanels(graph_servers.graphs()),
@@ -62,7 +62,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         uid='water-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['private', 'mobile'],
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_water.graphs()),
@@ -75,7 +75,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         uid='currency-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['private', 'mobile'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_currency.graphs()),
@@ -88,7 +88,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         uid='interest-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['private', 'mobile'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),
@@ -101,7 +101,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         uid='internet-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['private', 'mobile'],
                         time_from='now-2d', refresh=''
                   )
                   .addPanels(graph_internet.graphs()),
@@ -114,7 +114,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         uid='conditions-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['private', 'mobile'],
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_conditions.graphs()),
@@ -127,7 +127,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         uid='containers-mobile',
                         editable=true,
                         graphTooltip='shared_tooltip',
-                        tags=['published', 'mobile'],
+                        tags=['private', 'mobile'],
                         time_from='now-1h', refresh=''
                   )
                   .addPanels(graph_containers.graphs()),
