@@ -40,4 +40,9 @@ else
   docker system prune --volumes -f -a 2>&1 >/dev/null
 fi
 echo "----------" && docker ps -f name="${SERVICE_NAME}" && echo "----------"
-sleep 2 && docker logs "${SERVICE_NAME}" && echo "----------"
+
+if [ $(docker ps | grep "${SERVICE_NAME}_bootstrap" | wc -l) -eq 1 ]; then
+  docker logs "${SERVICE_NAME}_bootstrap" -f
+else
+  sleep 5 && docker logs "${SERVICE_NAME}" && echo "----------"
+fi

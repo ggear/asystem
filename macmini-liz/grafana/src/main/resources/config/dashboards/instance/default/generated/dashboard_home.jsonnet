@@ -28,8 +28,8 @@ local dashboard = grafana.dashboard;
                                     span=null,
                                     mode='markdown',
                                     content='
-- [Public Dashbaords](https://grafana.janeandgraham.com?orgId=1)
-- [Private Dashbaords](https://grafana.janeandgraham.com?orgId=2)
+- [Public Dashbaords](https://grafana.janeandgraham.com/d/home-mobile/home?orgId=1)
+- [Private Dashbaords](https://grafana.janeandgraham.com/d/home-mobile/home?orgId=2)
                                     ',
                               ) { gridPos: { x: 0, y: 0, w: 6, h: 2.5 } },
 
