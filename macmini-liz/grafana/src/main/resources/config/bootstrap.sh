@@ -4,7 +4,6 @@ echo "--------------------------------------------------------------------------
 echo "Grafana bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-alias curl='curl -f -s'
 LIBRARIES_HOME=${LIBRARIES_HOME:-"/bootstrap"}
 DASHBOARDS_HOME=${DASHBOARDS_HOME:-"../dashboards"}
 
@@ -12,7 +11,7 @@ cd ${LIBRARIES_HOME}/grizzly
 make dev
 cd ../grafonnet-lib
 
-while ! curl ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
+while ! curl -sf ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
   echo "Waiting for grafana to come up ..." && sleep 1
 done
 
@@ -26,17 +25,17 @@ echo "--------------------------------------------------------------------------
 #######################################################################################
 # Global Orgs
 #######################################################################################
-curl ${GRAFANA_URL}/api/admin/stats | jq
-if [ $(curl ${GRAFANA_URL}/api/orgs/1 | jq -r '.name' | grep "Public Portal" | wc -l) -eq 0 ]; then
-  curl -XPUT ${GRAFANA_URL}/api/orgs/1 \
+curl -sf ${GRAFANA_URL}/api/admin/stats | jq
+if [ $(curl -sf ${GRAFANA_URL}/api/orgs/1 | jq -r '.name' | grep "Public Portal" | wc -l) -eq 0 ]; then
+  curl -sf -XPUT ${GRAFANA_URL}/api/orgs/1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
           "name": "Public Portal"
         }' | jq
 fi
-if [ $(curl ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL}/api/orgs \
+if [ $(curl -sf ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL}/api/orgs \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -47,8 +46,8 @@ fi
 #######################################################################################
 # Global Users
 #######################################################################################
-if [ $(curl ${GRAFANA_URL}/api/admin/stats | jq -r '.users') -lt 3 ]; then
-  curl -XPOST ${GRAFANA_URL}/api/admin/users \
+if [ $(curl -sf ${GRAFANA_URL}/api/admin/stats | jq -r '.users') -lt 3 ]; then
+  curl -sf -XPOST ${GRAFANA_URL}/api/admin/users \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -57,7 +56,7 @@ if [ $(curl ${GRAFANA_URL}/api/admin/stats | jq -r '.users') -lt 3 ]; then
           "password":"'"${GRAFANA_KEY_PUBLIC}"'",
           "OrgId": 1
         }' | jq
-  curl -XPOST ${GRAFANA_URL}/api/admin/users \
+  curl -sf -XPOST ${GRAFANA_URL}/api/admin/users \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -66,44 +65,44 @@ if [ $(curl ${GRAFANA_URL}/api/admin/stats | jq -r '.users') -lt 3 ]; then
           "password":"'"${GRAFANA_KEY_PRIVATE}"'",
           "OrgId": 2
         }' | jq
-  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 | jq
-  USER_ID=$(curl ${GRAFANA_URL}/api/users/lookup?loginOrEmail=${GRAFANA_USER_PUBLIC} | jq -r '.id')
-  curl -XPUT ${GRAFANA_URL}/api/admin/users/${USER_ID}/permissions \
+  curl -sf -XPOST --silent ${GRAFANA_URL}/api/user/using/1 | jq
+  USER_ID=$(curl -sf ${GRAFANA_URL}/api/users/lookup?loginOrEmail=${GRAFANA_USER_PUBLIC} | jq -r '.id')
+  curl -sf -XPUT ${GRAFANA_URL}/api/admin/users/${USER_ID}/permissions \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
           "isGrafanaAdmin": true
         }' | jq
-  curl -XPATCH ${GRAFANA_URL}/api/org/users/${USER_ID} \
+  curl -sf -XPATCH ${GRAFANA_URL}/api/org/users/${USER_ID} \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
           "role": "Admin"
         }' | jq
-  curl ${GRAFANA_URL_PUBLIC}/api/org/users | jq -r '.[0]'
-  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 | jq
-  USER_ID=$(curl ${GRAFANA_URL}/api/users/lookup?loginOrEmail=${GRAFANA_USER_PRIVATE} | jq -r '.id')
-  curl -XPUT ${GRAFANA_URL}/api/admin/users/${USER_ID}/permissions \
+  curl -sf ${GRAFANA_URL_PUBLIC}/api/org/users | jq -r '.[0]'
+  curl -sf -XPOST --silent ${GRAFANA_URL}/api/user/using/2 | jq
+  USER_ID=$(curl -sf ${GRAFANA_URL}/api/users/lookup?loginOrEmail=${GRAFANA_USER_PRIVATE} | jq -r '.id')
+  curl -sf -XPUT ${GRAFANA_URL}/api/admin/users/${USER_ID}/permissions \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
           "isGrafanaAdmin": true
         }' | jq
-  curl -XPATCH ${GRAFANA_URL}/api/org/users/${USER_ID} \
+  curl -sf -XPATCH ${GRAFANA_URL}/api/org/users/${USER_ID} \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
           "role": "Admin"
         }' | jq
-  curl ${GRAFANA_URL_PRIVATE}/api/org/users | jq -r '.[0]'
+  curl -sf ${GRAFANA_URL_PRIVATE}/api/org/users | jq -r '.[0]'
 fi
-curl ${GRAFANA_URL}/api/admin/stats | jq
+curl -sf ${GRAFANA_URL}/api/admin/stats | jq
 
 #######################################################################################
 # Public Datasources
 #######################################################################################
-if [ $(curl ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/datasources \
+if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PUBLIC}/api/datasources \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -125,8 +124,8 @@ if [ $(curl ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V2 | jq -r '.nam
           }
         }' | jq
 fi
-if [ $(curl ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/datasources \
+if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PUBLIC}/api/datasources \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -140,13 +139,13 @@ if [ $(curl ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V1 | grep Influx
           "password": "'"${INFLUXDB_TOKEN_PUBLIC_V1}"'"
         }' | jq
 fi
-curl ${GRAFANA_URL_PUBLIC}/api/datasources | jq
+curl -sf ${GRAFANA_URL_PUBLIC}/api/datasources | jq
 
 #######################################################################################
 # Public Folders
 #######################################################################################
-if [ $(curl ${GRAFANA_URL_PUBLIC}/api/folders | grep Default | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
+if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Default | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -154,8 +153,8 @@ if [ $(curl ${GRAFANA_URL_PUBLIC}/api/folders | grep Default | wc -l) -eq 0 ]; t
           "title": "Default"
         }' | jq
 fi
-if [ $(curl ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Mobile | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
+if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Mobile | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -163,8 +162,8 @@ if [ $(curl ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Mobile | wc -l) -eq 
           "title": "Public _Mobile"
         }' | jq
 fi
-if [ $(curl ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Desktop | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
+if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Desktop | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -172,7 +171,7 @@ if [ $(curl ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Desktop | wc -l) -eq
           "title": "Public_Desktop"
         }' | jq
 fi
-curl ${GRAFANA_URL_PUBLIC}/api/folders | jq
+curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | jq
 
 #######################################################################################
 # Public Dashboards
@@ -184,8 +183,8 @@ find ${DASHBOARDS_HOME}/default -name dashboard_* -exec ../grizzly/grr apply {} 
 #######################################################################################
 # Private Datasources
 #######################################################################################
-if [ $(curl ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL_PRIVATE}/api/datasources \
+if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PRIVATE}/api/datasources \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -207,8 +206,8 @@ if [ $(curl ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V2 | jq -r '.na
           }
         }' | jq
 fi
-if [ $(curl ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL_PRIVATE}/api/datasources \
+if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PRIVATE}/api/datasources \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -222,13 +221,13 @@ if [ $(curl ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V1 | grep Influ
           "password": "'"${INFLUXDB_TOKEN}"'"
         }' | jq
 fi
-curl ${GRAFANA_URL_PRIVATE}/api/datasources | jq
+curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources | jq
 
 #######################################################################################
 # Private Folders
 #######################################################################################
-if [ $(curl ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Mobile | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL_PRIVATE}/api/folders \
+if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Mobile | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PRIVATE}/api/folders \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -236,8 +235,8 @@ if [ $(curl ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Mobile | wc -l) -e
           "title": "Private_Mobile"
         }' | jq
 fi
-if [ $(curl ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Desktop | wc -l) -eq 0 ]; then
-  curl -XPOST ${GRAFANA_URL_PRIVATE}/api/folders \
+if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Desktop | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PRIVATE}/api/folders \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -245,7 +244,7 @@ if [ $(curl ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Desktop | wc -l) -
           "title": "Private_Desktop"
         }' | jq
 fi
-curl ${GRAFANA_URL_PRIVATE}/api/folders | jq
+curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | jq
 
 #######################################################################################
 # Private Dashboards
