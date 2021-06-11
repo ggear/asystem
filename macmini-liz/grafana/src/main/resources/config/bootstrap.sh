@@ -66,26 +66,38 @@ if [ $(curl ${GRAFANA_URL}/api/admin/stats | jq -r '.users') -lt 3 ]; then
           "password":"'"${GRAFANA_KEY_PRIVATE}"'",
           "OrgId": 2
         }' | jq
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 | jq
+  USER_ID=$(curl ${GRAFANA_URL}/api/users/lookup?loginOrEmail=${GRAFANA_USER_PUBLIC} | jq -r '.id')
+  curl -XPUT ${GRAFANA_URL}/api/admin/users/${USER_ID}/permissions \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "isGrafanaAdmin": true
+        }' | jq
+  curl -XPATCH ${GRAFANA_URL}/api/org/users/${USER_ID} \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "role": "Admin"
+        }' | jq
+  curl ${GRAFANA_URL_PUBLIC}/api/org/users | jq -r '.[0]'
+  curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 | jq
+  USER_ID=$(curl ${GRAFANA_URL}/api/users/lookup?loginOrEmail=${GRAFANA_USER_PRIVATE} | jq -r '.id')
+  curl -XPUT ${GRAFANA_URL}/api/admin/users/${USER_ID}/permissions \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "isGrafanaAdmin": true
+        }' | jq
+  curl -XPATCH ${GRAFANA_URL}/api/org/users/${USER_ID} \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "role": "Admin"
+        }' | jq
+  curl ${GRAFANA_URL_PRIVATE}/api/org/users | jq -r '.[0]'
 fi
 curl ${GRAFANA_URL}/api/admin/stats | jq
-
-#######################################################################################
-# Public User
-#######################################################################################
-USER_ID=$(curl ${GRAFANA_URL_PUBLIC}/api/org/users | jq -r '.[0].userId')
-curl -XPUT ${GRAFANA_URL_PUBLIC}/api/admin/users/${USER_ID}/permissions \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "isGrafanaAdmin": true
-      }' | jq
-curl -XPATCH ${GRAFANA_URL_PUBLIC}/api/org/users/${USER_ID} \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "role": "Admin"
-      }' | jq
-curl ${GRAFANA_URL_PUBLIC}/api/org/users | jq -r '.[0]'
 
 #######################################################################################
 # Public Datasources
@@ -168,24 +180,6 @@ curl ${GRAFANA_URL_PUBLIC}/api/folders | jq
 export GRAFANA_URL=${GRAFANA_URL_PUBLIC}
 find ${DASHBOARDS_HOME}/public -name dashboard_* -exec ../grizzly/grr apply {} \;
 find ${DASHBOARDS_HOME}/default -name dashboard_* -exec ../grizzly/grr apply {} \;
-
-#######################################################################################
-# Private User
-#######################################################################################
-USER_ID=$(curl ${GRAFANA_URL_PRIVATE}/api/org/users | jq -r '.[0].userId')
-curl -XPUT ${GRAFANA_URL_PRIVATE}/api/admin/users/${USER_ID}/permissions \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "isGrafanaAdmin": true
-      }' | jq
-curl -XPATCH ${GRAFANA_URL_PRIVATE}/api/org/users/${USER_ID} \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "role": "Admin"
-      }' | jq
-curl ${GRAFANA_URL_PRIVATE}/api/org/users | jq -r '.[0]'
 
 #######################################################################################
 # Private Datasources
