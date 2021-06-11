@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 10,
+  "id": 12,
   "links": [],
   "panels": [
     {
@@ -23,12 +23,6 @@
       "fieldConfig": {
         "defaults": {},
         "overrides": []
-      },
-      "gridPos": {
-        "h": 2.5,
-        "w": 6,
-        "x": 0,
-        "y": 0
       },
       "id": 2,
       "options": {
@@ -49,7 +43,7 @@
         "h": 20,
         "w": 3,
         "x": 0,
-        "y": 2.5
+        "y": 3
       },
       "id": 3,
       "options": {
@@ -61,16 +55,14 @@
         "showSearch": true,
         "showStarred": false,
         "tags": [
-          "mobile",
-          "published"
+          "mobile"
         ]
       },
       "pluginVersion": "7.5.7",
       "tags": [
-        "mobile",
-        "published"
+        "mobile"
       ],
-      "title": "Mobile Dashbaords",
+      "title": "Dashbaords",
       "type": "dashlist"
     },
     {
@@ -83,7 +75,7 @@
         "h": 20,
         "w": 3,
         "x": 3,
-        "y": 2.5
+        "y": 3
       },
       "id": 4,
       "options": {
@@ -95,16 +87,14 @@
         "showSearch": true,
         "showStarred": false,
         "tags": [
-          "desktop",
-          "published"
+          "desktop"
         ]
       },
       "pluginVersion": "7.5.7",
       "tags": [
-        "desktop",
-        "published"
+        "desktop"
       ],
-      "title": "Desktop Dashbaords",
+      "title": "Dashbaords",
       "type": "dashlist"
     }
   ],
@@ -147,5 +137,5 @@
   "timezone": "browser",
   "title": "Home",
   "uid": "home-default",
-  "version": 20
+  "version": 10
 }
