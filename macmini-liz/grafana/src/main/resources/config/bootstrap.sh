@@ -4,218 +4,260 @@ echo "--------------------------------------------------------------------------
 echo "Grafana bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! curl --silent ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
+alias curl='curl -f -s'
+LIBRARIES_HOME=${LIBRARIES_HOME:-"/bootstrap"}
+DASHBOARDS_HOME=${DASHBOARDS_HOME:-"../dashboards"}
+
+cd ${LIBRARIES_HOME}/grizzly
+make dev
+cd ../grafonnet-lib
+
+while ! curl ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
   echo "Waiting for grafana to come up ..." && sleep 1
 done
 
-if [ -d /bootstrap/grafonnet-lib ]; then
-  sleep 5
-fi
+set -e
+set -o pipefail
 
 echo "--------------------------------------------------------------------------------"
 echo "Grafana bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-curl -XPOST --silent ${GRAFANA_URL}/api/admin/users \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "email":"'"${GRAFANA_USER_PUBLIC}@localhost"'",
-        "login":"'"${GRAFANA_USER_PUBLIC}"'",
-        "password":"'"${GRAFANA_KEY_PUBLIC}"'",
-        "OrgId": 1
-      }' | jq
-curl -XPOST --silent ${GRAFANA_URL}/api/admin/users \
-  -H "Accept: application/json" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "email":"'"${GRAFANA_USER_PRIVATE}@localhost"'",
-        "login":"'"${GRAFANA_USER_PRIVATE}"'",
-        "password":"'"${GRAFANA_KEY_PRIVATE}"'",
-        "OrgId": 2
-      }' | jq
-for i in {1..3}; do
-  curl -XPUT --silent ${GRAFANA_URL}/api/admin/users/${i}/permissions \
+#######################################################################################
+# Global Orgs
+#######################################################################################
+curl ${GRAFANA_URL}/api/admin/stats | jq
+if [ $(curl ${GRAFANA_URL}/api/orgs/1 | jq -r '.name' | grep "Public Portal" | wc -l) -eq 0 ]; then
+  curl -XPUT ${GRAFANA_URL}/api/orgs/1 \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "isGrafanaAdmin": true
+          "name": "Public Portal"
         }' | jq
-done
-curl --silent ${GRAFANA_URL}/api/admin/stats | jq
-curl --silent ${GRAFANA_URL_PUBLIC}/api/admin/stats | jq
-curl --silent ${GRAFANA_URL_PRIVATE}/api/admin/stats | jq
+fi
+if [ $(curl ${GRAFANA_URL}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL}/api/orgs \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "name": "Private Portal"
+        }' | jq
+fi
 
+#######################################################################################
+# Global Users
+#######################################################################################
+if [ $(curl ${GRAFANA_URL}/api/admin/stats | jq -r '.users') -lt 3 ]; then
+  curl -XPOST ${GRAFANA_URL}/api/admin/users \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "email":"'"${GRAFANA_USER_PUBLIC}@localhost"'",
+          "login":"'"${GRAFANA_USER_PUBLIC}"'",
+          "password":"'"${GRAFANA_KEY_PUBLIC}"'",
+          "OrgId": 1
+        }' | jq
+  curl -XPOST ${GRAFANA_URL}/api/admin/users \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "email":"'"${GRAFANA_USER_PRIVATE}@localhost"'",
+          "login":"'"${GRAFANA_USER_PRIVATE}"'",
+          "password":"'"${GRAFANA_KEY_PRIVATE}"'",
+          "OrgId": 2
+        }' | jq
+fi
+curl ${GRAFANA_URL}/api/admin/stats | jq
 
+#######################################################################################
+# Public User
+#######################################################################################
+USER_ID=$(curl ${GRAFANA_URL_PUBLIC}/api/org/users | jq -r '.[0].userId')
+curl -XPUT ${GRAFANA_URL_PUBLIC}/api/admin/users/${USER_ID}/permissions \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "isGrafanaAdmin": true
+      }' | jq
+curl -XPATCH ${GRAFANA_URL_PUBLIC}/api/org/users/${USER_ID} \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "role": "Admin"
+      }' | jq
+curl ${GRAFANA_URL_PUBLIC}/api/org/users | jq -r '.[0]'
 
+#######################################################################################
+# Public Datasources
+#######################################################################################
+if [ $(curl ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/datasources \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "name": "InfluxDB_V2",
+          "type": "influxdb",
+          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "access": "proxy",
+          "isDefault": true,
+          "jsonData": {
+            "version": "Flux",
+            "organization": "'"${INFLUXDB_ORG}"'",
+            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'"
+          },
+          "secureJsonData": {
+            "token": "'"${INFLUXDB_TOKEN_PUBLIC_V2}"'"
+          },
+          "secureJsonFields": {
+            "token": true
+          }
+        }' | jq
+fi
+if [ $(curl ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/datasources \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "name": "InfluxDB_V1",
+          "type": "influxdb",
+          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "access": "proxy",
+          "isDefault": false,
+          "database": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
+          "user": "'"${INFLUXDB_USER_PUBLIC}"'",
+          "password": "'"${INFLUXDB_TOKEN_PUBLIC_V1}"'"
+        }' | jq
+fi
+curl ${GRAFANA_URL_PUBLIC}/api/datasources | jq
 
+#######################################################################################
+# Public Folders
+#######################################################################################
+if [ $(curl ${GRAFANA_URL_PUBLIC}/api/folders | grep Default | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Default",
+          "title": "Default"
+        }' | jq
+fi
+if [ $(curl ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Mobile | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Public_Mobile",
+          "title": "Public _Mobile"
+        }' | jq
+fi
+if [ $(curl ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Desktop | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Public_Desktop",
+          "title": "Public_Desktop"
+        }' | jq
+fi
+curl ${GRAFANA_URL_PUBLIC}/api/folders | jq
 
+#######################################################################################
+# Public Dashboards
+#######################################################################################
+export GRAFANA_URL=${GRAFANA_URL_PUBLIC}
+find ${DASHBOARDS_HOME}/public -name dashboard_* -exec ../grizzly/grr apply {} \;
+find ${DASHBOARDS_HOME}/default -name dashboard_* -exec ../grizzly/grr apply {} \;
 
+#######################################################################################
+# Private User
+#######################################################################################
+USER_ID=$(curl ${GRAFANA_URL_PRIVATE}/api/org/users | jq -r '.[0].userId')
+curl -XPUT ${GRAFANA_URL_PRIVATE}/api/admin/users/${USER_ID}/permissions \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "isGrafanaAdmin": true
+      }' | jq
+curl -XPATCH ${GRAFANA_URL_PRIVATE}/api/org/users/${USER_ID} \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "role": "Admin"
+      }' | jq
+curl ${GRAFANA_URL_PRIVATE}/api/org/users | jq -r '.[0]'
 
+#######################################################################################
+# Private Datasources
+#######################################################################################
+if [ $(curl ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL_PRIVATE}/api/datasources \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "name": "InfluxDB_V2",
+          "type": "influxdb",
+          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "access": "proxy",
+          "isDefault": true,
+          "jsonData": {
+            "version": "Flux",
+            "organization": "'"${INFLUXDB_ORG}"'",
+            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'"
+          },
+          "secureJsonData": {
+            "token": "'"${INFLUXDB_TOKEN}"'"
+          },
+          "secureJsonFields": {
+            "token": true
+          }
+        }' | jq
+fi
+if [ $(curl ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL_PRIVATE}/api/datasources \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "name": "InfluxDB_V1",
+          "type": "influxdb",
+          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "access": "proxy",
+          "isDefault": false,
+          "database": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
+          "user": "'"${INFLUXDB_USER_PUBLIC}"'",
+          "password": "'"${INFLUXDB_TOKEN}"'"
+        }' | jq
+fi
+curl ${GRAFANA_URL_PRIVATE}/api/datasources | jq
 
+#######################################################################################
+# Private Folders
+#######################################################################################
+if [ $(curl ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Mobile | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL_PRIVATE}/api/folders \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Private_Mobile",
+          "title": "Private_Mobile"
+        }' | jq
+fi
+if [ $(curl ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Desktop | wc -l) -eq 0 ]; then
+  curl -XPOST ${GRAFANA_URL_PRIVATE}/api/folders \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Private_Desktop",
+          "title": "Private_Desktop"
+        }' | jq
+fi
+curl ${GRAFANA_URL_PRIVATE}/api/folders | jq
 
-#curl -XPOST --silent ${GRAFANA_URL_PUBLIC}/api/user/using/1 | jq
-#curl -XPUT --silent ${GRAFANA_URL_PUBLIC}/api/orgs/1 \
-#  -H "Accept: application/json" \
-#  -H "Content-Type: application/json" \
-#  -d '{
-#        "name": "Public Portal"
-#      }' | jq
-#if [ $(curl --silent ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V2?orgId=1 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PUBLIC}/api/datasources?orgId=1 \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "name": "InfluxDB_V2",
-#          "type": "influxdb",
-#          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
-#          "access": "proxy",
-#          "isDefault": true,
-#          "jsonData": {
-#            "version": "Flux",
-#            "organization": "'"${INFLUXDB_ORG}"'",
-#            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'"
-#          },
-#          "secureJsonData": {
-#            "token": "'"${INFLUXDB_TOKEN_PUBLIC_V2}"'"
-#          },
-#          "secureJsonFields": {
-#            "token": true
-#          }
-#        }' | jq
-#fi
-#if [ $(curl --silent ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V1?orgId=1 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PUBLIC}/api/datasources?orgId=1 \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "name": "InfluxDB_V1",
-#          "type": "influxdb",
-#          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
-#          "access": "proxy",
-#          "isDefault": false,
-#          "database": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
-#          "user": "'"${INFLUXDB_USER_PUBLIC}"'",
-#          "password": "'"${INFLUXDB_TOKEN_PUBLIC_V1}"'"
-#        }' | jq
-#fi
-#curl --silent ${GRAFANA_URL_PUBLIC}/api/datasources?orgId=1 | jq
-#
-#if [ $(curl --silent ${GRAFANA_URL_PUBLIC}/api/folders/default?orgId=1 | grep default | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PUBLIC}/api/folders?orgId=1 \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "uid": "Default",
-#          "title": "Default"
-#        }' | jq
-#fi
-#if [ $(curl --silent ${GRAFANA_URL_PUBLIC}/api/folders/public_mobile?orgId=1 | grep public_mobile | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PUBLIC}/api/folders?orgId=1 \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "uid": "Public_Mobile",
-#          "title": "Public _Mobile"
-#        }' | jq
-#fi
-#if [ $(curl --silent ${GRAFANA_URL_PUBLIC}/api/folders/public_desktop?orgId=1 | grep public_desktop | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PUBLIC}/api/folders?orgId=1 \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "uid": "Public_Desktop",
-#          "title": "Public_Desktop"
-#        }' | jq
-#fi
-#curl --silent ${GRAFANA_URL_PUBLIC}/api/folders?orgId=1 | jq
-#if [ -d /bootstrap/grafonnet-lib ]; then
-#  cd /bootstrap/grafonnet-lib
-#  find ../dashboards/public -name dashboard_* -exec ../grizzly/grr apply {} \;
-#  find ../dashboards/default -name dashboard_* -exec ../grizzly/grr apply {} \;
-#
-#fi
-
-
-
-
-
-
-
-
-
-#curl -XPOST --silent ${GRAFANA_URL_PRIVATE}/api/user/using/2 | jq
-#if [ $(curl --silent ${GRAFANA_URL_PRIVATE}/api/orgs/2 | jq -r '.id' | grep 2 | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PRIVATE}/api/orgs \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "name": "Private Portal"
-#        }' | jq
-#fi
-#if [ $(curl --silent ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V2?orgId=2 | jq -r '.name' | grep InfluxDB_V2 | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PRIVATE}/api/datasources?orgId=2 \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "name": "InfluxDB_V2",
-#          "type": "influxdb",
-#          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
-#          "access": "proxy",
-#          "isDefault": true,
-#          "jsonData": {
-#            "version": "Flux",
-#            "organization": "'"${INFLUXDB_ORG}"'",
-#            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'"
-#          },
-#          "secureJsonData": {
-#            "token": "'"${INFLUXDB_TOKEN}"'"
-#          },
-#          "secureJsonFields": {
-#            "token": true
-#          }
-#        }' | jq
-#fi
-#if [ $(curl --silent ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V1?orgId=2 | grep InfluxDB_V1 | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PRIVATE}/api/datasources?orgId=2 \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "name": "InfluxDB_V1",
-#          "type": "influxdb",
-#          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
-#          "access": "proxy",
-#          "isDefault": false,
-#          "database": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
-#          "user": "'"${INFLUXDB_USER_PUBLIC}"'",
-#          "password": "'"${INFLUXDB_TOKEN}"'"
-#        }' | jq
-#fi
-#curl --silent ${GRAFANA_URL_PRIVATE}/api/datasources?orgId=2 | jq
-#
-#if [ $(curl --silent ${GRAFANA_URL_PRIVATE}/api/folders/private_mobile?orgId=2 | grep private_mobile | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PRIVATE}/api/folders?orgId=2 \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "uid": "Private_Mobile",
-#          "title": "Private_Mobile"
-#        }' | jq
-#fi
-#if [ $(curl --silent ${GRAFANA_URL_PRIVATE}/api/folders/private_desktop?orgId=2 | grep private_desktop | wc -l) -eq 0 ]; then
-#  curl -XPOST --silent ${GRAFANA_URL_PRIVATE}/api/folders?orgId=2 \
-#    -H "Accept: application/json" \
-#    -H "Content-Type: application/json" \
-#    -d '{
-#          "uid": "Private_Desktop",
-#          "title": "Private_Desktop"
-#        }' | jq
-#fi
-#curl --silent ${GRAFANA_URL_PRIVATE}/api/folders?orgId=2 | jq
-#if [ -d /bootstrap/grafonnet-lib ]; then
-#  cd /bootstrap/grafonnet-lib
-#  find ../dashboards/private -name dashboard_* -exec sh -c ../grizzly/grr apply {} \;
-#fi
+#######################################################################################
+# Private Dashboards
+#######################################################################################
+export GRAFANA_URL=${GRAFANA_URL_PRIVATE}
+find ${DASHBOARDS_HOME}/private -name dashboard_* -exec ../grizzly/grr apply {} \;
 
 echo "--------------------------------------------------------------------------------"
 echo "Grafana bootstrap finished"

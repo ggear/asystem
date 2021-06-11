@@ -1,28 +1,19 @@
 #!/bin/bash
 
-. .env
+export $(xargs <.env)
+
 export GOROOT=/usr/local/opt/go/libexec
 export GOPATH=${HOME}/.go
 export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
-export GRAFANA_HOST=${GRAFANA_HOST_PROD}
-export GRAFANA_PORT=${GRAFANA_PORT}
-export GRAFANA_USER_PUBLIC=${GRAFANA_USER_PUBLIC}
-export GRAFANA_USER_PRIVATE=${GRAFANA_USER_PRIVATE}
-export GRAFANA_KEY_PUBLIC=${GRAFANA_KEY_PUBLIC}
-export GRAFANA_KEY_PRIVATE=${GRAFANA_KEY_PRIVATE}
+
+export INFLUXDB_HOST=${INFLUXDB_HOST_PROD}
+export INFLUXDB_IP=${INFLUXDB_IP_PROD}
+
 export GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST_PROD}:${GRAFANA_PORT}
 export GRAFANA_URL_PUBLIC=http://${GRAFANA_USER_PUBLIC}:${GRAFANA_KEY_PUBLIC}@${GRAFANA_HOST_PROD}:${GRAFANA_PORT}
 export GRAFANA_URL_PRIVATE=http://${GRAFANA_USER_PRIVATE}:${GRAFANA_KEY_PRIVATE}@${GRAFANA_HOST_PROD}:${GRAFANA_PORT}
 
-./src/main/resources/config/bootstrap.sh
+export LIBRARIES_HOME=src/main/resources/libraries
+export DASHBOARDS_HOME=../../config/dashboards/instance
 
-#cd src/main/resources/libraries/grizzly
-#make dev
-#cd ../grafonnet-lib
-#
-#echo "---" && echo "Setting up [PUBLIC] organisation"
-#find ../../config/dashboards/instance/public -name dashboard_* -exec sh -c 'curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 >/dev/null && ../grizzly/grr apply $1' sh {} \;
-#find ../../config/dashboards/instance/default -name dashboard_* -exec sh -c 'curl -XPOST --silent ${GRAFANA_URL}/api/user/using/1 >/dev/null && ../grizzly/grr apply $1' sh {} \;
-#
-#echo "---" && echo "Setting up [PRIVATE] organisation"
-#find ../../config/dashboards/instance/private -name dashboard_* -exec sh -c 'curl -XPOST --silent ${GRAFANA_URL}/api/user/using/2 >/dev/null && ../grizzly/grr apply $1' sh {} \;
+./src/main/resources/config/bootstrap.sh
