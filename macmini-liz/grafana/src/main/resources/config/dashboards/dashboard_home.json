@@ -15,7 +15,7 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 12,
+  "id": 10,
   "links": [],
   "panels": [
     {
@@ -26,8 +26,8 @@
       },
       "id": 2,
       "options": {
-        "content": "\n- [Public Dashbaords](https://grafana.janeandgraham.com?orgId=1)\n- [Private Dashbaords](https://grafana.janeandgraham.com?orgId=2)\n                                    ",
-        "mode": "markdown"
+        "content": "\n<ul>\n\t<li><a href=\"https://grafana.janeandgraham.com?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public Dashbaords</a></li>\n\t<li><a href=\"https://grafana.janeandgraham.com?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private Dashbaords</a></li>\n</ul>\n                                    ",
+        "mode": "html"
       },
       "pluginVersion": "7.5.7",
       "title": "Portals",
@@ -137,5 +137,5 @@
   "timezone": "browser",
   "title": "Home",
   "uid": "home-default",
-  "version": 10
+  "version": 2
 }

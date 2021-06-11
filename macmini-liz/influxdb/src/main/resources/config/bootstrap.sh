@@ -8,6 +8,9 @@ while ! influx ping --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT} >>/dev/null 
   echo "Waiting for influxdb to come up ..." && sleep 1
 done
 
+set -e
+set -o pipefail
+
 echo "--------------------------------------------------------------------------------"
 echo "Influx bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
