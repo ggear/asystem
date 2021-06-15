@@ -1,4 +1,4 @@
-//ASDASHBOARD_DEFAULTS time_from='now-5y', refresh=''
+//ASDASHBOARD_DEFAULTS time_from='now-25y', refresh=''
 {
       graphs()::
 
@@ -12,6 +12,36 @@
             local influxdb = grafana.influxdb;
 
             [
+
+                  stat.new(
+                        title='Net Rate Last Snapshot',
+                        datasource='InfluxDB_V2',
+                        unit='percent',
+                        decimals=3,
+                        reducerFunction='last',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 1 }
+                  ).addThreshold(
+                        { color: 'green', value: 2 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "net")
+  |> filter(fn: (r) => r["period"] == "1-month")
+  |> last()
+  |> keep(columns: ["_value"])
+                  '))
+                      { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='Retail Rate Last Snapshot',
@@ -28,24 +58,26 @@
                   ).addThreshold(
                         { color: 'red', value: 0 }
                   ).addThreshold(
-                        { color: 'yellow', value: 1.58 }
+                        { color: 'yellow', value: 1 }
                   ).addThreshold(
-                        { color: 'green', value: 2.07 }
-                  ).addTarget(influxdb.target(query='// Start
+                        { color: 'green', value: 2 }
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "retail")
   |> filter(fn: (r) => r["period"] == "1-month")
-  |> sort(columns: ["_time"], desc: false)
   |> last()
   |> keep(columns: ["_value"])
-// End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 8, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='Inflation Rate Last Snapshot',
                         datasource='InfluxDB_V2',
-                        unit='',
+                        unit='percent',
                         decimals=3,
                         reducerFunction='last',
                         colorMode='value',
@@ -55,241 +87,159 @@ from(bucket: "data_public")
                         repeatDirection='h',
                         pluginVersion='7',
                   ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 1 }
+                  ).addThreshold(
+                        { color: 'red', value: 2 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "inflation")
+  |> filter(fn: (r) => r["period"] == "1-month")
+  |> last()
+  |> keep(columns: ["_value"])
+                  '))
+//ASM                 { gridPos: { x: 0, y: 16, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
+                  ,
+
+                  bar.new(
+                        title='Interest Rate Range Means',
+                        datasource='InfluxDB_V2',
+                        unit='percent',
+                        min=-30,
+                        max=30,
+                        thresholds=[
+                              { 'color': 'red', 'value': 0 },
+                              { 'color': 'yellow', 'value': 1 },
+                              { 'color': 'green', 'value': 2 },
+                        ],
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "net")
+  |> filter(fn: (r) => r["period"] == "1-month")
+  |> keep(columns: ["_time", "_value"])
+  |> mean(column: "_value")
+  |> rename(fn: (column) => "Net")
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "retail")
+  |> filter(fn: (r) => r["period"] == "1-month")
+  |> keep(columns: ["_time", "_value"])
+  |> mean(column: "_value")
+  |> rename(fn: (column) => "Retail")
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "inflation")
+  |> filter(fn: (r) => r["period"] == "1-month")
+  |> keep(columns: ["_time", "_value"])
+  |> mean(column: "_value")
+  |> rename(fn: (column) => "Inflation")
+                  '))
+//ASM                 { gridPos: { x: 0, y: 24, w: 9, h: 8 } }
+//ASD                 { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
+                  ,
+
+                  gauge.new(
+                        title='Net Rate 10 Year Mean',
+                        datasource='InfluxDB_V2',
+                        reducerFunction='last',
+                        showThresholdLabels=false,
+                        showThresholdMarkers=true,
+                        unit='percent',
+                        min=0,
+                        max=5,
+                        decimals=2,
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
                         { color: 'red', value: 0 }
                   ).addThreshold(
-                        { color: 'yellow', value: 1.23 }
+                        { color: 'yellow', value: 2.5 }
                   ).addThreshold(
-                        { color: 'green', value: 1.8 }
-                  ).addTarget(influxdb.target(query='// Start
+                        { color: 'green', value: 5 }
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: false)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "net")
+  |> filter(fn: (r) => r["period"] == "120-month")
   |> last()
-  |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
-// End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+                  ,
 
-                  stat.new(
-                        title='Net Rate Last Snapshot',
+                  gauge.new(
+                        title='Retail Rate 10 Year Mean',
                         datasource='InfluxDB_V2',
-                        unit='',
-                        decimals=3,
                         reducerFunction='last',
-                        colorMode='value',
-                        graphMode='none',
-                        justifyMode='auto',
-                        thresholdsMode='absolute',
+                        showThresholdLabels=false,
+                        showThresholdMarkers=true,
+                        unit='percent',
+                        min=0,
+                        max=5,
+                        decimals=2,
                         repeatDirection='h',
                         pluginVersion='7',
                   ).addThreshold(
                         { color: 'red', value: 0 }
                   ).addThreshold(
-                        { color: 'yellow', value: 0.91 }
+                        { color: 'yellow', value: 2.5 }
                   ).addThreshold(
-                        { color: 'green', value: 1.23 }
-                  ).addTarget(influxdb.target(query='// Start
+                        { color: 'green', value: 5 }
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "snapshot")
-  |> sort(columns: ["_time"], desc: false)
-  |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "retail")
+  |> filter(fn: (r) => r["period"] == "120-month")
   |> last()
   |> keep(columns: ["_value"])
-// End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
-
-//                  bar.new(
-//                        title='Rates Ranged Means',
-//                        datasource='InfluxDB_V2',
-//                        unit='percent',
-//                        min=-30,
-//                        max=30,
-//                        thresholds=[
-//                              { 'color': 'red', 'value': -9999 },
-//                              { 'color': 'yellow', 'value': -0.5 },
-//                              { 'color': 'green', 'value': 0.5 },
-//                        ],
-//                  ).addTarget(influxdb.target(query='// Start
-//import "regexp"
-//import "experimental"
-//normalizeTime = (t) => {
-//      normalized =
-//            if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
-//            else time(v: t)
-//      return normalized
-//}
-//first_snapshot = from(bucket: "data_public")
-//  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
-//  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-//  |> filter(fn: (r) => r["period"] == "1-day")
-//  |> filter(fn: (r) => r["type"] == "snapshot")
-//  |> sort(columns: ["_time"], desc: true)
-//  |> last()
-//  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
-//from(bucket: "data_public")
-//  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-//  |> filter(fn: (r) => r["_measurement"] == "currency")
-//  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-//  |> filter(fn: (r) => r["period"] == "1-day")
-//  |> filter(fn: (r) => r["type"] == "snapshot")
-//  |> sort(columns: ["_time"], desc: false)
-//  |> last()
-//  |> map(fn: (r) => ({ r with "AUD/GBP": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
-//  |> keep(columns: ["AUD/GBP"])
-//// End')).addTarget(influxdb.target(query='// Start
-//import "regexp"
-//import "experimental"
-//normalizeTime = (t) => {
-//      normalized =
-//            if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
-//            else time(v: t)
-//      return normalized
-//}
-//first_snapshot = from(bucket: "data_public")
-//  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
-//  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-//  |> filter(fn: (r) => r["period"] == "1-day")
-//  |> filter(fn: (r) => r["type"] == "snapshot")
-//  |> sort(columns: ["_time"], desc: true)
-//  |> last()
-//  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
-//from(bucket: "data_public")
-//  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-//  |> filter(fn: (r) => r["_measurement"] == "currency")
-//  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-//  |> filter(fn: (r) => r["period"] == "1-day")
-//  |> filter(fn: (r) => r["type"] == "snapshot")
-//  |> sort(columns: ["_time"], desc: false)
-//  |> last()
-//  |> map(fn: (r) => ({ r with "AUD/USD": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
-//  |> keep(columns: ["AUD/USD"])
-//// End')).addTarget(influxdb.target(query='// Start
-//import "regexp"
-//import "experimental"
-//normalizeTime = (t) => {
-//      normalized =
-//            if regexp.matchRegexpString(r: /[n|u|s|m|h|d|w|o|y]/, v: t) then experimental.addDuration(d: duration(v: t), to: now())
-//            else time(v: t)
-//      return normalized
-//}
-//first_snapshot = from(bucket: "data_public")
-//  |> range(start: experimental.subDuration(d:0d, from:normalizeTime(t: string(v: v.timeRangeStart))), stop: v.timeRangeStop)  |> filter(fn: (r) => r["_measurement"] == "currency")
-//  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-//  |> filter(fn: (r) => r["period"] == "1-day")
-//  |> filter(fn: (r) => r["type"] == "snapshot")
-//  |> sort(columns: ["_time"], desc: true)
-//  |> last()
-//  |> findColumn(fn: (key) => key._measurement == "fx", column: "_value")
-//from(bucket: "data_public")
-//  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-//  |> filter(fn: (r) => r["_measurement"] == "currency")
-//  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-//  |> filter(fn: (r) => r["period"] == "1-day")
-//  |> filter(fn: (r) => r["type"] == "snapshot")
-//  |> sort(columns: ["_time"], desc: false)
-//  |> last()
-//  |> map(fn: (r) => ({ r with "AUD/SGD": (r._value - first_snapshot[0]) / first_snapshot[0] * -100.0 }))
-//  |> keep(columns: ["AUD/SGD"])
-//// End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 11, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
+                  ,
 
                   gauge.new(
-                        title='Retail Rate 5-Year Mean',
+                        title='Inflation Rate 10 Year Mean',
                         datasource='InfluxDB_V2',
                         reducerFunction='last',
                         showThresholdLabels=false,
                         showThresholdMarkers=true,
                         unit='percent',
-                        min=-2,
-                        max=2,
+                        min=0,
+                        max=5,
                         decimals=2,
                         repeatDirection='h',
                         pluginVersion='7',
                   ).addThreshold(
-                        { color: 'red', value: -9999 }
+                        { color: 'green', value: 0 }
                   ).addThreshold(
-                        { color: 'yellow', value: -0.5 }
+                        { color: 'yellow', value: 2.5 }
                   ).addThreshold(
-                        { color: 'green', value: 0.5 }
-                  ).addTarget(influxdb.target(query='// Start
+                        { color: 'red', value: 5 }
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> sort(columns: ["_time"], desc: false)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "inflation")
+  |> filter(fn: (r) => r["period"] == "120-month")
   |> last()
   |> keep(columns: ["_value"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-// End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
-
-                  gauge.new(
-                        title='Inflation Rate 5-Year Mean',
-                        datasource='InfluxDB_V2',
-                        reducerFunction='last',
-                        showThresholdLabels=false,
-                        showThresholdMarkers=true,
-                        unit='percent',
-                        min=-2,
-                        max=2,
-                        decimals=2,
-                        repeatDirection='h',
-                        pluginVersion='7',
-                  ).addThreshold(
-                        { color: 'red', value: -9999 }
-                  ).addThreshold(
-                        { color: 'yellow', value: -0.5 }
-                  ).addThreshold(
-                        { color: 'green', value: 0.5 }
-                  ).addTarget(influxdb.target(query='// Start
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> sort(columns: ["_time"], desc: false)
-  |> last()
-  |> keep(columns: ["_value"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-// End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
-
-                  gauge.new(
-                        title='Net Rate 5-Year Mean',
-                        datasource='InfluxDB_V2',
-                        reducerFunction='last',
-                        showThresholdLabels=false,
-                        showThresholdMarkers=true,
-                        unit='percent',
-                        min=-2,
-                        max=2,
-                        decimals=2,
-                        repeatDirection='h',
-                        pluginVersion='7',
-                  ).addThreshold(
-                        { color: 'red', value: -9999 }
-                  ).addThreshold(
-                        { color: 'yellow', value: -0.5 }
-                  ).addThreshold(
-                        { color: 'green', value: 0.5 }
-                  ).addTarget(influxdb.target(query='// Start
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> filter(fn: (r) => r["period"] == "1-day")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> sort(columns: ["_time"], desc: false)
-  |> last()
-  |> keep(columns: ["_value"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-// End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 19, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
+                  ,
 
                   graph.new(
                         title='Interest Rate Monthly Means',
@@ -300,41 +250,143 @@ from(bucket: "data_public")
                         lines=false,
                         staircase=false,
                         formatY1='percent',
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=true,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=false,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "net")
   |> filter(fn: (r) => r["period"] == "1-month")
   |> keep(columns: ["_time", "_value", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "retail")
   |> filter(fn: (r) => r["period"] == "1-month")
   |> keep(columns: ["_time", "_value", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "inflation")
   |> filter(fn: (r) => r["period"] == "1-month")
   |> keep(columns: ["_time", "_value", "_field"])
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "/.*retail.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   ).addSeriesOverride(
                         { "alias": "/.*inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
-                  ) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
+                  )
+//ASM                 { gridPos: { x: 0, y: 32, w: 24, h: 7 } }
+//ASD                 { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
+                  ,
+
+                  graph.new(
+                        title='Interest Rate 10 Year Means',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='',
+                        bars=true,
+                        lines=false,
+                        staircase=false,
+                        formatY1='percent',
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=true,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=false,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "net")
+  |> filter(fn: (r) => r["period"] == "120-month")
+  |> keep(columns: ["_time", "_value", "_field"])
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "retail")
+  |> filter(fn: (r) => r["period"] == "120-month")
+  |> keep(columns: ["_time", "_value", "_field"])
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "inflation")
+  |> filter(fn: (r) => r["period"] == "120-month")
+  |> keep(columns: ["_time", "_value", "_field"])
+                  ')).addSeriesOverride(
+                        { "alias": "/.*retail.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
+                  ).addSeriesOverride(
+                        { "alias": "/.*inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
+                  )
+//ASM                 { gridPos: { x: 0, y: 39, w: 24, h: 7 } }
+//ASD                 { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
+                  ,
+
+                  graph.new(
+                        title='Net Rate n-Monthly Means',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        formatY1='percent',
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=true,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=false,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "net")
+  |> filter(fn: (r) => r["period"] == "12-month")
+  |> keep(columns: ["_time", "_value", "period"])
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "net")
+  |> filter(fn: (r) => r["period"] == "60-month")
+  |> keep(columns: ["_time", "_value", "period"])
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "net")
+  |> filter(fn: (r) => r["period"] == "120-month")
+  |> keep(columns: ["_time", "_value", "period"])
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "net")
+  |> filter(fn: (r) => r["period"] == "240-month")
+  |> keep(columns: ["_time", "_value", "period"])
+                  '))
+//ASM                 { gridPos: { x: 0, y: 46, w: 24, h: 7 } }
+//ASD                 { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
+                  ,
 
             ],
 }

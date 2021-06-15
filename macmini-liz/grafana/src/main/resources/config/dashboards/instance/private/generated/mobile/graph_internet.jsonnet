@@ -30,7 +30,7 @@
                         { color: 'yellow', value: 43200 }
                   ).addThreshold(
                         { color: 'green', value: 86400 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -39,7 +39,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-// End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+                  ')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
                   stat.new(
                         title='Domain Uptime',
@@ -59,7 +59,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 600 }
                   ).addThreshold(
                         { color: 'green', value: 12000 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -68,7 +68,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-// End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+                  ')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
                   stat.new(
                         title='Certificate Expiry',
@@ -88,7 +88,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 432000 }
                   ).addThreshold(
                         { color: 'green', value: 864000 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -97,7 +97,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-// End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
+                  ')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
                   bar.new(
                         title='Service Availability',
@@ -108,7 +108,7 @@ from(bucket: "host_private")
                               { 'color': 'yellow', 'value': 80 },
                               { 'color': 'green', 'value': 90 }
                         ],
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -119,7 +119,7 @@ from(bucket: "host_private")
  |> sum()
  |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: math.floor(x: r._value / (1.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0)) }))
  |> map(fn: (r) => ({ r with metric: if r.metric == "certificate" then "Certificate" else (if r.metric == "lookup" then "Domain" else (if r.metric == "network" then "Internet" else r.metric)) }))
-// End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+                  ')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
                   gauge.new(
                         title='Internet Max Upload',
@@ -140,7 +140,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 30 }
                   ).addThreshold(
                         { color: 'green', value: 70 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -149,7 +149,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-// End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+                  ')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
 
                   gauge.new(
                         title='Internet Max Download',
@@ -170,7 +170,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 30 }
                   ).addThreshold(
                         { color: 'green', value: 70 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -179,7 +179,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-// End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
+                  ')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
 
                   stat.new(
                         title='Internet Mean Latency',
@@ -201,7 +201,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 20 }
                   ).addThreshold(
                         { color: 'red', value: 30 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -212,7 +212,7 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
+                  ')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
 
                   graph.new(
                         title='Internet Total Throughput',
@@ -222,16 +222,7 @@ from(bucket: "host_private")
                         bars=true,
                         lines=false,
                         staircase=false,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
@@ -241,7 +232,7 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
@@ -251,9 +242,9 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "upload", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
+                  ) { gridPos: { x: 0, y: 8, w: 24, h: 7 } },
 
                   graph.new(
                         title='Internet Max Throughput',
@@ -263,16 +254,7 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -281,7 +263,7 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -290,9 +272,9 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "upload", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
+                  ) { gridPos: { x: 0, y: 20, w: 24, h: 7 } },
 
                   graph.new(
                         title='Internet Min Latency',
@@ -302,16 +284,7 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -321,13 +294,13 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: true)
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+                  ')) { gridPos: { x: 0, y: 32, w: 24, h: 7 } },
 
                   table.new(
                         title='Internet Categorised Throughput',
                         datasource='InfluxDB_V2',
                         default_unit='decbytes'
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 start_bytes = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clientdpi")
@@ -358,12 +331,12 @@ join(tables: {d1: start_bytes, d2: finish_bytes},      on: ["category"])
   |> map(fn: (r) => ({ r with "Transmitted Total": r.tx_bytes }))
   |> keep(columns: ["Category", "Received", "Transmitted", "Received Total", "Transmitted Total"])
   |> sort(columns: ["Received"], desc: true)
-// End')) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
+                  ')) { gridPos: { x: 0, y: 44, w: 24, h: 7 } },
 
                   table.new(
                         title='Domain Resolution',
                         datasource='InfluxDB_V2'
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 start_ips = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -397,7 +370,7 @@ unknown_ips = from(bucket: "host_private")
   |> sort(columns: ["_time"], desc: true)
 union(tables: [start_ips, finish_ips, unknown_ips])
   |> sort(columns: ["_time"], desc: true)
-// End')) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
+                  ')) { gridPos: { x: 0, y: 56, w: 24, h: 7 } },
 
             ],
 }

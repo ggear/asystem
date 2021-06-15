@@ -31,14 +31,14 @@
                         { color: 'yellow', value: 43200 }
                   ).addThreshold(
                         { color: 'green', value: 86400 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "uptime")
   |> keep(columns: ["_time", "_value"])
   |> last()
-// End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+                  ')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
                   stat.new(
                         title='Network Clients',
@@ -58,7 +58,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 1 }
                   ).addThreshold(
                         { color: 'green', value: 5 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
@@ -66,7 +66,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
   |> unique()
   |> count()
-// End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+                  ')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
                   bar.new(
                         title='Wireless Performance',
@@ -77,7 +77,7 @@ from(bucket: "host_private")
                               { 'color': 'yellow', 'value': 60 },
                               { 'color': 'green', 'value': 80 }
                         ],
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -94,7 +94,7 @@ from(bucket: "host_private")
   |> mean()
   |> map(fn: (r) => ({ r with _value: math.round(x: r._value) }))
   |> map(fn: (r) => ({ r with radio: if r.radio == "ng" then "No Retries (2.4 GHz)" else (if r.radio == "na" then "No Retries (5 GHz)" else r.radio) }))
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -115,7 +115,7 @@ from(bucket: "host_private")
   |> mean()
   |> map(fn: (r) => ({ r with _value: math.round(x: r._value) }))
   |> map(fn: (r) => ({ r with radio: if r.radio == "ng" then "No Errors (2.4 GHz)" else (if r.radio == "na" then "No Errors (5 GHz)" else r.radio) }))
-// End')) { gridPos: { x: 10, y: 0, w: 14, h: 8 } },
+                  ')) { gridPos: { x: 10, y: 0, w: 14, h: 8 } },
 
                   gauge.new(
                         title='Wireless Quality Score (5GHz)',
@@ -136,7 +136,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 15 }
                   ).addThreshold(
                         { color: 'green', value: 30 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap_vaps")
@@ -145,7 +145,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
   |> mean()
   |> map(fn: (r) => ({ r with _value: r._value / 10.0 }))
-// End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+                  ')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
 
                   gauge.new(
                         title='Wireless Quality Score (2.4GHz)',
@@ -166,7 +166,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 30 }
                   ).addThreshold(
                         { color: 'green', value: 70 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap_vaps")
@@ -175,7 +175,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
   |> mean()
   |> map(fn: (r) => ({ r with _value: r._value / 10.0 }))
-// End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
+                  ')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
 
                   graph.new(
                         title='Network Throughput',
@@ -186,16 +186,16 @@ from(bucket: "host_private")
                         bars=true,
                         lines=false,
                         staircase=false,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=true,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=false,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
@@ -205,7 +205,7 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
@@ -215,9 +215,9 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "transmit", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
+                  ) { gridPos: { x: 0, y: 8, w: 24, h: 7 } },
 
                   graph.new(
                         title='Network Clients',
@@ -227,16 +227,16 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=true,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=false,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
@@ -258,9 +258,9 @@ from(bucket: "host_private")
 //  |> unique()
 //  |> count()
 //  |> group(columns: ["name"], mode:"by")
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "transmit", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
+      ) { gridPos: { x: 0, y: 20, w: 24, h: 7 } },
 
                   graph.new(
                         title='Network Device CPU Usage',
@@ -270,16 +270,16 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=true,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=false,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap" or r["_measurement"] == "usw" or r["_measurement"] == "usg")
@@ -287,7 +287,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+                  ')) { gridPos: { x: 0, y: 32, w: 24, h: 7 } },
 
                   graph.new(
                         title='Network Device RAM Usage',
@@ -297,16 +297,16 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=true,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=false,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap" or r["_measurement"] == "usw" or r["_measurement"] == "usg")
@@ -314,7 +314,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
+                  ')) { gridPos: { x: 0, y: 44, w: 24, h: 7 } },
 
                   graph.new(
                         title='Network Device Temperature',
@@ -324,16 +324,16 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=false,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=true,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=false,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=425
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap" or r["_measurement"] == "usw" or r["_measurement"] == "usg")
@@ -341,7 +341,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
@@ -349,13 +349,13 @@ from(bucket: "asystem")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 56, w: 24, h: 12 } },
+                  ')) { gridPos: { x: 0, y: 56, w: 24, h: 7 } },
 
                   table.new(
                         title='Wireless Clients',
                         datasource='InfluxDB_V2',
                         default_unit=''
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
@@ -377,13 +377,13 @@ from(bucket: "host_private")
   |> keep(columns: ["Host", "IP", "Host Vendor", "Wireless Channel", "Wireless Protocol", "Uptime", "Received Bytes", "Transmitted Bytes"])
   |> sort(columns: ["Host"])
   |> unique(column: "IP")
-// End')) { gridPos: { x: 0, y: 68, w: 24, h: 36 } },
+                  ')) { gridPos: { x: 0, y: 68, w: 24, h: 36 } },
 
                   table.new(
                         title='Wired Clients',
                         datasource='InfluxDB_V2',
                         default_unit=''
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "clients")
@@ -405,7 +405,7 @@ from(bucket: "host_private")
   |> keep(columns: ["Host", "IP", "Host Vendor", "Wired Fixed IP", "Wired Port", "Uptime", "Received Bytes", "Transmitted Bytes"])
   |> sort(columns: ["Host"])
   |> unique(column: "IP")
-// End')) { gridPos: { x: 0, y: 94, w: 24, h: 12 } },
+                  ')) { gridPos: { x: 0, y: 94, w: 24, h: 7 } },
 
             ],
 }

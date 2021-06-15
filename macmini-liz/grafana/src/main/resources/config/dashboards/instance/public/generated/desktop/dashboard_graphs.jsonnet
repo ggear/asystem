@@ -30,7 +30,7 @@ local graph_interest = import 'graph_interest.jsonnet';
                         editable=true,
                         graphTooltip='shared_tooltip',
                         tags=['public', 'desktop'],
-                        time_from='now-5y', refresh=''
+                        time_from='now-25y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),
 

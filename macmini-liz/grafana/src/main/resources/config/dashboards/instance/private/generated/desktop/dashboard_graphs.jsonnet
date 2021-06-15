@@ -89,7 +89,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         editable=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'desktop'],
-                        time_from='now-5y', refresh=''
+                        time_from='now-25y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),
 

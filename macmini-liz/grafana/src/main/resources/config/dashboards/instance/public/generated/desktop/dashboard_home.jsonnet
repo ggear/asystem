@@ -26,10 +26,12 @@ local dashboard = grafana.dashboard;
                               text.new(
                                     title='Portals',
                                     span=null,
-                                    mode='markdown',
+                                    mode='html',
                                     content='
-- [Public Dashbaords](https://grafana.janeandgraham.com?orgId=1)
-- [Private Dashbaords](https://grafana.janeandgraham.com?orgId=2)
+<ul>
+	<li><a href="https://grafana.janeandgraham.com?orgId=1" onClick="window.location.reload(true);return false;">Public Dashbaords</a></li>
+	<li><a href="https://grafana.janeandgraham.com?orgId=2" onClick="window.location.reload(true);return false;">Private Dashbaords</a></li>
+</ul>
                                     ',
                               ) { gridPos: { x: 0, y: 0, w: 3, h: 3 } },
 

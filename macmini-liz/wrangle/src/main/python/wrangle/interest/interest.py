@@ -9,10 +9,10 @@ from .. import library
 
 LABELS = ['Retail', 'Inflation', 'Net']
 PERIODS = OrderedDict([
-    ('1 Year Mean', 12),
-    ('5 Year Mean', 5 * 12),
-    ('10 Year Mean', 10 * 12),
-    ('20 Year Mean', 20 * 12),
+    ('1 Year Mean', 12 - 1),
+    ('5 Year Mean', 5 * 12 - 1),
+    ('10 Year Mean', 10 * 12 - 1),
+    ('20 Year Mean', 20 * 12 - 1),
 ])
 COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + PERIODS.keys())]
 

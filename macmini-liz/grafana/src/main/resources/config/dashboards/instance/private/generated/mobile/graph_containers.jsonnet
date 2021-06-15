@@ -30,7 +30,7 @@
                         { color: 'yellow', value: 5 }
                   ).addThreshold(
                         { color: 'green', value: 10 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 // TODO: Averaging all values is very slow
 // import "math"
 // from(bucket: "host_private")
@@ -51,7 +51,7 @@ from(bucket: "host_private")
   |> last()
   |> group()
   |> sum()
-// End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+                  ')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
 
                   stat.new(
                         title='Containers Currently Not Running',
@@ -69,7 +69,7 @@ from(bucket: "host_private")
                         { color: 'green', value: 0 }
                   ).addThreshold(
                         { color: 'red', value: 1 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 // TODO: Averaging all values is very slow
 // import "math"
 // from(bucket: "host_private")
@@ -90,7 +90,7 @@ from(bucket: "host_private")
   |> last()
   |> group()
   |> sum()
-// End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+                  ')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
 
                   stat.new(
                         title='Container Images Currently Installed',
@@ -110,7 +110,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 5 }
                   ).addThreshold(
                         { color: 'green', value: 10 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 // TODO: Averaging all values is very slow
 // import "math"
 // from(bucket: "host_private")
@@ -131,7 +131,7 @@ from(bucket: "host_private")
   |> last()
   |> group()
   |> sum()
-// End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
+                  ')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
 
                   bar.new(
                         title='Containers with Peak Usage <50%',
@@ -142,7 +142,7 @@ from(bucket: "host_private")
                               { 'color': 'yellow', 'value': 50 },
                               { 'color': 'green', 'value': 90 }
                         ],
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 import "math"
 import "strings"
 from(bucket: "host_private")
@@ -160,7 +160,7 @@ from(bucket: "host_private")
   |> last()
   |> map(fn: (r) => ({ r with "CPU": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
   |> keep(columns: ["CPU"])
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -176,7 +176,7 @@ from(bucket: "host_private")
   |> last()
   |> map(fn: (r) => ({ r with "RAM": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
   |> keep(columns: ["RAM"])
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -195,7 +195,7 @@ from(bucket: "host_private")
   |> last()
   |> map(fn: (r) => ({ r with "IOPS": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
   |> keep(columns: ["IOPS"])
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -214,7 +214,7 @@ from(bucket: "host_private")
   |> last()
   |> map(fn: (r) => ({ r with "Network": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
   |> keep(columns: ["Network"])
-// End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+                  ')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
 
                   gauge.new(
                         title='Container Mean Running Rate',
@@ -235,7 +235,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 95 }
                   ).addThreshold(
                         { color: 'green', value: 99 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -251,7 +251,7 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: float(v: r.n_containers_running) / float(v: r.n_containers) * 100.0) }))
   |> keep(columns: ["_value"])
   |> mean()
-// End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+                  ')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
 
                   gauge.new(
                         title='Container Mean Healthy Rate',
@@ -272,7 +272,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 95 }
                   ).addThreshold(
                         { color: 'green', value: 99 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -291,7 +291,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
   |> group()
   |> mean()
-// End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
+                  ')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
 
                   gauge.new(
                         title='Container Image Usage',
@@ -312,7 +312,7 @@ from(bucket: "host_private")
                         { color: 'yellow', value: 95 }
                   ).addThreshold(
                         { color: 'green', value: 99 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -328,7 +328,7 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: float(v: r.n_containers) / float(v: r.n_images) * 100.0) }))
   |> keep(columns: ["_value"])
   |> mean()
-// End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
+                  ')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
 
                   graph.new(
                         title='Container CPU Usage',
@@ -338,16 +338,7 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 import "strings"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -358,7 +349,7 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)      then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)      then r._value / 8.0 else r._value) }))
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (" + r.host + ")" }))
   |> keep(columns: ["_time", "_value", "container_name"])
-// End')) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
+                  ')) { gridPos: { x: 0, y: 8, w: 24, h: 7 } },
 
                   graph.new(
                         title='Container RAM Usage',
@@ -368,16 +359,7 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_mem")
@@ -386,7 +368,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-// End')) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
+                  ')) { gridPos: { x: 0, y: 20, w: 24, h: 7 } },
 
                   graph.new(
                         title='Container IOPS Usage',
@@ -398,16 +380,7 @@ from(bucket: "host_private")
                         staircase=false,
                         points=true,
                         pointradius=1,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
@@ -417,7 +390,7 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
@@ -427,9 +400,9 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "/.*Write.*/", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+                  ) { gridPos: { x: 0, y: 32, w: 24, h: 7 } },
 
                   graph.new(
                         title='Container Network Usage',
@@ -441,16 +414,7 @@ from(bucket: "host_private")
                         staircase=false,
                         points=true,
                         pointradius=1,
-                        legend_values=true,
-                        legend_min=true,
-                        legend_max=true,
-                        legend_current=true,
-                        legend_total=false,
-                        legend_avg=false,
-                        legend_alignAsTable=true,
-                        legend_rightSide=true,
-                        legend_sideWidth=425
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
@@ -460,7 +424,7 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
@@ -470,15 +434,15 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 46, w: 24, h: 12 } },
+                  ) { gridPos: { x: 0, y: 46, w: 24, h: 7 } },
 
                   table.new(
                         title='Container Current Process Status',
                         datasource='InfluxDB_V2',
                         default_unit='ns'
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 status = from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_status")
@@ -510,7 +474,7 @@ union(tables: [status, health])
   |> last()
   |> keep(columns: ["Name", "Status", "Temperature", "Uptime", "Host"])
   |> group()
-// End')) { gridPos: { x: 0, y: 60, w: 24, h: 18 } },
+                  ')) { gridPos: { x: 0, y: 60, w: 24, h: 18 } },
 
             ],
 }

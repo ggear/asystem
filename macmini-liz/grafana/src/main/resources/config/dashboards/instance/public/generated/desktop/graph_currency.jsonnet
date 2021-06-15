@@ -30,7 +30,7 @@
                         { color: 'yellow', value: 1.58 }
                   ).addThreshold(
                         { color: 'green', value: 2.07 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -41,7 +41,9 @@ from(bucket: "data_public")
   |> last()
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
-// End')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+                  '))
+                      { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='USD/AUD Last Snapshot',
@@ -61,7 +63,7 @@ from(bucket: "data_public")
                         { color: 'yellow', value: 1.23 }
                   ).addThreshold(
                         { color: 'green', value: 1.8 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -72,7 +74,9 @@ from(bucket: "data_public")
   |> last()
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
-// End')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+                  '))
+                      { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='SGD/AUD Last Snapshot',
@@ -92,7 +96,7 @@ from(bucket: "data_public")
                         { color: 'yellow', value: 0.91 }
                   ).addThreshold(
                         { color: 'green', value: 1.23 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -103,7 +107,9 @@ from(bucket: "data_public")
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> last()
   |> keep(columns: ["_value"])
-// End')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
+                  '))
+                      { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
+                  ,
 
                   bar.new(
                         title='CCY/AUD Range Deltas',
@@ -116,7 +122,7 @@ from(bucket: "data_public")
                               { 'color': 'yellow', 'value': -0.5 },
                               { 'color': 'green', 'value': 0.5 },
                         ],
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 field = "AUD/GBP"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -132,7 +138,7 @@ series
   |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 field = "AUD/USD"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -148,7 +154,7 @@ series
   |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value", "_field"])
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 field = "AUD/SGD"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -164,7 +170,9 @@ series
   |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value", "_field"])
-// End')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+                  '))
+                      { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
+                  ,
 
                   gauge.new(
                         title='GBP/AUD Last Delta',
@@ -184,7 +192,7 @@ series
                         { color: 'yellow', value: -0.5 }
                   ).addThreshold(
                         { color: 'green', value: 0.5 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -195,7 +203,9 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-// End')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+                  '))
+                      { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+                  ,
 
                   gauge.new(
                         title='USD/AUD Last Delta',
@@ -215,7 +225,7 @@ from(bucket: "data_public")
                         { color: 'yellow', value: -0.5 }
                   ).addThreshold(
                         { color: 'green', value: 0.5 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -226,7 +236,9 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-// End')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
+                  '))
+                      { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
+                  ,
 
                   gauge.new(
                         title='SGD/AUD Last Delta',
@@ -246,7 +258,7 @@ from(bucket: "data_public")
                         { color: 'yellow', value: -0.5 }
                   ).addThreshold(
                         { color: 'green', value: 0.5 }
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -257,7 +269,9 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-// End')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
+                  '))
+                      { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
+                  ,
 
                   graph.new(
                         title='CCY/AUD Deltas',
@@ -278,7 +292,7 @@ from(bucket: "data_public")
                         legend_rightSide=true,
                         legend_sideWidth=425,
                         maxDataPoints=10000
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 field = "AUD/GBP"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -292,7 +306,7 @@ baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
   |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 field = "AUD/USD"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -306,7 +320,7 @@ baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
   |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 field = "AUD/SGD"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -320,7 +334,9 @@ baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
   |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
-// End')) { gridPos: { x: 0, y: 8, w: 24, h: 12 } },
+                  '))
+                      { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='GBP/AUD Dailies',
@@ -343,7 +359,7 @@ series
                         legend_rightSide=true,
                         legend_sideWidth=425,
                         maxDataPoints=10000
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -352,7 +368,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -361,11 +377,13 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
-                  ) { gridPos: { x: 0, y: 20, w: 24, h: 12 } },
+                  )
+                      { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='USD/AUD Dailies',
@@ -388,7 +406,7 @@ from(bucket: "data_public")
                         legend_rightSide=true,
                         legend_sideWidth=425,
                         maxDataPoints=10000
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -397,7 +415,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -406,11 +424,13 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
-                  ) { gridPos: { x: 0, y: 32, w: 24, h: 12 } },
+                  )
+                      { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='SGD/AUD Dailies',
@@ -433,7 +453,7 @@ from(bucket: "data_public")
                         legend_rightSide=true,
                         legend_sideWidth=425,
                         maxDataPoints=10000
-                  ).addTarget(influxdb.target(query='// Start
+                  ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -442,7 +462,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-// End')).addTarget(influxdb.target(query='// Start
+                  ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -451,11 +471,13 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> keep(columns: ["_time", "_value", "type"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
-// End')).addSeriesOverride(
+                  ')).addSeriesOverride(
                         { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
-                  ) { gridPos: { x: 0, y: 44, w: 24, h: 12 } },
+                  )
+                      { gridPos: { x: 0, y: 44, w: 24, h: 12 } }
+                  ,
 
             ],
 }

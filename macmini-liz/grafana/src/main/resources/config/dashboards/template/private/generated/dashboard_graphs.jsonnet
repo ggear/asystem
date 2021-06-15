@@ -102,7 +102,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         graphTooltip='shared_tooltip',
 //ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
-                        time_from='now-5y', refresh=''
+                        time_from='now-25y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),
 
