@@ -109,8 +109,8 @@ from(bucket: "data_public")
                         title='Interest Rate Range Means',
                         datasource='InfluxDB_V2',
                         unit='percent',
-                        min=-30,
-                        max=30,
+                        min=0,
+                        max=3,
                         thresholds=[
                               { 'color': 'red', 'value': 0 },
                               { 'color': 'yellow', 'value': 1 },
@@ -156,16 +156,16 @@ from(bucket: "data_public")
                         showThresholdMarkers=true,
                         unit='percent',
                         min=0,
-                        max=5,
+                        max=3,
                         decimals=2,
                         repeatDirection='h',
                         pluginVersion='7',
                   ).addThreshold(
                         { color: 'red', value: 0 }
                   ).addThreshold(
-                        { color: 'yellow', value: 2.5 }
+                        { color: 'yellow', value: 1 }
                   ).addThreshold(
-                        { color: 'green', value: 5 }
+                        { color: 'green', value: 2 }
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -187,16 +187,16 @@ from(bucket: "data_public")
                         showThresholdMarkers=true,
                         unit='percent',
                         min=0,
-                        max=5,
+                        max=3,
                         decimals=2,
                         repeatDirection='h',
                         pluginVersion='7',
                   ).addThreshold(
                         { color: 'red', value: 0 }
                   ).addThreshold(
-                        { color: 'yellow', value: 2.5 }
+                        { color: 'yellow', value: 1 }
                   ).addThreshold(
-                        { color: 'green', value: 5 }
+                        { color: 'green', value: 2 }
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -218,16 +218,16 @@ from(bucket: "data_public")
                         showThresholdMarkers=true,
                         unit='percent',
                         min=0,
-                        max=5,
+                        max=3,
                         decimals=2,
                         repeatDirection='h',
                         pluginVersion='7',
                   ).addThreshold(
                         { color: 'green', value: 0 }
                   ).addThreshold(
-                        { color: 'yellow', value: 2.5 }
+                        { color: 'yellow', value: 1 }
                   ).addThreshold(
-                        { color: 'red', value: 5 }
+                        { color: 'red', value: 2 }
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
