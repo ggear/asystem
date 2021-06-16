@@ -162,6 +162,15 @@ if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Mobile | wc -l) 
           "title": "Public _Mobile"
         }' | jq
 fi
+if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Tablet| wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Public_Tablet",
+          "title": "Public_Tablet"
+        }' | jq
+fi
 if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Desktop | wc -l) -eq 0 ]; then
   curl -sf -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
     -H "Accept: application/json" \
@@ -233,6 +242,15 @@ if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Mobile | wc -l
     -d '{
           "uid": "Private_Mobile",
           "title": "Private_Mobile"
+        }' | jq
+fi
+if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Tablet | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PRIVATE}/api/folders \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Private_Tablet",
+          "title": "Private_Tablet"
         }' | jq
 fi
 if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Desktop | wc -l) -eq 0 ]; then

@@ -43,7 +43,17 @@ local dashboard = grafana.dashboard;
                                     starred=false,
                                     headings=false,
                                     limit=100,
-                              ) { gridPos: { x: 0, y: 0, w: 12, h: 20 } },
+                              ) { gridPos: { x: 0, y: 0, w: 8, h: 20 } },
+
+                              dashlist.new(
+                                    title='Tablet Dashbaords',
+                                    tags=['tablet'],
+                                    recent=false,
+                                    search=true,
+                                    starred=false,
+                                    headings=false,
+                                    limit=100,
+                              ) { gridPos: { x: 8, y: 0, w: 8, h: 20 } },
 
                               dashlist.new(
                                     title='Desktop Dashbaords',
@@ -53,7 +63,7 @@ local dashboard = grafana.dashboard;
                                     starred=false,
                                     headings=false,
                                     limit=100,
-                              ) { gridPos: { x: 12, y: 0, w: 12, h: 20 } },
+                              ) { gridPos: { x: 16, y: 0, w: 8, h: 20 } },
 
                         ],
 

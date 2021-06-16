@@ -33,7 +33,7 @@ local dashboard = grafana.dashboard;
 	<li><a href="https://grafana.janeandgraham.com?orgId=2" onClick="window.location.reload(true);return false;">Private Dashbaords</a></li>
 </ul>
                                     ',
-                              ) { gridPos: { x: 0, y: 0, w: 24, h: 3 } },
+                              ) { gridPos: { x: 0, y: 0, w: 8, h: 3 } },
 
                               dashlist.new(
                                     title='Public Desktop Dashbaords',
@@ -43,7 +43,7 @@ local dashboard = grafana.dashboard;
                                     starred=false,
                                     headings=false,
                                     limit=100,
-                              ) { gridPos: { x: 0, y: 3, w: 24, h: 20 } },
+                              ) { gridPos: { x: 0, y: 3, w: 8, h: 20 } },
 
                         ],
 

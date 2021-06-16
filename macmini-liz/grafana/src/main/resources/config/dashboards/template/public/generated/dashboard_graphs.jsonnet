@@ -5,8 +5,9 @@ local graph_interest = import 'graph_interest.jsonnet';
 
 {
             
-//ASD grafanaDashboardFolder:: 'Public_Desktop',
 //ASM grafanaDashboardFolder:: 'Public_Mobile',
+//AST grafanaDashboardFolder:: 'Public_Tablet',
+//ASD grafanaDashboardFolder:: 'Public_Desktop',
             
       grafanaDashboards:: {
 
@@ -15,11 +16,14 @@ local graph_interest = import 'graph_interest.jsonnet';
                         schemaVersion=26,
                         title='Currency',
 //ASM                   uid='currency-mobile',
+//AST                   uid='currency-tablet',
 //ASD                   uid='currency-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['public', 'mobile'],
+//AST                   tags=['public', 'tablet'],
 //ASD                   tags=['public', 'desktop'],
                         time_from='now-5y', refresh=''
                   )
@@ -31,11 +35,14 @@ local graph_interest = import 'graph_interest.jsonnet';
                         schemaVersion=26,
                         title='Interest',
 //ASM                   uid='interest-mobile',
+//AST                   uid='interest-tablet',
 //ASD                   uid='interest-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['public', 'mobile'],
+//AST                   tags=['public', 'tablet'],
 //ASD                   tags=['public', 'desktop'],
                         time_from='now-25y', refresh=''
                   )

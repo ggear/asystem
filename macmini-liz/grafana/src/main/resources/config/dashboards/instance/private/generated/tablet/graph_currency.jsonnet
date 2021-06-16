@@ -1,4 +1,3 @@
-//ASDASHBOARD_DEFAULTS time_from='now-5y', refresh=''
 {
       graphs()::
 
@@ -43,9 +42,7 @@ from(bucket: "data_public")
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 0, w: 24, h: 3 } }
-//AST                 { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
-//ASD                 { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
+                      { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
                   ,
 
                   stat.new(
@@ -78,9 +75,7 @@ from(bucket: "data_public")
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 8, w: 24, h: 3 } }
-//AST                 { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
-//ASD                 { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
+                      { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
                   ,
 
                   stat.new(
@@ -113,9 +108,7 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 16, w: 24, h: 3 } }
-//AST                 { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
-//ASD                 { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
+                      { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
                   ,
 
                   bar.new(
@@ -178,9 +171,7 @@ series
   |> last()
   |> keep(columns: ["_time", "_value", "_field"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 24, w: 24, h: 8 } }
-//AST                 { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
-//ASD                 { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
+                      { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
                   ,
 
                   gauge.new(
@@ -213,9 +204,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 3, w: 24, h: 5 } }
-//AST                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
-//ASD                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+                      { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
                   ,
 
                   gauge.new(
@@ -248,9 +237,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 11, w: 24, h: 5 } }
-//AST                 { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
-//ASD                 { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
+                      { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
                   ,
 
                   gauge.new(
@@ -283,9 +270,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 19, w: 24, h: 5 } }
-//AST                 { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
-//ASD                 { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
+                      { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
                   ,
 
                   graph.new(
@@ -298,15 +283,6 @@ from(bucket: "data_public")
                         staircase=false,
                         formatY1='percent',
                         decimals=2,
-//ASD                   legend_values=true,
-//ASD                   legend_min=true,
-//ASD                   legend_max=true,
-//ASD                   legend_current=true,
-//ASD                   legend_total=false,
-//ASD                   legend_avg=false,
-//ASD                   legend_alignAsTable=true,
-//ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 field = "AUD/GBP"
@@ -351,9 +327,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 32, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
+                      { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -368,15 +342,6 @@ series
                         min=-2,
                         max=2,
                         decimals=2,
-//ASD                   legend_values=true,
-//ASD                   legend_min=true,
-//ASD                   legend_max=true,
-//ASD                   legend_current=true,
-//ASD                   legend_total=false,
-//ASD                   legend_avg=false,
-//ASD                   legend_alignAsTable=true,
-//ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -401,9 +366,7 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
-//ASM                 { gridPos: { x: 0, y: 39, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
+                      { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -418,15 +381,6 @@ from(bucket: "data_public")
                         min=-2,
                         max=2,
                         decimals=2,
-//ASD                   legend_values=true,
-//ASD                   legend_min=true,
-//ASD                   legend_max=true,
-//ASD                   legend_current=true,
-//ASD                   legend_total=false,
-//ASD                   legend_avg=false,
-//ASD                   legend_alignAsTable=true,
-//ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -451,9 +405,7 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
-//ASM                 { gridPos: { x: 0, y: 46, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
+                      { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -468,15 +420,6 @@ from(bucket: "data_public")
                         min=-2,
                         max=2,
                         decimals=2,
-//ASD                   legend_values=true,
-//ASD                   legend_min=true,
-//ASD                   legend_max=true,
-//ASD                   legend_current=true,
-//ASD                   legend_total=false,
-//ASD                   legend_avg=false,
-//ASD                   legend_alignAsTable=true,
-//ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -501,9 +444,7 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
-//ASM                 { gridPos: { x: 0, y: 53, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 44, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 44, w: 24, h: 12 } }
+                      { gridPos: { x: 0, y: 44, w: 24, h: 12 } }
                   ,
 
             ],

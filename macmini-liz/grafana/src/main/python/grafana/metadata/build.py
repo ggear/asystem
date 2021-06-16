@@ -17,6 +17,7 @@ DIR_DASHBOARDS_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards
 
 PREFIX = "//AS"
 PREFIX_MOBILE = PREFIX + "M"
+PREFIX_TABLET = PREFIX + "T"
 PREFIX_DESKTOP = PREFIX + "D"
 PREFIX_DASHBOARD_DEFAULTS = PREFIX + "DASHBOARD_DEFAULTS "
 
@@ -100,9 +101,11 @@ local graph_{} = import 'graph_{}.jsonnet';
 
 {
             """ + """
-//ASD grafanaDashboardFolder:: '{}_Desktop',
 //ASM grafanaDashboardFolder:: '{}_Mobile',
+//AST grafanaDashboardFolder:: '{}_Tablet',
+//ASD grafanaDashboardFolder:: '{}_Desktop',
             """.format(
+                scope.title(),
                 scope.title(),
                 scope.title()
             ) + """
@@ -122,11 +125,14 @@ local graph_{} = import 'graph_{}.jsonnet';
                         schemaVersion=26,
                         title='{}',
 //ASM                   uid='{}-mobile',
+//AST                   uid='{}-tablet',
 //ASD                   uid='{}-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['{}', 'mobile'],
+//AST                   tags=['{}', 'tablet'],
 //ASD                   tags=['{}', 'desktop'],
                         {}
                   )
@@ -136,6 +142,8 @@ local graph_{} = import 'graph_{}.jsonnet';
                     graph.title(),
                     graph,
                     graph,
+                    graph,
+                    scope,
                     scope,
                     scope,
                     defaults,
@@ -148,7 +156,7 @@ local graph_{} = import 'graph_{}.jsonnet';
 
     shutil.rmtree(os.path.join(DIR_DASHBOARDS_ROOT, "instance"), ignore_errors=True)
     for scope in ["default", "public", "private"]:
-        for form in ["desktop", "mobile"]:
+        for form in ["desktop", "tablet", "mobile"]:
             for files in os.walk("{}/template/{}".format(DIR_DASHBOARDS_ROOT, scope)):
                 for file_name in files[2]:
                     if not file_name.startswith("graphsnip_"):
@@ -169,9 +177,13 @@ local graph_{} = import 'graph_{}.jsonnet';
                                 for line in file_source:
                                     if not line.startswith(PREFIX) or \
                                             line.startswith(PREFIX_MOBILE) and form == "mobile" or \
+                                            line.startswith(PREFIX_TABLET) and form == "tablet" or \
                                             line.startswith(PREFIX_DESKTOP) and form == "desktop":
                                         if not line.startswith(PREFIX_DASHBOARD_DEFAULTS):
-                                            line = line.replace(PREFIX_MOBILE, "     ").replace(PREFIX_DESKTOP, "     ")
+                                            line = line\
+                                                .replace(PREFIX_MOBILE, "     ")\
+                                                .replace(PREFIX_TABLET, "     ")\
+                                                .replace(PREFIX_DESKTOP, "     ")
                                             destination_file.write(line)
                                             if private_copy:
                                                 destination_file_copy.write(line)

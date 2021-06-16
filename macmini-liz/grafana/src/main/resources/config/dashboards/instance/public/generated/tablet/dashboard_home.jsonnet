@@ -3,7 +3,7 @@ local dashboard = grafana.dashboard;
 
 {
 
-      grafanaDashboardFolder:: 'Private_Desktop',
+      grafanaDashboardFolder:: 'Public_Tablet',
 
       grafanaDashboards:: {
 
@@ -11,8 +11,8 @@ local dashboard = grafana.dashboard;
                   dashboard.new(
                         schemaVersion=26,
                         title='Home',
-                        uid='home-desktop',
-                        editable=true,
+                        uid='home-tablet',
+                        editable=false,
                   )
                   .addPanels(
 
@@ -36,8 +36,8 @@ local dashboard = grafana.dashboard;
                               ) { gridPos: { x: 0, y: 0, w: 8, h: 3 } },
 
                               dashlist.new(
-                                    title='Private Desktop Dashbaords',
-                                    tags=['desktop', 'public'],
+                                    title='Public Tablet Dashbaords',
+                                    tags=['tablet', 'public'],
                                     recent=false,
                                     search=true,
                                     starred=false,

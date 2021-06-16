@@ -12,8 +12,9 @@ local graph_containers = import 'graph_containers.jsonnet';
 
 {
             
-//ASD grafanaDashboardFolder:: 'Private_Desktop',
 //ASM grafanaDashboardFolder:: 'Private_Mobile',
+//AST grafanaDashboardFolder:: 'Private_Tablet',
+//ASD grafanaDashboardFolder:: 'Private_Desktop',
             
       grafanaDashboards:: {
 
@@ -22,11 +23,14 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Network',
 //ASM                   uid='network-mobile',
+//AST                   uid='network-tablet',
 //ASD                   uid='network-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
                         time_from='now-2d', refresh=''
                   )
@@ -38,11 +42,14 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Electricity',
 //ASM                   uid='electricity-mobile',
+//AST                   uid='electricity-tablet',
 //ASD                   uid='electricity-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
                         time_from='now-7d', refresh=''
                   )
@@ -54,11 +61,14 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Servers',
 //ASM                   uid='servers-mobile',
+//AST                   uid='servers-tablet',
 //ASD                   uid='servers-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
                         time_from='now-2d', refresh=''
                   )
@@ -70,11 +80,14 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Water',
 //ASM                   uid='water-mobile',
+//AST                   uid='water-tablet',
 //ASD                   uid='water-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
                         time_from='now-7d', refresh=''
                   )
@@ -86,11 +99,14 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Currency',
 //ASM                   uid='currency-mobile',
+//AST                   uid='currency-tablet',
 //ASD                   uid='currency-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
                         time_from='now-5y', refresh=''
                   )
@@ -102,11 +118,14 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Interest',
 //ASM                   uid='interest-mobile',
+//AST                   uid='interest-tablet',
 //ASD                   uid='interest-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
                         time_from='now-25y', refresh=''
                   )
@@ -118,11 +137,14 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Internet',
 //ASM                   uid='internet-mobile',
+//AST                   uid='internet-tablet',
 //ASD                   uid='internet-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
                         time_from='now-2d', refresh=''
                   )
@@ -134,11 +156,14 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Conditions',
 //ASM                   uid='conditions-mobile',
+//AST                   uid='conditions-tablet',
 //ASD                   uid='conditions-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
                         time_from='now-7d', refresh=''
                   )
@@ -150,11 +175,14 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Containers',
 //ASM                   uid='containers-mobile',
+//AST                   uid='containers-tablet',
 //ASD                   uid='containers-desktop',
 //ASM                   editable=false,
+//AST                   editable=false,
 //ASD                   editable=true,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
                         time_from='now-1h', refresh=''
                   )
