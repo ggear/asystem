@@ -65,7 +65,7 @@ if __name__ == "__main__":
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 {}
                   '))
@@ -121,12 +121,13 @@ local graph_{} = import 'graph_{}.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='{}',
-//ASD                   uid='{}-desktop',
 //ASM                   uid='{}-mobile',
-                        editable=true,
+//ASD                   uid='{}-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['{}', 'desktop'],
 //ASM                   tags=['{}', 'mobile'],
+//ASD                   tags=['{}', 'desktop'],
                         {}
                   )
                   .addPanels(graph_{}.graphs()),

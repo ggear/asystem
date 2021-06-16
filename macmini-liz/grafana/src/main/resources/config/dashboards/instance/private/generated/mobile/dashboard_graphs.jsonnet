@@ -21,7 +21,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Network',
                         uid='network-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
                         time_from='now-2d', refresh=''
@@ -34,7 +34,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Electricity',
                         uid='electricity-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
                         time_from='now-7d', refresh=''
@@ -47,7 +47,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Servers',
                         uid='servers-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
                         time_from='now-2d', refresh=''
@@ -60,7 +60,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Water',
                         uid='water-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
                         time_from='now-7d', refresh=''
@@ -73,7 +73,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Currency',
                         uid='currency-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
                         time_from='now-5y', refresh=''
@@ -86,7 +86,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Interest',
                         uid='interest-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
                         time_from='now-25y', refresh=''
@@ -99,7 +99,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Internet',
                         uid='internet-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
                         time_from='now-2d', refresh=''
@@ -112,7 +112,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Conditions',
                         uid='conditions-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
                         time_from='now-7d', refresh=''
@@ -125,7 +125,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         schemaVersion=26,
                         title='Containers',
                         uid='containers-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
                         time_from='now-1h', refresh=''

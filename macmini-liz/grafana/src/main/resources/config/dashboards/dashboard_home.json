@@ -24,6 +24,12 @@
         "defaults": {},
         "overrides": []
       },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
       "id": 2,
       "options": {
         "content": "\n<ul>\n\t<li><a href=\"https://grafana.janeandgraham.com?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public Dashbaords</a></li>\n\t<li><a href=\"https://grafana.janeandgraham.com?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private Dashbaords</a></li>\n</ul>\n                                    ",
@@ -41,7 +47,7 @@
       },
       "gridPos": {
         "h": 20,
-        "w": 3,
+        "w": 12,
         "x": 0,
         "y": 3
       },
@@ -62,7 +68,7 @@
       "tags": [
         "mobile"
       ],
-      "title": "Dashbaords",
+      "title": "Mobile Dashbaords",
       "type": "dashlist"
     },
     {
@@ -73,8 +79,8 @@
       },
       "gridPos": {
         "h": 20,
-        "w": 3,
-        "x": 3,
+        "w": 12,
+        "x": 12,
         "y": 3
       },
       "id": 4,
@@ -94,7 +100,7 @@
       "tags": [
         "desktop"
       ],
-      "title": "Dashbaords",
+      "title": "Desktop Dashbaords",
       "type": "dashlist"
     }
   ],
@@ -137,5 +143,5 @@
   "timezone": "browser",
   "title": "Home",
   "uid": "home-default",
-  "version": 2
+  "version": 71
 }

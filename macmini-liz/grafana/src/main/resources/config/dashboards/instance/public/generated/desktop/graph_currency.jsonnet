@@ -282,6 +282,7 @@ from(bucket: "data_public")
                         lines=true,
                         staircase=false,
                         formatY1='percent',
+                        decimals=2,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -290,7 +291,7 @@ from(bucket: "data_public")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425,
+                        legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 field = "AUD/GBP"
@@ -349,6 +350,7 @@ series
                         formatY1='percent',
                         min=-2,
                         max=2,
+                        decimals=2,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -357,7 +359,7 @@ series
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425,
+                        legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -396,6 +398,7 @@ from(bucket: "data_public")
                         formatY1='percent',
                         min=-2,
                         max=2,
+                        decimals=2,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -404,7 +407,7 @@ from(bucket: "data_public")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425,
+                        legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -443,6 +446,7 @@ from(bucket: "data_public")
                         formatY1='percent',
                         min=-2,
                         max=2,
+                        decimals=2,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -451,7 +455,7 @@ from(bucket: "data_public")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425,
+                        legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")

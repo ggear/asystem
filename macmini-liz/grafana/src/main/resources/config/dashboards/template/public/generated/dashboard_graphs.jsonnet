@@ -14,12 +14,13 @@ local graph_interest = import 'graph_interest.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Currency',
-//ASD                   uid='currency-desktop',
 //ASM                   uid='currency-mobile',
-                        editable=true,
+//ASD                   uid='currency-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['public', 'desktop'],
 //ASM                   tags=['public', 'mobile'],
+//ASD                   tags=['public', 'desktop'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_currency.graphs()),
@@ -29,12 +30,13 @@ local graph_interest = import 'graph_interest.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Interest',
-//ASD                   uid='interest-desktop',
 //ASM                   uid='interest-mobile',
-                        editable=true,
+//ASD                   uid='interest-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['public', 'desktop'],
 //ASM                   tags=['public', 'mobile'],
+//ASD                   tags=['public', 'desktop'],
                         time_from='now-25y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),

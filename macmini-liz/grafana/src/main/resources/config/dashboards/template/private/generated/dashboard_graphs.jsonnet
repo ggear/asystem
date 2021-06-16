@@ -21,12 +21,13 @@ local graph_containers = import 'graph_containers.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Network',
-//ASD                   uid='network-desktop',
 //ASM                   uid='network-mobile',
-                        editable=true,
+//ASD                   uid='network-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
                         time_from='now-2d', refresh=''
                   )
                   .addPanels(graph_network.graphs()),
@@ -36,12 +37,13 @@ local graph_containers = import 'graph_containers.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Electricity',
-//ASD                   uid='electricity-desktop',
 //ASM                   uid='electricity-mobile',
-                        editable=true,
+//ASD                   uid='electricity-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_electricity.graphs()),
@@ -51,12 +53,13 @@ local graph_containers = import 'graph_containers.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Servers',
-//ASD                   uid='servers-desktop',
 //ASM                   uid='servers-mobile',
-                        editable=true,
+//ASD                   uid='servers-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
                         time_from='now-2d', refresh=''
                   )
                   .addPanels(graph_servers.graphs()),
@@ -66,12 +69,13 @@ local graph_containers = import 'graph_containers.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Water',
-//ASD                   uid='water-desktop',
 //ASM                   uid='water-mobile',
-                        editable=true,
+//ASD                   uid='water-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_water.graphs()),
@@ -81,12 +85,13 @@ local graph_containers = import 'graph_containers.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Currency',
-//ASD                   uid='currency-desktop',
 //ASM                   uid='currency-mobile',
-                        editable=true,
+//ASD                   uid='currency-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
                         time_from='now-5y', refresh=''
                   )
                   .addPanels(graph_currency.graphs()),
@@ -96,12 +101,13 @@ local graph_containers = import 'graph_containers.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Interest',
-//ASD                   uid='interest-desktop',
 //ASM                   uid='interest-mobile',
-                        editable=true,
+//ASD                   uid='interest-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
                         time_from='now-25y', refresh=''
                   )
                   .addPanels(graph_interest.graphs()),
@@ -111,12 +117,13 @@ local graph_containers = import 'graph_containers.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Internet',
-//ASD                   uid='internet-desktop',
 //ASM                   uid='internet-mobile',
-                        editable=true,
+//ASD                   uid='internet-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
                         time_from='now-2d', refresh=''
                   )
                   .addPanels(graph_internet.graphs()),
@@ -126,12 +133,13 @@ local graph_containers = import 'graph_containers.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Conditions',
-//ASD                   uid='conditions-desktop',
 //ASM                   uid='conditions-mobile',
-                        editable=true,
+//ASD                   uid='conditions-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
                         time_from='now-7d', refresh=''
                   )
                   .addPanels(graph_conditions.graphs()),
@@ -141,12 +149,13 @@ local graph_containers = import 'graph_containers.jsonnet';
                   dashboard.new(
                         schemaVersion=26,
                         title='Containers',
-//ASD                   uid='containers-desktop',
 //ASM                   uid='containers-mobile',
-                        editable=true,
+//ASD                   uid='containers-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                         graphTooltip='shared_tooltip',
-//ASD                   tags=['private', 'desktop'],
 //ASM                   tags=['private', 'mobile'],
+//ASD                   tags=['private', 'desktop'],
                         time_from='now-1h', refresh=''
                   )
                   .addPanels(graph_containers.graphs()),

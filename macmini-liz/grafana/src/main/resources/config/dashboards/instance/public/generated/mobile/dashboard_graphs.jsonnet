@@ -14,7 +14,7 @@ local graph_interest = import 'graph_interest.jsonnet';
                         schemaVersion=26,
                         title='Currency',
                         uid='currency-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['public', 'mobile'],
                         time_from='now-5y', refresh=''
@@ -27,7 +27,7 @@ local graph_interest = import 'graph_interest.jsonnet';
                         schemaVersion=26,
                         title='Interest',
                         uid='interest-mobile',
-                        editable=true,
+                        editable=false,
                         graphTooltip='shared_tooltip',
                         tags=['public', 'mobile'],
                         time_from='now-25y', refresh=''

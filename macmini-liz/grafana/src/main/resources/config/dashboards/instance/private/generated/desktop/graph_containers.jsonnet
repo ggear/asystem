@@ -338,6 +338,7 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
+                        decimals=0,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -346,7 +347,7 @@ from(bucket: "host_private")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425
+                        legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 import "strings"
 from(bucket: "host_private")
@@ -368,6 +369,7 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
+                        decimals=0,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -376,7 +378,7 @@ from(bucket: "host_private")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425
+                        legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -398,6 +400,7 @@ from(bucket: "host_private")
                         staircase=false,
                         points=true,
                         pointradius=1,
+                        decimals=0,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -406,7 +409,7 @@ from(bucket: "host_private")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425
+                        legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -441,6 +444,7 @@ from(bucket: "host_private")
                         staircase=false,
                         points=true,
                         pointradius=1,
+                        decimals=0,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -449,7 +453,7 @@ from(bucket: "host_private")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425
+                        legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

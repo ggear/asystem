@@ -25,7 +25,7 @@
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425
+//ASD                   legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "asystem")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -79,7 +79,7 @@ from(bucket: "asystem")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -105,7 +105,7 @@ from(bucket: "home_private")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -131,7 +131,7 @@ from(bucket: "home_private")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -157,7 +157,7 @@ from(bucket: "home_private")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -183,7 +183,7 @@ from(bucket: "home_private")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -209,7 +209,7 @@ from(bucket: "home_private")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

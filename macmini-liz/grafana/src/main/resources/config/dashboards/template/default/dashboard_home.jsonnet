@@ -12,7 +12,7 @@ local dashboard = grafana.dashboard;
                         schemaVersion=26,
                         title='Home',
                         uid='home-default',
-                        editable=true,
+                        editable=false,
                   )
                   .addPanels(
 
@@ -33,27 +33,27 @@ local dashboard = grafana.dashboard;
 	<li><a href="https://grafana.janeandgraham.com?orgId=2" onClick="window.location.reload(true);return false;">Private Dashbaords</a></li>
 </ul>
                                     ',
-                              ) { gridPos: { x: 0, y: 0, w: 6, h: 3 } },
+                              ) { gridPos: { x: 0, y: 0, w: 24, h: 3 } },
 
                               dashlist.new(
-                                    title='Dashbaords',
+                                    title='Mobile Dashbaords',
                                     tags=['mobile'],
                                     recent=false,
                                     search=true,
                                     starred=false,
                                     headings=false,
                                     limit=100,
-                              ) { gridPos: { x: 0, y: 0, w: 3, h: 20 } },
+                              ) { gridPos: { x: 0, y: 0, w: 12, h: 20 } },
 
                               dashlist.new(
-                                    title='Dashbaords',
+                                    title='Desktop Dashbaords',
                                     tags=['desktop'],
                                     recent=false,
                                     search=true,
                                     starred=false,
                                     headings=false,
                                     limit=100,
-                              ) { gridPos: { x: 3, y: 0, w: 3, h: 20 } },
+                              ) { gridPos: { x: 12, y: 0, w: 12, h: 20 } },
 
                         ],
 

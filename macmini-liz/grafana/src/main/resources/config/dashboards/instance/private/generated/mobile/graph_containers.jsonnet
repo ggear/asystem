@@ -338,6 +338,7 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
+                        decimals=0,
                   ).addTarget(influxdb.target(query='
 import "strings"
 from(bucket: "host_private")
@@ -359,6 +360,7 @@ from(bucket: "host_private")
                         bars=false,
                         lines=true,
                         staircase=true,
+                        decimals=0,
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -380,6 +382,7 @@ from(bucket: "host_private")
                         staircase=false,
                         points=true,
                         pointradius=1,
+                        decimals=0,
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -414,6 +417,7 @@ from(bucket: "host_private")
                         staircase=false,
                         points=true,
                         pointradius=1,
+                        decimals=0,
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

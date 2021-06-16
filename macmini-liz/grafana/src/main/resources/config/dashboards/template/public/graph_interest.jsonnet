@@ -14,7 +14,7 @@
             [
 
                   stat.new(
-                        title='Net Rate Last Snapshot',
+                        title='Net Rate Last Month Mean',
                         datasource='InfluxDB_V2',
                         unit='percent',
                         decimals=2,
@@ -40,11 +40,12 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-                      { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 0, w: 24, h: 3 } }
+//ASD                 { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
                   ,
 
                   stat.new(
-                        title='Retail Rate Last Snapshot',
+                        title='Retail Rate Last Month Mean',
                         datasource='InfluxDB_V2',
                         unit='percent',
                         decimals=2,
@@ -70,12 +71,12 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 8, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 8, w: 24, h: 3 } }
 //ASD                 { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
                   ,
 
                   stat.new(
-                        title='Inflation Rate Last Snapshot',
+                        title='Inflation Rate Last Month Mean',
                         datasource='InfluxDB_V2',
                         unit='percent',
                         decimals=2,
@@ -101,7 +102,7 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 16, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 16, w: 24, h: 3 } }
 //ASD                 { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
                   ,
 
@@ -144,7 +145,7 @@ from(bucket: "data_public")
   |> mean(column: "_value")
   |> rename(fn: (column) => "Inflation")
                   '))
-//ASM                 { gridPos: { x: 0, y: 24, w: 9, h: 8 } }
+//ASM                 { gridPos: { x: 0, y: 24, w: 24, h: 8 } }
 //ASD                 { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
                   ,
 
@@ -175,7 +176,7 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 3, w: 24, h: 5 } }
 //ASD                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
                   ,
 
@@ -206,7 +207,7 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 11, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 11, w: 24, h: 5 } }
 //ASD                 { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
                   ,
 
@@ -237,7 +238,7 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 19, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 19, w: 24, h: 5 } }
 //ASD                 { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
                   ,
 
@@ -250,6 +251,7 @@ from(bucket: "data_public")
                         lines=false,
                         staircase=false,
                         formatY1='percent',
+                        decimals=2,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
@@ -258,7 +260,7 @@ from(bucket: "data_public")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425
+//ASD                   legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -298,6 +300,7 @@ from(bucket: "data_public")
                         lines=false,
                         staircase=false,
                         formatY1='percent',
+                        decimals=2,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
@@ -306,7 +309,7 @@ from(bucket: "data_public")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425
+//ASD                   legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -346,6 +349,7 @@ from(bucket: "data_public")
                         lines=true,
                         staircase=false,
                         formatY1='percent',
+                        decimals=2,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
@@ -354,7 +358,7 @@ from(bucket: "data_public")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425
+//ASD                   legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

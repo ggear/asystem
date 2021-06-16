@@ -24,7 +24,7 @@
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425,
+                        legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

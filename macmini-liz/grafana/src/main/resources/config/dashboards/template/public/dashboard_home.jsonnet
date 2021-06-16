@@ -3,8 +3,8 @@ local dashboard = grafana.dashboard;
 
 {
 
-//ASD grafanaDashboardFolder:: 'Public_Desktop',
 //ASM grafanaDashboardFolder:: 'Public_Mobile',
+//ASD grafanaDashboardFolder:: 'Public_Desktop',
 
       grafanaDashboards:: {
 
@@ -12,9 +12,10 @@ local dashboard = grafana.dashboard;
                   dashboard.new(
                         schemaVersion=26,
                         title='Home',
-//ASD                   uid='home-desktop',
 //ASM                   uid='home-mobile',
-                        editable=true,
+//ASD                   uid='home-desktop',
+//ASM                   editable=false,
+//ASD                   editable=true,
                   )
                   .addPanels(
 
@@ -35,10 +36,11 @@ local dashboard = grafana.dashboard;
 	<li><a href="https://grafana.janeandgraham.com?orgId=2" onClick="window.location.reload(true);return false;">Private Dashbaords</a></li>
 </ul>
                                     ',
-                              ) { gridPos: { x: 0, y: 0, w: 3, h: 3 } },
+                              ) { gridPos: { x: 0, y: 0, w: 24, h: 3 } },
 
                               dashlist.new(
-                                    title='Dashbaords',
+//ASM                               title='Public Mobile Dashbaords',
+//ASD                               title='Public Desktop Dashbaords',
 //ASM                               tags=['mobile', 'public'],
 //ASD                               tags=['desktop', 'public'],
                                     recent=false,
@@ -46,7 +48,7 @@ local dashboard = grafana.dashboard;
                                     starred=false,
                                     headings=false,
                                     limit=100,
-                              ) { gridPos: { x: 0, y: 3, w: 3, h: 20 } },
+                              ) { gridPos: { x: 0, y: 3, w: 24, h: 20 } },
 
                         ],
 

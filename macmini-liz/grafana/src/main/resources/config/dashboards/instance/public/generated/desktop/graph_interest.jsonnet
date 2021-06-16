@@ -13,7 +13,7 @@
             [
 
                   stat.new(
-                        title='Net Rate Last Snapshot',
+                        title='Net Rate Last Month Mean',
                         datasource='InfluxDB_V2',
                         unit='percent',
                         decimals=2,
@@ -43,7 +43,7 @@ from(bucket: "data_public")
                   ,
 
                   stat.new(
-                        title='Retail Rate Last Snapshot',
+                        title='Retail Rate Last Month Mean',
                         datasource='InfluxDB_V2',
                         unit='percent',
                         decimals=2,
@@ -73,7 +73,7 @@ from(bucket: "data_public")
                   ,
 
                   stat.new(
-                        title='Inflation Rate Last Snapshot',
+                        title='Inflation Rate Last Month Mean',
                         datasource='InfluxDB_V2',
                         unit='percent',
                         decimals=2,
@@ -243,6 +243,7 @@ from(bucket: "data_public")
                         lines=false,
                         staircase=false,
                         formatY1='percent',
+                        decimals=2,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -251,7 +252,7 @@ from(bucket: "data_public")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425
+                        legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -290,6 +291,7 @@ from(bucket: "data_public")
                         lines=false,
                         staircase=false,
                         formatY1='percent',
+                        decimals=2,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -298,7 +300,7 @@ from(bucket: "data_public")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425
+                        legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -337,6 +339,7 @@ from(bucket: "data_public")
                         lines=true,
                         staircase=false,
                         formatY1='percent',
+                        decimals=2,
                         legend_values=true,
                         legend_min=true,
                         legend_max=true,
@@ -345,7 +348,7 @@ from(bucket: "data_public")
                         legend_avg=false,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=425
+                        legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

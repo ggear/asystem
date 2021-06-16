@@ -43,7 +43,8 @@ from(bucket: "data_public")
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-                      { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 0, w: 24, h: 3 } }
+//ASD                 { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
                   ,
 
                   stat.new(
@@ -76,7 +77,7 @@ from(bucket: "data_public")
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 8, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 8, w: 24, h: 3 } }
 //ASD                 { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
                   ,
 
@@ -110,7 +111,7 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 16, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 16, w: 24, h: 3 } }
 //ASD                 { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
                   ,
 
@@ -174,7 +175,7 @@ series
   |> last()
   |> keep(columns: ["_time", "_value", "_field"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 24, w: 9, h: 8 } }
+//ASM                 { gridPos: { x: 0, y: 24, w: 24, h: 8 } }
 //ASD                 { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
                   ,
 
@@ -208,7 +209,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 3, w: 24, h: 5 } }
 //ASD                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
                   ,
 
@@ -242,7 +243,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 11, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 11, w: 24, h: 5 } }
 //ASD                 { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
                   ,
 
@@ -276,7 +277,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 19, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 19, w: 24, h: 5 } }
 //ASD                 { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
                   ,
 
@@ -289,6 +290,7 @@ from(bucket: "data_public")
                         lines=true,
                         staircase=false,
                         formatY1='percent',
+                        decimals=2,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
@@ -297,7 +299,7 @@ from(bucket: "data_public")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 field = "AUD/GBP"
@@ -357,6 +359,7 @@ series
                         formatY1='percent',
                         min=-2,
                         max=2,
+                        decimals=2,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
@@ -365,7 +368,7 @@ series
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -405,6 +408,7 @@ from(bucket: "data_public")
                         formatY1='percent',
                         min=-2,
                         max=2,
+                        decimals=2,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
@@ -413,7 +417,7 @@ from(bucket: "data_public")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -453,6 +457,7 @@ from(bucket: "data_public")
                         formatY1='percent',
                         min=-2,
                         max=2,
+                        decimals=2,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
@@ -461,7 +466,7 @@ from(bucket: "data_public")
 //ASD                   legend_avg=false,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=425,
+//ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")

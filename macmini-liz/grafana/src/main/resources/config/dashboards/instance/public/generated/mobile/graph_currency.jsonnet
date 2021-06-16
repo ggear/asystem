@@ -42,7 +42,7 @@ from(bucket: "data_public")
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-                      { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
+                      { gridPos: { x: 0, y: 0, w: 24, h: 3 } }
                   ,
 
                   stat.new(
@@ -75,7 +75,7 @@ from(bucket: "data_public")
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-                      { gridPos: { x: 0, y: 8, w: 5, h: 3 } }
+                      { gridPos: { x: 0, y: 8, w: 24, h: 3 } }
                   ,
 
                   stat.new(
@@ -108,7 +108,7 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-                      { gridPos: { x: 0, y: 16, w: 5, h: 3 } }
+                      { gridPos: { x: 0, y: 16, w: 24, h: 3 } }
                   ,
 
                   bar.new(
@@ -171,7 +171,7 @@ series
   |> last()
   |> keep(columns: ["_time", "_value", "_field"])
                   '))
-                      { gridPos: { x: 0, y: 24, w: 9, h: 8 } }
+                      { gridPos: { x: 0, y: 24, w: 24, h: 8 } }
                   ,
 
                   gauge.new(
@@ -204,7 +204,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-                      { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+                      { gridPos: { x: 0, y: 3, w: 24, h: 5 } }
                   ,
 
                   gauge.new(
@@ -237,7 +237,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-                      { gridPos: { x: 0, y: 11, w: 5, h: 5 } }
+                      { gridPos: { x: 0, y: 11, w: 24, h: 5 } }
                   ,
 
                   gauge.new(
@@ -270,7 +270,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-                      { gridPos: { x: 0, y: 19, w: 5, h: 5 } }
+                      { gridPos: { x: 0, y: 19, w: 24, h: 5 } }
                   ,
 
                   graph.new(
@@ -282,6 +282,7 @@ from(bucket: "data_public")
                         lines=true,
                         staircase=false,
                         formatY1='percent',
+                        decimals=2,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 field = "AUD/GBP"
@@ -340,6 +341,7 @@ series
                         formatY1='percent',
                         min=-2,
                         max=2,
+                        decimals=2,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -378,6 +380,7 @@ from(bucket: "data_public")
                         formatY1='percent',
                         min=-2,
                         max=2,
+                        decimals=2,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -416,6 +419,7 @@ from(bucket: "data_public")
                         formatY1='percent',
                         min=-2,
                         max=2,
+                        decimals=2,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
