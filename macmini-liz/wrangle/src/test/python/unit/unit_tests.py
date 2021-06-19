@@ -31,7 +31,7 @@ class WrangleTest(unittest.TestCase):
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 15,
                     library.CTR_ACT_CURRENT_COLUMNS: 15,
-                    library.CTR_ACT_INPUT_COLUMNS: 15,
+                    library.CTR_ACT_UPDATE_COLUMNS: 15,
                     library.CTR_ACT_DELTA_COLUMNS: 15,
                 },
             },
@@ -43,7 +43,7 @@ class WrangleTest(unittest.TestCase):
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 15,
                     library.CTR_ACT_CURRENT_COLUMNS: 15,
-                    library.CTR_ACT_INPUT_COLUMNS: 15,
+                    library.CTR_ACT_UPDATE_COLUMNS: 15,
                     library.CTR_ACT_DELTA_COLUMNS: 15,
                 },
             },
@@ -55,7 +55,7 @@ class WrangleTest(unittest.TestCase):
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 108,
                     library.CTR_ACT_CURRENT_COLUMNS: 108,
-                    library.CTR_ACT_INPUT_COLUMNS: 72,
+                    library.CTR_ACT_UPDATE_COLUMNS: 72,
                     library.CTR_ACT_DELTA_COLUMNS: 108,
                 },
             },
@@ -67,7 +67,7 @@ class WrangleTest(unittest.TestCase):
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 99,
                     library.CTR_ACT_CURRENT_COLUMNS: 108,
-                    library.CTR_ACT_INPUT_COLUMNS: 108,
+                    library.CTR_ACT_UPDATE_COLUMNS: 108,
                     library.CTR_ACT_DELTA_COLUMNS: 108,
                 },
             },
@@ -79,7 +79,7 @@ class WrangleTest(unittest.TestCase):
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 88,
                     library.CTR_ACT_CURRENT_COLUMNS: 88,
-                    library.CTR_ACT_INPUT_COLUMNS: 56,
+                    library.CTR_ACT_UPDATE_COLUMNS: 56,
                     library.CTR_ACT_DELTA_COLUMNS: 88,
                 },
             },
@@ -91,7 +91,7 @@ class WrangleTest(unittest.TestCase):
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 88,
                     library.CTR_ACT_CURRENT_COLUMNS: 88,
-                    library.CTR_ACT_INPUT_COLUMNS: 64,
+                    library.CTR_ACT_UPDATE_COLUMNS: 64,
                     library.CTR_ACT_DELTA_COLUMNS: 88,
                 },
             },
@@ -103,7 +103,7 @@ class WrangleTest(unittest.TestCase):
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 15,
                     library.CTR_ACT_CURRENT_COLUMNS: 15,
-                    library.CTR_ACT_INPUT_COLUMNS: 15,
+                    library.CTR_ACT_UPDATE_COLUMNS: 15,
                     library.CTR_ACT_DELTA_COLUMNS: 15,
                 },
             },
@@ -115,7 +115,7 @@ class WrangleTest(unittest.TestCase):
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 15,
                     library.CTR_ACT_CURRENT_COLUMNS: 15,
-                    library.CTR_ACT_INPUT_COLUMNS: 15,
+                    library.CTR_ACT_UPDATE_COLUMNS: 15,
                     library.CTR_ACT_DELTA_COLUMNS: 15,
                 },
             },
@@ -128,7 +128,7 @@ class WrangleTest(unittest.TestCase):
     #             library.CTR_SRC_DATA: {
     #                 library.CTR_ACT_PREVIOUS_COLUMNS: 0,
     #                 library.CTR_ACT_CURRENT_COLUMNS: 1,
-    #                 library.CTR_ACT_INPUT_COLUMNS: 1,
+    #                 library.CTR_ACT_UPDATE_COLUMNS: 1,
     #                 library.CTR_ACT_DELTA_COLUMNS: 1,
     #             },
     #         },
@@ -140,7 +140,7 @@ class WrangleTest(unittest.TestCase):
     #             library.CTR_SRC_DATA: {
     #                 library.CTR_ACT_PREVIOUS_COLUMNS: 0,
     #                 library.CTR_ACT_CURRENT_COLUMNS: 1,
-    #                 library.CTR_ACT_INPUT_COLUMNS: 1,
+    #                 library.CTR_ACT_UPDATE_COLUMNS: 1,
     #                 library.CTR_ACT_DELTA_COLUMNS: 1,
     #             },
     #         },
@@ -258,7 +258,7 @@ ASSERT_RUN = {
         },
         library.CTR_SRC_DATA: {
             library.CTR_ACT_CURRENT_ROWS: 0,
-            library.CTR_ACT_INPUT_ROWS: 0,
+            library.CTR_ACT_UPDATE_ROWS: 0,
             library.CTR_ACT_DELTA_ROWS: 0,
         },
     },
@@ -281,8 +281,8 @@ ASSERT_NOOP = {
             library.CTR_ACT_PREVIOUS_ROWS: 0,
             library.CTR_ACT_CURRENT_COLUMNS: 0,
             library.CTR_ACT_CURRENT_ROWS: 0,
-            library.CTR_ACT_INPUT_COLUMNS: 0,
-            library.CTR_ACT_INPUT_ROWS: 0,
+            library.CTR_ACT_UPDATE_COLUMNS: 0,
+            library.CTR_ACT_UPDATE_ROWS: 0,
             library.CTR_ACT_DELTA_COLUMNS: 0,
             library.CTR_ACT_DELTA_ROWS: 0,
             library.CTR_ACT_ERRORED: 0,
@@ -330,7 +330,7 @@ ASSERT_RELOAD = {
         },
         library.CTR_SRC_DATA: {
             library.CTR_ACT_CURRENT_ROWS: 0,
-            library.CTR_ACT_INPUT_ROWS: 0,
+            library.CTR_ACT_UPDATE_ROWS: 0,
             library.CTR_ACT_DELTA_ROWS: 0,
         },
     },

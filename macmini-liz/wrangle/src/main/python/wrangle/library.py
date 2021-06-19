@@ -42,8 +42,8 @@ CTR_ACT_PREVIOUS_ROWS = "Previous Rows"
 CTR_ACT_PREVIOUS_COLUMNS = "Previous Columns"
 CTR_ACT_CURRENT_ROWS = "Current Rows"
 CTR_ACT_CURRENT_COLUMNS = "Current Columns"
-CTR_ACT_INPUT_ROWS = "Input Rows"
-CTR_ACT_INPUT_COLUMNS = "Input Columns"
+CTR_ACT_UPDATE_ROWS = "Update Rows"
+CTR_ACT_UPDATE_COLUMNS = "Update Columns"
 CTR_ACT_DELTA_ROWS = "Delta Rows"
 CTR_ACT_DELTA_COLUMNS = "Delta Columns"
 CTR_ACT_SHEET_ROWS = "Sheet Rows"
@@ -179,8 +179,8 @@ class Library(object):
                 (CTR_ACT_PREVIOUS_ROWS, 0),
                 (CTR_ACT_CURRENT_COLUMNS, 0),
                 (CTR_ACT_CURRENT_ROWS, 0),
-                (CTR_ACT_INPUT_COLUMNS, 0),
-                (CTR_ACT_INPUT_ROWS, 0),
+                (CTR_ACT_UPDATE_COLUMNS, 0),
+                (CTR_ACT_UPDATE_ROWS, 0),
                 (CTR_ACT_DELTA_COLUMNS, 0),
                 (CTR_ACT_DELTA_ROWS, 0),
                 (CTR_ACT_ERRORED, 0),
@@ -509,9 +509,9 @@ class Library(object):
                     actioned_files[local_path] = True, file_actioned
         return collections.OrderedDict(sorted(actioned_files.items()))
 
-    def state_cache(self, data_df_input, file_prefix):
+    def state_cache(self, data_df_update, file_prefix):
         file_delta = os.path.abspath("{}/__{}_Delta.csv".format(self.input, file_prefix))
-        file_input = os.path.abspath("{}/__{}_Input.csv".format(self.input, file_prefix))
+        file_update = os.path.abspath("{}/__{}_Update.csv".format(self.input, file_prefix))
         file_current = os.path.abspath("{}/__{}_Current.csv".format(self.input, file_prefix))
         file_previous = os.path.abspath("{}/__{}_Previous.csv".format(self.input, file_prefix))
         if not os.path.isdir(self.input):
@@ -523,19 +523,19 @@ class Library(object):
         data_df_current.index = pd.to_datetime(data_df_current.index)
         data_df_current.index.name = 'Date'
         data_columns = data_df_current.columns.get_values().tolist()
-        for data_column in data_df_input.columns.get_values().tolist():
+        for data_column in data_df_update.columns.get_values().tolist():
             if data_column not in data_columns:
                 data_columns.append(data_column)
         for data_column in data_columns:
             if data_column not in data_df_current:
                 data_df_current[data_column] = np.nan
-        data_df_input.index.name = 'Date'
-        data_df_input.index = pd.to_datetime(data_df_input.index)
-        data_df_input.sort_index().to_csv(file_input)
-        data_df_input = pd.read_csv(file_input, index_col=0, dtype=str)
-        data_df_input.index = pd.to_datetime(data_df_input.index)
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_INPUT_COLUMNS, len(data_df_input.columns))
-        self.add_counter(CTR_SRC_DATA, CTR_ACT_INPUT_ROWS, len(data_df_input))
+        data_df_update.index.name = 'Date'
+        data_df_update.index = pd.to_datetime(data_df_update.index)
+        data_df_update.sort_index().to_csv(file_update)
+        data_df_update = pd.read_csv(file_update, index_col=0, dtype=str)
+        data_df_update.index = pd.to_datetime(data_df_update.index)
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_COLUMNS, len(data_df_update.columns))
+        self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_ROWS, len(data_df_update))
         if os.path.isfile(file_current):
             shutil.move(file_current, file_previous)
         elif os.path.isfile(file_previous):
@@ -548,7 +548,7 @@ class Library(object):
             if data_column not in data_df_previous:
                 data_df_previous[data_column] = ""
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_previous), file_previous))
-        data_df_current = pd.concat([data_df_current, data_df_input], sort=True)
+        data_df_current = pd.concat([data_df_current, data_df_update], sort=True)
         data_df_current = data_df_current[~data_df_current.index.duplicated(keep='last')]
         data_df_current = data_df_current[data_columns]
         data_df_current.sort_index().to_csv(file_current)
@@ -557,7 +557,7 @@ class Library(object):
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_current), file_current))
-        self.print_log("File [{}] written to [{}]".format(os.path.basename(file_input), file_input))
+        self.print_log("File [{}] written to [{}]".format(os.path.basename(file_update), file_update))
         data_df_delta = data_df_current if len(data_df_previous) == 0 else \
             data_df_current.merge(data_df_previous, on=data_columns, how='outer', left_index=True, right_index=True, indicator=True) \
                 .loc[lambda x: x['_merge'] != 'both'].drop('_merge', 1).drop_duplicates()
