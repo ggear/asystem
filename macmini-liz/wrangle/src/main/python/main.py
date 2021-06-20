@@ -16,7 +16,7 @@ def main(arguments=[]):
             module = getattr(importlib.import_module("wrangle.{}".format(module_name)), module_name.title())()
             module.run()
             runtime_errors += (
-                    module.get_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_ERRORED) +
+                    module.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_ERRORED) +
                     module.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED) +
                     module.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_ERRORED) +
                     module.get_counter(library.CTR_SRC_EGRESS, library.CTR_ACT_ERRORED)

@@ -95,6 +95,7 @@ class Weather(library.Library):
             self.state_write()
         if not new_data:
             self.print_log("No new data found")
+        self.counter_write()
 
     def __init__(self):
         super(Weather, self).__init__("Weather", "1SiOrwMf-DgNQ19wRNbE7itzd4RWT829v")

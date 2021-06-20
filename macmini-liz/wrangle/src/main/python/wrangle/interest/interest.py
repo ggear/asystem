@@ -83,13 +83,13 @@ class Interest(library.Library):
                     self.sheet_write(interest_current_df.sort_index(ascending=False), DRIVE_URL,
                                      {'index': True, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
                     for int_rate in LABELS:
-                        self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "1-month",
+                        self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "1mo",
                                                                            "%", int_rate.lower()) +
                                                       interest_delta_df[int_rate].map(str) +
                                                       " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
                         for int_period in PERIODS:
-                            self.database_write("\n".join(LINE_PROTOCOL.format("mean", "{}-month".format(PERIODS[int_period]),
+                            self.database_write("\n".join(LINE_PROTOCOL.format("mean", "{}y".format(PERIODS[int_period] / 12),
                                                                                "%", int_rate.lower()) +
                                                           interest_delta_df["{} {}".format(int_rate, int_period)].map(str) +
                                                           " " + (pd.to_datetime(interest_delta_df.index).astype(int) +
@@ -105,6 +105,7 @@ class Interest(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         if not new_data:
             self.print_log("No new data found")
+        self.counter_write()
 
     def __init__(self):
         super(Interest, self).__init__("Interest", "1a20Mmm8j4bz5FneZBPoS9pGDabnnSzUZ")

@@ -108,10 +108,10 @@ class Equity(library.Library):
                             31),
                         STOCK[stock]["end of day"], check=False)
         statement_files = {}
-        files_cached = self.get_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_CACHED)
-        files_downloaded = self.get_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_DOWNLOADED)
+        files_cached = self.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED)
+        files_downloaded = self.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_DOWNLOADED)
         files = self.drive_sync(self.input_drive, self.input)
-        self.add_counter(library.CTR_SRC_RESOURCES, library.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
+        self.add_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
         for file_name in files:
             if os.path.basename(file_name).startswith("58861"):
                 statement_files[file_name] = files[file_name]
@@ -347,6 +347,7 @@ class Equity(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         if not new_data:
             self.print_log("No new data found")
+        self.counter_write()
 
     def __init__(self):
         super(Equity, self).__init__("Equity", "1wDj18Imc3q1UWfRDU-h9-Rwb73R6PAm-")

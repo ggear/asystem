@@ -348,7 +348,7 @@ class Health(library.Library):
                         dimension_metric = dimension.split('(')[0].replace(dimension.split(' ')[0], '').strip().replace(' ', '-').lower()
                         dimension_value = data_delta_df[dimension].dropna() if dimension_unit != 'dt' else \
                             pd.to_datetime(data_delta_df[dimension].dropna(), format='%Y-%m-%d %H:%M:%S').astype(int) // 10 ** 9
-                        self.database_write("\n".join(LINE_PROTOCOL.format(dimension_type, "1-hour", dimension_unit, dimension_metric) +
+                        self.database_write("\n".join(LINE_PROTOCOL.format(dimension_type, "1h", dimension_unit, dimension_metric) +
                                                       dimension_value.map(str) +
                                                       " " + (pd.to_datetime(dimension_value.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
@@ -361,6 +361,7 @@ class Health(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         else:
             self.print_log("No new data found")
+        self.counter_write()
 
     def __init__(self):
         super(Health, self).__init__("Health", "1oI-jGTGsaYJgvj--v0q0B4Q_42OR21E2")

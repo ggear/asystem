@@ -37,7 +37,7 @@ CTR_LBL_WIDTH = 26
 CTR_SRC_DATA = "Data"
 CTR_SRC_FILES = "Files"
 CTR_SRC_EGRESS = "Egress"
-CTR_SRC_RESOURCES = "Resources"
+CTR_SRC_SOURCES = "Sources"
 CTR_ACT_PREVIOUS_ROWS = "Previous Rows"
 CTR_ACT_PREVIOUS_COLUMNS = "Previous Columns"
 CTR_ACT_CURRENT_ROWS = "Current Rows"
@@ -59,6 +59,8 @@ CTR_ACT_DOWNLOADED = "Downloaded"
 CTR_ACT_CACHED = "Cached"
 CTR_ACT_PERSISTED = "Persisted"
 CTR_ACT_UPLOADED = "Uploaded"
+
+LINE_PROTOCOL_METADATA = "{},type=metadata,period=30m,unit=scalar {}={} {:.0f}"
 
 pd.set_option('display.max_rows', None)
 pd.set_option('display.max_columns', None)
@@ -162,7 +164,7 @@ class Library(object):
 
     def reset_counters(self):
         self.counters = OrderedDict([
-            (CTR_SRC_RESOURCES, OrderedDict([
+            (CTR_SRC_SOURCES, OrderedDict([
                 (CTR_ACT_DOWNLOADED, 0),
                 (CTR_ACT_CACHED, 0),
                 (CTR_ACT_UPLOADED, 0),
@@ -200,7 +202,7 @@ class Library(object):
         local_file = os.path.abspath(local_file)
         if not force and not check and os.path.isfile(local_file):
             self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
-            self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_CACHED)
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return True, False
         else:
             client = {
@@ -229,7 +231,7 @@ class Library(object):
                     if modified_timestamp is not None:
                         if modified_timestamp_cached == modified_timestamp:
                             self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
-                            self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_CACHED)
+                            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return True, False
                 except:
                     pass
@@ -241,19 +243,19 @@ class Library(object):
                 if modified_timestamp is not None:
                     os.utime(local_file, (modified_timestamp, modified_timestamp))
                 self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
-                self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_DOWNLOADED)
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 return True, True
             except Exception as exception:
                 if not ignore:
                     self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file), exception)
-                    self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_ERRORED)
+                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return False, False
 
     def ftp_download(self, url_file, local_file, check=True, force=False, ignore=False):
         local_file = os.path.abspath(local_file)
         if not force and not check and os.path.isfile(local_file):
             self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
-            self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_CACHED)
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return True, False
         else:
             url_server = url_file.replace("ftp://", "").split("/")[0]
@@ -267,13 +269,13 @@ class Library(object):
                     modified_timestamp_cached = int(os.path.getmtime(local_file))
                     if modified_timestamp_cached == modified_timestamp:
                         self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
-                        self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_CACHED)
+                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                         client.quit()
                         return True, False
                 client.retrbinary("RETR {}".format(url_path), open(local_file, 'wb').write)
                 os.utime(local_file, (modified_timestamp, modified_timestamp))
                 self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
-                self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_DOWNLOADED)
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 client.quit()
                 return True, True
             except Exception as exception:
@@ -281,7 +283,7 @@ class Library(object):
                     client.quit()
                 self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file), exception)
                 if not ignore:
-                    self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_ERRORED)
+                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return False, False
 
     def stock_download(self, local_file, ticker, start, end, end_of_day='17:00', check=True, force=False, ignore=False):
@@ -291,7 +293,7 @@ class Library(object):
         if start != end_exclusive:
             if not force and not check and os.path.isfile(local_file):
                 self.print_log("File [{}: {} {}] cached at [{}]".format(os.path.basename(local_file), start, end, local_file))
-                self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_CACHED)
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return True, False
             else:
                 try:
@@ -304,7 +306,7 @@ class Library(object):
                             if end_data == end_expected:
                                 self.print_log("File [{}: {} {}] cached at [{}]"
                                                .format(os.path.basename(local_file), start, end, local_file))
-                                self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_CACHED)
+                                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return True, False
                     data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, debug=False)
                     if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) \
@@ -317,13 +319,13 @@ class Library(object):
                                               timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
                     os.utime(local_file, (modified_timestamp, modified_timestamp))
                     self.print_log("File [{}: {} {}] downloaded to [{}]".format(os.path.basename(local_file), start, end, local_file))
-                    self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_DOWNLOADED)
+                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                     return True, True
                 except Exception as exception:
                     self.print_log("File not available for [{} - {} {}]"
                                    .format(ticker, start, end_exclusive), exception)
                     if not ignore:
-                        self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_ERRORED)
+                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return False, False
 
     def dropbox_download(self, dropbox_dir, local_dir, check=True):
@@ -410,10 +412,10 @@ class Library(object):
                     "modified": dropbox_files[dropbox_file]["modified"]
                 }
                 file_actioned = True
-                self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_DOWNLOADED)
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 self.print_log("File [{}] downloaded to [{}]".format(dropbox_file, local_path))
             else:
-                self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_CACHED)
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 self.print_log("File [{}] cached at [{}]".format(dropbox_file, local_path))
             actioned_files[local_path] = True, file_actioned
         return collections.OrderedDict(sorted(actioned_files.items()))
@@ -472,10 +474,10 @@ class Library(object):
                         "modified": drive_files[drive_file]["modified"]
                     }
                     file_actioned = True
-                    self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_DOWNLOADED)
+                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                     self.print_log("File [{}] downloaded to [{}]".format(drive_file, local_path))
                 else:
-                    self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_CACHED)
+                    self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                     self.print_log("File [{}] cached at [{}]".format(drive_file, local_path))
                 actioned_files[local_path] = True, file_actioned
         if upload:
@@ -490,20 +492,9 @@ class Library(object):
                         self.drive_write(local_path, drive_dir, local_files[local_file]["modified"], service,
                                          drive_files[local_file]["id"] if local_file in drive_files else None)
                         file_actioned = True
-
-                        # TODO: Remove!
-                        self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_UPLOADED)
-                        # print("\nUPLOAD {} {}\n".format(local_file, self.get_counter(CTR_SRC_RESOURCES, CTR_ACT_UPLOADED)))
-
-
-
-
+                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED)
                     else:
-                        self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_PERSISTED)
-
-                        # TODO: Remove!
-                        # print("\nNOLOAD {} {}\n".format(local_file, self.get_counter(CTR_SRC_RESOURCES, CTR_ACT_PERSISTED)))
-
+                        self.add_counter(CTR_SRC_SOURCES, CTR_ACT_PERSISTED)
                         self.print_log("File [{}] verified at [https://drive.google.com/file/d/{}]"
                                        .format(local_file, drive_files[local_file]["id"]))
                     actioned_files[local_path] = True, file_actioned
@@ -590,11 +581,11 @@ class Library(object):
                     request = service.files().update(fileId=drive_id, body=metadata, media_body=data).execute()
                 self.print_log("File [{}] uploaded to [https://drive.google.com/file/d/{}]"
                                .format(os.path.basename(local_file), request.get('id') if drive_id is None else drive_id))
-                self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_UPLOADED)
+                self.add_counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED)
         except Exception as exception:
             self.print_log("File [{}] failed to upload to [https://drive.google.com/drive/folders/{}]"
                            .format(local_file, drive_dir), exception)
-            self.add_counter(CTR_SRC_RESOURCES, CTR_ACT_ERRORED)
+            self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
 
     def sheet_write(self, data_df, drive_url, sheet_params={}):
         try:
@@ -624,6 +615,17 @@ class Library(object):
 
     def stdout_write(self, line):
         print(line)
+
+    def counter_write(self):
+        timestamp = time.time() * 10 ** 8
+        for source in self.counters:
+            for action in self.counters[source]:
+                self.stdout_write(LINE_PROTOCOL_METADATA.format(
+                    self.name.lower(),
+                    "{}_{}".format(source, action).lower().replace(" ", "_"),
+                    self.counters[source][action],
+                    timestamp
+                ))
 
     def __init__(self, name, input_drive):
         self.name = name

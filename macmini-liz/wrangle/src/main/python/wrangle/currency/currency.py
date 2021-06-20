@@ -171,13 +171,13 @@ class Currency(library.Library):
                     rba_current_df.index = rba_current_df.index.strftime('%Y-%m-%d')
                     self.sheet_write(rba_current_df, DRIVE_URL, {'index': True, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
                     for fx_pair in PAIRS:
-                        self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "1-day",
+                        self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "1d",
                                                                            "$/£" if "GBP" in fx_pair else "$/$", fx_pair) +
                                                       rba_delta_df[fx_pair].map(str) +
                                                       " " + (pd.to_datetime(rba_delta_df.index).astype(int) +
                                                              6 * 60 * 60 * 1000000000).map(str)))
                         for fx_period in PERIODS:
-                            self.database_write("\n".join(LINE_PROTOCOL.format("delta", "{}-day".format(PERIODS[fx_period]),
+                            self.database_write("\n".join(LINE_PROTOCOL.format("delta", "{}d".format(PERIODS[fx_period]),
                                                                                "%", fx_pair) +
                                                           rba_delta_df["{} {}".format(fx_pair, fx_period)].map(str) +
                                                           " " + (pd.to_datetime(rba_delta_df.index).astype(int) +
@@ -193,6 +193,7 @@ class Currency(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         if not new_data:
             self.print_log("No new data found")
+        self.counter_write()
 
     def __init__(self):
         super(Currency, self).__init__("Currency", "1_RhzDdkh9PvZ4VsRtsTwfvUMLj6S3QzE")

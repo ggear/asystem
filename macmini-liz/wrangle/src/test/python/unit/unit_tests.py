@@ -236,7 +236,7 @@ def merge_asserts(base, addition):
 
 ASSERT_RUN = {
     "counter_equals": {
-        library.CTR_SRC_RESOURCES: {
+        library.CTR_SRC_SOURCES: {
             library.CTR_ACT_ERRORED: 0,
         },
         library.CTR_SRC_FILES: {
@@ -250,7 +250,7 @@ ASSERT_RUN = {
         },
     },
     "counter_greater": {
-        library.CTR_SRC_RESOURCES: {
+        library.CTR_SRC_SOURCES: {
             library.CTR_ACT_DOWNLOADED: 0,
         },
         library.CTR_SRC_FILES: {
@@ -266,7 +266,7 @@ ASSERT_RUN = {
 
 ASSERT_NOOP = {
     "counter_equals": {
-        library.CTR_SRC_RESOURCES: {
+        library.CTR_SRC_SOURCES: {
             library.CTR_ACT_DOWNLOADED: 0,
             library.CTR_ACT_UPLOADED: 0,
             library.CTR_ACT_PERSISTED: 0,
@@ -298,7 +298,7 @@ ASSERT_NOOP = {
         },
     },
     "counter_greater": {
-        library.CTR_SRC_RESOURCES: {
+        library.CTR_SRC_SOURCES: {
             library.CTR_ACT_CACHED: 0,
         },
         library.CTR_SRC_FILES: {
@@ -309,7 +309,7 @@ ASSERT_NOOP = {
 
 ASSERT_RELOAD = {
     "counter_equals": {
-        library.CTR_SRC_RESOURCES: {
+        library.CTR_SRC_SOURCES: {
             library.CTR_ACT_DOWNLOADED: 0,
             library.CTR_ACT_ERRORED: 0,
         },
