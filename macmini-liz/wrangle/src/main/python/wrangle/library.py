@@ -617,7 +617,7 @@ class Library(object):
         print(line)
 
     def counter_write(self):
-        timestamp = time.time() * 10 ** 8
+        timestamp = time.time() * 10 ** 9
         for source in self.counters:
             for action in self.counters[source]:
                 self.stdout_write(LINE_PROTOCOL_METADATA.format(

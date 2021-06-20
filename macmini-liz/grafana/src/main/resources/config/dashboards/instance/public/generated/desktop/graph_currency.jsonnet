@@ -12,6 +12,137 @@
 
             [
 
+
+
+
+                  stat.new(
+                        title='Last Run',
+                        datasource='InfluxDB_V2',
+                        fields='_time',
+                        decimals=0,
+                        unit='',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 0 }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["type"] == "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+                  '))
+                      { gridPos: { x: 0, y: 0, w: 2, h: 2 } }
+                  ,
+                  stat.new(
+                        title='Time Since Last Run',
+                        datasource='InfluxDB_V2',
+                        fields='_time',
+                        decimals=1,
+                        unit='dtdurationms',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 0 }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["type"] == "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+  |> map(fn: (r) => ({ r with _time: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
+                  '))
+                      { gridPos: { x: 2, y: 0, w: 2, h: 2 } }
+                  ,
+                  stat.new(
+                        title='Last Updated',
+                        datasource='InfluxDB_V2',
+                        fields='_time',
+                        decimals=0,
+                        unit='',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 0 }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["type"] != "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+                  '))
+                      { gridPos: { x: 4, y: 0, w: 2, h: 2 } }
+                  ,
+                  stat.new(
+                        title='Time Since Last Update',
+                        datasource='InfluxDB_V2',
+                        fields='_time',
+                        decimals=1,
+                        unit='dtdurationms',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 0 }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["type"] != "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+  |> map(fn: (r) => ({ r with _time: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
+                  '))
+                      { gridPos: { x: 6, y: 0, w: 2, h: 2 } }
+                  ,
+
+
+
+
+
+
                   stat.new(
                         title='GBP/AUD Last End of Day',
                         datasource='InfluxDB_V2',
@@ -35,14 +166,14 @@ from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: false)
   |> last()
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-                      { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
+                      { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
                   ,
 
                   stat.new(
@@ -68,14 +199,14 @@ from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: false)
   |> last()
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-                      { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
+                      { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
                   ,
 
                   stat.new(
@@ -101,14 +232,14 @@ from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: false)
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> last()
   |> keep(columns: ["_value"])
                   '))
-                      { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
+                      { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
                   ,
 
                   bar.new(
@@ -127,7 +258,7 @@ field = "AUD/GBP"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
@@ -144,7 +275,7 @@ field = "AUD/USD"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
@@ -161,7 +292,7 @@ field = "AUD/SGD"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
@@ -174,7 +305,7 @@ series
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "SGD/AUD"})
                   '))
-                      { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
+                      { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
                   ,
 
                   gauge.new(
@@ -200,14 +331,14 @@ from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "delta")
   |> sort(columns: ["_time"], desc: false)
   |> last()
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-                      { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+                      { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
                   ,
 
                   gauge.new(
@@ -233,14 +364,14 @@ from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "delta")
   |> sort(columns: ["_time"], desc: false)
   |> last()
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-                      { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
+                      { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
                   ,
 
                   gauge.new(
@@ -266,14 +397,14 @@ from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "delta")
   |> sort(columns: ["_time"], desc: false)
   |> last()
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-                      { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
+                      { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
                   ,
 
                   graph.new(
@@ -301,7 +432,7 @@ field = "AUD/GBP"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
@@ -317,7 +448,7 @@ field = "AUD/USD"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
@@ -333,7 +464,7 @@ field = "AUD/SGD"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
@@ -345,7 +476,7 @@ series
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "SGD/AUD"})
                   '))
-                      { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
+                      { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -374,7 +505,7 @@ series
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "delta")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> keep(columns: ["_time", "_value"])
@@ -384,7 +515,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> keep(columns: ["_time", "_value"])
@@ -395,7 +526,7 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
-                      { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
+                      { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -424,7 +555,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "delta")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> keep(columns: ["_time", "_value"])
@@ -434,7 +565,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> keep(columns: ["_time", "_value"])
@@ -445,7 +576,7 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
-                      { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
+                      { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -474,7 +605,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "delta")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> keep(columns: ["_time", "_value"])
@@ -484,7 +615,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1-day")
+  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> keep(columns: ["_time", "_value"])
@@ -495,7 +626,7 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
-                      { gridPos: { x: 0, y: 44, w: 24, h: 12 } }
+                      { gridPos: { x: 0, y: 46, w: 24, h: 12 } }
                   ,
 
             ],

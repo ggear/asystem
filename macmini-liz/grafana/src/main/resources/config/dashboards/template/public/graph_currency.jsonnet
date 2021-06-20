@@ -13,6 +13,137 @@
 
             [
 
+
+
+
+                  stat.new(
+                        title='Last Run',
+                        datasource='InfluxDB_V2',
+                        fields='_time',
+                        decimals=0,
+                        unit='',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 0 }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["type"] == "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+                  '))
+                      { gridPos: { x: 0, y: 0, w: 2, h: 2 } }
+                  ,
+                  stat.new(
+                        title='Time Since Last Run',
+                        datasource='InfluxDB_V2',
+                        fields='_time',
+                        decimals=1,
+                        unit='dtdurationms',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 0 }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["type"] == "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+  |> map(fn: (r) => ({ r with _time: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
+                  '))
+                      { gridPos: { x: 2, y: 0, w: 2, h: 2 } }
+                  ,
+                  stat.new(
+                        title='Last Updated',
+                        datasource='InfluxDB_V2',
+                        fields='_time',
+                        decimals=0,
+                        unit='',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 0 }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["type"] != "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+                  '))
+                      { gridPos: { x: 4, y: 0, w: 2, h: 2 } }
+                  ,
+                  stat.new(
+                        title='Time Since Last Update',
+                        datasource='InfluxDB_V2',
+                        fields='_time',
+                        decimals=1,
+                        unit='dtdurationms',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 0 }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "currency")
+  |> filter(fn: (r) => r["type"] != "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+  |> map(fn: (r) => ({ r with _time: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
+                  '))
+                      { gridPos: { x: 6, y: 0, w: 2, h: 2 } }
+                  ,
+
+
+
+
+
+
                   stat.new(
                         title='GBP/AUD Last End of Day',
                         datasource='InfluxDB_V2',
@@ -43,9 +174,9 @@ from(bucket: "data_public")
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 0, w: 24, h: 3 } }
-//AST                 { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
-//ASD                 { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 2, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
                   ,
 
                   stat.new(
@@ -78,9 +209,9 @@ from(bucket: "data_public")
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 8, w: 24, h: 3 } }
-//AST                 { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
-//ASD                 { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 10, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
                   ,
 
                   stat.new(
@@ -113,9 +244,9 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 16, w: 24, h: 3 } }
-//AST                 { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
-//ASD                 { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 18, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
                   ,
 
                   bar.new(
@@ -181,9 +312,9 @@ series
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "SGD/AUD"})
                   '))
-//ASM                 { gridPos: { x: 0, y: 24, w: 24, h: 8 } }
-//AST                 { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
-//ASD                 { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
+//ASM                 { gridPos: { x: 0, y: 26, w: 24, h: 8 } }
+//AST                 { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
+//ASD                 { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
                   ,
 
                   gauge.new(
@@ -216,9 +347,9 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 3, w: 24, h: 5 } }
-//AST                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
-//ASD                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 5, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
                   ,
 
                   gauge.new(
@@ -251,9 +382,9 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 11, w: 24, h: 5 } }
-//AST                 { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
-//ASD                 { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 13, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
                   ,
 
                   gauge.new(
@@ -286,9 +417,9 @@ from(bucket: "data_public")
   |> keep(columns: ["_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
                   '))
-//ASM                 { gridPos: { x: 0, y: 19, w: 24, h: 5 } }
-//AST                 { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
-//ASD                 { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 21, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
                   ,
 
                   graph.new(
@@ -360,9 +491,9 @@ series
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "SGD/AUD"})
                   '))
-//ASM                 { gridPos: { x: 0, y: 32, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
+//ASM                 { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -412,9 +543,9 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
-//ASM                 { gridPos: { x: 0, y: 39, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
+//ASM                 { gridPos: { x: 0, y: 41, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -464,9 +595,9 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
-//ASM                 { gridPos: { x: 0, y: 46, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
+//ASM                 { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -516,9 +647,9 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
-//ASM                 { gridPos: { x: 0, y: 53, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 44, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 44, w: 24, h: 12 } }
+//ASM                 { gridPos: { x: 0, y: 55, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 46, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 46, w: 24, h: 12 } }
                   ,
 
             ],
