@@ -1,12 +1,27 @@
-//ASDASHBOARD_DEFAULTS time_from='now-7d', refresh=''
+//ASDASHBOARD_DEFAULTS time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
 {
       graphs()::
       
             local grafana = import 'grafonnet/grafana.libsonnet';
+            local asystem = import 'default/generated/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
+            local stat = grafana.statPanel;
             local graph = grafana.graphPanel;
+            local table = grafana.tablePanel;
+            local gauge = grafana.gaugePanel;
+            local bar = grafana.barGaugePanel;
             local influxdb = grafana.influxdb;
-            
+            local header = asystem.header;
+
+            header.new(
+//ASM           style='minimal',
+//AST           style='medial',
+//ASD           style='maximal',
+                datasource='InfluxDB_V2',
+                measurement='currency',
+                maxTimeSinceUpdate='259200000',
+            ) +
+
             [
 
                   graph.new(

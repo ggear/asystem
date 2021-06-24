@@ -15,20 +15,20 @@
   "editable": false,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 66,
+  "id": 14,
   "links": [],
   "panels": [
     {
       "datasource": null,
       "gridPos": {
-        "h": 3,
+        "h": 2,
         "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 2,
       "options": {
-        "content": "\n<ul>\n\t<li><a href=\"https://grafana.janeandgraham.com?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public Dashbaords</a></li>\n\t<li><a href=\"https://grafana.janeandgraham.com?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private Dashbaords</a></li>\n</ul>\n                                    ",
+        "content": "\n<p style=\"text-align: center\">\n      <a href=\"https://grafana.janeandgraham.com?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public</a>\n          &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"https://grafana.janeandgraham.com?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private</a>\n</p>\n                                    ",
         "mode": "html"
       },
       "pluginVersion": "8.0.2",
@@ -41,7 +41,7 @@
         "h": 20,
         "w": 8,
         "x": 0,
-        "y": 3
+        "y": 2
       },
       "id": 3,
       "options": {
@@ -60,7 +60,7 @@
       "tags": [
         "mobile"
       ],
-      "title": "Mobile Dashbaords",
+      "title": "Mobile Dashboards",
       "type": "dashlist"
     },
     {
@@ -69,7 +69,7 @@
         "h": 20,
         "w": 8,
         "x": 8,
-        "y": 3
+        "y": 2
       },
       "id": 4,
       "options": {
@@ -88,7 +88,7 @@
       "tags": [
         "tablet"
       ],
-      "title": "Tablet Dashbaords",
+      "title": "Tablet Dashboards",
       "type": "dashlist"
     },
     {
@@ -97,7 +97,7 @@
         "h": 20,
         "w": 8,
         "x": 16,
-        "y": 3
+        "y": 2
       },
       "id": 5,
       "options": {
@@ -116,8 +116,59 @@
       "tags": [
         "desktop"
       ],
-      "title": "Desktop Dashbaords",
+      "title": "Desktop Dashboards",
       "type": "dashlist"
+    },
+    {
+      "datasource": null,
+      "gridPos": {
+        "h": 2,
+        "w": 8,
+        "x": 0,
+        "y": 22
+      },
+      "id": 6,
+      "options": {
+        "content": "\n<p style=\"text-align: center\">\n      <a href=\"https://grafana.janeandgraham.com/d/home-mobile/home?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public</a>\n        &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"https://grafana.janeandgraham.com/d/home-mobile/home?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private</a>\n</p>\n                                    ",
+        "mode": "html"
+      },
+      "pluginVersion": "8.0.2",
+      "title": "Mobile Portals",
+      "type": "text"
+    },
+    {
+      "datasource": null,
+      "gridPos": {
+        "h": 2,
+        "w": 8,
+        "x": 8,
+        "y": 22
+      },
+      "id": 7,
+      "options": {
+        "content": "\n<p style=\"text-align: center\">\n      <a href=\"https://grafana.janeandgraham.com/d/home-tablet/home?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public</a>\n          &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"https://grafana.janeandgraham.com/d/home-tablet/home?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private</a>\n</p>\n                                    ",
+        "mode": "html"
+      },
+      "pluginVersion": "8.0.2",
+      "title": "Tablet Portals",
+      "type": "text"
+    },
+    {
+      "datasource": null,
+      "gridPos": {
+        "h": 2,
+        "w": 8,
+        "x": 16,
+        "y": 22
+      },
+      "id": 8,
+      "options": {
+        "content": "\n<p style=\"text-align: center\">\n      <a href=\"https://grafana.janeandgraham.com/d/home-desktop/home?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public</a>\n          &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"https://grafana.janeandgraham.com/d/home-desktop/home?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private</a>\n</p>\n                                    ",
+        "mode": "html"
+      },
+      "pluginVersion": "8.0.2",
+      "title": "Desktop Portals",
+      "type": "text"
     }
   ],
   "refresh": "",
@@ -159,5 +210,5 @@
   "timezone": "browser",
   "title": "Home",
   "uid": "home-default",
-  "version": 2
+  "version": 158
 }

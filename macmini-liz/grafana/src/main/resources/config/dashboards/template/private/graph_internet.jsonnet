@@ -1,8 +1,9 @@
-//ASDASHBOARD_DEFAULTS time_from='now-2d', refresh=''
+//ASDASHBOARD_DEFAULTS time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
 {
       graphs()::
 
             local grafana = import 'grafonnet/grafana.libsonnet';
+            local asystem = import 'default/generated/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
             local stat = grafana.statPanel;
             local graph = grafana.graphPanel;
@@ -10,6 +11,19 @@
             local gauge = grafana.gaugePanel;
             local bar = grafana.barGaugePanel;
             local influxdb = grafana.influxdb;
+            local header = asystem.header;
+
+            header.new(
+//ASM           style='minimal',
+//AST           style='medial',
+//ASD           style='maximal',
+//ASM           formFactor='Mobile',
+//AST           formFactor='Tablet',
+//ASD           formFactor='Desktop',
+                datasource='InfluxDB_V2',
+                measurement='',
+                maxTimeSinceUpdate='0',
+            ) +
 
             [
 
@@ -40,7 +54,11 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-                  ')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 2, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='Domain Uptime',
@@ -69,7 +87,11 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-                  ')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 10, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='Certificate Expiry',
@@ -98,7 +120,11 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-                  ')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 18, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
+                  ,
 
                   bar.new(
                         title='Service Availability',
@@ -120,7 +146,11 @@ from(bucket: "host_private")
  |> sum()
  |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: math.floor(x: r._value / (1.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0)) }))
  |> map(fn: (r) => ({ r with metric: if r.metric == "certificate" then "Certificate" else (if r.metric == "lookup" then "Domain" else (if r.metric == "network" then "Internet" else r.metric)) }))
-                  ')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 26, w: 24, h: 8 } }
+//AST                 { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
+//ASD                 { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
+                  ,
 
                   gauge.new(
                         title='Internet Max Upload',
@@ -150,7 +180,11 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-                  ')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 5, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
+                  ,
 
                   gauge.new(
                         title='Internet Max Download',
@@ -180,7 +214,11 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> sort(columns: ["_time"])
   |> last()
-                  ')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 13, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
+                  ,
 
                   stat.new(
                         title='Internet Mean Latency',
@@ -213,7 +251,11 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
   |> fill(column: "_value", usePrevious: true)
-                  ')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 21, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
+                  ,
 
                   graph.new(
                         title='Internet Total Throughput',
@@ -254,7 +296,11 @@ from(bucket: "host_private")
   |> derivative(unit: 1s, nonNegative: true)
                   ')).addSeriesOverride(
                         { "alias": "upload", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 8, w: 24, h: 7 } },
+                  )
+//ASM                 { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Internet Max Throughput',
@@ -293,7 +339,11 @@ from(bucket: "host_private")
   |> fill(column: "_value", usePrevious: true)
                   ')).addSeriesOverride(
                         { "alias": "upload", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 20, w: 24, h: 7 } },
+                  )
+//ASM                 { gridPos: { x: 0, y: 41, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Internet Min Latency',
@@ -322,7 +372,11 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: true)
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
-                  ')) { gridPos: { x: 0, y: 32, w: 24, h: 7 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
+                  ,
 
                   table.new(
                         title='Internet Categorised Throughput',
@@ -359,7 +413,11 @@ join(tables: {d1: start_bytes, d2: finish_bytes},      on: ["category"])
   |> map(fn: (r) => ({ r with "Transmitted Total": r.tx_bytes }))
   |> keep(columns: ["Category", "Received", "Transmitted", "Received Total", "Transmitted Total"])
   |> sort(columns: ["Received"], desc: true)
-                  ')) { gridPos: { x: 0, y: 44, w: 24, h: 7 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 55, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 46, w: 24, h: 7 } }
+//ASD                 { gridPos: { x: 0, y: 46, w: 24, h: 7 } }
+                  ,
 
                   table.new(
                         title='Domain Resolution',
@@ -398,7 +456,11 @@ unknown_ips = from(bucket: "host_private")
   |> sort(columns: ["_time"], desc: true)
 union(tables: [start_ips, finish_ips, unknown_ips])
   |> sort(columns: ["_time"], desc: true)
-                  ')) { gridPos: { x: 0, y: 56, w: 24, h: 7 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 62, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 58, w: 24, h: 7 } }
+//ASD                 { gridPos: { x: 0, y: 58, w: 24, h: 7 } }
+                  ,
 
             ],
 }

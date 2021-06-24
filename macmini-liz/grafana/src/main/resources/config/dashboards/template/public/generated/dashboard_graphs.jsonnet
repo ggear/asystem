@@ -1,5 +1,6 @@
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
+local timepicker = grafana.timepicker;
 local graph_currency = import 'graph_currency.jsonnet';
 local graph_interest = import 'graph_interest.jsonnet';
 
@@ -21,11 +22,14 @@ local graph_interest = import 'graph_interest.jsonnet';
 //ASM                   editable=false,
 //AST                   editable=false,
 //ASD                   editable=true,
+//ASM                   hideControls=true,
+//AST                   hideControls=true,
+//ASD                   hideControls=false,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['public', 'mobile'],
 //AST                   tags=['public', 'tablet'],
 //ASD                   tags=['public', 'desktop'],
-                        time_from='now-5y', refresh=''
+                        time_from='now-1y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_currency.graphs()),
 
@@ -40,11 +44,14 @@ local graph_interest = import 'graph_interest.jsonnet';
 //ASM                   editable=false,
 //AST                   editable=false,
 //ASD                   editable=true,
+//ASM                   hideControls=true,
+//AST                   hideControls=true,
+//ASD                   hideControls=false,
                         graphTooltip='shared_tooltip',
 //ASM                   tags=['public', 'mobile'],
 //AST                   tags=['public', 'tablet'],
 //ASD                   tags=['public', 'desktop'],
-                        time_from='now-25y', refresh=''
+                        time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_interest.graphs()),
 

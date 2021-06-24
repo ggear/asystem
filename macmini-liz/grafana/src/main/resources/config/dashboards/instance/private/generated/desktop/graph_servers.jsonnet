@@ -2,6 +2,7 @@
       graphs()::
 
             local grafana = import 'grafonnet/grafana.libsonnet';
+            local asystem = import 'default/generated/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
             local stat = grafana.statPanel;
             local graph = grafana.graphPanel;
@@ -9,6 +10,15 @@
             local gauge = grafana.gaugePanel;
             local bar = grafana.barGaugePanel;
             local influxdb = grafana.influxdb;
+            local header = asystem.header;
+
+            header.new(
+                style='maximal',
+                formFactor='Desktop',
+                datasource='InfluxDB_V2',
+                measurement='',
+                maxTimeSinceUpdate='0',
+            ) +
 
             [
 
@@ -39,7 +49,9 @@ from(bucket: "host_private")
   |> group()
   |> min()
   |> keep(columns: ["_value"])
-                  ')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+                  '))
+                      { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='Servers OS Volumes >80%',
@@ -70,7 +82,9 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with _value: if r._value > 80.0 then 1 else 0 }))
   |> keep(columns: ["_value"])
   |> sum()
-                  ')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+                  '))
+                      { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='Servers Data Volumes >80%',
@@ -101,7 +115,9 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with _value: if r._value > 80.0 then 1 else 0 }))
   |> keep(columns: ["_value"])
   |> sum()
-                  ')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
+                  '))
+                      { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
+                  ,
 
                   bar.new(
                         title='Servers with Peak Usage <50%',
@@ -184,7 +200,9 @@ from(bucket: "host_private")
   |> last()
   |> map(fn: (r) => ({ r with "Network": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
   |> keep(columns: ["Network"])
-                  ')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+                  '))
+                      { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
+                  ,
 
                   gauge.new(
                         title='Server Mean CPU Availability',
@@ -216,7 +234,9 @@ from(bucket: "host_private")
   |> mean()
   |> map(fn: (r) => ({ r with _value: r._value }))
   |> keep(columns: ["_value"])
-                  ')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+                  '))
+                      { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
+                  ,
 
                   gauge.new(
                         title='Server Mean Memory Availability',
@@ -247,7 +267,9 @@ from(bucket: "host_private")
   |> mean()
   |> map(fn: (r) => ({ r with _value: 100.0 - r._value }))
   |> keep(columns: ["_value"])
-                  ')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
+                  '))
+                      { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
+                  ,
 
                   gauge.new(
                         title='Server Mean 30< Temperature >100ºC',
@@ -277,7 +299,9 @@ from(bucket: "host_private")
   |> mean()
   |> map(fn: (r) => ({ r with _value: 130.0 - r._value }))
   |> keep(columns: ["_value"])
-                  ')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
+                  '))
+                      { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
+                  ,
 
                   graph.new(
                         title='Server CPU Usage',
@@ -307,7 +331,9 @@ from(bucket: "host_private")
   |> fill(column: "_value", usePrevious: true)
   |> map(fn: (r) => ({ r with _value: 100.0 - r._value }))
   |> keep(columns: ["_time", "_value", "host"])
-                  ')) { gridPos: { x: 0, y: 8, w: 24, h: 7 } },
+                  '))
+                      { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Server RAM Usage',
@@ -335,7 +361,9 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> keep(columns: ["_time", "_value", "host"])
-                  ')) { gridPos: { x: 0, y: 20, w: 24, h: 7 } },
+                  '))
+                      { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Server Swap Usage',
@@ -363,7 +391,9 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> keep(columns: ["_time", "_value", "host"])
-                  ')) { gridPos: { x: 0, y: 32, w: 24, h: 7 } },
+                  '))
+                      { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Server Volume Usage',
@@ -393,7 +423,9 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with path: r.host + " (" + r.path + ")" }))
   |> keep(columns: ["_time", "_value", "path"])
   |> sort(columns: ["_time"])
-                  ')) { gridPos: { x: 0, y: 44, w: 24, h: 7 } },
+                  '))
+                      { gridPos: { x: 0, y: 46, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Server IOPS Usage',
@@ -436,7 +468,9 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with host: r.host + " - Write" }))
                   ')).addSeriesOverride(
                         { "alias": "/.*Write.*/", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 56, w: 24, h: 7 } },
+                  )
+                      { gridPos: { x: 0, y: 58, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Server Network Usage',
@@ -479,7 +513,9 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with host: r.host + " - Transmit" }))
                   ')).addSeriesOverride(
                         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 68, w: 24, h: 7 } },
+                  )
+                      { gridPos: { x: 0, y: 70, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Server Temperature',
@@ -513,7 +549,8 @@ from(bucket: "host_private")
   |> fill(column: "_value", usePrevious: true)
   |> set(key: "host", value: "ambient-rack")
                   '))
-                  { gridPos: { x: 0, y: 80, w: 24, h: 7 } },
+                      { gridPos: { x: 0, y: 82, w: 24, h: 12 } }
+                  ,
 
             ],
 }

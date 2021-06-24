@@ -1,8 +1,9 @@
-//ASDASHBOARD_DEFAULTS time_from='now-1h', refresh=''
+//ASDASHBOARD_DEFAULTS time_from='now-1h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
 {
       graphs()::
 
             local grafana = import 'grafonnet/grafana.libsonnet';
+            local asystem = import 'default/generated/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
             local stat = grafana.statPanel;
             local graph = grafana.graphPanel;
@@ -10,6 +11,19 @@
             local gauge = grafana.gaugePanel;
             local bar = grafana.barGaugePanel;
             local influxdb = grafana.influxdb;
+            local header = asystem.header;
+
+            header.new(
+//ASM           style='minimal',
+//AST           style='medial',
+//ASD           style='maximal',
+//ASM           formFactor='Mobile',
+//AST           formFactor='Tablet',
+//ASD           formFactor='Desktop',
+                datasource='InfluxDB_V2',
+                measurement='',
+                maxTimeSinceUpdate='0',
+            ) +
 
             [
 
@@ -52,7 +66,11 @@ from(bucket: "host_private")
   |> last()
   |> group()
   |> sum()
-                  ')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 2, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='Containers Currently Not Running',
@@ -91,7 +109,11 @@ from(bucket: "host_private")
   |> last()
   |> group()
   |> sum()
-                  ')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 10, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
+                  ,
 
                   stat.new(
                         title='Container Images Currently Installed',
@@ -132,7 +154,11 @@ from(bucket: "host_private")
   |> last()
   |> group()
   |> sum()
-                  ')) { gridPos: { x: 10, y: 0, w: 5, h: 3 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 18, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
+                  ,
 
                   bar.new(
                         title='Containers with Peak Usage <50%',
@@ -215,7 +241,11 @@ from(bucket: "host_private")
   |> last()
   |> map(fn: (r) => ({ r with "Network": math.mMin(x: 100.0, y: 100.0 - float(v: r._value) / float(v: r.index) * 100.0) }))
   |> keep(columns: ["Network"])
-                  ')) { gridPos: { x: 15, y: 0, w: 9, h: 8 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 26, w: 24, h: 8 } }
+//AST                 { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
+//ASD                 { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
+                  ,
 
                   gauge.new(
                         title='Container Mean Running Rate',
@@ -252,7 +282,11 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: float(v: r.n_containers_running) / float(v: r.n_containers) * 100.0) }))
   |> keep(columns: ["_value"])
   |> mean()
-                  ')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 5, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
+                  ,
 
                   gauge.new(
                         title='Container Mean Healthy Rate',
@@ -292,7 +326,11 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
   |> group()
   |> mean()
-                  ')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 13, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
+                  ,
 
                   gauge.new(
                         title='Container Image Usage',
@@ -329,7 +367,11 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: float(v: r.n_containers) / float(v: r.n_images) * 100.0) }))
   |> keep(columns: ["_value"])
   |> mean()
-                  ')) { gridPos: { x: 10, y: 3, w: 5, h: 5 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 21, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
+                  ,
 
                   graph.new(
                         title='Container CPU Usage',
@@ -360,7 +402,11 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)      then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)      then r._value / 8.0 else r._value) }))
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (" + r.host + ")" }))
   |> keep(columns: ["_time", "_value", "container_name"])
-                  ')) { gridPos: { x: 0, y: 8, w: 24, h: 7 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Container RAM Usage',
@@ -389,7 +435,11 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-                  ')) { gridPos: { x: 0, y: 20, w: 24, h: 7 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 41, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Container IOPS Usage',
@@ -433,7 +483,11 @@ from(bucket: "host_private")
   |> derivative(unit: 1s, nonNegative: true)
                   ')).addSeriesOverride(
                         { "alias": "/.*Write.*/", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 32, w: 24, h: 7 } },
+                  )
+//ASM                 { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
+                  ,
 
                   graph.new(
                         title='Container Network Usage',
@@ -477,7 +531,11 @@ from(bucket: "host_private")
   |> derivative(unit: 1s, nonNegative: true)
                   ')).addSeriesOverride(
                         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 46, w: 24, h: 7 } },
+                  )
+//ASM                 { gridPos: { x: 0, y: 55, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 46, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 46, w: 24, h: 12 } }
+                  ,
 
                   table.new(
                         title='Container Current Process Status',
@@ -515,7 +573,11 @@ union(tables: [status, health])
   |> last()
   |> keep(columns: ["Name", "Status", "Temperature", "Uptime", "Host"])
   |> group()
-                  ')) { gridPos: { x: 0, y: 60, w: 24, h: 18 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 62, w: 24, h: 18 } }
+//AST                 { gridPos: { x: 0, y: 58, w: 24, h: 18 } }
+//ASD                 { gridPos: { x: 0, y: 58, w: 24, h: 18 } }
+                  ,
 
             ],
 }

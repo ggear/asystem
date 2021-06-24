@@ -5,11 +5,11 @@ echo "Grafana bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
 LIBRARIES_HOME=${LIBRARIES_HOME:-"/bootstrap"}
-DASHBOARDS_HOME=${DASHBOARDS_HOME:-"../dashboards"}
+DASHBOARDS_HOME=${DASHBOARDS_HOME:-"/bootstrap/dashboards"}
 
 cd ${LIBRARIES_HOME}/grizzly
 make dev
-cd ../grafonnet-lib
+cd ${LIBRARIES_HOME}
 
 while ! curl -sf ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
   echo "Waiting for grafana to come up ..." && sleep 1
@@ -186,8 +186,8 @@ curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | jq
 # Public Dashboards
 #######################################################################################
 export GRAFANA_URL=${GRAFANA_URL_PUBLIC}
-find ${DASHBOARDS_HOME}/public -name dashboard_* -exec ../grizzly/grr apply {} \;
-find ${DASHBOARDS_HOME}/default -name dashboard_* -exec ../grizzly/grr apply {} \;
+find ${DASHBOARDS_HOME}/public -name dashboard_* -exec ${LIBRARIES_HOME}/grizzly/grr -J ${LIBRARIES_HOME}/grafonnet-lib -J ${DASHBOARDS_HOME} apply {} \;
+find ${DASHBOARDS_HOME}/default -name dashboard_* -exec ${LIBRARIES_HOME}/grizzly/grr -J ${LIBRARIES_HOME}/grafonnet-lib -J ${DASHBOARDS_HOME} apply {} \;
 
 #######################################################################################
 # Private Datasources
@@ -268,7 +268,7 @@ curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | jq
 # Private Dashboards
 #######################################################################################
 export GRAFANA_URL=${GRAFANA_URL_PRIVATE}
-find ${DASHBOARDS_HOME}/private -name dashboard_* -exec ../grizzly/grr apply {} \;
+find ${DASHBOARDS_HOME}/private -name dashboard_* -exec ${LIBRARIES_HOME}/grizzly/grr -J ${LIBRARIES_HOME}/grafonnet-lib -J ${DASHBOARDS_HOME} apply {} \;
 
 echo "--------------------------------------------------------------------------------"
 echo "Grafana bootstrap finished"

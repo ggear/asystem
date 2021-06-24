@@ -1,8 +1,9 @@
-//ASDASHBOARD_DEFAULTS time_from='now-25y', refresh=''
+//ASDASHBOARD_DEFAULTS time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
 {
       graphs()::
 
             local grafana = import 'grafonnet/grafana.libsonnet';
+            local asystem = import 'default/generated/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
             local stat = grafana.statPanel;
             local graph = grafana.graphPanel;
@@ -10,6 +11,19 @@
             local gauge = grafana.gaugePanel;
             local bar = grafana.barGaugePanel;
             local influxdb = grafana.influxdb;
+            local header = asystem.header;
+
+            header.new(
+//ASM           style='minimal',
+//AST           style='medial',
+//ASD           style='maximal',
+//ASM           formFactor='Mobile',
+//AST           formFactor='Tablet',
+//ASD           formFactor='Desktop',
+                datasource='InfluxDB_V2',
+                measurement='interest',
+                maxTimeSinceUpdate='5184000000',
+            ) +
 
             [
 
@@ -40,9 +54,9 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 0, w: 24, h: 3 } }
-//AST                 { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
-//ASD                 { gridPos: { x: 0, y: 0, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 2, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
                   ,
 
                   stat.new(
@@ -72,9 +86,9 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 8, w: 24, h: 3 } }
-//AST                 { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
-//ASD                 { gridPos: { x: 5, y: 0, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 10, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
                   ,
 
                   stat.new(
@@ -104,13 +118,13 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 16, w: 24, h: 3 } }
-//AST                 { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
-//ASD                 { gridPos: { x: 10, y: 0, w: 5, h: 3 } }
+//ASM                 { gridPos: { x: 0, y: 18, w: 24, h: 3 } }
+//AST                 { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
+//ASD                 { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
                   ,
 
                   bar.new(
-                        title='Interest Rate Range Means',
+                        title='Interest Rates Range Means',
                         datasource='InfluxDB_V2',
                         unit='percent',
                         min=-1,
@@ -148,9 +162,9 @@ from(bucket: "data_public")
   |> mean(column: "_value")
   |> rename(fn: (column) => "Inflation")
                   '))
-//ASM                 { gridPos: { x: 0, y: 24, w: 24, h: 8 } }
-//AST                 { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
-//ASD                 { gridPos: { x: 15, y: 0, w: 9, h: 8 } }
+//ASM                 { gridPos: { x: 0, y: 26, w: 24, h: 8 } }
+//AST                 { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
+//ASD                 { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
                   ,
 
                   gauge.new(
@@ -180,9 +194,9 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 3, w: 24, h: 5 } }
-//AST                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
-//ASD                 { gridPos: { x: 0, y: 3, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 5, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
                   ,
 
                   gauge.new(
@@ -212,9 +226,9 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 11, w: 24, h: 5 } }
-//AST                 { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
-//ASD                 { gridPos: { x: 5, y: 3, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 13, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
                   ,
 
                   gauge.new(
@@ -244,13 +258,13 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-//ASM                 { gridPos: { x: 0, y: 19, w: 24, h: 5 } }
-//AST                 { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
-//ASD                 { gridPos: { x: 10, y: 3, w: 5, h: 5 } }
+//ASM                 { gridPos: { x: 0, y: 21, w: 24, h: 5 } }
+//AST                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
+//ASD                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
                   ,
 
                   graph.new(
-                        title='Interest Rate Monthly Means',
+                        title='Interest Rates Monthly Means',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -294,13 +308,13 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   )
-//ASM                 { gridPos: { x: 0, y: 32, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 8, w: 24, h: 12 } }
+//ASM                 { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
                   ,
 
                   graph.new(
-                        title='Interest Rate 10 Year Means',
+                        title='Interest Rates 10 Year Means',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -344,13 +358,13 @@ from(bucket: "data_public")
                   ).addSeriesOverride(
                         { "alias": "/.*inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   )
-//ASM                 { gridPos: { x: 0, y: 39, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 20, w: 24, h: 12 } }
+//ASM                 { gridPos: { x: 0, y: 41, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
 
                   graph.new(
-                        title='Net Rate n-Monthly Means',
+                        title='Net Rate n-Year Means',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -374,32 +388,36 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "net")
   |> filter(fn: (r) => r["period"] == "1y")
-  |> keep(columns: ["_time", "_value", "period"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "1 year"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "net")
   |> filter(fn: (r) => r["period"] == "5y")
-  |> keep(columns: ["_time", "_value", "period"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "5 year"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "net")
   |> filter(fn: (r) => r["period"] == "10y")
-  |> keep(columns: ["_time", "_value", "period"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "10 year"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "net")
   |> filter(fn: (r) => r["period"] == "20y")
-  |> keep(columns: ["_time", "_value", "period"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "20 year"})
                   '))
-//ASM                 { gridPos: { x: 0, y: 46, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 32, w: 24, h: 12 } }
+//ASM                 { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
                   ,
 
             ],

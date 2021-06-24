@@ -13,7 +13,7 @@ export GRAFANA_URL=http://${GRAFANA_USER}:${GRAFANA_KEY}@${GRAFANA_HOST_PROD}:${
 export GRAFANA_URL_PUBLIC=http://${GRAFANA_USER_PUBLIC}:${GRAFANA_KEY_PUBLIC}@${GRAFANA_HOST_PROD}:${GRAFANA_PORT}
 export GRAFANA_URL_PRIVATE=http://${GRAFANA_USER_PRIVATE}:${GRAFANA_KEY_PRIVATE}@${GRAFANA_HOST_PROD}:${GRAFANA_PORT}
 
-export LIBRARIES_HOME=src/main/resources/libraries
-export DASHBOARDS_HOME=../../config/dashboards/instance
+export LIBRARIES_HOME=$PWD/src/main/resources/libraries
+export DASHBOARDS_HOME=$PWD/src/main/resources/config/dashboards/instance
 
 ./src/main/resources/config/bootstrap.sh

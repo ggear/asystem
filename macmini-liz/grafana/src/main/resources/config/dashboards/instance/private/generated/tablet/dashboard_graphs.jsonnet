@@ -1,5 +1,6 @@
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
+local timepicker = grafana.timepicker;
 local graph_network = import 'graph_network.jsonnet';
 local graph_electricity = import 'graph_electricity.jsonnet';
 local graph_servers = import 'graph_servers.jsonnet';
@@ -22,9 +23,10 @@ local graph_containers = import 'graph_containers.jsonnet';
                         title='Network',
                         uid='network-tablet',
                         editable=false,
+                        hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-2d', refresh=''
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_network.graphs()),
 
@@ -35,9 +37,10 @@ local graph_containers = import 'graph_containers.jsonnet';
                         title='Electricity',
                         uid='electricity-tablet',
                         editable=false,
+                        hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-7d', refresh=''
+                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_electricity.graphs()),
 
@@ -48,9 +51,10 @@ local graph_containers = import 'graph_containers.jsonnet';
                         title='Servers',
                         uid='servers-tablet',
                         editable=false,
+                        hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-2d', refresh=''
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_servers.graphs()),
 
@@ -61,9 +65,10 @@ local graph_containers = import 'graph_containers.jsonnet';
                         title='Water',
                         uid='water-tablet',
                         editable=false,
+                        hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-7d', refresh=''
+                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_water.graphs()),
 
@@ -74,9 +79,10 @@ local graph_containers = import 'graph_containers.jsonnet';
                         title='Currency',
                         uid='currency-tablet',
                         editable=false,
+                        hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-5y', refresh=''
+                        time_from='now-1y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_currency.graphs()),
 
@@ -87,9 +93,10 @@ local graph_containers = import 'graph_containers.jsonnet';
                         title='Interest',
                         uid='interest-tablet',
                         editable=false,
+                        hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-25y', refresh=''
+                        time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_interest.graphs()),
 
@@ -100,9 +107,10 @@ local graph_containers = import 'graph_containers.jsonnet';
                         title='Internet',
                         uid='internet-tablet',
                         editable=false,
+                        hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-2d', refresh=''
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_internet.graphs()),
 
@@ -113,9 +121,10 @@ local graph_containers = import 'graph_containers.jsonnet';
                         title='Conditions',
                         uid='conditions-tablet',
                         editable=false,
+                        hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-7d', refresh=''
+                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_conditions.graphs()),
 
@@ -126,9 +135,10 @@ local graph_containers = import 'graph_containers.jsonnet';
                         title='Containers',
                         uid='containers-tablet',
                         editable=false,
+                        hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-1h', refresh=''
+                        time_from='now-1h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_containers.graphs()),
 

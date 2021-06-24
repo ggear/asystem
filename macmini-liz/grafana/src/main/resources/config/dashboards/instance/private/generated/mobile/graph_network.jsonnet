@@ -2,6 +2,7 @@
       graphs()::
 
             local grafana = import 'grafonnet/grafana.libsonnet';
+            local asystem = import 'default/generated/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
             local stat = grafana.statPanel;
             local graph = grafana.graphPanel;
@@ -9,6 +10,15 @@
             local gauge = grafana.gaugePanel;
             local bar = grafana.barGaugePanel;
             local influxdb = grafana.influxdb;
+            local header = asystem.header;
+
+            header.new(
+                style='minimal',
+                formFactor='Mobile',
+                datasource='InfluxDB_V2',
+                measurement='',
+                maxTimeSinceUpdate='0',
+            ) +
 
             [
 
@@ -37,7 +47,9 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_field"] == "uptime")
   |> keep(columns: ["_time", "_value"])
   |> last()
-                  ')) { gridPos: { x: 0, y: 0, w: 5, h: 3 } },
+                  '))
+                      { gridPos: { x: 0, y: 2, w: 24, h: 3 } }
+                  ,
 
                   stat.new(
                         title='Network Clients',
@@ -65,7 +77,9 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
   |> unique()
   |> count()
-                  ')) { gridPos: { x: 5, y: 0, w: 5, h: 3 } },
+                  '))
+                      { gridPos: { x: 0, y: 10, w: 24, h: 3 } }
+                  ,
 
                   bar.new(
                         title='Wireless Performance',
@@ -114,7 +128,9 @@ from(bucket: "host_private")
   |> mean()
   |> map(fn: (r) => ({ r with _value: math.round(x: r._value) }))
   |> map(fn: (r) => ({ r with radio: if r.radio == "ng" then "No Errors (2.4 GHz)" else (if r.radio == "na" then "No Errors (5 GHz)" else r.radio) }))
-                  ')) { gridPos: { x: 10, y: 0, w: 14, h: 8 } },
+                  '))
+                      { gridPos: { x: 0, y: 18, w: 24, h: 8 } }
+                  ,
 
                   gauge.new(
                         title='Wireless Quality Score (5GHz)',
@@ -144,7 +160,9 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
   |> mean()
   |> map(fn: (r) => ({ r with _value: r._value / 10.0 }))
-                  ')) { gridPos: { x: 0, y: 3, w: 5, h: 5 } },
+                  '))
+                      { gridPos: { x: 0, y: 5, w: 24, h: 5 } }
+                  ,
 
                   gauge.new(
                         title='Wireless Quality Score (2.4GHz)',
@@ -174,7 +192,9 @@ from(bucket: "host_private")
   |> keep(columns: ["_value"])
   |> mean()
   |> map(fn: (r) => ({ r with _value: r._value / 10.0 }))
-                  ')) { gridPos: { x: 5, y: 3, w: 5, h: 5 } },
+                  '))
+                      { gridPos: { x: 0, y: 13, w: 24, h: 5 } }
+                  ,
 
                   graph.new(
                         title='Network Throughput',
@@ -207,7 +227,9 @@ from(bucket: "host_private")
   |> derivative(unit: 1s, nonNegative: true)
                   ')).addSeriesOverride(
                         { "alias": "transmit", "transform": "negative-Y" }
-                  ) { gridPos: { x: 0, y: 8, w: 24, h: 7 } },
+                  )
+                      { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
+                  ,
 
                   graph.new(
                         title='Network Clients',
@@ -241,7 +263,9 @@ from(bucket: "host_private")
 //  |> group(columns: ["name"], mode:"by")
                   ')).addSeriesOverride(
                         { "alias": "transmit", "transform": "negative-Y" }
-      ) { gridPos: { x: 0, y: 20, w: 24, h: 7 } },
+      )
+                      { gridPos: { x: 0, y: 41, w: 24, h: 7 } }
+                  ,
 
                   graph.new(
                         title='Network Device CPU Usage',
@@ -259,7 +283,9 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-                  ')) { gridPos: { x: 0, y: 32, w: 24, h: 7 } },
+                  '))
+                      { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
+                  ,
 
                   graph.new(
                         title='Network Device RAM Usage',
@@ -277,7 +303,9 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-                  ')) { gridPos: { x: 0, y: 44, w: 24, h: 7 } },
+                  '))
+                      { gridPos: { x: 0, y: 55, w: 24, h: 7 } }
+                  ,
 
                   graph.new(
                         title='Network Device Temperature',
@@ -303,7 +331,9 @@ from(bucket: "asystem")
   |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
-                  ')) { gridPos: { x: 0, y: 56, w: 24, h: 7 } },
+                  '))
+                      { gridPos: { x: 0, y: 62, w: 24, h: 7 } }
+                  ,
 
                   table.new(
                         title='Wireless Clients',

@@ -2,6 +2,7 @@
       graphs()::
 
             local grafana = import 'grafonnet/grafana.libsonnet';
+            local asystem = import 'default/generated/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
             local stat = grafana.statPanel;
             local graph = grafana.graphPanel;
@@ -9,139 +10,17 @@
             local gauge = grafana.gaugePanel;
             local bar = grafana.barGaugePanel;
             local influxdb = grafana.influxdb;
+            local header = asystem.header;
+
+            header.new(
+                style='medial',
+                formFactor='Tablet',
+                datasource='InfluxDB_V2',
+                measurement='currency',
+                maxTimeSinceUpdate='259200000',
+            ) +
 
             [
-
-
-
-
-                  stat.new(
-                        title='Last Run',
-                        datasource='InfluxDB_V2',
-                        fields='_time',
-                        decimals=0,
-                        unit='',
-                        colorMode='value',
-                        graphMode='none',
-                        justifyMode='auto',
-                        thresholdsMode='absolute',
-                        repeatDirection='h',
-                        pluginVersion='7',
-                  ).addThreshold(
-                        { color: 'red', value: 0 }
-                  ).addThreshold(
-                        { color: 'yellow', value: 0 }
-                  ).addThreshold(
-                        { color: 'green', value: 0 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["type"] == "metadata")
-  |> last()
-  |> group()
-  |> last()
-  |> keep(columns: ["_time"])
-                  '))
-                      { gridPos: { x: 0, y: 0, w: 2, h: 2 } }
-                  ,
-                  stat.new(
-                        title='Time Since Last Run',
-                        datasource='InfluxDB_V2',
-                        fields='_time',
-                        decimals=1,
-                        unit='dtdurationms',
-                        colorMode='value',
-                        graphMode='none',
-                        justifyMode='auto',
-                        thresholdsMode='absolute',
-                        repeatDirection='h',
-                        pluginVersion='7',
-                  ).addThreshold(
-                        { color: 'red', value: 0 }
-                  ).addThreshold(
-                        { color: 'yellow', value: 0 }
-                  ).addThreshold(
-                        { color: 'green', value: 0 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["type"] == "metadata")
-  |> last()
-  |> group()
-  |> last()
-  |> keep(columns: ["_time"])
-  |> map(fn: (r) => ({ r with _time: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
-                  '))
-                      { gridPos: { x: 2, y: 0, w: 2, h: 2 } }
-                  ,
-                  stat.new(
-                        title='Last Updated',
-                        datasource='InfluxDB_V2',
-                        fields='_time',
-                        decimals=0,
-                        unit='',
-                        colorMode='value',
-                        graphMode='none',
-                        justifyMode='auto',
-                        thresholdsMode='absolute',
-                        repeatDirection='h',
-                        pluginVersion='7',
-                  ).addThreshold(
-                        { color: 'red', value: 0 }
-                  ).addThreshold(
-                        { color: 'yellow', value: 0 }
-                  ).addThreshold(
-                        { color: 'green', value: 0 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["type"] != "metadata")
-  |> last()
-  |> group()
-  |> last()
-  |> keep(columns: ["_time"])
-                  '))
-                      { gridPos: { x: 4, y: 0, w: 2, h: 2 } }
-                  ,
-                  stat.new(
-                        title='Time Since Last Update',
-                        datasource='InfluxDB_V2',
-                        fields='_time',
-                        decimals=1,
-                        unit='dtdurationms',
-                        colorMode='value',
-                        graphMode='none',
-                        justifyMode='auto',
-                        thresholdsMode='absolute',
-                        repeatDirection='h',
-                        pluginVersion='7',
-                  ).addThreshold(
-                        { color: 'red', value: 0 }
-                  ).addThreshold(
-                        { color: 'yellow', value: 0 }
-                  ).addThreshold(
-                        { color: 'green', value: 0 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["type"] != "metadata")
-  |> last()
-  |> group()
-  |> last()
-  |> keep(columns: ["_time"])
-  |> map(fn: (r) => ({ r with _time: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
-                  '))
-                      { gridPos: { x: 6, y: 0, w: 2, h: 2 } }
-                  ,
-
-
-
-
-
 
                   stat.new(
                         title='GBP/AUD Last End of Day',
