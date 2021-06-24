@@ -38,11 +38,11 @@ local dashboard = grafana.dashboard;
                                     mode='html',
                                     content='
 <p style="text-align: center">
-      <a href="https://grafana.janeandgraham.com" onClick="window.location.reload(true);return false;">All</a>
+      <a href="https://grafana.janeandgraham.com"">All</a>
           &nbsp;&nbsp;|&nbsp;&nbsp;
-//ASM <a href="https://grafana.janeandgraham.com/d/home-mobile/home?orgId=2" onClick="window.location.reload(true);return false;">Private</a>
-//AST <a href="https://grafana.janeandgraham.com/d/home-tablet/home?orgId=2" onClick="window.location.reload(true);return false;">Private</a>
-//ASD <a href="https://grafana.janeandgraham.com/d/home-desktop/home?orgId=2" onClick="window.location.reload(true);return false;">Private</a>
+//ASM <a href="#" onClick="location.href=\'https://grafana.janeandgraham.com/d/home-mobile/home?orgId=2\'";return false;">Private</a>
+//AST <a href="#" onClick="location.href=\'https://grafana.janeandgraham.com/d/home-tablet/home?orgId=2\'";return false;">Private</a>
+//ASD <a href="#" onClick="location.href=\'https://grafana.janeandgraham.com/d/home-desktop/home?orgId=2\'";return false;">Private</a>
 </p>
                                     ',
                               )

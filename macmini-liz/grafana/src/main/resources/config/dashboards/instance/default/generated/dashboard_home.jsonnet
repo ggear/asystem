@@ -30,9 +30,9 @@ local dashboard = grafana.dashboard;
                                     mode='html',
                                     content='
 <p style="text-align: center">
-      <a href="https://grafana.janeandgraham.com?orgId=1#">Public</a>
+      <a href="#" onClick="location.href=\'https://grafana.janeandgraham.com?orgId=1\'";return false;">Public</a>
           &nbsp;&nbsp;|&nbsp;&nbsp;
-      <a href="https://grafana.janeandgraham.com?orgId=2#">Private</a>
+      <a href="#" onClick="location.href=\'https://grafana.janeandgraham.com?orgId=2\'";return false;">Private</a>
 </p>
                                     ',
                               )
