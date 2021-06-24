@@ -32,9 +32,78 @@
 </p>
                         ',
                   )
-                      { gridPos: { x: 0, y: 0, w: 2, h: 2 } }
+                      { gridPos: { x: 0, y: 0, w: (if style == 'maximal' then 2 else (if style == 'medial' then 6 else 24)), h: 2 } }
                   ,
            ]
+
+           + (if style == 'maximal' || style == 'medial' || style == 'minimal' then [
+                  stat.new(
+                        title='Time Since Update',
+                        datasource=datasource,
+                        fields='duration',
+                        decimals=1,
+                        unit='dtdurationms',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: '' }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: maxTimeSinceUpdate }
+                  ).addThreshold(
+                        { color: 'red', value: maxTimeSinceUpdate }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
+  |> filter(fn: (r) => r["type"] != "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> map(fn: (r) => ({ r with duration: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
+  |> keep(columns: ["duration"])
+                  '))
+                      { gridPos: { x: (if style == 'maximal' then 4 else (if style == 'medial' then 6 else 0)), y: 0, w: (if style == 'maximal' then 2 else (if style == 'medial' then 6 else 24)), h: 2 } }
+                  ,
+           ] else [])
+
+           + (if style == 'maximal' then [
+                  stat.new(
+                        title='Last Updated',
+                        datasource=datasource,
+                        fields='_time',
+                        decimals=0,
+                        unit='',
+                        colorMode='value',
+                        graphMode='none',
+                        justifyMode='auto',
+                        thresholdsMode='absolute',
+                        repeatDirection='h',
+                        pluginVersion='7',
+                  ).addThreshold(
+                        { color: 'red', value: 0 }
+                  ).addThreshold(
+                        { color: 'yellow', value: 0 }
+                  ).addThreshold(
+                        { color: 'green', value: 0 }
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_public")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
+  |> filter(fn: (r) => r["type"] != "metadata")
+  |> last()
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+                  '))
+                      { gridPos: { x: 6, y: 0, w: 2, h: 2 } }
+                  ,
+           ] else [])
 
            + (if style == 'maximal' then [
                   stat.new(
@@ -74,75 +143,6 @@ from(bucket: "data_public")
 
            + (if style == 'maximal' then [
                   stat.new(
-                        title='Last Updated',
-                        datasource=datasource,
-                        fields='_time',
-                        decimals=0,
-                        unit='',
-                        colorMode='value',
-                        graphMode='none',
-                        justifyMode='auto',
-                        thresholdsMode='absolute',
-                        repeatDirection='h',
-                        pluginVersion='7',
-                  ).addThreshold(
-                        { color: 'red', value: 0 }
-                  ).addThreshold(
-                        { color: 'yellow', value: 0 }
-                  ).addThreshold(
-                        { color: 'green', value: 0 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  |> filter(fn: (r) => r["type"] != "metadata")
-  |> last()
-  |> group()
-  |> last()
-  |> keep(columns: ["_time"])
-                  '))
-                      { gridPos: { x: 4, y: 0, w: 2, h: 2 } }
-                  ,
-           ] else [])
-
-           + (if style == 'maximal' || style == 'medial' || style == 'minimal' then [
-                  stat.new(
-                        title='Time Since Update',
-                        datasource=datasource,
-                        fields='duration',
-                        decimals=1,
-                        unit='dtdurationms',
-                        colorMode='value',
-                        graphMode='none',
-                        justifyMode='auto',
-                        thresholdsMode='absolute',
-                        repeatDirection='h',
-                        pluginVersion='7',
-                  ).addThreshold(
-                        { color: 'red', value: '' }
-                  ).addThreshold(
-                        { color: 'green', value: 0 }
-                  ).addThreshold(
-                        { color: 'yellow', value: maxTimeSinceUpdate }
-                  ).addThreshold(
-                        { color: 'red', value: maxTimeSinceUpdate }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  |> filter(fn: (r) => r["type"] != "metadata")
-  |> last()
-  |> group()
-  |> last()
-  |> map(fn: (r) => ({ r with duration: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
-  |> keep(columns: ["duration"])
-                  '))
-                      { gridPos: { x: (if style == 'maximal' then 6 else 0), y: 0, w: (if style == 'maximal' then 2 else (if style == 'medial' then 6 else 24)), h: 2 } }
-                  ,
-           ] else [])
-
-           + (if style == 'maximal' then [
-                  stat.new(
                         title='Update Metrics',
                         datasource=datasource,
                         fields='_value',
@@ -172,7 +172,7 @@ from(bucket: "data_public")
                   ,
            ] else [])
 
-           + (if style == 'maximal' || style == 'medial' then [
+           + (if style == 'maximal' then [
                   stat.new(
                         title='Update Points',
                         datasource=datasource,
@@ -199,7 +199,7 @@ from(bucket: "data_public")
   |> last()
   |> keep(columns: ["_value"])
                   '))
-                      { gridPos: { x: (if style == 'maximal' then 10 else 6), y: 0, w: (if style == 'maximal' then 2 else 6), h: 2 } }
+                      { gridPos: { x: 10, y: 0, w: 2, h: 2 } }
                   ,
            ] else [])
 
