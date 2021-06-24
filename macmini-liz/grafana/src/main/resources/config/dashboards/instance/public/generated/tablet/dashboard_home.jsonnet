@@ -25,12 +25,12 @@ local dashboard = grafana.dashboard;
                         [
 
                               text.new(
-                                    title='Public Tablet Portals',
+                                    title='Tablet Portals',
                                     span=null,
                                     mode='html',
                                     content='
 <p style="text-align: center">
-      <a href="https://grafana.janeandgraham.com/d/home-tablet/home?orgId=1" onClick="window.location.reload(true);return false;">Public</a>
+      <a href="https://grafana.janeandgraham.com" onClick="window.location.reload(true);return false;">All</a>
           &nbsp;&nbsp;|&nbsp;&nbsp;
       <a href="https://grafana.janeandgraham.com/d/home-tablet/home?orgId=2" onClick="window.location.reload(true);return false;">Private</a>
 </p>

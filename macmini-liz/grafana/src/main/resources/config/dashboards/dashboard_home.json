@@ -31,7 +31,7 @@
         "content": "\n<p style=\"text-align: center\">\n      <a href=\"https://grafana.janeandgraham.com?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public</a>\n          &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"https://grafana.janeandgraham.com?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private</a>\n</p>\n                                    ",
         "mode": "html"
       },
-      "pluginVersion": "8.0.2",
+      "pluginVersion": "8.0.3",
       "title": "Portals",
       "type": "text"
     },
@@ -56,7 +56,7 @@
           "mobile"
         ]
       },
-      "pluginVersion": "8.0.2",
+      "pluginVersion": "8.0.3",
       "tags": [
         "mobile"
       ],
@@ -84,7 +84,7 @@
           "tablet"
         ]
       },
-      "pluginVersion": "8.0.2",
+      "pluginVersion": "8.0.3",
       "tags": [
         "tablet"
       ],
@@ -112,63 +112,12 @@
           "desktop"
         ]
       },
-      "pluginVersion": "8.0.2",
+      "pluginVersion": "8.0.3",
       "tags": [
         "desktop"
       ],
       "title": "Desktop Dashboards",
       "type": "dashlist"
-    },
-    {
-      "datasource": null,
-      "gridPos": {
-        "h": 2,
-        "w": 8,
-        "x": 0,
-        "y": 22
-      },
-      "id": 6,
-      "options": {
-        "content": "\n<p style=\"text-align: center\">\n      <a href=\"https://grafana.janeandgraham.com/d/home-mobile/home?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public</a>\n        &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"https://grafana.janeandgraham.com/d/home-mobile/home?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private</a>\n</p>\n                                    ",
-        "mode": "html"
-      },
-      "pluginVersion": "8.0.2",
-      "title": "Mobile Portals",
-      "type": "text"
-    },
-    {
-      "datasource": null,
-      "gridPos": {
-        "h": 2,
-        "w": 8,
-        "x": 8,
-        "y": 22
-      },
-      "id": 7,
-      "options": {
-        "content": "\n<p style=\"text-align: center\">\n      <a href=\"https://grafana.janeandgraham.com/d/home-tablet/home?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public</a>\n          &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"https://grafana.janeandgraham.com/d/home-tablet/home?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private</a>\n</p>\n                                    ",
-        "mode": "html"
-      },
-      "pluginVersion": "8.0.2",
-      "title": "Tablet Portals",
-      "type": "text"
-    },
-    {
-      "datasource": null,
-      "gridPos": {
-        "h": 2,
-        "w": 8,
-        "x": 16,
-        "y": 22
-      },
-      "id": 8,
-      "options": {
-        "content": "\n<p style=\"text-align: center\">\n      <a href=\"https://grafana.janeandgraham.com/d/home-desktop/home?orgId=1\" onClick=\"window.location.reload(true);return false;\">Public</a>\n          &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"https://grafana.janeandgraham.com/d/home-desktop/home?orgId=2\" onClick=\"window.location.reload(true);return false;\">Private</a>\n</p>\n                                    ",
-        "mode": "html"
-      },
-      "pluginVersion": "8.0.2",
-      "title": "Desktop Portals",
-      "type": "text"
     }
   ],
   "refresh": "",
@@ -210,5 +159,5 @@
   "timezone": "browser",
   "title": "Home",
   "uid": "home-default",
-  "version": 158
+  "version": 2
 }

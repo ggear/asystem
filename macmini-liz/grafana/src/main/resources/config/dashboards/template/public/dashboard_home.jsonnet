@@ -31,16 +31,14 @@ local dashboard = grafana.dashboard;
                         [
 
                               text.new(
-//ASM                               title='Public Mobile Portals',
-//AST                               title='Public Tablet Portals',
-//ASD                               title='Public Desktop Portals',
+//ASM                               title='Mobile Portals',
+//AST                               title='Tablet Portals',
+//ASD                               title='Desktop Portals',
                                     span=null,
                                     mode='html',
                                     content='
 <p style="text-align: center">
-//ASM <a href="https://grafana.janeandgraham.com/d/home-mobile/home?orgId=1" onClick="window.location.reload(true);return false;">Public</a>
-//AST <a href="https://grafana.janeandgraham.com/d/home-tablet/home?orgId=1" onClick="window.location.reload(true);return false;">Public</a>
-//ASD <a href="https://grafana.janeandgraham.com/d/home-desktop/home?orgId=1" onClick="window.location.reload(true);return false;">Public</a>
+      <a href="https://grafana.janeandgraham.com" onClick="window.location.reload(true);return false;">All</a>
           &nbsp;&nbsp;|&nbsp;&nbsp;
 //ASM <a href="https://grafana.janeandgraham.com/d/home-mobile/home?orgId=2" onClick="window.location.reload(true);return false;">Private</a>
 //AST <a href="https://grafana.janeandgraham.com/d/home-tablet/home?orgId=2" onClick="window.location.reload(true);return false;">Private</a>

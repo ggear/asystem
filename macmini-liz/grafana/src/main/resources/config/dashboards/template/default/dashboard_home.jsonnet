@@ -75,51 +75,6 @@ local dashboard = grafana.dashboard;
                                   { gridPos: { x: 16, y: 2, w: 8, h: 20 } }
                               ,
 
-                              text.new(
-                                    title='Mobile Portals',
-                                    span=null,
-                                    mode='html',
-                                    content='
-<p style="text-align: center">
-      <a href="https://grafana.janeandgraham.com/d/home-mobile/home?orgId=1" onClick="window.location.reload(true);return false;">Public</a>
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-      <a href="https://grafana.janeandgraham.com/d/home-mobile/home?orgId=2" onClick="window.location.reload(true);return false;">Private</a>
-</p>
-                                    ',
-                              )
-                                  { gridPos: { x: 0, y: 22, w: 8, h: 2 } }
-                              ,
-
-                              text.new(
-                                    title='Tablet Portals',
-                                    span=null,
-                                    mode='html',
-                                    content='
-<p style="text-align: center">
-      <a href="https://grafana.janeandgraham.com/d/home-tablet/home?orgId=1" onClick="window.location.reload(true);return false;">Public</a>
-          &nbsp;&nbsp;|&nbsp;&nbsp;
-      <a href="https://grafana.janeandgraham.com/d/home-tablet/home?orgId=2" onClick="window.location.reload(true);return false;">Private</a>
-</p>
-                                    ',
-                              )
-                                  { gridPos: { x: 8, y: 22, w: 8, h: 2 } }
-                              ,
-
-                              text.new(
-                                    title='Desktop Portals',
-                                    span=null,
-                                    mode='html',
-                                    content='
-<p style="text-align: center">
-      <a href="https://grafana.janeandgraham.com/d/home-desktop/home?orgId=1" onClick="window.location.reload(true);return false;">Public</a>
-          &nbsp;&nbsp;|&nbsp;&nbsp;
-      <a href="https://grafana.janeandgraham.com/d/home-desktop/home?orgId=2" onClick="window.location.reload(true);return false;">Private</a>
-</p>
-                                    ',
-                              )
-                                  { gridPos: { x: 16, y: 22, w: 8, h: 2 } }
-                              ,
-
                         ],
 
                   ),
