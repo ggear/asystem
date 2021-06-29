@@ -1,4 +1,4 @@
-//ASDASHBOARD_DEFAULTS time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+//ASDASHBOARD_DEFAULTS time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
 {
       graphs()::
 
@@ -20,9 +20,9 @@
 //ASM           formFactor='Mobile',
 //AST           formFactor='Tablet',
 //ASD           formFactor='Desktop',
-                datasource='InfluxDB_V2',
                 measurement='interest',
-                maxTimeSinceUpdate='5184000000',
+                maxMilliSecSinceUpdate='5184000000',
+                simpleErrors=false,
             ) +
 
             [

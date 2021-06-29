@@ -15,9 +15,9 @@
             header.new(
                 style='maximal',
                 formFactor='Desktop',
-                datasource='InfluxDB_V2',
                 measurement='currency',
-                maxTimeSinceUpdate='259200000',
+                maxMilliSecSinceUpdate='259200000',
+                simpleErrors=false,
             ) +
 
             [
@@ -398,7 +398,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> keep(columns: ["_time", "_value"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
+  |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> rename(columns: {_value: "snapshot"})
                   ')).addSeriesOverride(
                         { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
@@ -448,7 +448,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> keep(columns: ["_time", "_value"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
+  |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> rename(columns: {_value: "snapshot"})
                   ')).addSeriesOverride(
                         { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
@@ -498,7 +498,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> keep(columns: ["_time", "_value"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
+  |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
   |> rename(columns: {_value: "snapshot"})
                   ')).addSeriesOverride(
                         { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }

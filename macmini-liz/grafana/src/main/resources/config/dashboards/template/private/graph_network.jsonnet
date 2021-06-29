@@ -1,4 +1,4 @@
-//ASDASHBOARD_DEFAULTS time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+//ASDASHBOARD_DEFAULTS time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['30s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
 {
       graphs()::
 
@@ -20,9 +20,12 @@
 //ASM           formFactor='Mobile',
 //AST           formFactor='Tablet',
 //ASD           formFactor='Desktop',
-                datasource='InfluxDB_V2',
-                measurement='',
-                maxTimeSinceUpdate='0',
+                bucket='host_private',
+                measurement='usg',
+                maxMilliSecSincePoll=30000,
+                maxMilliSecSinceUpdate=30000,
+                filter_data='',
+                filter_metadata='',
             ) +
 
             [
@@ -59,7 +62,7 @@ from(bucket: "host_private")
                   ,
 
                   stat.new(
-                        title='Network Clients',
+                        title='Network Unique Clients',
                         datasource='InfluxDB_V2',
                         unit='clients',
                         decimals=0,
@@ -106,7 +109,6 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_measurement"] == "uap_vaps")
   |> filter(fn: (r) => r["_field"] == "tx_packets" or r["_field"] == "tx_combined_retries")
   |> filter(fn: (r) => r["radio"] == "ng" or r["radio"] == "na")
-  |> keep(columns: ["_time", "_value", "_field", "radio"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
   |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
@@ -116,6 +118,8 @@ from(bucket: "host_private")
   |> mean()
   |> map(fn: (r) => ({ r with _value: math.round(x: r._value) }))
   |> map(fn: (r) => ({ r with radio: if r.radio == "ng" then "No Retries (2.4 GHz)" else (if r.radio == "na" then "No Retries (5 GHz)" else r.radio) }))
+  |> keep(columns: ["_time", "_value", "_field", "radio"])
+  |> rename(columns: {_value: ""})
                   ')).addTarget(influxdb.target(query='
 import "math"
 from(bucket: "host_private")
@@ -123,7 +127,6 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_measurement"] == "uap_vaps")
   |> filter(fn: (r) => r["_field"] == "rx_packets" or r["_field"] == "rx_errors" or r["_field"] == "rx_dropped" or r["_field"] == "rx_crypts" or r["_field"] == "rx_frags" or r["_field"] == "rx_nwids")
   |> filter(fn: (r) => r["radio"] == "ng" or r["radio"] == "na")
-  |> keep(columns: ["_time", "_value", "_field", "radio"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
   |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
@@ -137,6 +140,8 @@ from(bucket: "host_private")
   |> mean()
   |> map(fn: (r) => ({ r with _value: math.round(x: r._value) }))
   |> map(fn: (r) => ({ r with radio: if r.radio == "ng" then "No Errors (2.4 GHz)" else (if r.radio == "na" then "No Errors (5 GHz)" else r.radio) }))
+  |> keep(columns: ["_time", "_value", "_field", "radio"])
+  |> rename(columns: {_value: ""})
                   '))
 //ASM                 { gridPos: { x: 0, y: 18, w: 24, h: 8 } }
 //AST                 { gridPos: { x: 10, y: 2, w: 14, h: 8 } }
@@ -235,20 +240,22 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-rx_bytes")
   |> set(key: "name", value: "receive")
-  |> keep(columns: ["_time", "_value", "name"])
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "name"])
+  |> rename(columns: {_value: ""})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "lan-tx_bytes")
   |> set(key: "name", value: "transmit")
-  |> keep(columns: ["_time", "_value", "name"])
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "name"])
+  |> rename(columns: {_value: ""})
                   ')).addSeriesOverride(
                         { "alias": "transmit", "transform": "negative-Y" }
                   )
@@ -284,7 +291,8 @@ from(bucket: "host_private")
   |> unique()
   |> count()
   |> group()
-  |> set(key: "name", value: "clients")
+  |> keep(columns: ["_start", "_value"])
+  |> rename(columns: {_start: "_time", _value: "clients"})
 // TODO: Separate wired/wireless, unfortunately data quality is poor coming from unifi, so many wireless devices show up as wired!
 //from(bucket: "host_private")
 //  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -326,9 +334,10 @@ from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap" or r["_measurement"] == "usw" or r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "cpu")
-  |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
+  |> keep(columns: ["_time", "_value", "name"])
+  |> rename(columns: {_value: ""})
                   '))
 //ASM                 { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
 //AST                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
@@ -357,9 +366,10 @@ from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap" or r["_measurement"] == "usw" or r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "mem")
-  |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
+  |> keep(columns: ["_time", "_value", "name"])
+  |> rename(columns: {_value: ""})
                   '))
 //ASM                 { gridPos: { x: 0, y: 55, w: 24, h: 7 } }
 //AST                 { gridPos: { x: 0, y: 46, w: 24, h: 12 } }
@@ -388,17 +398,18 @@ from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "uap" or r["_measurement"] == "usw" or r["_measurement"] == "usg")
   |> filter(fn: (r) => r["_field"] == "temp_CPU")
-  |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "udm-rack"})
                   ')).addTarget(influxdb.target(query='
-from(bucket: "asystem")
+from(bucket: "home_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
-  |> set(key: "name", value: "ambient-rack")
-  |> keep(columns: ["_time", "_value", "name"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "ambient-rack"})
                   '))
 //ASM                 { gridPos: { x: 0, y: 62, w: 24, h: 7 } }
 //AST                 { gridPos: { x: 0, y: 58, w: 24, h: 12 } }
@@ -431,7 +442,11 @@ from(bucket: "host_private")
   |> keep(columns: ["Host", "IP", "Host Vendor", "Wireless Channel", "Wireless Protocol", "Uptime", "Received Bytes", "Transmitted Bytes"])
   |> sort(columns: ["Host"])
   |> unique(column: "IP")
-                  ')) { gridPos: { x: 0, y: 68, w: 24, h: 36 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 69, w: 24, h: 12 } }
+//AST                 { gridPos: { x: 0, y: 70, w: 24, h: 20 } }
+//ASD                 { gridPos: { x: 0, y: 70, w: 24, h: 20 } }
+                  ,
 
                   table.new(
                         title='Wired Clients',
@@ -459,7 +474,11 @@ from(bucket: "host_private")
   |> keep(columns: ["Host", "IP", "Host Vendor", "Wired Fixed IP", "Wired Port", "Uptime", "Received Bytes", "Transmitted Bytes"])
   |> sort(columns: ["Host"])
   |> unique(column: "IP")
-                  ')) { gridPos: { x: 0, y: 94, w: 24, h: 7 } },
+                  '))
+//ASM                 { gridPos: { x: 0, y: 81, w: 24, h: 12 } }
+//AST                 { gridPos: { x: 0, y: 90, w: 24, h: 20 } }
+//ASD                 { gridPos: { x: 0, y: 90, w: 24, h: 20 } }
+                  ,
 
             ],
 }

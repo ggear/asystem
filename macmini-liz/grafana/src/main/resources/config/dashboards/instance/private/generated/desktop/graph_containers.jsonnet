@@ -15,9 +15,12 @@
             header.new(
                 style='maximal',
                 formFactor='Desktop',
-                datasource='InfluxDB_V2',
-                measurement='',
-                maxTimeSinceUpdate='0',
+                bucket='host_private',
+                measurement='docker',
+                maxMilliSecSincePoll=10000,
+                maxMilliSecSinceUpdate=10000,
+                filter_data='',
+                filter_metadata='',
             ) +
 
             [
@@ -170,7 +173,7 @@ from(bucket: "host_private")
   |> group()
   |> map(fn: (r) => ({ r with index: 1 }))
   |> cumulativeSum(columns: ["index"])
-  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)      then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)      then r._value / 8.0 else r._value) }))
+  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host) then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host) then r._value / 8.0 else r._value) }))
   |> map(fn: (r) => ({ r with _value: if r._value > 50.0 then 1 else 0 }))
   |> cumulativeSum(columns: ["_value"])
   |> last()
@@ -380,9 +383,10 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
   |> keep(columns: ["_time", "_value", "container_name", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host)      then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host)      then r._value / 8.0 else r._value) }))
+  |> map(fn: (r) => ({ r with _value: if strings.containsStr(substr: "macmini", v: r.host) then r._value / 4.0 else (if strings.containsStr(substr: "macbookpro", v: r.host) then r._value / 8.0 else r._value) }))
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (" + r.host + ")" }))
   |> keep(columns: ["_time", "_value", "container_name"])
+  |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
                   ,
@@ -411,9 +415,10 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_measurement"] == "docker_container_mem")
   |> filter(fn: (r) => r["_field"] == "usage_percent")
   |> map(fn: (r) => ({ r with container_name: r.container_name + " (" + r.host + ")" }))
-  |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
@@ -444,20 +449,22 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
   |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_read")
   |> map(fn: (r) => ({ r with container_name: r.container_name + " + Read (" + r.host + ")" }))
-  |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> rename(columns: {_value: ""})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_blkio")
   |> filter(fn: (r) => r["_field"] == "io_service_bytes_recursive_write")
   |> map(fn: (r) => ({ r with container_name: r.container_name + " - Write (" + r.host + ")" }))
-  |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> rename(columns: {_value: ""})
                   ')).addSeriesOverride(
                         { "alias": "/.*Write.*/", "transform": "negative-Y" }
                   )
@@ -490,20 +497,22 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
   |> filter(fn: (r) => r["_field"] == "rx_bytes")
   |> map(fn: (r) => ({ r with container_name: r.container_name + " + Receive (" + r.host + ")" }))
-  |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> rename(columns: {_value: ""})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "docker_container_net")
   |> filter(fn: (r) => r["_field"] == "tx_bytes")
   |> map(fn: (r) => ({ r with container_name: r.container_name + " - Transmit (" + r.host + ")" }))
-  |> keep(columns: ["_time", "_value", "container_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "container_name"])
+  |> rename(columns: {_value: ""})
                   ')).addSeriesOverride(
                         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
                   )

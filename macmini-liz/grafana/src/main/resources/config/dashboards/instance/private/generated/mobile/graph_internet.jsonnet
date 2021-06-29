@@ -15,9 +15,12 @@
             header.new(
                 style='minimal',
                 formFactor='Mobile',
-                datasource='InfluxDB_V2',
-                measurement='',
-                maxTimeSinceUpdate='0',
+                bucket='host_private',
+                measurement='internet',
+                maxMilliSecSincePoll=200000,
+                maxMilliSecSinceUpdate=200000,
+                filter_data='',
+                filter_metadata='',
             ) +
 
             [
@@ -135,6 +138,8 @@ from(bucket: "host_private")
  |> sum()
  |> map(fn: (r) => ({ r with _value: math.mMin(x: 100.0, y: math.floor(x: r._value / (1.0 * float(v: uint(v: r._stop) - uint(v: r._start))) * 100000000000.0)) }))
  |> map(fn: (r) => ({ r with metric: if r.metric == "certificate" then "Certificate" else (if r.metric == "lookup" then "Domain" else (if r.metric == "network" then "Internet" else r.metric)) }))
+ |> keep(columns: ["_value", "metric"])
+ |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 26, w: 24, h: 8 } }
                   ,
@@ -250,22 +255,24 @@ from(bucket: "host_private")
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
-  |> filter(fn: (r) => r["_field"] == "rx_bytes")
-  |> set(key: "name", value: "download")
+  |> filter(fn: (r) => r["_field"] == "tx_bytes")
   |> keep(columns: ["_time", "_value", "name"])
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "upload"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "usg_wan_ports")
-  |> filter(fn: (r) => r["_field"] == "tx_bytes")
-  |> set(key: "name", value: "upload")
+  |> filter(fn: (r) => r["_field"] == "rx_bytes")
   |> keep(columns: ["_time", "_value", "name"])
   |> sort(columns: ["_time"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "download"})
                   ')).addSeriesOverride(
                         { "alias": "upload", "transform": "negative-Y" }
                   )
@@ -284,20 +291,24 @@ from(bucket: "host_private")
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
-  |> filter(fn: (r) => r["_field"] == "download_mbps")
-  |> keep(columns: ["_time", "_value", "metric"])
-  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
-  |> sort(columns: ["_time"])
-  |> fill(column: "_value", usePrevious: true)
-                  ')).addTarget(influxdb.target(query='
-from(bucket: "host_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => r["_field"] == "upload_mbps")
   |> keep(columns: ["_time", "_value", "metric"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "upload"})
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "host_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "internet")
+  |> filter(fn: (r) => r["_field"] == "download_mbps")
+  |> keep(columns: ["_time", "_value", "metric"])
+  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: true)
+  |> sort(columns: ["_time"])
+  |> fill(column: "_value", usePrevious: true)
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "download"})
                   ')).addSeriesOverride(
                         { "alias": "upload", "transform": "negative-Y" }
                   )
@@ -322,6 +333,8 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: min, createEmpty: true)
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
+  |> keep(columns: ["_time", "_value", "host_location"])
+  |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
                   ,
@@ -402,6 +415,7 @@ unknown_ips = from(bucket: "host_private")
   |> sort(columns: ["_time"], desc: true)
 union(tables: [start_ips, finish_ips, unknown_ips])
   |> sort(columns: ["_time"], desc: true)
+  |> rename(columns: {_time: "Time"})
                   '))
                       { gridPos: { x: 0, y: 62, w: 24, h: 7 } }
                   ,

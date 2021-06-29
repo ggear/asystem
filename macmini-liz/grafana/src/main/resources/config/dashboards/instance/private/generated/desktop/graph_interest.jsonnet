@@ -15,9 +15,9 @@
             header.new(
                 style='maximal',
                 formFactor='Desktop',
-                datasource='InfluxDB_V2',
                 measurement='interest',
-                maxTimeSinceUpdate='5184000000',
+                maxMilliSecSinceUpdate='5184000000',
+                simpleErrors=false,
             ) +
 
             [

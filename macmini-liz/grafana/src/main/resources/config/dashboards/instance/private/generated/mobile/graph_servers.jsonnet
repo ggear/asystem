@@ -15,9 +15,12 @@
             header.new(
                 style='minimal',
                 formFactor='Mobile',
-                datasource='InfluxDB_V2',
-                measurement='',
-                maxTimeSinceUpdate='0',
+                bucket='host_private',
+                measurement='system',
+                maxMilliSecSincePoll=10000,
+                maxMilliSecSinceUpdate=10000,
+                filter_data='',
+                filter_metadata='',
             ) +
 
             [
@@ -229,7 +232,6 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_measurement"] == "cpu")
   |> filter(fn: (r) => r["_field"] == "usage_idle")
   |> filter(fn: (r) => r["cpu"] == "cpu-total")
-  |> keep(columns: ["_time", "_value"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> mean()
   |> map(fn: (r) => ({ r with _value: r._value }))
@@ -262,7 +264,6 @@ from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "mem")
   |> filter(fn: (r) => r["_field"] == "used_percent")
-  |> keep(columns: ["_time", "_value"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> mean()
   |> map(fn: (r) => ({ r with _value: 100.0 - r._value }))
@@ -294,7 +295,6 @@ from(bucket: "host_private")
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
-  |> keep(columns: ["_time", "_value"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> mean()
   |> map(fn: (r) => ({ r with _value: 130.0 - r._value }))
@@ -317,11 +317,11 @@ from(bucket: "host_private")
   |> filter(fn: (r) => r["_measurement"] == "cpu")
   |> filter(fn: (r) => r["_field"] == "usage_idle")
   |> filter(fn: (r) => r["cpu"] == "cpu-total")
-  |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> map(fn: (r) => ({ r with _value: 100.0 - r._value }))
   |> keep(columns: ["_time", "_value", "host"])
+  |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
                   ,
@@ -339,10 +339,10 @@ from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "mem")
   |> filter(fn: (r) => r["_field"] == "used_percent")
-  |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> keep(columns: ["_time", "_value", "host"])
+  |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 41, w: 24, h: 7 } }
                   ,
@@ -360,10 +360,10 @@ from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "swap")
   |> filter(fn: (r) => r["_field"] == "used_percent")
-  |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> keep(columns: ["_time", "_value", "host"])
+  |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
                   ,
@@ -387,6 +387,7 @@ from(bucket: "host_private")
   |> map(fn: (r) => ({ r with path: r.host + " (" + r.path + ")" }))
   |> keep(columns: ["_time", "_value", "path"])
   |> sort(columns: ["_time"])
+  |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 55, w: 24, h: 7 } }
                   ,
@@ -406,21 +407,23 @@ from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "diskio")
   |> filter(fn: (r) => r["_field"] == "read_bytes")
-  |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "host"])
   |> map(fn: (r) => ({ r with host: r.host + " + Read" }))
+  |> rename(columns: {_value: ""})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "diskio")
   |> filter(fn: (r) => r["_field"] == "write_bytes")
-  |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "host"])
   |> map(fn: (r) => ({ r with host: r.host + " - Write" }))
+  |> rename(columns: {_value: ""})
                   ')).addSeriesOverride(
                         { "alias": "/.*Write.*/", "transform": "negative-Y" }
                   )
@@ -442,21 +445,23 @@ from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "net")
   |> filter(fn: (r) => r["_field"] == "bytes_recv")
-  |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "host"])
   |> map(fn: (r) => ({ r with host: r.host + " + Receive" }))
+  |> rename(columns: {_value: ""})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "net")
   |> filter(fn: (r) => r["_field"] == "bytes_sent")
-  |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
   |> fill(column: "_value", usePrevious: true)
   |> derivative(unit: 1s, nonNegative: true)
+  |> keep(columns: ["_time", "_value", "host"])
   |> map(fn: (r) => ({ r with host: r.host + " - Transmit" }))
+  |> rename(columns: {_value: ""})
                   ')).addSeriesOverride(
                         { "alias": "/.*Transmit.*/", "transform": "negative-Y" }
                   )
@@ -475,16 +480,18 @@ from(bucket: "host_private")
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
-  |> keep(columns: ["_time", "_value", "host"])
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
+  |> keep(columns: ["_time", "_value", "host"])
+  |> rename(columns: {_value: ""})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
-  |> keep(columns: ["_time", "_value"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+  |> keep(columns: ["_time", "_value", "host"])
   |> fill(column: "_value", usePrevious: true)
   |> set(key: "host", value: "ambient-rack")
+  |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 76, w: 24, h: 7 } }
                   ,

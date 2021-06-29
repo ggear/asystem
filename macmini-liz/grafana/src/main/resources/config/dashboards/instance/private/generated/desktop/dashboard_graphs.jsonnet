@@ -19,21 +19,21 @@ local graph_containers = import 'graph_containers.jsonnet';
 
             network_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Network',
                         uid='network-desktop',
                         editable=true,
                         hideControls=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'desktop'],
-                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['30s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_network.graphs()),
 
 
             electricity_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Electricity',
                         uid='electricity-desktop',
                         editable=true,
@@ -47,21 +47,21 @@ local graph_containers = import 'graph_containers.jsonnet';
 
             servers_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Servers',
                         uid='servers-desktop',
                         editable=true,
                         hideControls=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'desktop'],
-                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['10s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_servers.graphs()),
 
 
             water_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Water',
                         uid='water-desktop',
                         editable=true,
@@ -75,49 +75,49 @@ local graph_containers = import 'graph_containers.jsonnet';
 
             currency_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Currency',
                         uid='currency-desktop',
                         editable=true,
                         hideControls=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'desktop'],
-                        time_from='now-1y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+                        time_from='now-1y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_currency.graphs()),
 
 
             interest_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Interest',
                         uid='interest-desktop',
                         editable=true,
                         hideControls=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'desktop'],
-                        time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+                        time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_interest.graphs()),
 
 
             internet_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Internet',
                         uid='internet-desktop',
                         editable=true,
                         hideControls=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'desktop'],
-                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['20s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_internet.graphs()),
 
 
             conditions_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Conditions',
                         uid='conditions-desktop',
                         editable=true,
@@ -131,14 +131,14 @@ local graph_containers = import 'graph_containers.jsonnet';
 
             containers_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Containers',
                         uid='containers-desktop',
                         editable=true,
                         hideControls=false,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'desktop'],
-                        time_from='now-1h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-1h', refresh='', timepicker=timepicker.new(refresh_intervals=['10s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_containers.graphs()),
 

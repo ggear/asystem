@@ -21,7 +21,7 @@ local graph_containers = import 'graph_containers.jsonnet';
 
             network_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Network',
 //ASM                   uid='network-mobile',
 //AST                   uid='network-tablet',
@@ -36,14 +36,14 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   tags=['private', 'mobile'],
 //AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
-                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['30s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_network.graphs()),
 
 
             electricity_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Electricity',
 //ASM                   uid='electricity-mobile',
 //AST                   uid='electricity-tablet',
@@ -65,7 +65,7 @@ local graph_containers = import 'graph_containers.jsonnet';
 
             servers_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Servers',
 //ASM                   uid='servers-mobile',
 //AST                   uid='servers-tablet',
@@ -80,14 +80,14 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   tags=['private', 'mobile'],
 //AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
-                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['10s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_servers.graphs()),
 
 
             water_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Water',
 //ASM                   uid='water-mobile',
 //AST                   uid='water-tablet',
@@ -109,7 +109,7 @@ local graph_containers = import 'graph_containers.jsonnet';
 
             currency_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Currency',
 //ASM                   uid='currency-mobile',
 //AST                   uid='currency-tablet',
@@ -124,14 +124,14 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   tags=['private', 'mobile'],
 //AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
-                        time_from='now-1y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+                        time_from='now-1y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_currency.graphs()),
 
 
             interest_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Interest',
 //ASM                   uid='interest-mobile',
 //AST                   uid='interest-tablet',
@@ -146,14 +146,14 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   tags=['private', 'mobile'],
 //AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
-                        time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['30m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+                        time_from='now-25y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_interest.graphs()),
 
 
             internet_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Internet',
 //ASM                   uid='internet-mobile',
 //AST                   uid='internet-tablet',
@@ -168,14 +168,14 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   tags=['private', 'mobile'],
 //AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
-                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['20s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_internet.graphs()),
 
 
             conditions_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Conditions',
 //ASM                   uid='conditions-mobile',
 //AST                   uid='conditions-tablet',
@@ -197,7 +197,7 @@ local graph_containers = import 'graph_containers.jsonnet';
 
             containers_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Containers',
 //ASM                   uid='containers-mobile',
 //AST                   uid='containers-tablet',
@@ -212,7 +212,7 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   tags=['private', 'mobile'],
 //AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
-                        time_from='now-1h', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-1h', refresh='', timepicker=timepicker.new(refresh_intervals=['10s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_containers.graphs()),
 

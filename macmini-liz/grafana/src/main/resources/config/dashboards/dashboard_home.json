@@ -28,7 +28,7 @@
       },
       "id": 2,
       "options": {
-        "content": "\n<p style=\"text-align: center\">\n      <a href=\"#\" onClick=\"location.href='https://grafana.janeandgraham.com?orgId=1'\";return false;\">Public</a>\n          &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"#\" onClick=\"location.href='https://grafana.janeandgraham.com?orgId=2'\";return false;\">Private</a>\n</p>\n                                    ",
+        "content": "\n<p style=\"text-align: center\">\n      <a href=\"#\" onClick=\"location.href='/?orgId=1'\";return false;\">Public</a>\n          &nbsp;&nbsp;|&nbsp;&nbsp;\n      <a href=\"#\" onClick=\"location.href='/?orgId=2'\";return false;\">Private</a>\n</p>\n                                    ",
         "mode": "html"
       },
       "pluginVersion": "8.0.3",
@@ -159,5 +159,5 @@
   "timezone": "browser",
   "title": "Home",
   "uid": "home-default",
-  "version": 5
+  "version": 91
 }

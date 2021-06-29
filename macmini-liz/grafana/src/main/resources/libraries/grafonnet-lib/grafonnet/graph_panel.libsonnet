@@ -167,6 +167,12 @@
         label=labelY2
       ),
     ],
+
+    yaxis: {
+      align: false,
+      alignLevel: null
+    },
+
     xaxis: {
       show: show_xaxis,
       mode: x_axis_mode,
@@ -189,6 +195,10 @@
     stack: stack,
     percentage: percentage,
     [if maxDataPoints != null then 'maxDataPoints']: maxDataPoints,
+
+    hiddenSeries: false,
+    options: { alertThreshold: true },
+
     legend: {
       show: legend_show,
       values: legend_values,
@@ -214,6 +224,9 @@
     },
     timeFrom: time_from,
     timeShift: time_shift,
+
+    timeRegions: [],
+
     [if interval != null then 'interval']: interval,
     [if transparent == true then 'transparent']: transparent,
     aliasColors: aliasColors,

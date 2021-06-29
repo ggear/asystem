@@ -48,7 +48,7 @@ if __name__ == "__main__":
 //ASD           style='maximal',
                 datasource='InfluxDB_V2',
                 measurement='currency',
-                maxTimeSinceUpdate='259200000',
+                maxMilliSecSinceUpdate='259200000',
             ) +
 
             [
@@ -140,7 +140,7 @@ local graph_{} = import 'graph_{}.jsonnet';
                 file.write("\n            " + """
             {}_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='{}',
 //ASM                   uid='{}-mobile',
 //AST                   uid='{}-tablet',

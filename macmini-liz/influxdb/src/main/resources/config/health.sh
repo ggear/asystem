@@ -1,7 +1,5 @@
 #!/bin/sh
 
-apt-get install -y jq=1.5+dfsg-2+b1 curl=7.64.0-4+deb10u2 expect=5.45.4-2 netcat=1.10-41.1
-
 set -e
 set -o pipefail
 

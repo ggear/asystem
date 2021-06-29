@@ -16,7 +16,7 @@
                 style='maximal',
                 datasource='InfluxDB_V2',
                 measurement='currency',
-                maxTimeSinceUpdate='259200000',
+                maxMilliSecSinceUpdate='259200000',
             ) +
 
             [

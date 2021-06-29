@@ -3,9 +3,14 @@
       new(
             style='maximal',
             formFactor='Desktop',
-            datasource=null,
+            datasource='InfluxDB_V2',
+            bucket='data_public',
             measurement=null,
-            maxTimeSinceUpdate=0,
+            maxMilliSecSincePoll=1800000000,
+            maxMilliSecSinceUpdate=1800000000,
+            filter_data='|> filter(fn: (r) => r["type"] != "metadata")',
+            filter_metadata='|> filter(fn: (r) => r["type"] == "metadata")',
+            simpleErrors=true,
       )::
 
             local grafana = import 'grafonnet/grafana.libsonnet';
@@ -26,9 +31,9 @@
                         mode='html',
                         content='
 <p style="text-align: center">
-  <a href="https://grafana.janeandgraham.com">All</a></li>
+  <a href="/">All</a></li>
     &nbsp;&nbsp;|&nbsp;&nbsp;
-  <a href="https://grafana.janeandgraham.com/d/home-' + std.asciiLower(formFactor) + '/home">' + formFactor + '</a></li>
+  <a href="/d/home-' + std.asciiLower(formFactor) + '/home">' + formFactor + '</a></li>
 </p>
                         ',
                   )
@@ -41,7 +46,7 @@
                         title='Time Since Update',
                         datasource=datasource,
                         fields='duration',
-                        decimals=1,
+                        decimals=0,
                         unit='dtdurationms',
                         colorMode='value',
                         graphMode='none',
@@ -54,15 +59,17 @@
                   ).addThreshold(
                         { color: 'green', value: 0 }
                   ).addThreshold(
-                        { color: 'yellow', value: maxTimeSinceUpdate }
+                        { color: 'yellow', value: maxMilliSecSinceUpdate }
                   ).addThreshold(
-                        { color: 'red', value: maxTimeSinceUpdate }
+                        { color: 'red', value: maxMilliSecSinceUpdate }
                   ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  |> filter(fn: (r) => r["type"] != "metadata")
+  ' + filter_data + '
   |> last()
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
   |> group()
   |> last()
   |> map(fn: (r) => ({ r with duration: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
@@ -92,11 +99,13 @@ from(bucket: "data_public")
                   ).addThreshold(
                         { color: 'green', value: 0 }
                   ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  |> filter(fn: (r) => r["type"] != "metadata")
+  ' + filter_data + '
   |> last()
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
   |> group()
   |> last()
   |> keep(columns: ["_time"])
@@ -110,7 +119,7 @@ from(bucket: "data_public")
                         title='Time Since Poll',
                         datasource=datasource,
                         fields='duration',
-                        decimals=1,
+                        decimals=0,
                         unit='dtdurationms',
                         colorMode='value',
                         graphMode='none',
@@ -123,15 +132,17 @@ from(bucket: "data_public")
                   ).addThreshold(
                         { color: 'green', value: 0 }
                   ).addThreshold(
-                        { color: 'yellow', value: 1740000000 }
+                        { color: 'yellow', value: maxMilliSecSincePoll }
                   ).addThreshold(
-                        { color: 'red', value: 1800000000 }
+                        { color: 'red', value: maxMilliSecSincePoll }
                   ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  |> filter(fn: (r) => r["type"] == "metadata")
+  ' + filter_metadata + '
   |> last()
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
   |> group()
   |> last()
   |> map(fn: (r) => ({ r with duration: int(v: uint(v: now()) - uint(v: r._time)) / 1000000 }))
@@ -161,12 +172,27 @@ from(bucket: "data_public")
                   ).addThreshold(
                         { color: 'green', value: 0 }
                   ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+updated = from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  |> filter(fn: (r) => r["_field"] == "data_update_columns")
+  ' + filter_data + '
   |> last()
-  |> keep(columns: ["_value"])
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+  |> findRecord(fn: (key) => true, idx: 0)
+from(bucket: "' + bucket + '")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
+  ' + filter_data + '
+  |> filter(fn: (r) => r["_time"] == updated._time)
+  |> last()
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
+  |> group()
+  |> count()
                   '))
                       { gridPos: { x: 8, y: 0, w: 2, h: 2 } }
                   ,
@@ -192,12 +218,26 @@ from(bucket: "data_public")
                   ).addThreshold(
                         { color: 'green', value: 0 }
                   ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+updated = from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  |> filter(fn: (r) => r["_field"] == "egress_database_rows")
+  ' + filter_data + '
   |> last()
-  |> keep(columns: ["_value"])
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
+  |> group()
+  |> last()
+  |> keep(columns: ["_time"])
+  |> findRecord(fn: (key) => true, idx: 0)
+from(bucket: "' + bucket + '")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
+  ' + filter_data + '
+  |> filter(fn: (r) => r["_time"] == updated._time)
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
+  |> group()
+  |> count()
                   '))
                       { gridPos: { x: 10, y: 0, w: 2, h: 2 } }
                   ,
@@ -209,7 +249,7 @@ from(bucket: "data_public")
                         datasource=datasource,
                         fields='_value',
                         decimals=0,
-                        unit='',
+                        unit='locale',
                         colorMode='value',
                         graphMode='none',
                         justifyMode='auto',
@@ -223,11 +263,13 @@ from(bucket: "data_public")
                   ).addThreshold(
                         { color: 'green', value: 10 }
                   ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+from(bucket: "' + bucket + '")
   |> range(start: -100y, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  |> filter(fn: (r) => r["type"] != "metadata")
+  ' + filter_data + '
   |> last()
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
   |> group()
   |> count()
   |> keep(columns: ["_value"])
@@ -242,7 +284,7 @@ from(bucket: "data_public")
                         datasource=datasource,
                         fields='_value',
                         decimals=0,
-                        unit='',
+                        unit='locale',
                         colorMode='value',
                         graphMode='none',
                         justifyMode='auto',
@@ -256,10 +298,10 @@ from(bucket: "data_public")
                   ).addThreshold(
                         { color: 'green', value: 100 }
                   ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+from(bucket: "' + bucket + '")
   |> range(start: -100y, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  |> filter(fn: (r) => r["type"] != "metadata")
+  ' + filter_data + '
   |> group()
   |> count()
   |> keep(columns: ["_value"])
@@ -289,14 +331,27 @@ from(bucket: "data_public")
                         { color: 'yellow', value: 1 }
                   ).addThreshold(
                         { color: 'red', value: 1 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+                  ).addTarget(influxdb.target(query=(if simpleErrors then '
+from(bucket: "' + bucket + '")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
+  |> group()
+  |> count()
+  |> keep(columns: ["_value"])
+  |> map(fn: (r) => ({ r with _value: if r._value > 0 then 0 else 1 }))
+  |> filter(fn: (r) => r["_value"] == 0)
+  |> last()
+  |> keep(columns: ["_value"])
+                  ' else '
+from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
   |> filter(fn: (r) => r["_field"] == "sources_errored")
   |> last()
   |> keep(columns: ["_value"])
-                  '))
+                  ')))
                       { gridPos: { x: 16, y: 0, w: 2, h: 2 } }
                   ,
            ] else [])
@@ -322,14 +377,27 @@ from(bucket: "data_public")
                         { color: 'yellow', value: 1 }
                   ).addThreshold(
                         { color: 'red', value: 1 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+                  ).addTarget(influxdb.target(query=(if simpleErrors then '
+from(bucket: "' + bucket + '")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
+  |> group()
+  |> count()
+  |> keep(columns: ["_value"])
+  |> map(fn: (r) => ({ r with _value: if r._value > 0 then 0 else 1 }))
+  |> filter(fn: (r) => r["_value"] == 0)
+  |> last()
+  |> keep(columns: ["_value"])
+                  ' else '
+from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
   |> filter(fn: (r) => r["_field"] == "files_errored")
   |> last()
   |> keep(columns: ["_value"])
-                  '))
+                  ')))
                       { gridPos: { x: 18, y: 0, w: 2, h: 2 } }
                   ,
            ] else [])
@@ -355,14 +423,27 @@ from(bucket: "data_public")
                         { color: 'yellow', value: 1 }
                   ).addThreshold(
                         { color: 'red', value: 1 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+                  ).addTarget(influxdb.target(query=(if simpleErrors then '
+from(bucket: "' + bucket + '")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
+  |> group()
+  |> count()
+  |> keep(columns: ["_value"])
+  |> map(fn: (r) => ({ r with _value: if r._value > 0 then 0 else 1 }))
+  |> filter(fn: (r) => r["_value"] == 0)
+  |> last()
+  |> keep(columns: ["_value"])
+                  ' else '
+from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
   |> filter(fn: (r) => r["_field"] == "data_errored")
   |> last()
   |> keep(columns: ["_value"])
-                  '))
+                  ')))
                       { gridPos: { x: 20, y: 0, w: 2, h: 2 } }
                   ,
            ] else [])
@@ -388,14 +469,27 @@ from(bucket: "data_public")
                         { color: 'yellow', value: 1 }
                   ).addThreshold(
                         { color: 'red', value: 1 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+                  ).addTarget(influxdb.target(query=(if simpleErrors then '
+from(bucket: "' + bucket + '")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
+  |> group()
+  |> count()
+  |> keep(columns: ["_value"])
+  |> map(fn: (r) => ({ r with _value: if r._value > 0 then 0 else 1 }))
+  |> filter(fn: (r) => r["_value"] == 0)
+  |> last()
+  |> keep(columns: ["_value"])
+                  ' else '
+from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
   |> filter(fn: (r) => r["_field"] == "egress_errored")
   |> last()
   |> keep(columns: ["_value"])
-                  '))
+                  ')))
                       { gridPos: { x: 22, y: 0, w: 2, h: 2 } }
                   ,
            ] else [])
@@ -421,15 +515,28 @@ from(bucket: "data_public")
                         { color: 'yellow', value: 1 }
                   ).addThreshold(
                         { color: 'red', value: 1 }
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_public")
+                  ).addTarget(influxdb.target(query=(if simpleErrors then '
+from(bucket: "' + bucket + '")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
+  |> keep(columns: ["_time"])
+  |> set(key: "_value", value: "")
+  |> group()
+  |> count()
+  |> keep(columns: ["_value"])
+  |> map(fn: (r) => ({ r with _value: if r._value > 0 then 0 else 1 }))
+  |> filter(fn: (r) => r["_value"] == 0)
+  |> last()
+  |> keep(columns: ["_value"])
+                  ' else '
+from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
   |> filter(fn: (r) => r["_field"] == "sources_errored" or r["_field"] == "files_errored" or r["_field"] == "data_errored" or r["_field"] == "egress_errored")
   |> last()
   |> group()
   |> sum()
-                  '))
+                  ')))
                       { gridPos: { x: (if style == 'medial' then 18 else 0), y: (if style == 'medial' then 0 else 2), w: (if style == 'medial' then 6 else 24), h: 2 } }
                   ,
            ] else [])

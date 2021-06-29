@@ -9,7 +9,7 @@ local dashboard = grafana.dashboard;
 
             home_dashboard:
                   dashboard.new(
-                        schemaVersion=26,
+                        schemaVersion=30,
                         title='Home',
                         uid='home-default',
                         editable=false,
@@ -30,9 +30,9 @@ local dashboard = grafana.dashboard;
                                     mode='html',
                                     content='
 <p style="text-align: center">
-      <a href="#" onClick="location.href=\'https://grafana.janeandgraham.com?orgId=1\'";return false;">Public</a>
+      <a href="#" onClick="location.href=\'/?orgId=1\'";return false;">Public</a>
           &nbsp;&nbsp;|&nbsp;&nbsp;
-      <a href="#" onClick="location.href=\'https://grafana.janeandgraham.com?orgId=2\'";return false;">Private</a>
+      <a href="#" onClick="location.href=\'/?orgId=2\'";return false;">Private</a>
 </p>
                                     ',
                               )

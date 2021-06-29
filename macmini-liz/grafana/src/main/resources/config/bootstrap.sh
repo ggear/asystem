@@ -114,7 +114,8 @@ if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V2 | jq -r '
           "jsonData": {
             "version": "Flux",
             "organization": "'"${INFLUXDB_ORG}"'",
-            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'"
+            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
+            "timeout": "60"
           },
           "secureJsonData": {
             "token": "'"${INFLUXDB_TOKEN_PUBLIC_V2}"'"
@@ -205,7 +206,8 @@ if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V2 | jq -r 
           "jsonData": {
             "version": "Flux",
             "organization": "'"${INFLUXDB_ORG}"'",
-            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'"
+            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
+            "timeout": "60"
           },
           "secureJsonData": {
             "token": "'"${INFLUXDB_TOKEN}"'"
