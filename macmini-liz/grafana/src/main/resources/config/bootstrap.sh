@@ -137,7 +137,9 @@ if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V1 | grep In
           "isDefault": false,
           "database": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
           "user": "'"${INFLUXDB_USER_PUBLIC}"'",
-          "password": "'"${INFLUXDB_TOKEN_PUBLIC_V1}"'"
+          "secureJsonData": {
+            "password": "'"${INFLUXDB_TOKEN_PUBLIC_V1}"'"
+          }
         }' | jq
 fi
 curl -sf ${GRAFANA_URL_PUBLIC}/api/datasources | jq
@@ -206,7 +208,7 @@ if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V2 | jq -r 
           "jsonData": {
             "version": "Flux",
             "organization": "'"${INFLUXDB_ORG}"'",
-            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
+            "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PRIVATE}"'",
             "timeout": "60"
           },
           "secureJsonData": {
@@ -227,9 +229,11 @@ if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V1 | grep I
           "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
           "access": "proxy",
           "isDefault": false,
-          "database": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
-          "user": "'"${INFLUXDB_USER_PUBLIC}"'",
-          "password": "'"${INFLUXDB_TOKEN}"'"
+          "database": "'"${INFLUXDB_BUCKET_DATA_PRIVATE}"'",
+          "user": "'"${INFLUXDB_USER_PRIVATE}"'",
+          "secureJsonData": {
+            "password": "'"${INFLUXDB_TOKEN}"'"
+          }
         }' | jq
 fi
 curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources | jq
