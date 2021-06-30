@@ -1,24 +1,42 @@
 version: '3.7'
+x-common: &common
+  image: homeassistant/home-assistant:2021.6.6
+  init: true
+  user: root
+  environment:
+    - TZ=Australia/Perth
+    - HOMEASSISTANT_DB
+    - VERNEMQ_HOST
+    - VERNEMQ_PORT
+    - INFLUXDB_HOST
+    - INFLUXDB_PORT
+    - INFLUXDB_ORG
+    - INFLUXDB_TOKEN
+    - INFLUXDB_BUCKET_HOME_PRIVATE
 services:
   homeassistant:
     container_name: homeassistant
-    image: homeassistant/home-assistant:2021.6.6
-    init: true
+    <<: *common
     restart: ${SERVICE_RESTART}
-    environment:
-      - TZ=Australia/Perth
-      - HOMEASSISTANT_DB
-      - VERNEMQ_HOST
-      - VERNEMQ_PORT
-      - INFLUXDB_HOST
-      - INFLUXDB_PORT
-      - INFLUXDB_ORG
-      - INFLUXDB_TOKEN
-      - INFLUXDB_BUCKET_HOME_PUBLIC
     volumes:
+      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}:/config
+    ports:
+      - ${HOMEASSISTANT_PORT}:${HOMEASSISTANT_PORT}
     network_mode: host
     deploy:
       resources:
         limits:
           memory: 5G
+  homeassistant_bootstrap:
+    container_name: homeassistant_bootstrap
+    <<: *common
+    restart: 'no'
+    volumes:
+      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
+      - ${SERVICE_DATA_DIR}:/config
+    entrypoint: /bin/bash
+    command:
+      - /bootstrap/bootstrap.sh
+    depends_on:
+      - homeassistant

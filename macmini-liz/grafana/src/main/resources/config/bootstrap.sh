@@ -1,7 +1,7 @@
 #!/bin/sh
 
 echo "--------------------------------------------------------------------------------"
-echo "Grafana bootstrap initialising ..."
+echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
 LIBRARIES_HOME=${LIBRARIES_HOME:-"/bootstrap"}
@@ -12,14 +12,14 @@ make dev
 cd ${LIBRARIES_HOME}
 
 while ! curl -sf ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
-  echo "Waiting for grafana to come up ..." && sleep 1
+  echo "Waiting for service to come up ..." && sleep 1
 done
 
 set -e
 set -o pipefail
 
 echo "--------------------------------------------------------------------------------"
-echo "Grafana bootstrap starting ..."
+echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
 #######################################################################################
@@ -277,5 +277,5 @@ export GRAFANA_URL=${GRAFANA_URL_PRIVATE}
 find ${DASHBOARDS_HOME}/private -name dashboard_* -exec ${LIBRARIES_HOME}/grizzly/grr -J ${LIBRARIES_HOME}/grafonnet-lib -J ${DASHBOARDS_HOME} apply {} \;
 
 echo "--------------------------------------------------------------------------------"
-echo "Grafana bootstrap finished"
+echo "Bootstrap finished"
 echo "--------------------------------------------------------------------------------"

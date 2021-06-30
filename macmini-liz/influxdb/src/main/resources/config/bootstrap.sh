@@ -1,18 +1,18 @@
 #!/bin/sh
 
 echo "--------------------------------------------------------------------------------"
-echo "Influx bootstrap initialising ..."
+echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
 while ! influx ping --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT} >>/dev/null 2>&1; do
-  echo "Waiting for influxdb to come up ..." && sleep 1
+  echo "Waiting for service to come up ..." && sleep 1
 done
 
 set -e
 set -o pipefail
 
 echo "--------------------------------------------------------------------------------"
-echo "Influx bootstrap starting ..."
+echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
 if [ ! -f "/root/.influxdbv2/configs" ] || [ $(grep remote /root/.influxdbv2/configs | wc -l) -ne 1 ]; then
@@ -95,5 +95,5 @@ if [ $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFL
 fi
 
 echo "--------------------------------------------------------------------------------"
-echo "Influx bootstrap finished"
+echo "Bootstrap finished"
 echo "--------------------------------------------------------------------------------"

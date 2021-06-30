@@ -2,9 +2,8 @@
 
 default_config:
 
-homeassistant:
-  customize: !include customize.yaml
-
+#homeassistant:
+#  customize: !include customize.yaml
 
 http:
   use_x_forwarded_for: true
@@ -22,7 +21,6 @@ recorder:
   db_url: !env_var HOMEASSISTANT_DB
   purge_keep_days: 1
 
-
 influxdb:
   api_version: 2
   ssl: false
@@ -30,7 +28,7 @@ influxdb:
   port: !env_var INFLUXDB_PORT
   token: !env_var INFLUXDB_TOKEN
   organization: !env_var INFLUXDB_ORG
-  bucket: !env_var INFLUXDB_BUCKET_HOME_PUBLIC
+  bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
   precision: ns
   tags:
     instance: production
@@ -52,44 +50,44 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
-sensor:
-  !include_dir_merge_list config_sensors
-
-weather:
-  - platform: bom
-    name: Perth Airport
-    station: IDW60901.94610
-
-camera:
-  - platform: bom
-    location: Perth
-
-tplink:
-  discovery: false
-  switch:
-    - host: 192.168.1.22
-    - host: 192.168.1.25
-
-automation:
-  !include_dir_merge_list config_automations
-
-lovelace:
-  mode: yaml
-  resources:
-    - url: /local/custom_ui/multiple-entity-row.js?v=3.4.0
-      type: module
-    - url: /local/custom_ui/mini-graph-card-bundle.js?v=0.9.4
-      type: module
-    - url: /local/custom_ui/bom-weather-card.js?v=0.81_HACKED_BY_ME
-      type: module
-  dashboards:
-    lovelace-generated:
-      mode: yaml
-      filename: notexist.yaml
-      title: Generated
-      icon: mdi:tools
-      show_in_sidebar: true
-      require_admin: true
+#sensor:
+#  !include_dir_merge_list config_sensors
+#
+#weather:
+#  - platform: bom
+#    name: Perth Airport
+#    station: IDW60901.94610
+#
+#camera:
+#  - platform: bom
+#    location: Perth
+#
+#tplink:
+#  discovery: false
+#  switch:
+#    - host: 192.168.1.22
+#    - host: 192.168.1.25
+#
+#automation:
+#  !include_dir_merge_list config_automations
+#
+#lovelace:
+#  mode: yaml
+#  resources:
+#    - url: /local/custom_ui/multiple-entity-row.js?v=3.4.0
+#      type: module
+#    - url: /local/custom_ui/mini-graph-card-bundle.js?v=0.9.4
+#      type: module
+#    - url: /local/custom_ui/bom-weather-card.js?v=0.81_HACKED_BY_ME
+#      type: module
+#  dashboards:
+#    lovelace-generated:
+#      mode: yaml
+#      filename: notexist.yaml
+#      title: Generated
+#      icon: mdi:tools
+#      show_in_sidebar: true
+#      require_admin: true
 
 logger:
   default: warning
