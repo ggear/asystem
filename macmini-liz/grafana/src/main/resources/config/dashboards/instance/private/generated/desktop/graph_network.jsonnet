@@ -380,7 +380,7 @@ from(bucket: "host_private")
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "udm-rack"})
                   ')).addTarget(influxdb.target(query='
-from(bucket: "home_public")
+from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)

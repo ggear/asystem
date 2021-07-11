@@ -1,9 +1,10 @@
-#TODO: Look at examples to structure, such as https://www.awesome-ha.com and https://isabellaalstrom.github.io
+#TODO: Look at examples to structure, such as https://www.awesome-ha.com and https://isabellaalstrom.github.io/lovelace and https://github.com/DavidFW1960/home-assistant
 
 default_config:
 
-#homeassistant:
-#  customize: !include customize.yaml
+homeassistant:
+  customize: !include customize.yaml
+  packages: !include_dir_named custom_packages
 
 http:
   use_x_forwarded_for: true
@@ -52,48 +53,32 @@ mqtt:
 
 #sensor:
 #  !include_dir_merge_list config_sensors
-#
-#weather:
-#  - platform: bom
-#    name: Perth Airport
-#    station: IDW60901.94610
-#
-#camera:
-#  - platform: bom
-#    location: Perth
-#
-#tplink:
-#  discovery: false
-#  switch:
-#    - host: 192.168.1.22
-#    - host: 192.168.1.25
-#
+
 #automation:
 #  !include_dir_merge_list config_automations
-#
-#lovelace:
-#  mode: yaml
-#  resources:
-#    - url: /local/custom_ui/multiple-entity-row.js?v=3.4.0
-#      type: module
-#    - url: /local/custom_ui/mini-graph-card-bundle.js?v=0.9.4
-#      type: module
-#    - url: /local/custom_ui/bom-weather-card.js?v=0.81_HACKED_BY_ME
-#      type: module
-#  dashboards:
-#    lovelace-generated:
-#      mode: yaml
-#      filename: notexist.yaml
-#      title: Generated
-#      icon: mdi:tools
-#      show_in_sidebar: true
-#      require_admin: true
+
+lovelace:
+  mode: yaml
+  resources:
+    - url: /local/custom_ui/bom-weather-card.js?v=0.90a-HACKED
+      type: module
+    - url: /local/custom_ui/bom-radar-card/bom-radar-card.js?v=v1.2.9
+      type: module
+    - url: /local/custom_ui/apexcharts-card/apexcharts-card.js?v=0.9.0
+      type: module
+    - url: /local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=0.10.0
+      type: module
+  dashboards:
+    lovelace-generated:
+      mode: yaml
+      filename: notexist.yaml
+      title: Generated
+      icon: mdi:tools
+      show_in_sidebar: true
+      require_admin: true
 
 logger:
-  default: warning
+  default: info
   logs:
-    hacs: warning
-    custom_components.hacs: warning
-    custom_components.bom_forecast: warning
-    homeassistant.components.bom: warning
-    homeassistant.components.mqtt: warning
+    homeassistant.components.mqtt: info
+    custom_components.bureau_of_meteorology: debug

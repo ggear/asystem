@@ -1,0 +1,123 @@
+- type: custom:bom-weather-card
+  title: BOM Weather
+  entity_current_conditions: sensor.darlington_forecast_icon_descriptor_0
+  entity_temperature: sensor.gooseberry_hill_temp
+  entity_forecast_high_temp_1: sensor.darlington_forecast_temp_max_1
+  entity_forecast_high_temp_2: sensor.darlington_forecast_temp_max_2
+  entity_forecast_high_temp_3: sensor.darlington_forecast_temp_max_3
+  entity_forecast_high_temp_4: sensor.darlington_forecast_temp_max_4
+  entity_forecast_high_temp_5: sensor.darlington_forecast_temp_max_5
+  entity_forecast_icon_1: sensor.darlington_forecast_icon_descriptor_1
+  entity_forecast_icon_2: sensor.darlington_forecast_icon_descriptor_2
+  entity_forecast_icon_3: sensor.darlington_forecast_icon_descriptor_3
+  entity_forecast_icon_4: sensor.darlington_forecast_icon_descriptor_4
+  entity_forecast_icon_5: sensor.darlington_forecast_icon_descriptor_5
+  entity_forecast_low_temp_1: sensor.darlington_forecast_temp_min_1
+  entity_forecast_low_temp_2: sensor.darlington_forecast_temp_min_2
+  entity_forecast_low_temp_3: sensor.darlington_forecast_temp_min_3
+  entity_forecast_low_temp_4: sensor.darlington_forecast_temp_min_4
+  entity_forecast_low_temp_5: sensor.darlington_forecast_temp_min_5
+  entity_summary_1: sensor.darlington_forecast_short_text_1
+  entity_summary_2: sensor.darlington_forecast_short_text_2
+  entity_summary_3: sensor.darlington_forecast_short_text_3
+  entity_summary_4: sensor.darlington_forecast_short_text_4
+  entity_summary_5: sensor.darlington_forecast_short_text_5
+  entity_sun: sun.sun
+  #           entity_visibility: sensor.dark_sky_visibility
+  entity_daytime_high: sensor.bom_today_max
+  entity_daytime_low: sensor.bom_today_min
+  entity_wind_bearing: sensor.bom_today_wind_direction
+  entity_wind_speed: sensor.bom_today_wind_speed
+  entity_wind_gust: sensor.bom_today_wind_speed_gust
+  #           entity_wind_speed_kt: sensor.gooseberry_hill_wind_speed_knot
+  #           entity_wind_gust_kt: sensor.gooseberry_hill_gust_speed_knot
+  entity_humidity: sensor.bom_today_humidity
+  ############################## IMPORTANT!!! BOM are NOT providing Pressure sensor for forecast.
+  ############################## IF you use my entity_pressure sensor the card won't display
+  # entity_pressure: sensor.nodemcu_lounge_bme280_seapressure
+  entity_apparent_temp: sensor.gooseberry_hill_temp_feels_like
+  entity_daily_summary: sensor.darlington_forecast_extended_text_0
+  entity_pop: sensor.bom_today_rain_chance
+  entity_pop_intensity: sensor.bom_today_rain
+  entity_possible_today: sensor.bom_today_rain
+  entity_pos_1: sensor.bom_rain_range_1
+  entity_pos_2: sensor.bom_rain_range_2
+  entity_pos_3: sensor.bom_rain_range_3
+  entity_pos_4: sensor.bom_rain_range_4
+  entity_pos_5: sensor.bom_rain_range_5
+  entity_pop_1: sensor.darlington_forecast_rain_chance_1
+  entity_pop_2: sensor.darlington_forecast_rain_chance_2
+  entity_pop_3: sensor.darlington_forecast_rain_chance_3
+  entity_pop_4: sensor.darlington_forecast_rain_chance_4
+  entity_pop_5: sensor.darlington_forecast_rain_chance_5
+  entity_current_text: sensor.bom_current_text
+  entity_uv_alert: sensor.bom_uv_alert
+  entity_fire_danger: sensor.bom_fire_danger
+  entity_uv_alert_summary: sensor.bom_today_uv
+  entity_fire_danger_summary: sensor.bom_today_fire
+  locale: en
+  sunset: true
+  static_icons: false
+  old_icon: hybrid
+  tooltip_bg_color: 'rgb( 75,155,239)'
+  tooltip_border_color: 'rgb(255,161,0)'
+  tooltip_border_width: 1
+  tooltip_caret_size: 5
+  tooltip_fg_color: '#fff'
+  tooltip_left_offset: 3
+  tooltip_width: 80
+  tooltips: true
+  old_daily_format: false
+  time_format: 12
+  show_beaufort: false
+  #           show_decimals: true
+  refresh_interval: 60
+  #           tempformat: highlow OPTIONAL to show max/min in daily
+  show_separator: false
+  temp_top_margin: 0px            #default 0px px or em Note: pre-0.109.x default was -0.3em
+  temp_font_weight: 300           #default 300 numeric
+  temp_font_size: 4em             #default 4em em
+  temp_right_pos: 0.85em          #default .85em px or em
+  temp_uom_top_margin: -12px      #default -12px px or em Note: pre-0.109.x default was -9px
+  temp_uom_right_margin: 4px      #default 4px px or em
+  apparent_top_margin: 45px       #default 45px px or em
+  apparent_right_pos: 1em         #default 1em px or em
+  apparent_right_margin: 1em      #default 1em px or em
+  current_text_top_margin: 4.5em  #default 4.5em px or em pre-0.109.x default was 39px
+  current_text_left_pos: 0px      #default 0px px or em pre-0.109.x default was 5em
+  current_text_font_size: 1.5em   #default 1.5em em
+  current_text_alignment: center  #default center
+  current_text_width: 100%        #default 100%
+  current_data_top_margin: 10em   #default 10em px or em pre-0.109.x default was 7em
+  large_icon_top_margin: -3.2em   #default -3.2em px or em Note: pre-0.109.x default was -3.5em
+  large_icon_left_position: 0px   #default 0em px or em
+  separator_top_margin: 6em       #default 6em px or em
+  summary_top_padding: 2em        #default 2em px or em pre-0.109.x default was 1em
+  summary_font_size: 0.8em        #default 0.8em px or em
+  slot_l1: daytime_high
+  slot_l2: daytime_low
+  slot_l3: humidity
+  slot_l4: pop
+  slot_l5: wind
+  slot_r1: sun_following
+  slot_r2: sun_next
+  slot_r3: uv_summary
+  slot_r4: fire_summary
+  slot_r5: empty
+
+- type: 'custom:bom-radar-card'
+  map_style: 'light'
+  frame_count: 10
+  center_latitude: -31.92
+  center_longitude: 116.08
+  marker_latitude: -31.92
+  marker_longitude: 116.08
+  show_marker: true
+  show_range: true
+  show_scale: true
+  show_zoom: true
+  show_recenter: true
+  show_playback: true
+  show_radar_coverage: false
+  show_radar_location: true
+  zoom_level: 8
