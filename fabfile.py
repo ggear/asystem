@@ -283,6 +283,9 @@ def _release(context):
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in modules:
         for host in _get_hosts(context, module):
+
+            print(host)
+
             _clean(context, filter_module=module)
             _pull(context, filter_module=module, filter_host=host, is_release=True)
             _build(context, filter_module=module, is_release=True)
