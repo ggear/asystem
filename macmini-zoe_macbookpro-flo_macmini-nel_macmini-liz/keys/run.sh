@@ -12,7 +12,7 @@ if [ -d /Users/graham ]; then
 fi
 
 cp -rvf ./config/id_rsa.pub ${HOME}/.ssh
-chown ${USER} ${HOME}/.ssh
+chown ${USER} ${HOME}/.ssh/id_rsa.pub
 cp -rvf ./config/.id_rsa ${HOME}/.ssh/id_rsa
 chown ${USER} ${HOME}/.ssh/id_rsa
 rm -rfv ./config/.id_rsa
