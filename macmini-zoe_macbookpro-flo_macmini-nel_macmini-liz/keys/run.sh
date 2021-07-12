@@ -5,14 +5,14 @@ SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE
 cd ${SERVICE_INSTALL} || exit
 
 USER=root
-GROUP=root
 HOME=/root
 if [ -d /Users/graham ]; then
   USER=graham
-  GROUP=staff
   HOME=/Users/graham
 fi
 
 cp -rvf ./config/id_rsa.pub ${HOME}/.ssh
+chown ${USER} ${HOME}/.ssh
 cp -rvf ./config/.id_rsa ${HOME}/.ssh/id_rsa
+chown ${USER} ${HOME}/.ssh/id_rsa
 rm -rfv ./config/.id_rsa
