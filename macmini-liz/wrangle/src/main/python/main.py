@@ -9,20 +9,28 @@ from wrangle import library
 
 
 def main(arguments=[]):
-    runtime_errors = 0
+    module_count = 0
+    module_errored_count = 0
     for module_path in glob.glob("{}/wrangle/*/*.py".format(os.path.dirname(os.path.realpath(__file__)))):
         if not module_path.endswith("__init__.py"):
             module_name = os.path.basename(os.path.dirname(module_path))
             module = getattr(importlib.import_module("wrangle.{}".format(module_name)), module_name.title())()
-            module.run()
-            runtime_errors += (
-                    module.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_ERRORED) +
-                    module.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED) +
-                    module.get_counter(library.CTR_SRC_DATA, library.CTR_ACT_ERRORED) +
-                    module.get_counter(library.CTR_SRC_EGRESS, library.CTR_ACT_ERRORED)
-            )
-    return runtime_errors
+            module_count += 1
+            module_errored = False
+            try:
+                module.run()
+                counters = module.get_counters()
+                for source in counters:
+                    for action in counters[source]:
+                        if action == library.CTR_ACT_ERRORED and counters[source][action] > 0:
+                            module_errored = True
+            except Exception as exception:
+                module.print_log("Module threw unexpected exception", exception)
+                module_errored = True
+            if module_errored:
+                module_errored_count += 1
+    return module_count != 0 and module_count > module_errored_count
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(0 if main(sys.argv) else 1)
