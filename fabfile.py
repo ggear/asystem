@@ -269,7 +269,7 @@ def _deploy(context):
 
 
 def _release(context):
-    modules = _get_modules(context, "docker-compose.yml")
+    modules = _get_modules(context)
     for module in modules:
         if FAB_SKIP_TESTS not in os.environ:
             _pull(context, filter_module=module)
@@ -283,9 +283,6 @@ def _release(context):
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in modules:
         for host in _get_hosts(context, module):
-
-            print(host)
-
             _clean(context, filter_module=module)
             _pull(context, filter_module=module, filter_host=host, is_release=True)
             _build(context, filter_module=module, is_release=True)
