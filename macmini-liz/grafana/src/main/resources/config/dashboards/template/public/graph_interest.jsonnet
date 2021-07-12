@@ -21,7 +21,7 @@
 //AST           formFactor='Tablet',
 //ASD           formFactor='Desktop',
                 measurement='interest',
-                maxMilliSecSinceUpdate='5184000000',
+                maxMilliSecSinceUpdate='7776000000',
                 simpleErrors=false,
             ) +
 
@@ -364,7 +364,7 @@ from(bucket: "data_public")
                   ,
 
                   graph.new(
-                        title='Net Rate n-Year Means',
+                        title='Net Rate N Year Means',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
