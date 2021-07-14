@@ -262,7 +262,7 @@ class BOMWeatherCard extends Lit {
         }
       default :
         return {
-          feelsLike: "Feels like",
+          feelsLike: "On our roof",
           maxToday: "Today's High",
           minToday: "Today's Low",
           posToday: "Forecast",

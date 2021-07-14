@@ -332,6 +332,13 @@ sensor:
     start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
     end: '{{ now() }}'
 
+  - platform: average
+    name: today_temp_roof
+    entities:
+      - sensor.roof_temperature
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
 # IMPORTANT NOTE IF YOU USE statistics, you must comment out the above average sensor. Both cannot exist
 #  - platform: statistics
 #    name: today_temp_bom
