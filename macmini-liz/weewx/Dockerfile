@@ -43,5 +43,3 @@ VOLUME ["/data"]
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["/data/weewx.conf"]
-
-#ENTRYPOINT ["sleep", "10000"]
