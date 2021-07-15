@@ -1,7 +1,7 @@
 FROM python:3.8.5-slim-buster as image_base
 
 FROM image_base as image_package
-ENV WEEWX_VERSION="4.4.0"
+ENV WEEWX_VERSION="4.5.1"
 ENV WEEWX_HOME="/home/weewx"
 ENV WEEWX_ARCHIVE="weewx-${WEEWX_VERSION}.tar.gz"
 RUN apt-get update && apt-get -y --no-install-recommends install \
@@ -9,8 +9,8 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   gnupg2=2.2.12-1+deb10u1 \
   wget=1.20.1-1.1 \
   tar=1.30+dfsg-6 \
-  apache2=2.4.38-3+deb10u4 \
-  apache2-utils=2.4.38-3+deb10u4 \
+  apache2=2.4.38-3+deb10u5 \
+  apache2-utils=2.4.38-3+deb10u5 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN pip install --no-cache \
   configobj==5.0.6 \
@@ -43,3 +43,5 @@ VOLUME ["/data"]
 
 ENTRYPOINT ["./entrypoint.sh"]
 CMD ["/data/weewx.conf"]
+
+#ENTRYPOINT ["sleep", "10000"]
