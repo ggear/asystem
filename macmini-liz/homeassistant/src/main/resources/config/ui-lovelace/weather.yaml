@@ -24,22 +24,22 @@
   entity_summary_5: sensor.darlington_forecast_short_text_5
   entity_sun: sun.sun
   #           entity_visibility: sensor.dark_sky_visibility
-  entity_daytime_high: sensor.bom_today_max
-  entity_daytime_low: sensor.bom_today_min
+  entity_daytime_high: sensor.bom_today_maxs
+  entity_daytime_low: sensor.bom_today_mins
   entity_wind_bearing: sensor.bom_today_wind_direction
   entity_wind_speed: sensor.bom_today_wind_speed
-  entity_wind_gust: sensor.bom_today_wind_speed_gust
+  entity_wind_gust: sensor.bom_today_wind_gusts
   #           entity_wind_speed_kt: sensor.gooseberry_hill_wind_speed_knot
   #           entity_wind_gust_kt: sensor.gooseberry_hill_gust_speed_knot
-  entity_humidity: sensor.bom_today_humidity
+  entity_humidity: sensor.bom_today_humiditys
   ############################## IMPORTANT!!! BOM are NOT providing Pressure sensor for forecast.
   ############################## IF you use my entity_pressure sensor the card won't display
   # entity_pressure: sensor.nodemcu_lounge_bme280_seapressure
   entity_apparent_temp: sensor.roof_temperature
   entity_daily_summary: sensor.darlington_forecast_extended_text_0
   entity_pop: sensor.bom_today_rain_chance
-  entity_pop_intensity: sensor.bom_today_rain
-  entity_possible_today: sensor.bom_today_rain
+  entity_pop_intensity: sensor.bom_today_rains
+  entity_possible_today: sensor.bom_today_rains
   entity_pos_1: sensor.bom_rain_range_1
   entity_pos_2: sensor.bom_rain_range_2
   entity_pos_3: sensor.bom_rain_range_3

@@ -303,6 +303,10 @@ sensor:
             {{ states('sensor.darlington_forecast_temp_max_0') }}
           {% endif %}
 
+      bom_today_maxs:
+        value_template: >
+          {{ states('sensor.bom_today_max') | round | int }} ({{ state_attr('sensor.today_temp_roof', 'max_value') | round | int }})
+
 # ONLY USE ONE bom_today_min below:
 #      bom_today_min:
 #        value_template: >
@@ -315,6 +319,26 @@ sensor:
           {% else %}
             {{ states('sensor.darlington_forecast_temp_min_0') }}
           {% endif %}
+
+      bom_today_mins:
+        value_template: >
+          {{ states('sensor.bom_today_min') | round | int }} ({{ state_attr('sensor.today_temp_roof', 'min_value') | round | int }})
+
+      bom_today_rains:
+        value_template: >
+          {{ states('sensor.bom_today_rain') }} (
+          {%- if states('sensor.day_rain') in ['unavailable', 'unknown', 'none', 'n/a'] -%}unknown)
+          {% else %}{{ states('sensor.day_rain') | round | int }})
+          {% endif %}
+
+      bom_today_humiditys:
+        value_template: >
+          {{ states('sensor.bom_today_humidity') }} ({{ states('sensor.today_humidity_roof') | round | int }})
+
+      bom_today_wind_gusts:
+        value_template: >
+          {{ states('sensor.bom_today_wind_speed_gust') }} ({{ state_attr('sensor.today_gusts_roof', 'max_value') | round | int }})
+
 
   # IMPORTANT NOTE IF YOU USE average, you must comment out the below statistics sensor. Both cannot exist
   # https://github.com/Limych/ha-average
@@ -336,6 +360,27 @@ sensor:
     name: today_temp_roof
     entities:
       - sensor.roof_temperature
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
+  - platform: average
+    name: today_rain_roof
+    entities:
+      - sensor.day_rain
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
+  - platform: average
+    name: today_humidity_roof
+    entities:
+      - sensor.roof_humidity
+    start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
+    end: '{{ now() }}'
+
+  - platform: average
+    name: today_gusts_roof
+    entities:
+      - sensor.gust_speed_wind
     start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
     end: '{{ now() }}'
 
