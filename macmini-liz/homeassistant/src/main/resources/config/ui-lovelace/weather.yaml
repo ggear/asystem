@@ -23,7 +23,7 @@
   entity_summary_4: sensor.darlington_forecast_short_text_4
   entity_summary_5: sensor.darlington_forecast_short_text_5
   entity_sun: sun.sun
-  #           entity_visibility: sensor.dark_sky_visibility
+  entity_visibility: sensor.illuminance
   entity_daytime_high: sensor.bom_today_maxs
   entity_daytime_low: sensor.bom_today_mins
   entity_wind_bearing: sensor.bom_today_wind_direction
@@ -99,11 +99,11 @@
   slot_l3: humidity
   slot_l4: pop
   slot_l5: wind
-  slot_r1: sun_next
-  slot_r2: sun_following
-  slot_r3: uv_summary
-  slot_r4: fire_summary
-  slot_r5: empty
+  slot_r1: visibility
+  slot_r2: sun_next
+  slot_r3: sun_following
+  slot_r4: uv_summary
+  slot_r5: fire_summary
 
 - type: 'custom:bom-radar-card'
   map_style: 'light'

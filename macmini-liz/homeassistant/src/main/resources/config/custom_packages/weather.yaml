@@ -305,7 +305,7 @@ sensor:
 
       bom_today_maxs:
         value_template: >
-          {{ states('sensor.bom_today_max') | round | int }} ({{ state_attr('sensor.today_temp_roof', 'max_value') | round | int }})
+          {{ states('sensor.bom_today_max') | round | int }} ({{ state_attr('sensor.today_temp_roof', 'max_value') | round(0, 'ceil') }})
 
 # ONLY USE ONE bom_today_min below:
 #      bom_today_min:
@@ -322,7 +322,7 @@ sensor:
 
       bom_today_mins:
         value_template: >
-          {{ states('sensor.bom_today_min') | round | int }} ({{ state_attr('sensor.today_temp_roof', 'min_value') | round | int }})
+          {{ states('sensor.bom_today_min') | round | int }} ({{ state_attr('sensor.today_temp_roof', 'min_value') | round(0, 'floor') }})
 
       bom_today_rains:
         value_template: >
@@ -391,6 +391,94 @@ sensor:
 #    entity_id: sensor.gooseberry_hill_temp
 #    max_age:
 #      hours: 24
+
+  - platform: sun2
+    monitored_conditions:
+      - solar_midnight
+      - astronomical_dawn
+      - nautical_dawn
+      - dawn
+      - sunrise
+      - solar_noon
+      - sunset
+      - dusk
+      - nautical_dusk
+      - astronomical_dusk
+      - daylight
+      - civil_daylight
+      - nautical_daylight
+      - astronomical_daylight
+      - night
+      - civil_night
+      - nautical_night
+      - astronomical_night
+      - elevation
+      - min_elevation
+      - max_elevation
+    entity_namespace: solar
+
+  - platform: template
+    sensors:
+      illuminance:
+        friendly_name: Outdoor Illuminance Educated Guessor
+        icon_template: mdi:brightness-auto
+        unit_of_measurement: lx
+        value_template: |
+          {%- set factors = namespace(condition='',sun='') %}
+
+          {#- Retrieve the current condition and normalize the value #}
+          {%- set current_condition = states("weather.darlington_forecast") %}
+          {%- set current_condition = current_condition|lower|replace("-day","")|replace("_day","")|replace("-night","")|replace("_night","")|replace("and","")|replace("-", " ")|replace("_", " ")|replace("(","")|replace(")","")|replace(".", "")|replace(" ", "") %}
+
+
+          {#- Assign a seemingly arbitrary number to the condition factor #}
+          {%- set condition_factors = {
+            "10000": ("clear", "clearnight", "sunny", "windy", "wind", "windyvariant", "exceptional"),
+            "7500": ("partlycloudy", "partlysunny", "mostlysunny", "mostlyclear", "hazy", "hazey", "hazysunshine", "intermittentclouds", "lightrain"),
+            "2500": ("cloudy", "mostlycloudy"),
+            "1000": ("fog", "foggy", "dust", "dusty", "rainy", "pouring", "rain", "lightshower", "lightshowers", "showers", "shower", "snowy", "snow", "snowyheavy", "snowyrainy", "flurries", "chanceflurries", "chancerain", "chancesleet", "drearyovercast", "sleet", "frost"),
+            "200": ("hail", "lightning", "lightningrainy", "tstorms", "thunderstorm", "storm", "stormy", "heavyshower", "heavyshowers", "tropicalcyclone")
+          } %}
+          {%- for factor in condition_factors if current_condition in condition_factors[factor] %}
+            {%- set factors.condition = factor %}
+          {%- endfor %}
+
+          {#- Compute Sun Factor #}
+          {%- set right_now = now() | as_timestamp %}
+          {%- set sunrise = states("sensor.solar_sunrise") | as_timestamp %}
+          {%- set sunrise_begin = states("sensor.solar_dawn") | as_timestamp %}
+          {%- set sunrise_end = sunrise + (40 * 60) %}
+          {%- set sunset = states("sensor.solar_sunset") | as_timestamp %}
+          {%- set sunset_begin = sunset - (40 * 60) %}
+          {%- set sunset_end = states("sensor.solar_dusk") | as_timestamp %}
+          {%- if sunrise_end < right_now and right_now < sunset_begin %}
+            {%- set factors.sun = 1 %}
+          {%- elif sunset_end < right_now or right_now < sunrise_begin %}
+            {%- set factors.sun = 0 %}
+          {%- elif right_now <= sunrise_end %}
+            {%- set factors.sun = (right_now - sunrise_begin) / (60*60) %}
+          {%- else %}
+            {%- set factors.sun = (sunset_end - right_now) / (60*60) %}
+          {%- endif %}
+          {%- set factors.sun = 1 if factors.sun > 1 else factors.sun %}
+
+          {# Take an educated guess #}
+          {%- set illuminance = (factors.sun|float * factors.condition|float) | round %}
+          {%- set illuminance = 10 if illuminance < 10 else illuminance %}
+          {{ illuminance }}
+
+binary_sensor:
+  - platform: sun2
+    monitored_conditions:
+      - elevation
+      - elevation:
+          above: 25
+          name: Sun Above 25
+  - platform: workday
+    country: AU
+    province: WA
+    workdays: [mon, tue, wed, thu, fri]
+    excludes: [sat, sun, holiday]
 
 automation:
   - alias: 'Update BOM Icons'
