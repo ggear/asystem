@@ -30,7 +30,7 @@
 # Networks -> LAN -> Domain name -> janeandgraham.com
 # Networks -> LAN -> DHCP range -> 192.168.1.50 to 192.168.1.254
 # Devices -> udm-rack, usw-house and uap-hallway
-# Clients -> udm-rack 192.168.1.1, macmini-liz 192.168.1.10, phillips-hue 192.168.1.12
+# Clients -> udm-rack 192.168.1.1, macmini-liz 192.168.1.10, phillips-hue 192.168.1.12, tplplug-* 192.168.1.20+, haiku-* 192.168.1.40+
 # Routing & Firewall -> Port Forwarding -> Nginx, 80, 192.168.1.10, 9080, TCP, Enable Logging
 # Routing & Firewall -> Port Forwarding -> Nginx, 443, 192.168.1.10, 9443, TCP, Enable Logging
 

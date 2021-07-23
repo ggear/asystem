@@ -1,6 +1,6 @@
 [package]
 
-name = "gateway"
+name = "solaredge"
 version = "0.0.0-SNAPSHOT"
 
 [dependencies]
@@ -8,9 +8,9 @@ chrono = "0.4"
 tokio = { version = "1.5.0", features = ["full"] }
 
 [[bin]]
-name = "gateway"
+name = "solaredge"
 path = "src/main/rust/main.rs"
 
 [[test]]
-name = "gateway_test"
+name = "solaredge_test"
 path = "src/test/rust/unit/unit_tests.rs"

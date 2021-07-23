@@ -2,4 +2,4 @@ macmini-liz/anode
 macmini-liz/weewx
 macmini-liz/grafana
 macmini-liz/influxdb
-macmini-liz/homeassitant
+macmini-liz/homeassistant

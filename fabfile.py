@@ -113,10 +113,11 @@ def _setup(context):
     _print_line(
         "Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(_get_versions()[2], _get_versions()[1], _get_versions()[0]))
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) == 0:
-        _run_local(context, "conda create -y -n $CONDA_ENV python=2.7")
+        _run_local(context, "conda create -y -n $ENV python=2.7")
         _print_line("Installing requirements ...")
         for requirement in glob.glob("{}/*/*/*/reqs_*.txt".format(DIR_ROOT)):
             _run_local(context, "pip install -r {}".format(requirement))
+    _run_local(context, "[ ! -d $HOME/.go/asystem ] && mkdir -vp $HOME/.go/$ENV/{bin,src,pkg} || true")
 
     # TODO: Update requirements or manage
     # sudo npm install -g karma jasmine karma-jasmine karma-chrome-launcher html-minifier uglify-js --unsafe-perm=true --allow-root
@@ -125,15 +126,14 @@ def _setup(context):
 
 
 def _purge(context):
-    _print_header("asystem", "purge docker")
+    _print_header("asystem", "purge")
     _run_local(context, "[ $(docker ps -a -q | wc -l) -gt 0 ] && docker rm -vf $(docker ps -a -q)", warn=True)
     _run_local(context, "[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)", warn=True)
     _run_local(context, "docker system prune --volumes -f")
-    _print_footer("asystem", "purge docker")
-    _print_header("asystem", "purge conda")
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) > 0:
         _run_local(context, "conda remove -y -n $CONDA_ENV --all")
-    _print_footer("asystem", "purge conda")
+    _run_local(context, "rm -rvf $HOME/.go/$ENV || true")
+    _print_footer("asystem", "purge")
 
 
 def _backup(context):

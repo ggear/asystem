@@ -1,0 +1,7 @@
+# Re-implement anode as a Go app
+
+# Resources:
+# - https://golang.org/doc/code#next
+# - https://tour.golang.org/list
+# - https://golang.org/doc/effective_go
+# - https://golang.org/ref/spec
