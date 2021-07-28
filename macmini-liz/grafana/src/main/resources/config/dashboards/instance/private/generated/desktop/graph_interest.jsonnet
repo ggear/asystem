@@ -383,14 +383,6 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["period"] == "10y")
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "10 year"})
-                  ')).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "interest")
-  |> filter(fn: (r) => r["_field"] == "net")
-  |> filter(fn: (r) => r["period"] == "20y")
-  |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: "20 year"})
                   '))
                       { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
                   ,

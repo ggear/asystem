@@ -44,6 +44,11 @@ STOCK = OrderedDict([
         "end of day": "16:00",
         "exchange": "AX",
     }),
+    ('VHY', {
+        "start": "2011",
+        "end of day": "16:00",
+        "exchange": "AX",
+    }),
     ('VAE', {
         "start": "2016",
         "end of day": "16:00",

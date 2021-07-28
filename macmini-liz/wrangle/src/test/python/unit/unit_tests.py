@@ -54,9 +54,9 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 108,
-                    library.CTR_ACT_CURRENT_COLUMNS: 108,
-                    library.CTR_ACT_UPDATE_COLUMNS: 72,
-                    library.CTR_ACT_DELTA_COLUMNS: 108,
+                    library.CTR_ACT_CURRENT_COLUMNS: 117,
+                    library.CTR_ACT_UPDATE_COLUMNS: 81,
+                    library.CTR_ACT_DELTA_COLUMNS: 117,
                 },
             },
         })})
@@ -66,14 +66,14 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 99,
-                    library.CTR_ACT_CURRENT_COLUMNS: 108,
-                    library.CTR_ACT_UPDATE_COLUMNS: 108,
-                    library.CTR_ACT_DELTA_COLUMNS: 108,
+                    library.CTR_ACT_CURRENT_COLUMNS: 117,
+                    library.CTR_ACT_UPDATE_COLUMNS: 117,
+                    library.CTR_ACT_DELTA_COLUMNS: 117,
                 },
             },
         })})
 
-    # TODO: Disable until health dashbaord is built
+    # TODO: Disable until health dashboard is built
     # def test_health_typical(self):
     #     self.run_module("health", {"success_typical": merge_asserts(ASSERT_RUN, {
     #         "counter_equals": {
