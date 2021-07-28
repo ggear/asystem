@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import print_function
 
 import os
@@ -37,6 +39,7 @@ class Interest(library.Library):
                     new_data = True
                     retail_raw_df = pd.read_excel(retail_file, skiprows=11, header=None)
                     retail_df['Date'] = pd.to_datetime(retail_raw_df.iloc[:, [0]][0].dt.strftime('%Y-%m-01'))
+                    # Column O: Retail deposit and investment rates; Banks' term deposits ($10000); 3 years
                     retail_df['Retail'] = retail_raw_df.iloc[:, [14]]
                     retail_df = retail_df.set_index('Date')
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
@@ -56,7 +59,8 @@ class Interest(library.Library):
                     new_data = True
                     inflation_raw_df = pd.read_excel(inflation_file, skiprows=11, header=None)
                     inflation_df['Date'] = pd.to_datetime(inflation_raw_df.iloc[:, [0]][0].dt.strftime('%Y-%m-01'))
-                    inflation_df['Inflation'] = inflation_raw_df.iloc[:, [3]]
+                    # Column E: Year-ended inflation – excluding volatile items
+                    inflation_df['Inflation'] = inflation_raw_df.iloc[:, [4]]
                     inflation_df = inflation_df.set_index('Date')
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                 except Exception as exception:
