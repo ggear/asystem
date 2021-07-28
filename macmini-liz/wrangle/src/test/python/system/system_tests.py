@@ -67,7 +67,7 @@ def test_reload():
     data_public_len = bucket_length("data_public")
     data_private_len = bucket_length("data_private")
     process = subprocess.Popen("docker exec -e WRANGLE_REPROCESS_ALL_FILES=true wrangle telegraf --debug --once",
-        shell=True, stdout=subprocess.PIPE)
+                               shell=True, stdout=subprocess.PIPE)
     process.wait()
     assert process.returncode == 0
     assert bucket_length("data_public") > data_public_len
