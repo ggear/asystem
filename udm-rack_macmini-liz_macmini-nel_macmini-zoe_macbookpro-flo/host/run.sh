@@ -1,7 +1,11 @@
 #!/bin/sh
 
+SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+
+cd ${SERVICE_INSTALL} || exit
+
 key_append() {
-  if [ "$(uname)" != "Darwin" ] || [ -d "${3}/${1}" ]; then
+  if [ -d "${3}/${1}" ]; then
     if [ ! -e "${3}/${1}/.ssh/authorized_keys" ] || [ $(grep graham "${3}/${1}/.ssh/authorized_keys" | wc -l) -eq 0 ]; then
       [ -d "${3}" ] && mkdir -p ${3} && chmod 711 ${3} && chown ${1}.${2} ${3}
       [ $(grep "${1}" "/etc/passwd" | wc -l) -eq 0 ] && adduser -D "${1}" && chmod 700 ${3}/${1}
