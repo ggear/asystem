@@ -12,10 +12,11 @@ key_copy() {
     chown ${1} ${3}/${1}/id_rsa.pub
     cp -rvf ./config/.id_rsa ${3}/${1}/id_rsa
     chown ${1} ${3}/${1}/id_rsa
-    rm -rfv ./config/.id_rsa
   fi
 }
 
 key_copy 'root' 'root' ''
 key_copy 'graham' 'users' '/home'
 key_copy 'graham' 'staff' '/Users'
+
+rm -rfv ./config/.id_rsa
