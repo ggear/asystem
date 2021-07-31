@@ -5,7 +5,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE
 cd ${SERVICE_INSTALL} || exit
 
 key_copy() {
-  if [ -d "${3}" ]; then
+  if [ -d "${3}/${1}" ]; then
     mkdir -p ${3}/${1}/.ssh
     chown ${1} ${3}/${1}/.ssh
     cp -rvf ./config/id_rsa.pub ${3}/${1}/.ssh
