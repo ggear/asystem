@@ -4,17 +4,18 @@ SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE
 
 cd ${SERVICE_INSTALL} || exit
 
-USER=root
-HOME=/root/.ssh
-if [ -d /Users/graham ]; then
-  USER=graham
-  HOME=/Users/graham
-fi
+key_copy() {
+  if [ -d "${3}" ]; then
+    mkdir -p ${3}/${1}
+    chown ${1} ${3}/${1}
+    cp -rvf ./config/id_rsa.pub ${3}/${1}
+    chown ${1} ${3}/${1}/id_rsa.pub
+    cp -rvf ./config/.id_rsa ${3}/${1}/id_rsa
+    chown ${1} ${3}/${1}/id_rsa
+    rm -rfv ./config/.id_rsa
+  fi
+}
 
-mkdir -p ${HOME}
-chown ${USER} ${HOME}
-cp -rvf ./config/id_rsa.pub ${HOME}
-chown ${USER} ${HOME}/id_rsa.pub
-cp -rvf ./config/.id_rsa ${HOME}/id_rsa
-chown ${USER} ${HOME}/id_rsa
-rm -rfv ./config/.id_rsa
+key_copy 'root' 'root' ''
+key_copy 'graham' 'users' '/home'
+key_copy 'graham' 'staff' '/Users'
