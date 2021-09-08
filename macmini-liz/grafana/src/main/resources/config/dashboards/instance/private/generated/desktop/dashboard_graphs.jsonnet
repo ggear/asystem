@@ -6,6 +6,7 @@ local graph_electricity = import 'graph_electricity.jsonnet';
 local graph_servers = import 'graph_servers.jsonnet';
 local graph_water = import 'graph_water.jsonnet';
 local graph_currency = import 'graph_currency.jsonnet';
+local graph_health = import 'graph_health.jsonnet';
 local graph_interest = import 'graph_interest.jsonnet';
 local graph_internet = import 'graph_internet.jsonnet';
 local graph_conditions = import 'graph_conditions.jsonnet';
@@ -85,6 +86,20 @@ local graph_containers = import 'graph_containers.jsonnet';
                         time_from='now-1y', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_currency.graphs()),
+
+
+            health_dashboard:
+                  dashboard.new(
+                        schemaVersion=30,
+                        title='Health',
+                        uid='health-desktop',
+                        editable=true,
+                        hideControls=false,
+                        graphTooltip='shared_tooltip',
+                        tags=['private', 'desktop'],
+                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['20s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                  )
+                  .addPanels(graph_health.graphs()),
 
 
             interest_dashboard:

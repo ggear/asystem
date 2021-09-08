@@ -261,7 +261,7 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: "upload"})
+  |> rename(columns: {_value: "Upload"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -272,9 +272,9 @@ from(bucket: "host_private")
   |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
   |> derivative(unit: 1s, nonNegative: true)
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: "download"})
+  |> rename(columns: {_value: "Download"})
                   ')).addSeriesOverride(
-                        { "alias": "upload", "transform": "negative-Y" }
+                        { "alias": "Upload", "transform": "negative-Y" }
                   )
                       { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
                   ,
@@ -297,7 +297,7 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: "upload"})
+  |> rename(columns: {_value: "Upload"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -308,9 +308,9 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: "download"})
+  |> rename(columns: {_value: "Download"})
                   ')).addSeriesOverride(
-                        { "alias": "upload", "transform": "negative-Y" }
+                        { "alias": "Upload", "transform": "negative-Y" }
                   )
                       { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
@@ -324,6 +324,7 @@ from(bucket: "host_private")
                         lines=true,
                         staircase=true,
                   ).addTarget(influxdb.target(query='
+import "strings"
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "internet")
@@ -334,6 +335,7 @@ from(bucket: "host_private")
   |> sort(columns: ["_time"])
   |> fill(column: "_value", usePrevious: true)
   |> keep(columns: ["_time", "_value", "host_location"])
+  |> map(fn: (r) => ({ r with host_location: strings.title(v: r.host_location) }))
   |> rename(columns: {_value: ""})
                   '))
                       { gridPos: { x: 0, y: 34, w: 24, h: 12 } }

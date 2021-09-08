@@ -1,6 +1,7 @@
 import sys
 
 sys.path.append('../../../main/python')
+
 import copy
 import os
 import shutil

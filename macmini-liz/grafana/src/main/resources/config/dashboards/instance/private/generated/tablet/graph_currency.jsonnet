@@ -287,7 +287,7 @@ from(bucket: "data_public")
                   ,
 
                   graph.new(
-                        title='CCY/AUD End of Day Deltas',
+                        title='CCY/AUD Range End of Day Deltas',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -371,7 +371,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> keep(columns: ["_time", "_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-  |> rename(columns: {_value: "delta"})
+  |> rename(columns: {_value: "Delta"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -381,11 +381,11 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/GBP")
   |> keep(columns: ["_time", "_value"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
-  |> rename(columns: {_value: "snapshot"})
+  |> rename(columns: {_value: "Snapshot"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
+                        { "alias": "/.*Delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
                   ).addSeriesOverride(
-                        { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
+                        { "alias": "/.*Snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
                       { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
@@ -412,7 +412,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> keep(columns: ["_time", "_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-  |> rename(columns: {_value: "delta"})
+  |> rename(columns: {_value: "Delta"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -422,11 +422,11 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/USD")
   |> keep(columns: ["_time", "_value"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
-  |> rename(columns: {_value: "snapshot"})
+  |> rename(columns: {_value: "Snapshot"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
+                        { "alias": "/.*Delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
                   ).addSeriesOverride(
-                        { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
+                        { "alias": "/.*Snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
                       { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
                   ,
@@ -453,7 +453,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> keep(columns: ["_time", "_value"])
   |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-  |> rename(columns: {_value: "delta"})
+  |> rename(columns: {_value: "Delta"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -463,11 +463,11 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_field"] == "AUD/SGD")
   |> keep(columns: ["_time", "_value"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
-  |> rename(columns: {_value: "snapshot"})
+  |> rename(columns: {_value: "Snapshot"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
+                        { "alias": "/.*Delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
                   ).addSeriesOverride(
-                        { "alias": "/.*snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
+                        { "alias": "/.*Snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
                   )
                       { gridPos: { x: 0, y: 46, w: 24, h: 12 } }
                   ,

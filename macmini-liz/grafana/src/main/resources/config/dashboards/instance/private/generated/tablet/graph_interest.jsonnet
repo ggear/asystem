@@ -260,25 +260,28 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "net")
   |> filter(fn: (r) => r["period"] == "1mo")
-  |> keep(columns: ["_time", "_value", "_field"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "Net"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "retail")
   |> filter(fn: (r) => r["period"] == "1mo")
-  |> keep(columns: ["_time", "_value", "_field"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "Retail"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "inflation")
   |> filter(fn: (r) => r["period"] == "1mo")
-  |> keep(columns: ["_time", "_value", "_field"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "Inflation"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*retail.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
+                        { "alias": "/.*Retail.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   ).addSeriesOverride(
-                        { "alias": "/.*inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
+                        { "alias": "/.*Inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   )
                       { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
                   ,
@@ -299,25 +302,28 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "net")
   |> filter(fn: (r) => r["period"] == "10y")
-  |> keep(columns: ["_time", "_value", "_field"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "Net"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "retail")
   |> filter(fn: (r) => r["period"] == "10y")
-  |> keep(columns: ["_time", "_value", "_field"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "Retail"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
   |> filter(fn: (r) => r["_field"] == "inflation")
   |> filter(fn: (r) => r["period"] == "10y")
-  |> keep(columns: ["_time", "_value", "_field"])
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "Inflation"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*retail.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
+                        { "alias": "/.*Retail.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   ).addSeriesOverride(
-                        { "alias": "/.*inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
+                        { "alias": "/.*Inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   )
                       { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
