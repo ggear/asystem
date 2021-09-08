@@ -5,10 +5,10 @@ USER root
 RUN apk add --no-cache \
   jq==1.6-r1 \
   git==2.30.2-r0 \
-  curl==7.77.0-r1 \
+  curl==7.78.0-r0 \
   make==4.3-r0 \
   musl-dev==1.2.2-r1 \
-  go==1.15.12-r0
+  go==1.15.15-r0
 
 FROM image_package as image_install
 ARG GOLANG_VERSION=1.16.4
