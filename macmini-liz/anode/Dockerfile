@@ -10,18 +10,18 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   tk=8.6.0+9 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-FROM image_package as image_install
+FROM image_package as image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem
 RUN cat /asystem/reqs_run.txt | xargs -n 1 pip install --no-deps --prefix=/asystem/runtime && rm -rf /asystem/reqs_run.txt
 
-FROM image_install as image_runtime
-RUN mkdir /asystem/install
+FROM image_runtime as image_install
+RUN mkdir -p /asystem/install
 WORKDIR /asystem/install
 COPY src/reqs_dev.txt /asystem
 RUN pip install -r /asystem/reqs_dev.txt
-RUN mkdir /asystem/source
+RUN mkdir -p /asystem/source
 WORKDIR /asystem/source
 COPY target/package /asystem/source
 RUN export PYTHONPATH=/asystem/runtime/lib/python2.7/site-packages:/asystem/install/lib/python2.7/site-packages:$PYTHONPATH \
