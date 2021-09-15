@@ -2,7 +2,7 @@ version: '3.7'
 services:
   vernemq:
     container_name: vernemq
-    image: vernemq/vernemq:1.11.0-alpine
+    image: vernemq/vernemq:1.12.3-alpine
     init: true
     restart: ${SERVICE_RESTART}
     environment:

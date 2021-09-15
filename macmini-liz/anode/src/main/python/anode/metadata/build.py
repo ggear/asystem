@@ -89,9 +89,6 @@ def load():
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-
-    print("{}:{}".format(HOST_VERNEMQ, CONFIG["publish_port"]))
-
     client.connect(HOST_VERNEMQ, CONFIG["publish_port"], 60)
     time_start = time.time()
     while True:
