@@ -1,6 +1,7 @@
 # Implement Modbus client for solaredge in Rust
 
 # https://github.com/nmakel/solaredge_modbus
+# https://github.com/erikarenhill/solaredge-modbus-hass
 # https://github.com/jsloane/solar-monitoring-stack
 # https://www.photovoltaikforum.com/core/attachment/88445-power-control-open-protocol-for-solaredge-inverters-pdf/
 # https://forums.whirlpool.net.au/thread/9pll20v9?p=20
