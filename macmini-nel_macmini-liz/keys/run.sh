@@ -5,16 +5,15 @@ SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE
 cd ${SERVICE_INSTALL} || exit
 
 key_copy() {
-  if [ -d "${3}/${1}" ]; then
-    mkdir -p ${3}/${1}/.ssh
-    chown ${1} ${3}/${1}/.ssh
-    cp -rvf ./config/id_rsa.pub ${3}/${1}/.ssh
-    chown ${1} ${3}/${1}/.ssh/id_rsa.pub
-    cp -rvf ./config/.id_rsa ${3}/${1}/.ssh/id_rsa
-    chown ${1} ${3}/${1}/.ssh/id_rsa
+  if [ -d "${3}${1}" ]; then
+    mkdir -p ${3}${1}/.ssh
+    cp -rvf ./config/id_rsa.pub ${3}${1}/.ssh
+    cp -rvf ./config/.id_rsa ${3}${1}/.ssh/id_rsa
+    chown -R ${1} ${3}${1}
+    chgrp -R ${2} ${3}${1}
   fi
 }
 
-key_copy 'root' 'root' ''
-key_copy 'graham' 'users' '/home'
-key_copy 'graham' 'staff' '/Users'
+key_copy 'root' 'root' '/'
+key_copy 'graham' 'users' '/home/'
+key_copy 'graham' 'staff' '/Users/'
