@@ -2,7 +2,7 @@ FROM telegraf:1.18.3-alpine as image_base
 
 FROM image_base as image_package
 ENV PYTHONUNBUFFERED=1
-RUN apk add --no-cache python2=2.7.18-r0 && \
+RUN apk add --no-cache python2=2.7.18-r2 && \
     python -m ensurepip && \
     rm -r /usr/lib/python*/ensurepip && \
     pip install --upgrade pip setuptools && \
