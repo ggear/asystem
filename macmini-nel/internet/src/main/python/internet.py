@@ -193,7 +193,10 @@ def upload():
             time_start = time_ms()
             try:
                 speedtest = Speedtest()
-                speedtest.get_servers([host_speedtest_id])
+                try:
+                    speedtest.get_servers([host_speedtest_id])
+                except Exception:
+                    pass
                 host_speedtest = speedtest.best
                 speedtest.upload()
                 results_speedtest = speedtest.results.dict()
@@ -212,7 +215,7 @@ def upload():
                 run_code = run_code_iteration
             print(FORMAT_TEMPLATE.format(
                 "upload",
-                "speedtest-" + host_speedtest_id,
+                "speedtest-" + host_speedtest["id"],
                 run_code_iteration,
                 "{} upload_mbps={},upload_b={},".format(
                     ",host_location={},host_name={}".format(
@@ -264,7 +267,10 @@ def download():
             time_start = time_ms()
             try:
                 speedtest = Speedtest()
-                speedtest.get_servers([host_speedtest_id])
+                try:
+                    speedtest.get_servers([host_speedtest_id])
+                except Exception:
+                    pass
                 host_speedtest = speedtest.best
                 speedtest.download()
                 results_speedtest = speedtest.results.dict()
@@ -283,7 +289,7 @@ def download():
                 run_code = run_code_iteration
             print(FORMAT_TEMPLATE.format(
                 "download",
-                "speedtest-" + host_speedtest_id,
+                "speedtest-" + host_speedtest["id"],
                 run_code_iteration,
                 "{} download_mbps={},download_b={},".format(
                     ",host_location={},host_name={}".format(
