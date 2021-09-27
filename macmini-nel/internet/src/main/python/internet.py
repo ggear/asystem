@@ -19,8 +19,8 @@ from speedtest import Speedtest
 
 HOST_HOME_NAME = "home.janeandgraham.com"
 
-HOST_SPEEDTEST_PING_IDS = ["234"]
-HOST_SPEEDTEST_THROUGHPUT_IDS = ["30879"]
+HOST_SPEEDTEST_PING_IDS = []
+HOST_SPEEDTEST_THROUGHPUT_IDS = ["AUTO"]
 
 RESOLVER_IPS = ["192.168.1.1", "162.159.44.190", "1.1.1.1", "8.8.8.8"]
 
@@ -117,7 +117,10 @@ def ping():
         for i in xrange(PING_COUNT):
             try:
                 speedtest = Speedtest()
-                speedtest.get_servers([host_speedtest_id])
+                try:
+                    speedtest.get_servers([host_speedtest_id])
+                except Exception:
+                    pass
                 host_speedtest = speedtest.best
                 speedtest_results = speedtest.results.dict()
                 pings.append(speedtest_results["ping"])
@@ -136,7 +139,7 @@ def ping():
             run_code = run_code_iteration
         print(FORMAT_TEMPLATE.format(
             "ping",
-            "speedtest-" + host_speedtest_id,
+            "speedtest-" + host_speedtest["id"],
             run_code_iteration,
             "{} ping_min_ms={},ping_max_ms={},ping_med_ms={},pings_lost={},".format(
                 ",host_location={},host_name={}".format(
