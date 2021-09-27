@@ -20,7 +20,7 @@ from speedtest import Speedtest
 HOST_HOME_NAME = "home.janeandgraham.com"
 
 HOST_SPEEDTEST_PING_IDS = []
-HOST_SPEEDTEST_THROUGHPUT_IDS = ["AUTO"]
+HOST_SPEEDTEST_THROUGHPUT_IDS = ["12494"]
 
 RESOLVER_IPS = ["192.168.1.1", "162.159.44.190", "1.1.1.1", "8.8.8.8"]
 
