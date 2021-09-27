@@ -474,9 +474,12 @@ if __name__ == "__main__":
     up_code_network = True
     run_code_all.append(ping())
     up_code_network = run_code_all[-1] == RUN_CODE_SUCCESS or run_code_all[-1] == RUN_CODE_FAIL_SPEEDTEST
-    if up_code_network:
-        run_code_all.append(upload())
-        run_code_all.append(download())
+
+    # RE-enable once I have fixed upload/download
+    # if up_code_network:
+    #     run_code_all.append(upload())
+    #     run_code_all.append(download())
+
     run_code_all.append(lookup())
     run_code_all.append(certificate())
     run_code_uptime = RUN_CODE_FAIL_CONFIG
