@@ -23,7 +23,7 @@ services:
       - ${SERVICE_DATA_DIR}:/config
     ports:
       - ${HOMEASSISTANT_PORT}:${HOMEASSISTANT_PORT}
-#    network_mode: host
+    network_mode: host
     deploy:
       resources:
         limits:
