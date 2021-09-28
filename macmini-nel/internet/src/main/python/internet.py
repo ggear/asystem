@@ -20,7 +20,7 @@ from speedtest import Speedtest
 HOST_HOME_NAME = "home.janeandgraham.com"
 
 HOST_SPEEDTEST_PING_IDS = []
-HOST_SPEEDTEST_THROUGHPUT_IDS = ["12494"]
+HOST_SPEEDTEST_THROUGHPUT_ID = "12494"
 
 RESOLVER_IPS = ["192.168.1.1", "162.159.44.190", "1.1.1.1", "8.8.8.8"]
 
@@ -69,7 +69,7 @@ from(bucket: "host_private")
 
 QUERY_LAST = """
 from(bucket: "host_private")
-  |> range(start: -8h, stop: now())
+  |> range(start: -24h, stop: now())
   |> filter(fn: (r) => r["_measurement"] == "internet")
   |> filter(fn: (r) => {})
   |> filter(fn: (r) => r["metric"] == "{}" {})
@@ -112,7 +112,7 @@ def query(flux):
 
 def ping():
     run_code = RUN_CODE_FAIL_CONFIG
-    for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS + HOST_SPEEDTEST_PING_IDS:
+    for host_speedtest_id in [HOST_SPEEDTEST_THROUGHPUT_ID] + HOST_SPEEDTEST_PING_IDS:
         pings = []
         host_speedtest = None
         time_start = time_ms()
@@ -161,7 +161,7 @@ def ping():
 
 def upload():
     run_code = RUN_CODE_SUCCESS
-    run_host_ids = set()
+    throughput_run = True
     network_stats = {
         "upload": [
             """ r["_field"] == "upload_mbps" """,
@@ -175,67 +175,65 @@ def upload():
             for network_stat_reply in \
                     query(QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
                 if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
-                    if network_stat_reply[2].replace("speedtest-", "") in HOST_SPEEDTEST_THROUGHPUT_IDS:
-                        run_host_ids.add(network_stat_reply[2].replace("speedtest-", ""))
-                        print(FORMAT_TEMPLATE.format(
-                            network_stat,
-                            network_stat_reply[2],
-                            RUN_CODE_REPEAT,
-                            network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
-                            time_ms() - time_start,
-                            time_ns()))
+                    throughput_run = False
+                    print(FORMAT_TEMPLATE.format(
+                        network_stat,
+                        network_stat_reply[2],
+                        RUN_CODE_REPEAT,
+                        network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
+                        time_ms() - time_start,
+                        time_ns()))
         except Exception as exception:
             print("Error processing speedtest upload - ", end="", file=sys.stderr)
             traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
             run_code = RUN_CODE_FAIL_CONFIG
-    for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS:
-        if host_speedtest_id not in run_host_ids:
-            host_speedtest = None
-            results_speedtest = None
-            run_code_iteration = RUN_CODE_FAIL_NETWORK
-            time_start = time_ms()
+    if throughput_run:
+        host_speedtest = None
+        results_speedtest = None
+        run_code_iteration = RUN_CODE_FAIL_NETWORK
+        time_start = time_ms()
+        try:
+            speedtest = Speedtest()
             try:
-                speedtest = Speedtest()
-                try:
-                    speedtest.get_servers([host_speedtest_id])
-                except Exception:
-                    pass
-                host_speedtest = speedtest.best
-                speedtest.upload()
-                results_speedtest = speedtest.results.dict()
-            except NoMatchedServers:
-                run_code_iteration = RUN_CODE_FAIL_SPEEDTEST
-            except Exception as exception:
-                print("Error processing speedtest upload - ", end="", file=sys.stderr)
-                traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
-                run_code_iteration = RUN_CODE_FAIL_NETWORK
-            run_code_iteration = RUN_CODE_SUCCESS \
-                if (results_speedtest is not None and "upload" in results_speedtest and results_speedtest["upload"] > 0) \
-                else run_code_iteration
-            if run_code > RUN_CODE_SUCCESS and run_code_iteration == RUN_CODE_SUCCESS:
-                run_code = RUN_CODE_SUCCESS
-            else:
-                run_code = run_code_iteration
-            print(FORMAT_TEMPLATE.format(
-                "upload",
-                "speedtest-" + host_speedtest["id"],
-                run_code_iteration,
-                "{} upload_mbps={},upload_b={},".format(
-                    ",host_location={},host_name={}".format(
-                        host_speedtest["name"].lower(),
-                        host_speedtest["host"].split(":")[0]
-                    ) if host_speedtest is not None else "",
-                    results_speedtest["upload"] / 8000000,
-                    results_speedtest["bytes_sent"]
-                ) if results_speedtest is not None else " ",
-                time_ms() - time_start,
-                time_ns()))
+                speedtest.get_servers([HOST_SPEEDTEST_THROUGHPUT_ID])
+            except Exception:
+                pass
+            host_speedtest = speedtest.best
+            speedtest.upload()
+            results_speedtest = speedtest.results.dict()
+        except NoMatchedServers:
+            run_code_iteration = RUN_CODE_FAIL_SPEEDTEST
+        except Exception as exception:
+            print("Error processing speedtest upload - ", end="", file=sys.stderr)
+            traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
+            run_code_iteration = RUN_CODE_FAIL_NETWORK
+        run_code_iteration = RUN_CODE_SUCCESS \
+            if (results_speedtest is not None and "upload" in results_speedtest and results_speedtest["upload"] > 0) \
+            else run_code_iteration
+        if run_code > RUN_CODE_SUCCESS and run_code_iteration == RUN_CODE_SUCCESS:
+            run_code = RUN_CODE_SUCCESS
+        else:
+            run_code = run_code_iteration
+        print(FORMAT_TEMPLATE.format(
+            "upload",
+            "speedtest-" + host_speedtest["id"],
+            run_code_iteration,
+            "{} upload_mbps={},upload_b={},".format(
+                ",host_location={},host_name={}".format(
+                    host_speedtest["name"].lower(),
+                    host_speedtest["host"].split(":")[0]
+                ) if host_speedtest is not None else "",
+                results_speedtest["upload"] / 8000000,
+                results_speedtest["bytes_sent"]
+            ) if results_speedtest is not None else " ",
+            time_ms() - time_start,
+            time_ns()))
     return run_code
 
 
 def download():
     run_code = RUN_CODE_SUCCESS
-    run_host_ids = set()
+    throughput_run = True
     network_stats = {
         "download": [
             """ r["_field"] == "download_mbps" """,
@@ -249,61 +247,59 @@ def download():
             for network_stat_reply in \
                     query(QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
                 if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
-                    if network_stat_reply[2].replace("speedtest-", "") in HOST_SPEEDTEST_THROUGHPUT_IDS:
-                        run_host_ids.add(network_stat_reply[2].replace("speedtest-", ""))
-                        print(FORMAT_TEMPLATE.format(
-                            network_stat,
-                            network_stat_reply[2],
-                            RUN_CODE_REPEAT,
-                            network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
-                            time_ms() - time_start,
-                            time_ns()))
+                    throughput_run = False
+                    print(FORMAT_TEMPLATE.format(
+                        network_stat,
+                        network_stat_reply[2],
+                        RUN_CODE_REPEAT,
+                        network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
+                        time_ms() - time_start,
+                        time_ns()))
         except Exception as exception:
             print("Error processing speedtest download - ", end="", file=sys.stderr)
             traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
             run_code = RUN_CODE_FAIL_CONFIG
-    for host_speedtest_id in HOST_SPEEDTEST_THROUGHPUT_IDS:
-        if host_speedtest_id not in run_host_ids:
-            host_speedtest = None
-            results_speedtest = None
-            run_code_iteration = RUN_CODE_FAIL_NETWORK
-            time_start = time_ms()
+    if throughput_run:
+        host_speedtest = None
+        results_speedtest = None
+        run_code_iteration = RUN_CODE_FAIL_NETWORK
+        time_start = time_ms()
+        try:
+            speedtest = Speedtest()
             try:
-                speedtest = Speedtest()
-                try:
-                    speedtest.get_servers([host_speedtest_id])
-                except Exception:
-                    pass
-                host_speedtest = speedtest.best
-                speedtest.download()
-                results_speedtest = speedtest.results.dict()
-            except NoMatchedServers:
-                run_code_iteration = RUN_CODE_FAIL_SPEEDTEST
-            except Exception as exception:
-                print("Error processing speedtest download - ", end="", file=sys.stderr)
-                traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
-                run_code_iteration = RUN_CODE_FAIL_NETWORK
-            run_code_iteration = RUN_CODE_SUCCESS \
-                if (results_speedtest is not None and "download" in results_speedtest and results_speedtest["download"] > 0) \
-                else run_code_iteration
-            if run_code > RUN_CODE_SUCCESS and run_code_iteration == RUN_CODE_SUCCESS:
-                run_code = RUN_CODE_SUCCESS
-            else:
-                run_code = run_code_iteration
-            print(FORMAT_TEMPLATE.format(
-                "download",
-                "speedtest-" + host_speedtest["id"],
-                run_code_iteration,
-                "{} download_mbps={},download_b={},".format(
-                    ",host_location={},host_name={}".format(
-                        host_speedtest["name"].lower(),
-                        host_speedtest["host"].split(":")[0]
-                    ) if host_speedtest is not None else "",
-                    results_speedtest["download"] / 8000000,
-                    results_speedtest["bytes_received"]
-                ) if results_speedtest is not None else " ",
-                time_ms() - time_start,
-                time_ns()))
+                speedtest.get_servers([HOST_SPEEDTEST_THROUGHPUT_ID])
+            except Exception:
+                pass
+            host_speedtest = speedtest.best
+            speedtest.download()
+            results_speedtest = speedtest.results.dict()
+        except NoMatchedServers:
+            run_code_iteration = RUN_CODE_FAIL_SPEEDTEST
+        except Exception as exception:
+            print("Error processing speedtest download - ", end="", file=sys.stderr)
+            traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
+            run_code_iteration = RUN_CODE_FAIL_NETWORK
+        run_code_iteration = RUN_CODE_SUCCESS \
+            if (results_speedtest is not None and "download" in results_speedtest and results_speedtest["download"] > 0) \
+            else run_code_iteration
+        if run_code > RUN_CODE_SUCCESS and run_code_iteration == RUN_CODE_SUCCESS:
+            run_code = RUN_CODE_SUCCESS
+        else:
+            run_code = run_code_iteration
+        print(FORMAT_TEMPLATE.format(
+            "download",
+            "speedtest-" + host_speedtest["id"],
+            run_code_iteration,
+            "{} download_mbps={},download_b={},".format(
+                ",host_location={},host_name={}".format(
+                    host_speedtest["name"].lower(),
+                    host_speedtest["host"].split(":")[0]
+                ) if host_speedtest is not None else "",
+                results_speedtest["download"] / 8000000,
+                results_speedtest["bytes_received"]
+            ) if results_speedtest is not None else " ",
+            time_ms() - time_start,
+            time_ns()))
     return run_code
 
 
@@ -477,12 +473,9 @@ if __name__ == "__main__":
     up_code_network = True
     run_code_all.append(ping())
     up_code_network = run_code_all[-1] == RUN_CODE_SUCCESS or run_code_all[-1] == RUN_CODE_FAIL_SPEEDTEST
-
-    # TODO: Re-enable once I resolved the InfluxDB query issue
-    # if up_code_network:
-    #     run_code_all.append(upload())
-    #     run_code_all.append(download())
-
+    if up_code_network:
+        run_code_all.append(upload())
+        run_code_all.append(download())
     run_code_all.append(lookup())
     run_code_all.append(certificate())
     run_code_uptime = RUN_CODE_FAIL_CONFIG
@@ -550,5 +543,4 @@ if __name__ == "__main__":
             ),
             run_code_all.count(0) + (1 if run_code_uptime == RUN_CODE_SUCCESS else 0),
             len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)),
-        time_ms() - time_start_all,
-        uptime_epoch))
+        time_ms() - time_start_all, uptime_epoch))
