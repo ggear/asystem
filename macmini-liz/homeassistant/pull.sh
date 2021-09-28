@@ -18,7 +18,7 @@ done
 rm -rf src/main/resources/config/www/custom_ui/bom-radar-card
 mkdir -p src/main/resources/config/www/custom_ui/bom-radar-card &&
   cp -rvf ../../../asystem-external/homeassistant/bom-radar-card/dist/* src/main/resources/config/www/custom_ui/bom-radar-card &&
-  sed -i '' 's/\/hacsfiles/\/local\/custom_ui/g' src/main/resources/config/www/custom_ui/bom-radar-card/bom-radar-card.js &&
+  sed -i '' 's/\/local\/community/\/local\/custom_ui/g' src/main/resources/config/www/custom_ui/bom-radar-card/bom-radar-card.js &&
   wget -q -O src/main/resources/config/www/custom_ui/bom-radar-card/leaflet.js.map https://unpkg.com/leaflet@1.7.1/dist/leaflet.js.map
 
 rm -rf src/main/resources/config/www/custom_ui/apexcharts-card

@@ -21,9 +21,9 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}:/config
-#    ports:
-#      - ${HOMEASSISTANT_PORT}:${HOMEASSISTANT_PORT}
-    network_mode: host
+    ports:
+      - ${HOMEASSISTANT_PORT}:${HOMEASSISTANT_PORT}
+#    network_mode: host
     deploy:
       resources:
         limits:
