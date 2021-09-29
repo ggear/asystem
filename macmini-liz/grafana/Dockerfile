@@ -1,14 +1,14 @@
-FROM grafana/grafana:8.1.2 as image_base
+FROM grafana/grafana:8.1.5 as image_base
 
 FROM image_base as image_package
 USER root
 RUN apk add --no-cache \
   jq==1.6-r1 \
-  git==2.30.2-r0 \
-  curl==7.78.0-r0 \
+  git==2.32.0-r0 \
+  curl==7.79.1-r0 \
   make==4.3-r0 \
-  musl-dev==1.2.2-r1 \
-  go==1.15.15-r0
+  musl-dev==1.2.2-r3 \
+  go==1.16.8-r0
 
 FROM image_package as image_install
 ARG GOLANG_VERSION=1.16.4
