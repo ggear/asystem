@@ -56,7 +56,7 @@ class WrangleTest(unittest.TestCase):
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 108,
                     library.CTR_ACT_CURRENT_COLUMNS: 117,
-                    library.CTR_ACT_UPDATE_COLUMNS: 81,
+                    library.CTR_ACT_UPDATE_COLUMNS: 117,
                     library.CTR_ACT_DELTA_COLUMNS: 117,
                 },
             },
@@ -74,30 +74,29 @@ class WrangleTest(unittest.TestCase):
             },
         })})
 
-    # TODO: Disable until health dashboard is built
-    # def test_health_typical(self):
-    #     self.run_module("health", {"success_typical": merge_asserts(ASSERT_RUN, {
-    #         "counter_equals": {
-    #             library.CTR_SRC_DATA: {
-    #                 library.CTR_ACT_PREVIOUS_COLUMNS: 88,
-    #                 library.CTR_ACT_CURRENT_COLUMNS: 88,
-    #                 library.CTR_ACT_UPDATE_COLUMNS: 56,
-    #                 library.CTR_ACT_DELTA_COLUMNS: 88,
-    #             },
-    #         },
-    #     })})
-    #
-    # def test_health_partial(self):
-    #     self.run_module("health", {"success_partial": merge_asserts(ASSERT_RUN, {
-    #         "counter_equals": {
-    #             library.CTR_SRC_DATA: {
-    #                 library.CTR_ACT_PREVIOUS_COLUMNS: 88,
-    #                 library.CTR_ACT_CURRENT_COLUMNS: 88,
-    #                 library.CTR_ACT_UPDATE_COLUMNS: 64,
-    #                 library.CTR_ACT_DELTA_COLUMNS: 88,
-    #             },
-    #         },
-    #     })})
+    def test_health_typical(self):
+        self.run_module("health", {"success_typical": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 88,
+                    library.CTR_ACT_CURRENT_COLUMNS: 88,
+                    library.CTR_ACT_UPDATE_COLUMNS: 56,
+                    library.CTR_ACT_DELTA_COLUMNS: 88,
+                },
+            },
+        })})
+
+    def test_health_partial(self):
+        self.run_module("health", {"success_partial": merge_asserts(ASSERT_RUN, {
+            "counter_equals": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 88,
+                    library.CTR_ACT_CURRENT_COLUMNS: 88,
+                    library.CTR_ACT_UPDATE_COLUMNS: 64,
+                    library.CTR_ACT_DELTA_COLUMNS: 88,
+                },
+            },
+        })})
 
     def test_interest_typical(self):
         self.run_module("interest", {"success_typical": merge_asserts(ASSERT_RUN, {

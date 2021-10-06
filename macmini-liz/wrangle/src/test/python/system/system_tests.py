@@ -59,8 +59,8 @@ def test_noop():
                                shell=True, stdout=subprocess.PIPE)
     process.wait()
     assert process.returncode == 0
-    assert bucket_length("data_public") == data_public_len
-    assert bucket_length("data_private") == data_private_len
+    assert bucket_length("data_public") >= data_public_len
+    assert bucket_length("data_private") >= data_private_len
 
 
 def test_reload():
