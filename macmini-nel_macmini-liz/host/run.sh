@@ -11,7 +11,14 @@
 # Guided entire disk and setup LVM create partitions at 450GB, /tmp, /var, /home, max, force UEFI
 # Install SSH server, standard sys utils
 # Enable remote root login : /etc/ssh/sshd_config PermitRootLogin yes
-# Second HDD (1.9TB), single partition with defaults (fdisk /dev/sdb) and formatted as ext4 (mkfs.ext4 /dev/sdb1)
+# Second HDD (1.9TB), single partition and added to fstab as per:
+#fdisk -l
+#blkid /dev/sdb
+#fdisk /dev/sdb
+#mkfs.ext4 -j /dev/sdb1
+#blkid /dev/sdb1
+#echo "/dev/sdb1 /data ext4 defaults 1 2" >>/etc/fstab
+#mount -a
 
 ################################################################################
 # Shell
@@ -38,11 +45,7 @@ fi
 vgdisplay
 df -h /var
 lvdisplay /dev/$(hostname)-vg/var
-if [ -e /dev/sdb ] && [ $(grep "/dev/sdb1 /data ext4 defaults 1 2" /etc/fstab | wc -l) -eq 0 ]; then
-  echo "/dev/sdb1 /data ext4 defaults 1 2" >>/etc/fstab
-  mkdir -p /data
-  mount -a
-fi
+mkdir -p /data
 
 ################################################################################
 # Utilities
