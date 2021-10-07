@@ -3,7 +3,7 @@
 ################################################################################
 # Samba
 ################################################################################
-mkdir -vp /data/media /data/backup/timemachine
+mkdir -vp /data/media /data/backup/timemachine /data/tmp
 find /data -type f -name .DS_Store -exec rm -f {} \;
 chmod -vR a+rwX /data
 cat <<EOF >/etc/samba/smb.conf
