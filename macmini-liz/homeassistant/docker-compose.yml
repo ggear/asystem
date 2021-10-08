@@ -1,6 +1,6 @@
 version: '3.7'
 x-common: &common
-  image: homeassistant/home-assistant:2021.9.4
+  image: homeassistant/home-assistant:2021.10.0
   init: true
   user: root
   environment:

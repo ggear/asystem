@@ -45,7 +45,6 @@ fi
 vgdisplay
 df -h /var
 lvdisplay /dev/$(hostname)-vg/var
-mkdir -p /data
 
 ################################################################################
 # Utilities
