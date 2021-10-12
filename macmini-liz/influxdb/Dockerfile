@@ -1,4 +1,4 @@
-FROM quay.io/influxdb/influxdb:v2.0.8 as image_base
+FROM quay.io/influxdb/influxdb:v2.0.9 as image_base
 
 FROM image_base as image_package
 USER root
