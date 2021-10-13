@@ -55,9 +55,9 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 108,
-                    library.CTR_ACT_CURRENT_COLUMNS: 135,
-                    library.CTR_ACT_UPDATE_COLUMNS: 108,
-                    library.CTR_ACT_DELTA_COLUMNS: 135,
+                    library.CTR_ACT_CURRENT_COLUMNS: 144,
+                    library.CTR_ACT_UPDATE_COLUMNS: 117,
+                    library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
         })})
@@ -67,9 +67,9 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 99,
-                    library.CTR_ACT_CURRENT_COLUMNS: 135,
-                    library.CTR_ACT_UPDATE_COLUMNS: 108,
-                    library.CTR_ACT_DELTA_COLUMNS: 135,
+                    library.CTR_ACT_CURRENT_COLUMNS: 144,
+                    library.CTR_ACT_UPDATE_COLUMNS: 117,
+                    library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
         })})

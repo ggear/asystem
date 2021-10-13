@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from __future__ import print_function
 
 import calendar
@@ -19,44 +21,58 @@ STATEMENT_CURRENCIES = ["GBP", "USD", "SGD"]
 STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 
 STOCK = OrderedDict([
+    ('AORD', {
+        "start": "1985-01",
+        "end of day": "16:00",
+        "prefix": "^",
+        "exchange": "",
+    }),
     ('WPL', {
         "start": "2009-01",
         "end of day": "16:00",
+        "prefix": "",
         "exchange": "AX",
     }),
     ('SIG', {
         "start": "2006-01",
         "end of day": "16:00",
+        "prefix": "",
         "exchange": "AX",
     }),
     ('OZL', {
         "start": "2009-01",
         "end of day": "16:00",
+        "prefix": "",
         "exchange": "AX",
     }),
     ('VAS', {
         "start": "2010-01",
         "end of day": "16:00",
+        "prefix": "",
         "exchange": "AX",
     }),
     ('VHY', {
         "start": "2011-01",
         "end of day": "16:00",
+        "prefix": "",
         "exchange": "AX",
     }),
     ('VAE', {
         "start": "2016-01",
         "end of day": "16:00",
+        "prefix": "",
         "exchange": "AX",
     }),
     ('VDHG', {
         "start": "2018-01",
         "end of day": "16:00",
+        "prefix": "",
         "exchange": "AX",
     }),
     ('CLNE', {
         "start": "2021-04",
         "end of day": "16:00",
+        "prefix": "",
         "exchange": "AX",
     }),
 ])
@@ -75,6 +91,8 @@ DIMENSIONS = [
 
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
 
+LINE_PROTOCOL = "equity,type={},period={},unit={} {}="
+
 
 class Equity(library.Library):
 
@@ -90,7 +108,8 @@ class Equity(library.Library):
                             file_name = "{}/Yahoo_{}_{}-{:02}.csv".format(self.input, stock, year, month)
                             stock_files[file_name] = self.stock_download(
                                 file_name,
-                                "{}{}{}".format(stock, '.' if STOCK[stock]["exchange"] != "" else '', STOCK[stock]["exchange"]),
+                                "{}{}{}{}".format(STOCK[stock]["prefix"], stock,
+                                                  '.' if STOCK[stock]["exchange"] != "" else '', STOCK[stock]["exchange"]),
                                 "{}-{:02}-01".format(year, month),
                                 "{}-{:02}-{:02}".format(
                                     year,
@@ -101,7 +120,8 @@ class Equity(library.Library):
                     file_name = "{}/Yahoo_{}_{}.csv".format(self.input, stock, year)
                     stock_files[file_name] = self.stock_download(
                         file_name,
-                        "{}{}{}".format(stock, '.' if STOCK[stock]["exchange"] != "" else '', STOCK[stock]["exchange"]),
+                        "{}{}{}{}".format(STOCK[stock]["prefix"], stock,
+                                          '.' if STOCK[stock]["exchange"] != "" else '', STOCK[stock]["exchange"]),
                         "{}-{:02}-01".format(year, 1),
                         "{}-{:02}-{:02}".format(
                             year,
@@ -336,6 +356,20 @@ class Equity(library.Library):
                                      {'index': True, 'sheet': 'History', 'start': 'A1', 'replace': True})
 
                     # TODO: Provide a database_write implementation
+                    # LINE_PROTOCOL = "equity,type={},period={},unit={} {}="
+                    #
+                    # for stock in STOCK:
+                    #     self.database_write("\n".join(LINE_PROTOCOL.format("snapshot", "1d",
+                    #                                                        "$/£" if "GBP" in fx_pair else "$/$", fx_pair) +
+                    #                                   rba_delta_df[fx_pair].map(str) +
+                    #                                   " " + (pd.to_datetime(rba_delta_df.index).astype(int) +
+                    #                                          6 * 60 * 60 * 1000000000).map(str)))
+                    #     for fx_period in PERIODS:
+                    #         self.database_write("\n".join(LINE_PROTOCOL.format("delta", "{}d".format(PERIODS[fx_period]),
+                    #                                                            "%", fx_pair) +
+                    #                                       rba_delta_df["{} {}".format(fx_pair, fx_period)].map(str) +
+                    #                                       " " + (pd.to_datetime(rba_delta_df.index).astype(int) +
+                    #                                              6 * 60 * 60 * 1000000000).map(str)))
 
                     self.state_write()
                 else:
