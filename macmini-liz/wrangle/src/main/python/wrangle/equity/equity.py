@@ -19,48 +19,43 @@ STATEMENT_CURRENCIES = ["GBP", "USD", "SGD"]
 STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 
 STOCK = OrderedDict([
-    ('S32', {
-        "start": "2016",
-        "end of day": "16:00",
-        "exchange": "AX",
-    }),
     ('WPL', {
-        "start": "2009",
+        "start": "2009-01",
         "end of day": "16:00",
         "exchange": "AX",
     }),
     ('SIG', {
-        "start": "2006",
+        "start": "2006-01",
         "end of day": "16:00",
         "exchange": "AX",
     }),
     ('OZL', {
-        "start": "2009",
+        "start": "2009-01",
         "end of day": "16:00",
         "exchange": "AX",
     }),
     ('VAS', {
-        "start": "2010",
+        "start": "2010-01",
         "end of day": "16:00",
         "exchange": "AX",
     }),
     ('VHY', {
-        "start": "2011",
+        "start": "2011-01",
         "end of day": "16:00",
         "exchange": "AX",
     }),
     ('VAE', {
-        "start": "2016",
+        "start": "2016-01",
         "end of day": "16:00",
         "exchange": "AX",
     }),
-    ('VGE', {
-        "start": "2014",
+    ('VDHG', {
+        "start": "2018-01",
         "end of day": "16:00",
         "exchange": "AX",
     }),
-    ('VGS', {
-        "start": "2015",
+    ('CLNE', {
+        "start": "2021-04",
         "end of day": "16:00",
         "exchange": "AX",
     }),
@@ -87,20 +82,21 @@ class Equity(library.Library):
         stock_files = {}
         for stock in STOCK:
             today = datetime.today()
-            stock_start_year = int(STOCK[stock]["start"])
-            for year in range(stock_start_year, today.year + 1):
+            stock_start = datetime.strptime(STOCK[stock]["start"], '%Y-%m')
+            for year in range(stock_start.year, today.year + 1):
                 if year == today.year:
-                    for month in range(1 if year == stock_start_year else 1, today.month + 1):
-                        file_name = "{}/Yahoo_{}_{}-{:02}.csv".format(self.input, stock, year, month)
-                        stock_files[file_name] = self.stock_download(
-                            file_name,
-                            "{}{}{}".format(stock, '.' if STOCK[stock]["exchange"] != "" else '', STOCK[stock]["exchange"]),
-                            "{}-{:02}-01".format(year, month),
-                            "{}-{:02}-{:02}".format(
-                                year,
-                                month,
-                                calendar.monthrange(year, month)[1]),
-                            STOCK[stock]["end of day"], check=year == today.year and month == today.month)
+                    for month in range(1 if year == stock_start.year else 1, today.month + 1):
+                        if month >= stock_start.month:
+                            file_name = "{}/Yahoo_{}_{}-{:02}.csv".format(self.input, stock, year, month)
+                            stock_files[file_name] = self.stock_download(
+                                file_name,
+                                "{}{}{}".format(stock, '.' if STOCK[stock]["exchange"] != "" else '', STOCK[stock]["exchange"]),
+                                "{}-{:02}-01".format(year, month),
+                                "{}-{:02}-{:02}".format(
+                                    year,
+                                    month,
+                                    calendar.monthrange(year, month)[1]),
+                                STOCK[stock]["end of day"], check=year == today.year and month == today.month)
                 else:
                     file_name = "{}/Yahoo_{}_{}.csv".format(self.input, stock, year)
                     stock_files[file_name] = self.stock_download(

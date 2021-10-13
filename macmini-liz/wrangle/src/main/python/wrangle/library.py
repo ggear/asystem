@@ -313,7 +313,10 @@ class Library(object):
                             and data_df.index[-1].date() == now.date() and now.strftime('%H:%M') < end_of_day:
                         data_df = data_df[:-1]
                     if len(data_df) == 0:
-                        raise Exception("No data returned from Yahoo! Finance history service")
+                        if ignore:
+                            self.print_log("No data returned for [{} - {} {}]".format(ticker, start, end_exclusive))
+                        else:
+                            raise Exception("No data returned for [{} - {} {}]".format(ticker, start, end_exclusive))
                     data_df.to_csv(local_file)
                     modified_timestamp = int((datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d') +
                                               timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
