@@ -22,7 +22,7 @@ STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "V
 
 STOCK = OrderedDict([
     ('AORD', {
-        "start": "1985-01",
+        "start": "2006-01",
         "end of day": "16:00",
         "prefix": "^",
         "exchange": "",
