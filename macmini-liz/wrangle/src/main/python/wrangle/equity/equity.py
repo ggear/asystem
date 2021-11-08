@@ -401,7 +401,7 @@ class Equity(library.Library):
                 equity_current_expanded_df.loc[:, column] = equity_current_expanded_df.loc[:, column].ffill().bfill()
                 column = [(ticker + " " + column) for column in
                           ["Market Volume", "Paid Dividends", "Stock Splits"] for ticker in tickers]
-                equity_current_expanded_df.loc[:, column] = equity_current_expanded_df.loc[:, column].fillna(0)
+                equity_current_expanded_df.loc[:, column] = equity_current_expanded_df.loc[:, column].fillna(0.0)
                 equity_current_expanded_df = equity_current_expanded_df.set_index(equity_current_expanded_df.index.date).sort_index()
                 equity_current_expanded_df = equity_current_expanded_df.sort_index(axis=1)
                 self.print_log("Data has [{}] columns and [{}] rows post copy"
@@ -421,6 +421,7 @@ class Equity(library.Library):
                 fx_rates = fx_rates.set_index(pd.to_datetime(fx_rates["Date"]).dt.date).sort_index()
                 del fx_rates["Date"]
                 fx_rates["Rate"] = fx_rates["Rate"].apply(pd.to_numeric)
+
                 index_weights = self.sheet_read(DRIVE_URL_PORTFOLIO, "Index_weights",
                                                 read_cache=library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES),
                                                 sheet_params={"sheet": "Indexes", "index": None, "start_row": 2})
@@ -437,14 +438,14 @@ class Equity(library.Library):
                     if base_currency == "AUD":
                         equity_current_expanded_df[ticker + " Currency Rate Spot"] = 1.0
                     else:
-                        fx_rates_pair = fx_rates[fx_rates["Pair"] == "AUD/" + base_currency]
+                        fx_rates_pair = fx_rates[fx_rates["Pair"] == "aud/" + base_currency.lower()]
                         del fx_rates_pair["Pair"]
                         fx_rates_pair.columns = [ticker + " Currency Rate Spot"]
                         equity_current_expanded_df = equity_current_expanded_df.join(fx_rates_pair)
                     for index in index_weights.columns:
                         index_weight = index_weights[index_weights.index == ticker][index]
-                        equity_current_expanded_df[ticker + " Index " + index.title() + " Weight"] = \
-                            index_weight.values[0] if len(index_weight) > 0 else 0.0
+                        index_weght_value = index_weight.values[0] if len(index_weight) > 0 else 0.0
+                        equity_current_expanded_df[ticker + " Index " + index.title() + " Weight"] = index_weght_value
                     for column in [" Price Open", " Price High", " Price Low", " Price Close"]:
                         equity_current_expanded_df[ticker + column + " Base"] = \
                             equity_current_expanded_df[ticker + column] * \
@@ -472,10 +473,10 @@ class Equity(library.Library):
                     equity_current_expanded_df[index + " Market Volume"] = 0.0
                     for column in [" Price Close", " Price High", " Price Low", " Price Open"]:
                         equity_current_expanded_df[index + column] = 0.0
-                        for index_equity in tickers:
-                            if index_equity not in indexes:
+                        for index_ticker_component in tickers:
+                            if index_ticker_component not in indexes:
                                 equity_current_expanded_df[index + column] += \
-                                    equity_current_expanded_df[index_equity + " Index " + index.title() +
+                                    equity_current_expanded_df[index_ticker_component + " Index " + index.title() +
                                                                column.replace("Price", "Value") + " Spot"]
                         for snapshot in [" Base", " Spot"]:
                             equity_current_expanded_df[index + column + snapshot] = \
@@ -492,9 +493,9 @@ class Equity(library.Library):
                         equity_current_expanded_df[ticker + " Price Close Spot"]
                     for snapshot in [" Base", " Spot"]:
                         equity_current_expanded_df[ticker + " Price Change Value" + snapshot] = \
-                            equity_current_expanded_df[ticker + " Price Close" + snapshot].diff().fillna(0)
+                            equity_current_expanded_df[ticker + " Price Close" + snapshot].diff().fillna(0.0)
                         equity_current_expanded_df[ticker + " Price Change Percentage" + snapshot] = \
-                            equity_current_expanded_df[ticker + " Price Close" + snapshot].pct_change().fillna(0) * 100
+                            equity_current_expanded_df[ticker + " Price Close" + snapshot].pct_change().fillna(0.0) * 100
                 self.print_log("Data has [{}] columns and [{}] rows post change enrichment"
                                .format(len(equity_current_expanded_df.columns), len(equity_current_expanded_df)))
                 equity_current_expanded_df = equity_current_expanded_df.sort_index(axis=1)

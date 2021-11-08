@@ -25,10 +25,10 @@ class WrangleTest(unittest.TestCase):
     def test_adhoc(self):
         self.run_module("equity", {"success_typical": ASSERT_NONE},
                         one_test=True,
-                        enable_log=True,
-                        random_subset_rows=True,
+                        enable_log=False,
+                        random_subset_rows=False,
                         reprocess_all_files=False,
-                        disable_write_stdout=False,
+                        disable_write_stdout=True,
                         disable_upload_files=True,
                         disable_download_files=True,
                         )
