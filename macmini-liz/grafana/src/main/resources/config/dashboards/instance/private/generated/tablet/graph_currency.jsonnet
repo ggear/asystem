@@ -25,7 +25,7 @@
                   stat.new(
                         title='GBP/AUD Last End of Day',
                         datasource='InfluxDB_V2',
-                        unit='',
+                        unit='currencyUSD',
                         decimals=3,
                         reducerFunction='last',
                         colorMode='value',
@@ -44,7 +44,7 @@
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+  |> filter(fn: (r) => r["_field"] == "aud/gbp")
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: false)
@@ -58,7 +58,7 @@ from(bucket: "data_public")
                   stat.new(
                         title='USD/AUD Last End of Day',
                         datasource='InfluxDB_V2',
-                        unit='',
+                        unit='currencyUSD',
                         decimals=3,
                         reducerFunction='last',
                         colorMode='value',
@@ -77,7 +77,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
+  |> filter(fn: (r) => r["_field"] == "aud/usd")
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: false)
@@ -91,7 +91,7 @@ from(bucket: "data_public")
                   stat.new(
                         title='SGD/AUD Last End of Day',
                         datasource='InfluxDB_V2',
-                        unit='',
+                        unit='currencyUSD',
                         decimals=3,
                         reducerFunction='last',
                         colorMode='value',
@@ -110,7 +110,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
+  |> filter(fn: (r) => r["_field"] == "aud/sgd")
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
   |> sort(columns: ["_time"], desc: false)
@@ -133,7 +133,7 @@ from(bucket: "data_public")
                               { 'color': 'green', 'value': 0.5 },
                         ],
                   ).addTarget(influxdb.target(query='
-field = "AUD/GBP"
+field = "aud/gbp"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -150,7 +150,7 @@ series
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "GBP/AUD"})
                   ')).addTarget(influxdb.target(query='
-field = "AUD/USD"
+field = "aud/usd"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -167,7 +167,7 @@ series
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "USD/AUD"})
                   ')).addTarget(influxdb.target(query='
-field = "AUD/SGD"
+field = "aud/sgd"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -209,7 +209,7 @@ series
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+  |> filter(fn: (r) => r["_field"] == "aud/gbp")
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "delta")
   |> sort(columns: ["_time"], desc: false)
@@ -242,7 +242,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
+  |> filter(fn: (r) => r["_field"] == "aud/usd")
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "delta")
   |> sort(columns: ["_time"], desc: false)
@@ -275,7 +275,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
+  |> filter(fn: (r) => r["_field"] == "aud/sgd")
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "delta")
   |> sort(columns: ["_time"], desc: false)
@@ -298,7 +298,7 @@ from(bucket: "data_public")
                         decimals=2,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
-field = "AUD/GBP"
+field = "aud/gbp"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -314,7 +314,7 @@ series
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "GBP/AUD"})
                   ')).addTarget(influxdb.target(query='
-field = "AUD/USD"
+field = "aud/usd"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -330,7 +330,7 @@ series
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "USD/AUD"})
                   ')).addTarget(influxdb.target(query='
-field = "AUD/SGD"
+field = "aud/sgd"
 series = from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
@@ -354,12 +354,10 @@ series
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
-                        bars=true,
-                        lines=false,
+                        bars=false,
+                        lines=true,
                         staircase=false,
-                        formatY1='percent',
-                        min=-2,
-                        max=2,
+                        formatY1='currencyUSD',
                         decimals=2,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
@@ -367,25 +365,13 @@ from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1d")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
-  |> keep(columns: ["_time", "_value"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-  |> rename(columns: {_value: "Delta"})
-                  ')).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
-  |> filter(fn: (r) => r["_field"] == "AUD/GBP")
+  |> filter(fn: (r) => r["_field"] == "aud/gbp")
   |> keep(columns: ["_time", "_value"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
-  |> rename(columns: {_value: "Snapshot"})
+  |> rename(columns: {_value: "GBP/AUD"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*Delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
-                  ).addSeriesOverride(
-                        { "alias": "/.*Snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
+                        { "alias": "/.*AUD.*/", "yaxis": 1 }
                   )
                       { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
@@ -395,12 +381,10 @@ from(bucket: "data_public")
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
-                        bars=true,
-                        lines=false,
+                        bars=false,
+                        lines=true,
                         staircase=false,
-                        formatY1='percent',
-                        min=-2,
-                        max=2,
+                        formatY1='currencyUSD',
                         decimals=2,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
@@ -408,25 +392,13 @@ from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1d")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
-  |> keep(columns: ["_time", "_value"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-  |> rename(columns: {_value: "Delta"})
-                  ')).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
-  |> filter(fn: (r) => r["_field"] == "AUD/USD")
+  |> filter(fn: (r) => r["_field"] == "aud/usd")
   |> keep(columns: ["_time", "_value"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
-  |> rename(columns: {_value: "Snapshot"})
+  |> rename(columns: {_value: "USD/AUD"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*Delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
-                  ).addSeriesOverride(
-                        { "alias": "/.*Snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
+                        { "alias": "/.*AUD.*/", "yaxis": 1 }
                   )
                       { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
                   ,
@@ -436,12 +408,10 @@ from(bucket: "data_public")
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
-                        bars=true,
-                        lines=false,
+                        bars=false,
+                        lines=true,
                         staircase=false,
-                        formatY1='percent',
-                        min=-2,
-                        max=2,
+                        formatY1='currencyUSD',
                         decimals=2,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
@@ -449,25 +419,13 @@ from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "currency")
   |> filter(fn: (r) => r["period"] == "1d")
-  |> filter(fn: (r) => r["type"] == "delta")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
-  |> keep(columns: ["_time", "_value"])
-  |> map(fn: (r) => ({ r with _value: -1.0 * r._value }))
-  |> rename(columns: {_value: "Delta"})
-                  ')).addTarget(influxdb.target(query='
-from(bucket: "data_public")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "currency")
-  |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "snapshot")
-  |> filter(fn: (r) => r["_field"] == "AUD/SGD")
+  |> filter(fn: (r) => r["_field"] == "aud/sgd")
   |> keep(columns: ["_time", "_value"])
   |> map(fn: (r) => ({ r with _value: 1.0 / r._value }))
-  |> rename(columns: {_value: "Snapshot"})
+  |> rename(columns: {_value: "SGD/AUD"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*Delta.*/", "bars": true, "lines": false, "zindex": 1, "yaxis": 1, "color": "rgba(150, 217, 141, 0.31)" }
-                  ).addSeriesOverride(
-                        { "alias": "/.*Snapshot.*/", "bars": false, "lines": true, "zindex": 3, "yaxis": 2 }
+                        { "alias": "/.*AUD.*/", "yaxis": 1 }
                   )
                       { gridPos: { x: 0, y: 46, w: 24, h: 12 } }
                   ,

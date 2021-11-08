@@ -671,6 +671,7 @@ class Library(object):
             column_rename = {}
             for column in data_df.columns:
                 column_rename[column] = column.strip().replace(' ', '-').lower()
+                data_df[column] = pd.to_numeric(data_df[column], downcast='float')
             data_df = data_df.rename(columns=column_rename)
             import influxdb
             lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
