@@ -36,7 +36,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r._measurement == "a_non_existent_metric")
 """) is not None
         except Exception as exception:
-            print(exception)
+            print("Waiting for influxdb server to come up ...")
             time.sleep(1)
     assert success is True
 

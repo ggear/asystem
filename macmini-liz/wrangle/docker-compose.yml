@@ -7,6 +7,8 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
+      - INFLUXDB_IP
+      - INFLUXDB_IP_PROD
       - INFLUXDB_HOST
       - INFLUXDB_PORT
       - INFLUXDB_ORG
@@ -16,7 +18,7 @@ services:
       - DROPBOX_TOKEN
       - WRANGLE_ENABLE_LOG
       - WRANGLE_REPROCESS_ALL_FILES
-      - WRANGLE_DISABLE_EXTERNAL_SERVICES
+      - WRANGLE_DISABLE_UPLOAD_FILES
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/runtime
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro

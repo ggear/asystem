@@ -18,13 +18,20 @@ DIR_SRC = "../../../../src/main/python"
 
 for key, value in library.load_profile(library.get_file(".env")).iteritems():
     os.environ[key] = value
-os.environ['WRANGLE_ENABLE_LOG'] = 'true'
 
 
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("interest", {"success_typical": ASSERT_RUN}, write=False)
+        self.run_module("health", {"success_typical": ASSERT_NONE},
+                        one_test=True,
+                        enable_log=True,
+                        random_subset_rows=True,
+                        reprocess_all_files=False,
+                        disable_write_stdout=False,
+                        disable_upload_files=True,
+                        disable_download_files=True,
+                        )
 
     def test_currency_typical(self):
         self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {
@@ -54,10 +61,14 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 108,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 117,
                     library.CTR_ACT_CURRENT_COLUMNS: 144,
-                    library.CTR_ACT_UPDATE_COLUMNS: 117,
                     library.CTR_ACT_DELTA_COLUMNS: 144,
+                },
+            },
+            "counter_greater": {
+                library.CTR_SRC_DATA: {
+                    library.CTR_ACT_UPDATE_COLUMNS: 108,
                 },
             },
         })})
@@ -66,9 +77,9 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 99,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 117,
                     library.CTR_ACT_CURRENT_COLUMNS: 144,
-                    library.CTR_ACT_UPDATE_COLUMNS: 117,
+                    library.CTR_ACT_UPDATE_COLUMNS: 144,
                     library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
@@ -79,6 +90,10 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 88,
+                },
+            },
+            "counter_greater": {
+                library.CTR_SRC_DATA: {
                     library.CTR_ACT_CURRENT_COLUMNS: 96,
                     library.CTR_ACT_UPDATE_COLUMNS: 64,
                     library.CTR_ACT_DELTA_COLUMNS: 96,
@@ -91,8 +106,12 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 88,
+                },
+            },
+            "counter_greater": {
+                library.CTR_SRC_DATA: {
                     library.CTR_ACT_CURRENT_COLUMNS: 96,
-                    library.CTR_ACT_UPDATE_COLUMNS: 72,
+                    library.CTR_ACT_UPDATE_COLUMNS: 64,
                     library.CTR_ACT_DELTA_COLUMNS: 96,
                 },
             },
@@ -147,7 +166,13 @@ class WrangleTest(unittest.TestCase):
     #         },
     #     })})
 
-    def run_module(self, module_name, tests_asserts, prepare_only=False, write=False):
+    def run_module(self, module_name, tests_asserts, prepare_only=False, one_test=False, enable_log=True, random_subset_rows=False,
+                   reprocess_all_files=False, disable_write_stdout=True, disable_upload_files=True, disable_download_files=False):
+        os.environ[library.ENV_ENABLE_LOG] = str(enable_log)
+        os.environ[library.ENV_RANDOM_SUBSET_ROWS] = str(random_subset_rows)
+        os.environ[library.ENV_REPROCESS_ALL_FILES] = str(reprocess_all_files)
+        os.environ[library.ENV_DISABLE_UPLOAD_FILES] = str(disable_upload_files)
+        os.environ[library.ENV_DISABLE_DOWNLOAD_FILES] = str(disable_download_files)
         if not os.path.isdir(DIR_TARGET):
             os.makedirs(DIR_TARGET)
         module = getattr(importlib.import_module("wrangle.{}".format(module_name)), module_name.title())()
@@ -172,46 +197,47 @@ class WrangleTest(unittest.TestCase):
                     if "counter_less" in counters_that:
                         counter_less = counters_that["counter_less"]
                         if counter_source in counter_less and counter_action in counter_less[counter_source]:
-                            self.assertLess(counters_this[counter_source][counter_action],
-                                            counter_less[counter_source][counter_action],
-                                            "Counter [{} {}] less than assertion failed [{}] > [{}]".format(
-                                                counter_source, counter_action,
-                                                counters_this[counter_source][counter_action],
-                                                counter_less[counter_source][counter_action]))
+                            self.assertLessEqual(counters_this[counter_source][counter_action],
+                                                 counter_less[counter_source][counter_action],
+                                                 "Counter [{} {}] less than assertion failed [{}] >= [{}]".format(
+                                                     counter_source, counter_action,
+                                                     counters_this[counter_source][counter_action],
+                                                     counter_less[counter_source][counter_action]))
                     if "counter_greater" in counters_that:
                         counter_greater = counters_that["counter_greater"]
                         if counter_source in counter_greater and counter_action in counter_greater[counter_source]:
-                            self.assertGreater(counters_this[counter_source][counter_action],
-                                               counter_greater[counter_source][counter_action],
-                                               "Counter [{} {}] greater than assertion failed [{}] < [{}]".format(
-                                                   counter_source, counter_action,
-                                                   counters_this[counter_source][counter_action],
-                                                   counter_greater[counter_source][counter_action]))
+                            self.assertGreaterEqual(counters_this[counter_source][counter_action],
+                                                    counter_greater[counter_source][counter_action],
+                                                    "Counter [{} {}] greater than assertion failed [{}] <= [{}]".format(
+                                                        counter_source, counter_action,
+                                                        counters_this[counter_source][counter_action],
+                                                        counter_greater[counter_source][counter_action]))
 
         print("")
         for test in tests_asserts:
             load_caches("{}{}/{}".format(DIR_RESOURCES, module.input.split("target")[-1], test), module.input)
             counters = {}
             if not prepare_only:
-                with patch.object(library.Library, "sheet_write") if not write else no_op():
-                    with patch.object(library.Library, "drive_write") if not write else no_op():
-                        with patch.object(library.Library, "stdout_write"):
+                with patch.object(library.Library, "sheet_write") if disable_upload_files else no_op():
+                    with patch.object(library.Library, "drive_write") if disable_upload_files else no_op():
+                        with patch.object(library.Library, "stdout_write") if disable_write_stdout else no_op():
                             print("STARTING (run)     [{}]   [{}]".format(module_name.title(), test))
                             module.run()
                             print("FINISHED (run)     [{}]   [{}]\n".format(module_name.title(), test))
                             assert_counters(module.get_counters(), tests_asserts[test])
-                            module.reset_counters()
-                            print("STARTING (no-op)   [{}]   [{}]".format(module_name.title(), test))
-                            module.run()
-                            print("FINISHED (no-op)   [{}]   [{}]\n\n".format(module_name.title(), test))
-                            assert_counters(module.get_counters(), ASSERT_NOOP)
-                            module.reset_counters()
-                            print("STARTING (reload)   [{}]   [{}]".format(module_name.title(), test))
-                            os.environ['WRANGLE_REPROCESS_ALL_FILES'] = 'true'
-                            module.run()
-                            os.environ['WRANGLE_REPROCESS_ALL_FILES'] = 'false'
-                            print("FINISHED (reload)   [{}]   [{}]\n\n".format(module_name.title(), test))
-                            assert_counters(module.get_counters(), ASSERT_RELOAD)
+                            if not one_test:
+                                module.reset_counters()
+                                print("STARTING (no-op)   [{}]   [{}]".format(module_name.title(), test))
+                                module.run()
+                                print("FINISHED (no-op)   [{}]   [{}]\n\n".format(module_name.title(), test))
+                                assert_counters(module.get_counters(), ASSERT_NOOP)
+                                module.reset_counters()
+                                print("STARTING (reload)   [{}]   [{}]".format(module_name.title(), test))
+                                os.environ['WRANGLE_REPROCESS_ALL_FILES'] = 'true'
+                                module.run()
+                                os.environ['WRANGLE_REPROCESS_ALL_FILES'] = 'false'
+                                print("FINISHED (reload)   [{}]   [{}]\n\n".format(module_name.title(), test))
+                                assert_counters(module.get_counters(), ASSERT_RELOAD)
         return counters
 
     def setUp(self):
@@ -234,6 +260,8 @@ def merge_asserts(base, addition):
                     merged[test][source].update(addition[test][source])
     return merged
 
+
+ASSERT_NONE = {}
 
 ASSERT_RUN = {
     "counter_equals": {
@@ -278,10 +306,6 @@ ASSERT_NOOP = {
             library.CTR_ACT_ERRORED: 0,
         },
         library.CTR_SRC_DATA: {
-            library.CTR_ACT_PREVIOUS_COLUMNS: 0,
-            library.CTR_ACT_PREVIOUS_ROWS: 0,
-            library.CTR_ACT_CURRENT_COLUMNS: 0,
-            library.CTR_ACT_CURRENT_ROWS: 0,
             library.CTR_ACT_UPDATE_COLUMNS: 0,
             library.CTR_ACT_UPDATE_ROWS: 0,
             library.CTR_ACT_DELTA_COLUMNS: 0,
