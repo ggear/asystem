@@ -27,7 +27,7 @@ if [ ! -d "$SERVICE_HOME" ]; then
     mkdir -p "${SERVICE_HOME}"
     chmod 777 "${SERVICE_HOME}"
   fi
-  rm -rvf "$SERVICE_HOME_OLDEST"
+  rm -rvf $SERVICE_HOME_OLDEST
 fi
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
