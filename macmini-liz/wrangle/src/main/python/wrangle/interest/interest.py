@@ -74,8 +74,7 @@ class Interest(library.Library):
             try:
                 if new_data:
                     interest_df = retail_df.merge(inflation_df, left_index=True, right_index=True, how='outer')
-                    interest_df = interest_df.dropna(subset=['Retail', 'Inflation'], how='all').fillna(method='ffill').fillna(
-                        method='bfill')
+                    interest_df = interest_df.dropna(subset=['Retail', 'Inflation'], how='all').ffill().bfill()
                     interest_df['Net'] = interest_df['Retail'] - interest_df['Inflation']
                     for int_rate in LABELS:
                         for int_period in PERIODS:

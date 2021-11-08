@@ -357,7 +357,7 @@ class Equity(library.Library):
                             equity_df = pd.concat([equity_df, stocks_df[stock]], axis=1, sort=True)
                     equity_df.index = pd.to_datetime(equity_df.index)
                     equity_df = equity_df.resample('D')
-                    equity_df = equity_df.fillna(method='backfill')
+                    equity_df = equity_df.ffill()
                     equity_df = pd.concat([equity_df, statement_df], axis=1, sort=True)
                     equity_df.index = pd.to_datetime(equity_df.index)
                     equity_df = equity_df[~equity_df.index.duplicated(keep='last')]

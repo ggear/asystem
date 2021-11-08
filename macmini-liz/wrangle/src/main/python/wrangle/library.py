@@ -668,42 +668,14 @@ class Library(object):
         try:
             if is_true(ENV_RANDOM_SUBSET_ROWS) and len(data_df) > 0:
                 data_df = data_df.sample(1, replace=True).sort_index()
-
-
-
-
-            # if global_tags["type"] == "price-change-percentage-spot":
-            #     print(data_df["baseline"])
-
-
-
-
             column_rename = {}
             for column in data_df.columns:
                 column_rename[column] = column.strip().replace(' ', '-').lower()
                 data_df[column] = pd.to_numeric(data_df[column], downcast='float')
             data_df = data_df.rename(columns=column_rename)
-
-
-
-
-            # if global_tags["type"] == "price-change-percentage-spot":
-            #     print(data_df["baseline"])
-
-
-
             import influxdb
             lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
                 data_df, self.name.lower(), tag_columns=[], global_tags=global_tags)
-
-
-
-            if global_tags["type"] == "price-change-percentage-spot":
-                print(lines[-2])
-                print(lines[-1])
-
-
-
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
         except Exception as exception:

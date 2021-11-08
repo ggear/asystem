@@ -96,8 +96,7 @@ class Currency(library.Library):
                                                 elif isinstance(column, datetime.datetime):
                                                     ato_df.rename(columns={column: column.strftime("{}-%m-%d".format(year))}, inplace=True)
                                             ato_df = ato_df.melt('Country', var_name='Date', value_name='Rate'). \
-                                                pivot_table('Rate', ['Date'], 'Country', aggfunc='first'). \
-                                                fillna(method='ffill').fillna(method='bfill').reset_index()
+                                                pivot_table('Rate', ['Date'], 'Country', aggfunc='first').ffill().bfill().reset_index()
                                             ato_df.rename(columns={'USA': 'AUD/USD', 'UK': 'AUD/GBP', 'SINGAPORE': 'AUD/SGD'}, inplace=True)
                                             ato_df.index.name = None
                                             ato_df.columns.name = None
@@ -149,8 +148,7 @@ class Currency(library.Library):
                         data_df = data_df.set_index('Date').sort_index()
                         for fx_pair in PAIRS:
                             data_df = data_df[~data_df[fx_pair].isin(['Closed', 'CLOSED'])]
-                        data_df = data_df.reindex(pd.date_range(start=data_df.index[0], end=data_df.index[-1])) \
-                            .fillna(method='ffill').fillna(method='bfill')
+                        data_df = data_df.reindex(pd.date_range(start=data_df.index[0], end=data_df.index[-1])).ffill().bfill()
                         data_df = data_df[['Source'] + PAIRS]
                         data_df.index.name = 'Date'
                         for fx_pair in PAIRS:

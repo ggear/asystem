@@ -30,8 +30,8 @@
                   stat.new(
                         title='Holdings Daily Delta',
                         datasource='InfluxDB_V2',
-                        unit='',
-                        decimals=3,
+                        unit='currencyUSD',
+                        decimals=2,
                         reducerFunction='last',
                         colorMode='value',
                         graphMode='none',
@@ -40,12 +40,22 @@
                         repeatDirection='h',
                         pluginVersion='7',
                   ).addThreshold(
-                        { color: 'red', value: 0 }
+                        { color: 'red', value: -9999999 }
                   ).addThreshold(
-                        { color: 'yellow', value: 1.58 }
+                        { color: 'yellow', value: -500 }
                   ).addThreshold(
-                        { color: 'green', value: 2.07 }
+                        { color: 'green', value: 500 }
                   ).addTarget(influxdb.target(query='
+field = "holdings"
+from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-change-value-spot")
+  |> sort(columns: ["_time"], desc: false)
+  |> last()
+  |> keep(columns: ["_value"])
                   '))
 //ASM                 { gridPos: { x: 0, y: 2, w: 24, h: 3 } }
 //AST                 { gridPos: { x: 0, y: 2, w: 5, h: 3 } }
@@ -55,8 +65,8 @@
                   stat.new(
                         title='Watch Daily Delta',
                         datasource='InfluxDB_V2',
-                        unit='',
-                        decimals=3,
+                        unit='currencyUSD',
+                        decimals=2,
                         reducerFunction='last',
                         colorMode='value',
                         graphMode='none',
@@ -65,12 +75,22 @@
                         repeatDirection='h',
                         pluginVersion='7',
                   ).addThreshold(
-                        { color: 'red', value: 0 }
+                        { color: 'red', value: -9999999 }
                   ).addThreshold(
-                        { color: 'yellow', value: 1.23 }
+                        { color: 'yellow', value: -500 }
                   ).addThreshold(
-                        { color: 'green', value: 1.8 }
+                        { color: 'green', value: 500 }
                   ).addTarget(influxdb.target(query='
+field = "watch"
+from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-change-value-spot")
+  |> sort(columns: ["_time"], desc: false)
+  |> last()
+  |> keep(columns: ["_value"])
                   '))
 //ASM                 { gridPos: { x: 0, y: 10, w: 24, h: 3 } }
 //AST                 { gridPos: { x: 5, y: 2, w: 5, h: 3 } }
@@ -80,8 +100,8 @@
                   stat.new(
                         title='Baseline Daily Delta',
                         datasource='InfluxDB_V2',
-                        unit='',
-                        decimals=3,
+                        unit='currencyUSD',
+                        decimals=2,
                         reducerFunction='last',
                         colorMode='value',
                         graphMode='none',
@@ -90,12 +110,22 @@
                         repeatDirection='h',
                         pluginVersion='7',
                   ).addThreshold(
-                        { color: 'red', value: 0 }
+                        { color: 'red', value: -9999999 }
                   ).addThreshold(
-                        { color: 'yellow', value: 0.91 }
+                        { color: 'yellow', value: -500 }
                   ).addThreshold(
-                        { color: 'green', value: 1.23 }
+                        { color: 'green', value: 500 }
                   ).addTarget(influxdb.target(query='
+field = "baseline"
+from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-change-value-spot")
+  |> sort(columns: ["_time"], desc: false)
+  |> last()
+  |> keep(columns: ["_value"])
                   '))
 //ASM                 { gridPos: { x: 0, y: 18, w: 24, h: 3 } }
 //AST                 { gridPos: { x: 10, y: 2, w: 5, h: 3 } }
