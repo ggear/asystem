@@ -47,11 +47,10 @@
                   ).addThreshold(
                         { color: 'green', value: 500 }
                   ).addTarget(influxdb.target(query='
-field = "holdings"
 from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
-  |> filter(fn: (r) => r["_field"] == field)
+  |> filter(fn: (r) => r["_field"] == "holdings")
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-change-value-spot")
   |> sort(columns: ["_time"], desc: false)
