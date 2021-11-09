@@ -491,14 +491,13 @@ class Equity(library.Library):
                     equity_current_expanded_df[ticker + " Market Volume Value"] = \
                         equity_current_expanded_df[ticker + " Market Volume"] * \
                         equity_current_expanded_df[ticker + " Price Close Spot"]
-                    periods = {"Daily": 1, "Monthly": 30, "Quarterly": 90}
                     for snapshot in ["Base", "Spot"]:
-                        for period in periods:
-                            equity_current_expanded_df[ticker + " Price " + period + " Change Value " + snapshot] = \
-                                equity_current_expanded_df[ticker + " Price Close " + snapshot].diff(periods[period]) \
+                        for period in [1, 30, 90]:
+                            equity_current_expanded_df[ticker + " Price Change Value " + snapshot + " (" + str(period) + ")"] = \
+                                equity_current_expanded_df[ticker + " Price Close " + snapshot].diff(period) \
                                     .fillna(0.0)
-                            equity_current_expanded_df[ticker + " Price " + period + " Change Percentage " + snapshot] = \
-                                equity_current_expanded_df[ticker + " Price Close " + snapshot].pct_change(periods[period]) \
+                            equity_current_expanded_df[ticker + " Price Change Percentage " + snapshot + " (" + str(period) + ")"] = \
+                                equity_current_expanded_df[ticker + " Price Close " + snapshot].pct_change(period) \
                                     .fillna(0.0) * 100
                 self.print_log("Data has [{}] columns and [{}] rows post change enrichment"
                                .format(len(equity_current_expanded_df.columns), len(equity_current_expanded_df)))
@@ -517,27 +516,35 @@ class Equity(library.Library):
                          " Price Close Base",
                          " Price Close Spot",
                          " Market Volume Value",
-                         " Price Daily Change Value Base",
-                         " Price Daily Change Value Spot",
-                         " Price Monthly Change Value Base",
-                         " Price Monthly Change Value Spot",
-                         " Price Quarterly Change Value Base",
-                         " Price Quarterly Change Value Spot",
+                         " Price Change Value Base (1)",
+                         " Price Change Value Spot (1)",
                          " Index Watch Value Close Base",
                          " Index Watch Value Close Spot",
                          " Index Baseline Value Close Base",
                          " Index Baseline Value Close Spot",
                          " Index Holdings Value Close Base",
                          " Index Holdings Value Close Spot",
-                     ], "$"),
+                     ], "$", "1d"),
                     ([
-                         " Price Daily Change Percentage Base",
-                         " Price Daily Change Percentage Spot",
-                         " Price Monthly Change Percentage Base",
-                         " Price Monthly Change Percentage Spot",
-                         " Price Quarterly Change Percentage Base",
-                         " Price Quarterly Change Percentage Spot",
-                     ], "%"),
+                         " Price Change Percentage Base (1)",
+                         " Price Change Percentage Spot (1)",
+                     ], "%", "1d"),
+                    ([
+                         " Price Change Value Base (30)",
+                         " Price Change Value Spot (30)",
+                     ], "$", "30d"),
+                    ([
+                         " Price Change Percentage Base (30)",
+                         " Price Change Percentage Spot (30)",
+                     ], "%", "30d"),
+                    ([
+                         " Price Change Value Base (90)",
+                         " Price Change Value Spot (90)",
+                     ], "$", "90d"),
+                    ([
+                         " Price Change Percentage Base (90)",
+                         " Price Change Percentage Spot (90)",
+                     ], "%", "90d"),
                 ]:
                     for column_sub in metadata[0]:
                         columns = []
@@ -546,8 +553,8 @@ class Equity(library.Library):
                             columns.append(ticker + column_sub)
                             columns_rename[ticker + column_sub] = ticker.lower()
                         self.database_write(equity_current_expanded_df[columns].rename(columns=columns_rename), global_tags={
-                            "type": column_sub.strip().replace(" ", "-").lower(),
-                            "period": "1d",
+                            "type": column_sub.split('(')[0].strip().replace(" ", "-").lower(),
+                            "period": metadata[2],
                             "unit": metadata[1]
                         })
                 self.state_write()
