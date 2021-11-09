@@ -15,10 +15,10 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-if [ ! -f "/root/.influxdbv2/configs" ] || [ $(grep remote /root/.influxdbv2/configs | wc -l) -ne 1 ]; then
+if [ ! -f "/var/lib/influxdb2/configs" ] || [ $(grep remote /var/lib/influxdb2/configs | wc -l) -ne 1 ]; then
   influx config create -a -n remote -u http://${INFLUXDB_HOST}:${INFLUXDB_PORT} -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN}
 fi
-if [ ! -f "/root/.influxdbv2/configs" ] || [ $(grep default /root/.influxdbv2/configs | wc -l) -ne 1 ]; then
+if [ ! -f "/var/lib/influxdb2/configs" ] || [ $(grep default /var/lib/influxdb2/configs | wc -l) -ne 1 ]; then
   influx setup -f -n default --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT} -o ${INFLUXDB_ORG} -b ${INFLUXDB_BUCKET_HOME_PUBLIC} -u ${INFLUXDB_USER} -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN}
 fi
 

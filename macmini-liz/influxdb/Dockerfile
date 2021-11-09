@@ -1,11 +1,11 @@
-FROM quay.io/influxdb/influxdb:v2.0.9 as image_base
+FROM influxdb:2.1.0-alpine as image_base
 
 FROM image_base as image_package
 USER root
-RUN apt-get install -y \
-  netcat=1.10-41.1 \
-  jq=1.5+dfsg-2+b1 \
-  curl=7.64.0-4+deb10u2
+RUN apk add --no-cache \
+  jq==1.6-r1 \
+  curl==7.79.1-r0 \
+  netcat-openbsd==1.130-r2
 
 FROM image_package as image_install
 

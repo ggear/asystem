@@ -20,7 +20,8 @@
 //ASM           formFactor='Mobile',
 //AST           formFactor='Tablet',
 //ASD           formFactor='Desktop',
-                measurement='currency',
+                bucket='data_private',
+                measurement='equity',
                 maxMilliSecSinceUpdate='259200000',
                 simpleErrors=false,
             ) +
