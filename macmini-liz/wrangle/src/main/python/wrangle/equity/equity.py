@@ -491,11 +491,15 @@ class Equity(library.Library):
                     equity_current_expanded_df[ticker + " Market Volume Value"] = \
                         equity_current_expanded_df[ticker + " Market Volume"] * \
                         equity_current_expanded_df[ticker + " Price Close Spot"]
-                    for snapshot in [" Base", " Spot"]:
-                        equity_current_expanded_df[ticker + " Price Change Value" + snapshot] = \
-                            equity_current_expanded_df[ticker + " Price Close" + snapshot].diff().fillna(0.0)
-                        equity_current_expanded_df[ticker + " Price Change Percentage" + snapshot] = \
-                            equity_current_expanded_df[ticker + " Price Close" + snapshot].pct_change().fillna(0.0) * 100
+                    periods = {"Daily": 1, "Monthly": 30, "Quarterly": 90}
+                    for snapshot in ["Base", "Spot"]:
+                        for period in periods:
+                            equity_current_expanded_df[ticker + " Price " + period + " Change Value " + snapshot] = \
+                                equity_current_expanded_df[ticker + " Price Close " + snapshot].diff(periods[period]) \
+                                    .fillna(0.0)
+                            equity_current_expanded_df[ticker + " Price " + period + " Change Percentage " + snapshot] = \
+                                equity_current_expanded_df[ticker + " Price Close " + snapshot].pct_change(periods[period]) \
+                                    .fillna(0.0) * 100
                 self.print_log("Data has [{}] columns and [{}] rows post change enrichment"
                                .format(len(equity_current_expanded_df.columns), len(equity_current_expanded_df)))
                 equity_current_expanded_df = equity_current_expanded_df.sort_index(axis=1)
@@ -513,8 +517,12 @@ class Equity(library.Library):
                          " Price Close Base",
                          " Price Close Spot",
                          " Market Volume Value",
-                         " Price Change Value Base",
-                         " Price Change Value Spot",
+                         " Price Daily Change Value Base",
+                         " Price Daily Change Value Spot",
+                         " Price Monthly Change Value Base",
+                         " Price Monthly Change Value Spot",
+                         " Price Quarterly Change Value Base",
+                         " Price Quarterly Change Value Spot",
                          " Index Watch Value Close Base",
                          " Index Watch Value Close Spot",
                          " Index Baseline Value Close Base",
@@ -523,8 +531,12 @@ class Equity(library.Library):
                          " Index Holdings Value Close Spot",
                      ], "$"),
                     ([
-                         " Price Change Percentage Base",
-                         " Price Change Percentage Spot",
+                         " Price Daily Change Percentage Base",
+                         " Price Daily Change Percentage Spot",
+                         " Price Monthly Change Percentage Base",
+                         " Price Monthly Change Percentage Spot",
+                         " Price Quarterly Change Percentage Base",
+                         " Price Quarterly Change Percentage Spot",
                      ], "%"),
                 ]:
                     for column_sub in metadata[0]:

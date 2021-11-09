@@ -10,6 +10,7 @@
             maxMilliSecSinceUpdate=1800000000,
             filter_data='|> filter(fn: (r) => r["type"] != "metadata")',
             filter_metadata='|> filter(fn: (r) => r["type"] == "metadata")',
+            filter_metadata_delta='|> filter(fn: (r) => r["_field"] == "data_delta_rows") |> filter(fn: (r) => r["type"] == "metadata") |> filter(fn: (r) => r["_value"] > 0)',
             simpleErrors=true,
       )::
 
@@ -66,7 +67,8 @@
 from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  ' + filter_data + '
+  ' + filter_metadata_delta + '
+  |> sort(columns: ["_time"], desc: false)
   |> last()
   |> keep(columns: ["_time"])
   |> set(key: "_value", value: "")
@@ -102,7 +104,8 @@ from(bucket: "' + bucket + '")
 from(bucket: "' + bucket + '")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "' + measurement + '")
-  ' + filter_data + '
+  ' + filter_metadata_delta + '
+  |> sort(columns: ["_time"], desc: false)
   |> last()
   |> keep(columns: ["_time"])
   |> set(key: "_value", value: "")

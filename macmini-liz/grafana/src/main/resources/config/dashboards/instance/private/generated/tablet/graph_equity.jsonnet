@@ -57,7 +57,7 @@ from(bucket: "data_private")
                   ,
 
                   stat.new(
-                        title='Watch Daily Delta',
+                        title='Holdings Monthly Delta',
                         datasource='InfluxDB_V2',
                         unit='currencyUSD',
                         decimals=2,
@@ -90,7 +90,7 @@ from(bucket: "data_private")
                   ,
 
                   stat.new(
-                        title='Baseline Daily Delta',
+                        title='Holdings Quarterly Delta',
                         datasource='InfluxDB_V2',
                         unit='currencyUSD',
                         decimals=2,
@@ -162,7 +162,7 @@ from(bucket: "data_private")
                   ,
 
                   gauge.new(
-                        title='Watch Daily Delta',
+                        title='Holdings Monthly Delta',
                         datasource='InfluxDB_V2',
                         reducerFunction='last',
                         showThresholdLabels=false,
@@ -185,7 +185,7 @@ from(bucket: "data_private")
                   ,
 
                   gauge.new(
-                        title='Baseline Daily Delta',
+                        title='Holdings Quarterly Delta',
                         datasource='InfluxDB_V2',
                         reducerFunction='last',
                         showThresholdLabels=false,
@@ -208,7 +208,7 @@ from(bucket: "data_private")
                   ,
 
                   graph.new(
-                        title='Portfolio Range Deltas',
+                        title='Holdings Monthly Deltas',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -223,6 +223,24 @@ from(bucket: "data_private")
                   ')).addTarget(influxdb.target(query='
                   '))
                       { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+                  ,
+
+                  graph.new(
+                        title='Portfolio Range Deltas',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        formatY1='percent',
+                        decimals=2,
+                        maxDataPoints=10000
+                  ).addTarget(influxdb.target(query='
+                  ')).addTarget(influxdb.target(query='
+                  ')).addTarget(influxdb.target(query='
+                  '))
+                      { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
 
             ],

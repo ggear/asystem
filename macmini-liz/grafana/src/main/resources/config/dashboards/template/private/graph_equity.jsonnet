@@ -64,7 +64,7 @@ from(bucket: "data_private")
                   ,
 
                   stat.new(
-                        title='Watch Daily Delta',
+                        title='Holdings Monthly Delta',
                         datasource='InfluxDB_V2',
                         unit='currencyUSD',
                         decimals=2,
@@ -99,7 +99,7 @@ from(bucket: "data_private")
                   ,
 
                   stat.new(
-                        title='Baseline Daily Delta',
+                        title='Holdings Quarterly Delta',
                         datasource='InfluxDB_V2',
                         unit='currencyUSD',
                         decimals=2,
@@ -177,7 +177,7 @@ from(bucket: "data_private")
                   ,
 
                   gauge.new(
-                        title='Watch Daily Delta',
+                        title='Holdings Monthly Delta',
                         datasource='InfluxDB_V2',
                         reducerFunction='last',
                         showThresholdLabels=false,
@@ -202,7 +202,7 @@ from(bucket: "data_private")
                   ,
 
                   gauge.new(
-                        title='Baseline Daily Delta',
+                        title='Holdings Quarterly Delta',
                         datasource='InfluxDB_V2',
                         reducerFunction='last',
                         showThresholdLabels=false,
@@ -224,6 +224,35 @@ from(bucket: "data_private")
 //ASM                 { gridPos: { x: 0, y: 21, w: 24, h: 5 } }
 //AST                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
 //ASD                 { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
+                  ,
+
+                  graph.new(
+                        title='Holdings Monthly Deltas',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        formatY1='percent',
+                        decimals=2,
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=true,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=false,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=330,
+                        maxDataPoints=10000
+                  ).addTarget(influxdb.target(query='
+                  ')).addTarget(influxdb.target(query='
+                  ')).addTarget(influxdb.target(query='
+                  '))
+//ASM                 { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
                   ,
 
                   graph.new(
@@ -250,9 +279,9 @@ from(bucket: "data_private")
                   ')).addTarget(influxdb.target(query='
                   ')).addTarget(influxdb.target(query='
                   '))
-//ASM                 { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
+//ASM                 { gridPos: { x: 0, y: 41, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
                   ,
 
             ],
