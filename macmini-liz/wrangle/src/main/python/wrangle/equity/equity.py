@@ -454,12 +454,10 @@ class Equity(library.Library):
                             equity_current_expanded_df[ticker + column + " Base"] / \
                             equity_current_expanded_df[ticker + " Currency Rate Spot"]
                         for index in indexes:
-                            equity_current_expanded_df[ticker + " Index " + index.title() +
-                                                       column.replace("Price", "Value") + " Base"] = \
+                            equity_current_expanded_df[ticker + " Index " + index.title() + column + " Base"] = \
                                 equity_current_expanded_df[ticker + " Index " + index.title() + " Weight"] * \
                                 equity_current_expanded_df[ticker + column + " Base"]
-                            equity_current_expanded_df[ticker + " Index " + index.title() +
-                                                       column.replace("Price", "Value") + " Spot"] = \
+                            equity_current_expanded_df[ticker + " Index " + index.title() + column + " Spot"] = \
                                 equity_current_expanded_df[ticker + " Index " + index.title() + " Weight"] * \
                                 equity_current_expanded_df[ticker + column + " Spot"]
                 self.print_log("Data has [{}] columns and [{}] rows post equity enrichment"
@@ -476,14 +474,12 @@ class Equity(library.Library):
                         for index_ticker_component in tickers:
                             if index_ticker_component not in indexes:
                                 equity_current_expanded_df[index + column] += \
-                                    equity_current_expanded_df[index_ticker_component + " Index " + index.title() +
-                                                               column.replace("Price", "Value") + " Spot"]
+                                    equity_current_expanded_df[index_ticker_component + " Index " + index.title() + column + " Spot"]
                         for snapshot in [" Base", " Spot"]:
                             equity_current_expanded_df[index + column + snapshot] = \
                                 equity_current_expanded_df[index + column]
                             for index_sub in indexes:
-                                equity_current_expanded_df[index + " Index " + index_sub.title() +
-                                                           column.replace("Price", "Value") + snapshot] = \
+                                equity_current_expanded_df[index + " Index " + index_sub.title() + column + snapshot] = \
                                     equity_current_expanded_df[index + column] if index == index_sub else 0.0
                 self.print_log("Data has [{}] columns and [{}] rows post index enrichment"
                                .format(len(equity_current_expanded_df.columns), len(equity_current_expanded_df)))
@@ -493,7 +489,7 @@ class Equity(library.Library):
                         equity_current_expanded_df[ticker + " Price Close Spot"]
                     for snapshot in ["Base", "Spot"]:
                         for period in [1, 30, 90]:
-                            equity_current_expanded_df[ticker + " Price Change Value " + snapshot + " (" + str(period) + ")"] = \
+                            equity_current_expanded_df[ticker + " Price Change " + snapshot + " (" + str(period) + ")"] = \
                                 equity_current_expanded_df[ticker + " Price Close " + snapshot].diff(period) \
                                     .fillna(0.0)
                             equity_current_expanded_df[ticker + " Price Change Percentage " + snapshot + " (" + str(period) + ")"] = \
@@ -516,30 +512,30 @@ class Equity(library.Library):
                          " Price Close Base",
                          " Price Close Spot",
                          " Market Volume Value",
-                         " Price Change Value Base (1)",
-                         " Price Change Value Spot (1)",
-                         " Index Watch Value Close Base",
-                         " Index Watch Value Close Spot",
-                         " Index Baseline Value Close Base",
-                         " Index Baseline Value Close Spot",
-                         " Index Holdings Value Close Base",
-                         " Index Holdings Value Close Spot",
+                         " Index Watch Price Close Base",
+                         " Index Watch Price Close Spot",
+                         " Index Baseline Price Close Base",
+                         " Index Baseline Price Close Spot",
+                         " Index Holdings Price Close Base",
+                         " Index Holdings Price Close Spot",
+                         " Price Change Base (1)",
+                         " Price Change Spot (1)",
                      ], "$", "1d"),
                     ([
                          " Price Change Percentage Base (1)",
                          " Price Change Percentage Spot (1)",
                      ], "%", "1d"),
                     ([
-                         " Price Change Value Base (30)",
-                         " Price Change Value Spot (30)",
+                         " Price Change Base (30)",
+                         " Price Change Spot (30)",
                      ], "$", "30d"),
                     ([
                          " Price Change Percentage Base (30)",
                          " Price Change Percentage Spot (30)",
                      ], "%", "30d"),
                     ([
-                         " Price Change Value Base (90)",
-                         " Price Change Value Spot (90)",
+                         " Price Change Base (90)",
+                         " Price Change Spot (90)",
                      ], "$", "90d"),
                     ([
                          " Price Change Percentage Base (90)",

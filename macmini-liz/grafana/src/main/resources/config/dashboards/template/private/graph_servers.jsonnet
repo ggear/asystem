@@ -26,6 +26,7 @@
                 maxMilliSecSinceUpdate=10000,
                 filter_data='',
                 filter_metadata='',
+                filter_metadata_delta='',
             ) +
 
             [

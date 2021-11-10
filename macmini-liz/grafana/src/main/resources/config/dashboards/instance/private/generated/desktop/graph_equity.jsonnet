@@ -42,11 +42,10 @@
                   ).addThreshold(
                         { color: 'green', value: 500 }
                   ).addTarget(influxdb.target(query='
-field = "holdings"
 from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
-  |> filter(fn: (r) => r["_field"] == field)
+  |> filter(fn: (r) => r["_field"] == "holdings")
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-change-value-spot")
   |> sort(columns: ["_time"], desc: false)
@@ -75,12 +74,11 @@ from(bucket: "data_private")
                   ).addThreshold(
                         { color: 'green', value: 500 }
                   ).addTarget(influxdb.target(query='
-field = "watch"
 from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
-  |> filter(fn: (r) => r["_field"] == field)
-  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["_field"] == "holdings")
+  |> filter(fn: (r) => r["period"] == "30d")
   |> filter(fn: (r) => r["type"] == "price-change-value-spot")
   |> sort(columns: ["_time"], desc: false)
   |> last()
@@ -108,12 +106,11 @@ from(bucket: "data_private")
                   ).addThreshold(
                         { color: 'green', value: 500 }
                   ).addTarget(influxdb.target(query='
-field = "baseline"
 from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
-  |> filter(fn: (r) => r["_field"] == field)
-  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["_field"] == "holdings")
+  |> filter(fn: (r) => r["period"] == "90d")
   |> filter(fn: (r) => r["type"] == "price-change-value-spot")
   |> sort(columns: ["_time"], desc: false)
   |> last()
@@ -134,6 +131,59 @@ from(bucket: "data_private")
                               { 'color': 'green', 'value': 0.5 },
                         ],
                   ).addTarget(influxdb.target(query='
+import "strings"
+field = "watch"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> last()
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.title(v: field)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "holdings"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> last()
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.title(v: field)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "baseline"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> last()
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.title(v: field)})
                   '))
                       { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
                   ,
@@ -157,6 +207,15 @@ from(bucket: "data_private")
                   ).addThreshold(
                         { color: 'green', value: 0.5 }
                   ).addTarget(influxdb.target(query='
+from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == "holdings")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-change-percentage-spot")
+  |> sort(columns: ["_time"], desc: false)
+  |> last()
+  |> keep(columns: ["_value"])
                   '))
                       { gridPos: { x: 0, y: 5, w: 5, h: 5 } }
                   ,
@@ -180,6 +239,15 @@ from(bucket: "data_private")
                   ).addThreshold(
                         { color: 'green', value: 0.5 }
                   ).addTarget(influxdb.target(query='
+from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == "holdings")
+  |> filter(fn: (r) => r["period"] == "30d")
+  |> filter(fn: (r) => r["type"] == "price-change-percentage-spot")
+  |> sort(columns: ["_time"], desc: false)
+  |> last()
+  |> keep(columns: ["_value"])
                   '))
                       { gridPos: { x: 5, y: 5, w: 5, h: 5 } }
                   ,
@@ -203,6 +271,15 @@ from(bucket: "data_private")
                   ).addThreshold(
                         { color: 'green', value: 0.5 }
                   ).addTarget(influxdb.target(query='
+from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == "holdings")
+  |> filter(fn: (r) => r["period"] == "90d")
+  |> filter(fn: (r) => r["type"] == "price-change-percentage-spot")
+  |> sort(columns: ["_time"], desc: false)
+  |> last()
+  |> keep(columns: ["_value"])
                   '))
                       { gridPos: { x: 10, y: 5, w: 5, h: 5 } }
                   ,
@@ -212,10 +289,10 @@ from(bucket: "data_private")
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
-                        bars=false,
-                        lines=true,
+                        bars=true,
+                        lines=false,
                         staircase=false,
-                        formatY1='percent',
+                        formatY1='currencyUSD',
                         decimals=2,
                         legend_values=true,
                         legend_min=true,
@@ -228,8 +305,14 @@ from(bucket: "data_private")
                         legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
-                  ')).addTarget(influxdb.target(query='
-                  ')).addTarget(influxdb.target(query='
+from(bucket: "data_private")
+  |> range(start: -90d, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == "holdings")
+  |> filter(fn: (r) => r["period"] == "30d")
+  |> filter(fn: (r) => r["type"] == "price-change-value-spot")
+  |> aggregateWindow(every:  1mo, fn: mean)
+  |> keep(columns: ["_time", "_value"])
                   '))
                       { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
                   ,
@@ -255,10 +338,90 @@ from(bucket: "data_private")
                         legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
+import "strings"
+field = "watch"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.title(v: field)})
                   ')).addTarget(influxdb.target(query='
+import "strings"
+field = "holdings"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.title(v: field)})
                   ')).addTarget(influxdb.target(query='
+import "strings"
+field = "baseline"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> filter(fn: (r) => r["_field"] == field)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.title(v: field)})
                   '))
                       { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
+                  ,
+
+                  graph.new(
+                        title='Holdings Value',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        formatY1='currencyUSD',
+                        decimals=2,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=true,
+                        legend_total=false,
+                        legend_avg=false,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=330,
+                        maxDataPoints=10000
+                  ).addTarget(influxdb.target(query='
+from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == "holdings")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value"])
+                  '))
+                      { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
                   ,
 
             ],
