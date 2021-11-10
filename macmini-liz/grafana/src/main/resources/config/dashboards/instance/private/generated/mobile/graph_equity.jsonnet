@@ -47,7 +47,7 @@ from(bucket: "data_private")
   |> filter(fn: (r) => r["_measurement"] == "equity")
   |> filter(fn: (r) => r["_field"] == "holdings")
   |> filter(fn: (r) => r["period"] == "1d")
-  |> filter(fn: (r) => r["type"] == "price-change-value-spot")
+  |> filter(fn: (r) => r["type"] == "price-change-spot")
   |> sort(columns: ["_time"], desc: false)
   |> last()
   |> keep(columns: ["_value"])
@@ -79,7 +79,7 @@ from(bucket: "data_private")
   |> filter(fn: (r) => r["_measurement"] == "equity")
   |> filter(fn: (r) => r["_field"] == "holdings")
   |> filter(fn: (r) => r["period"] == "30d")
-  |> filter(fn: (r) => r["type"] == "price-change-value-spot")
+  |> filter(fn: (r) => r["type"] == "price-change-spot")
   |> sort(columns: ["_time"], desc: false)
   |> last()
   |> keep(columns: ["_value"])
@@ -111,7 +111,7 @@ from(bucket: "data_private")
   |> filter(fn: (r) => r["_measurement"] == "equity")
   |> filter(fn: (r) => r["_field"] == "holdings")
   |> filter(fn: (r) => r["period"] == "90d")
-  |> filter(fn: (r) => r["type"] == "price-change-value-spot")
+  |> filter(fn: (r) => r["type"] == "price-change-spot")
   |> sort(columns: ["_time"], desc: false)
   |> last()
   |> keep(columns: ["_value"])
@@ -136,9 +136,9 @@ field = "watch"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -154,9 +154,9 @@ field = "holdings"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -172,9 +172,9 @@ field = "baseline"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -301,7 +301,7 @@ from(bucket: "data_private")
   |> filter(fn: (r) => r["_measurement"] == "equity")
   |> filter(fn: (r) => r["_field"] == "holdings")
   |> filter(fn: (r) => r["period"] == "30d")
-  |> filter(fn: (r) => r["type"] == "price-change-value-spot")
+  |> filter(fn: (r) => r["type"] == "price-change-spot")
   |> aggregateWindow(every:  1mo, fn: mean)
   |> keep(columns: ["_time", "_value"])
                   '))
@@ -325,9 +325,9 @@ field = "watch"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -342,9 +342,9 @@ field = "holdings"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -359,9 +359,9 @@ field = "baseline"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -393,6 +393,111 @@ from(bucket: "data_private")
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
   |> keep(columns: ["_time", "_value"])
+                  '))
+                      { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
+                  ,
+
+                  graph.new(
+                        title='MIO Range Deltas',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        formatY1='percent',
+                        decimals=2,
+                        maxDataPoints=10000
+                  ).addTarget(influxdb.target(query='
+import "strings"
+field = "muk"
+type = "spot"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "muk"
+type = "base"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "mus"
+type = "spot"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "mus"
+type = "base"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "msg"
+type = "spot"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "msg"
+type = "base"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   '))
                       { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
                   ,

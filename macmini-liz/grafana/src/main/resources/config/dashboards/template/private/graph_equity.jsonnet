@@ -147,9 +147,9 @@ field = "watch"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -165,9 +165,9 @@ field = "holdings"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -183,9 +183,9 @@ field = "baseline"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -364,9 +364,9 @@ field = "watch"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -381,9 +381,9 @@ field = "holdings"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -398,9 +398,9 @@ field = "baseline"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == field)
   |> filter(fn: (r) => r["period"] == "1d")
   |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> filter(fn: (r) => r["_field"] == field)
   |> keep(columns: ["_time", "_value", "_field"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 baseline = series
@@ -450,14 +450,14 @@ from(bucket: "data_private")
                   ,
 
                   graph.new(
-                        title='MIO Value',
+                        title='MIO Range Deltas',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
                         bars=false,
                         lines=true,
                         staircase=false,
-                        formatY1='currencyUSD',
+                        formatY1='percent',
                         decimals=2,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
@@ -470,13 +470,95 @@ from(bucket: "data_private")
 //ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
-from(bucket: "data_private")
+import "strings"
+field = "muk"
+type = "spot"
+series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "equity")
-  |> filter(fn: (r) => r["_field"] == "holdings")
-  |> filter(fn: (r) => r["period"] == "1d")
-  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "muk"
+type = "base"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "mus"
+type = "spot"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "mus"
+type = "base"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "msg"
+type = "spot"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "msg"
+type = "base"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   '))
 //ASM                 { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
 //AST                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
