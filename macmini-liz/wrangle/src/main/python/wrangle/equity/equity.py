@@ -94,6 +94,12 @@ STOCK = OrderedDict([
         "prefix": "",
         "exchange": "AX",
     }),
+    ('ERTH', {
+        "start": "2021-04",
+        "end of day": "16:00",
+        "prefix": "",
+        "exchange": "AX",
+    }),
 ])
 
 DIMENSIONS = [
