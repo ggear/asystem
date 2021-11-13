@@ -1,14 +1,14 @@
 version: '3.7'
 services:
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus:v2.22.0
+  redpanda:
+    container_name: redpanda
+    image: docker.vectorized.io/vectorized/redpanda:v21.10.1
     init: true
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
-    volumes:
-      - ${SERVICE_DATA_DIR}/data:/prometheus
+    ports:
+      - ${REDPANDA_PORT}:${REDPANDA_PORT}
     deploy:
       resources:
         limits:
