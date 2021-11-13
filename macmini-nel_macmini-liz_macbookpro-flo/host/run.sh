@@ -40,7 +40,18 @@ fi
 ################################################################################
 # Display
 ################################################################################
-[ -e /sys/class/backlight/gmux_backlight ] && echo 0 > /sys/class/backlight/gmux_backlight/brightness
+if [ -e /sys/class/backlight/gmux_backlight ] && [ ! -f /etc/systemd/system/backlight.service ]; then
+  cat <<EOF >/etc/systemd/system/backlight.service
+[Unit]
+Description=Turn backlight off
+After=default.target
+[Service]
+ExecStart=/bin/sh -c '/usr/bin/echo 0 > /sys/class/backlight/gmux_backlight/brightness'
+[Install]
+WantedBy=default.target
+EOF
+  systemctl enable backlight.service
+fi
 
 ################################################################################
 # Volumes
@@ -72,26 +83,20 @@ fi
 # Network
 ################################################################################
 cat <<EOF >/etc/avahi/avahi-daemon.conf
-# See avahi-daemon.conf(5) for more information
-
 [server]
 use-ipv4=yes
 use-ipv6=yes
 ratelimit-interval-usec=1000000
 ratelimit-burst=1000
 cache-entries-max=0
-
 [wide-area]
 enable-wide-area=yes
-
 [publish]
 publish-hinfo=no
 publish-workstation=no
-
 [reflector]
 enable-reflector=yes
 reflect-ipv=no
-
 [rlimits]
 EOF
 
