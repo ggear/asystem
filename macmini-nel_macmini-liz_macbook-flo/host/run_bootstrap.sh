@@ -6,16 +6,19 @@
 # Debian 11 (bullyseye amd64 net iso)
 # Install (non-graphical)
 # Dont load proprietary media
-# Set host to ${HOST_TYPE}-${HOST_NAME}.janeandgraham.com (macmini-liz, macmini-nel, macbookpro-flo)
+# Set host to ${HOST_TYPE}-${HOST_NAME}.janeandgraham.com (macmini-liz, macmini-nel, macbook-flo)
 # Create user graham
 # Guided entire disk and setup LVM create partitions at 450GB, /tmp, /var, /home, max, force UEFI
 # Install SSH server, standard sys utils
-
 
 ################################################################################
 # Bootstrap system
 ################################################################################
 # Enable remote root login : /etc/ssh/sshd_config PermitRootLogin yes
+
+################################################################################
+# Storage format
+################################################################################
 # Second HDD (1.9TB), single partition and added to fstab as per:
 #fdisk -l
 #blkid /dev/sdb
