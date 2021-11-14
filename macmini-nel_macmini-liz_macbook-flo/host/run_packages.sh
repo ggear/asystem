@@ -31,6 +31,7 @@ PACKAGES=(
   iotop
   hdparm
   stress-ng
+  memtester
 )
 for PACKAGE in ${PACKAGES[@]}; do
   apt-get install -y ${PACKAGE}

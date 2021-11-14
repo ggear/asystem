@@ -30,6 +30,7 @@ apt-get install -y --allow-downgrades  htop=3.0.5-7
 apt-get install -y --allow-downgrades  iotop=0.6-24-g733f3f8-1.1
 apt-get install -y --allow-downgrades  hdparm=9.60+ds-1
 apt-get install -y --allow-downgrades  stress-ng=0.12.06-1
+apt-get install -y --allow-downgrades  memtester=4.5.0-1
 
 ################################################################################
 # Shell
