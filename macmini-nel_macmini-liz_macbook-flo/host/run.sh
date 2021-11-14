@@ -28,6 +28,7 @@ apt-get install -y --allow-downgrades  cifs-utils=2:6.11-3.1
 apt-get install -y --allow-downgrades  samba=2:4.13.13+dfsg-1~deb11u2
 apt-get install -y --allow-downgrades  smbclient=2:4.13.13+dfsg-1~deb11u2
 apt-get install -y --allow-downgrades  hdparm=9.60+ds-1
+apt-get install -y --allow-downgrades  stress-ng=0.12.06-1
 
 ################################################################################
 # Shell
