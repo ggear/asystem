@@ -15,7 +15,6 @@ PACKAGES=(
   smartmontools
   avahi-daemon
   net-tools
-  htop
   mbpfan
   lm-sensors
   apt-transport-https
@@ -28,6 +27,8 @@ PACKAGES=(
   cifs-utils
   samba
   smbclient
+  htop
+  iotop
   hdparm
   stress-ng
 )
