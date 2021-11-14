@@ -3,32 +3,32 @@
 ################################################################################
 # Packages (from update script)
 ################################################################################
-apt-get install -y --allow-downgrades  ntfs-3g=1:2017.3.23AR.3-4+deb11u1
-apt-get install -y --allow-downgrades  acl=2.2.53-10
-apt-get install -y --allow-downgrades  rsync=3.2.3-4+deb11u1
-apt-get install -y --allow-downgrades  vim=2:8.2.2434-3
-apt-get install -y --allow-downgrades  rename=1.13-1
-apt-get install -y --allow-downgrades  curl=7.74.0-1.3+b1
-apt-get install -y --allow-downgrades  fswatch=1.14.0+repack-13
-apt-get install -y --allow-downgrades  netselect-apt=0.3.ds1-29
-apt-get install -y --allow-downgrades  smartmontools=7.2-1
-apt-get install -y --allow-downgrades  avahi-daemon=0.8-5
-apt-get install -y --allow-downgrades  net-tools=1.60+git20181103.0eebece-1
-apt-get install -y --allow-downgrades  htop=3.0.5-7
-apt-get install -y --allow-downgrades  mbpfan=2.2.1-1
-apt-get install -y --allow-downgrades  lm-sensors=1:3.6.0-7
-apt-get install -y --allow-downgrades  apt-transport-https=2.2.4
-apt-get install -y --allow-downgrades  ca-certificates=20210119
-apt-get install -y --allow-downgrades  gnupg-agent=2.2.27-2
-apt-get install -y --allow-downgrades  software-properties-common=0.96.20.2-2.1
-apt-get install -y --allow-downgrades  docker-ce=5:20.10.10~3-0~debian-bullseye
-apt-get install -y --allow-downgrades  docker-ce-cli=5:20.10.10~3-0~debian-bullseye
-apt-get install -y --allow-downgrades  containerd.io=1.4.11-1
-apt-get install -y --allow-downgrades  cifs-utils=2:6.11-3.1
-apt-get install -y --allow-downgrades  samba=2:4.13.13+dfsg-1~deb11u2
-apt-get install -y --allow-downgrades  smbclient=2:4.13.13+dfsg-1~deb11u2
-apt-get install -y --allow-downgrades  hdparm=9.60+ds-1
-apt-get install -y --allow-downgrades  stress-ng=0.12.06-1
+apt-get install -y --allow-downgrades ntfs-3g=1:2017.3.23AR.3-4+deb11u1
+apt-get install -y --allow-downgrades acl=2.2.53-10
+apt-get install -y --allow-downgrades rsync=3.2.3-4+deb11u1
+apt-get install -y --allow-downgrades vim=2:8.2.2434-3
+apt-get install -y --allow-downgrades rename=1.13-1
+apt-get install -y --allow-downgrades curl=7.74.0-1.3+b1
+apt-get install -y --allow-downgrades fswatch=1.14.0+repack-13
+apt-get install -y --allow-downgrades netselect-apt=0.3.ds1-29
+apt-get install -y --allow-downgrades smartmontools=7.2-1
+apt-get install -y --allow-downgrades avahi-daemon=0.8-5
+apt-get install -y --allow-downgrades net-tools=1.60+git20181103.0eebece-1
+apt-get install -y --allow-downgrades htop=3.0.5-7
+apt-get install -y --allow-downgrades mbpfan=2.2.1-1
+apt-get install -y --allow-downgrades lm-sensors=1:3.6.0-7
+apt-get install -y --allow-downgrades apt-transport-https=2.2.4
+apt-get install -y --allow-downgrades ca-certificates=20210119
+apt-get install -y --allow-downgrades gnupg-agent=2.2.27-2
+apt-get install -y --allow-downgrades software-properties-common=0.96.20.2-2.1
+apt-get install -y --allow-downgrades docker-ce=5:20.10.10~3-0~debian-bullseye
+apt-get install -y --allow-downgrades docker-ce-cli=5:20.10.10~3-0~debian-bullseye
+apt-get install -y --allow-downgrades containerd.io=1.4.11-1
+apt-get install -y --allow-downgrades cifs-utils=2:6.11-3.1
+apt-get install -y --allow-downgrades samba=2:4.13.13+dfsg-1~deb11u2
+apt-get install -y --allow-downgrades smbclient=2:4.13.13+dfsg-1~deb11u2
+apt-get install -y --allow-downgrades hdparm=9.60+ds-1
+apt-get install -y --allow-downgrades stress-ng=0.12.06-1
 
 ################################################################################
 # Shell
@@ -37,6 +37,52 @@ if [ $(grep "history-search" /etc/bash.bashrc | wc -l) -eq 0 ]; then
   echo "" >>/etc/bash.bashrc
   echo "bind '\"\e[A\":history-search-backward'" >>/etc/bash.bashrc
   echo "bind '\"\e[B\":history-search-forward'" >>/etc/bash.bashrc
+fi
+
+################################################################################
+# Monitoring
+################################################################################
+if [ ! -f /root/.config/htop/htoprc ]; then
+  mkdir -p /root/.config/htop
+  cat <<EOF >/root/.config/htop/htoprc
+fields=0 48 17 18 38 39 40 2 46 47 49 1
+sort_key=46
+sort_direction=-1
+tree_sort_key=0
+tree_sort_direction=1
+hide_kernel_threads=1
+hide_userland_threads=0
+shadow_other_users=0
+show_thread_names=0
+show_program_path=1
+highlight_base_name=1
+highlight_megabytes=1
+highlight_threads=1
+highlight_changes=0
+highlight_changes_delay_secs=5
+find_comm_in_cmdline=1
+strip_exe_from_cmdline=1
+show_merged_command=0
+tree_view=0
+tree_view_always_by_pid=0
+header_margin=1
+detailed_cpu_time=0
+cpu_count_from_one=0
+show_cpu_usage=1
+show_cpu_frequency=1
+show_cpu_temperature=1
+degree_fahrenheit=0
+update_process_names=0
+account_guest_in_cpu_meter=0
+color_scheme=0
+enable_mouse=1
+delay=10
+left_meters=LeftCPUs Memory Swap
+left_meter_modes=1 1 1
+right_meters=RightCPUs Tasks LoadAverage Uptime
+right_meter_modes=1 2 2 2
+hide_function_bar=0
+EOF
 fi
 
 ################################################################################
