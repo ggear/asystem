@@ -13,7 +13,7 @@ influxql-max-select-buckets: 0
 influxql-max-select-point: 0
 influxql-max-select-series: 0
 key-name: ""
-log-level: error
+log-level: info
 metrics-disabled: false
 nats-max-payload-bytes: 1048576
 nats-port: -1

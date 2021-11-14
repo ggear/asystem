@@ -15,12 +15,13 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-if [ ! -f "/var/lib/influxdb2/configs" ] || [ $(grep remote /var/lib/influxdb2/configs | wc -l) -ne 1 ]; then
-  influx config create -a -n remote -u http://${INFLUXDB_HOST}:${INFLUXDB_PORT} -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN}
-fi
-if [ ! -f "/var/lib/influxdb2/configs" ] || [ $(grep default /var/lib/influxdb2/configs | wc -l) -ne 1 ]; then
+if [ ! -f "/var/lib/influxdb2/configs" ]; then
   influx setup -f -n default --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT} -o ${INFLUXDB_ORG} -b ${INFLUXDB_BUCKET_HOME_PUBLIC} -u ${INFLUXDB_USER} -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN}
 fi
+if [ $(influx config list | grep remote | wc -l) -ne 1 ]; then
+  influx config create -a -n remote -u http://${INFLUXDB_HOST}:${INFLUXDB_PORT} -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN}
+fi
+influx config set --config-name remote
 
 if [ $(influx bucket list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_BUCKET_HOME_PUBLIC} | wc -l) -eq 0 ]; then
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PUBLIC} -r 0 -t ${INFLUXDB_TOKEN}
