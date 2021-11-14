@@ -28,6 +28,7 @@ PACKAGES=(
   cifs-utils
   samba
   smbclient
+  hdparm
 )
 for PACKAGE in ${PACKAGES[@]}; do
   apt-get install -y ${PACKAGE}
