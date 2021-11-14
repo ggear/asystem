@@ -42,9 +42,8 @@ fi
 ################################################################################
 # Monitoring
 ################################################################################
-if [ ! -f /root/.config/htop/htoprc ]; then
-  mkdir -p /root/.config/htop
-  cat <<EOF >/root/.config/htop/htoprc
+mkdir -p /home/graham/.config/htop
+cat <<EOF >/home/graham/.config/htop/htoprc
 fields=0 48 17 18 38 39 40 2 46 47 49 1
 sort_key=46
 sort_direction=-1
@@ -83,7 +82,10 @@ right_meters=RightCPUs Tasks LoadAverage Uptime
 right_meter_modes=1 2 2 2
 hide_function_bar=0
 EOF
-fi
+chown -R graham.graham /home/graham/.config
+mkdir -p /root/.config/htop && rm -rf /root/.config/htop/htoprc
+ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
+
 
 ################################################################################
 # Display
@@ -167,7 +169,7 @@ systemctl enable mbpfan.service
 ################################################################################
 # Docker
 ################################################################################
-curl -sL "https://github.com/docker/compose/releases/download/1.26.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+curl -sL "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
