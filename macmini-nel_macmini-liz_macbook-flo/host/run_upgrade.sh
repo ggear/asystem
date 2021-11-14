@@ -26,10 +26,11 @@ deb http://deb.debian.org/debian bullseye-updates main contrib non-free
 deb http://deb.debian.org/debian bullseye-backports main contrib non-free
 #deb-src http://deb.debian.org/debian bullseye-backports main contrib non-free
 
-deb [arch=amd64] http://download.docker.com/linux/debian bullseye stable
-#deb-src [arch=amd64] http://download.docker.com/linux/debian bullseye stable
+deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian bullseye stable
+#deb-src [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg]] https://download.docker.com/linux/debian bullseye stable
 
 EOF
+curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
 ################################################################################
 # Upgrade system

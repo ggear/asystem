@@ -29,7 +29,9 @@ PACKAGES=(
   samba
   smbclient
 )
-apt-get install -y ${PACKAGES[@]}
+for PACKAGE in ${PACKAGES[@]}; do
+  apt-get install -y ${PACKAGE}
+done
 INSTALLED="$(apt list 2>/dev/null | column -t | awk -F"/" '{print $1"\t"$2}' | awk '{print "  "$1"="$3""}' | grep -v Listing)"
 echo "" && echo "Run script base package versions:"
 for PACKAGE in ${PACKAGES[@]}; do
