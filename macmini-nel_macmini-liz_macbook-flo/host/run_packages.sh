@@ -29,6 +29,7 @@ PACKAGES=(
   samba
   smbclient
   hdparm
+  stress-ng
 )
 for PACKAGE in ${PACKAGES[@]}; do
   apt-get install -y ${PACKAGE}
