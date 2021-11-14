@@ -49,5 +49,6 @@
 ################################################################################
 # fab release ./macmini-nel_macmini-liz_macbook-flo/host
 # fab release ./macmini-nel_macmini-liz_macbook-flo/keys
+# fab release ./macmini-nel_macmini-liz_macbook-flo/monitor
 # fab release ./udm-rack_macmini-liz_macmini-nel_macbook-flo/host
 # fab release ./udm-rack_macmini-liz_macmini-nel_macbook-flo/users
