@@ -8,11 +8,14 @@ rm -rf ${DIR_RESULTS} && mkdir -p ${DIR_RESULTS}
 docker run --rm \
   ljishen/sysbench \
   /root/results/output_help.prof \
-  help
+  help > /dev/null
 
 ################################################################################
 # CPU tests
 ################################################################################
+echo "################################################################################"
+echo "# CPU tests [$HOSTNAME]"
+echo "################################################################################"
 docker run --rm \
   -v ${DIR_RESULTS}:/root/results \
   ljishen/sysbench \
@@ -20,16 +23,21 @@ docker run --rm \
   --test=cpu \
   --cpu-max-prime=20000 \
   run
+echo "################################################################################"
 
 ################################################################################
 # Memory tests
 ################################################################################
+echo "################################################################################"
+echo "# Memory tests [$HOSTNAME]"
+echo "################################################################################"
 docker run --rm \
   -v ${DIR_RESULTS}:/root/results \
   ljishen/sysbench \
   /root/results/output_memory.prof \
   --test=memory \
   run
+echo "################################################################################"
 
 ################################################################################
 # IO tests
@@ -40,7 +48,10 @@ docker run --rm \
   /root/results/output_fileio.prof \
   --test=fileio \
   --file-num=64 \
-  prepare
+  prepare > /dev/null
+echo "################################################################################"
+echo "# IO tests [$HOSTNAME]"
+echo "################################################################################"
 docker run --rm \
   -v ${DIR_RESULTS}:/root/results \
   -v ${DIR_RESULTS}/workdir:/root/workdir \
@@ -50,10 +61,11 @@ docker run --rm \
   --file-num=64 \
   --file-test-mode=seqrewr \
   run
+echo "################################################################################"
 docker run --rm \
   -v ${DIR_RESULTS}/workdir:/root/workdir \
   ljishen/sysbench \
   /root/results/output_fileio.prof \
   --test=fileio \
-  cleanup
+  cleanup > /dev/null
 rm -r ${DIR_RESULTS}/workdir
