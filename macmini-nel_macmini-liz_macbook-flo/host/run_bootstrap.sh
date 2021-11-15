@@ -41,7 +41,8 @@
 #fdisk /dev/sdb
 #mkfs.ext4 -j /dev/sdb1
 #blkid /dev/sdb1
-#echo "/dev/sdb1 /data ext4 defaults 1 2" >>/etc/fstab
+#blkid | grep " UUID=" | grep -v mapper | grep -v PARTLABEL | grep BLOCK_SIZE
+#echo "UUID=89b36041-a92a-4364-8080-339e84280eb4  /data           ext4    rw,user,exec,auto,async,nofail        0       2" >>/etc/fstab
 #mount -a
 
 ################################################################################
