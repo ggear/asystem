@@ -46,6 +46,30 @@
 #mount -a
 
 ################################################################################
+# Volumes
+################################################################################
+vgdisplay
+lvdisplay
+lvextend -L15G /dev/$(hostname)-vg/var
+resize2fs /dev/$(hostname)-vg/var
+lvdisplay /dev/$(hostname)-vg/var
+df -h /var
+systemctl stop docker.service
+systemctl stop docker.socket
+rm -rf /var/lib/docker
+mkdir -p /var/lib/docker
+lvcreate -L20G -n docker $(hostname)-vg
+mkfs.ext4 -j /dev/$(hostname)-vg/docker
+echo "/dev/mapper/"${HOSTNAME/-/--}"--vg-docker        /var/lib/docker ext4    barrier=0,nofail                      0       2" >>/etc/fstab
+mount -a
+rm -rf /var/lib/docker/lost+found
+systemctl start docker.service
+systemctl start docker.socket
+lvdisplay /dev/$(hostname)-vg/docker
+df -h /var/lib/docker
+vgdisplay
+
+################################################################################
 # Norm installs
 ################################################################################
 # fab release ./macmini-nel_macmini-liz_macbook-flo/host

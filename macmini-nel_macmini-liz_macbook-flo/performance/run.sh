@@ -66,4 +66,4 @@ docker run --rm \
   /root/results/output_fileio.prof \
   --test=fileio \
   cleanup > /dev/null
-rm -r ${DIR_RESULTS}/workdir
+rm -rf ${DIR_RESULTS}/workdir
