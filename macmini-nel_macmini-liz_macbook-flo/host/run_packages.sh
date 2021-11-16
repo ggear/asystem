@@ -34,6 +34,7 @@ PACKAGES=(
   memtester
   linux-cpupower
   intel-microcode
+  hwinfo
 )
 for PACKAGE in ${PACKAGES[@]}; do
   apt install -y ${PACKAGE}
