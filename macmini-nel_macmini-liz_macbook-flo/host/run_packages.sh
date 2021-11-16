@@ -32,6 +32,8 @@ PACKAGES=(
   hdparm
   stress-ng
   memtester
+  linux-cpupower
+  intel-microcode
 )
 for PACKAGE in ${PACKAGES[@]}; do
   apt install -y ${PACKAGE}

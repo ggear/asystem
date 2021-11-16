@@ -60,7 +60,8 @@ rm -rf /var/lib/docker
 mkdir -p /var/lib/docker
 lvcreate -L20G -n docker $(hostname)-vg
 mkfs.ext4 -j /dev/$(hostname)-vg/docker
-echo "/dev/mapper/"${HOSTNAME/-/--}"--vg-docker        /var/lib/docker ext4    barrier=0,nofail                      0       2" >>/etc/fstab
+tune2fs -O ^has_journal /dev/$(hostname)-vg/docker
+echo "/dev/mapper/"${HOSTNAME/-/--}"--vg-docker        /var/lib/docker ext4    noatime,barrier=0,commit=6000,nofail  0       2" >>/etc/fstab
 mount -a
 rm -rf /var/lib/docker/lost+found
 systemctl start docker.service
