@@ -13,16 +13,16 @@ Threads started!
 
 
 General statistics:
-    total time:                          9.5118s
+    total time:                          9.5144s
     total number of events:              10000
-    total time taken by event execution: 38.0315s
+    total time taken by event execution: 38.0461s
     response time:
-         min:                                  3.00ms
+         min:                                  2.87ms
          avg:                                  3.80ms
-         max:                                  7.87ms
+         max:                                  6.66ms
          approx.  95 percentile:               3.82ms
 
 Threads fairness:
-    events (avg/stddev):           2500.0000/3.00
-    execution time (avg/stddev):   9.5079/0.00
+    events (avg/stddev):           2500.0000/2.83
+    execution time (avg/stddev):   9.5115/0.00
 
