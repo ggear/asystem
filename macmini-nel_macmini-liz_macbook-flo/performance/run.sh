@@ -26,7 +26,7 @@ docker run --rm -v ${DIR_RESULTS}:/root/results ljishen/sysbench /root/results/o
   --test=cpu \
   --num-threads=${NUM_THREADS_MAX} \
   --max-time=${MAX_RUNTIME_SEC} \
-  --cpu-max-prime=80000 \
+  --cpu-max-prime=20000 \
   run
 
 #################################################################################
