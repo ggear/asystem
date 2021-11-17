@@ -6,6 +6,7 @@
 
 DIR_RESULTS=/home/asystem/performance
 NUM_THREADS=1
+NUM_THREADS_MAX=4
 MAX_RUNTIME_SEC=180
 FILE_NUM=20
 FILE_BLOCK_SIZE=32K
@@ -23,7 +24,7 @@ echo "# CPU tests ["$(hostname)"]"
 echo "################################################################################"
 docker run --rm -v ${DIR_RESULTS}:/root/results ljishen/sysbench /root/results/output_cpu.prof \
   --test=cpu \
-  --num-threads=${NUM_THREADS} \
+  --num-threads=${NUM_THREADS_MAX} \
   --max-time=${MAX_RUNTIME_SEC} \
   --cpu-max-prime=20000 \
   run
