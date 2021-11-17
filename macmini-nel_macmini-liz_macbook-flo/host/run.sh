@@ -115,7 +115,9 @@ ExecStart=/bin/sh -c '/usr/bin/echo 0 > /sys/class/backlight/gmux_backlight/brig
 [Install]
 WantedBy=default.target
 EOF
+  systemctl daemon-reload
   systemctl enable backlight.service
+  systemctl start backlight.service
 fi
 
 ################################################################################
