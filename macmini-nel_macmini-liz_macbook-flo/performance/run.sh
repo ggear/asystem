@@ -28,115 +28,115 @@ docker run --rm -v ${DIR_RESULTS}:/root/results ljishen/sysbench /root/results/o
   --cpu-max-prime=20000 \
   run
 
-################################################################################
-# Memory tests
-################################################################################
-echo "################################################################################"
-echo "# Memory tests ["$(hostname)"]"
-echo "################################################################################"
-docker run --rm -v ${DIR_RESULTS}:/root/results ljishen/sysbench /root/results/output_memory.prof \
-  --test=memory \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  --memory-total-size=5G \
-  --memory-oper=read \
-  run
-docker run --rm -v ${DIR_RESULTS}:/root/results ljishen/sysbench /root/results/output_memory.prof \
-  --test=memory \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  --memory-total-size=5G \
-  --memory-oper=write \
-  run
-
-################################################################################
-# IO tests
-################################################################################
-echo "################################################################################"
-echo "# Sequential IO tests ["$(hostname)"]"
-echo "################################################################################"
-docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_prepare.prof \
-  --test=fileio \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  --file-num=${FILE_NUM} \
-  --file-block-size=${FILE_BLOCK_SIZE} \
-  --file-total-size=${FILE_SIZE_TOTAL} \
-  --file-test-mode=seqrewr \
-  prepare
-docker run --rm -v ${DIR_RESULTS}:/root/results -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_seqrewr.prof \
-  --test=fileio \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  --file-num=${FILE_NUM} \
-  --file-block-size=${FILE_BLOCK_SIZE} \
-  --file-total-size=${FILE_SIZE_TOTAL} \
-  --file-test-mode=seqrewr \
-  run
-docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_cleanup.prof \
-  --test=fileio \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  cleanup >/dev/null
-
-echo "################################################################################"
-echo "# Random IO tests ["$(hostname)"]"
-echo "################################################################################"
-docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_prepare.prof \
-  --test=fileio \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  --file-num=${FILE_NUM} \
-  --file-block-size=${FILE_BLOCK_SIZE} \
-  --file-total-size=${FILE_SIZE_TOTAL} \
-  --file-test-mode=rndrw \
-  prepare
-docker run --rm \
-  -v ${DIR_RESULTS}:/root/results -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_rndrw.prof \
-  --test=fileio \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  --file-num=${FILE_NUM} \
-  --file-block-size=${FILE_BLOCK_SIZE} \
-  --file-total-size=${FILE_SIZE_TOTAL} \
-  --file-rw-ra=1.5 \
-  --file-test-mode=rndrw \
-  run
-docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_cleanup.prof \
-  --test=fileio \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  cleanup >/dev/null
-
-echo "################################################################################"
-echo "# Validate IO tests ["$(hostname)"]"
-echo "################################################################################"
-docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_prepare.prof \
-  --test=fileio \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  --file-num=${FILE_NUM} \
-  --file-block-size=${FILE_BLOCK_SIZE} \
-  --file-total-size=${FILE_SIZE_TOTAL_VALIDATE} \
-  --validate=on\
-  --file-test-mode=rndrw \
-  prepare
-docker run --rm \
-  -v ${DIR_RESULTS}:/root/results -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_rndrw.prof \
-  --test=fileio \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  --file-num=${FILE_NUM} \
-  --file-block-size=${FILE_BLOCK_SIZE} \
-  --file-total-size=${FILE_SIZE_TOTAL_VALIDATE} \
-  --file-rw-ra=1.5 \
-  --validate=on\
-  --file-test-mode=rndrw \
-  run
-docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_cleanup.prof \
-  --test=fileio \
-  --num-threads=${NUM_THREADS} \
-  --max-time=${MAX_RUNTIME_SEC} \
-  cleanup >/dev/null
-echo "################################################################################"
-rm -rf ${DIR_RESULTS}/workdir
+#################################################################################
+## Memory tests
+#################################################################################
+#echo "################################################################################"
+#echo "# Memory tests ["$(hostname)"]"
+#echo "################################################################################"
+#docker run --rm -v ${DIR_RESULTS}:/root/results ljishen/sysbench /root/results/output_memory.prof \
+#  --test=memory \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  --memory-total-size=5G \
+#  --memory-oper=read \
+#  run
+#docker run --rm -v ${DIR_RESULTS}:/root/results ljishen/sysbench /root/results/output_memory.prof \
+#  --test=memory \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  --memory-total-size=5G \
+#  --memory-oper=write \
+#  run
+#
+#################################################################################
+## IO tests
+#################################################################################
+#echo "################################################################################"
+#echo "# Sequential IO tests ["$(hostname)"]"
+#echo "################################################################################"
+#docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_prepare.prof \
+#  --test=fileio \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  --file-num=${FILE_NUM} \
+#  --file-block-size=${FILE_BLOCK_SIZE} \
+#  --file-total-size=${FILE_SIZE_TOTAL} \
+#  --file-test-mode=seqrewr \
+#  prepare
+#docker run --rm -v ${DIR_RESULTS}:/root/results -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_seqrewr.prof \
+#  --test=fileio \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  --file-num=${FILE_NUM} \
+#  --file-block-size=${FILE_BLOCK_SIZE} \
+#  --file-total-size=${FILE_SIZE_TOTAL} \
+#  --file-test-mode=seqrewr \
+#  run
+#docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_cleanup.prof \
+#  --test=fileio \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  cleanup >/dev/null
+#
+#echo "################################################################################"
+#echo "# Random IO tests ["$(hostname)"]"
+#echo "################################################################################"
+#docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_prepare.prof \
+#  --test=fileio \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  --file-num=${FILE_NUM} \
+#  --file-block-size=${FILE_BLOCK_SIZE} \
+#  --file-total-size=${FILE_SIZE_TOTAL} \
+#  --file-test-mode=rndrw \
+#  prepare
+#docker run --rm \
+#  -v ${DIR_RESULTS}:/root/results -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_rndrw.prof \
+#  --test=fileio \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  --file-num=${FILE_NUM} \
+#  --file-block-size=${FILE_BLOCK_SIZE} \
+#  --file-total-size=${FILE_SIZE_TOTAL} \
+#  --file-rw-ra=1.5 \
+#  --file-test-mode=rndrw \
+#  run
+#docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_cleanup.prof \
+#  --test=fileio \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  cleanup >/dev/null
+#
+#echo "################################################################################"
+#echo "# Validate IO tests ["$(hostname)"]"
+#echo "################################################################################"
+#docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_prepare.prof \
+#  --test=fileio \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  --file-num=${FILE_NUM} \
+#  --file-block-size=${FILE_BLOCK_SIZE} \
+#  --file-total-size=${FILE_SIZE_TOTAL_VALIDATE} \
+#  --validate=on\
+#  --file-test-mode=rndrw \
+#  prepare
+#docker run --rm \
+#  -v ${DIR_RESULTS}:/root/results -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_rndrw.prof \
+#  --test=fileio \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  --file-num=${FILE_NUM} \
+#  --file-block-size=${FILE_BLOCK_SIZE} \
+#  --file-total-size=${FILE_SIZE_TOTAL_VALIDATE} \
+#  --file-rw-ra=1.5 \
+#  --validate=on\
+#  --file-test-mode=rndrw \
+#  run
+#docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/output_fileio_cleanup.prof \
+#  --test=fileio \
+#  --num-threads=${NUM_THREADS} \
+#  --max-time=${MAX_RUNTIME_SEC} \
+#  cleanup >/dev/null
+#echo "################################################################################"
+#rm -rf ${DIR_RESULTS}/workdir
