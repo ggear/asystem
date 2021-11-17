@@ -7,7 +7,7 @@ cd ${SERVICE_INSTALL} || exit
 user_add() {
   if [ -d "${3}" ]; then
     [ $(grep "${1}" "/etc/passwd" | wc -l) -eq 0 ] && adduser -D "${1}"
-    [ -d "${3}${1}" ] && mkdir -p ${3}{1} && chmod 711 ${3}
+    [ -d "${3}${1}" ] && mkdir -p ${3}${1} && chmod 711 ${3}
     if [ ! -e "${3}${1}/.ssh/authorized_keys" ] || [ $(grep graham "${3}${1}/.ssh/authorized_keys" | wc -l) -eq 0 ]; then
       mkdir -p ${3}${1}/.ssh
       chmod 700 ${3}${1}/.ssh
