@@ -28,6 +28,13 @@ docker run --rm -v ${DIR_RESULTS}:/root/results ljishen/sysbench /root/results/o
   --max-time=${MAX_RUNTIME_SEC} \
   --cpu-max-prime=20000 \
   run
+docker run --rm -v ${DIR_RESULTS}:/root/results ljishen/sysbench /root/results/output_cpu.prof \
+  --test=cpu \
+  --num-threads=${NUM_THREADS_MAX} \
+  --max-time=${MAX_RUNTIME_SEC} \
+  --cpu-max-prime=20000 \
+  parse
+
 
 #################################################################################
 ## Memory tests
