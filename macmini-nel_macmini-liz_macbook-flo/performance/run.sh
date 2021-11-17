@@ -123,7 +123,7 @@ docker run --rm -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/r
   --file-test-mode=rndrw \
   prepare
 docker run --rm \
-  -v ${DIR_RESULTS}:/root/results -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/${MAX_RUNTIME_SEC}s_$(hostname)_fileio_rndrw.prof \
+  -v ${DIR_RESULTS}:/root/results -v ${DIR_RESULTS}/workdir:/root/workdir ljishen/sysbench /root/results/${MAX_RUNTIME_SEC}s_$(hostname)_fileio_rndrw-validate.prof \
   --test=fileio \
   --num-threads=${NUM_THREADS} \
   --max-time=${MAX_RUNTIME_SEC} \
