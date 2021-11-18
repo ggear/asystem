@@ -1,0 +1,3 @@
+machine,limits,benchmark,base_result,lower_is_better,result
+macbook-flo,180s,sysbench_cpu_,6.0761,True,6.0854
+macbook-flo,180s,sysbench_cpu_,6.0761,True,6.0854

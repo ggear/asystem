@@ -15,7 +15,7 @@ fi
 mkdir -p $(dirname $3)
 
 header="machine,limits,benchmark,base_result,lower_is_better,result"
-if [ ! -f "$3" ] || ! grep -q "$header" "$3"; then
+if [ ! -f "$3" ] || ! ggrep -q "$header" "$3"; then
     echo "$header" | tee "$3"
 fi
 
@@ -33,7 +33,7 @@ limits=`echo "$bn" | cut -d _ -f 1`
 
 p_ops="[\d\.]+(?= ops/sec)"
 
-base_res=`grep -oP "$p_ops" $1`
-res=`grep -oP "$p_ops" $2`
+base_res=`ggrep -oP "$p_ops" $1`
+res=`ggrep -oP "$p_ops" $2`
 
 echo "$machine,$limits,sysbench_${test_name}_${opts},$base_res,False,$res" | tee -a "$3"

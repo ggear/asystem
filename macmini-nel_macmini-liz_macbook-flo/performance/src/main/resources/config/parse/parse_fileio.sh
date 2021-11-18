@@ -15,7 +15,7 @@ fi
 mkdir -p $(dirname $3)
 
 header="machine,limits,benchmark,base_result,lower_is_better,result"
-if [ ! -f "$3" ] || ! grep -q "$header" "$3"; then
+if [ ! -f "$3" ] || ! ggrep -q "$header" "$3"; then
     echo "$header" | tee "$3"
 fi
 
@@ -42,12 +42,12 @@ prt() {
 
 # calculate events/min
 kw='total number of events:'
-base_evs=`grep -oP "$(pt "$kw")" $1`
-evs=`grep -oP "$(pt "$kw")" $2`
+base_evs=`ggrep -oP "$(pt "$kw")" $1`
+evs=`ggrep -oP "$(pt "$kw")" $2`
 
 kw='total time:'
-base_res=`grep -oP "$(pt "$kw")"  $1`
-res=`grep -oP "$(pt "$kw")" $2`
+base_res=`ggrep -oP "$(pt "$kw")"  $1`
+res=`ggrep -oP "$(pt "$kw")" $2`
 
 base_res=`echo "scale=4; ${base_evs}/${base_res}*60" | bc`
 res=`echo "scale=4; ${evs}/${res}*60" | bc`
@@ -58,8 +58,8 @@ prt "$desc" "$base_res" "$res" "$3"
 
 # calculate req/min
 kw='writes/s:'
-base_res=`grep -oP "$(pt "$kw")"  $1`
-res=`grep -oP "$(pt "$kw")" $2`
+base_res=`ggrep -oP "$(pt "$kw")"  $1`
+res=`ggrep -oP "$(pt "$kw")" $2`
 
 base_res=`echo "scale=4; ${base_res}*60" | bc`
 res=`echo "scale=4; ${res}*60" | bc`
@@ -78,8 +78,8 @@ fi
 # The proper way to check if a variable is set
 # http://stackoverflow.com/questions/3601515/how-to-check-if-a-variable-is-set-in-bash
 if [ ! -z "${kw+x}" ]; then
-    base_res=`grep -oP "$(pt "$kw")"  $1`
-    res=`grep -oP "$(pt "$kw")" $2`
+    base_res=`ggrep -oP "$(pt "$kw")"  $1`
+    res=`ggrep -oP "$(pt "$kw")" $2`
 
     desc='bw_mib_per_sec'
     prt "$desc" "$base_res" "$res" "$3"
