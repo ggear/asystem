@@ -46,6 +46,21 @@
 #mount -a
 
 ################################################################################
+# Mount options
+################################################################################
+# <file system>                            <mount point>   <type>  <options>                             <dump>  <pass>
+#/dev/mapper/macmini--nel--vg-root          /               ext4    noatime,commit=600,errors=remount-ro  0       1
+#UUID=51e5d8b5-1614-473e-85ce-eea631757e3b  /boot           ext2    noatime,commit=600,defaults           0       2
+#UUID=6B88-1A36                             /boot/efi       vfat    umask=0077                            0       1
+#/dev/mapper/macmini--nel--vg-home          /home           ext4    noatime,commit=600,errors=remount-ro  0       2
+#/dev/mapper/macmini--nel--vg-tmp           /tmp            ext4    noatime,commit=600,errors=remount-ro  0       2
+#/dev/mapper/macmini--nel--vg-var           /var            ext4    noatime,commit=600,errors=remount-ro  0       2
+#/dev/mapper/macmini--nel--vg-swap_1        none            swap    sw                                    0       0
+#UUID=89b36041-a92a-4364-8080-339e84280eb4  /data           ext4    rw,user,exec,auto,async,nofail        0       2
+#/dev/mapper/macmini--nel--vg-docker        /var/lib/docker ext4    noatime,barrier=0,nofail              0       2
+
+
+################################################################################
 # Volumes
 ################################################################################
 vgdisplay
