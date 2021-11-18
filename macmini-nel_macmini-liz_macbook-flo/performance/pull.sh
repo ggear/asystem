@@ -1,6 +1,6 @@
 #!/bin/sh
 
-rm -rf src/main/resources/config
+rm -rf src/main/resources/config/parse*
 mkdir -p src/main/resources/config &&
   cp -rvf ../../../asystem-external/performance/BSFD/benchmarks/sysbench/parse* src/main/resources/config
 
