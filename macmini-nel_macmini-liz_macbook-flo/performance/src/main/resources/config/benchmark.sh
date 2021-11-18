@@ -4,7 +4,7 @@
 # Bootstrap tests
 ################################################################################
 
-DIR_RESULTS=/home/asystem/performance
+DIR_RESULTS=$(ssh root@macbook-flo "find /home/asystem/performance -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")/results
 NUM_THREADS=1
 NUM_THREADS_MAX=4
 MAX_RUNTIME_SEC=180
