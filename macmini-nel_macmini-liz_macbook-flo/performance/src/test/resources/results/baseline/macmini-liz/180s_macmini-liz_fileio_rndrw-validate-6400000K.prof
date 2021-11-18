@@ -24,25 +24,25 @@ Threads started!
 
 
 File operations:
-    reads/s:                      1360.11
-    writes/s:                     906.74
-    fsyncs/s:                     453.37
+    reads/s:                      1396.52
+    writes/s:                     931.02
+    fsyncs/s:                     465.51
 
 Throughput:
-    read, MiB/s:                  42.50
-    written, MiB/s:               28.34
+    read, MiB/s:                  43.64
+    written, MiB/s:               29.09
 
 General statistics:
-    total time:                          4.4114s
+    total time:                          4.2964s
     total number of events:              10000
-    total time taken by event execution: 0.1018s
+    total time taken by event execution: 0.0778s
     response time:
-         min:                                  0.01ms
+         min:                                  0.00ms
          avg:                                  0.01ms
-         max:                                  0.07ms
+         max:                                  0.06ms
          approx.  95 percentile:               0.02ms
 
 Threads fairness:
     events (avg/stddev):           10000.0000/0.00
-    execution time (avg/stddev):   0.1018/0.00
+    execution time (avg/stddev):   0.0778/0.00
 
