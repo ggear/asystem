@@ -215,4 +215,5 @@ journalctl -b | grep -i error |
   grep -v "radeon_pci_probe" |
   grep -v "Clock Unsynchronized" |
   grep -v "/usr/lib/gnupg/scdaemon" |
-  grep -v "v1.aufs" | grep -v "v1.btrfs" | grep -v "v1.devmapper" | grep -v "v1.zfs" | grep -v "devmapper not configured"
+  grep -v "v1.aufs" | grep -v "v1.btrfs" | grep -v "v1.devmapper" | grep -v "v1.zfs" | grep -v "devmapper not configured" ||
+  true
