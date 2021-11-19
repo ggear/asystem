@@ -39,6 +39,7 @@ CONFIG = anode.anode.load_config(
     os.path.join(DIR_MODULE_ROOT, "../../../.env")
 )
 
+print(os.path.join(DIR_MODULE_ROOT, "../../../.env"))
 
 def on_connect(client, user_data, flags, return_code):
     client.subscribe("{}/#".format(CONFIG["publish_push_metadata_topic"]))
