@@ -209,11 +209,21 @@ fi
 ################################################################################
 # Boot
 ################################################################################
-journalctl -b | grep -i error |
-  grep -v "remount-ro" |
-  grep -v "ACPI Error" |
-  grep -v "radeon_pci_probe" |
-  grep -v "Clock Unsynchronized" |
-  grep -v "/usr/lib/gnupg/scdaemon" |
-  grep -v "v1.aufs" | grep -v "v1.btrfs" | grep -v "v1.devmapper" | grep -v "v1.zfs" | grep -v "devmapper not configured" ||
-  true
+BOOT_ERRORS=$(
+  journalctl -b | grep -i error |
+    grep -v "remount-ro" |
+    grep -v "ACPI Error" |
+    grep -v "radeon_pci_probe" |
+    grep -v "Clock Unsynchronized" |
+    grep -v "/usr/lib/gnupg/scdaemon" |
+    grep -v "v1.aufs" | grep -v "v1.btrfs" | grep -v "v1.devmapper" | grep -v "v1.zfs" | grep -v "devmapper not configured"
+)
+echo "################################################################################"
+if [ "${BOOT_ERRORS}" == "" ]; then
+  echo "No Boot errors, yay!"
+else
+  echo "Boot errors encountered, boo!"
+  echo "################################################################################"
+  echo "${BOOT_ERRORS}"
+fi
+echo "################################################################################"
