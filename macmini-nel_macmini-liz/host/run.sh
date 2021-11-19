@@ -40,13 +40,10 @@ apt install -y --allow-downgrades hwinfo=21.72-1
 ################################################################################
 # Defaults
 ################################################################################
-chmod 755 /
 if [ $(grep "net.ipv6.conf.all.disable_ipv6" /etc/sysctl.conf | wc -l) -eq 0 ]; then
   echo "net.ipv6.conf.all.disable_ipv6 = 1" >>/etc/sysctl.conf
   sysctl -p
 fi
-
-/etc/sysctl.conf
 
 ################################################################################
 # Shell
