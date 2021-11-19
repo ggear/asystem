@@ -9,8 +9,8 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   gnupg2=2.2.12-1+deb10u1 \
   wget=1.20.1-1.1 \
   tar=1.30+dfsg-6 \
-  apache2=2.4.38-3+deb10u5 \
-  apache2-utils=2.4.38-3+deb10u5 \
+  apache2=2.4.38-3+deb10u6 \
+  apache2-utils=2.4.38-3+deb10u6 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN pip install --no-cache \
   configobj==5.0.6 \
