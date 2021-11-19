@@ -4,6 +4,7 @@
 # Packages (from update script)
 ################################################################################
 apt udpate
+apt install -y --allow-downgrades ntp=1:4.2.8p15+dfsg-1
 apt install -y --allow-downgrades ntfs-3g=1:2017.3.23AR.3-4+deb11u1
 apt install -y --allow-downgrades acl=2.2.53-10
 apt install -y --allow-downgrades rsync=3.2.3-4+deb11u1
@@ -154,11 +155,11 @@ reflect-ipv=no
 [rlimits]
 EOF
 
-# TODO: Doesnt seem to resolve boot issue as per https://github.com/bus1/dbus-broker/commit/28af5ac996c94922fc49660e0efa955f57575187
-#if [ $(grep dbus.socket /etc/systemd/system/dbus-org.freedesktop.timesync1.service | wc -l) -eq 0 ]; then
-#  sed -i 's/After=systemd-sysusers.service/After=dbus.socket systemd-sysusers.service/g' /etc/systemd/system/dbus-org.freedesktop.timesync1.service
-#  systemctl daemon-reload
-#fi
+################################################################################
+# Time
+################################################################################
+disable systemd-timesyncd
+ntpq -p
 
 ################################################################################
 # Monitoring
