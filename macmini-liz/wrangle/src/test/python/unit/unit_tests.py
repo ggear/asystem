@@ -26,11 +26,11 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
-                        random_subset_rows=True,
+                        random_subset_rows=False,
                         reprocess_all_files=False,
-                        disable_write_stdout=False,
+                        disable_write_stdout=True,
                         disable_upload_files=True,
-                        disable_download_files=True,
+                        disable_download_files=False,
                         )
 
     def test_currency_typical(self):

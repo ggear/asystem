@@ -215,7 +215,10 @@ class Equity(library.Library):
                                     line_index = 0
                                     statement_lines = statement_pages[page_index].split("\n")
                                     if page_index == 0:
-                                        if len(statement_lines) > 1 and statement_lines[0].startswith("Consolidated Statement"):
+                                        if len(statement_lines) > 1 and (
+                                                statement_lines[0].strip().startswith("Consolidated Statement") or
+                                                statement_lines[0].strip().startswith("Statement of MIO Investments")
+                                        ):
                                             statement_data[statement_file_name]['Status'] = STATUS_SUCCESS
                                         elif len(statement_lines) > 1 and "Administration Services" in statement_lines[0]:
                                             statement_data[statement_file_name]['Status'] = STATUS_SKIPPED
