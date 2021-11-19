@@ -42,6 +42,6 @@ done
 INSTALLED="$(apt list 2>/dev/null | column -t | awk -F"/" '{print $1"\t"$2}' | awk '{print "  "$1"="$3""}' | grep -v Listing)"
 echo "" && echo "Run script base package versions:"
 for PACKAGE in ${PACKAGES[@]}; do
-  echo "apt install -y --allow-downgrades "$(echo "${INSTALLED}" | grep " "${PACKAGE}"=")
+  echo "apt install -y --allow-downgrades"$(echo "${INSTALLED}" | grep " "${PACKAGE}"=")
 done
 echo ""
