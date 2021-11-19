@@ -1,0 +1,5 @@
+anode
+weewx
+grafana
+influxdb
+homeassistant

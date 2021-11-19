@@ -1,5 +1,0 @@
-macmini-liz/anode
-macmini-liz/weewx
-macbook-nel/grafana
-macbook-flo/influxdb
-macbook-flo/homeassistant

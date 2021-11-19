@@ -175,12 +175,13 @@ def _clean(context, filter_module=None):
         _run_local(context, "find . -name __pycache__ -prune -exec rm -rf {} \;")
         _run_local(context, "find . -name .coverage -prune -exec rm -rf {} \;")
         _run_local(context, "find . -name Cargo.lock -prune -exec rm -rf {} \;")
-        _run_local(context, "find . -name .DS_Store -prune -exec rm -rf {} \;")
         _print_footer("asystem", "clean transients")
     for module in _get_modules(context, filter_module=filter_module, filter_changes=False):
         _print_header(module, "clean target")
+        _run_local(context, "rm -rf {}/{}/.env".format(DIR_ROOT, module))
         _run_local(context, "rm -rf {}/{}/target".format(DIR_ROOT, module))
         _print_footer(module, "clean target")
+    _run_local(context, "find . -name .DS_Store -exec rm -r {} \;")
 
 
 def _build(context, filter_module=None, is_release=False):
@@ -342,6 +343,15 @@ def _name(module):
     return basename(module)
 
 
+def _get_module_paths(context):
+    module_paths = {}
+    for module_path in _run_local(context, "find {} -not -path '{}/.*' -type d -mindepth 2 -maxdepth 2"
+            .format(DIR_ROOT, DIR_ROOT), hide='out').stdout.strip().split("\n"):
+        module_path_elements = module_path.split("/")
+        module_paths[module_path_elements[-1]] = "{}/{}".format(module_path_elements[-2], module_path_elements[-1])
+    return module_paths
+
+
 def _get_modules(context, filter_path=None, filter_module=None, filter_changes=True):
     if filter_module is None:
         working_modules = []
@@ -398,12 +408,13 @@ def _get_hosts(context, module):
 def _get_dependencies(context, module):
     run_deps = []
     run_deps_path = join(DIR_ROOT, module, "run_deps.txt")
+    module_paths = _get_module_paths(context)
     if isfile(run_deps_path):
         with open(run_deps_path, "r") as run_deps_file:
             for run_dep in run_deps_file:
                 run_dep = run_dep.strip()
                 if run_dep != "" and not run_dep.startswith("#"):
-                    run_deps.append(run_dep)
+                    run_deps.append(module_paths[run_dep] if run_dep in module_paths else run_dep)
     return run_deps + [module]
 
 

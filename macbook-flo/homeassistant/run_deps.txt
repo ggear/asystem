@@ -1,3 +1,0 @@
-macbook-flo/vernemq
-macbook-flo/postgres
-macbook-flo/influxdb
