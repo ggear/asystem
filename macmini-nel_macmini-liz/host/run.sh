@@ -151,11 +151,19 @@ enable-reflector=yes
 reflect-ipv=no
 [rlimits]
 EOF
+[ ! -f /etc/modprobe.d/blacklist-b43.conf ] && echo blacklist b43 | tee -a /etc/modprobe.d/blacklist-b43.conf
 
 ################################################################################
 # Time
 ################################################################################
-disable systemd-timesyncd
+systemctl mask systemd-timesyncd.service
+sed -i 's/0.debian.pool.ntp.org/216.239.35.0/g' /etc/ntp.conf
+sed -i 's/1.debian.pool.ntp.org/216.239.35.4/g' /etc/ntp.conf
+sed -i 's/2.debian.pool.ntp.org/216.239.35.8/g' /etc/ntp.conf
+sed -i 's/3.debian.pool.ntp.org/216.239.35.12/g' /etc/ntp.conf
+systemctl daemon-reload
+systemctl restart ntp.service
+systemctl status ntp.service
 ntpq -p
 
 ################################################################################
@@ -197,3 +205,14 @@ else
   systemctl stop smbd
   systemctl disable smbd
 fi
+
+################################################################################
+# Boot
+################################################################################
+journalctl -b | grep -i error |
+  grep -v "remount-ro" |
+  grep -v "ACPI Error" |
+  grep -v "radeon_pci_probe" |
+  grep -v "Clock Unsynchronized" |
+  grep -v "/usr/lib/gnupg/scdaemon" |
+  grep -v "v1.aufs" | grep -v "v1.btrfs" | grep -v "v1.devmapper" | grep -v "v1.zfs" | grep -v "devmapper not configured"
