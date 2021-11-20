@@ -686,6 +686,15 @@ class Library(object):
                 self.stdout_write(line)
         self.stdout_write()
 
+    def file_list(self, file_dir, file_prefix):
+        files = {}
+        for file_name in os.listdir(file_dir):
+            if file_name.startswith(file_prefix):
+                file_path = os.path.join(file_dir, file_name)
+                files[file_path] = True, True
+                self.print_log("File [{}] found at [{}]".format(file_name, file_path))
+        return files
+
     def stdout_write(self, line=None):
         if line is not None:
             print(line)

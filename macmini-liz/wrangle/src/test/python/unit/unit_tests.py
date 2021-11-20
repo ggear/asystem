@@ -26,11 +26,11 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
-                        random_subset_rows=False,
+                        random_subset_rows=True,
                         reprocess_all_files=False,
-                        disable_write_stdout=True,
+                        disable_write_stdout=False,
                         disable_upload_files=True,
-                        disable_download_files=False,
+                        disable_download_files=True,
                         )
 
     def test_currency_typical(self):
@@ -62,13 +62,13 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 117,
-                    library.CTR_ACT_CURRENT_COLUMNS: 144,
-                    library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
+                    library.CTR_ACT_CURRENT_COLUMNS: 144,
                     library.CTR_ACT_UPDATE_COLUMNS: 108,
+                    library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
         })})
@@ -78,6 +78,10 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 117,
+                },
+            },
+            "counter_greater": {
+                library.CTR_SRC_DATA: {
                     library.CTR_ACT_CURRENT_COLUMNS: 144,
                     library.CTR_ACT_UPDATE_COLUMNS: 144,
                     library.CTR_ACT_DELTA_COLUMNS: 144,
