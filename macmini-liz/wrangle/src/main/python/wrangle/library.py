@@ -619,7 +619,7 @@ class Library(object):
             data_df = Spread(drive_url).sheet_to_df(**sheet_params)
             self.print_log("Dataframe [{}] downloaded from [{}]".format(file_cache, drive_url))
         if not read_cache and write_cache:
-            data_df.to_csv(file_path, encoding='utf-8')
+            data_df.to_csv(file_path, index=False, encoding='utf-8')
             self.print_log("Dataframe [{}] cached at [{}]".format(file_cache, file_path))
         return data_df
 

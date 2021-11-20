@@ -386,6 +386,14 @@ class Equity(library.Library):
                 equity_df = equity_df[~equity_df.index.duplicated(keep='last')]
                 equity_df.index = pd.to_datetime(equity_df.index)
                 equity_df = equity_df.sort_index(axis=1)
+                equity_df_manual = self.sheet_read(DRIVE_URL, "Equity_manual",
+                                                   read_cache=library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES),
+                                                   sheet_params={"sheet": "Manual", "index": None, "start_row": 1})
+                equity_df_manual.index = pd.to_datetime(equity_df_manual["Date"])
+                del equity_df_manual["Date"]
+                equity_df_manual = equity_df_manual.apply(pd.to_numeric)
+                equity_df.update(equity_df_manual)
+                equity_df = equity_df.sort_index(axis=1).interpolate(limit_direction='both', limit_area='inside')
         except Exception as exception:
             self.print_log("Unexpected error processing equity dataframe", exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
