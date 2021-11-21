@@ -20,43 +20,42 @@
 # Install SSH server, standard sys utils
 
 ################################################################################
-# Bootstrap system
-################################################################################
-# Enable remote root login : /etc/ssh/sshd_config PermitRootLogin yes
-
-################################################################################
 # Install packages
 ################################################################################
-# Run run_packages.sh
-# Run run_upgrade.sh
-# Run run_packages.sh
-# Run run_update.sh
+# Run apt-get install commands of run.sh, ignore errors (eg docker/containerio)
 
 ################################################################################
-# Storage format
+# Bootstrap system
 ################################################################################
-# Second HDD (1.9TB), single partition and added to fstab as per:
-#fdisk -l
-#blkid /dev/sdb
-#fdisk /dev/sdb
-#mkfs.ext4 -j /dev/sdb1
-#blkid /dev/sdb1
-#blkid | grep " UUID=" | grep -v mapper | grep -v PARTLABEL | grep BLOCK_SIZE
-#echo "UUID=89b36041-a92a-4364-8080-339e84280eb4  /data           ext4    rw,user,exec,auto,async,nofail        0       2" >>/etc/fstab
-#mount -a
+sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+systemctl restart ssh
 
 ################################################################################
-# Mount options
+# Network USB
 ################################################################################
-# <file system>                            <mount point>   <type>  <options>                             <dump>  <pass>
-#/dev/mapper/macmini--nel--vg-root          /               ext4    noatime,commit=600,errors=remount-ro  0       1
-#UUID=51e5d8b5-1614-473e-85ce-eea631757e3b  /boot           ext2    noatime,defaults                      0       2
-#UUID=6B88-1A36                             /boot/efi       vfat    umask=0077                            0       1
-#/dev/mapper/macmini--nel--vg-home          /home           ext4    noatime,commit=600,errors=remount-ro  0       2
-#/dev/mapper/macmini--nel--vg-tmp           /tmp            ext4    noatime,commit=600,errors=remount-ro  0       2
-#/dev/mapper/macmini--nel--vg-var           /var            ext4    noatime,commit=600,errors=remount-ro  0       2
-#/dev/mapper/macmini--nel--vg-swap_1        none            swap    sw                                    0       0
-#UUID=89b36041-a92a-4364-8080-339e84280eb4  /data           ext4    rw,user,exec,auto,async,nofail        0       2
+ip a | grep 192
+lshw -C network -short
+ifconfig enx00e04c680421
+cat <<EOF >>/etc/network/interfaces
+
+allow-hotplug enx00e04c680421
+iface enx00e04c680421 inet dhcp
+
+EOF
+ifup -a
+ip a | grep 192
+
+################################################################################
+# Install HDD
+################################################################################
+fdisk -l
+blkid /dev/sdb
+fdisk /dev/sdx
+mkfs.ext4 -j /dev/sdx1
+blkid /dev/sdx1
+blkid | grep " UUID=" | grep -v mapper | grep -v PARTLABEL | grep BLOCK_SIZE
+echo "UUID=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX  /data           ext4    rw,user,exec,auto,async,nofail        0       2" >>/etc/fstab
+mount -a
 
 ################################################################################
 # Volumes
@@ -84,25 +83,22 @@ df -h /var/lib/docker
 vgdisplay
 
 ################################################################################
-# Network
+# Mount options
 ################################################################################
-ip a | grep 192
-lshw -C network -short
-ifconfig enx00e04c680421
-cat <<EOF >>/etc/network/interfaces
-
-allow-hotplug enx00e04c680421
-iface enx00e04c680421 inet dhcp
-
-EOF
-ifup -a
-ip a | grep 192
+# <file system>                            <mount point>   <type>  <options>                             <dump>  <pass>
+#/dev/mapper/macmini--nel--vg-root          /               ext4    noatime,commit=600,errors=remount-ro  0       1
+#UUID=51e5d8b5-1614-473e-85ce-eea631757e3b  /boot           ext2    noatime,defaults                      0       2
+#UUID=6B88-1A36                             /boot/efi       vfat    umask=0077                            0       1
+#/dev/mapper/macmini--nel--vg-home          /home           ext4    noatime,commit=600,errors=remount-ro  0       2
+#/dev/mapper/macmini--nel--vg-tmp           /tmp            ext4    noatime,commit=600,errors=remount-ro  0       2
+#/dev/mapper/macmini--nel--vg-var           /var            ext4    noatime,commit=600,errors=remount-ro  0       2
+#/dev/mapper/macmini--nel--vg-swap_1        none            swap    sw                                    0       0
+#UUID=89b36041-a92a-4364-8080-339e84280eb4  /data           ext4    rw,user,exec,auto,async,nofail        0       2
 
 ################################################################################
 # Normalisation
 ################################################################################
-# fab release ./macmini-nel_macmini-liz_macbook-flo/host
-# fab release ./macmini-nel_macmini-liz_macbook-flo/keys
-# fab release ./macmini-nel_macmini-liz_macbook-flo/monitor
-# fab release ./udm-rack_macmini-liz_macmini-nel_macbook-flo/host
-# fab release ./udm-rack_macmini-liz_macmini-nel_macbook-flo/users
+cd /Users/graham/_/dev/asystem/macmini-nel_macmini-liz/host-debian && fab release
+cd /Users/graham/_/dev/asystem/macmini-nel_macmini-liz_macbook-flo/host-keys && fab release
+cd /Users/graham/_/dev/asystem/udm-rack_macmini-liz_macmini-nel_macbook-flo/host-home && fab release
+cd /Users/graham/_/dev/asystem/udm-rack_macmini-liz_macmini-nel_macbook-flo/host-users && fab release
