@@ -199,17 +199,6 @@ if [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq
 fi
 
 ################################################################################
-# Samba
-################################################################################
-if [ -e /dev/sdb ]; then
-  systemctl start smbd
-  systemctl enable smbd
-else
-  systemctl stop smbd
-  systemctl disable smbd
-fi
-
-################################################################################
 # Boot
 ################################################################################
 BOOT_ERRORS=$(

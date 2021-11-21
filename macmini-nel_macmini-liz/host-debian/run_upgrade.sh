@@ -4,10 +4,10 @@
 # Upgrade system
 ################################################################################
 echo "" && cat /etc/debian_version && echo ""
-apt update
-apt upgrade -y --without-new-pkgs
-apt -y full-upgrade
-apt -y --purge autoremove
+apt-get update
+apt-get upgrade -y --without-new-pkgs
+apt-get -y full-upgrade
+apt-get -y --purge autoremove
 echo "" && cat /etc/debian_version && echo ""
 
 ################################################################################
@@ -36,8 +36,8 @@ curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/
 # Upgrade system
 ################################################################################
 echo "" && cat /etc/debian_version && echo ""
-apt update
-apt upgrade -y --without-new-pkgs
-apt -y full-upgrade
-apt -y --purge autoremove
+apt-get update
+apt-get upgrade -y --without-new-pkgs
+apt-get -y full-upgrade
+apt-get -y --purge autoremove
 echo "" && cat /etc/debian_version && echo ""
