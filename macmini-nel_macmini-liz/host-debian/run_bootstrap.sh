@@ -84,7 +84,22 @@ df -h /var/lib/docker
 vgdisplay
 
 ################################################################################
-# Norm installs
+# Network
+################################################################################
+ip a | grep 192
+lshw -C network -short
+ifconfig enx00e04c680421
+cat <<EOF >>/etc/network/interfaces
+
+allow-hotplug enx00e04c680421
+iface enx00e04c680421 inet dhcp
+
+EOF
+ifup -a
+ip a | grep 192
+
+################################################################################
+# Normalisation
 ################################################################################
 # fab release ./macmini-nel_macmini-liz_macbook-flo/host
 # fab release ./macmini-nel_macmini-liz_macbook-flo/keys

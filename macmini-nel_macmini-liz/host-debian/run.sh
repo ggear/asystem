@@ -22,9 +22,9 @@ apt-get install -y --allow-downgrades apt-transport-https=2.2.4
 apt-get install -y --allow-downgrades ca-certificates=20210119
 apt-get install -y --allow-downgrades gnupg-agent=2.2.27-2
 apt-get install -y --allow-downgrades software-properties-common=0.96.20.2-2.1
-apt-get install -y --allow-downgrades docker-ce=5:20.10.10~3-0~debian-bullseye
-apt-get install -y --allow-downgrades docker-ce-cli=5:20.10.10~3-0~debian-bullseye
-apt-get install -y --allow-downgrades containerd.io=1.4.11-1
+apt-get install -y --allow-downgrades docker-ce=5:20.10.11~3-0~debian-bullseye
+apt-get install -y --allow-downgrades docker-ce-cli=5:20.10.11~3-0~debian-bullseye
+apt-get install -y --allow-downgrades containerd.io=1.4.12-1
 apt-get install -y --allow-downgrades cifs-utils=2:6.11-3.1
 apt-get install -y --allow-downgrades samba=2:4.13.13+dfsg-1~deb11u2
 apt-get install -y --allow-downgrades smbclient=2:4.13.13+dfsg-1~deb11u2
@@ -35,7 +35,10 @@ apt-get install -y --allow-downgrades stress-ng=0.12.06-1
 apt-get install -y --allow-downgrades memtester=4.5.0-1
 apt-get install -y --allow-downgrades linux-cpupower=5.10.70-1
 apt-get install -y --allow-downgrades intel-microcode=3.20210608.2
+apt-get install -y --allow-downgrades firmware-realtek=20210315-3
+apt-get install -y --allow-downgrades firmware-linux-nonfree=20210315-3
 apt-get install -y --allow-downgrades hwinfo=21.72-1
+apt-get install -y --allow-downgrades lshw=02.18.85-0.7
 
 ################################################################################
 # Defaults
@@ -216,7 +219,7 @@ BOOT_ERRORS=$(
     grep -v "radeon_pci_probe" |
     grep -v "Clock Unsynchronized" |
     grep -v "/usr/lib/gnupg/scdaemon" |
-    grep -v "v1.aufs" | grep -v "v1.btrfs" | grep -v "v1.devmapper" | grep -v "v1.zfs" | grep -v "devmapper not configured"
+    grep -v "dockerd" | grep -v "containerd"
 )
 echo "################################################################################"
 if [ "${BOOT_ERRORS}" == "" ]; then

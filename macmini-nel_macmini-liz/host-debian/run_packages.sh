@@ -35,12 +35,15 @@ PACKAGES=(
   memtester
   linux-cpupower
   intel-microcode
+  firmware-realtek
+  firmware-linux-nonfree
   hwinfo
+  lshw
 )
 for PACKAGE in ${PACKAGES[@]}; do
   apt-get install -y ${PACKAGE}
 done
-INSTALLED="$(apt-get list 2>/dev/null | column -t | awk -F"/" '{print $1"\t"$2}' | awk '{print "  "$1"="$3""}' | grep -v Listing)"
+INSTALLED="$(apt list 2>/dev/null | column -t | awk -F"/" '{print $1"\t"$2}' | awk '{print "  "$1"="$3""}' | grep -v Listing)"
 echo "" && echo "Run script base package versions:"
 for PACKAGE in ${PACKAGES[@]}; do
   echo "apt-get install -y --allow-downgrades"$(echo "${INSTALLED}" | grep " "${PACKAGE}"=")
