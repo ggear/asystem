@@ -38,6 +38,7 @@ RUN python ./setup.py install
 RUN cp -f /home/weewx/weewx.conf /data
 COPY src/main/python/weewx/weewx_anode_plugin.py /home/weewx/bin/user
 COPY src/main/resources/entrypoint.sh ./
+
 EXPOSE 80
 VOLUME ["/data"]
 

@@ -1,4 +1,4 @@
-//ASDASHBOARD_DEFAULTS time_from='now-6M', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+//ASDASHBOARD_DEFAULTS time_from='now-9M', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
 {
       graphs()::
 
@@ -155,7 +155,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
@@ -173,7 +173,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
@@ -191,7 +191,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
@@ -372,7 +372,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
                   ')).addTarget(influxdb.target(query='
@@ -389,7 +389,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
                   ')).addTarget(influxdb.target(query='
@@ -406,7 +406,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
                   '))
@@ -481,7 +481,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -496,7 +496,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -511,7 +511,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -526,7 +526,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -541,7 +541,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -556,7 +556,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   '))

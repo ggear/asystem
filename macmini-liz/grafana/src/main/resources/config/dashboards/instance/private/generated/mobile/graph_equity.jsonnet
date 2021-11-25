@@ -144,7 +144,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
@@ -162,7 +162,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
@@ -180,7 +180,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
@@ -333,7 +333,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
                   ')).addTarget(influxdb.target(query='
@@ -350,7 +350,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
                   ')).addTarget(influxdb.target(query='
@@ -367,7 +367,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.title(v: field)})
                   '))
@@ -420,7 +420,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -435,7 +435,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -450,7 +450,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -465,7 +465,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -480,7 +480,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
@@ -495,7 +495,7 @@ series = from(bucket: "data_private")
 baseline = series
   |> findRecord(fn: (key) => true, idx: 0)
 series
-  |> map(fn: (r) => ({ r with _value: (baseline._value - r._value) / baseline._value * 100.0 }))
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   '))

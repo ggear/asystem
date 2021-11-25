@@ -28,6 +28,7 @@ PACKAGES=(
   cifs-utils
   samba
   smbclient
+  inotify-tools
   htop
   iotop
   hdparm

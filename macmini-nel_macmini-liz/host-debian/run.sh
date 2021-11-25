@@ -28,6 +28,7 @@ apt-get install -y --allow-downgrades containerd.io=1.4.12-1
 apt-get install -y --allow-downgrades cifs-utils=2:6.11-3.1
 apt-get install -y --allow-downgrades samba=2:4.13.13+dfsg-1~deb11u2
 apt-get install -y --allow-downgrades smbclient=2:4.13.13+dfsg-1~deb11u2
+apt-get install -y --allow-downgrades inotify-tools=3.14-8.1
 apt-get install -y --allow-downgrades htop=3.0.5-7
 apt-get install -y --allow-downgrades iotop=0.6-24-g733f3f8-1.1
 apt-get install -y --allow-downgrades hdparm=9.60+ds-1
