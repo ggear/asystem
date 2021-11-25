@@ -27,6 +27,7 @@ PACKAGES=(
   containerd.io
   cifs-utils
   samba
+  cups
   smbclient
   inotify-tools
   htop
@@ -35,11 +36,12 @@ PACKAGES=(
   stress-ng
   memtester
   linux-cpupower
-  intel-microcode
   firmware-realtek
   firmware-linux-nonfree
   hwinfo
   lshw
+  libc6-i386
+  intel-microcode
 )
 for PACKAGE in ${PACKAGES[@]}; do
   apt-get install -y ${PACKAGE}
