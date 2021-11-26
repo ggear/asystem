@@ -21,7 +21,6 @@ if [ -f "docker-compose.yml" ]; then
   docker wait "${SERVICE_NAME}" >/dev/null 2>&1
   docker system prune --volumes -f 2>&1 >/dev/null
 fi
-[ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
 if [ ! -d "$SERVICE_HOME" ]; then
   if [ -d "$SERVICE_HOME_OLD" ]; then
     cp -rvfp "$SERVICE_HOME_OLD" "$SERVICE_HOME"
@@ -34,6 +33,7 @@ fi
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
 chmod 600 .env
+[ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
 [ -f "docker-compose.yml" ] && docker-compose --compatibility --no-ansi up --force-recreate -d && sleep 2
 [ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
 if [ -f "docker-compose.yml" ]; then
