@@ -164,7 +164,8 @@
         max2,
         decimals=(if decimalsY2 != null then decimalsY2 else decimals),
         logBase=logBase2Y,
-        label=labelY2
+        label=labelY2,
+        show=false
       ),
     ],
 

@@ -140,7 +140,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'tablet'],
-                        time_from='now-9M', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+                        time_from='now-12M', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
                   )
                   .addPanels(graph_equity.graphs()),
 

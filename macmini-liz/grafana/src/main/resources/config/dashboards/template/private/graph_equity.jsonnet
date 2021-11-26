@@ -1,4 +1,4 @@
-//ASDASHBOARD_DEFAULTS time_from='now-9M', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
+//ASDASHBOARD_DEFAULTS time_from='now-12M', refresh='', timepicker=timepicker.new(refresh_intervals=['15m'], time_options=['7d', '30d', '90d', '180d', '1y', '5y', '10y', '25y', '50y'])
 {
       graphs()::
 
@@ -158,7 +158,7 @@ series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.title(v: field)})
+  |> rename(columns: { _value: strings.title(v: field) })
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "holdings"
@@ -176,7 +176,7 @@ series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.title(v: field)})
+  |> rename(columns: { _value: strings.title(v: field) })
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "baseline"
@@ -194,7 +194,7 @@ series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> last()
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.title(v: field)})
+  |> rename(columns: { _value: strings.title(v: field) })
                   '))
 //ASM                 { gridPos: { x: 0, y: 26, w: 24, h: 8 } }
 //AST                 { gridPos: { x: 15, y: 2, w: 9, h: 8 } }
@@ -304,42 +304,58 @@ from(bucket: "data_private")
                   ,
 
                   graph.new(
-                        title='Holdings Monthly Deltas',
+                        title='Holdings Value',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
-                        bars=true,
-                        lines=false,
+                        bars=false,
+                        lines=true,
                         staircase=false,
                         formatY1='currencyUSD',
+                        formatY2='currencyUSD',
+                        decimalsY1=0,
                         decimals=2,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
-//ASD                   legend_current=true,
+//ASD                   legend_current=false,
 //ASD                   legend_total=false,
-//ASD                   legend_avg=false,
+//ASD                   legend_avg=true,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
 //ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_private")
-  |> range(start: -90d, stop: v.timeRangeStop)
+  |> range(start: time(v: int(v: v.timeRangeStart) - int(v: 1mo)), stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
   |> filter(fn: (r) => r["_field"] == "holdings")
   |> filter(fn: (r) => r["period"] == "30d")
   |> filter(fn: (r) => r["type"] == "price-change-spot")
-  |> aggregateWindow(every:  1mo, fn: mean)
+  |> aggregateWindow(every:  1mo, fn: last)
   |> keep(columns: ["_time", "_value"])
-                  '))
+  |> rename(columns: { _value: "Monthly Delta"})
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == "holdings")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: "Daily Value"})
+                  ')).addSeriesOverride(
+                        { "alias": "/.*Monthly.*/", "steppedLine": true, "yaxis": 1 }
+                  ).addSeriesOverride(
+                        { "alias": "/.*Daily.*/", "steppedLine": false, "yaxis": 2 }
+                  )
 //ASM                 { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
 //AST                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
 //ASD                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
                   ,
 
                   graph.new(
-                        title='Portfolio Range Deltas',
+                        title='Portfolio Deltas',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -347,13 +363,13 @@ from(bucket: "data_private")
                         lines=true,
                         staircase=false,
                         formatY1='percent',
-                        decimals=2,
+                        decimals=0,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
-//ASD                   legend_current=true,
+//ASD                   legend_current=false,
 //ASD                   legend_total=false,
-//ASD                   legend_avg=false,
+//ASD                   legend_avg=true,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
 //ASD                   legend_sideWidth=330,
@@ -374,7 +390,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.title(v: field)})
+  |> rename(columns: { _value: strings.title(v: field) })
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "holdings"
@@ -391,7 +407,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.title(v: field)})
+  |> rename(columns: { _value: strings.title(v: field) })
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "baseline"
@@ -408,7 +424,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.title(v: field)})
+  |> rename(columns: { _value: strings.title(v: field) })
                   '))
 //ASM                 { gridPos: { x: 0, y: 41, w: 24, h: 7 } }
 //AST                 { gridPos: { x: 0, y: 22, w: 24, h: 12 } }
@@ -416,41 +432,7 @@ series
                   ,
 
                   graph.new(
-                        title='Holdings Value',
-                        datasource='InfluxDB_V2',
-                        fill=0,
-                        format='',
-                        bars=false,
-                        lines=true,
-                        staircase=false,
-                        formatY1='currencyUSD',
-                        decimals=2,
-//ASD                   legend_values=true,
-//ASD                   legend_min=true,
-//ASD                   legend_max=true,
-//ASD                   legend_current=true,
-//ASD                   legend_total=false,
-//ASD                   legend_avg=false,
-//ASD                   legend_alignAsTable=true,
-//ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=330,
-                        maxDataPoints=10000
-                  ).addTarget(influxdb.target(query='
-from(bucket: "data_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "equity")
-  |> filter(fn: (r) => r["_field"] == "holdings")
-  |> filter(fn: (r) => r["period"] == "1d")
-  |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> keep(columns: ["_time", "_value"])
-                  '))
-//ASM                 { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
-//AST                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
-//ASD                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
-                  ,
-
-                  graph.new(
-                        title='MIO Range Deltas',
+                        title='Equities Deltas',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -458,13 +440,207 @@ from(bucket: "data_private")
                         lines=true,
                         staircase=false,
                         formatY1='percent',
-                        decimals=2,
+                        decimals=0,
 //ASD                   legend_values=true,
 //ASD                   legend_min=true,
 //ASD                   legend_max=true,
-//ASD                   legend_current=true,
+//ASD                   legend_current=false,
 //ASD                   legend_total=false,
-//ASD                   legend_avg=false,
+//ASD                   legend_avg=true,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=330,
+                        maxDataPoints=10000
+                  ).addTarget(influxdb.target(query='
+import "strings"
+field = "clne"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "erth"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "gold"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "iaf"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "mck"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "msg"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "muk"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "mus"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "vae"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "vas"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "vdhg"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "vhy"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) })
+                  '))
+//ASM                 { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
+//AST                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
+//ASD                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
+                  ,
+
+                  graph.new(
+                        title='MIO Deltas',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        formatY1='percent',
+                        decimals=0,
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=false,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=true,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
 //ASD                   legend_sideWidth=330,
@@ -483,7 +659,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+  |> rename(columns: { _value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "muk"
@@ -498,7 +674,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+  |> rename(columns: { _value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "mus"
@@ -513,7 +689,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+  |> rename(columns: { _value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "mus"
@@ -528,7 +704,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+  |> rename(columns: { _value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "msg"
@@ -543,7 +719,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+  |> rename(columns: { _value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "msg"
@@ -558,7 +734,7 @@ baseline = series
 series
   |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+  |> rename(columns: { _value: strings.toUpper(v: field) + " " + strings.title(v: type)})
                   '))
 //ASM                 { gridPos: { x: 0, y: 48, w: 24, h: 7 } }
 //AST                 { gridPos: { x: 0, y: 34, w: 24, h: 12 } }
