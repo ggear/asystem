@@ -40,9 +40,11 @@ PACKAGES=(
   firmware-linux-nonfree
   hwinfo
   lshw
+  powertop
   libc6-i386
   intel-microcode
 )
+apt-get update
 for PACKAGE in ${PACKAGES[@]}; do
   apt-get install -y ${PACKAGE}
 done
