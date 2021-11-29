@@ -11,7 +11,7 @@ sys.path.insert(0, DIR_MODULE_ROOT)
 from anode.metadata.build import load
 
 if __name__ == "__main__":
-    sensors = load()
+    sensors = load(os.path.join(DIR_MODULE_ROOT, "../../../.env"))
     with open(DIR_MODULE_ROOT + "/../../main/resources/config/customize.yaml", "w") as file:
         for group in sensors:
             for domain in sensors[group]:

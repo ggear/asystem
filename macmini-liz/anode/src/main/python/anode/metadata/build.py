@@ -1,12 +1,8 @@
-import glob
 import os
 import sys
 
 DIR_MODULE_ROOT = os.path.abspath("{}/../..".format(os.path.dirname(os.path.realpath(__file__))))
 DIR_ROOT = os.path.abspath("{}/../../../../../".format(DIR_MODULE_ROOT))
-for dir_module in glob.glob("{}/*/*/".format(DIR_ROOT)):
-    if dir_module.split("/")[-2] == "vernemq":
-        HOST_VERNEMQ = dir_module.split("/")[-3]
 sys.path.insert(0, DIR_MODULE_ROOT)
 
 import json
@@ -20,6 +16,7 @@ from collections import OrderedDict
 
 TIME_WAIT_SECS = 2
 
+ENV = {}
 SENSORS = {}
 SENSORS_HEADER = [
     "Index ID",
@@ -34,15 +31,9 @@ SENSORS_HEADER = [
     "Entity Topic"
 ]
 
-CONFIG = anode.anode.load_config(
-    os.path.join(DIR_MODULE_ROOT, "../resources/config/anode.yaml"),
-    os.path.join(DIR_MODULE_ROOT, "../../../.env")
-)
-
-print(os.path.join(DIR_MODULE_ROOT, "../../../.env"))
 
 def on_connect(client, user_data, flags, return_code):
-    client.subscribe("{}/#".format(CONFIG["publish_push_metadata_topic"]))
+    client.subscribe("{}/#".format(ENV["VERNEMQ_PORT"]))
 
 
 def on_message(client, user_data, message):
@@ -77,8 +68,11 @@ def on_message(client, user_data, message):
         print(exception)
 
 
-def load():
+def load(env_path):
     print("Metadata script [anode] sensor load")
+    if os.path.isfile(env_path):
+        with open(env_path, 'r') as env_file:
+            ENV = anode.anode.load_profile(env_file)
     file_sensor = "{}/../resources/metadata/sensor.csv".format(DIR_MODULE_ROOT)
     if os.path.isfile(file_sensor):
         with open(file_sensor, "r") as file:
@@ -90,7 +84,7 @@ def load():
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_message = on_message
-    client.connect(HOST_VERNEMQ, CONFIG["publish_port"], 60)
+    client.connect(ENV["VERNEMQ_IP_PROD"], ENV["VERNEMQ_PORT"], 60)
     time_start = time.time()
     while True:
         client.loop()
@@ -124,4 +118,4 @@ def mode():
 
 
 if __name__ == "__main__":
-    sensors = load()
+    sensors = load(os.path.join(DIR_MODULE_ROOT, "../../../.env"))

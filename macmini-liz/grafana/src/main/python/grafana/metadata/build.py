@@ -22,7 +22,7 @@ PREFIX_DESKTOP = PREFIX + "D"
 PREFIX_DASHBOARD_DEFAULTS = PREFIX + "DASHBOARD_DEFAULTS "
 
 if __name__ == "__main__":
-    sensors = load()
+    sensors = load(os.path.join(DIR_MODULE_ROOT, "../../../.env"))
     for group in sensors:
         with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/graph_{}.jsonnet".format(group.lower()), "w") as file:
             file.write((PREFIX_DASHBOARD_DEFAULTS + "time_from='now-7d', refresh='', "
