@@ -8,6 +8,7 @@ import os
 from collections import OrderedDict
 from datetime import datetime
 
+import numpy as np
 import pandas as pd
 import pdftotext
 import pytz
@@ -456,6 +457,7 @@ class Equity(library.Library):
                 index_weights = self.sheet_read(DRIVE_URL_PORTFOLIO, "Index_weights",
                                                 read_cache=library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES),
                                                 sheet_params={"sheet": "Indexes", "index": None, "start_row": 2})
+                index_weights = index_weights.replace('#N/A', np.nan)
                 index_weights = index_weights.set_index(index_weights["Exchange Symbol"]).sort_index()
                 index_weights = index_weights[["Holdings Quantity", "Watch Quantity", "Baseline Quantity"]]
                 index_weights.columns = index_weights.columns.str.rstrip(' Quantity')
