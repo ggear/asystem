@@ -71,11 +71,11 @@ pd.options.mode.chained_assignment = None
 
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 
-ENV_ENABLE_LOG = 'WRANGLE_ENABLE_LOG'
-ENV_RANDOM_SUBSET_ROWS = 'WRANGLE_RANDOM_SUBSET_ROWS'
-ENV_REPROCESS_ALL_FILES = 'WRANGLE_REPROCESS_ALL_FILES'
-ENV_DISABLE_UPLOAD_FILES = 'WRANGLE_DISABLE_UPLOAD_FILES'
-ENV_DISABLE_DOWNLOAD_FILES = 'WRANGLE_DISABLE_DOWNLOAD_FILES'
+WRANGLE_ENABLE_LOG = 'WRANGLE_ENABLE_LOG'
+WRANGLE_RANDOM_SUBSET_ROWS = 'WRANGLE_RANDOM_SUBSET_ROWS'
+WRANGLE_REPROCESS_ALL_FILES = 'WRANGLE_REPROCESS_ALL_FILES'
+WRANGLE_DISABLE_UPLOAD_FILES = 'WRANGLE_DISABLE_UPLOAD_FILES'
+WRANGLE_DISABLE_DOWNLOAD_FILES = 'WRANGLE_DISABLE_DOWNLOAD_FILES'
 
 
 def is_true(variable, default=False):
@@ -83,7 +83,7 @@ def is_true(variable, default=False):
 
 
 def print_log(process, message, exception=None, level="debug"):
-    if is_true(ENV_ENABLE_LOG):
+    if is_true(WRANGLE_ENABLE_LOG):
         prefix = "{} [{}] [{}]: " \
             .format(level.upper() if exception is None else 'ERROR', process, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
         if type(message) is not list:
@@ -522,7 +522,7 @@ class Library(object):
         file_previous = os.path.abspath("{}/__{}_Previous.csv".format(self.input, self.name.title()))
         if not os.path.isdir(self.input):
             os.makedirs(self.input)
-        if not only_load and is_true(ENV_REPROCESS_ALL_FILES):
+        if not only_load and is_true(WRANGLE_REPROCESS_ALL_FILES):
             if os.path.isfile(file_current):
                 os.remove(file_current)
         data_df_current = pd.read_csv(file_current, index_col=0, dtype=str) if os.path.isfile(file_current) else pd.DataFrame()
@@ -580,7 +580,7 @@ class Library(object):
 
     def state_write(self):
         try:
-            if not is_true(ENV_DISABLE_UPLOAD_FILES):
+            if not is_true(WRANGLE_DISABLE_UPLOAD_FILES):
                 self.drive_sync(self.input_drive, self.input, check=True, download=False, upload=True)
                 self.print_log("Directory [{}] uploaded to [https://drive.google.com/drive/folders/{}]"
                                .format(os.path.basename(self.input), self.input_drive))
@@ -592,7 +592,7 @@ class Library(object):
         try:
             data = MediaFileUpload(local_file)
             metadata = {'modifiedTime': datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
-            if not is_true(ENV_DISABLE_UPLOAD_FILES):
+            if not is_true(WRANGLE_DISABLE_UPLOAD_FILES):
                 if drive_id is None:
                     metadata['name'] = os.path.basename(local_file)
                     metadata['parents'] = [drive_dir]
@@ -625,7 +625,7 @@ class Library(object):
 
     def sheet_write(self, data_df, drive_url, sheet_params={}):
         try:
-            if not is_true(ENV_DISABLE_UPLOAD_FILES):
+            if not is_true(WRANGLE_DISABLE_UPLOAD_FILES):
                 Spread(drive_url).df_to_sheet(data_df, **sheet_params)
                 self.print_log("Dataframe uploaded to [{}]".format(drive_url))
                 self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
@@ -666,7 +666,7 @@ class Library(object):
     def database_write(self, data_df, global_tags={}):
         lines = []
         try:
-            if is_true(ENV_RANDOM_SUBSET_ROWS) and len(data_df) > 0:
+            if is_true(WRANGLE_RANDOM_SUBSET_ROWS) and len(data_df) > 0:
                 data_df = data_df.sample(1, replace=True).sort_index()
             column_rename = {}
             for column in data_df.columns:

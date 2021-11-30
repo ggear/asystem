@@ -127,14 +127,14 @@ class Equity(library.Library):
         equity_delta_df = pd.DataFrame()
         stock_files = {}
         statement_files = {}
-        if not library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES):
+        if not library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES):
             for stock in STOCK:
                 today = datetime.today()
                 stock_start = datetime.strptime(STOCK[stock]["start"], '%Y-%m')
                 for year in range(stock_start.year, today.year + 1):
                     if year == today.year:
-                        for month in range(1 if year == stock_start.year else 1, today.month + 1):
-                            if month >= stock_start.month:
+                        for month in range(1, today.month + 1):
+                            if year != stock_start.year or month >= stock_start.month:
                                 file_name = "{}/Yahoo_{}_{}-{:02}.csv".format(self.input, stock, year, month)
                                 stock_files[file_name] = self.stock_download(
                                     file_name,
@@ -166,19 +166,19 @@ class Equity(library.Library):
                 if os.path.basename(file_name).startswith("58861"):
                     statement_files[file_name] = files[file_name]
                 elif os.path.basename(file_name).startswith("Yahoo"):
-                    if files[file_name][0] and (library.is_true(library.ENV_REPROCESS_ALL_FILES) or files[file_name][1]):
+                    if files[file_name][0] and (library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or files[file_name][1]):
                         stock_files[file_name] = files[file_name]
-            new_data = library.is_true(library.ENV_REPROCESS_ALL_FILES) or \
+            new_data = library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or \
                        (all([status[0] for status in stock_files.values()]) and any([status[1] for status in stock_files.values()])) or \
                        (all([status[0] for status in statement_files.values()]) and any([status[1] for status in statement_files.values()]))
-        elif library.is_true(library.ENV_REPROCESS_ALL_FILES):
+        elif library.is_true(library.WRANGLE_REPROCESS_ALL_FILES):
             stock_files = self.file_list(self.input, "Yahoo")
             statement_files = self.file_list(self.input, "58861")
             new_data = stock_files or statement_files
         stocks_df = {}
         for stock_file_name in stock_files:
             if stock_files[stock_file_name][0]:
-                if library.is_true(library.ENV_REPROCESS_ALL_FILES) or stock_files[stock_file_name][1]:
+                if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or stock_files[stock_file_name][1]:
                     try:
                         stock_ticker = os.path.basename(stock_file_name).split('_')[1]
                         stock_df = pd.read_csv(stock_file_name) \
@@ -202,7 +202,7 @@ class Equity(library.Library):
         statement_data = {}
         for statement_file_name in statement_files:
             if statement_files[statement_file_name][0]:
-                if library.is_true(library.ENV_REPROCESS_ALL_FILES) or statement_files[statement_file_name][1]:
+                if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or statement_files[statement_file_name][1]:
                     with open(statement_file_name, "rb") as statement_file:
                         statement_data[statement_file_name] = {}
                         try:
@@ -388,7 +388,7 @@ class Equity(library.Library):
                 equity_df.index = pd.to_datetime(equity_df.index)
                 equity_df = equity_df.sort_index(axis=1)
                 equity_df_manual = self.sheet_read(DRIVE_URL, "Equity_manual",
-                                                   read_cache=library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES),
+                                                   read_cache=library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES),
                                                    sheet_params={"sheet": "Manual", "index": None, "start_row": 1})
                 equity_df_manual.index = pd.to_datetime(equity_df_manual["Date"])
                 del equity_df_manual["Date"]
@@ -403,7 +403,7 @@ class Equity(library.Library):
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
             equity_delta_df, equity_current_df, _ = self.state_cache(
-                equity_df, not library.is_true(library.ENV_REPROCESS_ALL_FILES) and library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES))
+                equity_df, not library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) and library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             if len(equity_delta_df):
                 tickers = []
                 for column in equity_current_df.columns:
@@ -450,12 +450,12 @@ class Equity(library.Library):
                         |> sort(columns: ["_time"])
                                 """.format(pytz.UTC.localize(pd.to_datetime(equity_current_expanded_df.index[0])).isoformat()),
                                               ["Date", "Rate", "Pair"], "RBA_FX_rates",
-                                              read_cache=library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES))
+                                              read_cache=library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
                 fx_rates = fx_rates.set_index(pd.to_datetime(fx_rates["Date"]).dt.date).sort_index()
                 del fx_rates["Date"]
                 fx_rates["Rate"] = fx_rates["Rate"].apply(pd.to_numeric)
                 index_weights = self.sheet_read(DRIVE_URL_PORTFOLIO, "Index_weights",
-                                                read_cache=library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES),
+                                                read_cache=library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES),
                                                 sheet_params={"sheet": "Indexes", "index": None, "start_row": 2})
                 index_weights = index_weights.replace('#N/A', np.nan)
                 index_weights = index_weights.set_index(index_weights["Exchange Symbol"]).sort_index()

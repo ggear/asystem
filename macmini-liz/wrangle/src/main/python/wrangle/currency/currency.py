@@ -60,7 +60,7 @@ class Currency(library.Library):
     def _run(self):
         rba_df = pd.DataFrame()
         rba_delta_df = pd.DataFrame()
-        if not library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES):
+        if not library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES):
             new_data = False
             ato_df = pd.DataFrame()
             merged_df = pd.DataFrame()
@@ -75,7 +75,7 @@ class Currency(library.Library):
                                                          .format(month_string, year), year_month_file, check=False, ignore=True)
                         if file_status[0]:
                             year_month_file_downloaded = True
-                            if library.is_true(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
+                            if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
                                 new_data = True
                                 for header_rows in ATO_XLS_HEADER_ROWS:
                                     try:
@@ -117,7 +117,7 @@ class Currency(library.Library):
                 years_file = os.path.join(self.input, "rba_fx_{}.xls".format(years))
                 file_status = self.http_download(RBA_URL.format(years), years_file, check='current' in years)
                 if file_status[0]:
-                    if library.is_true(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
+                    if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
                         new_data = True
                         try:
                             rba_itr_df = pd.read_excel(years_file, skiprows=10)
@@ -170,7 +170,7 @@ class Currency(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES))
+            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             if len(rba_delta_df):
                 data_df = rba_current_df[PAIRS]
                 data_df.insert(0, "Date", data_df.index.strftime('%Y-%m-%d'))

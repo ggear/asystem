@@ -17,19 +17,19 @@ class Health(library.Library):
     def _run(self):
         data_df = pd.DataFrame()
         data_delta_df = pd.DataFrame()
-        if not library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES):
+        if not library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES):
             sleep_df = pd.DataFrame()
             health_df = pd.DataFrame()
             workout_df = pd.DataFrame()
             files = self.dropbox_download("/Data/Health", self.input)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, 0 if library.is_true(library.ENV_REPROCESS_ALL_FILES) else \
+            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, 0 if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) else \
                 sum([not status[1] for status in files.values()]))
-            new_data = library.is_true(library.ENV_REPROCESS_ALL_FILES) or \
+            new_data = library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or \
                        all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
             if new_data:
                 sleep_yesterday_df = pd.DataFrame()
                 for file_name in files:
-                    if files[file_name][0] and (library.is_true(library.ENV_REPROCESS_ALL_FILES) or files[file_name][1]):
+                    if files[file_name][0] and (library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or files[file_name][1]):
 
                         def normalise(df):
                             df['Date'] = pd.to_datetime(df['Date'])
@@ -348,7 +348,7 @@ class Health(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            data_delta_df, _, _ = self.state_cache(data_df, library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES))
+            data_delta_df, _, _ = self.state_cache(data_df, library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             if len(data_delta_df):
                 buckets = {}
                 for column in data_delta_df.columns.tolist():

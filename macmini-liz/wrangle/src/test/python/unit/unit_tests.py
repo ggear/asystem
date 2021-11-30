@@ -26,11 +26,11 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
-                        random_subset_rows=True,
-                        reprocess_all_files=False,
-                        disable_write_stdout=False,
+                        random_subset_rows=False,
+                        reprocess_all_files=True,
+                        disable_write_stdout=True,
                         disable_upload_files=True,
-                        disable_download_files=True,
+                        disable_download_files=False,
                         )
 
     def test_currency_typical(self):
@@ -172,11 +172,11 @@ class WrangleTest(unittest.TestCase):
 
     def run_module(self, module_name, tests_asserts, prepare_only=False, one_test=False, enable_log=True, random_subset_rows=False,
                    reprocess_all_files=False, disable_write_stdout=True, disable_upload_files=True, disable_download_files=False):
-        os.environ[library.ENV_ENABLE_LOG] = str(enable_log)
-        os.environ[library.ENV_RANDOM_SUBSET_ROWS] = str(random_subset_rows)
-        os.environ[library.ENV_REPROCESS_ALL_FILES] = str(reprocess_all_files)
-        os.environ[library.ENV_DISABLE_UPLOAD_FILES] = str(disable_upload_files)
-        os.environ[library.ENV_DISABLE_DOWNLOAD_FILES] = str(disable_download_files)
+        os.environ[library.WRANGLE_ENABLE_LOG] = str(enable_log)
+        os.environ[library.WRANGLE_RANDOM_SUBSET_ROWS] = str(random_subset_rows)
+        os.environ[library.WRANGLE_REPROCESS_ALL_FILES] = str(reprocess_all_files)
+        os.environ[library.WRANGLE_DISABLE_UPLOAD_FILES] = str(disable_upload_files)
+        os.environ[library.WRANGLE_DISABLE_DOWNLOAD_FILES] = str(disable_download_files)
         if not os.path.isdir(DIR_TARGET):
             os.makedirs(DIR_TARGET)
         module = getattr(importlib.import_module("wrangle.{}".format(module_name)), module_name.title())()

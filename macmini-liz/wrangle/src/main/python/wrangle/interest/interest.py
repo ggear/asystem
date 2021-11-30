@@ -29,13 +29,13 @@ class Interest(library.Library):
     def _run(self):
         interest_df = pd.DataFrame()
         interest_delta_df = pd.DataFrame()
-        if not library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES):
+        if not library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES):
             new_data = False
             retail_df = pd.DataFrame()
             retail_file = os.path.join(self.input, "retail.xls")
             file_status = self.http_download(RETAIL_URL, retail_file)
             if file_status[0]:
-                if library.is_true(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
+                if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
                     try:
                         new_data = True
                         retail_raw_df = pd.read_excel(retail_file, skiprows=11, header=None)
@@ -55,7 +55,7 @@ class Interest(library.Library):
             inflation_file = os.path.join(self.input, "inflation.xls")
             file_status = self.http_download(INFLATION_URL, inflation_file)
             if file_status[0]:
-                if library.is_true(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
+                if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
                     try:
                         new_data = True
                         inflation_raw_df = pd.read_excel(inflation_file, skiprows=11, header=None)
@@ -89,7 +89,7 @@ class Interest(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, library.is_true(library.ENV_DISABLE_DOWNLOAD_FILES))
+            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             if len(interest_delta_df):
                 interest_delta_df = interest_delta_df.set_index(pd.to_datetime(interest_delta_df.index)).sort_index()
                 data_df = interest_current_df.copy()
