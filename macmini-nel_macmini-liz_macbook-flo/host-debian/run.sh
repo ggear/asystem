@@ -128,24 +128,6 @@ mkdir -p /root/.config/htop && rm -rf /root/.config/htop/htoprc
 ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
 
 ################################################################################
-# Display
-################################################################################
-if [ -e /sys/class/backlight/gmux_backlight ] && [ ! -f /etc/systemd/system/backlight.service ]; then
-  cat <<EOF >/etc/systemd/system/backlight.service
-[Unit]
-Description=Turn backlight off
-After=default.target
-[Service]
-ExecStart=/bin/sh -c '/usr/bin/echo 0 > /sys/class/backlight/gmux_backlight/brightness'
-[Install]
-WantedBy=default.target
-EOF
-  systemctl daemon-reload
-  systemctl enable backlight.service
-  systemctl start backlight.service
-fi
-
-################################################################################
 # Utilities
 ################################################################################
 if [ ! -d /usr/local/go ]; then
