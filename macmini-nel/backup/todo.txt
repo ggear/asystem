@@ -1,2 +1,0 @@
-# TODO:
-- https://www.kostolansky.sk/posts/postgresql-advisory-locks/
