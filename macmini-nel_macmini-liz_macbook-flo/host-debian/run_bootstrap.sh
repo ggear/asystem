@@ -86,7 +86,7 @@ EOF
 ################################################################################
 # Normalisation
 ################################################################################
-cd /Users/graham/_/dev/asystem/macmini-nel_macmini-liz/host-debian && fab release
 cd /Users/graham/_/dev/asystem/macmini-nel_macmini-liz_macbook-flo/host-keys && fab release
-cd /Users/graham/_/dev/asystem/udm-rack_macmini-liz_macmini-nel_macbook-flo/host-home && fab release
 cd /Users/graham/_/dev/asystem/udm-rack_macmini-liz_macmini-nel_macbook-flo/host-users && fab release
+cd /Users/graham/_/dev/asystem/udm-rack_macmini-liz_macmini-nel_macbook-flo/host-home && fab release
+cd /Users/graham/_/dev/asystem/macmini-nel_macmini-liz_macbook-flo/host-debian && fab release
