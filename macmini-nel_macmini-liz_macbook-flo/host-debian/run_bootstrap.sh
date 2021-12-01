@@ -22,7 +22,8 @@ diskutil eject /dev/disk2
 ################################################################################
 # Install packages
 ################################################################################
-# Run apt-get install commands of run.sh, ignore errors (eg docker/containerio)
+# Run run.sh apt-get install commands, ignore errors (eg docker/containerio)
+# Run run_upgrade script
 
 ################################################################################
 # Bootstrap system
