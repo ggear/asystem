@@ -2,11 +2,6 @@
 
 # Allow host to stay up with lid closed: https://ubuntuhandbook.org/index.php/2020/05/lid-close-behavior-ubuntu-20-04/
 # Disable descrete GPU and enable integrated GPU: https://github.com/0xbb/gpu-switch, think this is the go https://github.com/0xbb/apple_set_os.efi referencing https://unix.stackexchange.com/questions/193425/enabling-intel-iris-pro-syslinux-tails-system-macbook-pro-15-retina-late-2013
-# Disable bluetooth (same as macmini?)
-# Disable sound (same as macmini?)
-# Disable wireless (same as macmini?)
-# Check powertop
-# Check boot log
 
 ################################################################################
 # Display
@@ -25,3 +20,34 @@ EOF
   systemctl enable backlight.service
   systemctl start backlight.service
 fi
+
+
+lspci -nnk | egrep -i --color 'vga|3d|2d' -A3 | grep 'in use'
+[ ! -f /etc/modprobe.d/blacklist-nvidia.conf ] && echo "blacklist nvidia" | tee -a /etc/modprobe.d/blacklist-nvidia.conf
+[ ! -f /etc/modprobe.d/blacklist-nouveau.conf ] && echo "blacklist nouveau" | tee -a /etc/modprobe.d/blacklist-nouveau.conf
+
+#cd /tmp
+#git clone git@github.com:0xbb/apple_set_os.efi.git
+#cd apple_set_os.efi.git
+#docker build -t apple_set_os . && docker run --rm -it -v $(pwd):/build apple_set_os
+#mkdir /boot/efi/EFI/custom
+#cp apple_set_os.efi /boot/efi/EFI/custom
+#cat <<EOF >>/etc/grub.d/40_custom
+#
+#search --no-floppy --set=root --label EFI
+#chainloader (${root})/EFI/custom/apple_set_os.efi
+#boot
+#
+#EOF
+#grub-install
+#update-grub
+#cd /tmp
+#rm -rvf apple_set_os.efi.git
+#
+#
+#lspci -vnnn | grep VGA
+#cd /tmp
+#git clone git@github.com:0xbb/gpu-switch.git
+#cd gpu-switch
+
+

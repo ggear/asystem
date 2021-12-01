@@ -14,6 +14,7 @@ FILE_SIZE_TOTAL=6400000K
 FILE_SIZE_TOTAL_VALIDATE=640000K
 
 rm -rf ${DIR_RESULTS} && mkdir -p ${DIR_RESULTS}
+docker stop $(docker ps -q)
 docker run --rm ljishen/sysbench /root/results/help.prof help >/dev/null
 
 ################################################################################
