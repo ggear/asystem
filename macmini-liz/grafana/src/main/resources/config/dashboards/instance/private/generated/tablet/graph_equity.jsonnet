@@ -333,6 +333,7 @@ from(bucket: "data_private")
                         lines=true,
                         staircase=false,
                         formatY1='percent',
+                        decimalsY1=1,
                         decimals=0,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
@@ -399,6 +400,7 @@ series
                         lines=true,
                         staircase=false,
                         formatY1='percent',
+                        decimalsY1=1,
                         decimals=0,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
@@ -582,6 +584,7 @@ series
                         lines=true,
                         staircase=false,
                         formatY1='percent',
+                        decimalsY1=1,
                         decimals=0,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='

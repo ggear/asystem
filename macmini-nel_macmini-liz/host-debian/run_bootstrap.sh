@@ -3,11 +3,11 @@
 ################################################################################
 # Bootable USB
 ################################################################################
-# diskutil list /dev/disk2
-# umount /dev/disk2
-# wget https://laotzu.ftp.acc.umu.se/debian-cd/current/amd64/iso-cd/debian-11.1.0-amd64-netinst.iso
-# dd if=/Users/graham/Desktop/debian-11.1.0-amd64-netinst.iso bs=1m | pv /Users/graham/Desktop/debian-11.1.0-amd64-netinst.iso | dd of=/dev/disk2 bs=1m
-# diskutil eject /dev/disk2
+diskutil list /dev/disk2
+umount /dev/disk2
+wget https://laotzu.ftp.acc.umu.se/debian-cd/current/amd64/iso-cd/debian-11.1.0-amd64-netinst.iso
+dd if=/Users/graham/Desktop/debian-11.1.0-amd64-netinst.iso bs=1m | pv /Users/graham/Desktop/debian-11.1.0-amd64-netinst.iso | dd of=/dev/disk2 bs=1m
+diskutil eject /dev/disk2
 
 ################################################################################
 # Install system
@@ -31,7 +31,7 @@ sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd
 systemctl restart ssh
 
 ################################################################################
-# Network USB
+# Network USB (if required)
 ################################################################################
 ip a | grep 192
 lshw -C network -short
@@ -46,7 +46,7 @@ ifup -a
 ip a | grep 192
 
 ################################################################################
-# Install HDD
+# Install HDD (if required)
 ################################################################################
 fdisk -l
 blkid /dev/sdb
