@@ -1,31 +1,33 @@
 #!/bin/sh
 
 # Allow host to stay up with lid closed: https://ubuntuhandbook.org/index.php/2020/05/lid-close-behavior-ubuntu-20-04/
-# Disable descrete GPU and enable integrated GPU: https://github.com/0xbb/gpu-switch, think this is the go https://github.com/0xbb/apple_set_os.efi referencing https://unix.stackexchange.com/questions/193425/enabling-intel-iris-pro-syslinux-tails-system-macbook-pro-15-retina-late-2013
 
 ################################################################################
-# Display
+# Lid
 ################################################################################
-if [ -e /sys/class/backlight/gmux_backlight ] && [ ! -f /etc/systemd/system/backlight.service ]; then
-  cat <<EOF >/etc/systemd/system/backlight.service
-[Unit]
-Description=Turn backlight off
-After=default.target
-[Service]
-ExecStart=/bin/sh -c '/usr/bin/echo 0 > /sys/class/backlight/gmux_backlight/brightness'
-[Install]
-WantedBy=default.target
-EOF
-  systemctl daemon-reload
-  systemctl enable backlight.service
-  systemctl start backlight.service
-fi
+sed -i 's/#HandleLidSwitch=suspend/HandleLidSwitch=ignore/g' /etc/systemd/logind.conf
+sed -i 's/#HandleLidSwitchExternalPower=suspend/HandleLidSwitchExternalPower=ignore/g' /etc/systemd/logind.conf
+systemctl restart systemd-logind.service
 
-
-lspci -nnk | egrep -i --color 'vga|3d|2d' -A3 | grep 'in use'
-[ ! -f /etc/modprobe.d/blacklist-nvidia.conf ] && echo "blacklist nvidia" | tee -a /etc/modprobe.d/blacklist-nvidia.conf
-[ ! -f /etc/modprobe.d/blacklist-nouveau.conf ] && echo "blacklist nouveau" | tee -a /etc/modprobe.d/blacklist-nouveau.conf
-
+################################################################################
+# Display (disabled in favour of blacklisting video drivers)
+################################################################################
+# Disable discrete GPU and enable integrated GPU: https://github.com/0xbb/gpu-switch, think this is the go https://github.com/0xbb/apple_set_os.efi referencing https://unix.stackexchange.com/questions/193425/enabling-intel-iris-pro-syslinux-tails-system-macbook-pro-15-retina-late-2013
+#if [ -e /sys/class/backlight/gmux_backlight ] && [ ! -f /etc/systemd/system/backlight.service ]; then
+#  cat <<EOF >/etc/systemd/system/backlight.service
+#[Unit]
+#Description=Turn backlight off
+#After=default.target
+#[Service]
+#ExecStart=/bin/sh -c '/usr/bin/echo 0 > /sys/class/backlight/gmux_backlight/brightness'
+#[Install]
+#WantedBy=default.target
+#EOF
+#  systemctl daemon-reload
+#  systemctl enable backlight.service
+#  systemctl start backlight.service
+#fi
+#lspci -nnk | egrep -i --color 'vga|3d|2d' -A3 | grep 'in use'
 #cd /tmp
 #git clone git@github.com:0xbb/apple_set_os.efi.git
 #cd apple_set_os.efi.git
@@ -43,11 +45,8 @@ lspci -nnk | egrep -i --color 'vga|3d|2d' -A3 | grep 'in use'
 #update-grub
 #cd /tmp
 #rm -rvf apple_set_os.efi.git
-#
-#
 #lspci -vnnn | grep VGA
 #cd /tmp
 #git clone git@github.com:0xbb/gpu-switch.git
 #cd gpu-switch
-
-
+#./gpu-switch -d
