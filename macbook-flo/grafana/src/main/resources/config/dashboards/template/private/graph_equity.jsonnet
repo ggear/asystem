@@ -326,13 +326,19 @@ from(bucket: "data_private")
 //ASD                   legend_sideWidth=330,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
+import "strings"
+bin=1mo
+timeRangeStart=v.timeRangeStart
+// timeRangeStart=-5m
+// timeRangeStart=now()
+// timeRangeStart="2021-12-04T02:55:42.581000000Z"
 from(bucket: "data_private")
-  |> range(start: time(v: int(v: v.timeRangeStart) - int(v: 1mo)), stop: v.timeRangeStop)
+  |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - int(v: bin)))), stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
   |> filter(fn: (r) => r["_field"] == "holdings")
   |> filter(fn: (r) => r["period"] == "30d")
   |> filter(fn: (r) => r["type"] == "price-change-spot")
-  |> aggregateWindow(every:  1mo, fn: last)
+  |> aggregateWindow(every:  bin, fn: last)
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: { _value: "Monthly Delta"})
                   ')).addTarget(influxdb.target(query='

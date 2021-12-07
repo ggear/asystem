@@ -478,21 +478,27 @@ from(bucket: "host_private")
                         lines=true,
                         staircase=false,
                   ).addTarget(influxdb.target(query='
-from(bucket: "host_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
-  |> aggregateWindow(every: v.windowPeriod, fn: max, createEmpty: false)
-  |> keep(columns: ["_time", "_value", "host"])
-  |> rename(columns: {_value: ""})
-                  ')).addTarget(influxdb.target(query='
-from(bucket: "host_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
-  |> keep(columns: ["_time", "_value", "host"])
-  |> fill(column: "_value", usePrevious: true)
-  |> set(key: "host", value: "ambient-rack")
-  |> rename(columns: {_value: ""})
+import "strings"
+bin=1m
+timeRangeStart=v.timeRangeStart
+// timeRangeStart=-5m
+// timeRangeStart=now()
+// timeRangeStart="2021-12-04T02:55:42.581000000Z"
+union(tables: [
+  from(bucket: "host_private")
+    |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - int(v: bin)))), stop: v.timeRangeStop)
+    |> filter(fn: (r) => r["_measurement"] == "sensors" and r["_field"] == "temp_input" and r["feature"] == "package_id_0")
+    |> keep(columns: ["_time", "_value", "host"])
+    |> aggregateWindow(every: bin, fn: mean, createEmpty: false)
+    |> keep(columns: ["_time", "_value", "host"]),
+  from(bucket: "home_private")
+    |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - int(v: bin)))), stop: v.timeRangeStop)
+    |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
+    |> keep(columns: ["_time", "_value"])
+    |> aggregateWindow(every: bin, fn: max, createEmpty: false)
+    |> set(key: "host", value: "ambient-rack")
+    |> keep(columns: ["_time", "_value", "host"])
+])
                   '))
                       { gridPos: { x: 0, y: 76, w: 24, h: 7 } }
                   ,

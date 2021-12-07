@@ -164,7 +164,7 @@ def _pull(context, filter_module=None, filter_host=None, is_release=False):
             _print_footer(module, "pull resources")
         for module in _get_modules(context, "src/main/python/*/metadata/build.py", filter_changes=False):
             _print_header(module, "pull process")
-            # _run_local(context, "python {}/{}/src/main/python/{}/metadata/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
+            _run_local(context, "python {}/{}/src/main/python/{}/metadata/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
             _print_footer(module, "pull process")
 
 

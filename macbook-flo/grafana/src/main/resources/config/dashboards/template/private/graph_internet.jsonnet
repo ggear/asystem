@@ -313,7 +313,7 @@ from(bucket: "host_private")
                         title='Internet Max Throughput',
                         datasource='InfluxDB_V2',
                         fill=0,
-                        format='Bps',
+                        format='MBs',
                         bars=false,
                         lines=true,
                         staircase=true,
