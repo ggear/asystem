@@ -1,13 +1,6 @@
 #!/bin/sh
 
 ################################################################################
-# Todo
-################################################################################
-# Fix intermittent crashing, log uptime on 1.7.1-public.beta.1.2615
-# Upgrade to a release quality version 1.7.2+
-# Add nice to haves
-
-################################################################################
 # Shell (unifi-os shell) baseline
 ################################################################################
 # curl -L https://raw.githubusercontent.com/boostchicken/udm-utilities/master/on-boot-script/packages/udm-boot_1.0.1-1_all.deb -o udm-boot_1.0.1-1_all.deb
@@ -28,11 +21,20 @@
 ################################################################################
 # Wireless Networks -> BertAndErnie
 # Networks -> LAN -> Domain name -> janeandgraham.com
-# Networks -> LAN -> DHCP range -> 192.168.1.50 to 192.168.1.254
+# Networks -> LAN -> DHCP range -> 192.168.1.100 to 192.168.1.254
 # Devices -> udm-rack, usw-house and uap-hallway
-# Clients -> udm-rack 192.168.1.1, macbook-flo 192.168.1.9, macmini-liz 192.168.1.10, phillips-hue 192.168.1.12, lounge-tv 192.168.1.13, brother-printer 192.168.1.15, tplplug-* 192.168.1.20+, haiku-* 192.168.1.40+
 # Routing & Firewall -> Port Forwarding -> Nginx, 80, 192.168.1.10, 9080, TCP, Enable Logging
 # Routing & Firewall -> Port Forwarding -> Nginx, 443, 192.168.1.10, 9443, TCP, Enable Logging
+# Clients ->
+#   udm-rack 192.168.1.1
+#   macbook-flo 192.168.1.2
+#   macmini-liz 192.168.1.3
+#   macmini-liz 192.168.1.4
+#   lounge-tv 192.168.1.10
+#   phillips-hue 192.168.1.11
+#   brother-printer 192.168.1.12
+#   haiku-* 192.168.1.20-29
+#   tplplug-* 192.168.1.30-50
 
 ################################################################################
 # Network nice-to-have

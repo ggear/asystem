@@ -160,7 +160,7 @@ def _pull(context, filter_module=None, filter_host=None, is_release=False):
     if filter_module is None:
         for module in _get_modules(context, "pull.sh", filter_changes=False):
             _print_header(module, "pull resources")
-            # _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
+            _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
             _print_footer(module, "pull resources")
         for module in _get_modules(context, "src/main/python/*/metadata/build.py", filter_changes=False):
             _print_header(module, "pull process")
