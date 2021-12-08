@@ -7,6 +7,7 @@ apt-get update
 apt-get install -y --allow-downgrades ntp=1:4.2.8p15+dfsg-1
 apt-get install -y --allow-downgrades ntfs-3g=1:2017.3.23AR.3-4+deb11u1
 apt-get install -y --allow-downgrades acl=2.2.53-10
+apt-get install -y --allow-downgrades unrar=1:6.0.3-1
 apt-get install -y --allow-downgrades rsync=3.2.3-4+deb11u1
 apt-get install -y --allow-downgrades vim=2:8.2.2434-3
 apt-get install -y --allow-downgrades rename=1.13-1

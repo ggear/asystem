@@ -7,6 +7,7 @@ PACKAGES=(
   ntp
   ntfs-3g
   acl
+  unrar
   rsync
   vim
   rename
@@ -48,7 +49,7 @@ apt-get update
 for PACKAGE in ${PACKAGES[@]}; do
   apt-get install -y ${PACKAGE}
 done
-INSTALLED="$(apt list 2>/dev/null | column -t | awk -F"/" '{print $1"\t"$2}' | awk '{print "  "$1"="$3""}' | grep -v Listing)"
+INSTALLED="$(apt list 2>/dev/null | grep -v " i386" | column -t | awk -F"/" '{print $1"\t"$2}' | awk '{print "  "$1"="$3""}' | grep -v Listing)"
 echo "" && echo "Run script base package versions:"
 for PACKAGE in ${PACKAGES[@]}; do
   echo "apt-get install -y --allow-downgrades"$(echo "${INSTALLED}" | grep " "${PACKAGE}"=")

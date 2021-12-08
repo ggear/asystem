@@ -3,7 +3,7 @@
 ################################################################################
 # Samba
 ################################################################################
-mkdir -vp /data/media /data/backup/timemachine /data/tmp
+mkdir -vp /data/tmp
 find /data -type f -name .DS_Store -exec rm -f {} \;
 chmod -vR a+rwX /data
 cat <<EOF >/etc/samba/smb.conf
@@ -34,24 +34,13 @@ cat <<EOF >/etc/samba/smb.conf
   fruit:veto_appledouble = no
   fruit:wipe_intentionally_left_blank_rfork = yes
 
-[Media]
-  comment = Media Files
-  path = /data/media
+[Temp]
+  comment = Temp Files
+  path = /data/tmp
   browseable = yes
   read only = no
   guest ok = yes
 
-[Time Machine]
-  comment = Backup Files
-  path = /data/backup/timemachine
-  browseable = yes
-  writable = yes
-  read only = no
-  guest ok = yes
-  fruit:aapl = yes
-  fruit:time machine = yes
-  fruit:time machine max size = "4 T"
-  vfs objects = fruit streams_xattr
 EOF
 systemctl restart smbd
 systemctl enable smbd
