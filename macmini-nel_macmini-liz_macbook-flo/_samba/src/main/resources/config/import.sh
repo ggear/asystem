@@ -15,11 +15,10 @@ import_files() {
       rsync -avP /media/usbdrive/${1} /data/tmp
     fi
     umount -fq /media/usbdrive
+    echo "" && echo "ssh root@$(hostname)" && echo "rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv" && echo ""
   fi
 }
 
 import_files Audio
 import_files Movies
 import_files Series
-
-echo "" && echo "ssh root@$(hostname)" && echo "rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv" && echo ""

@@ -4,8 +4,6 @@
 # Samba
 ################################################################################
 mkdir -vp /data/tmp
-find /data -type f -name .DS_Store -exec rm -f {} \;
-chmod -vR a+rwX /data
 if [ $(grep "/data/tmp" /etc/samba/smb.conf | wc -l) -eq 0 ]; then
   cat <<EOF >/etc/samba/smb.conf
 [global]
