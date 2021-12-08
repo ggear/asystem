@@ -22,4 +22,4 @@ import_files Audio
 import_files Movies
 import_files Series
 
-echo "Example rename command:" && echo "rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv"
+echo "" && echo "ssh root@$(hostname)" && echo "rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv" && echo ""
