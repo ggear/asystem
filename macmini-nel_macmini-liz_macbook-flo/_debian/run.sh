@@ -12,6 +12,7 @@ apt-get install -y --allow-downgrades rsync=3.2.3-4+deb11u1
 apt-get install -y --allow-downgrades vim=2:8.2.2434-3
 apt-get install -y --allow-downgrades rename=1.13-1
 apt-get install -y --allow-downgrades curl=7.74.0-1.3+b1
+apt-get install -y --allow-downgrades screen=4.8.0-6
 apt-get install -y --allow-downgrades fswatch=1.14.0+repack-13
 apt-get install -y --allow-downgrades netselect-apt=0.3.ds1-29
 apt-get install -y --allow-downgrades smartmontools=7.2-1

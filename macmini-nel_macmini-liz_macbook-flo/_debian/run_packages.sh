@@ -12,6 +12,7 @@ PACKAGES=(
   vim
   rename
   curl
+  screen
   fswatch
   netselect-apt
   smartmontools
