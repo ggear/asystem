@@ -4,47 +4,47 @@
 # Packages (from update script)
 ################################################################################
 apt-get update
-apt-get install -y --allow-downgrades ntp=1:4.2.8p15+dfsg-1
-apt-get install -y --allow-downgrades ntfs-3g=1:2017.3.23AR.3-4+deb11u1
-apt-get install -y --allow-downgrades acl=2.2.53-10
-apt-get install -y --allow-downgrades unrar=1:6.0.3-1
-apt-get install -y --allow-downgrades rsync=3.2.3-4+deb11u1
-apt-get install -y --allow-downgrades vim=2:8.2.2434-3
-apt-get install -y --allow-downgrades rename=1.13-1
-apt-get install -y --allow-downgrades curl=7.74.0-1.3+b1
-apt-get install -y --allow-downgrades screen=4.8.0-6
-apt-get install -y --allow-downgrades fswatch=1.14.0+repack-13
-apt-get install -y --allow-downgrades netselect-apt=0.3.ds1-29
-apt-get install -y --allow-downgrades smartmontools=7.2-1
-apt-get install -y --allow-downgrades avahi-daemon=0.8-5
-apt-get install -y --allow-downgrades net-tools=1.60+git20181103.0eebece-1
-apt-get install -y --allow-downgrades mbpfan=2.2.1-1
-apt-get install -y --allow-downgrades lm-sensors=1:3.6.0-7
-apt-get install -y --allow-downgrades apt-transport-https=2.2.4
-apt-get install -y --allow-downgrades ca-certificates=20210119
-apt-get install -y --allow-downgrades gnupg-agent=2.2.27-2
-apt-get install -y --allow-downgrades software-properties-common=0.96.20.2-2.1
-apt-get install -y --allow-downgrades docker-ce=5:20.10.11~3-0~debian-bullseye
-apt-get install -y --allow-downgrades docker-ce-cli=5:20.10.11~3-0~debian-bullseye
-apt-get install -y --allow-downgrades containerd.io=1.4.12-1
-apt-get install -y --allow-downgrades cifs-utils=2:6.11-3.1
-apt-get install -y --allow-downgrades samba=2:4.13.13+dfsg-1~deb11u2
-apt-get install -y --allow-downgrades cups=2.3.3op2-3+deb11u1
-apt-get install -y --allow-downgrades smbclient=2:4.13.13+dfsg-1~deb11u2
-apt-get install -y --allow-downgrades inotify-tools=3.14-8.1
-apt-get install -y --allow-downgrades htop=3.0.5-7
-apt-get install -y --allow-downgrades iotop=0.6-24-g733f3f8-1.1
-apt-get install -y --allow-downgrades hdparm=9.60+ds-1
-apt-get install -y --allow-downgrades stress-ng=0.12.06-1
-apt-get install -y --allow-downgrades memtester=4.5.0-1
-apt-get install -y --allow-downgrades linux-cpupower=5.10.70-1
-apt-get install -y --allow-downgrades firmware-realtek=20210315-3
-apt-get install -y --allow-downgrades firmware-linux-nonfree=20210315-3
-apt-get install -y --allow-downgrades hwinfo=21.72-1
-apt-get install -y --allow-downgrades lshw=02.18.85-0.7
-apt-get install -y --allow-downgrades powertop=2.11-1
-apt-get install -y --allow-downgrades libc6-i386=2.31-13+deb11u2
-apt-get install -y --allow-downgrades intel-microcode=3.20210608.2
+apt-get install -y --allow-downgrades 'ntp=1:4.2.8p15+dfsg-1'
+apt-get install -y --allow-downgrades 'ntfs-3g=1:2017.3.23AR.3-4+deb11u1'
+apt-get install -y --allow-downgrades 'acl=2.2.53-10'
+apt-get install -y --allow-downgrades 'unrar=1:6.0.3-1'
+apt-get install -y --allow-downgrades 'rsync=3.2.3-4+deb11u1'
+apt-get install -y --allow-downgrades 'vim=2:8.2.2434-3'
+apt-get install -y --allow-downgrades 'rename=1.13-1'
+apt-get install -y --allow-downgrades 'curl=7.74.0-1.3+b1'
+apt-get install -y --allow-downgrades 'screen=4.8.0-6'
+apt-get install -y --allow-downgrades 'fswatch=1.14.0+repack-13'
+apt-get install -y --allow-downgrades 'netselect-apt=0.3.ds1-29'
+apt-get install -y --allow-downgrades 'smartmontools=7.2-1'
+apt-get install -y --allow-downgrades 'avahi-daemon=0.8-5'
+apt-get install -y --allow-downgrades 'net-tools=1.60+git20181103.0eebece-1'
+apt-get install -y --allow-downgrades 'mbpfan=2.2.1-1'
+apt-get install -y --allow-downgrades 'lm-sensors=1:3.6.0-7'
+apt-get install -y --allow-downgrades 'apt-transport-https=2.2.4'
+apt-get install -y --allow-downgrades 'ca-certificates=20210119'
+apt-get install -y --allow-downgrades 'gnupg-agent=2.2.27-2'
+apt-get install -y --allow-downgrades 'software-properties-common=0.96.20.2-2.1'
+apt-get install -y --allow-downgrades 'docker-ce=5:20.10.11~3-0~debian-bullseye'
+apt-get install -y --allow-downgrades 'docker-ce-cli=5:20.10.11~3-0~debian-bullseye'
+apt-get install -y --allow-downgrades 'containerd.io=1.4.12-1'
+apt-get install -y --allow-downgrades 'cifs-utils=2:6.11-3.1'
+apt-get install -y --allow-downgrades 'samba=2:4.13.13+dfsg-1~deb11u2'
+apt-get install -y --allow-downgrades 'cups=2.3.3op2-3+deb11u1'
+apt-get install -y --allow-downgrades 'smbclient=2:4.13.13+dfsg-1~deb11u2'
+apt-get install -y --allow-downgrades 'inotify-tools=3.14-8.1'
+apt-get install -y --allow-downgrades 'htop=3.0.5-7'
+apt-get install -y --allow-downgrades 'iotop=0.6-24-g733f3f8-1.1'
+apt-get install -y --allow-downgrades 'hdparm=9.60+ds-1'
+apt-get install -y --allow-downgrades 'stress-ng=0.12.06-1'
+apt-get install -y --allow-downgrades 'memtester=4.5.0-1'
+apt-get install -y --allow-downgrades 'linux-cpupower=5.10.70-1'
+apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
+apt-get install -y --allow-downgrades 'firmware-linux-nonfree=20210315-3'
+apt-get install -y --allow-downgrades 'hwinfo=21.72-1'
+apt-get install -y --allow-downgrades 'lshw=02.18.85-0.7'
+apt-get install -y --allow-downgrades 'powertop=2.11-1'
+apt-get install -y --allow-downgrades 'libc6-i386=2.31-13+deb11u2'
+apt-get install -y --allow-downgrades 'intel-microcode=3.20210608.2'
 
 ################################################################################
 # Disable hardware
@@ -205,16 +205,16 @@ systemctl status ntp.service
 ntpq -p
 
 ################################################################################
-# Monitoring
+# Temperature
 ################################################################################
 sensors-detect --auto
 cat <<EOF >/etc/mbpfan.conf
 [general]
 min_fan_speed = 1800
 max_fan_speed = 5500
-low_temp = 60
-high_temp = 66
-max_temp = 80
+low_temp = 40
+high_temp = 60
+max_temp = 65
 polling_interval = 1
 EOF
 curl https://raw.githubusercontent.com/linux-on-mac/mbpfan/49f544fd8d596fa13d5525a5b042eee311568c67/mbpfan.service -o /etc/systemd/system/mbpfan.service
