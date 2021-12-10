@@ -4,6 +4,7 @@
 # Packages (from update script)
 ################################################################################
 apt-get update
+apt-get install -y --allow-downgrades 'jq=1.6-2.1'
 apt-get install -y --allow-downgrades 'ntp=1:4.2.8p15+dfsg-1'
 apt-get install -y --allow-downgrades 'ntfs-3g=1:2017.3.23AR.3-4+deb11u1'
 apt-get install -y --allow-downgrades 'acl=2.2.53-10'

@@ -104,7 +104,7 @@ local graph_containers = import 'graph_containers.jsonnet';
 //ASM                   tags=['private', 'mobile'],
 //AST                   tags=['private', 'tablet'],
 //ASD                   tags=['private', 'desktop'],
-                        time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['10s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-48h', refresh='', timepicker=timepicker.new(refresh_intervals=['10s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_servers.graphs()),
 

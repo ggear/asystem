@@ -479,7 +479,7 @@ from(bucket: "host_private")
                         staircase=false,
                   ).addTarget(influxdb.target(query='
 import "strings"
-bin=1m
+bin=10m
 timeRangeStart=v.timeRangeStart
 // timeRangeStart=-5m
 // timeRangeStart=now()
@@ -495,10 +495,11 @@ union(tables: [
     |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - int(v: bin)))), stop: v.timeRangeStop)
     |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
     |> keep(columns: ["_time", "_value"])
-    |> aggregateWindow(every: bin, fn: max, createEmpty: false)
+    |> aggregateWindow(every: bin, fn: mean, createEmpty: false)
     |> set(key: "host", value: "ambient-rack")
     |> keep(columns: ["_time", "_value", "host"])
 ])
+  |> group(columns: ["host"], mode:"by")
                   '))
                       { gridPos: { x: 0, y: 82, w: 24, h: 12 } }
                   ,
