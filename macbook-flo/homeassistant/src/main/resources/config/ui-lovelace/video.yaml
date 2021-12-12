@@ -1,0 +1,7 @@
+- type: picture-entity
+    entity: camera.ada_camera
+    camera_view: live
+
+- type: picture-entity
+    entity: camera.edwin_camera
+    camera_view: live
