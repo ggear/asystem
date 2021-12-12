@@ -13,9 +13,9 @@ views:
     title: Media
     cards: !include ui-lovelace/media.yaml
 
-  - path: video
-    title: Video
-    cards: !include ui-lovelace/video.yaml
+  - path: cameras
+    title: Cameras
+    cards: !include ui-lovelace/cameras.yaml
 
   - path: monitor
     title: Monitor
