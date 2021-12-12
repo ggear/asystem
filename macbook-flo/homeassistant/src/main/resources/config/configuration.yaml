@@ -54,11 +54,11 @@ mqtt:
 camera:
   - platform: generic
     name: "Edwin Camera"
-    still_image_url: "http://192.168.1.16/snap.jpeg"
+    still_image_url: "http://ubnt:ubnt@192.168.1.16/snap.jpeg"
     stream_source: "rtsp://ubnt:ubnt@192.168.1.16:554/s0"
   - platform: generic
     name: "Ada Camera"
-    still_image_url: "http://192.168.1.17/snap.jpeg"
+    still_image_url: "http://ubnt:ubnt@192.168.1.17/snap.jpeg"
     stream_source: "rtsp://ubnt:ubnt@192.168.1.17:554/s0"
 
 #sensor:
