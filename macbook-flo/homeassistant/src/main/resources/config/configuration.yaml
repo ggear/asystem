@@ -51,6 +51,14 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
+camera:
+  - platform: generic
+    name: "Edwin Camera"
+    stream_source: "rtsp://ubnt:ubnt@192.168.1.16:554/s0"
+  - platform: generic
+    name: "Ada Camera"
+    stream_source: "rtsp://ubnt:ubnt@192.168.1.17:554/s0"
+
 #sensor:
 #  !include_dir_merge_list config_sensors
 

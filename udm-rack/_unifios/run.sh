@@ -33,6 +33,8 @@
 #   lounge-tv 192.168.1.10
 #   phillips-hue 192.168.1.11
 #   brother-printer 192.168.1.12
+#   uvc-ada 192.168.1.15
+#   uvc-edwin 192.168.1.16
 #   haiku-* 192.168.1.20-29
 #   tplplug-* 192.168.1.30-50
 
