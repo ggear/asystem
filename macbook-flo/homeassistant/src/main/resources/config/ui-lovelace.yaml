@@ -20,4 +20,3 @@ views:
   - path: monitor
     title: Monitor
     cards: !include ui-lovelace/monitor.yaml
-
