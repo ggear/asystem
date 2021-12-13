@@ -1,4 +1,4 @@
-FROM grafana/grafana:8.3.1 as image_base
+FROM grafana/grafana:8.3.2 as image_base
 
 FROM image_base as image_package
 USER root
