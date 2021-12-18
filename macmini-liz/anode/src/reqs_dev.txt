@@ -6,4 +6,5 @@ jasmine==3.5.0
 webdrivermanager==0.8.0
 pytest==4.6.10
 pytest_cov==2.9.0
+lazy-object-proxy==1.6.0
 pylint==1.9.5

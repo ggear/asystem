@@ -323,9 +323,9 @@ from(bucket: "data_private")
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: { _value: "Daily Value"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*Monthly.*/", "steppedLine": true, "yaxis": 1 }
+                        { "alias": "/.*Monthly.*/", "steppedLine": false, "bars": true, "lines" :false, "color": "#86653c", "yaxis": 1 }
                   ).addSeriesOverride(
-                        { "alias": "/.*Daily.*/", "steppedLine": false, "yaxis": 2 }
+                        { "alias": "/.*Daily.*/", "steppedLine": false, "bars": false, "lines" :true, "yaxis": 2 }
                   )
                       { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
                   ,
