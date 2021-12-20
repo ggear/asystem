@@ -51,19 +51,24 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
-camera:
-  - platform: generic
-    name: "Edwin Camera"
-    still_image_url: "http://ubnt:ubnt@192.168.1.16/snap.jpeg"
-    stream_source: "rtsp://ubnt:ubnt@192.168.1.16:554/s0"
-  - platform: generic
-    name: "Ada Camera"
-    still_image_url: "http://ubnt:ubnt@192.168.1.17/snap.jpeg"
-    stream_source: "rtsp://ubnt:ubnt@192.168.1.17:554/s0"
+stream:
 
+# Disable in favour of stream/protect integration
+#camera:
+#  - platform: generic
+#    name: "Edwin Camera"
+#    still_image_url: "http://ubnt:ubnt@192.168.1.16/snap.jpeg"
+#    stream_source: "rtsp://ubnt:ubnt@192.168.1.16:554/s0"
+#  - platform: generic
+#    name: "Ada Camera"
+#    still_image_url: "http://ubnt:ubnt@192.168.1.17/snap.jpeg"
+#    stream_source: "rtsp://ubnt:ubnt@192.168.1.17:554/s0"
+
+# Disable until add some sensors
 #sensor:
 #  !include_dir_merge_list config_sensors
 
+# Disable until I create some automations
 #automation:
 #  !include_dir_merge_list config_automations
 

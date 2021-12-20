@@ -44,3 +44,7 @@ mkdir -p src/main/resources/config/custom_components &&
 rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../asystem-external/homeassistant/bureau_of_meteorology/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
+
+rm -rf src/main/resources/config/custom_components/unifiprotect
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../../asystem-external/homeassistant/unifiprotect/custom_components/unifiprotect src/main/resources/config/custom_components
