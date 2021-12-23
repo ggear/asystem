@@ -19,17 +19,32 @@
 ################################################################################
 # Network baseline
 ################################################################################
-# Wireless Networks -> BertAndErnie
-# Networks -> LAN -> Domain name -> janeandgraham.com
-# Networks -> LAN -> DHCP range -> 192.168.1.100 to 192.168.1.254
-# Devices -> udm-rack, usw-house and uap-hallway
-# Routing & Firewall -> Port Forwarding -> Nginx, 80, 192.168.1.10, 9080, TCP, Enable Logging
-# Routing & Firewall -> Port Forwarding -> Nginx, 443, 192.168.1.10, 9443, TCP, Enable Logging
-# Clients ->
+# Updates -> UDM Pro / Apps -> Off
+# Location / Time -> Set
+# Advanced -> SSH
+# Users ->
+#   Super Admin, Local Access Only, Unifi Admin, unifi
+#   Limited Admin, Local Access Only, Unifi Protect, protect
+#   Limited Admin, Local Access Only, Unifi Protect, protect
+#   Limited Admin, Ubiquiti Account, jane.m.thomson@gmail.com
+# Network -> WiFi -> BertAndErnie
+# Network -> Networks -> LAN -> Advanced -> Domain Name -> janeandgraham.com
+# Network -> Networks -> LAN -> Advanced -> Auto Scale Network -> DHCP range -> 192.168.1.100 to 192.168.1.254
+# Traffic & Security -> Detect & Block -> Detect & Block
+# Traffic & Security -> System Sensitivity -> Maximum Protection
+# Traffic & Security -> Firewall -> Create New Rule ->
+#    HTTP nginx, TCP, ANY, HTTP (80), nginx (192.168.1.10), HTTP nginx (9080), Enable Logging
+#    HTTPS nginx, TCP, ANY, HTTPS (443), nginx (192.168.1.10), HTTPS nginx (9443), Enable Logging
+# Network -> Devices -> udm-rack, usw-ceiling, uap-deck, uap-hallway, uvc-ada, uvc-edwin
+
+# Network -> Clients ->
 #   udm-rack 192.168.1.1
 #   macbook-flo 192.168.1.2
 #   macmini-liz 192.168.1.3
-#   macmini-liz 192.168.1.4
+#   macmini-nel 192.168.1.4
+
+
+
 #   lounge-tv 192.168.1.10
 #   phillips-hue 192.168.1.11
 #   brother-printer 192.168.1.12

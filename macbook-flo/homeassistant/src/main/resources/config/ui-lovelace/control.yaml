@@ -43,6 +43,8 @@
     - entity: fan.edwin
     - entity: fan.lounge
     - entity: fan.parents
+    - entity: fan.deck1
+    - entity: fan.deck2
 
 - type: entities
   title: Switches

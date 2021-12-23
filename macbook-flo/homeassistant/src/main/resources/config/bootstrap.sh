@@ -21,6 +21,7 @@ echo "--------------------------------------------------------------------------
 #   - Google Cast
 #   - Philips hue (allow groups)
 #   - SenseME (have to add for each device)
+#   - Unifi Protect
 #   - TP-Link Smart Home (configure each device integration after adding primary integration)
 #   - Bureau of Meteorology (gooseberry_hill for observations, darlington_forecast for weather forecast, 7 day forecast)
 

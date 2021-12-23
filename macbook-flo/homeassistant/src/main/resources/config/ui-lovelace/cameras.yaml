@@ -1,7 +1,7 @@
 - type: picture-entity
-  entity: camera.ada_camera
+  entity: camera.uvc_ada_medium
   camera_view: live
 
 - type: picture-entity
-  entity: camera.edwin_camera
+  entity: camera.uvc_edwin_medium
   camera_view: live
