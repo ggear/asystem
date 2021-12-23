@@ -30,12 +30,12 @@
 # Network -> WiFi -> BertAndErnie
 # Network -> Networks -> LAN -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> LAN -> Advanced -> Auto Scale Network -> DHCP range -> 192.168.1.100 to 192.168.1.254
+# Network -> Devices -> udm-rack, usw-ceiling, uap-deck, uap-hallway, uvc-ada, uvc-edwin
 # Traffic & Security -> Detect & Block -> Detect & Block
 # Traffic & Security -> System Sensitivity -> Maximum Protection
 # Traffic & Security -> Firewall -> Create New Rule ->
-#    HTTP nginx, TCP, ANY, HTTP (80), nginx (192.168.1.10), HTTP nginx (9080), Enable Logging
-#    HTTPS nginx, TCP, ANY, HTTPS (443), nginx (192.168.1.10), HTTPS nginx (9443), Enable Logging
-# Network -> Devices -> udm-rack, usw-ceiling, uap-deck, uap-hallway, uvc-ada, uvc-edwin
+#    HTTP nginx, TCP, ANY, HTTP (80), nginx (192.168.1.3), HTTP nginx (9080), Enable Logging
+#    HTTPS nginx, TCP, ANY, HTTPS (443), nginx (192.168.1.3), HTTPS nginx (9443), Enable Logging
 
 # Network -> Clients ->
 #   udm-rack 192.168.1.1
