@@ -31,27 +31,26 @@
 # Network -> Networks -> LAN -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> LAN -> Advanced -> Auto Scale Network -> DHCP range -> 192.168.1.100 to 192.168.1.254
 # Network -> Devices -> udm-rack, usw-ceiling, uap-deck, uap-hallway, uvc-ada, uvc-edwin
-# Traffic & Security -> Detect & Block -> Detect & Block
+# Traffic & Security -> Global Threat Management -> Detect & Block -> Detect & Block
 # Traffic & Security -> System Sensitivity -> Maximum Protection
-# Traffic & Security -> Firewall -> Create New Rule ->
-#    HTTP nginx, TCP, ANY, HTTP (80), nginx (192.168.1.3), HTTP nginx (9080), Enable Logging
-#    HTTPS nginx, TCP, ANY, HTTPS (443), nginx (192.168.1.3), HTTPS nginx (9443), Enable Logging
-
+# Advanced Features -> Advanced Gateway Settings -> Create New Port Forwarding Rule ->
+#    HTTP, Enabled, WAN, Any, 80, 192.168.1.3, 9080, TCP, Logging enable
+#    HTTPS, Enabled, WAN, Any, 443, 192.168.1.3, 9443, TCP, Logging enable
 # Network -> Clients ->
 #   udm-rack 192.168.1.1
 #   macbook-flo 192.168.1.2
 #   macmini-liz 192.168.1.3
 #   macmini-nel 192.168.1.4
-
-
-
-#   lounge-tv 192.168.1.10
+#   appletv-lounge 192.168.1.10
 #   phillips-hue 192.168.1.11
-#   brother-printer 192.168.1.12
 #   uvc-ada 192.168.1.15
 #   uvc-edwin 192.168.1.16
-#   haiku-* 192.168.1.20-29
-#   tplplug-* 192.168.1.30-50
+
+
+#   sonos-* 192.168.1.20-29
+#   haiku-* 192.168.1.30-39
+#   tplplug-* 192.168.1.40-59
+#   brother-printer 192.168.1.12
 
 ################################################################################
 # Network nice-to-have
