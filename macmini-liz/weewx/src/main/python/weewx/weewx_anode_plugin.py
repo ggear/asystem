@@ -8,7 +8,7 @@ from weewx.almanac import Almanac
 from weewx.engine import StdService
 
 URL_DEV = "http://192.168.2.45:8091/rest/?sources=davis"
-URL_PROD = "http://192.168.1.10:8091/rest/?sources=davis"
+URL_PROD = "http://192.168.1.3:8091/rest/?sources=davis"
 
 
 class ANode(StdService):
