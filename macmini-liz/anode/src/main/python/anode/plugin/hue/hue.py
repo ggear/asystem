@@ -23,7 +23,7 @@ from anode.plugin.plugin import Plugin
 
 HTTP_TIMEOUT = 10
 
-BRIDGE_IP = "192.168.1.12"
+BRIDGE_IP = "192.168.1.11"
 
 # TODO: Externalise to environment
 BRIDGE_TOKEN = "o6PRIGF-uz17Gbp8JSWG1haIAAmnPVA-Zv7b3a9S"
