@@ -22,7 +22,7 @@ class Davis(Plugin):
                 bin_width = dict_content["packet"]["interval"]
                 data_timestamp = dict_content["packet"]["dateTime"]
                 self.datum_push(
-                    "temperature__conditions__utility",
+                    "temperature__conditions__rack",
                     "current", "point",
                     None if self.datum_value(dict_content["packet"], ["inTemp"]) is None else self.datum_value(
                         (dict_content["packet"]["inTemp"] - 32) * 5 / 9 - 1, factor=10),
@@ -36,7 +36,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "humidity__conditions__utility",
+                    "humidity__conditions__rack",
                     "current", "point",
                     self.datum_value(dict_content["packet"], ["inHumidity"]),
                     "_P25",
@@ -260,7 +260,7 @@ class Davis(Plugin):
                     data_derived_min=True
                 )
                 self.datum_push(
-                    "dew_Dpoint__conditions__utility",
+                    "dew_Dpoint__conditions__rack",
                     "current", "point",
                     None if self.datum_value(dict_content["packet"], ["inDewpoint"]) is None else self.datum_value(
                         (dict_content["packet"]["inDewpoint"] - 32) * 5 / 9, factor=10),
