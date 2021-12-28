@@ -4,8 +4,6 @@ sensor.ada_temperature:
   friendly_name: Ada
 sensor.basement_temperature:
   friendly_name: Basement
-sensor.deck_temperature:
-  friendly_name: Deck
 sensor.dining_temperature:
   friendly_name: Dining
 sensor.edwin_temperature:
@@ -22,18 +20,14 @@ sensor.pantry_temperature:
   friendly_name: Pantry
 sensor.parents_temperature:
   friendly_name: Parents
-sensor.utility_temperature:
-  friendly_name: Utility
-sensor.ada_carbon_dioxide:
-  friendly_name: Ada
+sensor.rack_temperature:
+  friendly_name: Rack
 sensor.dining_carbon_dioxide:
   friendly_name: Dining
 sensor.edwin_carbon_dioxide:
   friendly_name: Edwin
 sensor.kitchen_carbon_dioxide:
   friendly_name: Kitchen
-sensor.laundry_carbon_dioxide:
-  friendly_name: Laundry
 sensor.lounge_carbon_dioxide:
   friendly_name: Lounge
 sensor.office_carbon_dioxide:
@@ -74,8 +68,6 @@ sensor.ada_humidity:
   friendly_name: Ada
 sensor.basement_humidity:
   friendly_name: Basement
-sensor.deck_humidity:
-  friendly_name: Deck
 sensor.dining_humidity:
   friendly_name: Dining
 sensor.edwin_humidity:
@@ -92,10 +84,10 @@ sensor.pantry_humidity:
   friendly_name: Pantry
 sensor.parents_humidity:
   friendly_name: Parents
-sensor.utility_humidity:
-  friendly_name: Utility
-sensor.utility_dew_point:
-  friendly_name: Utility
+sensor.rack_humidity:
+  friendly_name: Rack
+sensor.rack_dew_point:
+  friendly_name: Rack
 sensor.roof_dew_point:
   friendly_name: Roof
 sensor.last_30_min_rain:

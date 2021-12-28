@@ -15,7 +15,6 @@
     - sensor.roof_temperature
     - sensor.ada_temperature
     - sensor.basement_temperature
-    - sensor.deck_temperature
     - sensor.dining_temperature
     - sensor.edwin_temperature
     - sensor.kitchen_temperature
@@ -24,14 +23,13 @@
     - sensor.office_temperature
     - sensor.pantry_temperature
     - sensor.parents_temperature
-    - sensor.utility_temperature
+    - sensor.rack_temperature
 - type: entities
   show_header_toggle: false
   entities:
     - entity: sensor.roof_temperature
     - entity: sensor.ada_temperature
     - entity: sensor.basement_temperature
-    - entity: sensor.deck_temperature
     - entity: sensor.dining_temperature
     - entity: sensor.edwin_temperature
     - entity: sensor.kitchen_temperature
@@ -40,7 +38,7 @@
     - entity: sensor.office_temperature
     - entity: sensor.pantry_temperature
     - entity: sensor.parents_temperature
-    - entity: sensor.utility_temperature
+    - entity: sensor.rack_temperature
 - type: custom:mini-graph-card
   name: Carbon Dioxide
   font_size_header: 19
@@ -55,11 +53,9 @@
     extrema: true
     fill: false
   entities:
-    - sensor.ada_carbon_dioxide
     - sensor.dining_carbon_dioxide
     - sensor.edwin_carbon_dioxide
     - sensor.kitchen_carbon_dioxide
-    - sensor.laundry_carbon_dioxide
     - sensor.lounge_carbon_dioxide
     - sensor.office_carbon_dioxide
     - sensor.pantry_carbon_dioxide
@@ -67,11 +63,9 @@
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.ada_carbon_dioxide
     - entity: sensor.dining_carbon_dioxide
     - entity: sensor.edwin_carbon_dioxide
     - entity: sensor.kitchen_carbon_dioxide
-    - entity: sensor.laundry_carbon_dioxide
     - entity: sensor.lounge_carbon_dioxide
     - entity: sensor.office_carbon_dioxide
     - entity: sensor.pantry_carbon_dioxide
@@ -153,7 +147,6 @@
     - sensor.roof_humidity
     - sensor.ada_humidity
     - sensor.basement_humidity
-    - sensor.deck_humidity
     - sensor.dining_humidity
     - sensor.edwin_humidity
     - sensor.kitchen_humidity
@@ -162,14 +155,13 @@
     - sensor.office_humidity
     - sensor.pantry_humidity
     - sensor.parents_humidity
-    - sensor.utility_humidity
+    - sensor.rack_humidity
 - type: entities
   show_header_toggle: false
   entities:
     - entity: sensor.roof_humidity
     - entity: sensor.ada_humidity
     - entity: sensor.basement_humidity
-    - entity: sensor.deck_humidity
     - entity: sensor.dining_humidity
     - entity: sensor.edwin_humidity
     - entity: sensor.kitchen_humidity
@@ -178,7 +170,7 @@
     - entity: sensor.office_humidity
     - entity: sensor.pantry_humidity
     - entity: sensor.parents_humidity
-    - entity: sensor.utility_humidity
+    - entity: sensor.rack_humidity
 - type: custom:mini-graph-card
   name: Dew Point
   font_size_header: 19
@@ -193,12 +185,12 @@
     extrema: true
     fill: false
   entities:
-    - sensor.utility_dew_point
+    - sensor.rack_dew_point
     - sensor.roof_dew_point
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.utility_dew_point
+    - entity: sensor.rack_dew_point
     - entity: sensor.roof_dew_point
 - type: custom:mini-graph-card
   name: Rain

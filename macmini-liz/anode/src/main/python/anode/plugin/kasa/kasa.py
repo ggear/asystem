@@ -12,15 +12,10 @@ from anode.plugin.plugin import Plugin
 # TODO: Lookup from env
 PLUGS = {
     # TODO: Re-enable once host and IPs are updated, potentially ping subnet 192.168.1.0/24 then grep arp request to get static IP
-    # "adhoc": "192.168.2.60",
-    # "fridge": "192.168.2.62",
-    # "freezer": "192.168.2.63",
-    # "booster": "192.168.2.64",
-    # "fan": "192.168.2.66",
-    #
-    "servers": "192.168.1.21",  # ac:84:c6:54:95:8b
-    "office": "192.168.1.22",  # ac:84:c6:54:96:50
-    "towelrails": "192.168.1.25",  # ac:84:c6:54:9d:98
+    "servers": "192.168.1.40",  # ac:84:c6:54:95:8b
+    "towelrails": "192.168.1.41",  # ac:84:c6:54:9d:98
+    "kitchenfan": "192.168.1.43",  # ac:84:c6:0d:1b:9c
+    "fridge": "192.168.1.43",  # ac:84:c6:54:96:50
 }
 
 
