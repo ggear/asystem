@@ -160,7 +160,10 @@ if [ ! -d /opt/brother/drivers ]; then
   dpkg -i --force-all brscan-skey-0.3.1-2.amd64.deb
   lpstat -s
   lpadmin -x MFCL2700DW
+
+  # TODO: Lookup from env
   lpadmin -p Brother-Printer -E -D "Home Printer" -o printer-is-shared=true -u allow:all -v socket://192.168.1.15:9100 -i /usr/share/ppd/brother/brother-MFCL2700DW-cups-en.ppd
+
   lpstat -s
   poptions -d Brother-Printer
   lpstat -d

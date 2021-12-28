@@ -9,6 +9,7 @@ import anode
 from anode.plugin.plugin import DATUM_QUEUE_MIN
 from anode.plugin.plugin import Plugin
 
+# TODO: Lookup from env
 PLUGS = {
     # TODO: Re-enable once host and IPs are updated, potentially ping subnet 192.168.1.0/24 then grep arp request to get static IP
     # "adhoc": "192.168.2.60",
