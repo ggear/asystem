@@ -1,0 +1,19 @@
+- type: custom:mini-graph-card
+  name: Rain
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.last_30_min_rain
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.last_30_min_rain

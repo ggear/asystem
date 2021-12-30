@@ -77,7 +77,7 @@ from(bucket: "asystem")
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "roof_temperature" or r["entity_id"] == "ada_temperature" or r["entity_id"] == "basement_temperature" or r["entity_id"] == "deck_temperature" or r["entity_id"] == "dining_temperature" or r["entity_id"] == "edwin_temperature" or r["entity_id"] == "kitchen_temperature" or r["entity_id"] == "laundry_temperature" or r["entity_id"] == "lounge_temperature" or r["entity_id"] == "office_temperature" or r["entity_id"] == "pantry_temperature" or r["entity_id"] == "parents_temperature" or r["entity_id"] == "utility_temperature")
+  |> filter(fn: (r) => r["entity_id"] == "roof_temperature" or r["entity_id"] == "ada_temperature" or r["entity_id"] == "basement_temperature" or r["entity_id"] == "dining_temperature" or r["entity_id"] == "edwin_temperature" or r["entity_id"] == "kitchen_temperature" or r["entity_id"] == "laundry_temperature" or r["entity_id"] == "lounge_temperature" or r["entity_id"] == "office_temperature" or r["entity_id"] == "pantry_temperature" or r["entity_id"] == "parents_temperature" or r["entity_id"] == "rack_temperature")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
@@ -94,7 +94,7 @@ from(bucket: "home_private")
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "ada_carbon_dioxide" or r["entity_id"] == "dining_carbon_dioxide" or r["entity_id"] == "edwin_carbon_dioxide" or r["entity_id"] == "kitchen_carbon_dioxide" or r["entity_id"] == "laundry_carbon_dioxide" or r["entity_id"] == "lounge_carbon_dioxide" or r["entity_id"] == "office_carbon_dioxide" or r["entity_id"] == "pantry_carbon_dioxide" or r["entity_id"] == "parents_carbon_dioxide")
+  |> filter(fn: (r) => r["entity_id"] == "dining_carbon_dioxide" or r["entity_id"] == "edwin_carbon_dioxide" or r["entity_id"] == "kitchen_carbon_dioxide" or r["entity_id"] == "lounge_carbon_dioxide" or r["entity_id"] == "office_carbon_dioxide" or r["entity_id"] == "pantry_carbon_dioxide" or r["entity_id"] == "parents_carbon_dioxide")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
@@ -118,23 +118,6 @@ from(bucket: "home_private")
                   { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
 
                   graph.new(
-                        title='Pressure',
-                        datasource='InfluxDB_V2',
-                        fill=0,
-                        format='short',
-                        bars=false,
-                        lines=true,
-                        staircase=false,
-                  ).addTarget(influxdb.target(query='
-from(bucket: "home_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "roof_pressure" or r["entity_id"] == "ada_pressure" or r["entity_id"] == "edwin_pressure" or r["entity_id"] == "kitchen_pressure" or r["entity_id"] == "laundry_pressure" or r["entity_id"] == "office_pressure" or r["entity_id"] == "parents_pressure")
-  |> keep(columns: ["_time", "_value", "friendly_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-                  '))
-                  { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
-
-                  graph.new(
                         title='Humidity',
                         datasource='InfluxDB_V2',
                         fill=0,
@@ -145,24 +128,7 @@ from(bucket: "home_private")
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "roof_humidity" or r["entity_id"] == "ada_humidity" or r["entity_id"] == "basement_humidity" or r["entity_id"] == "deck_humidity" or r["entity_id"] == "dining_humidity" or r["entity_id"] == "edwin_humidity" or r["entity_id"] == "kitchen_humidity" or r["entity_id"] == "laundry_humidity" or r["entity_id"] == "lounge_humidity" or r["entity_id"] == "office_humidity" or r["entity_id"] == "pantry_humidity" or r["entity_id"] == "parents_humidity" or r["entity_id"] == "utility_humidity")
-  |> keep(columns: ["_time", "_value", "friendly_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-                  '))
-                  { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
-
-                  graph.new(
-                        title='Dew Point',
-                        datasource='InfluxDB_V2',
-                        fill=0,
-                        format='short',
-                        bars=false,
-                        lines=true,
-                        staircase=false,
-                  ).addTarget(influxdb.target(query='
-from(bucket: "home_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "utility_dew_point" or r["entity_id"] == "roof_dew_point")
+  |> filter(fn: (r) => r["entity_id"] == "roof_humidity" or r["entity_id"] == "ada_humidity" or r["entity_id"] == "basement_humidity" or r["entity_id"] == "dining_humidity" or r["entity_id"] == "edwin_humidity" or r["entity_id"] == "kitchen_humidity" or r["entity_id"] == "laundry_humidity" or r["entity_id"] == "lounge_humidity" or r["entity_id"] == "office_humidity" or r["entity_id"] == "pantry_humidity" or r["entity_id"] == "parents_humidity" or r["entity_id"] == "rack_humidity")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))

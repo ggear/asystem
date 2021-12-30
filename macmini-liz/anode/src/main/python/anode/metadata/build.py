@@ -33,7 +33,7 @@ SENSORS_HEADER = [
 
 
 def on_connect(client, user_data, flags, return_code):
-    client.subscribe("{}/#".format(ENV["VERNEMQ_PORT"]))
+    client.subscribe("haas/sensor/config/#")
 
 
 def on_message(client, user_data, message):

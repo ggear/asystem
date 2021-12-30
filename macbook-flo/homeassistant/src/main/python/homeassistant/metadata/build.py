@@ -21,8 +21,9 @@ sensor.{}:
   friendly_name: {}
             """.format(sensor[2], sensor[5]).strip() + "\n")
     print("Metadata script [homeassistant] customize saved")
-    with open(DIR_MODULE_ROOT + "/../../main/resources/config/ui-lovelace/monitor.yaml", "w") as file:
-        for group in sensors:
+
+    for group in sensors:
+        with open(DIR_MODULE_ROOT + "/../../main/resources/config/ui-lovelace/{}.yaml".format(group), "w") as file:
             for domain in sensors[group]:
                 file.write("""
 - type: custom:mini-graph-card

@@ -1,0 +1,50 @@
+- type: custom:mini-graph-card
+  name: Power Consumption
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.fridge_power_consumption
+    - sensor.servers_power_consumption
+    - sensor.kitchenfan_power_consumption
+    - sensor.towelrails_power_consumption
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.fridge_power_consumption
+    - entity: sensor.servers_power_consumption
+    - entity: sensor.kitchenfan_power_consumption
+    - entity: sensor.towelrails_power_consumption
+- type: custom:mini-graph-card
+  name: Energy Consumption
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - sensor.fridge_energy_consumption
+    - sensor.servers_energy_consumption
+    - sensor.kitchenfan_energy_consumption
+    - sensor.towelrails_energy_consumption
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.fridge_energy_consumption
+    - entity: sensor.servers_energy_consumption
+    - entity: sensor.kitchenfan_energy_consumption
+    - entity: sensor.towelrails_energy_consumption

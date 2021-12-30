@@ -48,20 +48,6 @@ sensor.office_noise:
   friendly_name: Office
 sensor.parents_noise:
   friendly_name: Parents
-sensor.roof_pressure:
-  friendly_name: Roof
-sensor.ada_pressure:
-  friendly_name: Ada
-sensor.edwin_pressure:
-  friendly_name: Edwin
-sensor.kitchen_pressure:
-  friendly_name: Kitchen
-sensor.laundry_pressure:
-  friendly_name: Laundry
-sensor.office_pressure:
-  friendly_name: Office
-sensor.parents_pressure:
-  friendly_name: Parents
 sensor.roof_humidity:
   friendly_name: Roof
 sensor.ada_humidity:
@@ -86,15 +72,21 @@ sensor.parents_humidity:
   friendly_name: Parents
 sensor.rack_humidity:
   friendly_name: Rack
-sensor.rack_dew_point:
-  friendly_name: Rack
-sensor.roof_dew_point:
-  friendly_name: Roof
 sensor.last_30_min_rain:
   friendly_name: Last 30 Min
-sensor.office_power_consumption:
-  friendly_name: Office
+sensor.fridge_power_consumption:
+  friendly_name: Fridge
 sensor.servers_power_consumption:
   friendly_name: Servers
+sensor.kitchenfan_power_consumption:
+  friendly_name: Kitchenfan
 sensor.towelrails_power_consumption:
+  friendly_name: Towelrails
+sensor.fridge_energy_consumption:
+  friendly_name: Fridge
+sensor.servers_energy_consumption:
+  friendly_name: Servers
+sensor.kitchenfan_energy_consumption:
+  friendly_name: Kitchenfan
+sensor.towelrails_energy_consumption:
   friendly_name: Towelrails

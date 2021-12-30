@@ -53,17 +53,6 @@ mqtt:
 
 stream:
 
-# Disable in favour of stream/protect integration
-#camera:
-#  - platform: generic
-#    name: "Edwin Camera"
-#    still_image_url: "http://ubnt:ubnt@192.168.1.16/snap.jpeg"
-#    stream_source: "rtsp://ubnt:ubnt@192.168.1.16:554/s0"
-#  - platform: generic
-#    name: "Ada Camera"
-#    still_image_url: "http://ubnt:ubnt@192.168.1.17/snap.jpeg"
-#    stream_source: "rtsp://ubnt:ubnt@192.168.1.17:554/s0"
-
 # Disable until add some sensors
 #sensor:
 #  !include_dir_merge_list config_sensors
@@ -71,6 +60,71 @@ stream:
 # Disable until I create some automations
 #automation:
 #  !include_dir_merge_list config_automations
+
+panel_custom:
+  - name: weather
+    sidebar_title: Weather
+    sidebar_icon: mdi:weather-cloudy
+    js_url: /api/hassio/app/entrypoint.js
+    url_path: 'lovelace/default_view'
+    embed_iframe: true
+    require_admin: false
+    config:
+      ingress: core_configurator
+  - name: control
+    sidebar_title: Control
+    sidebar_icon: mdi:power
+    js_url: /api/hassio/app/entrypoint.js
+    url_path: 'lovelace/control'
+    embed_iframe: true
+    require_admin: false
+    config:
+      ingress: core_configurator
+  - name: media
+    sidebar_title: Media
+    sidebar_icon: mdi:play
+    js_url: /api/hassio/app/entrypoint.js
+    url_path: 'lovelace/media'
+    embed_iframe: true
+    require_admin: false
+    config:
+      ingress: core_configurator
+  - name: cameras
+    sidebar_title: Cameras
+    sidebar_icon: mdi:home-automation
+    js_url: /api/hassio/app/entrypoint.js
+    url_path: 'lovelace/cameras'
+    embed_iframe: true
+    require_admin: false
+    config:
+      ingress: core_configurator
+  - name: conditions
+    sidebar_title: Conditions
+    sidebar_icon: mdi:temperature-celsius
+    js_url: /api/hassio/app/entrypoint.js
+    url_path: 'lovelace/conditions'
+    embed_iframe: true
+    require_admin: false
+    config:
+      ingress: core_configurator
+  - name: electricity
+    sidebar_title: Electricity
+    sidebar_icon: mdi:lightning-bolt
+    js_url: /api/hassio/app/entrypoint.js
+    url_path: 'lovelace/electricity'
+    embed_iframe: true
+    require_admin: false
+    config:
+      ingress: core_configurator
+  - name: water
+    sidebar_title: Water
+    sidebar_icon: mdi:water
+    js_url: /api/hassio/app/entrypoint.js
+    url_path: 'lovelace/water'
+    embed_iframe: true
+    require_admin: false
+    config:
+      ingress: core_configurator
 
 lovelace:
   mode: yaml
