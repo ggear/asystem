@@ -1,8 +1,8 @@
 #!/bin/sh
 
 # Command Line
-# - sudo passwd
-# - vi /etc/ssh/sshd_config -> PermitRootLogin yes
+sudo passwd root
+sed 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config > /etc/ssh/sshd_config
 
 # Settings
 # - Sharing -> Computer Name
@@ -15,6 +15,9 @@
 # - Keyboard -> Shortcuts -> App Shortcuts -> Show Previous Tab
 # - Keyboard -> Shortcuts -> App Shortcuts -> Show Next Tab
 # - Users & Groups -> Icon edit
+
+# Safari
+# - Safari -> Downloads
 
 # Terminal Settings
 # - Profiles -> When the shell exits -> Close the window
@@ -30,10 +33,10 @@
 #git clone https://github.com/ggear/asystem.git
 
 # Brew
-#/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-#brew update
-#brew upgrade
-#brew install htop wget watch
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew update
+brew upgrade
+brew install htop wget watch
 
 # CleanMyMac X
 #wget https://dl.devmate.com/com.macpaw.CleanMyMac4/CleanMyMacX.dmg
