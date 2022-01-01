@@ -7,7 +7,7 @@ cd ${SERVICE_INSTALL} || exit
 user_add() {
   if [ -d "${3}" ]; then
     if [ ${4} ]; then
-      [ $(grep "${1}" "/etc/passwd" | wc -l) -eq 0 ] && adduser -D "${1}"
+      [ $(grep "${1}" "/etc/passwd" | wc -l) -eq 0 ] && adduser -D "${1}" 2> /dev/null
       [ -d "${3}${1}" ] && mkdir -p ${3}${1} && chmod 711 ${3}
     fi
     if [ -d "${3}${1}" ]; then
