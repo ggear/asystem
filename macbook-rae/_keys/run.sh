@@ -9,8 +9,8 @@ key_copy() {
     mkdir -p ${3}${1}/.ssh
     cp -rvf ./config/id_rsa.pub ${3}${1}/.ssh
     cp -rvf ./config/.id_rsa ${3}${1}/.ssh/id_rsa
-    chown -R ${1} ${3}${1}
-    chgrp -R ${2} ${3}${1}
+    chown -R ${1} ${3}${1} || true
+    chgrp -R ${2} ${3}${1} || true
   fi
 }
 
