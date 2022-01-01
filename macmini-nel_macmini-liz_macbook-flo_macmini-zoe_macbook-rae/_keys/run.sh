@@ -15,5 +15,6 @@ key_copy() {
 }
 
 key_copy 'root' 'root' '/'
+key_copy 'root' 'root' '/var'
 key_copy 'graham' 'users' '/home/'
 key_copy 'graham' 'staff' '/Users/'
