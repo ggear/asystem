@@ -8,7 +8,7 @@ user_add() {
   if [ -d "${3}" ]; then
     if [ ${4} ]; then
       [ $(grep "${1}" "/etc/passwd" | wc -l) -eq 0 ] && adduser -D "${1}" 2> /dev/null
-      [ -d "${3}${1}" ] && mkdir -p ${3}${1} && chmod 711 ${3}
+      [ -d "${3}${1}" ] && mkdir -p ${3}${1} && chmod 711 ${3} 2> /dev/null
     fi
     if [ -d "${3}${1}" ]; then
       if [ ! -e "${3}${1}/.ssh/authorized_keys" ] || [ $(grep graham "${3}${1}/.ssh/authorized_keys" | wc -l) -eq 0 ]; then
