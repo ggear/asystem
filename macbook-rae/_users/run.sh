@@ -28,6 +28,6 @@ EOF
 }
 
 user_add 'root' 'root' '/' false
-user_add 'root' 'root' '/var' false
+user_add 'root' 'root' '/var/' false
 user_add 'graham' 'users' '/home/' true
 user_add 'graham' 'staff' '/Users/' true
