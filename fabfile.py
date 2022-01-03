@@ -138,11 +138,11 @@ def _purge(context):
 
 def _backup(context):
     _print_header("asystem", "backup")
-    _run_local(context, "mkdir -p /Users/graham/_/doc/bup/asystem && "
+    _run_local(context, "mkdir -p /Users/graham/_/backup/asystem && "
                         "git check-ignore $(find . -type f -print) | grep -v ./asystem.iml | grep -v ./.git "
-                        "> /Users/graham/_/doc/bup/asystem/.gitexternal", DIR_ROOT)
-    _run_local(context, "mkdir -p /Users/graham/_/doc/bup/asystem && "
-                        "rsync -vr --files-from=/Users/graham/_/doc/bup/asystem/.gitexternal . /Users/graham/_/doc/bup/asystem", DIR_ROOT)
+                        "> /Users/graham/_/backup/asystem/.gitexternal", DIR_ROOT)
+    _run_local(context, "mkdir -p /Users/graham/_/backup/asystem && "
+                        "rsync -vr --files-from=/Users/graham/_/backup/asystem/.gitexternal . /Users/graham/_/backup/asystem", DIR_ROOT)
     _print_footer("asystem", "backup")
 
 
