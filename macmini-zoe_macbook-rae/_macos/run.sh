@@ -68,7 +68,7 @@ function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.
 export PATH=/opt/local/bin:/opt/local/sbin:/usr/sbin:$PATH
 EOF
 sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-su graham
+cd /Users/graham && su graham
 mkdir -p ~/Backup ~/Code ~/Temp
 git config --global user.name "Graham Gear"
 git config --global user.email graham.gear@gmail.com
