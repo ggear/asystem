@@ -16,6 +16,10 @@ brew update
 brew upgrade
 brew install htop wget watch
 
+# SSH
+git config --global user.name "Graham Gear"
+git config --global user.email graham.gear@gmail.com
+
 # Settings
 # - Sharing -> Computer Name
 # - Sharing -> Remote Login
