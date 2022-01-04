@@ -71,10 +71,10 @@ sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/s
 mkdir -p ~/Backup ~/Code ~/Temp
 git config --global user.name "Graham Gear"
 git config --global user.email graham.gear@gmail.com
-! brew --help 1>&2 >/dev/null && /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew update
-brew upgrade
-brew install \
-  htop \
-  wget \
-  watch
+#! brew --help 1>&2 >/dev/null && /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+#brew update
+#brew upgrade
+#brew install \
+#  htop \
+#  wget \
+#  watch
