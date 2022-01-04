@@ -43,13 +43,13 @@
 
 # Initialise
 # sudo passwd root
+# chsh -s /bin/bash
 # sudo scutil --set HostName <name>
 # sudo scutil --set LocalHostName <name>
 # sudo scutil --set ComputerName <name>
 
-chsh -s /bin/bash
 rm -rf .zprofile .zsh_history .zsh_sessions
-cat <<EOF >~/.bash_profile
+cat <<EOF >/Users/graham/.bash_profile
 # .bash_profile
 
 export CLICOLOR=1
@@ -68,13 +68,14 @@ function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.
 export PATH=/opt/local/bin:/opt/local/sbin:/usr/sbin:$PATH
 EOF
 sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+su graham
 mkdir -p ~/Backup ~/Code ~/Temp
 git config --global user.name "Graham Gear"
 git config --global user.email graham.gear@gmail.com
-#! brew --help 1>&2 >/dev/null && /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-#brew update
-#brew upgrade
-#brew install \
-#  htop \
-#  wget \
-#  watch
+! brew --help 1>&2 >/dev/null && /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew update
+brew upgrade
+brew install \
+  htop \
+  wget \
+  watch
