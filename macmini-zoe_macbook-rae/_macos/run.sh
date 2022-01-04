@@ -1,25 +1,5 @@
 #!/bin/sh
 
-# Initialise
-sudo passwd root
-sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-chsh -s /bin/bash
-
-# Home
-mkdir -p ~/Backup ~/Code ~/Temp
-cd ~/Code
-git clone https://github.com/ggear/asystem.git
-
-# Brew
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew update
-brew upgrade
-brew install htop wget watch
-
-# SSH
-git config --global user.name "Graham Gear"
-git config --global user.email graham.gear@gmail.com
-
 # Settings
 # - Sharing -> Computer Name
 # - Sharing -> Remote Login
@@ -42,38 +22,59 @@ git config --global user.email graham.gear@gmail.com
 # Safari
 # - Safari -> Downloads -> Desktop
 
-# Terminal Settings
+# Terminal
 # - Profiles -> When the shell exits -> Close the window
 # - Text -> Change -> SF Mono Regular 14
 # - Window -> Columns -> 200
 # - Window -> Rows -> 60
 
-# App Store
-# - Calca
-# - Infuse
-# - Adblock Plus
+# Install Apps
+# - Install Calca from App Store
+# - Infuse from App Store
+# - Adblock Plus from App Store
+# - Install from https://dl.google.com/drive-file-stream/GoogleDrive.dmg
+# - Install from https://dl.devmate.com/com.macpaw.CleanMyMac4/CleanMyMacX.dmg
+# - Install from https://cdn.bjango.com/files/istatmenus6/istatmenus6.60.zip
+# - Install from https://download.sublimetext.com/sublime_text_build_4107_mac.zip
+# - Install from https://downloads.kiwiforgmail.com/kiwi/release/consumer/Kiwi+for+Gmail+Setup.dmg
+# - Install from https://mirror.aarnet.edu.au/pub/videolan/vlc/3.0.16/macosx/vlc-3.0.16-intel64.dmg
+# - Install from https://github.com/newmarcel/KeepingYouAwake/releases/download/1.6.1/KeepingYouAwake-1.6.1.zip
+# - Remove all unnecessary apps using Clean My Mac
 
-# Applications
-# Remove all uncessary apps
+# Initialise
+# sudo passwd root
+# sudo scutil --set HostName <name>
+# sudo scutil --set LocalHostName <name>
+# sudo scutil --set ComputerName <name>
 
-# Google Drive
-# wget https://dl.google.com/drive-file-stream/GoogleDrive.dmg
-mv ~/Google\ Drive ~/Drive
+chsh -s /bin/bash
+rm -rf .zprofile .zsh_history .zsh_sessions
+cat <<EOF >~/.bash_profile
+# .bash_profile
 
-# CleanMyMac X
-#wget https://dl.devmate.com/com.macpaw.CleanMyMac4/CleanMyMacX.dmg
+export CLICOLOR=1
+export LSCOLORS=ExFxCxDxBxegedabagacad
 
-# iStat Pro
-#wget https://cdn.bjango.com/files/istatmenus6/istatmenus6.60.zip
+bind '"\e[A":history-search-backward'
+bind '"\e[B":history-search-forward'
 
-# Sublime Text
-#wget https://download.sublimetext.com/sublime_text_build_4107_mac.zip
+alias edit="/Applications/Sublime\ Text.app/Contents/SharedSupport/bin/subl"
+alias grep="grep --line-buffered"
+alias fab="fab -e"
 
-# Kiwi for Gmail
-#wget https://downloads.kiwiforgmail.com/kiwi/release/consumer/Kiwi+for+Gmail+Setup.dmg
+alias ssh-copy-id='sshcopyid_func'
+function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.ssh/authorized_keys' ;}
 
-# VLC Download
-#wget https://mirror.aarnet.edu.au/pub/videolan/vlc/3.0.16/macosx/vlc-3.0.16-intel64.dmg
-
-# Keep Awake
-wget https://objects.githubusercontent.com/github-production-release-asset-2e65be/25431634/01e1ea7d-2c92-4d41-a48a-e10835771b8f?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAIWNJYAX4CSVEH53A%2F20220101%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20220101T085745Z&X-Amz-Expires=300&X-Amz-Signature=cb696df80e60223a6df244ca28e72302d633b3c0b4ab8308f52955fdc0e9acd9&X-Amz-SignedHeaders=host&actor_id=0&key_id=0&repo_id=25431634&response-content-disposition=attachment%3B%20filename%3DKeepingYouAwake-1.6.1.zip&response-content-type=application%2Foctet-stream
+export PATH=/opt/local/bin:/opt/local/sbin:/usr/sbin:$PATH
+EOF
+sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+mkdir -p ~/Backup ~/Code ~/Temp
+git config --global user.name "Graham Gear"
+git config --global user.email graham.gear@gmail.com
+! brew --help 1>&2 >/dev/null && /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+brew update
+brew upgrade
+brew install \
+  htop \
+  wget \
+  watch
