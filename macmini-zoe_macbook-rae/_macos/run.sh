@@ -27,14 +27,3 @@ sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/s
 mkdir -p /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chown graham /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chgrp staff /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
-
-################################################################################
-# Install Brew Packages
-################################################################################
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-brew update
-brew upgrade
-brew install \
-  htop \
-  wget \
-  watch
