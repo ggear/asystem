@@ -48,8 +48,10 @@ RBA_YEARS = [
     "2007-2009",
     "2010-2013",
     "2014-2017",
+    "2014-2017",
     "2018-current"
 ]
+
 RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
@@ -136,7 +138,7 @@ class Currency(library.Library):
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-            if datetime.datetime.now().year > 2021:
+            if datetime.datetime.now().year > 2022:
                 self.print_log("Error processing RBA data, need to increment RBA_YEARS for new current file")
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, 1)
                 return

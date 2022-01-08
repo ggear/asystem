@@ -115,7 +115,7 @@ def _setup(context):
     _print_line(
         "Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(_get_versions()[2], _get_versions()[1], _get_versions()[0]))
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) == 0:
-        _run_local(context, "conda create -y -n $ENV python=2.7")
+        _run_local(context, "conda create -y -n $ENV python=2.7.18")
         _print_line("Installing requirements ...")
         for requirement in glob.glob("{}/*/*/*/reqs_*.txt".format(DIR_ROOT)):
             _run_local(context, "pip install -r {}".format(requirement))
