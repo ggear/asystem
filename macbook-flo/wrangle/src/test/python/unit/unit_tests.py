@@ -23,11 +23,11 @@ for key, value in library.load_profile(library.get_file(".env")).iteritems():
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("currency", {"success_typical": ASSERT_RUN},
+        self.run_module("equity", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
-                        random_subset_rows=True,
-                        reprocess_all_files=True,
+                        random_subset_rows=False,
+                        reprocess_all_files=False,
                         disable_write_stdout=True,
                         disable_upload_files=True,
                         disable_download_files=False,

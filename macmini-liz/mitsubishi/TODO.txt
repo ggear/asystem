@@ -1,0 +1,8 @@
+# Implement Modbus client for solaredge in Rust
+
+# https://chrdavis.github.io/hacking-a-mitsubishi-heat-pump-Part-1 & https://chrdavis.github.io/hacking-a-mitsubishi-heat-pump-Part-2
+
+Size, most effcient, draw from batteryt
+2 versus 1 unit, maybe install pipe/wires for 2, but only 1 initially
+pipe length limitations, extra insulation
+wall requirements

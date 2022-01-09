@@ -378,7 +378,7 @@ class Equity(library.Library):
                             statement_df[column] = statement_df[column].loc[statement_df[column].first_valid_index()]
                 for stock in STOCK:
                     if stock in stocks_df:
-                        equity_df = pd.concat([equity_df, stocks_df[stock]], axis=1, sort=True)
+                        equity_df = pd.concat([equity_df, stocks_df[stock][~stocks_df[stock].index.duplicated()]], axis=1, sort=True)
                 equity_df.index = pd.to_datetime(equity_df.index)
                 equity_df = equity_df.resample('D')
                 equity_df = equity_df.ffill()
@@ -403,7 +403,8 @@ class Equity(library.Library):
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
             equity_delta_df, equity_current_df, _ = self.state_cache(
-                equity_df, not library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) and library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+                equity_df, not library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) and
+                           library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             if len(equity_delta_df):
                 tickers = []
                 for column in equity_current_df.columns:
