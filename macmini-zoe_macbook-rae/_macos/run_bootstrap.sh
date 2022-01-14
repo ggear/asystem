@@ -53,6 +53,7 @@
 # Install from https://download.sublimetext.com/sublime_text_build_4107_mac.zip
 # Install from https://downloads.kiwiforgmail.com/kiwi/release/consumer/Kiwi+for+Gmail+Setup.dmg
 # Install from https://mirror.aarnet.edu.au/pub/videolan/vlc/3.0.16/macosx/vlc-3.0.16-intel64.dmg
+# Install from https://update-software.sonos.com/software/mac/mdcr/SonosDesktopController1341.dmg
 # Install from https://github.com/newmarcel/KeepingYouAwake/releases/download/1.6.1/KeepingYouAwake-1.6.1.zip
 # Remove all unnecessary apps using Clean My Mac
 
