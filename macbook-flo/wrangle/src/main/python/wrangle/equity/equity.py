@@ -222,7 +222,7 @@ class Equity(library.Library):
                                 if page_index == 0:
                                     if len(statement_lines) > 1 and (
                                             statement_lines[0].strip().startswith("Consolidated Statement") or
-                                            statement_lines[0].strip().startswith("Statement of MIO Investments")
+                                            statement_lines[0].strip().startswith("Statement of")
                                     ):
                                         statement_data[statement_file_name]['Status'] = STATUS_SUCCESS
                                     elif len(statement_lines) > 1 and "Administration Services" in statement_lines[0]:

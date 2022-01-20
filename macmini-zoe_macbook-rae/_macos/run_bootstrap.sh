@@ -45,8 +45,9 @@
 # Install Apps
 ################################################################################
 # Install Calca from App Store
-# Infuse from App Store
-# Adblock Plus from App Store
+# Install Infuse from App Store
+# Install WhatsApp from App Store
+# Install Adblock Plus from App Store
 # Install from https://dl.google.com/drive-file-stream/GoogleDrive.dmg
 # Install from https://dl.devmate.com/com.macpaw.CleanMyMac4/CleanMyMacX.dmg
 # Install from https://cdn.bjango.com/files/istatmenus6/istatmenus6.60.zip

@@ -1,4 +1,14 @@
 - type: entities
+  title: Fans
+  entities:
+    - entity: fan.ada
+    - entity: fan.edwin
+    - entity: fan.lounge
+    - entity: fan.parents
+    - entity: fan.deck1
+    - entity: fan.deck2
+
+- type: entities
   title: Lights
   entities:
     - entity: light.ada
@@ -35,16 +45,6 @@
       name: Parents Main
     - entity: light.wardrobe
       name: Wardrobe Main
-
-- type: entities
-  title: Fans
-  entities:
-    - entity: fan.ada
-    - entity: fan.edwin
-    - entity: fan.lounge
-    - entity: fan.parents
-    - entity: fan.deck1
-    - entity: fan.deck2
 
 - type: entities
   title: Switches

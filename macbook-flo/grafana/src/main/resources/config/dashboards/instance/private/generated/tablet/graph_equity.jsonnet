@@ -582,7 +582,7 @@ series
                   ,
 
                   graph.new(
-                        title='MIO Deltas',
+                        title='Fund Deltas',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -671,6 +671,36 @@ series
                   ')).addTarget(influxdb.target(query='
 import "strings"
 field = "msg"
+type = "base"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "mck"
+type = "spot"
+series = from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity" and r["_field"] == field and r["period"] == "1d" and r["type"] == "price-close-" + type)
+  |> keep(columns: ["_time", "_value", "_field"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+baseline = series
+  |> findRecord(fn: (key) => true, idx: 0)
+series
+  |> map(fn: (r) => ({ r with _value: (r._value - baseline._value) / baseline._value * 100.0 }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: strings.toUpper(v: field) + " " + strings.title(v: type)})
+                  ')).addTarget(influxdb.target(query='
+import "strings"
+field = "mck"
 type = "base"
 series = from(bucket: "data_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

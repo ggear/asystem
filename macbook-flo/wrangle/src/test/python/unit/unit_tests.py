@@ -30,7 +30,7 @@ class WrangleTest(unittest.TestCase):
                         reprocess_all_files=False,
                         disable_write_stdout=True,
                         disable_upload_files=True,
-                        disable_download_files=False,
+                        disable_download_files=True,
                         )
 
     def test_currency_typical(self):
