@@ -9,14 +9,20 @@ import anode
 from anode.plugin.plugin import DATUM_QUEUE_MIN
 from anode.plugin.plugin import Plugin
 
-# TODO: Lookup from env
+# TODO: Lookup from Kasa API (https://github.com/python-kasa/python-kasa)
 PLUGS = {
-    # TODO: Potentially ping subnet 192.168.1.0/24 then grep arp request to get static IP
-    "bathroom_Dtowelrails": "192.168.1.41",  # ac:84:c6:54:9d:98
-    "kitchen_Dfan": "192.168.1.43",  # ac:84:c6:0d:1b:9c
-    "kitchen_Dfridge": "192.168.1.42",  # ac:84:c6:54:96:50
-    "office_Dpower": "192.168.1.44",  # 10:27:f5:31:ec:58
-    "rack_Dpower": "192.168.1.40",  # ac:84:c6:54:95:8b
+    "various_adhoc": "192.168.1.48",
+    "study_power": "192.168.1.45",
+    "rack_Dpower": "192.168.1.40",
+    "office_Dpower": "192.168.1.44",
+    "lounge_tv": "192.168.1.49",
+    "kitchen_Dfridge": "192.168.1.42",
+    "kitchen_Dfan": "192.168.1.43",
+    "kitchen_coffee": "192.168.1.50",
+    "hallway_switch": "192.168.1.47",
+    "deck_freezer": "192.168.1.51",
+    "deck_festoons": "192.168.1.46",
+    "bathroom_Dtowelrails": "192.168.1.41",
 }
 
 

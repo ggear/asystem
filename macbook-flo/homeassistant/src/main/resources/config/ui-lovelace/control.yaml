@@ -49,7 +49,7 @@
 - type: entities
   title: Switches
   entities:
-    - entity: switch.kitchenfan
+    - entity: switch.kitchen_fan
       name: Kitchen Fan
-    - entity: switch.towelrails
+    - entity: switch.bathroom_towelrails
       name: Bathroom Towel Rails

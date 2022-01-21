@@ -12,17 +12,19 @@
     extrema: true
     fill: false
   entities:
-    - sensor.fridge_power_consumption
-    - sensor.servers_power_consumption
-    - sensor.kitchenfan_power_consumption
-    - sensor.towelrails_power_consumption
+    - sensor.kitchen_fridge_power_consumption
+    - sensor.rack_power_power_consumption
+    - sensor.office_power_power_consumption
+    - sensor.kitchen_fan_power_consumption
+    - sensor.bathroom_towelrails_power_consumption
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.fridge_power_consumption
-    - entity: sensor.servers_power_consumption
-    - entity: sensor.kitchenfan_power_consumption
-    - entity: sensor.towelrails_power_consumption
+    - entity: sensor.kitchen_fridge_power_consumption
+    - entity: sensor.rack_power_power_consumption
+    - entity: sensor.office_power_power_consumption
+    - entity: sensor.kitchen_fan_power_consumption
+    - entity: sensor.bathroom_towelrails_power_consumption
 - type: custom:mini-graph-card
   name: Energy Consumption
   font_size_header: 19
@@ -37,14 +39,16 @@
     extrema: true
     fill: false
   entities:
-    - sensor.fridge_energy_consumption
-    - sensor.servers_energy_consumption
-    - sensor.kitchenfan_energy_consumption
-    - sensor.towelrails_energy_consumption
+    - sensor.kitchen_fridge_energy_consumption
+    - sensor.rack_power_energy_consumption
+    - sensor.office_energy_consumption
+    - sensor.kitchen_fan_energy_consumption
+    - sensor.bathroom_towelrails_energy_consumption
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.fridge_energy_consumption
-    - entity: sensor.servers_energy_consumption
-    - entity: sensor.kitchenfan_energy_consumption
-    - entity: sensor.towelrails_energy_consumption
+    - entity: sensor.kitchen_fridge_energy_consumption
+    - entity: sensor.rack_power_energy_consumption
+    - entity: sensor.office_energy_consumption
+    - entity: sensor.kitchen_fan_energy_consumption
+    - entity: sensor.bathroom_towelrails_energy_consumption

@@ -74,19 +74,23 @@ sensor.rack_humidity:
   friendly_name: Rack
 sensor.last_30_min_rain:
   friendly_name: Last 30 Min
-sensor.fridge_power_consumption:
-  friendly_name: Fridge
-sensor.servers_power_consumption:
-  friendly_name: Servers
-sensor.kitchenfan_power_consumption:
-  friendly_name: Kitchenfan
-sensor.towelrails_power_consumption:
-  friendly_name: Towelrails
-sensor.fridge_energy_consumption:
-  friendly_name: Fridge
-sensor.servers_energy_consumption:
-  friendly_name: Servers
-sensor.kitchenfan_energy_consumption:
-  friendly_name: Kitchenfan
-sensor.towelrails_energy_consumption:
-  friendly_name: Towelrails
+sensor.kitchen_fridge_power_consumption:
+  friendly_name: Kitchen Fridge
+sensor.rack_power_power_consumption:
+  friendly_name: Rack Power
+sensor.office_power_power_consumption:
+  friendly_name: Office Power
+sensor.kitchen_fan_power_consumption:
+  friendly_name: Kitchen Fan
+sensor.bathroom_towelrails_power_consumption:
+  friendly_name: Bathroom Towelrails
+sensor.kitchen_fridge_energy_consumption:
+  friendly_name: Kitchen Fridge
+sensor.rack_power_energy_consumption:
+  friendly_name: Rack Power
+sensor.office_energy_consumption:
+  friendly_name: Office
+sensor.kitchen_fan_energy_consumption:
+  friendly_name: Kitchen Fan
+sensor.bathroom_towelrails_energy_consumption:
+  friendly_name: Bathroom Towelrails
