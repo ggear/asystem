@@ -14,7 +14,7 @@ PLUGS = {
     "various_Dadhoc": "192.168.1.48",
     "study_Dpower": "192.168.1.45",
     "rack_Dpower": "192.168.1.40",
-    "rack_Dmodem": "192.168.1.40",
+    "rack_Dmodem": "192.168.1.52",
     "office_Dpower": "192.168.1.44",
     "lounge_Dtv": "192.168.1.49",
     "kitchen_Dfridge": "192.168.1.42",
