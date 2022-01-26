@@ -74,23 +74,55 @@ sensor.rack_humidity:
   friendly_name: Rack
 sensor.last_30_min_rain:
   friendly_name: Last 30 Min
-sensor.kitchen_fridge_power_consumption:
-  friendly_name: Kitchen Fridge
+sensor.various_adhoc_power_consumption:
+  friendly_name: Various Adhoc
+sensor.rack_modem_power_consumption:
+  friendly_name: Rack Modem
 sensor.rack_power_power_consumption:
   friendly_name: Rack Power
-sensor.office_power_power_consumption:
-  friendly_name: Office Power
+sensor.roof_switch_power_consumption:
+  friendly_name: Roof Switch
 sensor.kitchen_fan_power_consumption:
   friendly_name: Kitchen Fan
+sensor.kitchen_fridge_power_consumption:
+  friendly_name: Kitchen Fridge
+sensor.kitchen_coffee_power_consumption:
+  friendly_name: Kitchen Coffee
+sensor.deck_freezer_power_consumption:
+  friendly_name: Deck Freezer
+sensor.deck_festoons_power_consumption:
+  friendly_name: Deck Festoons
+sensor.office_power_power_consumption:
+  friendly_name: Office Power
+sensor.lounge_tv_power_consumption:
+  friendly_name: Lounge Tv
+sensor.study_power_power_consumption:
+  friendly_name: Study Power
 sensor.bathroom_towelrails_power_consumption:
   friendly_name: Bathroom Towelrails
-sensor.kitchen_fridge_energy_consumption:
-  friendly_name: Kitchen Fridge
+sensor.various_adhoc_energy_consumption:
+  friendly_name: Various Adhoc
+sensor.rack_modem_energy_consumption:
+  friendly_name: Rack Modem
 sensor.rack_power_energy_consumption:
   friendly_name: Rack Power
-sensor.office_energy_consumption:
-  friendly_name: Office
+sensor.roof_switch_energy_consumption:
+  friendly_name: Roof Switch
 sensor.kitchen_fan_energy_consumption:
   friendly_name: Kitchen Fan
+sensor.kitchen_fridge_energy_consumption:
+  friendly_name: Kitchen Fridge
+sensor.kitchen_coffee_energy_consumption:
+  friendly_name: Kitchen Coffee
+sensor.deck_freezer_energy_consumption:
+  friendly_name: Deck Freezer
+sensor.deck_festoons_energy_consumption:
+  friendly_name: Deck Festoons
+sensor.lounge_tv_energy_consumption:
+  friendly_name: Lounge Tv
+sensor.study_power_energy_consumption:
+  friendly_name: Study Power
+sensor.office_power_energy_consumption:
+  friendly_name: Office Power
 sensor.bathroom_towelrails_energy_consumption:
   friendly_name: Bathroom Towelrails

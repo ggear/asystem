@@ -14,8 +14,12 @@
 
             header.new(
                 style='medial',
+                formFactor='Tablet',
                 datasource='InfluxDB_V2',
-                measurement='currency',
+
+// TODO: Update this to include metadata rows when re-implemented in Go
+                measurement='__FIXME__',
+
                 maxMilliSecSinceUpdate='259200000',
             ) +
 
@@ -36,7 +40,7 @@ from(bucket: "home_private")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
-                  { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 
             ],
 }

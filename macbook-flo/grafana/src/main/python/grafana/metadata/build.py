@@ -25,7 +25,7 @@ if __name__ == "__main__":
     sensors = load(os.path.join(DIR_MODULE_ROOT, "../../../.env"))
     for group in sensors:
         with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/graph_{}.jsonnet".format(group.lower()), "w") as file:
-            file.write((PREFIX_DASHBOARD_DEFAULTS + "time_from='now-7d', refresh='', "
+            file.write((PREFIX_DASHBOARD_DEFAULTS + "time_from='now-3d', refresh='', "
                                                     "timepicker=timepicker.new(refresh_intervals=['1m'], time_options="
                                                     "['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])" + """
 {
@@ -46,8 +46,14 @@ if __name__ == "__main__":
 //ASM           style='minimal',
 //AST           style='medial',
 //ASD           style='maximal',
+//ASM           formFactor='Mobile',
+//AST           formFactor='Tablet',
+//ASD           formFactor='Desktop',   
                 datasource='InfluxDB_V2',
-                measurement='currency',
+
+// TODO: Update this to include metadata rows when re-implemented in Go
+                measurement='__FIXME__',
+
                 maxMilliSecSinceUpdate='259200000',
             ) +
 
@@ -87,7 +93,7 @@ if __name__ == "__main__":
                   ).addTarget(influxdb.target(query='
 {}
                   '))
-                  {{ gridPos: {{ x: 0, y: 0, w: 24, h: 12 }} }},
+                  {{ gridPos: {{ x: 0, y: 2, w: 24, h: 12 }} }},
                 """.format(domain, "short", flux).strip() + "\n\n")
             file.write("            " + """
             ],
@@ -201,9 +207,9 @@ local graph_{} = import 'graph_{}.jsonnet';
                                             line.startswith(PREFIX_TABLET) and form == "tablet" or \
                                             line.startswith(PREFIX_DESKTOP) and form == "desktop":
                                         if not line.startswith(PREFIX_DASHBOARD_DEFAULTS):
-                                            line = line\
-                                                .replace(PREFIX_MOBILE, "     ")\
-                                                .replace(PREFIX_TABLET, "     ")\
+                                            line = line \
+                                                .replace(PREFIX_MOBILE, "     ") \
+                                                .replace(PREFIX_TABLET, "     ") \
                                                 .replace(PREFIX_DESKTOP, "     ")
                                             destination_file.write(line)
                                             if private_copy:

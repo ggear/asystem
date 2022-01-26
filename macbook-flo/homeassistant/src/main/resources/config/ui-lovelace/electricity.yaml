@@ -12,18 +12,34 @@
     extrema: true
     fill: false
   entities:
-    - sensor.kitchen_fridge_power_consumption
+    - sensor.various_adhoc_power_consumption
+    - sensor.rack_modem_power_consumption
     - sensor.rack_power_power_consumption
-    - sensor.office_power_power_consumption
+    - sensor.roof_switch_power_consumption
     - sensor.kitchen_fan_power_consumption
+    - sensor.kitchen_fridge_power_consumption
+    - sensor.kitchen_coffee_power_consumption
+    - sensor.deck_freezer_power_consumption
+    - sensor.deck_festoons_power_consumption
+    - sensor.office_power_power_consumption
+    - sensor.lounge_tv_power_consumption
+    - sensor.study_power_power_consumption
     - sensor.bathroom_towelrails_power_consumption
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.kitchen_fridge_power_consumption
+    - entity: sensor.various_adhoc_power_consumption
+    - entity: sensor.rack_modem_power_consumption
     - entity: sensor.rack_power_power_consumption
-    - entity: sensor.office_power_power_consumption
+    - entity: sensor.roof_switch_power_consumption
     - entity: sensor.kitchen_fan_power_consumption
+    - entity: sensor.kitchen_fridge_power_consumption
+    - entity: sensor.kitchen_coffee_power_consumption
+    - entity: sensor.deck_freezer_power_consumption
+    - entity: sensor.deck_festoons_power_consumption
+    - entity: sensor.office_power_power_consumption
+    - entity: sensor.lounge_tv_power_consumption
+    - entity: sensor.study_power_power_consumption
     - entity: sensor.bathroom_towelrails_power_consumption
 - type: custom:mini-graph-card
   name: Energy Consumption
@@ -39,16 +55,32 @@
     extrema: true
     fill: false
   entities:
-    - sensor.kitchen_fridge_energy_consumption
+    - sensor.various_adhoc_energy_consumption
+    - sensor.rack_modem_energy_consumption
     - sensor.rack_power_energy_consumption
-    - sensor.office_energy_consumption
+    - sensor.roof_switch_energy_consumption
     - sensor.kitchen_fan_energy_consumption
+    - sensor.kitchen_fridge_energy_consumption
+    - sensor.kitchen_coffee_energy_consumption
+    - sensor.deck_freezer_energy_consumption
+    - sensor.deck_festoons_energy_consumption
+    - sensor.lounge_tv_energy_consumption
+    - sensor.study_power_energy_consumption
+    - sensor.office_power_energy_consumption
     - sensor.bathroom_towelrails_energy_consumption
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.kitchen_fridge_energy_consumption
+    - entity: sensor.various_adhoc_energy_consumption
+    - entity: sensor.rack_modem_energy_consumption
     - entity: sensor.rack_power_energy_consumption
-    - entity: sensor.office_energy_consumption
+    - entity: sensor.roof_switch_energy_consumption
     - entity: sensor.kitchen_fan_energy_consumption
+    - entity: sensor.kitchen_fridge_energy_consumption
+    - entity: sensor.kitchen_coffee_energy_consumption
+    - entity: sensor.deck_freezer_energy_consumption
+    - entity: sensor.deck_festoons_energy_consumption
+    - entity: sensor.lounge_tv_energy_consumption
+    - entity: sensor.study_power_energy_consumption
+    - entity: sensor.office_power_energy_consumption
     - entity: sensor.bathroom_towelrails_energy_consumption

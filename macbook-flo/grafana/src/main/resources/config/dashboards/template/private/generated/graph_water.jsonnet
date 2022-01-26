@@ -1,4 +1,4 @@
-//ASDASHBOARD_DEFAULTS time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+//ASDASHBOARD_DEFAULTS time_from='now-3d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
 {
       graphs()::
       
@@ -17,8 +17,14 @@
 //ASM           style='minimal',
 //AST           style='medial',
 //ASD           style='maximal',
+//ASM           formFactor='Mobile',
+//AST           formFactor='Tablet',
+//ASD           formFactor='Desktop',   
                 datasource='InfluxDB_V2',
-                measurement='currency',
+
+// TODO: Update this to include metadata rows when re-implemented in Go
+                measurement='__FIXME__',
+
                 maxMilliSecSinceUpdate='259200000',
             ) +
 
@@ -48,7 +54,7 @@ from(bucket: "home_private")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
-                  { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 
             ],
 }

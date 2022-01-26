@@ -9,6 +9,18 @@
     - entity: fan.deck2
 
 - type: entities
+  title: Switches
+  entities:
+    - entity: switch.kitchen_fan
+      name: Kitchen Fan
+    - entity: switch.kitchen_coffee
+      name: Kitchen Coffee
+    - entity: switch.deck_festoons
+      name: Deck Festoons
+    - entity: switch.bathroom_towelrails
+      name: Bathroom Towel Rails
+
+- type: entities
   title: Lights
   entities:
     - entity: light.ada
@@ -47,9 +59,10 @@
       name: Wardrobe Main
 
 - type: entities
-  title: Switches
+  title: Resets - CAREFUL!
+  show_header_toggle: false
   entities:
-    - entity: switch.kitchen_fan
-      name: Kitchen Fan
-    - entity: switch.bathroom_towelrails
-      name: Bathroom Towel Rails
+    - entity: switch.lounge_tv
+      name: Lounge TV
+    - entity: switch.rack_modem
+      name: Rack Modem

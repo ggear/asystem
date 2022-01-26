@@ -333,12 +333,13 @@ timeRangeStart=v.timeRangeStart
 // timeRangeStart=now()
 // timeRangeStart="2021-12-04T02:55:42.581000000Z"
 from(bucket: "data_private")
-  |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - int(v: bin)))), stop: v.timeRangeStop)
+  // |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - int(v: bin)))), stop: v.timeRangeStop)
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "equity")
   |> filter(fn: (r) => r["_field"] == "holdings")
   |> filter(fn: (r) => r["period"] == "30d")
   |> filter(fn: (r) => r["type"] == "price-change-spot")
-  |> aggregateWindow(every:  bin, fn: last)
+  // |> aggregateWindow(every:  bin, fn: last)
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: { _value: "Monthly Delta"})
                   ')).addTarget(influxdb.target(query='
@@ -351,7 +352,7 @@ from(bucket: "data_private")
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: { _value: "Daily Value"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*Monthly.*/", "steppedLine": false, "bars": true, "lines" :false, "color": "#86653c", "yaxis": 1 }
+                        { "alias": "/.*Monthly.*/", "steppedLine": false, "bars": true, "lines" :false, "color": "#a6de9f5e", "yaxis": 1 }
                   ).addSeriesOverride(
                         { "alias": "/.*Daily.*/", "steppedLine": false, "bars": false, "lines" :true, "yaxis": 2 }
                   )

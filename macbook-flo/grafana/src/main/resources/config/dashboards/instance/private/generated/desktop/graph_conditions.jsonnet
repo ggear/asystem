@@ -14,17 +14,21 @@
 
             header.new(
                 style='maximal',
+                formFactor='Desktop',   
                 datasource='InfluxDB_V2',
-                measurement='currency',
+
+// TODO: Update this to include metadata rows when re-implemented in Go
+                measurement='__FIXME__',
+
                 maxMilliSecSinceUpdate='259200000',
             ) +
 
             [
 
                   graph.new(
-                        title='Temperature Dailies',
+                        title='Temperature Forecast',
                         datasource='InfluxDB_V2',
-                        fill=3,
+                        fill=0,
                         format='ºC',
                         bars=false,
                         lines=true,
@@ -39,42 +43,24 @@
                         legend_rightSide=true,
                         legend_sideWidth=330
                   ).addTarget(influxdb.target(query='
-from(bucket: "asystem")
+from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "roof_temperature")
-  |> set(key: "name", value: "Roof High")
-  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
-  |> fill(usePrevious: true)
-  |> timeShift(duration: -8h)
-  |> aggregateWindow(every: 1d, fn: max, createEmpty: false)
+  |> keep(columns: ["_time", "_value", "friendly_name"])
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+  |> map(fn: (r) => ({ r with friendly_name: "Actual" }))
                   ')).addTarget(influxdb.target(query='
-from(bucket: "asystem")
+import "strings"
+from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "bom_perth_max_temp_c_1" and r["_field"] == "value")
-  |> keep(columns: ["table", "_start", "_stop", "_time", "_value"])
-  |> fill(usePrevious: true)
-  |> timeShift(duration: 16h)
-  |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)
-  |> set(key: "name", value: "Forecast High")
-                  ')).addTarget(influxdb.target(query='
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "roof_temperature")
-  |> set(key: "name", value: "Roof Low")
-  |> keep(columns: ["table", "_start", "_stop", "_time", "_value", "name"])
-  |> fill(usePrevious: true)
-  |> timeShift(duration: -8h)
-  |> aggregateWindow(every: 1d, fn: min, createEmpty: false)
-                  ')).addTarget(influxdb.target(query='
-from(bucket: "asystem")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "bom_perth_min_temp_c_1" and r["_field"] == "value")
-  |> keep(columns: ["table", "_start", "_stop", "_time", "_value"])
-  |> fill(usePrevious: true)
-  |> timeShift(duration: 16h)
-  |> aggregateWindow(every: 1d, fn: mean, createEmpty: false)
-  |> set(key: "name", value: "Forecast Low")
-                  ')) { gridPos: { x: 0, y: 0, w: 24, h: 7 } },
+  |> filter(fn: (r) => r["_measurement"] == "°C")
+  |> filter(fn: (r) => r["entity_id"] == "darlington_forecast_temp_max_0" or r["entity_id"] == "darlington_forecast_temp_min_0")
+  |> filter(fn: (r) => r["_field"] == "value")
+  |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)
+  |> map(fn: (r) => ({ r with friendly_name: strings.replaceAll(v: r.friendly_name, t: "darlington_forecast Temp", u: "Forecast") }))
+  |> map(fn: (r) => ({ r with friendly_name: strings.replaceAll(v: r.friendly_name, t: " 0", u: "") }))
+  |> keep(columns: ["_time", "_value", "friendly_name"])
+                  ')) { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
                   graph.new(
                         title='Temperature',
                         datasource='InfluxDB_V2',
@@ -99,7 +85,7 @@ from(bucket: "home_private")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
-                  { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 
                   graph.new(
                         title='Carbon Dioxide',
@@ -125,7 +111,7 @@ from(bucket: "home_private")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
-                  { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 
                   graph.new(
                         title='Noise',
@@ -151,7 +137,7 @@ from(bucket: "home_private")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
-                  { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 
                   graph.new(
                         title='Humidity',
@@ -177,7 +163,7 @@ from(bucket: "home_private")
   |> keep(columns: ["_time", "_value", "friendly_name"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
-                  { gridPos: { x: 0, y: 0, w: 24, h: 12 } },
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 
             ],
 }

@@ -42,7 +42,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
-                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-3d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_electricity.graphs()),
 
@@ -84,7 +84,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
-                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-3d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_water.graphs()),
 
@@ -154,7 +154,7 @@ local graph_containers = import 'graph_containers.jsonnet';
                         hideControls=true,
                         graphTooltip='shared_tooltip',
                         tags=['private', 'mobile'],
-                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                        time_from='now-3d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_conditions.graphs()),
 
