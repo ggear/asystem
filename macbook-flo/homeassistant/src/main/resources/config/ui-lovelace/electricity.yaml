@@ -12,6 +12,13 @@
     extrema: true
     fill: false
   entities:
+    - sensor.rack_power_power_consumption
+    - sensor.kitchen_fridge_power_consumption
+    - sensor.kitchen_coffee_power_consumption
+    - sensor.deck_freezer_power_consumption
+    - sensor.deck_festoons_power_consumption
+    - sensor.office_power_power_consumption
+    - sensor.study_power_power_consumption
 - type: entities
   show_header_toggle: false
   entities:
@@ -42,6 +49,19 @@
     extrema: true
     fill: false
   entities:
+    - sensor.various_adhoc_energy_consumption
+    - sensor.rack_modem_energy_consumption
+    - sensor.rack_power_energy_consumption
+    - sensor.roof_switch_energy_consumption
+    - sensor.kitchen_fan_energy_consumption
+    - sensor.kitchen_fridge_energy_consumption
+    - sensor.kitchen_coffee_energy_consumption
+    - sensor.deck_freezer_energy_consumption
+    - sensor.deck_festoons_energy_consumption
+    - sensor.lounge_tv_energy_consumption
+    - sensor.study_power_energy_consumption
+    - sensor.office_power_energy_consumption
+    - sensor.bathroom_towelrails_energy_consumption
 - type: entities
   show_header_toggle: false
   entities:

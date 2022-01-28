@@ -110,7 +110,6 @@
     - sensor.edwin_noise
     - sensor.kitchen_noise
     - sensor.laundry_noise
-    - sensor.office_noise
     - sensor.parents_noise
 - type: entities
   show_header_toggle: false
