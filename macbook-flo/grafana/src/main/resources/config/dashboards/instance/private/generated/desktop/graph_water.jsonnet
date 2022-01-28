@@ -47,7 +47,7 @@ from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "last_30_min_rain")
   |> keep(columns: ["_time", "_value", "friendly_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
                   '))
                   { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 

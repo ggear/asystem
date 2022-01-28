@@ -36,18 +36,6 @@ sensor.pantry_carbon_dioxide:
   friendly_name: Pantry
 sensor.parents_carbon_dioxide:
   friendly_name: Parents
-sensor.ada_noise:
-  friendly_name: Ada
-sensor.edwin_noise:
-  friendly_name: Edwin
-sensor.kitchen_noise:
-  friendly_name: Kitchen
-sensor.laundry_noise:
-  friendly_name: Laundry
-sensor.office_noise:
-  friendly_name: Office
-sensor.parents_noise:
-  friendly_name: Parents
 sensor.roof_humidity:
   friendly_name: Roof
 sensor.ada_humidity:
@@ -72,6 +60,18 @@ sensor.parents_humidity:
   friendly_name: Parents
 sensor.rack_humidity:
   friendly_name: Rack
+sensor.ada_noise:
+  friendly_name: Ada
+sensor.edwin_noise:
+  friendly_name: Edwin
+sensor.kitchen_noise:
+  friendly_name: Kitchen
+sensor.laundry_noise:
+  friendly_name: Laundry
+sensor.office_noise:
+  friendly_name: Office
+sensor.parents_noise:
+  friendly_name: Parents
 sensor.last_30_min_rain:
   friendly_name: Last 30 Min
 sensor.various_adhoc_power_consumption:

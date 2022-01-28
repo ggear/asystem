@@ -19,7 +19,7 @@ if __name__ == "__main__":
                     file.write("""
 sensor.{}:
   friendly_name: {}
-            """.format(sensor[2], sensor[5]).strip() + "\n")
+            """.format(sensor[2], sensor[6]).strip() + "\n")
     print("Metadata script [homeassistant] customize saved")
 
     for group in sensors:
@@ -42,9 +42,10 @@ sensor.{}:
   entities:
                 """.format(domain).strip() + "\n")
                 for sensor in sensors[group][domain]:
-                    file.write("    " + """
+                    if sensor[3] == "Graph":
+                        file.write("    " + """
     - sensor.{}
-                """.format(sensor[2]).strip() + "\n")
+                        """.format(sensor[2]).strip() + "\n")
                 file.write("""
 - type: entities
   show_header_toggle: false

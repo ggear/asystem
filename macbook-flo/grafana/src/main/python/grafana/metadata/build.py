@@ -64,14 +64,18 @@ if __name__ == "__main__":
                 with open(snip_path, 'r') as snip_file:
                     file.write(snip_file.read())
             for domain in sensors[group]:
+                type = sensors[group][domain][0][4]
                 filter = " or ".join([sub + '"'
                                       for sub in ['r["entity_id"] == "' + sub for sub in [sensor[2] for sensor in sensors[group][domain]]]])
                 flux = """from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => {})
   |> keep(columns: ["_time", "_value", "friendly_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-                """.format(filter).strip()
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: {})
+                """.format(
+                    filter,
+                    "true" if type == "Discrete" else "false"
+                ).strip()
                 file.write("                  " + """
               graph.new(
                         title='{}',
