@@ -26,12 +26,17 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
-                        random_subset_rows=False,
+                        random_subset_rows=True,
                         reprocess_all_files=False,
                         disable_write_stdout=True,
                         disable_upload_files=True,
-                        disable_download_files=True,
+                        disable_download_files=False,
                         )
+
+        # import yfinance as yf
+        # data_df = yf.Ticker("^AORD").history(start="2022-02-01", end="2022-03-01", debug=True)
+        # print(data_df)
+
 
     def test_currency_typical(self):
         self.run_module("currency", {"success_typical": merge_asserts(ASSERT_RUN, {
