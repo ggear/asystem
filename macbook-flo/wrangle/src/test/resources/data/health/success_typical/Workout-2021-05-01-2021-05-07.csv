@@ -1,0 +1,5 @@
+Type,Start,End,Duration,Total Energy (kJ),Active Energy (kJ),Max Heart Rate (bpm),Avg Heart Rate (bpm),Distance (km),Avg Speed(km/hr),Step Count (count),Step Cadence (spm),Swimming Stroke Count (count),Swim Stoke Cadence (spm),Flights Climbed (count),Elevation Ascended (m),Elevation Descended (m)
+Cycling,2021-05-07 16:37,2021-05-07 17:42,01:04:37,1901,1462,156,122.82,10.76,9.99,414,0.107,,,,222.19,
+Cycling,2021-05-06 12:49,2021-05-06 13:09,00:20:45,743.08,528.83,174,145.22,3,8.68,532,0.427,,,,114.23,
+Cycling,2021-05-06 11:05,2021-05-06 11:32,00:26:02,479.75,270.74,157,111.57,2.95,6.8,120,0.077,,,,19.13,
+Cycling,2021-05-05 17:02,2021-05-05 17:19,00:17:14,560.17,441.51,153,117.63,2.84,9.9,73,0.071,,,,66.53,
