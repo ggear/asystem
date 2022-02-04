@@ -22,7 +22,8 @@ class Health(library.Library):
             health_df = pd.DataFrame()
             workout_df = pd.DataFrame()
             files = self.dropbox_download("/Data/Health", self.input)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, 0 if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) else \
+            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, 0 if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES)
+            else \
                 sum([not status[1] for status in files.values()]))
             new_data = library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or \
                        all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
@@ -192,7 +193,14 @@ class Health(library.Library):
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                         elif os.path.basename(file_name).startswith("_Health-") or os.path.basename(file_name).startswith("Health-"):
                             try:
-                                file_df = pd.read_csv(file_name, skipinitialspace=True)
+                                file_name_rewritten = file_name.replace(".csv", "-rewritten.csv")
+                                if not os.path.isfile(file_name_rewritten):
+                                    file_lines = []
+                                    with open(file_name, 'r') as file_original:
+                                        with open(file_name_rewritten, 'w') as file_rewrite:
+                                            for file_line in file_original.readlines():
+                                                file_rewrite.write(file_line.replace(' \n', '\n'))
+                                file_df = pd.read_csv(file_name_rewritten)
                                 file_df = file_df.dropna(how='all', thresh=2).dropna(axis=1, how='all')
                                 if 'Sleep Analysis [Asleep] (hours)' in file_df:
                                     del file_df['Sleep Analysis [Asleep] (hours)']
@@ -223,6 +231,9 @@ class Health(library.Library):
                                     'Walking Double Support Percentage (%)': 'Walking Double Support Percentage (%)',
                                     'Walking Heart Rate Average (count/min)': 'Walking Heart Rate Average (bpm)',
                                     'Walking Speed (km/hr)': 'Walking Speed (km/hr)',
+                                    'Weight & Body Mass (kg)': 'Body Mass (kg)',
+                                    'Body Mass Index (count)': 'Body Mass Index (count)',
+                                    'Lean Body Mass (kg)': 'Body Lean Mass (kg)'
                                 })
                                 health_df = pd.concat([health_df, normalise(file_df)], sort=True)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
@@ -318,6 +329,9 @@ class Health(library.Library):
                         'Heart Rate Minimum (bpm)',
                         'Heart Rate Resting (bpm)',
                         'Heart Rate Variability (ms)',
+                        'Body Mass (kg)',
+                        'Body Mass Index (count)',
+                        'Body Lean Mass (kg)'
                     ]]
                     health_df = health_df[~health_df.index.duplicated(keep='last')]
                 if len(workout_df) > 0:

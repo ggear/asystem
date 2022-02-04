@@ -109,7 +109,6 @@
     - sensor.ada_noise
     - sensor.edwin_noise
     - sensor.kitchen_noise
-    - sensor.laundry_noise
     - sensor.parents_noise
 - type: entities
   show_header_toggle: false

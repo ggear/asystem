@@ -26,8 +26,8 @@ class WrangleTest(unittest.TestCase):
         self.run_module("health", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
-                        random_subset_rows=True,
-                        reprocess_all_files=True,
+                        random_subset_rows=False,
+                        reprocess_all_files=False,
                         disable_write_stdout=False,
                         disable_upload_files=True,
                         disable_download_files=False,
@@ -98,9 +98,9 @@ class WrangleTest(unittest.TestCase):
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_CURRENT_COLUMNS: 96,
-                    library.CTR_ACT_UPDATE_COLUMNS: 64,
-                    library.CTR_ACT_DELTA_COLUMNS: 96,
+                    library.CTR_ACT_CURRENT_COLUMNS: 91,
+                    library.CTR_ACT_UPDATE_COLUMNS: 51,
+                    library.CTR_ACT_DELTA_COLUMNS: 91,
                 },
             },
         })})
@@ -114,9 +114,9 @@ class WrangleTest(unittest.TestCase):
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_CURRENT_COLUMNS: 96,
-                    library.CTR_ACT_UPDATE_COLUMNS: 64,
-                    library.CTR_ACT_DELTA_COLUMNS: 96,
+                    library.CTR_ACT_CURRENT_COLUMNS: 91,
+                    library.CTR_ACT_UPDATE_COLUMNS: 51,
+                    library.CTR_ACT_DELTA_COLUMNS: 91,
                 },
             },
         })})

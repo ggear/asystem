@@ -33,7 +33,7 @@ Index ID,Unique ID,Entity ID,Entity Filter,Entity Type,Entity Name,Entity Friend
 32,anode__ada__noise__conditions__ada,ada_noise,Graph,Continuous,Ada Noise,Ada,Noise,Conditions,Ada,haas/sensor/config/sensor/anode/anode__ada__noise__conditions__ada/config
 33,anode__edwin__noise__conditions__edwin,edwin_noise,Graph,Continuous,Edwin Noise,Edwin,Noise,Conditions,Edwin,haas/sensor/config/sensor/anode/anode__edwin__noise__conditions__edwin/config
 34,anode__kitchen__noise__conditions__kitchen,kitchen_noise,Graph,Continuous,Kitchen Noise,Kitchen,Noise,Conditions,Kitchen,haas/sensor/config/sensor/anode/anode__kitchen__noise__conditions__kitchen/config
-35,anode__laundry__noise__conditions__laundry,laundry_noise,Graph,Continuous,Laundry Noise,Laundry,Noise,Conditions,Laundry,haas/sensor/config/sensor/anode/anode__laundry__noise__conditions__laundry/config
+35,anode__laundry__noise__conditions__laundry,laundry_noise,Detail,Continuous,Laundry Noise,Laundry,Noise,Conditions,Laundry,haas/sensor/config/sensor/anode/anode__laundry__noise__conditions__laundry/config
 36,anode__office__noise__conditions__office,office_noise,Detail,Continuous,Office Noise,Office,Noise,Conditions,Office,haas/sensor/config/sensor/anode/anode__office__noise__conditions__office/config
 37,anode__parents__noise__conditions__parents,parents_noise,Graph,Continuous,Parents Noise,Parents,Noise,Conditions,Parents,haas/sensor/config/sensor/anode/anode__parents__noise__conditions__parents/config
 38,anode__last_D30_Dmin__rain__water__home,last_30_min_rain,Graph,Discrete,Last 30 Min Rain,Last 30 Min,Rain,Water,Home,haas/sensor/config/sensor/anode/anode__last_D30_Dmin__rain__water__home/config
