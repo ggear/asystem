@@ -49,10 +49,7 @@
     extrema: true
     fill: false
   entities:
-    - sensor.various_adhoc_energy_consumption
-    - sensor.rack_modem_energy_consumption
     - sensor.rack_power_energy_consumption
-    - sensor.roof_switch_energy_consumption
     - sensor.kitchen_fan_energy_consumption
     - sensor.kitchen_fridge_energy_consumption
     - sensor.kitchen_coffee_energy_consumption
