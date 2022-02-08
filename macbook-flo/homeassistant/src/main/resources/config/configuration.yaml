@@ -33,6 +33,7 @@ influxdb:
   organization: !env_var INFLUXDB_ORG
   bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
   precision: ns
+  measurement_attr: entity_id
   tags:
     instance: production
     source: home_assistant
