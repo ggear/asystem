@@ -5,6 +5,8 @@ default_config:
 homeassistant:
   customize: !include customize.yaml
   packages: !include_dir_named custom_packages
+  internal_url: "http://macbook-flo:8123"
+  external_url: "https://home.janeandgraham.com"
 
 http:
   use_x_forwarded_for: true
@@ -52,6 +54,11 @@ mqtt:
     payload: 'offline'
 
 stream:
+
+withings:
+  client_id: !env_var WITHINGS_CLIENTID
+  client_secret: !env_var WITHINGS_CONSUMERSECRET
+  use_webhook: true
 
 # Disable until add some sensors
 #sensor:

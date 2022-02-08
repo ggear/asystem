@@ -13,6 +13,8 @@ x-common: &common
     - INFLUXDB_ORG
     - INFLUXDB_TOKEN
     - INFLUXDB_BUCKET_HOME_PRIVATE
+    - WITHINGS_CLIENTID
+    - WITHINGS_CONSUMERSECRET
 services:
   homeassistant:
     container_name: homeassistant
