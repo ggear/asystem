@@ -11,19 +11,19 @@ from anode.plugin.plugin import Plugin
 
 # TODO: Lookup from Kasa API (https://github.com/python-kasa/python-kasa)
 PLUGS = {
-    "bathroom_Dtowelrails": "192.168.1.41",
-    "deck_Dfestoons": "192.168.1.46",
-    "deck_Dfreezer": "192.168.1.51",
-    "kitchen_Dcoffee": "192.168.1.52",
-    "kitchen_Dfan": "192.168.1.43",
-    "kitchen_Dfridge": "192.168.1.42",
-    "lounge_Dtv": "192.168.1.49",
-    "office_Dpower": "192.168.1.44",
-    "rack_Dmodem": "192.168.1.50",
-    "rack_Dpower": "192.168.1.40",
-    "roof_Dswitch": "192.168.1.47",
-    "study_Dpower": "192.168.1.45",
-    "various_Dadhoc": "192.168.1.48",
+    # "bathroom_Dtowelrails": "192.168.1.41",
+    # "deck_Dfestoons": "192.168.1.46",
+    # "deck_Dfreezer": "192.168.1.51",
+    # "kitchen_Dcoffee": "192.168.1.52",
+    # "kitchen_Dfan": "192.168.1.43",
+    # "kitchen_Dfridge": "192.168.1.42",
+    # "lounge_Dtv": "192.168.1.49",
+    # "office_Dpower": "192.168.1.44",
+    # "rack_Dmodem": "192.168.1.50",
+    # "rack_Dpower": "192.168.1.40",
+    # "roof_Dswitch": "192.168.1.47",
+    # "study_Dpower": "192.168.1.45",
+    # "various_Dadhoc": "192.168.1.48",
 }
 
 

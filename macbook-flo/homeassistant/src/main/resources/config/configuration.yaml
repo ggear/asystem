@@ -65,10 +65,6 @@ withings:
 #sensor:
 #  !include_dir_merge_list config_sensors
 
-# Disable until I create some automations
-#automation:
-#  !include_dir_merge_list config_automations
-
 panel_custom:
   - name: weather
     sidebar_title: Weather
