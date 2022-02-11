@@ -9,8 +9,8 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   wget=1.20.1-1.1 \
   rsyslog=8.1901.0-1 \
   gnupg2=2.2.12-1+deb10u1 \
-  apache2=2.4.38-3+deb10u6 \
-  apache2-utils=2.4.38-3+deb10u6 \
+  apache2=2.4.38-3+deb10u7 \
+  apache2-utils=2.4.38-3+deb10u7 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN pip install --no-cache \
   configobj==5.0.6 \
@@ -32,7 +32,7 @@ RUN mkdir -p ${WEEWX_HOME}
 RUN wget -q -O "${WEEWX_ARCHIVE}" "http://www.weewx.com/downloads/released_versions/${WEEWX_ARCHIVE}"
 RUN tar --extract --gunzip --directory ${WEEWX_HOME} --strip-components=1 --file "${WEEWX_ARCHIVE}"
 RUN wget -O weewx-mqtt.zip https://github.com/matthewwall/weewx-mqtt/archive/master.zip
-RUN wee_extension --install weewx-mqtt.zip
+RUN /home/weewx/bin/wee_extension --install weewx-mqtt.zip
 
 FROM image_install as image_runtime
 WORKDIR ${WEEWX_HOME}
