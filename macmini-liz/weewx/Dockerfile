@@ -1,7 +1,7 @@
 FROM python:3.8.5-slim-buster as image_base
 
 FROM image_base as image_package
-ENV WEEWX_VERSION="4.5.1"
+ENV WEEWX_VERSION="4.6.1"
 ENV WEEWX_HOME="/home/weewx"
 ENV WEEWX_ARCHIVE="weewx-${WEEWX_VERSION}.tar.gz"
 RUN apt-get update && apt-get -y --no-install-recommends install \
