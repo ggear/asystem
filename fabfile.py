@@ -302,8 +302,7 @@ def _release(context):
                                .format(file_image, _name(module), _get_versions()[0]), join(module, "target/release"))
                 if glob.glob(join(DIR_ROOT, module, "target/package/main/resources/*")):
                     _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
-                else:
-                    _run_local(context, "mkdir -p target/release/config", module)
+                _run_local(context, "mkdir -p target/release/config", module)
                 hosts = set(filter(len, _run_local(context, "find {} -type d ! -name '.*' -mindepth 1 -maxdepth 1"
                                                    .format(DIR_ROOT), hide='out').stdout.replace(DIR_ROOT + "/", "")
                                    .replace("_", "\n").split("\n")))
