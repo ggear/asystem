@@ -1,4 +1,5 @@
-# Increase poll time for the Kasa Smart Plugs
+powercalc:
+  create_utility_meters: true
 
 automation:
   - alias: Smart Plug Polling

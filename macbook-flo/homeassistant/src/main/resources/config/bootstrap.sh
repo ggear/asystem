@@ -17,6 +17,7 @@ echo "--------------------------------------------------------------------------
 
 # Install integrations manually (no option to do so programmatically currently):
 #   - Sonos
+#   - Netatmo
 #   - Apple TV
 #   - Withings
 #   - Google Cast

@@ -54,17 +54,10 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 
-stream:
-
-withings:
-  client_id: !env_var WITHINGS_CLIENTID
-  client_secret: !env_var WITHINGS_CONSUMERSECRET
-  use_webhook: true
-
 panel_custom:
   - name: weather
     sidebar_title: Weather
-    sidebar_icon: mdi:weather-cloudy
+    sidebar_icon: mdi:weather-partly-cloudy
     js_url: /api/hassio/app/entrypoint.js
     url_path: 'lovelace/default_view'
     embed_iframe: true
@@ -91,7 +84,7 @@ panel_custom:
       ingress: core_configurator
   - name: cameras
     sidebar_title: Cameras
-    sidebar_icon: mdi:home-automation
+    sidebar_icon: mdi:camera
     js_url: /api/hassio/app/entrypoint.js
     url_path: 'lovelace/cameras'
     embed_iframe: true
@@ -100,7 +93,7 @@ panel_custom:
       ingress: core_configurator
   - name: conditions
     sidebar_title: Conditions
-    sidebar_icon: mdi:temperature-celsius
+    sidebar_icon: mdi:home-thermometer
     js_url: /api/hassio/app/entrypoint.js
     url_path: 'lovelace/conditions'
     embed_iframe: true
