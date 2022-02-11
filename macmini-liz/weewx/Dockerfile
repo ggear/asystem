@@ -39,7 +39,10 @@ WORKDIR ${WEEWX_HOME}
 RUN python ./setup.py build
 RUN python ./setup.py install
 RUN cp -f /home/weewx/weewx.conf /data
+RUN cp -f /home/weewx/weewx.conf /home/weewx
 COPY src/main/resources/entrypoint.sh ./
+
+# RUN /home/weewx/bin/wee_device --set-interval=5
 
 EXPOSE 80
 VOLUME ["/data"]
