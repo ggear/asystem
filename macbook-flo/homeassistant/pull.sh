@@ -48,3 +48,7 @@ mkdir -p src/main/resources/config/custom_components &&
 rm -rf src/main/resources/config/custom_components/unifiprotect
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../asystem-external/homeassistant/unifiprotect/custom_components/unifiprotect src/main/resources/config/custom_components
+
+rm -rf src/main/resources/config/custom_components/withings
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../../asystem-external/homeassistant/withings/custom_components/withings src/main/resources/config/custom_components

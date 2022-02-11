@@ -23,7 +23,7 @@ echo "--------------------------------------------------------------------------
 #   - Unifi Protect
 #   - Philips hue (allow groups)
 #   - SenseME (have to add for each device)
-#   - TP-Link Smart Home (configure each device integration after adding primary integration)
+#   - TP-Link Smart Home (configure each device integration after adding primary integration, turn off polling/auto-add in System Options)
 #   - Bureau of Meteorology (gooseberry_hill for observations, darlington_forecast for weather forecast, 7 day forecast)
 
 echo "--------------------------------------------------------------------------------"

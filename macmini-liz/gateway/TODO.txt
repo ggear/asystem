@@ -5,3 +5,6 @@
 # - https://tour.golang.org/list
 # - https://golang.org/doc/effective_go
 # - https://golang.org/ref/spec
+
+# - Sonoff
+# - https://templates.blakadder.com/sonoff_POWR3.html

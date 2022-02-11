@@ -32,8 +32,8 @@ influxdb:
   token: !env_var INFLUXDB_TOKEN
   organization: !env_var INFLUXDB_ORG
   bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
-  precision: ns
-  measurement_attr: entity_id
+  precision: s
+  measurement_attr: domain__device_class
   tags:
     instance: production
     source: home_assistant
@@ -60,10 +60,6 @@ withings:
   client_id: !env_var WITHINGS_CLIENTID
   client_secret: !env_var WITHINGS_CONSUMERSECRET
   use_webhook: true
-
-# Disable until add some sensors
-#sensor:
-#  !include_dir_merge_list config_sensors
 
 panel_custom:
   - name: weather
