@@ -38,11 +38,12 @@ FROM image_install as image_runtime
 WORKDIR ${WEEWX_HOME}
 RUN python ./setup.py build
 RUN python ./setup.py install
-RUN cp -f /home/weewx/weewx.conf /data
-RUN cp -f /home/weewx/weewx.conf /home/weewx
-COPY src/main/resources/entrypoint.sh ./
 
+RUN rm -rf /home/weewx/weewx.conf*
+COPY src/main/resources/config/weewx.conf /home/weewx
 # RUN /home/weewx/bin/wee_device --set-interval=5
+
+COPY src/main/resources/entrypoint.sh ./
 
 EXPOSE 80
 VOLUME ["/data"]
