@@ -27,6 +27,9 @@ echo "--------------------------------------------------------------------------
 #   - TP-Link Smart Home (configure each device integration after adding primary integration, turn off polling/auto-add in System Options)
 #   - Bureau of Meteorology (gooseberry_hill for observations, darlington_forecast for weather forecast, 7 day forecast)
 
+# Delete integrations manually:
+#   - Meteorologisk institutt (Met.no)
+
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
 echo "--------------------------------------------------------------------------------"

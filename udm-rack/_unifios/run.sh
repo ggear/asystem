@@ -41,6 +41,8 @@
 #   macbook-flo 192.168.1.2
 #   macmini-liz 192.168.1.3
 #   macmini-nel 192.168.1.4
+#   chromecast-parents 192.168.1.8
+#   homepod-lounge 192.168.1.9
 #   appletv-lounge 192.168.1.10
 #   phillips-hue 192.168.1.11
 #   uvc-ada 192.168.1.15
