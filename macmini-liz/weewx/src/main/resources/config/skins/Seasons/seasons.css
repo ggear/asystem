@@ -278,7 +278,7 @@ a:hover {
 #history_widget img {
     border: none;
     margin-bottom: 10px;
-    width: 750px;
+    width: 500px; /* should match the image width in skin.conf */
 }
 
 #history_widget.widget_title {
