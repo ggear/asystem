@@ -9,7 +9,6 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   wget=1.20.1-1.1 \
   rsyslog=8.1901.0-1 \
   gnupg2=2.2.12-1+deb10u1 \
-  python3-mysqldb=1.3.10-2 \
   apache2=2.4.38-3+deb10u7 \
   default-mysql-client=1.0.5 \
   apache2-utils=2.4.38-3+deb10u7 \
@@ -22,7 +21,8 @@ RUN pip install --no-cache \
   pyserial==3.4 \
   pyusb==1.0.2 \
   ephem==3.7.7.0 \
-  paho-mqtt==1.6.1
+  paho-mqtt==1.6.1 \
+  pymysql==1.0.2
 
 FROM image_package as image_install
 WORKDIR /tmp
