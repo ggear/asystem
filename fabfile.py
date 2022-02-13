@@ -159,15 +159,14 @@ def _pull(context, filter_module=None, filter_host=None, is_release=False):
         _write_env(context, module, join(DIR_ROOT, module, "target/release") if is_release else join(DIR_ROOT, module),
                    filter_host=filter_host, is_release=is_release)
         _print_footer(module, "pull env")
-    if filter_module is None:
-        for module in _get_modules(context, "pull.sh", filter_changes=False):
-            _print_header(module, "pull resources")
-            _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
-            _print_footer(module, "pull resources")
-        for module in _get_modules(context, "src/main/python/*/metadata/build.py", filter_changes=False):
-            _print_header(module, "pull process")
-            _run_local(context, "python {}/{}/src/main/python/{}/metadata/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
-            _print_footer(module, "pull process")
+    for module in _get_modules(context, "pull.sh", filter_changes=False):
+        _print_header(module, "pull resources")
+        _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
+        _print_footer(module, "pull resources")
+    for module in _get_modules(context, "src/main/python/*/metadata/build.py", filter_changes=False):
+        _print_header(module, "pull process")
+        _run_local(context, "python {}/{}/src/main/python/{}/metadata/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
+        _print_footer(module, "pull process")
 
 
 def _clean(context, filter_module=None):
