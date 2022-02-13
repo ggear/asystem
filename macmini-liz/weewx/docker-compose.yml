@@ -9,6 +9,9 @@ services:
       - TZ=Australia/Perth
       - WEEWX_UID=weewx
       - WEEWX_GID=dialout
+      - MARIADB_HOST
+      - MARIADB_USER_WEEWX
+      - MARIADB_DATABASE_WEEWX
     ports:
       - ${WEEWX_PORT}:80
     volumes:
