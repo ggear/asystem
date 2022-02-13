@@ -22,6 +22,7 @@ RUN pip install --no-cache \
   pyusb==1.0.2 \
   ephem==3.7.7.0 \
   paho-mqtt==1.6.1 \
+  pyephem==9.99 \
   pymysql==1.0.2
 
 FROM image_package as image_install
