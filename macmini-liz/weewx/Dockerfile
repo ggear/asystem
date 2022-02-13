@@ -9,7 +9,9 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   wget=1.20.1-1.1 \
   rsyslog=8.1901.0-1 \
   gnupg2=2.2.12-1+deb10u1 \
+  python3-mysqldb=1.3.10-2 \
   apache2=2.4.38-3+deb10u7 \
+  default-mysql-client=1.0.5 \
   apache2-utils=2.4.38-3+deb10u7 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 RUN pip install --no-cache \
