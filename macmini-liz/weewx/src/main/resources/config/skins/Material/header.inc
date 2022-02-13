@@ -8,7 +8,7 @@
         <span class="navbar-brand d-flex">
             #if $Extras.Header.show_logo == "yes"
             <a class="mr-2" href="index.html">
-                #if $Extras.Header.custom_logo_url is not ""
+                #if $Extras.Header.custom_logo_url != ""
                 <img src="$Extras.Header.custom_logo_url" style="width: 4rem">
                 #else
                 <img src="img/icon-alpha-1x.png" srcset="img/icon-alpha-1x.png 1x, img/icon-alpha-2x.png 2x" style="width: 4rem">
@@ -111,13 +111,13 @@
                     #end if
                 #end if
 
-                #if $Extras.Header.custom1_url is not ""
+                #if $Extras.Header.custom1_url != ""
                 <li class="nav-item mr-3">
                     <a class="nav-link" href="$Extras.Header.custom1_url">$Extras.Header.custom1_label</a>
                 </li>
                 #end if
 
-                #if $Extras.Header.custom2_url is not ""
+                #if $Extras.Header.custom2_url != ""
                 <li class="nav-item mr-3">
                     <a class="nav-link" href="$Extras.Header.custom2_url">$Extras.Header.custom2_label</a>
                 </li>
