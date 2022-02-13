@@ -42,7 +42,7 @@ RUN python ./setup.py build
 RUN python ./setup.py install
 
 RUN rm -rf /home/weewx/weewx.conf*
-COPY src/main/resources/config/weewx.conf /home/weewx
+COPY target/package/main/resources/config/weewx.conf /home/weewx
 # RUN /home/weewx/bin/wee_device --set-interval=5
 
 COPY src/main/resources/entrypoint.sh ./
