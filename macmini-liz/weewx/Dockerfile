@@ -25,28 +25,18 @@ RUN tar xf pypy3.8-v7.3.7-linux64.tar.bz2
 RUN mv pypy3.8-v7.3.7-linux64 /var/lib/pypy
 RUN /var/lib/pypy/bin/pypy -m ensurepip --default-pip
 RUN /var/lib/pypy/bin/pypy -mpip install -U pip wheel
-RUN pip install --no-cache \
-  configobj==5.0.6 \
-  requests==2.27.1 \
-  cheetah3==3.2.6.post1 \
-  pillow==9.0.1 \
-  pyserial==3.5 \
-  pyusb==1.2.1 \
-  ephem==4.1.3 \
-  paho-mqtt==1.6.1 \
-  pyephem==9.99 \
-  pymysql==1.0.2
-RUN /var/lib/pypy/bin/pip install --no-cache \
-  configobj==5.0.6 \
-  requests==2.27.1 \
-  cheetah3==3.2.6.post1 \
-  pillow==9.0.1 \
-  pyserial==3.5 \
-  pyusb==1.2.1 \
-  ephem==4.1.3 \
-  paho-mqtt==1.6.1 \
-  pyephem==9.99 \
-  pymysql==1.0.2
+ENV PIP_PACKAGES="configobj==5.0.6 \
+                  requests==2.27.1 \
+                  cheetah3==3.2.6.post1 \
+                  pillow==9.0.1 \
+                  pyserial==3.5 \
+                  pyusb==1.2.1 \
+                  ephem==4.1.3 \
+                  paho-mqtt==1.6.1 \
+                  pyephem==9.99 \
+                  pymysql==1.0.2"
+RUN pip install --no-cache ${PIP_PACKAGES}
+RUN /var/lib/pypy/bin/pip install --no-cache ${PIP_PACKAGES}
 
 FROM image_package as image_install
 WORKDIR /tmp

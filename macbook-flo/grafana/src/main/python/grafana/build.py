@@ -5,13 +5,13 @@ import os
 import shutil
 import sys
 
-DIR_MODULE_ROOT = os.path.abspath("{}/../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../../..".format(os.path.dirname(os.path.realpath(__file__))))):
-    if dir_module.split("/")[-2] == "anode":
+DIR_MODULE_ROOT = os.path.abspath("{}/..".format(os.path.dirname(os.path.realpath(__file__))))
+for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../..".format(os.path.dirname(os.path.realpath(__file__))))):
+    if dir_module.split("/")[-2] == "homeassistant":
         sys.path.insert(0, "{}/src/main/python".format(dir_module))
 sys.path.insert(0, DIR_MODULE_ROOT)
 
-from anode.metadata.build import load
+from homeassistant.build import load_entity_metadata
 
 DIR_DASHBOARDS_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards"
 

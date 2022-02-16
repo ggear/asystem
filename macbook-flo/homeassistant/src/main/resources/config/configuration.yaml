@@ -1,9 +1,14 @@
-#TODO: Look at examples to structure, such as https://www.awesome-ha.com and https://isabellaalstrom.github.io/lovelace and https://github.com/DavidFW1960/home-assistant
+#######################################################################################
+# TODO: Look at examples to structure, such as
+#   - https://www.awesome-ha.com
+#   - https://isabellaalstrom.github.io/lovelace
+#   - https://github.com/DavidFW1960/home-assistant
+#######################################################################################
 
 default_config:
 
 homeassistant:
-  customize: !include customize.yaml
+  customize: !include customise.yaml
   packages: !include_dir_named custom_packages
   internal_url: "http://macbook-flo:8123"
   external_url: "https://home.janeandgraham.com"
@@ -46,7 +51,7 @@ mqtt:
   port: !env_var VERNEMQ_PORT
   client_id: 'hass'
   discovery: true
-  discovery_prefix: 'haas/sensor/config'
+  discovery_prefix: 'haas/entity'
   birth_message:
     topic: 'hass/status'
     payload: 'online'

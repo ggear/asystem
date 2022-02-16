@@ -1,0 +1,153 @@
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+
+#######################################################################################
+# Temperature
+#######################################################################################
+sensor.roof_temperature:
+  friendly_name: Roof
+sensor.roof_apparent_temperature:
+  friendly_name: Roof Apparent
+sensor.roof_dew_point:
+  friendly_name: Roof Dew Point
+sensor.roof_heat_index:
+  friendly_name: Roof Heat Index
+sensor.roof_high_temperature:
+  friendly_name: Roof High
+sensor.roof_humidity_index:
+  friendly_name: Roof Humidity Index
+sensor.rack_dew_point:
+  friendly_name: Rack Dew Point
+sensor.roof_low_temperature:
+  friendly_name: Roof Low
+sensor.netatmo_edwin_temperature:
+  friendly_name: Edwin
+sensor.roof_wind_chill_temperature:
+  friendly_name: Wind Chill
+sensor.rack_temperature:
+  friendly_name: Rack
+
+#######################################################################################
+# Carbon Dioxide
+#######################################################################################
+sensor.netatmo_edwin_co2:
+  friendly_name: Edwin
+
+#######################################################################################
+# Humidity
+#######################################################################################
+sensor.roof_humidity:
+  friendly_name: Roof
+sensor.rack_humidity:
+  friendly_name: Rack
+
+#######################################################################################
+# Noise
+#######################################################################################
+sensor.netatmo_ada_noise:
+  friendly_name: Ada
+
+#######################################################################################
+# Irradiance
+#######################################################################################
+sensor.roof_cloud_base:
+  friendly_name: Roof Cloud Base
+sensor.roof_max_solar_radiation:
+  friendly_name: Roof Max Solar Radiation
+
+#######################################################################################
+# Pressure
+#######################################################################################
+sensor.roof_alititude_pressure:
+  friendly_name: Roof Altitude
+sensor.roof_barometer_pressure:
+  friendly_name: Roof Barometer
+sensor.roof_pressure:
+  friendly_name: Roof
+
+#######################################################################################
+# Wind
+#######################################################################################
+sensor.roof_wind_direction:
+  friendly_name: Direction
+sensor.roof_wind_gust_direction:
+  friendly_name: Gust Direction
+sensor.roof_wind_gust_speed:
+  friendly_name: Gust Speed
+sensor.roof_wind_speed_10min:
+  friendly_name: Speed over 10m
+sensor.roof_wind_samples:
+  friendly_name: Samples
+sensor.roof_wind_run:
+  friendly_name: Run
+sensor.roof_wind_speed:
+  friendly_name: Speed
+
+#######################################################################################
+# Rain
+#######################################################################################
+sensor.roof_rain_rate:
+  friendly_name: Rate
+sensor.roof_hourly_rain:
+  friendly_name: Hourly
+sensor.roof_daily_rain:
+  friendly_name: Daily
+sensor.roof_monthly_rain:
+  friendly_name: Monthly
+sensor.roof_yearly_rain:
+  friendly_name: Yearly
+sensor.roof_24hour_rain:
+  friendly_name: 24 Hour
+sensor.roof_rain:
+  friendly_name: Total
+sensor.roof_storm_rain:
+  friendly_name: Storm
+
+#######################################################################################
+# Fans
+#######################################################################################
+fan.ada:
+  friendly_name: Ada
+
+#######################################################################################
+# Switches
+#######################################################################################
+switch.kitchen_coffee:
+  friendly_name: Coffee Machine
+
+#######################################################################################
+# Lights
+#######################################################################################
+light.dining:
+  friendly_name: Dining Main
+light.ada_light:
+  friendly_name: Ada Main
+
+#######################################################################################
+# Hard Resets - CAREFUL!
+#######################################################################################
+switch.lounge_tv:
+  friendly_name: Lounge TV
+
+#######################################################################################
+# Power
+#######################################################################################
+sensor.kitchen_coffee_current_consumption:
+  friendly_name: Coffee Machine
+
+#######################################################################################
+# Energy
+#######################################################################################
+sensor.kitchen_coffee_total_consumption:
+  friendly_name: Coffee Machine
+sensor.kitchen_coffee_today_s_consumption:
+  friendly_name: Coffee Machine
+
+#######################################################################################
+# Telemetry
+#######################################################################################
+sensor.weatherstation_console_battery_voltage:
+  friendly_name: Weather Station Console Battery Voltage
+sensor.weatherstation_coms_signal_quality:
+  friendly_name: Weather Station Coms Signal Quality
