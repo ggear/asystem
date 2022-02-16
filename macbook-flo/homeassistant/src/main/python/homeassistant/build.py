@@ -12,10 +12,6 @@ DIR_ROOT = os.path.abspath("{}/../../../../".format(DIR_MODULE_ROOT))
 sys.path.insert(0, DIR_MODULE_ROOT)
 
 
-def load_environment():
-    None
-
-
 def load_entity_metadata():
     metadata_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/entity_metadata.xlsx"))
     metadata_df = pd.read_excel(metadata_path, header=1)
@@ -33,13 +29,13 @@ if __name__ == "__main__":
         (metadata_df["index"] > 0) &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["name"].str.len() > 0) &
+        (metadata_df["friendly_name"].str.len() > 0) &
         (metadata_df["entity_domain"].str.len() > 0)
         ]
     metadata_customise_dicts = [row.dropna().to_dict() for index, row in metadata_customise_df[[
         "entity_namespace",
         "unique_id",
-        "name",
+        "friendly_name",
         "entity_domain",
     ]].iterrows()]
     metadata_customise_path = os.path.join(DIR_MODULE_ROOT, "../resources/config/customise.yaml")
@@ -59,7 +55,7 @@ if __name__ == "__main__":
                 domain_spacer,
                 metadata_customise_dict["entity_namespace"],
                 metadata_customise_dict["unique_id"],
-                metadata_customise_dict["name"],
+                metadata_customise_dict["friendly_name"],
             )
             metadata_customise_file.write(metadata_customise_str)
         print("Build script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
@@ -105,7 +101,6 @@ if __name__ == "__main__":
         ]
     metadata_publish_dicts = [row.dropna().to_dict() for index, row in metadata_publish_df[[
         "unique_id",
-        "name",
         "state_class",
         "unit_of_measurement",
         "device_class",
