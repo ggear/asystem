@@ -97,10 +97,12 @@ if __name__ == "__main__":
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["index"] > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
+        (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
     metadata_publish_dicts = [row.dropna().to_dict() for index, row in metadata_publish_df[[
         "unique_id",
+        "name",
         "state_class",
         "unit_of_measurement",
         "device_class",
