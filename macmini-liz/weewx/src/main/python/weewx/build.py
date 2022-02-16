@@ -34,3 +34,4 @@ if __name__ == "__main__":
         with open(weewx_conf_path, "wt") as weewx_conf_file:
             for line in weewx_conf_template_file:
                 weewx_conf_file.write(line.replace('$INPUTS_METADATA', metadata_weewx_str))
+    print("Build script [weewx] entity metadata persisted to [{}]".format(weewx_conf_path))
