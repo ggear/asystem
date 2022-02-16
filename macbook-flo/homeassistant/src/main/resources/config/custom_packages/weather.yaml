@@ -327,8 +327,8 @@ sensor:
       bom_today_rains:
         value_template: >
           {{ states('sensor.bom_today_rain') }} (
-          {%- if states('sensor.day_rain') in ['unavailable', 'unknown', 'none', 'n/a'] -%}unknown)
-          {% else %}{{ states('sensor.day_rain') | round | int }})
+          {%- if states('sensor.roof_daily_rain') in ['unavailable', 'unknown', 'none', 'n/a'] -%}unknown)
+          {% else %}{{ states('sensor.roof_daily_rain') | round | int }})
           {% endif %}
 
       bom_today_humiditys:
@@ -366,7 +366,7 @@ sensor:
   - platform: average
     name: today_rain_roof
     entities:
-      - sensor.day_rain
+      - sensor.roof_daily_rain
     start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
     end: '{{ now() }}'
 
