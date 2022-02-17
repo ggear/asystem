@@ -1,9 +1,13 @@
 from __future__ import print_function
 
 import datetime
+import json
 import os
+import shutil
+import subprocess
 import sys
 import time
+from collections import OrderedDict
 
 import pandas as pd
 from requests import get
@@ -60,9 +64,9 @@ if __name__ == "__main__":
         if state_response.status_code == 200:
             hours_since_update = (time.time() - (time.mktime(datetime.datetime.strptime(
                 state_response.json()["last_updated"].split('+')[0], '%Y-%m-%dT%H:%M:%S.%f').timetuple()) + 8 * 60 * 60)) / (60 * 60)
-            if hours_since_update > 1:
-                print("Build script [homeassistant] entity metadata [{}.{}] not recently updated"
-                      .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]),
+            if hours_since_update > 6:
+                print("Build script [homeassistant] entity metadata [{}.{}] not recently updated, [{:.1f}] hours"
+                      .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"], hours_since_update),
                       file=sys.stderr if "display_mode" in metadata_verify_dict else sys.stdout)
             else:
                 print("Build script [homeassistant] entity metadata [{}.{}] verified"
@@ -71,7 +75,7 @@ if __name__ == "__main__":
             print("Build script [homeassistant] entity metadata [{}.{}] not found"
                   .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
 
-    sys.exit()
+    # sys.exit()
 
     # Build customise YAML
     metadata_customise_df = metadata_df[

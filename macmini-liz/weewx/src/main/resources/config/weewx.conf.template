@@ -209,7 +209,7 @@ version = 4.1.1
         unit_system = METRIC
         binding = archive
         aggregation = individual
-        #obs_to_upload = none
+        obs_to_upload = none
         $INPUTS_METADATA
 
 ##############################################################################

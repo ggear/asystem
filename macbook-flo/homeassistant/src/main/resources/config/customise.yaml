@@ -69,6 +69,26 @@ sensor.netatmo_laundry_co2:
 #######################################################################################
 sensor.roof_humidity:
   friendly_name: Roof
+sensor.netatmo_ada_humidity:
+  friendly_name: Ada
+sensor.netatmo_edwin_humidity:
+  friendly_name: Edwin
+sensor.netatmo_parents_humidity:
+  friendly_name: Parents
+sensor.netatmo_bertram_2_office_humidity:
+  friendly_name: Office
+sensor.netatmo_bertram_2_kitchen_humidity:
+  friendly_name: Kitchen
+sensor.netatmo_bertram_2_office_pantry_humidity:
+  friendly_name: Pantry
+sensor.netatmo_bertram_2_office_lounge_humidity:
+  friendly_name: Lounge
+sensor.netatmo_bertram_2_office_dining_humidity:
+  friendly_name: Dining
+sensor.netatmo_laundry_humidity:
+  friendly_name: Laundry
+sensor.netatmo_bertram_2_office_basement_humidity:
+  friendly_name: Basement
 sensor.rack_humidity:
   friendly_name: Rack
 
@@ -77,6 +97,16 @@ sensor.rack_humidity:
 #######################################################################################
 sensor.netatmo_ada_noise:
   friendly_name: Ada
+sensor.netatmo_edwin_noise:
+  friendly_name: Edwin
+sensor.netatmo_parents_noise:
+  friendly_name: Parents
+sensor.netatmo_bertram_2_office_noise:
+  friendly_name: Office
+sensor.netatmo_bertram_2_kitchen_noise:
+  friendly_name: Kitchen
+sensor.netatmo_laundry_noise:
+  friendly_name: Laundry
 
 #######################################################################################
 # Irradiance
@@ -131,205 +161,3 @@ sensor.roof_rain:
   friendly_name: Total
 sensor.roof_storm_rain:
   friendly_name: Storm
-
-#######################################################################################
-# Fans
-#######################################################################################
-fan.ada:
-  friendly_name: Ada
-
-#######################################################################################
-# Switches
-#######################################################################################
-switch.kitchen_coffee:
-  friendly_name: Coffee Machine
-
-#######################################################################################
-# Lights
-#######################################################################################
-light.dining:
-  friendly_name: Dining Main
-light.ada_light:
-  friendly_name: Ada Main
-light.edwin_light:
-  friendly_name: Edwin Main
-light.lounge_light:
-  friendly_name: Lounge Fan
-light.hallway:
-  friendly_name: Hallway Main
-light.hue_color_candle_2:
-  friendly_name: Hallway Main
-light.hue_color_candle_3:
-  friendly_name: Hallway Main
-light.hue_color_candle_4:
-  friendly_name: Hallway Main
-light.hue_color_candle_5:
-  friendly_name: Hallway Main
-light.dining:
-  friendly_name: Dining Main
-light.hue_color_candle_6:
-  friendly_name: Dining Main
-light.hue_color_candle_7:
-  friendly_name: Dining Main
-light.hue_color_candle_8:
-  friendly_name: Dining Main
-light.hue_color_candle_9:
-  friendly_name: Dining Main
-light.hue_color_candle_10:
-  friendly_name: Dining Main
-light.hue_color_candle_11:
-  friendly_name: Dining Main
-light.lounge:
-  friendly_name: Lounge Main
-light.hue_color_candle_12:
-  friendly_name: Lounge Main
-light.hue_color_candle_13:
-  friendly_name: Lounge Main
-light.hue_color_candle_14:
-  friendly_name: Lounge Main
-light.parents:
-  friendly_name: Parents Main
-light.hue_color_candle_15:
-  friendly_name: Parents Main
-light.hue_color_candle_16:
-  friendly_name: Parents Main
-light.hue_color_candle_17:
-  friendly_name: Parents Main
-light.kitchen:
-  friendly_name: Kitchen Main
-light.hue_ambiance_lamp_1:
-  friendly_name: Kitchen Main
-light.hue_ambiance_lamp_2:
-  friendly_name: Kitchen Main
-light.hue_ambiance_lamp_3:
-  friendly_name: Kitchen Main
-light.hue_ambiance_lamp_12:
-  friendly_name: Kitchen Main
-light.laundry:
-  friendly_name: Laundry Main
-light.hue_ambiance_lamp_4:
-  friendly_name: Laundry Main
-light.pantry:
-  friendly_name: Pantry Main
-light.hue_ambiance_lamp_5:
-  friendly_name: Pantry Main
-light.office:
-  friendly_name: Office Main
-light.hue_ambiance_lamp_6:
-  friendly_name: Office Main
-light.bathroom:
-  friendly_name: Bathroom Main
-light.hue_ambiance_lamp_7:
-  friendly_name: Bathroom Main
-light.ensuite:
-  friendly_name: Ensuite Main
-light.hue_ambiance_lamp_8:
-  friendly_name: Ensuite Main
-light.wardrobe:
-  friendly_name: Wardrobe Main
-light.hue_ambiance_lamp_9:
-  friendly_name: Wardrobe Main
-light.edwin:
-  friendly_name: Edwin Lamp
-light.hue_ambiance_lamp_10:
-  friendly_name: Edwin Lamp
-light.ada:
-  friendly_name: Ada Lamp
-light.hue_ambiance_lamp_13:
-  friendly_name: Lounge Lamp
-light.hue_ambiance_lamp_11:
-  friendly_name: Ada Lamp
-light.lamp:
-  friendly_name: Lounge Lamp
-
-#######################################################################################
-# Hard Resets - BE CAREFUL!
-#######################################################################################
-switch.lounge_tv:
-  friendly_name: Lounge TV
-
-#######################################################################################
-# Power
-#######################################################################################
-sensor.kitchen_coffee_current_consumption:
-  friendly_name: Coffee Machine
-sensor.dining_lights_power:
-  friendly_name: Dining Lights
-
-#######################################################################################
-# Energy
-#######################################################################################
-sensor.kitchen_coffee_total_consumption:
-  friendly_name: Coffee Machine
-sensor.kitchen_coffee_today_s_consumption:
-  friendly_name: Coffee Machine
-sensor.dining_lights_energy:
-  friendly_name: Dining Lights
-sensor.dining_lights_energy_today:
-  friendly_name: Dining Lights
-
-#######################################################################################
-# Telemetry
-#######################################################################################
-sensor.weatherstation_console_battery_voltage:
-  friendly_name: Weather Station Console Battery Voltage
-sensor.weatherstation_coms_signal_quality:
-  friendly_name: Weather Station Coms Signal Quality
-
-#######################################################################################
-# Home
-#######################################################################################
-media_player.ada_home:
-  friendly_name: Ada Home
-
-#######################################################################################
-# Speaker
-#######################################################################################
-media_player.kitchen_speaker:
-  friendly_name: Kitchen Speaker
-
-#######################################################################################
-# Telemetry
-#######################################################################################
-sensor.parents_speaker_battery:
-  friendly_name: Parents Speaker Battery
-
-#######################################################################################
-# Camera
-#######################################################################################
-camera.uvc_ada_medium:
-  friendly_name: Ada
-camera.uvc_edwin_medium:
-  friendly_name: Edwin
-
-#######################################################################################
-# Motion
-#######################################################################################
-binary_sensor.ada_occupancy:
-  friendly_name: Ada Fan
-binary_sensor.uvc_ada_motion:
-  friendly_name: Ada Camera
-binary_sensor.edwin_occupancy:
-  friendly_name: Edwin Fan
-binary_sensor.uvc_edwin_motion:
-  friendly_name: Edwin Camera
-binary_sensor.parents_occupancy:
-  friendly_name: Parents Fan
-binary_sensor.lounge_occupancy:
-  friendly_name: Lounge Fan
-binary_sensor.deck2_occupancy:
-  friendly_name: Deck East Fan
-binary_sensor.deck1_occupancy:
-  friendly_name: Deck West Fan
-
-#######################################################################################
-# Lights
-#######################################################################################
-scene.ada_energize:
-  friendly_name: Ada Lights Energise
-
-#######################################################################################
-# Telemetry
-#######################################################################################
-automation.update_bom_icons:
-  friendly_name: Update BOM Icons
