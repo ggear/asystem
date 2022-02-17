@@ -177,6 +177,7 @@ fi
 ################################################################################
 cat <<EOF >/etc/avahi/avahi-daemon.conf
 [server]
+domain-name=janeandgraham.com
 use-ipv4=yes
 use-ipv6=yes
 ratelimit-interval-usec=1000000
@@ -192,6 +193,9 @@ enable-reflector=yes
 reflect-ipv=no
 [rlimits]
 EOF
+systemctl on avahi-daemon
+systemctl restart avahi-daemon
+systemctl status avahi-daemon
 
 ################################################################################
 # Time
