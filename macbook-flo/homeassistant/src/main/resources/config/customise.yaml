@@ -1,10 +1,6 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-
-#######################################################################################
-# Temperature
-#######################################################################################
 sensor.roof_temperature:
   friendly_name: Roof
 sensor.netatmo_ada_temperature:
@@ -41,10 +37,6 @@ sensor.rack_dew_point:
   friendly_name: Rack Dew Point
 sensor.roof_wind_chill_temperature:
   friendly_name: Wind Chill
-
-#######################################################################################
-# Carbon Dioxide
-#######################################################################################
 sensor.netatmo_ada_co2:
   friendly_name: Ada
 sensor.netatmo_edwin_co2:
@@ -63,10 +55,6 @@ sensor.netatmo_bertram_2_office_dining_co2:
   friendly_name: Dining
 sensor.netatmo_laundry_co2:
   friendly_name: Laundry
-
-#######################################################################################
-# Humidity
-#######################################################################################
 sensor.roof_humidity:
   friendly_name: Roof
 sensor.netatmo_ada_humidity:
@@ -91,10 +79,6 @@ sensor.netatmo_bertram_2_office_basement_humidity:
   friendly_name: Basement
 sensor.rack_humidity:
   friendly_name: Rack
-
-#######################################################################################
-# Noise
-#######################################################################################
 sensor.netatmo_ada_noise:
   friendly_name: Ada
 sensor.netatmo_edwin_noise:
@@ -107,26 +91,14 @@ sensor.netatmo_bertram_2_kitchen_noise:
   friendly_name: Kitchen
 sensor.netatmo_laundry_noise:
   friendly_name: Laundry
-
-#######################################################################################
-# Irradiance
-#######################################################################################
 sensor.roof_cloud_base:
   friendly_name: Roof Cloud Base
 sensor.roof_max_solar_radiation:
   friendly_name: Roof Max Solar Radiation
-
-#######################################################################################
-# Pressure
-#######################################################################################
 sensor.roof_barometer_pressure:
   friendly_name: Roof Barometer
 sensor.roof_pressure:
   friendly_name: Roof
-
-#######################################################################################
-# Wind
-#######################################################################################
 sensor.roof_wind_direction:
   friendly_name: Direction
 sensor.roof_wind_gust_direction:
@@ -141,10 +113,6 @@ sensor.roof_wind_run:
   friendly_name: Run
 sensor.roof_wind_speed:
   friendly_name: Speed
-
-#######################################################################################
-# Rain
-#######################################################################################
 sensor.roof_rain_rate:
   friendly_name: Rate
 sensor.roof_hourly_rain:

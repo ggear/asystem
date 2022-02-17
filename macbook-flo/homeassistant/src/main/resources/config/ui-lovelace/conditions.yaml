@@ -1,3 +1,6 @@
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
 - type: custom:mini-graph-card
   name: Temperature
   font_size_header: 19
@@ -13,23 +16,23 @@
     fill: false
   entities:
     - sensor.roof_temperature
-    - sensor.ada_temperature
-    - sensor.edwin_temperature
-    - sensor.parents_temperature
+    - sensor.netatmo_ada_temperature
+    - sensor.netatmo_edwin_temperature
+    - sensor.netatmo_parents_temperature
 - type: entities
   show_header_toggle: false
   entities:
     - entity: sensor.roof_temperature
-    - entity: sensor.ada_temperature
-    - entity: sensor.basement_temperature
-    - entity: sensor.dining_temperature
-    - entity: sensor.edwin_temperature
-    - entity: sensor.kitchen_temperature
-    - entity: sensor.laundry_temperature
-    - entity: sensor.lounge_temperature
-    - entity: sensor.office_temperature
-    - entity: sensor.pantry_temperature
-    - entity: sensor.parents_temperature
+    - entity: sensor.netatmo_ada_temperature
+    - entity: sensor.netatmo_edwin_temperature
+    - entity: sensor.netatmo_parents_temperature
+    - entity: sensor.netatmo_bertram_2_office_temperature
+    - entity: sensor.netatmo_bertram_2_kitchen_temperature
+    - entity: sensor.netatmo_bertram_2_office_pantry_temperature
+    - entity: sensor.netatmo_bertram_2_office_lounge_temperature
+    - entity: sensor.netatmo_bertram_2_office_dining_temperature
+    - entity: sensor.netatmo_laundry_temperature
+    - entity: sensor.netatmo_bertram_2_office_basement_temperature
     - entity: sensor.rack_temperature
 - type: custom:mini-graph-card
   name: Carbon Dioxide
@@ -45,20 +48,20 @@
     extrema: true
     fill: false
   entities:
-    - sensor.edwin_carbon_dioxide
-    - sensor.kitchen_carbon_dioxide
-    - sensor.lounge_carbon_dioxide
-    - sensor.office_carbon_dioxide
+    - sensor.netatmo_edwin_co2
+    - sensor.netatmo_parents_co2
+    - sensor.netatmo_bertram_2_kitchen_co2
+    - sensor.netatmo_bertram_2_office_pantry_co2
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.dining_carbon_dioxide
-    - entity: sensor.edwin_carbon_dioxide
-    - entity: sensor.kitchen_carbon_dioxide
-    - entity: sensor.lounge_carbon_dioxide
-    - entity: sensor.office_carbon_dioxide
-    - entity: sensor.pantry_carbon_dioxide
-    - entity: sensor.parents_carbon_dioxide
+    - entity: sensor.netatmo_edwin_co2
+    - entity: sensor.netatmo_parents_co2
+    - entity: sensor.netatmo_bertram_2_office_co2
+    - entity: sensor.netatmo_bertram_2_kitchen_co2
+    - entity: sensor.netatmo_bertram_2_office_pantry_co2
+    - entity: sensor.netatmo_bertram_2_office_lounge_co2
+    - entity: sensor.netatmo_bertram_2_office_dining_co2
 - type: custom:mini-graph-card
   name: Humidity
   font_size_header: 19
@@ -74,23 +77,23 @@
     fill: false
   entities:
     - sensor.roof_humidity
-    - sensor.ada_humidity
-    - sensor.edwin_humidity
-    - sensor.parents_humidity
+    - sensor.netatmo_ada_humidity
+    - sensor.netatmo_edwin_humidity
+    - sensor.netatmo_parents_humidity
 - type: entities
   show_header_toggle: false
   entities:
     - entity: sensor.roof_humidity
-    - entity: sensor.ada_humidity
-    - entity: sensor.basement_humidity
-    - entity: sensor.dining_humidity
-    - entity: sensor.edwin_humidity
-    - entity: sensor.kitchen_humidity
-    - entity: sensor.laundry_humidity
-    - entity: sensor.lounge_humidity
-    - entity: sensor.office_humidity
-    - entity: sensor.pantry_humidity
-    - entity: sensor.parents_humidity
+    - entity: sensor.netatmo_ada_humidity
+    - entity: sensor.netatmo_edwin_humidity
+    - entity: sensor.netatmo_parents_humidity
+    - entity: sensor.netatmo_bertram_2_office_humidity
+    - entity: sensor.netatmo_bertram_2_kitchen_humidity
+    - entity: sensor.netatmo_bertram_2_office_pantry_humidity
+    - entity: sensor.netatmo_bertram_2_office_lounge_humidity
+    - entity: sensor.netatmo_bertram_2_office_dining_humidity
+    - entity: sensor.netatmo_laundry_humidity
+    - entity: sensor.netatmo_bertram_2_office_basement_humidity
     - entity: sensor.rack_humidity
 - type: custom:mini-graph-card
   name: Noise
@@ -106,16 +109,16 @@
     extrema: true
     fill: false
   entities:
-    - sensor.ada_noise
-    - sensor.edwin_noise
-    - sensor.kitchen_noise
-    - sensor.parents_noise
+    - sensor.netatmo_ada_noise
+    - sensor.netatmo_edwin_noise
+    - sensor.netatmo_parents_noise
+    - sensor.netatmo_bertram_2_office_noise
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.ada_noise
-    - entity: sensor.edwin_noise
-    - entity: sensor.kitchen_noise
-    - entity: sensor.laundry_noise
-    - entity: sensor.office_noise
-    - entity: sensor.parents_noise
+    - entity: sensor.netatmo_ada_noise
+    - entity: sensor.netatmo_edwin_noise
+    - entity: sensor.netatmo_parents_noise
+    - entity: sensor.netatmo_bertram_2_office_noise
+    - entity: sensor.netatmo_bertram_2_kitchen_noise
+    - entity: sensor.netatmo_laundry_noise

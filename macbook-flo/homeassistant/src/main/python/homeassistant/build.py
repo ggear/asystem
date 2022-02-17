@@ -1,10 +1,7 @@
 from __future__ import print_function
 
 import datetime
-import json
 import os
-import shutil
-import subprocess
 import sys
 import time
 from collections import OrderedDict
@@ -67,15 +64,16 @@ if __name__ == "__main__":
             if hours_since_update > 6:
                 print("Build script [homeassistant] entity metadata [{}.{}] not recently updated, [{:.1f}] hours"
                       .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"], hours_since_update),
-                      file=sys.stderr if "display_mode" in metadata_verify_dict else sys.stdout)
+                      file=sys.stderr if \
+                          "display_mode" in metadata_verify_dict and \
+                          metadata_verify_dict["entity_namespace"] == "sensor"
+                      else sys.stdout)
             else:
                 print("Build script [homeassistant] entity metadata [{}.{}] verified"
                       .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
         else:
             print("Build script [homeassistant] entity metadata [{}.{}] not found"
                   .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
-
-    # sys.exit()
 
     # Build customise YAML
     metadata_customise_df = metadata_df[
@@ -87,26 +85,22 @@ if __name__ == "__main__":
         (metadata_df["entity_domain"].str.len() > 0)
         ]
     metadata_customise_dicts = [row.dropna().to_dict() for index, row in metadata_customise_df.iterrows()]
-    metadata_customise_path = os.path.join(DIR_MODULE_ROOT, "../resources/config/customise.yaml")
+    metadata_customise_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/config/customise.yaml"))
     with open(metadata_customise_path, 'w') as metadata_customise_file:
-        metadata_customise_file.write("#######################################################################################\n")
-        metadata_customise_file.write("# WARNING: This file is written to by the build process, any manual edits will be lost!\n")
-        metadata_customise_file.write("#######################################################################################\n")
-        last_domain = None
+        metadata_customise_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+        """.strip() + "\n")
         for metadata_customise_dict in metadata_customise_dicts:
-            domain_spacer = ""
-            if last_domain is None or last_domain != metadata_customise_dict["entity_domain"]:
-                last_domain = metadata_customise_dict["entity_domain"]
-                domain_spacer = "\n#######################################################################################\n" \
-                                "# {}\n#######################################################################################\n" \
-                    .format(last_domain)
-            metadata_customise_str = "{}{}.{}:\n  friendly_name: {}\n".format(
-                domain_spacer,
+            metadata_customise_file.write("""
+{}.{}:
+  friendly_name: {}                
+            """.format(
                 metadata_customise_dict["entity_namespace"],
                 metadata_customise_dict["unique_id"],
                 metadata_customise_dict["friendly_name"],
-            )
-            metadata_customise_file.write(metadata_customise_str)
+            ).strip() + "\n")
         print("Build script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
 
     # Build lovelace YAML
@@ -131,10 +125,69 @@ if __name__ == "__main__":
             metadata_lovelace_group_domain_dicts[group][domain] = []
         metadata_lovelace_group_domain_dicts[group][domain].append(metadata_lovelace_dict)
     for group in metadata_lovelace_group_domain_dicts:
-        for domain in metadata_lovelace_group_domain_dicts[group]:
-            for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
-                # TODO: Provide implementation
-                print("{} : {} : {}".format(group, domain, metadata_lovelace_dict["friendly_name"]))
+        metadata_lovelace_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT,
+                                                              "../resources/config/ui-lovelace", group.lower() + ".yaml"))
+        with open(metadata_lovelace_path, 'w') as metadata_lovelace_file:
+            metadata_lovelace_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+            """.strip() + "\n")
+            for domain in metadata_lovelace_group_domain_dicts[group]:
+                metadata_lovelace_graph_dicts = []
+                for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
+                    if metadata_lovelace_dict["display_mode"] == "Graph":
+                        metadata_lovelace_graph_dicts.append(metadata_lovelace_dict)
+                if metadata_lovelace_graph_dicts:
+                    metadata_lovelace_file.write("""
+- type: custom:mini-graph-card
+  name: {}
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+                    """.format(
+                        domain,
+                    ).strip() + "\n")
+                    for metadata_lovelace_graph_dict in metadata_lovelace_graph_dicts:
+                        metadata_lovelace_file.write("    " + ("""
+    - {}.{}
+                        """.format(
+                            metadata_lovelace_graph_dict["entity_namespace"],
+                            metadata_lovelace_graph_dict["unique_id"],
+                        )).strip() + "\n")
+                if metadata_lovelace_group_domain_dicts[group][domain]:
+                    metadata_lovelace_file.write("""
+- type: entities
+  show_header_toggle: false
+  entities:
+                    """.strip() + "\n")
+                    for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
+                        metadata_lovelace_file.write("    " + ("""
+    - entity: {}.{}
+                            """.format(
+                            metadata_lovelace_dict["entity_namespace"],
+                            metadata_lovelace_dict["unique_id"],
+                        )).strip() + "\n")
+            print("Build script [homeassistant] entity group [{}] persisted to lovelace [{}]"
+                .format(group.lower(), metadata_lovelace_path))
+
+
+
+
+    # TODO
+    sys.exit()
+
+
+
 
     # Build metadata publish JSON
     metadata_publish_df = metadata_df[
@@ -162,7 +215,7 @@ if __name__ == "__main__":
     metadata_device_pub_dicts = [row.dropna().to_dict() for index, row in
                                  metadata_publish_df[metadata_device_columns]
                                      .rename(columns=metadata_device_columns_rename).iterrows()]
-    metadata_publish_dir = os.path.join(DIR_MODULE_ROOT, "../resources/entity_metadata")
+    metadata_publish_dir = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/entity_metadata"))
     if os.path.exists(metadata_publish_dir):
         shutil.rmtree(metadata_publish_dir)
     os.makedirs(metadata_publish_dir)

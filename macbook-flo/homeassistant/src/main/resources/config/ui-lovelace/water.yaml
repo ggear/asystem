@@ -1,3 +1,6 @@
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
 - type: custom:mini-graph-card
   name: Rain
   font_size_header: 19
@@ -12,8 +15,12 @@
     extrema: true
     fill: false
   entities:
-    - sensor.last_30_min_rain
+    - sensor.roof_hourly_rain
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.last_30_min_rain
+    - entity: sensor.roof_rain_rate
+    - entity: sensor.roof_hourly_rain
+    - entity: sensor.roof_daily_rain
+    - entity: sensor.roof_monthly_rain
+    - entity: sensor.roof_yearly_rain
