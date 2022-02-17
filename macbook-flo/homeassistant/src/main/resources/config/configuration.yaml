@@ -87,11 +87,11 @@ panel_custom:
     require_admin: false
     config:
       ingress: core_configurator
-  - name: cameras
-    sidebar_title: Cameras
+  - name: security
+    sidebar_title: Security
     sidebar_icon: mdi:camera
     js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/cameras'
+    url_path: 'lovelace/security'
     embed_iframe: true
     require_admin: false
     config:

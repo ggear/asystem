@@ -13,9 +13,9 @@ views:
     title: Media
     cards: !include ui-lovelace/media.yaml
 
-  - path: cameras
-    title: Cameras
-    cards: !include ui-lovelace/cameras.yaml
+  - path: security
+    title: Security
+    cards: !include ui-lovelace/security.yaml
 
   - path: conditions
     title: Conditions
