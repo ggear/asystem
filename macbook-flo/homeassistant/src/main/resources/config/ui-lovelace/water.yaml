@@ -15,7 +15,7 @@
     extrema: true
     fill: false
   entities:
-    - sensor.roof_hourly_rain
+    - sensor.roof_rain_rate
 - type: entities
   show_header_toggle: false
   entities:

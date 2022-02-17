@@ -129,3 +129,29 @@ sensor.roof_rain:
   friendly_name: Total
 sensor.roof_storm_rain:
   friendly_name: Storm
+sensor.various_adhoc_current_consumption:
+  friendly_name: Adhoc
+sensor.rack_modem_current_consumption:
+  friendly_name: Internet Modem
+sensor.rack_power_current_consumption:
+  friendly_name: Server Rack
+sensor.roof_switch_current_consumption:
+  friendly_name: Network Switch
+sensor.kitchen_fan_current_consumption:
+  friendly_name: Kitchen Fan
+sensor.kitchen_fridge_current_consumption:
+  friendly_name: Kitchen Fridge
+sensor.kitchen_coffee_current_consumption:
+  friendly_name: Coffee Machine
+sensor.deck_freezer_current_consumption:
+  friendly_name: Deck Freezer
+sensor.deck_festoons_current_consumption:
+  friendly_name: Deck Lights
+sensor.office_power_current_consumption:
+  friendly_name: Office Outlet
+sensor.lounge_tv_current_consumption:
+  friendly_name: Lounge TV
+sensor.study_power_current_consumption:
+  friendly_name: Study Outlet
+sensor.bathroom_towelrails_current_consumption:
+  friendly_name: Bathroom Towel Rails
