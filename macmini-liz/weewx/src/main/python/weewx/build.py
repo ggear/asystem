@@ -19,10 +19,7 @@ if __name__ == "__main__":
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["unique_id_device"].str.len() > 0)
         ]
-    metadata_weewx_dicts = [row.dropna().to_dict() for index, row in metadata_weewx_df[[
-        "unique_id",
-        "unique_id_device",
-    ]].iterrows()]
+    metadata_weewx_dicts = [row.dropna().to_dict() for index, row in metadata_weewx_df.iterrows()]
     metadata_weewx_str = "[[[inputs]]]\n"
     for metadata_weewx_dict in metadata_weewx_dicts:
         metadata_weewx_str += ("            " + """
