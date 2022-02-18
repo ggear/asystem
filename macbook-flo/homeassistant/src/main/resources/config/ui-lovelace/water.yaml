@@ -20,7 +20,12 @@
   show_header_toggle: false
   entities:
     - entity: sensor.roof_rain_rate
+      name: Rate
     - entity: sensor.roof_hourly_rain
+      name: Hourly
     - entity: sensor.roof_daily_rain
+      name: Daily
     - entity: sensor.roof_monthly_rain
+      name: Monthly
     - entity: sensor.roof_yearly_rain
+      name: Yearly

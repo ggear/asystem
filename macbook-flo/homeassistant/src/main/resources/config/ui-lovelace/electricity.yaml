@@ -15,22 +15,45 @@
     extrema: true
     fill: false
   entities:
-    - sensor.rack_power_current_consumption
-    - sensor.office_power_current_consumption
-    - sensor.study_power_current_consumption
+    - sensor.study_outlet_current_consumption
+    - sensor.office_outlet_current_consumption
+    - sensor.rack_outlet_current_consumption
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.various_adhoc_current_consumption
-    - entity: sensor.rack_modem_current_consumption
-    - entity: sensor.rack_power_current_consumption
-    - entity: sensor.roof_switch_current_consumption
     - entity: sensor.kitchen_fan_current_consumption
+      name: Kitchen Fan
     - entity: sensor.kitchen_fridge_current_consumption
-    - entity: sensor.kitchen_coffee_current_consumption
+      name: Kitchen Fridge
     - entity: sensor.deck_freezer_current_consumption
-    - entity: sensor.deck_festoons_current_consumption
-    - entity: sensor.office_power_current_consumption
+      name: Deck Freezer
+    - entity: sensor.deck_lights_current_consumption
+      name: Deck Lights
+    - entity: sensor.kitchen_coffee_machine_current_consumption
+      name: Coffee Machine
+    - entity: sensor.kitchen_dishwasher_current_consumption
+      name: Dishwasher
     - entity: sensor.lounge_tv_current_consumption
-    - entity: sensor.study_power_current_consumption
+      name: Lounge TV
+    - entity: sensor.laundry_clothes_dryer_current_consumption
+      name: Clothes Dryer
+    - entity: sensor.laundry_washing_machine_current_consumption
+      name: Washing Machine
     - entity: sensor.bathroom_towelrails_current_consumption
+      name: Bathroom Towel Rails
+    - entity: sensor.study_outlet_current_consumption
+      name: Study Outlet
+    - entity: sensor.office_outlet_current_consumption
+      name: Office Outlet
+    - entity: sensor.rack_outlet_current_consumption
+      name: Server Rack
+    - entity: sensor.roof_network_switch_current_consumption
+      name: Network Switch
+    - entity: sensor.rack_internet_modem_current_consumption
+      name: Internet Modem
+    - entity: sensor.study_battery_charger_current_consumption
+      name: Battery Charger
+    - entity: sensor.laundry_vacuum_charger_current_consumption
+      name: Vacuum Charger
+    - entity: sensor.various_adhoc_outlet_current_consumption
+      name: Adhoc Outlet

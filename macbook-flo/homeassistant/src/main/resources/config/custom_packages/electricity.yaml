@@ -12,18 +12,3 @@ automation:
       - service: homeassistant.update_entity
         data:
           entity_id:
-            - switch.bathroom_towelrails
-            - switch.deck_festoons
-            - switch.deck_freezer
-            - switch.kitchen_coffee
-            - switch.kitchen_fan
-            - switch.kitchen_fridge
-            - switch.lounge_tv
-            - switch.office_power
-            - switch.rack_modem
-            - switch.rack_power
-            - switch.roof_switch
-            - switch.study_power
-            - switch.various_adhoc
-
-

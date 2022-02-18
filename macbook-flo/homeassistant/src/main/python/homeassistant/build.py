@@ -177,9 +177,11 @@ if __name__ == "__main__":
                     for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
                         metadata_lovelace_file.write("    " + ("""
     - entity: {}.{}
+      name: {}
                             """.format(
                             metadata_lovelace_dict["entity_namespace"],
                             metadata_lovelace_dict["unique_id"],
+                            metadata_lovelace_dict["friendly_name"],
                         )).strip() + "\n")
             print("Build script [homeassistant] entity group [{}] persisted to lovelace [{}]"
                 .format(group.lower(), metadata_lovelace_path))
