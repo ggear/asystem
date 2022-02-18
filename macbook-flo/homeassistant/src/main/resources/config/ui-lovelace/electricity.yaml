@@ -2,7 +2,7 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
 - type: custom:mini-graph-card
-  name: Power Consumption
+  name: Current Power Consumption
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 24
@@ -15,14 +15,17 @@
     extrema: true
     fill: false
   entities:
-    - sensor.kitchen_dishwasher_current_consumption
-    - sensor.laundry_clothes_dryer_current_consumption
-    - sensor.laundry_washing_machine_current_consumption
+    - entity: sensor.kitchen_dish_washer_current_consumption
+      name: Dish Washer
+    - entity: sensor.laundry_clothes_dryer_current_consumption
+      name: Clothes Dryer
+    - entity: sensor.laundry_washing_machine_current_consumption
+      name: Washing Machine
 - type: entities
   show_header_toggle: false
   entities:
-    - entity: sensor.kitchen_dishwasher_current_consumption
-      name: Dishwasher
+    - entity: sensor.kitchen_dish_washer_current_consumption
+      name: Dish Washer
     - entity: sensor.laundry_clothes_dryer_current_consumption
       name: Clothes Dryer
     - entity: sensor.laundry_washing_machine_current_consumption
@@ -56,4 +59,63 @@
     - entity: sensor.laundry_vacuum_charger_current_consumption
       name: Vacuum Charger
     - entity: sensor.various_adhoc_outlet_current_consumption
+      name: Adhoc Outlet
+- type: custom:mini-graph-card
+  name: Daily Energy Consumption
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - entity: sensor.kitchen_dish_washer_today_s_consumption
+      name: Dish Washer
+    - entity: sensor.laundry_clothes_dryer_today_s_consumption
+      name: Clothes Dryer
+    - entity: sensor.laundry_washing_machine_today_s_consumption
+      name: Washing Machine
+- type: entities
+  show_header_toggle: false
+  entities:
+    - entity: sensor.kitchen_dish_washer_today_s_consumption
+      name: Dish Washer
+    - entity: sensor.laundry_clothes_dryer_today_s_consumption
+      name: Clothes Dryer
+    - entity: sensor.laundry_washing_machine_today_s_consumption
+      name: Washing Machine
+    - entity: sensor.kitchen_coffee_machine_today_s_consumption
+      name: Coffee Machine
+    - entity: sensor.kitchen_fan_today_s_consumption
+      name: Kitchen Fan
+    - entity: sensor.kitchen_fridge_today_s_consumption
+      name: Kitchen Fridge
+    - entity: sensor.deck_freezer_today_s_consumption
+      name: Deck Freezer
+    - entity: sensor.deck_lights_today_s_consumption
+      name: Deck Lights
+    - entity: sensor.lounge_tv_today_s_consumption
+      name: Lounge TV
+    - entity: sensor.bathroom_rails_today_s_consumption
+      name: Bathroom Rails
+    - entity: sensor.study_outlet_today_s_consumption
+      name: Study Outlet
+    - entity: sensor.office_outlet_today_s_consumption
+      name: Office Outlet
+    - entity: sensor.rack_outlet_today_s_consumption
+      name: Server Rack
+    - entity: sensor.roof_network_switch_today_s_consumption
+      name: Network Switch
+    - entity: sensor.rack_internet_modem_today_s_consumption
+      name: Internet Modem
+    - entity: sensor.study_battery_charger_today_s_consumption
+      name: Battery Charger
+    - entity: sensor.laundry_vacuum_charger_today_s_consumption
+      name: Vacuum Charger
+    - entity: sensor.various_adhoc_outlet_today_s_consumption
       name: Adhoc Outlet

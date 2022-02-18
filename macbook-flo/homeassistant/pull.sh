@@ -57,4 +57,6 @@ rm -rf src/main/resources/config/custom_components/powercalc
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../asystem-external/homeassistant/powercalc/custom_components/powercalc src/main/resources/config/custom_components
 
-
+rm -rf src/main/resources/config/custom_components/adaptive_lighting
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../../asystem-external/homeassistant/adaptive-lighting/custom_components/adaptive_lighting src/main/resources/config/custom_components

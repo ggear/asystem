@@ -166,10 +166,12 @@ if __name__ == "__main__":
                     ).strip() + "\n")
                     for metadata_lovelace_graph_dict in metadata_lovelace_graph_dicts:
                         metadata_lovelace_file.write("    " + ("""
-    - {}.{}
+    - entity: {}.{}
+      name: {}
                         """.format(
                             metadata_lovelace_graph_dict["entity_namespace"],
                             metadata_lovelace_graph_dict["unique_id"],
+                            metadata_lovelace_graph_dict["friendly_name"],
                         )).strip() + "\n")
                 if metadata_lovelace_group_domain_dicts[group][domain]:
                     metadata_lovelace_file.write("""

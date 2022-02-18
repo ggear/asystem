@@ -15,10 +15,14 @@
     extrema: true
     fill: false
   entities:
-    - sensor.roof_temperature
-    - sensor.netatmo_ada_temperature
-    - sensor.netatmo_edwin_temperature
-    - sensor.netatmo_parents_temperature
+    - entity: sensor.roof_temperature
+      name: Roof
+    - entity: sensor.netatmo_ada_temperature
+      name: Ada
+    - entity: sensor.netatmo_edwin_temperature
+      name: Edwin
+    - entity: sensor.netatmo_parents_temperature
+      name: Parents
 - type: entities
   show_header_toggle: false
   entities:
@@ -60,10 +64,14 @@
     extrema: true
     fill: false
   entities:
-    - sensor.netatmo_edwin_co2
-    - sensor.netatmo_parents_co2
-    - sensor.netatmo_bertram_2_kitchen_co2
-    - sensor.netatmo_bertram_2_office_pantry_co2
+    - entity: sensor.netatmo_edwin_co2
+      name: Edwin
+    - entity: sensor.netatmo_parents_co2
+      name: Parents
+    - entity: sensor.netatmo_bertram_2_kitchen_co2
+      name: Kitchen
+    - entity: sensor.netatmo_bertram_2_office_pantry_co2
+      name: Pantry
 - type: entities
   show_header_toggle: false
   entities:
@@ -95,10 +103,14 @@
     extrema: true
     fill: false
   entities:
-    - sensor.roof_humidity
-    - sensor.netatmo_ada_humidity
-    - sensor.netatmo_edwin_humidity
-    - sensor.netatmo_parents_humidity
+    - entity: sensor.roof_humidity
+      name: Roof
+    - entity: sensor.netatmo_ada_humidity
+      name: Ada
+    - entity: sensor.netatmo_edwin_humidity
+      name: Edwin
+    - entity: sensor.netatmo_parents_humidity
+      name: Parents
 - type: entities
   show_header_toggle: false
   entities:
@@ -140,10 +152,14 @@
     extrema: true
     fill: false
   entities:
-    - sensor.netatmo_ada_noise
-    - sensor.netatmo_edwin_noise
-    - sensor.netatmo_parents_noise
-    - sensor.netatmo_bertram_2_office_noise
+    - entity: sensor.netatmo_ada_noise
+      name: Ada
+    - entity: sensor.netatmo_edwin_noise
+      name: Edwin
+    - entity: sensor.netatmo_parents_noise
+      name: Parents
+    - entity: sensor.netatmo_bertram_2_office_noise
+      name: Office
 - type: entities
   show_header_toggle: false
   entities:

@@ -129,8 +129,8 @@ sensor.roof_rain:
   friendly_name: Total
 sensor.roof_storm_rain:
   friendly_name: Storm
-sensor.kitchen_dishwasher_current_consumption:
-  friendly_name: Dishwasher
+sensor.kitchen_dish_washer_current_consumption:
+  friendly_name: Dish Washer
 sensor.laundry_clothes_dryer_current_consumption:
   friendly_name: Clothes Dryer
 sensor.laundry_washing_machine_current_consumption:
@@ -164,4 +164,40 @@ sensor.study_battery_charger_current_consumption:
 sensor.laundry_vacuum_charger_current_consumption:
   friendly_name: Vacuum Charger
 sensor.various_adhoc_outlet_current_consumption:
+  friendly_name: Adhoc Outlet
+sensor.kitchen_dish_washer_today_s_consumption:
+  friendly_name: Dish Washer
+sensor.laundry_clothes_dryer_today_s_consumption:
+  friendly_name: Clothes Dryer
+sensor.laundry_washing_machine_today_s_consumption:
+  friendly_name: Washing Machine
+sensor.kitchen_coffee_machine_today_s_consumption:
+  friendly_name: Coffee Machine
+sensor.kitchen_fan_today_s_consumption:
+  friendly_name: Kitchen Fan
+sensor.kitchen_fridge_today_s_consumption:
+  friendly_name: Kitchen Fridge
+sensor.deck_freezer_today_s_consumption:
+  friendly_name: Deck Freezer
+sensor.deck_lights_today_s_consumption:
+  friendly_name: Deck Lights
+sensor.lounge_tv_today_s_consumption:
+  friendly_name: Lounge TV
+sensor.bathroom_rails_today_s_consumption:
+  friendly_name: Bathroom Rails
+sensor.study_outlet_today_s_consumption:
+  friendly_name: Study Outlet
+sensor.office_outlet_today_s_consumption:
+  friendly_name: Office Outlet
+sensor.rack_outlet_today_s_consumption:
+  friendly_name: Server Rack
+sensor.roof_network_switch_today_s_consumption:
+  friendly_name: Network Switch
+sensor.rack_internet_modem_today_s_consumption:
+  friendly_name: Internet Modem
+sensor.study_battery_charger_today_s_consumption:
+  friendly_name: Battery Charger
+sensor.laundry_vacuum_charger_today_s_consumption:
+  friendly_name: Vacuum Charger
+sensor.various_adhoc_outlet_today_s_consumption:
   friendly_name: Adhoc Outlet
