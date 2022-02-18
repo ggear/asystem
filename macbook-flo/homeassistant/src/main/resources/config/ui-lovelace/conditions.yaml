@@ -52,6 +52,7 @@
       name: Rack
 - type: custom:mini-graph-card
   name: Carbon Dioxide
+  icon: mdi:molecule-co2
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 24

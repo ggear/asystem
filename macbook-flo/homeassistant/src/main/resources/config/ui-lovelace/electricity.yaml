@@ -3,6 +3,7 @@
 #######################################################################################
 - type: custom:mini-graph-card
   name: Current Power Consumption
+  icon: mdi:home-lightning-bolt
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 24
@@ -62,6 +63,7 @@
       name: Adhoc Outlet
 - type: custom:mini-graph-card
   name: Daily Energy Consumption
+  icon: mdi:battery-charging
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 24

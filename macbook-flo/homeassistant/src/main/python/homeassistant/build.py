@@ -93,20 +93,21 @@ if __name__ == "__main__":
         ]
     metadata_customise_dicts = [row.dropna().to_dict() for index, row in metadata_customise_df.iterrows()]
     metadata_customise_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/config/customise.yaml"))
-    with open(metadata_customise_path, 'w') as metadata_customise_file:
-        metadata_customise_file.write("""
+    with open(metadata_customise_path, 'w') as metadata_publish_file:
+        metadata_publish_file.write("""
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
         """.strip() + "\n")
         for metadata_customise_dict in metadata_customise_dicts:
-            metadata_customise_file.write("""
+            metadata_publish_file.write("""
 {}.{}:
-  friendly_name: {}                
+  friendly_name: {}{}
             """.format(
                 metadata_customise_dict["entity_namespace"],
                 metadata_customise_dict["unique_id"],
                 metadata_customise_dict["friendly_name"],
+                ("\n  icon: " + metadata_customise_dict["icon"]) if "icon" in metadata_customise_dict else "",
             ).strip() + "\n")
         print("Build script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
 
@@ -148,7 +149,7 @@ if __name__ == "__main__":
                 if metadata_lovelace_graph_dicts:
                     metadata_lovelace_file.write("""
 - type: custom:mini-graph-card
-  name: {}
+  name: {}{}
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 24
@@ -163,6 +164,7 @@ if __name__ == "__main__":
   entities:
                     """.format(
                         domain,
+                        ("\n  icon: " + metadata_lovelace_graph_dicts[0]["icon"]) if "icon" in metadata_lovelace_graph_dicts[0] else ""
                     ).strip() + "\n")
                     for metadata_lovelace_graph_dict in metadata_lovelace_graph_dicts:
                         metadata_lovelace_file.write("    " + ("""
@@ -191,8 +193,15 @@ if __name__ == "__main__":
             print("Build script [homeassistant] entity group [{}] persisted to lovelace [{}]"
                   .format(group.lower(), metadata_lovelace_path))
 
+
+
+
+
     # TODO
-    sys.exit()
+    sys.exit(0)
+
+
+
 
     # Build metadata publish JSON
     metadata_publish_df = metadata_df[
@@ -228,8 +237,8 @@ if __name__ == "__main__":
         metadata_publish_dict["device"] = metadata_device_pub_dicts[index]
         metadata_publish_str = json.dumps(metadata_publish_dict, ensure_ascii=False).encode('utf8')
         metadata_publish_path = os.path.abspath(os.path.join(metadata_publish_dir, metadata_publish_dict["unique_id"] + ".json"))
-        with open(metadata_publish_path, 'a') as metadata_customise_file:
-            metadata_customise_file.write(metadata_publish_str)
+        with open(metadata_publish_path, 'a') as metadata_publish_file:
+            metadata_publish_file.write(metadata_publish_str)
             print("Build script [homeassistant] entity metadata [sensor.{}] persisted to [{}]"
                   .format(metadata_publish_dict["unique_id"], metadata_publish_path))
 

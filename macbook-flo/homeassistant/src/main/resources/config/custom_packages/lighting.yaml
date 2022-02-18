@@ -1,0 +1,17 @@
+adaptive_lighting:
+  lights:
+    - light.dining
+    - light.hallway
+    - light.dining
+    - light.lounge
+    - light.parents
+    - light.kitchen
+    - light.laundry
+    - light.pantry
+    - light.office
+    - light.bathroom
+    - light.ensuite
+    - light.wardrobe
+    - light.edwin
+    - light.ada
+    - light.lamp

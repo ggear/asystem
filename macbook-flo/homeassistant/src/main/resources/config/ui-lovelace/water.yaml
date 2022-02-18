@@ -3,6 +3,7 @@
 #######################################################################################
 - type: custom:mini-graph-card
   name: Rain
+  icon: mdi:weather-pouring
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 24

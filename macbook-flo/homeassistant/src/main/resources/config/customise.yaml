@@ -39,22 +39,31 @@ sensor.roof_wind_chill_temperature:
   friendly_name: Wind Chill
 sensor.netatmo_ada_co2:
   friendly_name: Ada
+  icon: mdi:molecule-co2
 sensor.netatmo_edwin_co2:
   friendly_name: Edwin
+  icon: mdi:molecule-co2
 sensor.netatmo_parents_co2:
   friendly_name: Parents
+  icon: mdi:molecule-co2
 sensor.netatmo_bertram_2_office_co2:
   friendly_name: Office
+  icon: mdi:molecule-co2
 sensor.netatmo_bertram_2_kitchen_co2:
   friendly_name: Kitchen
+  icon: mdi:molecule-co2
 sensor.netatmo_bertram_2_office_pantry_co2:
   friendly_name: Pantry
+  icon: mdi:molecule-co2
 sensor.netatmo_bertram_2_office_lounge_co2:
   friendly_name: Lounge
+  icon: mdi:molecule-co2
 sensor.netatmo_bertram_2_office_dining_co2:
   friendly_name: Dining
+  icon: mdi:molecule-co2
 sensor.netatmo_laundry_co2:
   friendly_name: Laundry
+  icon: mdi:molecule-co2
 sensor.roof_humidity:
   friendly_name: Roof
 sensor.netatmo_ada_humidity:
@@ -93,111 +102,164 @@ sensor.netatmo_laundry_noise:
   friendly_name: Laundry
 sensor.roof_cloud_base:
   friendly_name: Roof Cloud Base
+  icon: mdi:cloud-outline
 sensor.roof_max_solar_radiation:
   friendly_name: Roof Max Solar Radiation
+  icon: mdi:solar-power
 sensor.roof_barometer_pressure:
   friendly_name: Roof Barometer
 sensor.roof_pressure:
   friendly_name: Roof
 sensor.roof_wind_direction:
   friendly_name: Direction
+  icon: mdi:weather-windy
 sensor.roof_wind_gust_direction:
   friendly_name: Gust Direction
+  icon: mdi:weather-windy
 sensor.roof_wind_gust_speed:
   friendly_name: Gust Speed
+  icon: mdi:weather-windy
 sensor.roof_wind_speed_10min:
   friendly_name: Speed over 10m
+  icon: mdi:weather-windy
 sensor.roof_wind_samples:
   friendly_name: Samples
+  icon: mdi:weather-windy
 sensor.roof_wind_run:
   friendly_name: Run
+  icon: mdi:weather-windy
 sensor.roof_wind_speed:
   friendly_name: Speed
+  icon: mdi:weather-windy
 sensor.roof_rain_rate:
   friendly_name: Rate
+  icon: mdi:weather-pouring
 sensor.roof_hourly_rain:
   friendly_name: Hourly
+  icon: mdi:weather-pouring
 sensor.roof_daily_rain:
   friendly_name: Daily
+  icon: mdi:weather-pouring
 sensor.roof_24hour_rain:
   friendly_name: 24 Hour
+  icon: mdi:weather-pouring
 sensor.roof_monthly_rain:
   friendly_name: Monthly
+  icon: mdi:weather-pouring
 sensor.roof_yearly_rain:
   friendly_name: Yearly
+  icon: mdi:weather-pouring
 sensor.roof_rain:
   friendly_name: Total
+  icon: mdi:weather-pouring
 sensor.roof_storm_rain:
   friendly_name: Storm
+  icon: mdi:weather-pouring
 sensor.kitchen_dish_washer_current_consumption:
   friendly_name: Dish Washer
+  icon: mdi:home-lightning-bolt
 sensor.laundry_clothes_dryer_current_consumption:
   friendly_name: Clothes Dryer
+  icon: mdi:home-lightning-bolt
 sensor.laundry_washing_machine_current_consumption:
   friendly_name: Washing Machine
+  icon: mdi:home-lightning-bolt
 sensor.kitchen_coffee_machine_current_consumption:
   friendly_name: Coffee Machine
+  icon: mdi:home-lightning-bolt
 sensor.kitchen_fan_current_consumption:
   friendly_name: Kitchen Fan
+  icon: mdi:home-lightning-bolt
 sensor.kitchen_fridge_current_consumption:
   friendly_name: Kitchen Fridge
+  icon: mdi:home-lightning-bolt
 sensor.deck_freezer_current_consumption:
   friendly_name: Deck Freezer
+  icon: mdi:home-lightning-bolt
 sensor.deck_lights_current_consumption:
   friendly_name: Deck Lights
+  icon: mdi:home-lightning-bolt
 sensor.lounge_tv_current_consumption:
   friendly_name: Lounge TV
+  icon: mdi:home-lightning-bolt
 sensor.bathroom_rails_current_consumption:
   friendly_name: Bathroom Rails
+  icon: mdi:home-lightning-bolt
 sensor.study_outlet_current_consumption:
   friendly_name: Study Outlet
+  icon: mdi:home-lightning-bolt
 sensor.office_outlet_current_consumption:
   friendly_name: Office Outlet
+  icon: mdi:home-lightning-bolt
 sensor.rack_outlet_current_consumption:
   friendly_name: Server Rack
+  icon: mdi:home-lightning-bolt
 sensor.roof_network_switch_current_consumption:
   friendly_name: Network Switch
+  icon: mdi:home-lightning-bolt
 sensor.rack_internet_modem_current_consumption:
   friendly_name: Internet Modem
+  icon: mdi:home-lightning-bolt
 sensor.study_battery_charger_current_consumption:
   friendly_name: Battery Charger
+  icon: mdi:home-lightning-bolt
 sensor.laundry_vacuum_charger_current_consumption:
   friendly_name: Vacuum Charger
+  icon: mdi:home-lightning-bolt
 sensor.various_adhoc_outlet_current_consumption:
   friendly_name: Adhoc Outlet
+  icon: mdi:home-lightning-bolt
 sensor.kitchen_dish_washer_today_s_consumption:
   friendly_name: Dish Washer
+  icon: mdi:battery-charging
 sensor.laundry_clothes_dryer_today_s_consumption:
   friendly_name: Clothes Dryer
+  icon: mdi:battery-charging
 sensor.laundry_washing_machine_today_s_consumption:
   friendly_name: Washing Machine
+  icon: mdi:battery-charging
 sensor.kitchen_coffee_machine_today_s_consumption:
   friendly_name: Coffee Machine
+  icon: mdi:battery-charging
 sensor.kitchen_fan_today_s_consumption:
   friendly_name: Kitchen Fan
+  icon: mdi:battery-charging
 sensor.kitchen_fridge_today_s_consumption:
   friendly_name: Kitchen Fridge
+  icon: mdi:battery-charging
 sensor.deck_freezer_today_s_consumption:
   friendly_name: Deck Freezer
+  icon: mdi:battery-charging
 sensor.deck_lights_today_s_consumption:
   friendly_name: Deck Lights
+  icon: mdi:battery-charging
 sensor.lounge_tv_today_s_consumption:
   friendly_name: Lounge TV
+  icon: mdi:battery-charging
 sensor.bathroom_rails_today_s_consumption:
   friendly_name: Bathroom Rails
+  icon: mdi:battery-charging
 sensor.study_outlet_today_s_consumption:
   friendly_name: Study Outlet
+  icon: mdi:battery-charging
 sensor.office_outlet_today_s_consumption:
   friendly_name: Office Outlet
+  icon: mdi:battery-charging
 sensor.rack_outlet_today_s_consumption:
   friendly_name: Server Rack
+  icon: mdi:battery-charging
 sensor.roof_network_switch_today_s_consumption:
   friendly_name: Network Switch
+  icon: mdi:battery-charging
 sensor.rack_internet_modem_today_s_consumption:
   friendly_name: Internet Modem
+  icon: mdi:battery-charging
 sensor.study_battery_charger_today_s_consumption:
   friendly_name: Battery Charger
+  icon: mdi:battery-charging
 sensor.laundry_vacuum_charger_today_s_consumption:
   friendly_name: Vacuum Charger
+  icon: mdi:battery-charging
 sensor.various_adhoc_outlet_today_s_consumption:
   friendly_name: Adhoc Outlet
+  icon: mdi:battery-charging
