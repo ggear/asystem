@@ -1,7 +1,10 @@
 from __future__ import print_function
 
 import datetime
+import json
 import os
+import shutil
+import subprocess
 import sys
 import time
 from collections import OrderedDict
@@ -184,16 +187,10 @@ if __name__ == "__main__":
                             metadata_lovelace_dict["friendly_name"],
                         )).strip() + "\n")
             print("Build script [homeassistant] entity group [{}] persisted to lovelace [{}]"
-                .format(group.lower(), metadata_lovelace_path))
-
-
-
+                  .format(group.lower(), metadata_lovelace_path))
 
     # TODO
     sys.exit()
-
-
-
 
     # Build metadata publish JSON
     metadata_publish_df = metadata_df[
