@@ -12,3 +12,6 @@ automation:
       - service: homeassistant.update_entity
         data:
           entity_id:
+            - switch.various_adhoc_outlet
+
+
