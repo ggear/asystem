@@ -17,6 +17,10 @@ sys.path.insert(0, DIR_MODULE_ROOT)
 def load_env(root_dir=None):
     env = {}
     env_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT if root_dir is None else root_dir, "../../../.env"))
+    if not os.path.isfile(env_path):
+        env_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT if root_dir is None else root_dir, "../../../target/release/.env"))
+    if not os.path.isfile(env_path):
+        raise Exception("Could not find dev or prod .env file!")
     with open(env_path, 'r') as env_file:
         for env_line in env_file:
             env_line = env_line.replace("export ", "").rstrip()
