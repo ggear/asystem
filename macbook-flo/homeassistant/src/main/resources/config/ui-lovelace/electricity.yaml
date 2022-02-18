@@ -15,12 +15,20 @@
     extrema: true
     fill: false
   entities:
-    - sensor.study_outlet_current_consumption
-    - sensor.office_outlet_current_consumption
-    - sensor.rack_outlet_current_consumption
+    - sensor.kitchen_dishwasher_current_consumption
+    - sensor.laundry_clothes_dryer_current_consumption
+    - sensor.laundry_washing_machine_current_consumption
 - type: entities
   show_header_toggle: false
   entities:
+    - entity: sensor.kitchen_dishwasher_current_consumption
+      name: Dishwasher
+    - entity: sensor.laundry_clothes_dryer_current_consumption
+      name: Clothes Dryer
+    - entity: sensor.laundry_washing_machine_current_consumption
+      name: Washing Machine
+    - entity: sensor.kitchen_coffee_machine_current_consumption
+      name: Coffee Machine
     - entity: sensor.kitchen_fan_current_consumption
       name: Kitchen Fan
     - entity: sensor.kitchen_fridge_current_consumption
@@ -29,18 +37,10 @@
       name: Deck Freezer
     - entity: sensor.deck_lights_current_consumption
       name: Deck Lights
-    - entity: sensor.kitchen_coffee_machine_current_consumption
-      name: Coffee Machine
-    - entity: sensor.kitchen_dishwasher_current_consumption
-      name: Dishwasher
     - entity: sensor.lounge_tv_current_consumption
       name: Lounge TV
-    - entity: sensor.laundry_clothes_dryer_current_consumption
-      name: Clothes Dryer
-    - entity: sensor.laundry_washing_machine_current_consumption
-      name: Washing Machine
-    - entity: sensor.bathroom_towelrails_current_consumption
-      name: Bathroom Towel Rails
+    - entity: sensor.bathroom_rails_current_consumption
+      name: Bathroom Rails
     - entity: sensor.study_outlet_current_consumption
       name: Study Outlet
     - entity: sensor.office_outlet_current_consumption

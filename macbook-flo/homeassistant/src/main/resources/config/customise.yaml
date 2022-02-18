@@ -129,6 +129,14 @@ sensor.roof_rain:
   friendly_name: Total
 sensor.roof_storm_rain:
   friendly_name: Storm
+sensor.kitchen_dishwasher_current_consumption:
+  friendly_name: Dishwasher
+sensor.laundry_clothes_dryer_current_consumption:
+  friendly_name: Clothes Dryer
+sensor.laundry_washing_machine_current_consumption:
+  friendly_name: Washing Machine
+sensor.kitchen_coffee_machine_current_consumption:
+  friendly_name: Coffee Machine
 sensor.kitchen_fan_current_consumption:
   friendly_name: Kitchen Fan
 sensor.kitchen_fridge_current_consumption:
@@ -137,18 +145,10 @@ sensor.deck_freezer_current_consumption:
   friendly_name: Deck Freezer
 sensor.deck_lights_current_consumption:
   friendly_name: Deck Lights
-sensor.kitchen_coffee_machine_current_consumption:
-  friendly_name: Coffee Machine
-sensor.kitchen_dishwasher_current_consumption:
-  friendly_name: Dishwasher
 sensor.lounge_tv_current_consumption:
   friendly_name: Lounge TV
-sensor.laundry_clothes_dryer_current_consumption:
-  friendly_name: Clothes Dryer
-sensor.laundry_washing_machine_current_consumption:
-  friendly_name: Washing Machine
-sensor.bathroom_towelrails_current_consumption:
-  friendly_name: Bathroom Towel Rails
+sensor.bathroom_rails_current_consumption:
+  friendly_name: Bathroom Rails
 sensor.study_outlet_current_consumption:
   friendly_name: Study Outlet
 sensor.office_outlet_current_consumption:
