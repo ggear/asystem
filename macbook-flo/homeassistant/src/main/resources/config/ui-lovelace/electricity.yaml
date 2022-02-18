@@ -16,7 +16,6 @@
     fill: false
   entities:
     - sensor.rack_power_current_consumption
-    - sensor.kitchen_fridge_current_consumption
     - sensor.office_power_current_consumption
     - sensor.study_power_current_consumption
 - type: entities
