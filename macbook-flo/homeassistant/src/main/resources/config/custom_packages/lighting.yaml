@@ -1,4 +1,7 @@
 adaptive_lighting:
+  only_once: true
+  take_over_control: true
+  detect_non_ha_changes: true
   lights:
     - light.dining
     - light.hallway

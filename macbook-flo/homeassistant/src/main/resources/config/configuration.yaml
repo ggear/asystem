@@ -149,3 +149,4 @@ logger:
   logs:
     homeassistant.components.mqtt: info
     custom_components.bureau_of_meteorology: debug
+    custom_components.adaptive_lighting: debug
