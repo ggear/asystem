@@ -28,8 +28,6 @@
 - type: entities
   title: Lights
   entities:
-    - entity: light.dining
-      name: Dining Main
     - entity: light.ada_light
       name: Ada Main
     - entity: light.edwin_light

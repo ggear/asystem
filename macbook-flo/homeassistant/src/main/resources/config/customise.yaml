@@ -176,8 +176,6 @@ fan.deck_east:
 fan.deck_west:
   friendly_name: Deck West
   icon: mdi:fan
-light.dining:
-  friendly_name: Dining Main
 light.ada_light:
   friendly_name: Ada Main
 light.edwin_light:
