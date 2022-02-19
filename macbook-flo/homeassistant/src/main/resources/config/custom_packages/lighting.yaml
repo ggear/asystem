@@ -1,5 +1,6 @@
 adaptive_lighting:
   interval: 5
+  only_once: false
   take_over_control: true
   detect_non_ha_changes: true
   lights:
@@ -14,6 +15,5 @@ adaptive_lighting:
     - light.bathroom
     - light.ensuite
     - light.wardrobe
-    - light.edwin
     - light.ada
     - light.lamp
