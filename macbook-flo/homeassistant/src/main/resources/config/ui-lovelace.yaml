@@ -1,30 +1,26 @@
 title: Home
 views:
-
   - path: default_view
     title: Weather
     cards: !include ui-lovelace/weather.yaml
-
   - path: control
     title: Control
     cards: !include ui-lovelace/control.yaml
-
   - path: media
     title: Media
     cards: !include ui-lovelace/media.yaml
-
   - path: security
     title: Security
     cards: !include ui-lovelace/security.yaml
-
   - path: conditions
     title: Conditions
     cards: !include ui-lovelace/conditions.yaml
-
   - path: electricity
     title: Electricity
     cards: !include ui-lovelace/electricity.yaml
-
   - path: water
     title: Water
     cards: !include ui-lovelace/water.yaml
+  - path: batteries
+    title: Batteries
+    cards: !include ui-lovelace/batteries.yaml

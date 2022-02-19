@@ -123,6 +123,15 @@ panel_custom:
     require_admin: false
     config:
       ingress: core_configurator
+  - name: batteries
+    sidebar_title: Batteries
+    sidebar_icon: mdi:battery-30
+    js_url: /api/hassio/app/entrypoint.js
+    url_path: 'lovelace/water'
+    embed_iframe: true
+    require_admin: false
+    config:
+      ingress: core_configurator
 
 lovelace:
   mode: yaml

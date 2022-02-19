@@ -223,9 +223,6 @@ if __name__ == "__main__":
                                     metadata_lovelace_dict["icon"],
                                 ).strip() + "\n")
                     else:
-
-
-
                         for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
                             metadata_lovelace_file.write("""
 - type: {}
@@ -235,16 +232,10 @@ if __name__ == "__main__":
                                 metadata_lovelace_dict["entity_namespace"],
                                 metadata_lovelace_dict["unique_id"],
                             ).strip() + "\n")
-
-
-
-
-
-
-
-
-
-
+                            if metadata_lovelace_first_display_type == "picture-entity":
+                                metadata_lovelace_file.write("  " + """
+  camera_view: live
+                                """.strip() + "\n")
             print("Build script [homeassistant] entity group [{}] persisted to lovelace [{}]"
                   .format(group.lower(), metadata_lovelace_path))
 
