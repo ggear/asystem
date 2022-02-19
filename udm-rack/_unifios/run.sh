@@ -41,15 +41,19 @@
 #   macbook-flo 192.168.1.2
 #   macmini-liz 192.168.1.3
 #   macmini-nel 192.168.1.4
-#   chromecast-parents 192.168.1.8
-#   homepod-lounge 192.168.1.9
-#   appletv-lounge 192.168.1.10
 #   phillips-hue 192.168.1.11
+#   brother-printer 192.168.1.12
 #   uvc-ada 192.168.1.15
 #   uvc-edwin 192.168.1.16
 #   haiku-* 192.168.1.30-39
 #   tplplug-* 192.168.1.40-59
-#   brother-printer 192.168.1.12
+
+#   sonoffpowr3-* (5x) - statically define?
+#   nestmini-* (6x) - statically define?
+#   chromecast-parents 192.168.1.8 - re-define?
+#   homepod-lounge 192.168.1.9 - re-define?
+#   appletv-lounge 192.168.1.10 - re-define?
+#   sonos* (5x) - statically define?
 
 ################################################################################
 # Network nice-to-have

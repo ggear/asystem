@@ -58,29 +58,33 @@ if __name__ == "__main__":
         ]
     metadata_verify_dicts = [row.dropna().to_dict() for index, row in metadata_verify_df.iterrows()]
     for metadata_verify_dict in metadata_verify_dicts:
-        state_response = get(
-            "http://{}:{}/api/states/{}.{}".format(
-                env["HOMEASSISTANT_HOST_PROD"],
-                env["HOMEASSISTANT_PORT"],
-                metadata_verify_dict["entity_namespace"],
-                metadata_verify_dict["unique_id"]
-            ), headers={"Authorization": "Bearer {}".format(env["HOMEASSISTANT_API_TOKEN"]), "content-type": "application/json", })
-        if state_response.status_code == 200:
-            hours_since_update = (time.time() - (time.mktime(datetime.datetime.strptime(
-                state_response.json()["last_updated"].split('+')[0], '%Y-%m-%dT%H:%M:%S.%f').timetuple()) + 8 * 60 * 60)) / (60 * 60)
-            if hours_since_update > 6:
-                print("Build script [homeassistant] entity metadata [{}.{}] not recently updated, [{:.1f}] hours"
-                      .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"], hours_since_update),
-                      file=sys.stderr if \
-                          "display_mode" in metadata_verify_dict and \
-                          metadata_verify_dict["entity_namespace"] == "sensor"
-                      else sys.stdout)
+        try:
+            state_response = get(
+                "http://{}:{}/api/states/{}.{}".format(
+                    env["HOMEASSISTANT_HOST_PROD"],
+                    env["HOMEASSISTANT_PORT"],
+                    metadata_verify_dict["entity_namespace"],
+                    metadata_verify_dict["unique_id"]
+                ), headers={"Authorization": "Bearer {}".format(env["HOMEASSISTANT_API_TOKEN"]), "content-type": "application/json", })
+            if state_response.status_code == 200:
+                hours_since_update = (time.time() - (time.mktime(datetime.datetime.strptime(
+                    state_response.json()["last_updated"].split('+')[0], '%Y-%m-%dT%H:%M:%S.%f').timetuple()) + 8 * 60 * 60)) / (60 * 60)
+                if hours_since_update > 6:
+                    print("Build script [homeassistant] entity metadata [{}.{}] not recently updated, [{:.1f}] hours"
+                          .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"], hours_since_update),
+                          file=sys.stderr if \
+                              "display_mode" in metadata_verify_dict and \
+                              metadata_verify_dict["entity_namespace"] == "sensor"
+                          else sys.stdout)
+                else:
+                    print("Build script [homeassistant] entity metadata [{}.{}] verified"
+                          .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
             else:
-                print("Build script [homeassistant] entity metadata [{}.{}] verified"
-                      .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
-        else:
-            print("Build script [homeassistant] entity metadata [{}.{}] not found"
-                  .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
+                print("Build script [homeassistant] entity metadata [{}.{}] not found"
+                      .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
+        except:
+            print("Build script [homeassistant] could not connect to HAAS"
+                  .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
 
     # Build customise YAML
     metadata_customise_df = metadata_df[
@@ -181,39 +185,66 @@ if __name__ == "__main__":
                             metadata_lovelace_graph_dict["friendly_name"],
                         )).strip() + "\n")
                 if metadata_lovelace_group_domain_dicts[group][domain]:
-                    metadata_lovelace_file.write("""
+                    metadata_lovelace_first_dict = metadata_lovelace_group_domain_dicts[group][domain][0]
+                    metadata_lovelace_first_display_type = metadata_lovelace_first_dict["display_type"] \
+                        if "display_type" in metadata_lovelace_first_dict else "entities"
+                    if metadata_lovelace_first_display_type == "entities":
+                        metadata_lovelace_file.write("""
 - type: entities
-                    """.strip() + "\n")
-                    if not metadata_lovelace_graph_dicts:
-                        metadata_lovelace_file.write("  " + """
-  title: {}
-                        """.format(
-                            domain
-                        ).strip() + "\n")
-                        if "NoToggle" in metadata_lovelace_group_domain_dicts[group][domain][0]["display_mode"]:
+                        """.strip() + "\n")
+                        if not metadata_lovelace_graph_dicts:
                             metadata_lovelace_file.write("  " + """
-  show_header_toggle: false
-                                          """.format(
+  title: {}
+                            """.format(
                                 domain
                             ).strip() + "\n")
-                    metadata_lovelace_file.write("  " + """
+                            if "NoToggle" in metadata_lovelace_first_dict["display_mode"]:
+                                metadata_lovelace_file.write("  " + """
+  show_header_toggle: false
+                                              """.format(
+                                    domain
+                                ).strip() + "\n")
+                        metadata_lovelace_file.write("  " + """
   entities:
-                    """.strip() + "\n")
-                    for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
-                        metadata_lovelace_file.write("    " + ("""
+                        """.strip() + "\n")
+                        for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
+                            metadata_lovelace_file.write("    " + ("""
     - entity: {}.{}
       name: {}
-                        """.format(
-                            metadata_lovelace_dict["entity_namespace"],
-                            metadata_lovelace_dict["unique_id"],
-                            metadata_lovelace_dict["friendly_name"],
-                        )).strip() + "\n")
-                        if "icon" in metadata_lovelace_dict:
-                            metadata_lovelace_file.write("      " + """
-      icon: {}
                             """.format(
-                                metadata_lovelace_dict["icon"],
+                                metadata_lovelace_dict["entity_namespace"],
+                                metadata_lovelace_dict["unique_id"],
+                                metadata_lovelace_dict["friendly_name"],
+                            )).strip() + "\n")
+                            if "icon" in metadata_lovelace_dict:
+                                metadata_lovelace_file.write("      " + """
+      icon: {}
+                                """.format(
+                                    metadata_lovelace_dict["icon"],
+                                ).strip() + "\n")
+                    else:
+
+
+
+                        for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
+                            metadata_lovelace_file.write("""
+- type: {}
+  entity: {}.{}
+                            """.format(
+                                metadata_lovelace_first_display_type,
+                                metadata_lovelace_dict["entity_namespace"],
+                                metadata_lovelace_dict["unique_id"],
                             ).strip() + "\n")
+
+
+
+
+
+
+
+
+
+
             print("Build script [homeassistant] entity group [{}] persisted to lovelace [{}]"
                   .format(group.lower(), metadata_lovelace_path))
 

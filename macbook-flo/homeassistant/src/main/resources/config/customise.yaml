@@ -429,3 +429,27 @@ sensor.laundry_vacuum_charger_today_s_consumption:
 sensor.various_adhoc_outlet_today_s_consumption:
   friendly_name: Adhoc Outlet
   icon: mdi:battery-charging
+media_player.ada_home:
+  friendly_name: Ada Home
+media_player.edwin_home:
+  friendly_name: Edwin Home
+media_player.parents_home:
+  friendly_name: Parents Home
+media_player.parents_speaker:
+  friendly_name: Parents Speaker
+media_player.parents_tv:
+  friendly_name: Parents TV
+media_player.kitchen_home:
+  friendly_name: Kitchen Home
+media_player.kitchen_speaker:
+  friendly_name: Kitchen Speaker
+media_player.lounge_home:
+  friendly_name: Lounge Home
+media_player.lounge_speaker:
+  friendly_name: Lounge Speaker
+media_player.lounge_tv:
+  friendly_name: Lounge TV
+camera.uvc_ada_medium:
+  friendly_name: Ada
+camera.uvc_edwin_medium:
+  friendly_name: Edwin

@@ -1,0 +1,23 @@
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+- type: media-control
+  entity: media_player.ada_home
+- type: media-control
+  entity: media_player.edwin_home
+- type: media-control
+  entity: media_player.parents_home
+- type: media-control
+  entity: media_player.parents_speaker
+- type: media-control
+  entity: media_player.parents_tv
+- type: media-control
+  entity: media_player.kitchen_home
+- type: media-control
+  entity: media_player.kitchen_speaker
+- type: media-control
+  entity: media_player.lounge_home
+- type: media-control
+  entity: media_player.lounge_speaker
+- type: media-control
+  entity: media_player.lounge_tv
