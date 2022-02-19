@@ -102,13 +102,18 @@ if __name__ == "__main__":
         for metadata_customise_dict in metadata_customise_dicts:
             metadata_publish_file.write("""
 {}.{}:
-  friendly_name: {}{}
+  friendly_name: {}
             """.format(
                 metadata_customise_dict["entity_namespace"],
                 metadata_customise_dict["unique_id"],
                 metadata_customise_dict["friendly_name"],
-                ("\n  icon: " + metadata_customise_dict["icon"]) if "icon" in metadata_customise_dict else "",
             ).strip() + "\n")
+            if "icon" in metadata_customise_dict:
+                metadata_publish_file.write("  " + """
+  icon: {}
+                """.format(
+                    metadata_customise_dict["icon"],
+                ).strip() + "\n")
         print("Build script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
 
     # Build lovelace YAML
@@ -178,18 +183,37 @@ if __name__ == "__main__":
                 if metadata_lovelace_group_domain_dicts[group][domain]:
                     metadata_lovelace_file.write("""
 - type: entities
+                    """.strip() + "\n")
+                    if not metadata_lovelace_graph_dicts:
+                        metadata_lovelace_file.write("  " + """
+  title: {}
+                        """.format(
+                            domain
+                        ).strip() + "\n")
+                        if "NoToggle" in metadata_lovelace_group_domain_dicts[group][domain][0]["display_mode"]:
+                            metadata_lovelace_file.write("  " + """
   show_header_toggle: false
+                                          """.format(
+                                domain
+                            ).strip() + "\n")
+                    metadata_lovelace_file.write("  " + """
   entities:
                     """.strip() + "\n")
                     for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
                         metadata_lovelace_file.write("    " + ("""
     - entity: {}.{}
       name: {}
-                            """.format(
+                        """.format(
                             metadata_lovelace_dict["entity_namespace"],
                             metadata_lovelace_dict["unique_id"],
                             metadata_lovelace_dict["friendly_name"],
                         )).strip() + "\n")
+                        if "icon" in metadata_lovelace_dict:
+                            metadata_lovelace_file.write("      " + """
+      icon: {}
+                            """.format(
+                                metadata_lovelace_dict["icon"],
+                            ).strip() + "\n")
             print("Build script [homeassistant] entity group [{}] persisted to lovelace [{}]"
                   .format(group.lower(), metadata_lovelace_path))
 

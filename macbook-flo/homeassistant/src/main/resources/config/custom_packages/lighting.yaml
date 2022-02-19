@@ -1,5 +1,5 @@
 adaptive_lighting:
-  only_once: true
+  interval: 5
   take_over_control: true
   detect_non_ha_changes: true
   lights:
@@ -11,7 +11,6 @@ adaptive_lighting:
     - light.kitchen
     - light.laundry
     - light.pantry
-    - light.office
     - light.bathroom
     - light.ensuite
     - light.wardrobe

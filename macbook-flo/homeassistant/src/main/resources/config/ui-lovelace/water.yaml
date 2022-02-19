@@ -19,15 +19,19 @@
     - entity: sensor.roof_rain_rate
       name: Rate
 - type: entities
-  show_header_toggle: false
   entities:
     - entity: sensor.roof_rain_rate
       name: Rate
+      icon: mdi:weather-pouring
     - entity: sensor.roof_hourly_rain
       name: Hourly
+      icon: mdi:weather-pouring
     - entity: sensor.roof_daily_rain
       name: Daily
+      icon: mdi:weather-pouring
     - entity: sensor.roof_monthly_rain
       name: Monthly
+      icon: mdi:weather-pouring
     - entity: sensor.roof_yearly_rain
       name: Yearly
+      icon: mdi:weather-pouring

@@ -24,7 +24,6 @@
     - entity: sensor.netatmo_parents_temperature
       name: Parents
 - type: entities
-  show_header_toggle: false
   entities:
     - entity: sensor.roof_temperature
       name: Roof
@@ -74,22 +73,28 @@
     - entity: sensor.netatmo_bertram_2_office_pantry_co2
       name: Pantry
 - type: entities
-  show_header_toggle: false
   entities:
     - entity: sensor.netatmo_edwin_co2
       name: Edwin
+      icon: mdi:molecule-co2
     - entity: sensor.netatmo_parents_co2
       name: Parents
+      icon: mdi:molecule-co2
     - entity: sensor.netatmo_bertram_2_office_co2
       name: Office
+      icon: mdi:molecule-co2
     - entity: sensor.netatmo_bertram_2_kitchen_co2
       name: Kitchen
+      icon: mdi:molecule-co2
     - entity: sensor.netatmo_bertram_2_office_pantry_co2
       name: Pantry
+      icon: mdi:molecule-co2
     - entity: sensor.netatmo_bertram_2_office_lounge_co2
       name: Lounge
+      icon: mdi:molecule-co2
     - entity: sensor.netatmo_bertram_2_office_dining_co2
       name: Dining
+      icon: mdi:molecule-co2
 - type: custom:mini-graph-card
   name: Humidity
   font_size_header: 19
@@ -113,7 +118,6 @@
     - entity: sensor.netatmo_parents_humidity
       name: Parents
 - type: entities
-  show_header_toggle: false
   entities:
     - entity: sensor.roof_humidity
       name: Roof
@@ -162,7 +166,6 @@
     - entity: sensor.netatmo_bertram_2_office_noise
       name: Office
 - type: entities
-  show_header_toggle: false
   entities:
     - entity: sensor.netatmo_ada_noise
       name: Ada

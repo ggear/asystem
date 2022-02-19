@@ -148,5 +148,5 @@ logger:
   default: info
   logs:
     homeassistant.components.mqtt: info
-    custom_components.bureau_of_meteorology: debug
-    custom_components.adaptive_lighting: debug
+    custom_components.adaptive_lighting: info
+    custom_components.bureau_of_meteorology: info
