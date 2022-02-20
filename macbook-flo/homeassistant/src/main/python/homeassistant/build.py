@@ -240,11 +240,8 @@ if __name__ == "__main__":
                   .format(group.lower(), metadata_lovelace_path))
 
 
-
-
-
     # TODO
-    sys.exit(0)
+    sys.exit()
 
 
 

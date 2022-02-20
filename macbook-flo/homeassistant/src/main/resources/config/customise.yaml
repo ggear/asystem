@@ -428,23 +428,35 @@ sensor.various_adhoc_outlet_today_s_consumption:
   friendly_name: Adhoc Outlet
   icon: mdi:battery-charging
 sensor.netatmo_bertram_2_office_pantry_battery_percent:
-  friendly_name: Netatmo Pantry
+  friendly_name: Pantry
   icon: mdi:battery-30
 sensor.netatmo_bertram_2_office_lounge_battery_percent:
-  friendly_name: Netatmo Lounge
+  friendly_name: Lounge
   icon: mdi:battery-30
 sensor.netatmo_bertram_2_office_dining_battery_percent:
-  friendly_name: Netatmo Dining
+  friendly_name: Dining
   icon: mdi:battery-30
 sensor.netatmo_bertram_2_office_basement_battery_percent:
-  friendly_name: Netatmo Basement
+  friendly_name: Basement
   icon: mdi:battery-30
 sensor.parents_speaker_battery:
-  friendly_name: Sonos Parents
+  friendly_name: Parents
   icon: mdi:battery-30
 sensor.kitchen_home_battery:
-  friendly_name: Sonos Kitchen
+  friendly_name: Kitchen
   icon: mdi:battery-30
+sensor.weatherstation_system_battery_status:
+  friendly_name: System Status
+  icon: mdi:battery-30
+sensor.weatherstation_console_battery_voltage:
+  friendly_name: Console Voltage
+  icon: mdi:battery-30
+sensor.weatherstation_sample_period:
+  friendly_name: Sample Period
+  icon: mdi:clipboard-clock-outline
+sensor.weatherstation_coms_signal_quality:
+  friendly_name: Coms Signal Quality
+  icon: mdi:signal
 media_player.ada_home:
   friendly_name: Ada Home
 media_player.edwin_home:
