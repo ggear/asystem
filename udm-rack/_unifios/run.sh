@@ -54,6 +54,7 @@
 #   homepod-lounge 192.168.1.9 - re-define?
 #   appletv-lounge 192.168.1.10 - re-define?
 #   sonos* (5x) - statically define?
+#   netatmo* (10x) - statically define?
 
 ################################################################################
 # Network nice-to-have
