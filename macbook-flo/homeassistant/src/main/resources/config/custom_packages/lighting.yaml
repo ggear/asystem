@@ -1,5 +1,19 @@
+# Generate in build.py
+# Export all light groups,  Update adaptive_lighting light list with _group
+# Work for all lights, paramaetirsed/templated
+# Work for when light turned on/off in HA/Hue?
+
+light:
+  - platform: group
+    name: Parents Group
+    unique_id: parents_group
+    entities:
+      - light.hue_color_candle_15
+      - light.hue_color_candle_16
+      - light.hue_color_candle_17
+
 adaptive_lighting:
-  interval: 90
+  interval: 30
   only_once: false
   take_over_control: true
   detect_non_ha_changes: true
@@ -8,7 +22,7 @@ adaptive_lighting:
     - light.hallway
     - light.dining
     - light.lounge
-    - light.parents
+    #    - light.parents
     - light.kitchen
     - light.laundry
     - light.pantry
@@ -17,18 +31,50 @@ adaptive_lighting:
     - light.wardrobe
     - light.ada
     - light.lamp
+    - light.parents_group
 
 automation:
-  - alias: "Lighting: Reset Adaptive lighting"
+  - alias: "Lighting: Reset Adaptive Lighting - Parents"
     mode: single
     trigger:
       - platform: time
         at: "04:00:00"
     condition: [ ]
     action:
-      - service: switch.turn_off
-        target:
-          entity_id: switch.adaptive_lighting_default
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_default
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.parents_group
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.parents_group
+          manual_control: false
+      - delay: '00:00:6'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.parents_group
+          manual_control: false
+      - delay: '00:00:6'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.parents_group
+          manual_control: false
+      - delay: '00:00:6'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.parents_group
+          manual_control: false

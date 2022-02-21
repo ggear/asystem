@@ -165,4 +165,4 @@ logger:
     homeassistant.components.mqtt: info
     custom_components.adaptive_lighting: debug
     custom_components.bureau_of_meteorology: info
-    homeassistant.components.automation.smart_plug_polling: warn
+    homeassistant.components.automation.electricity_smart_plug_polling: warn
