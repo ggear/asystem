@@ -63,6 +63,18 @@
     - entity: light.lamp
       name: Lounge Lamp
 - type: entities
+  title: Adaptive Lighting
+  show_header_toggle: false
+  entities:
+    - entity: switch.adaptive_lighting_default
+      name: Status
+    - entity: switch.adaptive_lighting_sleep_mode_default
+      name: Sleep
+    - entity: switch.adaptive_lighting_adapt_color_default
+      name: Colour
+    - entity: switch.adaptive_lighting_adapt_brightness_default
+      name: Brightness
+- type: entities
   title: Switches
   entities:
     - entity: switch.kitchen_dish_washer

@@ -2,7 +2,7 @@ powercalc:
   create_utility_meters: true
 
 automation:
-  - alias: Smart Plug Polling
+  - alias: "Electricity: Smart Plug Polling"
     mode: single
     trigger:
       - platform: time_pattern

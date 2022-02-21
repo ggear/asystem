@@ -1,5 +1,5 @@
 adaptive_lighting:
-  interval: 5
+  interval: 90
   only_once: false
   take_over_control: true
   detect_non_ha_changes: true
@@ -17,3 +17,18 @@ adaptive_lighting:
     - light.wardrobe
     - light.ada
     - light.lamp
+
+automation:
+  - alias: "Lighting: Reset Adaptive lighting"
+    mode: single
+    trigger:
+      - platform: time
+        at: "11:52:00"
+    condition: [ ]
+    action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.adaptive_lighting_default
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_default

@@ -548,7 +548,7 @@ binary_sensor:
     excludes: [sat, sun, holiday]
 
 automation:
-  - alias: 'Update BOM Icons'
+  - alias: 'Weather: Update BOM Icons'
     trigger:
       - event: start
         platform: homeassistant

@@ -268,6 +268,14 @@ light.lamp:
   friendly_name: Lounge Lamp
 light.hue_ambiance_lamp_13:
   friendly_name: Lounge Lamp
+switch.adaptive_lighting_default:
+  friendly_name: Status
+switch.adaptive_lighting_sleep_mode_default:
+  friendly_name: Sleep
+switch.adaptive_lighting_adapt_color_default:
+  friendly_name: Colour
+switch.adaptive_lighting_adapt_brightness_default:
+  friendly_name: Brightness
 switch.kitchen_dish_washer:
   friendly_name: Dish Washer
   icon: mdi:dishwasher
@@ -457,6 +465,18 @@ sensor.weatherstation_sample_period:
 sensor.weatherstation_coms_signal_quality:
   friendly_name: Coms Signal Quality
   icon: mdi:signal
+sensor.network_internet_uptime:
+  friendly_name: Up
+  icon: mdi:cloud-check
+sensor.network_internet_ping:
+  friendly_name: Ping
+  icon: mdi:cloud-refresh
+sensor.network_internet_upload:
+  friendly_name: Upload
+  icon: mdi:cloud-upload
+sensor.network_internet_download:
+  friendly_name: Download
+  icon: mdi:cloud-download
 media_player.ada_home:
   friendly_name: Ada Home
 media_player.edwin_home:

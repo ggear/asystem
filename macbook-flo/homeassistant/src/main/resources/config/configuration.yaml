@@ -27,7 +27,13 @@ tts:
 
 recorder:
   db_url: !env_var HOMEASSISTANT_DB
+  commit_interval: 120
   purge_keep_days: 1
+  auto_purge: true
+# TODO: Disabled all sensors in favour of redirecting to Grafana?
+#  exclude:
+#    entity_globs:
+#      - sensor.*
 
 influxdb:
   api_version: 2
@@ -157,5 +163,6 @@ logger:
   default: info
   logs:
     homeassistant.components.mqtt: info
-    custom_components.adaptive_lighting: info
+    custom_components.adaptive_lighting: debug
     custom_components.bureau_of_meteorology: info
+    homeassistant.components.automation.smart_plug_polling: warn

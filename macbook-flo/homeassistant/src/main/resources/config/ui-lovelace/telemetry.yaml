@@ -43,3 +43,18 @@
     - entity: sensor.weatherstation_coms_signal_quality
       name: Coms Signal Quality
       icon: mdi:signal
+- type: entities
+  title: Internet Telemetry
+  entities:
+    - entity: sensor.network_internet_uptime
+      name: Up
+      icon: mdi:cloud-check
+    - entity: sensor.network_internet_ping
+      name: Ping
+      icon: mdi:cloud-refresh
+    - entity: sensor.network_internet_upload
+      name: Upload
+      icon: mdi:cloud-upload
+    - entity: sensor.network_internet_download
+      name: Download
+      icon: mdi:cloud-download
