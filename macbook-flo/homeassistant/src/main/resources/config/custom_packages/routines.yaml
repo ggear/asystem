@@ -1,0 +1,49 @@
+################################################################################
+input_boolean:
+################################################################################
+  home_sleep:
+    name: Sleep
+    initial: off
+  ################################################################################
+  home_wakeup:
+    name: Wakeup
+    initial: off
+  ################################################################################
+
+################################################################################
+automation:
+################################################################################
+  - id: routine_home_sleep
+    alias: "Routine: Put the home to sleep"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_sleep
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+      - service: automation.trigger
+        data:
+          entity_id: automation.lighting_sleep_adaptive_lighting
+      - delay: '00:00:01'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.home_sleep
+  ################################################################################
+  - id: routine_home_wakeup
+    alias: "Routine: Wake the home up"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_wakeup
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+      - service: automation.trigger
+        data:
+          entity_id: automation.lighting_reset_adaptive_lighting
+      - delay: '00:00:01'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.home_wakeup
+  ################################################################################

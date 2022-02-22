@@ -26,7 +26,7 @@ echo "--------------------------------------------------------------------------
 #   - Apple (Lounge TV, Lounge Speaker)
 #   - SenseME (have to add for each device)
 #   - TP-Link Smart Home (have to add for each device)
-#   - Adaptive Lighting ('default' profile created automatically, have to add 'bedroom' and 'nightlight' manually)
+#   - Adaptive Lighting ('default' profile created automatically, have to add 'bedroom' and 'night_light' manually)
 #   - Bureau of Meteorology (gooseberry_hill for observations, darlington_forecast for weather forecast, 7 day forecast)
 
 # Delete integrations manually:

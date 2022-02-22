@@ -102,7 +102,7 @@ adaptive_lighting:
       - light.kitchen_main
       - light.laundry_main
       - light.pantry_main
-  - name: nightlight 
+  - name: night_light 
     interval: 30
     min_color_temp: 2500
     max_color_temp: 5500
@@ -127,7 +127,8 @@ adaptive_lighting:
       - light.wardrobe_main
 ################################################################################
 automation:
-  - alias: "Lighting: Sleep Adaptive Lighting "
+  - id: lighting_sleep_adaptive_lighting
+    alias: "Lighting: Sleep Adaptive Lighting "
     mode: single
     trigger:
       - platform: time
@@ -171,22 +172,23 @@ automation:
       ################################################################################
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_sleep_mode_nightlight
+          entity_id: switch.adaptive_lighting_sleep_mode_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_color_nightlight
+          entity_id: switch.adaptive_lighting_adapt_color_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_nightlight
+          entity_id: switch.adaptive_lighting_adapt_brightness_night_light
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
           manual_control: false
       ################################################################################
-  - alias: "Lighting: Reset Adaptive Lighting "
+  - id: lighting_reset_adaptive_lighting
+    alias: "Lighting: Reset Adaptive Lighting "
     mode: single
     trigger:
       - platform: time
@@ -230,21 +232,22 @@ automation:
       ################################################################################
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_sleep_mode_nightlight
+          entity_id: switch.adaptive_lighting_sleep_mode_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_color_nightlight
+          entity_id: switch.adaptive_lighting_adapt_color_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_nightlight
+          entity_id: switch.adaptive_lighting_adapt_brightness_night_light
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
           manual_control: false
       ################################################################################
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Bathroom"
     mode: single
     trigger:
@@ -263,6 +266,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.bathroom_main
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Laundry"
     mode: single
     trigger:
@@ -270,6 +274,11 @@ automation:
         entity_id: light.laundry_main
         from: 'unavailable'
     action:
+      - service: light.turn_on
+        target:
+          entity_id: light.laundry_main
+        data:
+          brightness_pct: 100
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -281,6 +290,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.laundry_main
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Hallway"
     mode: single
     trigger:
@@ -299,6 +309,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.hallway_main
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Lounge"
     mode: single
     trigger:
@@ -306,6 +317,11 @@ automation:
         entity_id: light.lounge_lamp
         from: 'unavailable'
     action:
+      - service: light.turn_on
+        target:
+          entity_id: light.lounge_lamp
+        data:
+          brightness_pct: 100
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -317,6 +333,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.lounge_lamp
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Pantry"
     mode: single
     trigger:
@@ -324,6 +341,11 @@ automation:
         entity_id: light.pantry_main
         from: 'unavailable'
     action:
+      - service: light.turn_on
+        target:
+          entity_id: light.pantry_main
+        data:
+          brightness_pct: 100
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -335,6 +357,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.pantry_main
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Wardrobe"
     mode: single
     trigger:
@@ -353,6 +376,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.wardrobe_main
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Dining"
     mode: single
     trigger:
@@ -360,6 +384,11 @@ automation:
         entity_id: light.dining_main
         from: 'unavailable'
     action:
+      - service: light.turn_on
+        target:
+          entity_id: light.dining_main
+        data:
+          brightness_pct: 100
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -371,6 +400,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.dining_main
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Parents"
     mode: single
     trigger:
@@ -389,6 +419,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.parents_main
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Ensuite"
     mode: single
     trigger:
@@ -407,6 +438,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.ensuite_main
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Ada"
     mode: single
     trigger:
@@ -416,15 +448,16 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
           lights: light.ada_lamp
           manual_control: false
       - delay: '00:00:10'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
           lights: light.ada_lamp
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Kitchen"
     mode: single
     trigger:
@@ -432,6 +465,11 @@ automation:
         entity_id: light.kitchen_main
         from: 'unavailable'
     action:
+      - service: light.turn_on
+        target:
+          entity_id: light.kitchen_main
+        data:
+          brightness_pct: 100
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -443,6 +481,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.kitchen_main
           manual_control: false
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - Lounge"
     mode: single
     trigger:
@@ -461,3 +500,4 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.lounge_main
           manual_control: false
+  ################################################################################

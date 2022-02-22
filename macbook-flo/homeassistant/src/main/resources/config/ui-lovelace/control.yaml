@@ -2,6 +2,16 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
 - type: entities
+  title: Routines
+  show_header_toggle: false
+  entities:
+    - entity: input_boolean.home_sleep
+      name: Sleep
+      icon: mdi:chat-sleep
+    - entity: input_boolean.home_wakeup
+      name: Wakeup
+      icon: mdi:white-balance-sunny
+- type: entities
   title: Fans
   entities:
     - entity: fan.ada
@@ -96,11 +106,11 @@
   title: Night Light Adaptive Lighting
   show_header_toggle: false
   entities:
-    - entity: switch.adaptive_lighting_nightlight
+    - entity: switch.adaptive_lighting_night_light
       name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_nightlight
+    - entity: switch.adaptive_lighting_sleep_mode_night_light
       name: Sleep
-    - entity: switch.adaptive_lighting_adapt_color_nightlight
+    - entity: switch.adaptive_lighting_adapt_color_night_light
       name: Colour
-    - entity: switch.adaptive_lighting_adapt_brightness_nightlight
+    - entity: switch.adaptive_lighting_adapt_brightness_night_light
       name: Brightness

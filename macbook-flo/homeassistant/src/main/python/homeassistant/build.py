@@ -49,89 +49,76 @@ if __name__ == "__main__":
     env = load_env()
     metadata_df = load_entity_metadata()
 
-#     # Verify entity IDs
-#     metadata_verify_df = metadata_df[
-#         (metadata_df["entity_status"] == "Enabled") &
-#         (metadata_df["index"] > 0) &
-#         (metadata_df["entity_namespace"].str.len() > 0) &
-#         (metadata_df["unique_id"].str.len() > 0)
-#         ]
-#     metadata_verify_dicts = [row.dropna().to_dict() for index, row in metadata_verify_df.iterrows()]
-#     for metadata_verify_dict in metadata_verify_dicts:
-#         try:
-#             state_response = get(
-#                 "http://{}:{}/api/states/{}.{}".format(
-#                     env["HOMEASSISTANT_HOST_PROD"],
-#                     env["HOMEASSISTANT_PORT"],
-#                     metadata_verify_dict["entity_namespace"],
-#                     metadata_verify_dict["unique_id"]
-#                 ), headers={"Authorization": "Bearer {}".format(env["HOMEASSISTANT_API_TOKEN"]), "content-type": "application/json", })
-#             if state_response.status_code == 200:
-#                 hours_since_update = (time.time() - (time.mktime(datetime.datetime.strptime(
-#                     state_response.json()["last_updated"].split('+')[0], '%Y-%m-%dT%H:%M:%S.%f').timetuple()) + 8 * 60 * 60)) / (60 * 60)
-#                 if hours_since_update > 6:
-#                     print("Build script [homeassistant] entity metadata [{}.{}] not recently updated, [{:.1f}] hours"
-#                           .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"], hours_since_update),
-#                           file=sys.stderr if \
-#                               "display_mode" in metadata_verify_dict and \
-#                               metadata_verify_dict["entity_namespace"] == "sensor"
-#                           else sys.stdout)
-#                 else:
-#                     print("Build script [homeassistant] entity metadata [{}.{}] verified"
-#                           .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
-#             else:
-#                 print("Build script [homeassistant] entity metadata [{}.{}] not found"
-#                       .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
-#         except:
-#             print("Build script [homeassistant] could not connect to HAAS"
-#                   .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
-#
-#     # Build customise YAML
-#     metadata_customise_df = metadata_df[
-#         (metadata_df["entity_status"] == "Enabled") &
-#         (metadata_df["index"] > 0) &
-#         (metadata_df["entity_namespace"].str.len() > 0) &
-#         (metadata_df["unique_id"].str.len() > 0) &
-#         (metadata_df["friendly_name"].str.len() > 0) &
-#         (metadata_df["entity_domain"].str.len() > 0)
-#         ]
-#     metadata_customise_dicts = [row.dropna().to_dict() for index, row in metadata_customise_df.iterrows()]
-#     metadata_customise_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/config/customise.yaml"))
-#     with open(metadata_customise_path, 'w') as metadata_customise_file:
-#         metadata_customise_file.write("""
-# #######################################################################################
-# # WARNING: This file is written to by the build process, any manual edits will be lost!
-# #######################################################################################
-#         """.strip() + "\n")
-#         for metadata_customise_dict in metadata_customise_dicts:
-#             metadata_customise_file.write("""
-# {}.{}:
-#   friendly_name: {}
-#             """.format(
-#                 metadata_customise_dict["entity_namespace"],
-#                 metadata_customise_dict["unique_id"],
-#                 metadata_customise_dict["friendly_name"],
-#             ).strip() + "\n")
-#             if "icon" in metadata_customise_dict:
-#                 metadata_customise_file.write("  " + """
-#   icon: {}
-#                 """.format(
-#                     metadata_customise_dict["icon"],
-#                 ).strip() + "\n")
-#         print("Build script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
+    # Verify entity IDs
+    metadata_verify_df = metadata_df[
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_namespace"].str.len() > 0) &
+        (metadata_df["unique_id"].str.len() > 0)
+        ]
+    metadata_verify_dicts = [row.dropna().to_dict() for index, row in metadata_verify_df.iterrows()]
+    for metadata_verify_dict in metadata_verify_dicts:
+        try:
+            state_response = get(
+                "http://{}:{}/api/states/{}.{}".format(
+                    env["HOMEASSISTANT_HOST_PROD"],
+                    env["HOMEASSISTANT_PORT"],
+                    metadata_verify_dict["entity_namespace"],
+                    metadata_verify_dict["unique_id"]
+                ), headers={"Authorization": "Bearer {}".format(env["HOMEASSISTANT_API_TOKEN"]), "content-type": "application/json", })
+            if state_response.status_code == 200:
+                hours_since_update = (time.time() - (time.mktime(datetime.datetime.strptime(
+                    state_response.json()["last_updated"].split('+')[0], '%Y-%m-%dT%H:%M:%S.%f').timetuple()) + 8 * 60 * 60)) / (60 * 60)
+                if hours_since_update > 6:
+                    print("Build script [homeassistant] entity metadata [{}.{}] not recently updated, [{:.1f}] hours"
+                          .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"], hours_since_update),
+                          file=sys.stderr if \
+                              "display_mode" in metadata_verify_dict and \
+                              metadata_verify_dict["entity_namespace"] == "sensor"
+                          else sys.stdout)
+                else:
+                    print("Build script [homeassistant] entity metadata [{}.{}] verified"
+                          .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
+            else:
+                print("Build script [homeassistant] entity metadata [{}.{}] not found"
+                      .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
+        except:
+            print("Build script [homeassistant] could not connect to HAAS"
+                  .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
 
-
-
-
-
-
-
-
-
-
-
-
-
+    # Build customise YAML
+    metadata_customise_df = metadata_df[
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_namespace"].str.len() > 0) &
+        (metadata_df["unique_id"].str.len() > 0) &
+        (metadata_df["friendly_name"].str.len() > 0) &
+        (metadata_df["entity_domain"].str.len() > 0)
+        ]
+    metadata_customise_dicts = [row.dropna().to_dict() for index, row in metadata_customise_df.iterrows()]
+    metadata_customise_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/config/customise.yaml"))
+    with open(metadata_customise_path, 'w') as metadata_customise_file:
+        metadata_customise_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+        """.strip() + "\n")
+        for metadata_customise_dict in metadata_customise_dicts:
+            metadata_customise_file.write("""
+{}.{}:
+  friendly_name: {}
+            """.format(
+                metadata_customise_dict["entity_namespace"],
+                metadata_customise_dict["unique_id"],
+                metadata_customise_dict["friendly_name"],
+            ).strip() + "\n")
+            if "icon" in metadata_customise_dict:
+                metadata_customise_file.write("  " + """
+  icon: {}
+                """.format(
+                    metadata_customise_dict["icon"],
+                ).strip() + "\n")
+        print("Build script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
 
     # Build lighting YAML
     metadata_lighting_df = metadata_df[
@@ -209,7 +196,8 @@ adaptive_lighting:
         metadata_lighting_file.write("""
 ################################################################################
 automation:
-  - alias: "Lighting: Sleep Adaptive Lighting "
+  - id: lighting_sleep_adaptive_lighting
+    alias: "Lighting: Sleep Adaptive Lighting "
     mode: single
     trigger:
       - platform: time
@@ -253,22 +241,23 @@ automation:
       ################################################################################
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_sleep_mode_nightlight
+          entity_id: switch.adaptive_lighting_sleep_mode_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_color_nightlight
+          entity_id: switch.adaptive_lighting_adapt_color_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_nightlight
+          entity_id: switch.adaptive_lighting_adapt_brightness_night_light
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
           manual_control: false
       ################################################################################
-  - alias: "Lighting: Reset Adaptive Lighting "
+  - id: lighting_reset_adaptive_lighting
+    alias: "Lighting: Reset Adaptive Lighting "
     mode: single
     trigger:
       - platform: time
@@ -312,25 +301,26 @@ automation:
       ################################################################################
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_sleep_mode_nightlight
+          entity_id: switch.adaptive_lighting_sleep_mode_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_color_nightlight
+          entity_id: switch.adaptive_lighting_adapt_color_night_light
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_nightlight
+          entity_id: switch.adaptive_lighting_adapt_brightness_night_light
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_nightlight
+          entity_id: switch.adaptive_lighting_night_light
           manual_control: false
       ################################################################################
         """.strip() + "\n")
         for group_name, metadata_lighting_group_dicts in metadata_lighting_groups_dicts.items():
             if "entity_automation" in metadata_lighting_group_dicts[0]:
                 metadata_lighting_file.write("  " + """
+  ################################################################################
   - alias: "Lighting: Reset Adaptive lighting - {}"
     mode: single
     trigger:
@@ -338,6 +328,21 @@ automation:
         entity_id: light.{}
         from: 'unavailable'
     action:
+                  """.format(
+                    metadata_lighting_group_dicts[0]["unique_id"].split("_")[0].title(),
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                ).strip() + "\n")
+                if metadata_lighting_group_dicts[0]["entity_automation"] == "default":
+                    metadata_lighting_file.write("      " + """
+      - service: light.turn_on
+        target:
+          entity_id: light.{}
+        data:
+          brightness_pct: 100
+                      """.format(
+                        metadata_lighting_group_dicts[0]["unique_id"],
+                    ).strip() + "\n")
+                metadata_lighting_file.write("      " + """
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_{}
@@ -350,13 +355,14 @@ automation:
           lights: light.{}
           manual_control: false
                   """.format(
-                    metadata_lighting_group_dicts[0]["unique_id"].split("_")[0].title(),
-                    metadata_lighting_group_dicts[0]["unique_id"],
                     metadata_lighting_group_dicts[0]["entity_automation"],
                     metadata_lighting_group_dicts[0]["unique_id"],
                     metadata_lighting_group_dicts[0]["entity_automation"],
                     metadata_lighting_group_dicts[0]["unique_id"],
                 ).strip() + "\n")
+        metadata_lighting_file.write("  " + """
+  ################################################################################
+        """.strip() + "\n")
     print("Build script [homeassistant] entity lighting persisted to [{}]".format(metadata_lighting_path))
 
     # Build lovelace YAML
