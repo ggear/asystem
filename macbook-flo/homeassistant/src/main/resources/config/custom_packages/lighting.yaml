@@ -1,80 +1,463 @@
-# Generate in build.py
-# Export all light groups,  Update adaptive_lighting light list with _group
-# Work for all lights, paramaetirsed/templated
-# Work for when light turned on/off in HA/Hue?
-
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
 light:
   - platform: group
-    name: Parents Group
-    unique_id: parents_group
+    name: Bathroom Main
+    unique_id: bathroom_main
+    entities:
+      - light.hue_ambiance_lamp_7
+  - platform: group
+    name: Laundry Main
+    unique_id: laundry_main
+    entities:
+      - light.hue_ambiance_lamp_4
+  - platform: group
+    name: Hallway Main
+    unique_id: hallway_main
+    entities:
+      - light.hue_color_candle_2
+      - light.hue_color_candle_3
+      - light.hue_color_candle_4
+      - light.hue_color_candle_5
+  - platform: group
+    name: Lounge Lamp
+    unique_id: lounge_lamp
+    entities:
+      - light.hue_ambiance_lamp_13
+  - platform: group
+    name: Pantry Main
+    unique_id: pantry_main
+    entities:
+      - light.hue_ambiance_lamp_5
+  - platform: group
+    name: Wardrobe Main
+    unique_id: wardrobe_main
+    entities:
+      - light.hue_ambiance_lamp_9
+  - platform: group
+    name: Dining Main
+    unique_id: dining_main
+    entities:
+      - light.hue_color_candle_6
+      - light.hue_color_candle_7
+      - light.hue_color_candle_8
+      - light.hue_color_candle_9
+      - light.hue_color_candle_10
+      - light.hue_color_candle_11
+  - platform: group
+    name: Parents Main
+    unique_id: parents_main
     entities:
       - light.hue_color_candle_15
       - light.hue_color_candle_16
       - light.hue_color_candle_17
-
+  - platform: group
+    name: Office Main
+    unique_id: office_main
+    entities:
+      - light.hue_ambiance_lamp_6
+  - platform: group
+    name: Ensuite Main
+    unique_id: ensuite_main
+    entities:
+      - light.hue_ambiance_lamp_8
+  - platform: group
+    name: Ada Lamp
+    unique_id: ada_lamp
+    entities:
+      - light.hue_ambiance_lamp_11
+  - platform: group
+    name: Kitchen Main
+    unique_id: kitchen_main
+    entities:
+      - light.hue_ambiance_lamp_1
+      - light.hue_ambiance_lamp_2
+      - light.hue_ambiance_lamp_3
+      - light.hue_ambiance_lamp_12
+  - platform: group
+    name: Edwin Lamp
+    unique_id: edwin_lamp
+    entities:
+      - light.hue_ambiance_lamp_10
+  - platform: group
+    name: Lounge Main
+    unique_id: lounge_main
+    entities:
+      - light.hue_color_candle_12
+      - light.hue_color_candle_13
+      - light.hue_color_candle_14
+################################################################################
 adaptive_lighting:
-  interval: 30
-  only_once: false
-  take_over_control: true
-  detect_non_ha_changes: true
-  lights:
-    - light.dining
-    - light.hallway
-    - light.dining
-    - light.lounge
-    #    - light.parents
-    - light.kitchen
-    - light.laundry
-    - light.pantry
-    - light.bathroom
-    - light.ensuite
-    - light.wardrobe
-    - light.ada
-    - light.lamp
-    - light.parents_group
-
+  - name: default 
+    interval: 30
+    min_color_temp: 2500
+    max_color_temp: 5500
+    only_once: false
+    take_over_control: true
+    detect_non_ha_changes: true
+    lights:
+      - light.dining_main
+      - light.lounge_lamp
+      - light.kitchen_main
+      - light.laundry_main
+      - light.pantry_main
+  - name: nightlight 
+    interval: 30
+    min_color_temp: 2500
+    max_color_temp: 5500
+    only_once: false
+    take_over_control: true
+    detect_non_ha_changes: true
+    lights:
+      - light.ada_lamp
+  - name: bedroom 
+    interval: 30
+    min_color_temp: 2500
+    max_color_temp: 5500
+    only_once: false
+    take_over_control: true
+    detect_non_ha_changes: true
+    lights:
+      - light.hallway_main
+      - light.lounge_main
+      - light.parents_main
+      - light.bathroom_main
+      - light.ensuite_main
+      - light.wardrobe_main
+################################################################################
 automation:
-  - alias: "Lighting: Reset Adaptive Lighting - Parents"
+  - alias: "Lighting: Sleep Adaptive Lighting "
     mode: single
     trigger:
       - platform: time
-        at: "04:00:00"
+        at: "01:00:00"
     condition: [ ]
     action:
+      ################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_default
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_sleep_mode_default
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_color_default
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_brightness_default
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
           manual_control: false
-  - alias: "Lighting: Reset Adaptive lighting"
+      ################################################################################
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_bedroom
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_sleep_mode_bedroom
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_color_bedroom
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_brightness_bedroom
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          manual_control: false
+      ################################################################################
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_nightlight
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_sleep_mode_nightlight
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_color_nightlight
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_brightness_nightlight
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_nightlight
+          manual_control: false
+      ################################################################################
+  - alias: "Lighting: Reset Adaptive Lighting "
+    mode: single
+    trigger:
+      - platform: time
+        at: "05:00:00"
+    condition: [ ]
+    action:
+      ################################################################################
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_default
+      - service: switch.turn_off
+        target:
+          entity_id: switch.adaptive_lighting_sleep_mode_default
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_color_default
+      - service: switch.turn_off
+        target:
+          entity_id: switch.adaptive_lighting_adapt_brightness_default
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          manual_control: false
+      ################################################################################
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_bedroom
+      - service: switch.turn_off
+        target:
+          entity_id: switch.adaptive_lighting_sleep_mode_bedroom
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_color_bedroom
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_brightness_bedroom
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          manual_control: false
+      ################################################################################
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_nightlight
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_sleep_mode_nightlight
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_color_nightlight
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_adapt_brightness_nightlight
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_nightlight
+          manual_control: false
+      ################################################################################
+  - alias: "Lighting: Reset Adaptive lighting - Bathroom"
     mode: single
     trigger:
       - platform: state
-        entity_id: light.parents_group
+        entity_id: light.bathroom_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.bathroom_main
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.bathroom_main
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Laundry"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.laundry_main
         from: 'unavailable'
     action:
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
-          lights: light.parents_group
+          lights: light.laundry_main
           manual_control: false
-      - delay: '00:00:6'
+      - delay: '00:00:10'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
-          lights: light.parents_group
+          lights: light.laundry_main
           manual_control: false
-      - delay: '00:00:6'
+  - alias: "Lighting: Reset Adaptive lighting - Hallway"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.hallway_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.hallway_main
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.hallway_main
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Lounge"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.lounge_lamp
+        from: 'unavailable'
+    action:
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
-          lights: light.parents_group
+          lights: light.lounge_lamp
           manual_control: false
-      - delay: '00:00:6'
+      - delay: '00:00:10'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
-          lights: light.parents_group
+          lights: light.lounge_lamp
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Pantry"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.pantry_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.pantry_main
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.pantry_main
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Wardrobe"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.wardrobe_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Dining"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.dining_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.dining_main
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.dining_main
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Parents"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.parents_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.parents_main
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.parents_main
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Ensuite"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.ensuite_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.ensuite_main
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.ensuite_main
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Ada"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.ada_lamp
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_nightlight
+          lights: light.ada_lamp
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_nightlight
+          lights: light.ada_lamp
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Kitchen"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.kitchen_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.kitchen_main
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.kitchen_main
+          manual_control: false
+  - alias: "Lighting: Reset Adaptive lighting - Lounge"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: light.lounge_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.lounge_main
+          manual_control: false
+      - delay: '00:00:10'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.lounge_main
           manual_control: false

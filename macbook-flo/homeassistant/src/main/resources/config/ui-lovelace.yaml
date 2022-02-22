@@ -21,6 +21,6 @@ views:
   - path: water
     title: Water
     cards: !include ui-lovelace/water.yaml
-  - path: telemetry
-    title: Telemetry
-    cards: !include ui-lovelace/telemetry.yaml
+  - path: diagnostics
+    title: Diagnostics
+    cards: !include ui-lovelace/diagnostics.yaml

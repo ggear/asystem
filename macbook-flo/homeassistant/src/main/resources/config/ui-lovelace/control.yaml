@@ -30,40 +30,46 @@
   entities:
     - entity: light.ada_light
       name: Ada Main
+      icon: mdi:lightbulb-group
+    - entity: light.ada_lamp
+      name: Ada Lamp
     - entity: light.edwin_light
       name: Edwin Main
+      icon: mdi:lightbulb-group
+    - entity: light.edwin_lamp
+      name: Edwin Lamp
     - entity: light.lounge_light
       name: Lounge Fan
-    - entity: light.hallway
+      icon: mdi:lightbulb-group
+    - entity: light.hallway_main
       name: Hallway Main
-    - entity: light.dining
+    - entity: light.dining_main
       name: Dining Main
-    - entity: light.lounge
+    - entity: light.lounge_main
       name: Lounge Main
-    - entity: light.parents
-      name: Parents Main
-    - entity: light.kitchen
-      name: Kitchen Main
-    - entity: light.laundry
-      name: Laundry Main
-    - entity: light.pantry
-      name: Pantry Main
-    - entity: light.office
-      name: Office Main
-    - entity: light.bathroom
-      name: Bathroom Main
-    - entity: light.ensuite
-      name: Ensuite Main
-    - entity: light.wardrobe
-      name: Wardrobe Main
-    - entity: light.edwin
-      name: Edwin Lamp
-    - entity: light.ada
-      name: Ada Lamp
-    - entity: light.lamp
+    - entity: light.lounge_lamp
       name: Lounge Lamp
+    - entity: light.parents_main
+      name: Parents Main
+    - entity: light.kitchen_main
+      name: Kitchen Main
+    - entity: light.laundry_main
+      name: Laundry Main
+    - entity: light.pantry_main
+      name: Pantry Main
+    - entity: light.office_main
+      name: Office Main
+    - entity: light.bathroom_main
+      name: Bathroom Main
+    - entity: light.ensuite_main
+      name: Ensuite Main
+    - entity: light.wardrobe_main
+      name: Wardrobe Main
+    - entity: switch.deck_lights
+      name: Deck Festoons
+      icon: mdi:lightbulb-group
 - type: entities
-  title: Adaptive Lighting
+  title: Default Adaptive Lighting
   show_header_toggle: false
   entities:
     - entity: switch.adaptive_lighting_default
@@ -75,54 +81,26 @@
     - entity: switch.adaptive_lighting_adapt_brightness_default
       name: Brightness
 - type: entities
-  title: Switches
-  entities:
-    - entity: switch.kitchen_dish_washer
-      name: Dish Washer
-      icon: mdi:dishwasher
-    - entity: switch.laundry_clothes_dryer
-      name: Clothes Dryer
-      icon: mdi:tumble-dryer
-    - entity: switch.laundry_washing_machine
-      name: Washing Machine
-      icon: mdi:washing-machine
-    - entity: switch.kitchen_coffee_machine
-      name: Coffee Machine
-      icon: mdi:coffee-maker
-    - entity: switch.deck_lights
-      name: Deck Lights
-      icon: mdi:string-lights
-    - entity: switch.bathroom_rails
-      name: Bathroom Rails
-      icon: mdi:radiator
-    - entity: switch.study_battery_charger
-      name: Battery Charger
-      icon: mdi:battery-charging-30
-    - entity: switch.laundry_vacuum_charger
-      name: Vacuum Charger
-      icon: mdi:battery-charging-30
-    - entity: switch.various_adhoc_outlet
-      name: Adhoc Outlet
-      icon: mdi:power-plug-outline
-- type: entities
-  title: Resets - CAREFUL!
+  title: Bedroom Adaptive Lighting
   show_header_toggle: false
   entities:
-    - entity: switch.study_outlet
-      name: Study Outlet
-      icon: mdi:power-plug-outline
-    - entity: switch.office_outlet
-      name: Office Outlet
-      icon: mdi:power-plug-outline
-    - entity: switch.lounge_tv
-      name: Lounge TV
-      icon: mdi:television
-    - entity: switch.rack_outlet
-      name: Server Rack
-      icon: mdi:server
-    - entity: switch.roof_network_switch
-      name: Network Switch
-      icon: mdi:server-network
-    - entity: switch.rack_internet_modem
-      name: Internet Modem
-      icon: mdi:router-wireless
+    - entity: switch.adaptive_lighting_bedroom
+      name: Status
+    - entity: switch.adaptive_lighting_sleep_mode_bedroom
+      name: Sleep
+    - entity: switch.adaptive_lighting_adapt_color_bedroom
+      name: Colour
+    - entity: switch.adaptive_lighting_adapt_brightness_bedroom
+      name: Brightness
+- type: entities
+  title: Night Light Adaptive Lighting
+  show_header_toggle: false
+  entities:
+    - entity: switch.adaptive_lighting_nightlight
+      name: Status
+    - entity: switch.adaptive_lighting_sleep_mode_nightlight
+      name: Sleep
+    - entity: switch.adaptive_lighting_adapt_color_nightlight
+      name: Colour
+    - entity: switch.adaptive_lighting_adapt_brightness_nightlight
+      name: Brightness

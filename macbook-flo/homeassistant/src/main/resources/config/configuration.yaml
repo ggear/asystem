@@ -129,11 +129,11 @@ panel_custom:
     require_admin: false
     config:
       ingress: core_configurator
-  - name: telemetry
-    sidebar_title: Telemetry
-    sidebar_icon: mdi:cellphone-wireless
+  - name: diagnostics
+    sidebar_title: Diagnostics
+    sidebar_icon: mdi:wrench
     js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/telemetry'
+    url_path: 'lovelace/diagnostics'
     embed_iframe: true
     require_admin: false
     config:
@@ -163,6 +163,7 @@ logger:
   default: info
   logs:
     homeassistant.components.mqtt: info
-    custom_components.adaptive_lighting: debug
+    custom_components.adaptive_lighting: info
     custom_components.bureau_of_meteorology: info
     homeassistant.components.automation.electricity_smart_plug_polling: warn
+    homeassistant.components.websocket_api.http.connection: fatal
