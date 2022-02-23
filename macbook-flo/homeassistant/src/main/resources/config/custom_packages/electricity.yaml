@@ -3,8 +3,69 @@ powercalc:
   create_utility_meters: true
 #######################################################################################
 
-#######################################################################################
+######################################################################################
+sensor:
+  ####################################################################################
+  - platform: template
+    sensors:
+      ################################################################################
+      home_peak_power:
+        unique_id: home_peak_power
+        value_template: >
+          {{
+            states('sensor.kitchen_dish_washer_current_consumption')|float(0) + 
+            states('sensor.laundry_clothes_dryer_current_consumption')|float(0) + 
+            states('sensor.laundry_washing_machine_current_consumption')|float(0)
+          }}
+      ################################################################################
+      home_base_power:
+        unique_id: home_base_power
+        value_template: >
+          {{
+            states('sensor.kitchen_fridge_current_consumption')|float(0) + 
+            states('sensor.deck_freezer_current_consumption')|float(0) + 
+            states('sensor.rack_outlet_current_consumption')|float(0)
+          }}
+      ################################################################################
+      home_power:
+        unique_id: home_power
+        value_template: >
+          {{
+            states('sensor.home_peak_power')|float(0) + 
+            states('sensor.home_base_power')|float(0)
+          }}
+  ####################################################################################
+  - platform: template
+    sensors:
+      ################################################################################
+      home_peak_energy_daily:
+        unique_id: home_peak_energy_daily
+        value_template: >
+          {{
+            states('sensor.kitchen_dish_washer_today_s_consumption')|float(0) + 
+            states('sensor.laundry_clothes_dryer_today_s_consumption')|float(0) + 
+            states('sensor.laundry_washing_machine_today_s_consumption')|float(0)
+          }}
+      ################################################################################
+      home_base_energy_daily:
+        unique_id: home_base_energy_daily
+        value_template: >
+          {{
+            states('sensor.kitchen_fridge_today_s_consumption')|float(0) + 
+            states('sensor.deck_freezer_today_s_consumption')|float(0) + 
+            states('sensor.rack_outlet_today_s_consumption')|float(0)
+          }}
+      ################################################################################
+      home_energy_daily:
+        unique_id: home_energy_daily
+        value_template: >
+          {{
+            states('sensor.home_peak_energy_daily')|float(0) + 
+            states('sensor.home_base_energy_daily')|float(0)
+          }}
+      ################################################################################
 automation:
+  ####################################################################################
   - alias: "Electricity: Smart Plug Polling"
     mode: single
     trigger:
@@ -16,4 +77,4 @@ automation:
         data:
           entity_id:
             - switch.various_adhoc_outlet
-#######################################################################################
+  ####################################################################################

@@ -103,7 +103,7 @@ if __name__ == "__main__":
         for metadata_customise_dict in metadata_customise_dicts:
             metadata_customise_file.write("""
 {}.{}:
-  friendly_name: {}
+  friendly_name: '{}'
             """.format(
                 metadata_customise_dict["entity_namespace"],
                 metadata_customise_dict["unique_id"],
@@ -111,9 +111,15 @@ if __name__ == "__main__":
             ).strip() + "\n")
             if "icon" in metadata_customise_dict:
                 metadata_customise_file.write("  " + """
-  icon: {}
+  icon: '{}'
                 """.format(
                     metadata_customise_dict["icon"],
+                ).strip() + "\n")
+            if "unit_of_measurement" in metadata_customise_dict:
+                metadata_customise_file.write("  " + """
+  unit_of_measurement: '{}'
+                """.format(
+                    metadata_customise_dict["unit_of_measurement"].encode('utf-8'),
                 ).strip() + "\n")
         print("Build script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
 

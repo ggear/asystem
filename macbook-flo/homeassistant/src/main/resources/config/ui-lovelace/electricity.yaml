@@ -16,15 +16,24 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.kitchen_dish_washer_current_consumption
-      name: Dish Washer
-    - entity: sensor.laundry_clothes_dryer_current_consumption
-      name: Clothes Dryer
-    - entity: sensor.laundry_washing_machine_current_consumption
-      name: Washing Machine
+    - entity: sensor.home_power
+      name: Home Load
+    - entity: sensor.home_peak_power
+      name: Peak Load
+    - entity: sensor.home_base_power
+      name: Base Load
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.home_power
+      name: Home Load
+      icon: mdi:home-lightning-bolt
+    - entity: sensor.home_peak_power
+      name: Peak Load
+      icon: mdi:home-lightning-bolt
+    - entity: sensor.home_base_power
+      name: Base Load
+      icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_dish_washer_current_consumption
       name: Dish Washer
       icon: mdi:home-lightning-bolt
@@ -95,15 +104,24 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.kitchen_dish_washer_today_s_consumption
-      name: Dish Washer
-    - entity: sensor.laundry_clothes_dryer_today_s_consumption
-      name: Clothes Dryer
-    - entity: sensor.laundry_washing_machine_today_s_consumption
-      name: Washing Machine
+    - entity: sensor.home_energy_daily
+      name: Home Load
+    - entity: sensor.home_peak_energy_daily
+      name: Home Peak Load
+    - entity: sensor.home_base_energy_daily
+      name: Home Base Load
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.home_energy_daily
+      name: Home Load
+      icon: mdi:battery-charging
+    - entity: sensor.home_peak_energy_daily
+      name: Home Peak Load
+      icon: mdi:battery-charging
+    - entity: sensor.home_base_energy_daily
+      name: Home Base Load
+      icon: mdi:battery-charging
     - entity: sensor.kitchen_dish_washer_today_s_consumption
       name: Dish Washer
       icon: mdi:battery-charging

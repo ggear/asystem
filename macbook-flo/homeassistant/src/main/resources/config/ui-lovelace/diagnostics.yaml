@@ -21,6 +21,15 @@
   title: Soft Resets
   show_header_toggle: false
   entities:
+    - entity: switch.various_adhoc_outlet
+      name: Adhoc Outlet
+      icon: mdi:power-plug-outline
+    - entity: switch.study_outlet
+      name: Study Outlet
+      icon: mdi:power-plug-outline
+    - entity: switch.office_outlet
+      name: Office Outlet
+      icon: mdi:power-plug-outline
     - entity: switch.kitchen_dish_washer
       name: Dish Washer
       icon: mdi:dishwasher
@@ -48,15 +57,6 @@
     - entity: switch.laundry_vacuum_charger
       name: Vacuum Charger
       icon: mdi:battery-charging-30
-    - entity: switch.various_adhoc_outlet
-      name: Adhoc Outlet
-      icon: mdi:power-plug-outline
-    - entity: switch.study_outlet
-      name: Study Outlet
-      icon: mdi:power-plug-outline
-    - entity: switch.office_outlet
-      name: Office Outlet
-      icon: mdi:power-plug-outline
 ################################################################################
 - type: entities
   title: Hard Resets
