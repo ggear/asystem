@@ -1,12 +1,14 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
-#######################################################################################
+################################################################################
 - type: picture-entity
   entity: camera.uvc_ada_medium
   camera_view: live
+################################################################################
 - type: picture-entity
   entity: camera.uvc_edwin_medium
   camera_view: live
+################################################################################
 - type: entities
   title: Fan Motion
   entities:
@@ -22,6 +24,7 @@
       name: Deck East
     - entity: binary_sensor.deck_west_occupancy
       name: Deck West
+################################################################################
 - type: entities
   title: Camera Motion
   entities:
@@ -29,3 +32,4 @@
       name: Ada
     - entity: binary_sensor.uvc_edwin_motion
       name: Edwin
+################################################################################

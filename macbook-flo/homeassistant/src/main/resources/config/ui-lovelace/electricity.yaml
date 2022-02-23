@@ -1,6 +1,6 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
-#######################################################################################
+################################################################################
 - type: custom:mini-graph-card
   name: Current Power Consumption
   icon: mdi:home-lightning-bolt
@@ -22,6 +22,7 @@
       name: Clothes Dryer
     - entity: sensor.laundry_washing_machine_current_consumption
       name: Washing Machine
+################################################################################
 - type: entities
   entities:
     - entity: sensor.kitchen_dish_washer_current_consumption
@@ -78,6 +79,7 @@
     - entity: sensor.various_adhoc_outlet_current_consumption
       name: Adhoc Outlet
       icon: mdi:home-lightning-bolt
+################################################################################
 - type: custom:mini-graph-card
   name: Daily Energy Consumption
   icon: mdi:battery-charging
@@ -99,6 +101,7 @@
       name: Clothes Dryer
     - entity: sensor.laundry_washing_machine_today_s_consumption
       name: Washing Machine
+################################################################################
 - type: entities
   entities:
     - entity: sensor.kitchen_dish_washer_today_s_consumption
@@ -155,3 +158,4 @@
     - entity: sensor.various_adhoc_outlet_today_s_consumption
       name: Adhoc Outlet
       icon: mdi:battery-charging
+################################################################################

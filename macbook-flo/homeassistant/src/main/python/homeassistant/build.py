@@ -152,7 +152,8 @@ if __name__ == "__main__":
 light:
         """.strip() + "\n")
         for group_name, metadata_lighting_group_dicts in metadata_lighting_groups_dicts.items():
-            metadata_lighting_file.write("  " +  """
+            metadata_lighting_file.write("""
+#######################################################################################
   - platform: group
     name: {}
     unique_id: {}
@@ -175,7 +176,8 @@ light:
 adaptive_lighting:
         """.strip() + "\n")
         for automation_name in metadata_lighting_automations_dicts:
-            metadata_lighting_file.write("  " +  """
+            metadata_lighting_file.write("""
+#######################################################################################
   - name: {} 
     interval: 30
     min_color_temp: 2500
@@ -196,6 +198,7 @@ adaptive_lighting:
         metadata_lighting_file.write("""
 ################################################################################
 automation:
+#######################################################################################
   - id: lighting_sleep_adaptive_lighting
     alias: "Lighting: Sleep Adaptive Lighting "
     mode: single
@@ -204,7 +207,7 @@ automation:
         at: "01:00:00"
     condition: [ ]
     action:
-      ################################################################################
+################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_default
@@ -221,7 +224,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_default
           manual_control: false
-      ################################################################################
+################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_bedroom
@@ -238,7 +241,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_bedroom
           manual_control: false
-      ################################################################################
+################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_night_light
@@ -255,7 +258,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_night_light
           manual_control: false
-      ################################################################################
+################################################################################
   - id: lighting_reset_adaptive_lighting
     alias: "Lighting: Reset Adaptive Lighting "
     mode: single
@@ -264,7 +267,7 @@ automation:
         at: "05:00:00"
     condition: [ ]
     action:
-      ################################################################################
+################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_default
@@ -281,7 +284,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_default
           manual_control: false
-      ################################################################################
+################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_bedroom
@@ -298,7 +301,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_bedroom
           manual_control: false
-      ################################################################################
+################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_night_light
@@ -315,21 +318,22 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_night_light
           manual_control: false
-      ################################################################################
+################################################################################
         """.strip() + "\n")
         for group_name, metadata_lighting_group_dicts in metadata_lighting_groups_dicts.items():
             if "entity_automation" in metadata_lighting_group_dicts[0]:
-                metadata_lighting_file.write("  " + """
-  ################################################################################
-  - alias: "Lighting: Reset Adaptive lighting - {}"
-    mode: single
+                metadata_lighting_file.write("""
+################################################################################
+  - id: lighting_reset_adaptive_lighting_{}
+    alias: "Lighting: Reset Adaptive Lighting - {}"
     trigger:
       - platform: state
         entity_id: light.{}
         from: 'unavailable'
     action:
                   """.format(
-                    metadata_lighting_group_dicts[0]["unique_id"].split("_")[0].title(),
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                    metadata_lighting_group_dicts[0]["friendly_name"],
                     metadata_lighting_group_dicts[0]["unique_id"],
                 ).strip() + "\n")
                 if metadata_lighting_group_dicts[0]["entity_automation"] == "default":
@@ -348,7 +352,19 @@ automation:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
-      - delay: '00:00:10'
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_{}
+          lights: light.{}
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_{}
+          lights: light.{}
+          manual_control: false
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_{}
@@ -359,9 +375,13 @@ automation:
                     metadata_lighting_group_dicts[0]["unique_id"],
                     metadata_lighting_group_dicts[0]["entity_automation"],
                     metadata_lighting_group_dicts[0]["unique_id"],
+                    metadata_lighting_group_dicts[0]["entity_automation"],
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                    metadata_lighting_group_dicts[0]["entity_automation"],
+                    metadata_lighting_group_dicts[0]["unique_id"],
                 ).strip() + "\n")
-        metadata_lighting_file.write("  " + """
-  ################################################################################
+        metadata_lighting_file.write("""
+################################################################################
         """.strip() + "\n")
     print("Build script [homeassistant] entity lighting persisted to [{}]".format(metadata_lighting_path))
 
@@ -393,7 +413,6 @@ automation:
             metadata_lovelace_file.write("""
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
-#######################################################################################
             """.strip() + "\n")
             for domain in metadata_lovelace_group_domain_dicts[group]:
                 metadata_lovelace_graph_dicts = []
@@ -402,6 +421,7 @@ automation:
                         metadata_lovelace_graph_dicts.append(metadata_lovelace_dict)
                 if metadata_lovelace_graph_dicts:
                     metadata_lovelace_file.write("""
+################################################################################
 - type: custom:mini-graph-card
   name: {}{}
   font_size_header: 19
@@ -435,6 +455,7 @@ automation:
                         if "display_type" in metadata_lovelace_first_dict else "entities"
                     if metadata_lovelace_first_display_type == "entities":
                         metadata_lovelace_file.write("""
+################################################################################
 - type: entities
                         """.strip() + "\n")
                         if not metadata_lovelace_graph_dicts:
@@ -470,6 +491,7 @@ automation:
                     else:
                         for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
                             metadata_lovelace_file.write("""
+################################################################################
 - type: {}
   entity: {}.{}
                             """.format(
@@ -481,6 +503,9 @@ automation:
                                 metadata_lovelace_file.write("  " + """
   camera_view: live
                                 """.strip() + "\n")
+            metadata_lovelace_file.write("""
+################################################################################
+            """.strip() + "\n")
             print("Build script [homeassistant] entity group [{}] persisted to lovelace [{}]"
                   .format(group.lower(), metadata_lovelace_path))
 

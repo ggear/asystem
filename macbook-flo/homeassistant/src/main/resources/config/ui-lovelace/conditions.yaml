@@ -1,6 +1,6 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
-#######################################################################################
+################################################################################
 - type: custom:mini-graph-card
   name: Temperature
   font_size_header: 19
@@ -23,6 +23,7 @@
       name: Edwin
     - entity: sensor.netatmo_parents_temperature
       name: Parents
+################################################################################
 - type: entities
   entities:
     - entity: sensor.roof_temperature
@@ -49,6 +50,7 @@
       name: Basement
     - entity: sensor.rack_temperature
       name: Rack
+################################################################################
 - type: custom:mini-graph-card
   name: Carbon Dioxide
   icon: mdi:molecule-co2
@@ -72,6 +74,7 @@
       name: Kitchen
     - entity: sensor.netatmo_bertram_2_office_pantry_co2
       name: Pantry
+################################################################################
 - type: entities
   entities:
     - entity: sensor.netatmo_edwin_co2
@@ -95,6 +98,7 @@
     - entity: sensor.netatmo_bertram_2_office_dining_co2
       name: Dining
       icon: mdi:molecule-co2
+################################################################################
 - type: custom:mini-graph-card
   name: Humidity
   font_size_header: 19
@@ -117,6 +121,7 @@
       name: Edwin
     - entity: sensor.netatmo_parents_humidity
       name: Parents
+################################################################################
 - type: entities
   entities:
     - entity: sensor.roof_humidity
@@ -143,6 +148,7 @@
       name: Basement
     - entity: sensor.rack_humidity
       name: Rack
+################################################################################
 - type: custom:mini-graph-card
   name: Noise
   font_size_header: 19
@@ -165,6 +171,7 @@
       name: Parents
     - entity: sensor.netatmo_bertram_2_office_noise
       name: Office
+################################################################################
 - type: entities
   entities:
     - entity: sensor.netatmo_ada_noise
@@ -179,3 +186,4 @@
       name: Kitchen
     - entity: sensor.netatmo_laundry_noise
       name: Laundry
+################################################################################

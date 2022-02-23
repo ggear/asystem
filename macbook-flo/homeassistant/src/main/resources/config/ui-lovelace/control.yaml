@@ -1,6 +1,6 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
-#######################################################################################
+################################################################################
 - type: entities
   title: Routines
   show_header_toggle: false
@@ -11,6 +11,7 @@
     - entity: input_boolean.home_wakeup
       name: Wakeup
       icon: mdi:white-balance-sunny
+################################################################################
 - type: entities
   title: Fans
   entities:
@@ -35,6 +36,7 @@
     - entity: fan.deck_west
       name: Deck West
       icon: mdi:fan
+################################################################################
 - type: entities
   title: Lights
   entities:
@@ -48,15 +50,15 @@
       icon: mdi:lightbulb-group
     - entity: light.edwin_lamp
       name: Edwin Lamp
-    - entity: light.lounge_light
-      name: Lounge Fan
-      icon: mdi:lightbulb-group
     - entity: light.hallway_main
       name: Hallway Main
     - entity: light.dining_main
       name: Dining Main
     - entity: light.lounge_main
       name: Lounge Main
+    - entity: light.lounge_light
+      name: Lounge Fan
+      icon: mdi:lightbulb-group
     - entity: light.lounge_lamp
       name: Lounge Lamp
     - entity: light.parents_main
@@ -78,6 +80,7 @@
     - entity: switch.deck_lights
       name: Deck Festoons
       icon: mdi:lightbulb-group
+################################################################################
 - type: entities
   title: Default Adaptive Lighting
   show_header_toggle: false
@@ -86,10 +89,7 @@
       name: Status
     - entity: switch.adaptive_lighting_sleep_mode_default
       name: Sleep
-    - entity: switch.adaptive_lighting_adapt_color_default
-      name: Colour
-    - entity: switch.adaptive_lighting_adapt_brightness_default
-      name: Brightness
+################################################################################
 - type: entities
   title: Bedroom Adaptive Lighting
   show_header_toggle: false
@@ -98,10 +98,7 @@
       name: Status
     - entity: switch.adaptive_lighting_sleep_mode_bedroom
       name: Sleep
-    - entity: switch.adaptive_lighting_adapt_color_bedroom
-      name: Colour
-    - entity: switch.adaptive_lighting_adapt_brightness_bedroom
-      name: Brightness
+################################################################################
 - type: entities
   title: Night Light Adaptive Lighting
   show_header_toggle: false
@@ -110,7 +107,4 @@
       name: Status
     - entity: switch.adaptive_lighting_sleep_mode_night_light
       name: Sleep
-    - entity: switch.adaptive_lighting_adapt_color_night_light
-      name: Colour
-    - entity: switch.adaptive_lighting_adapt_brightness_night_light
-      name: Brightness
+################################################################################
