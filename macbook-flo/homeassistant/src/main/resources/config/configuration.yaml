@@ -1,18 +1,12 @@
 #######################################################################################
-# TODO: Look at examples to structure, such as
-#   - https://www.awesome-ha.com
-#   - https://isabellaalstrom.github.io/lovelace
-#   - https://github.com/DavidFW1960/home-assistant
-#######################################################################################
-
 default_config:
-
+#######################################################################################
 homeassistant:
   customize: !include customise.yaml
   packages: !include_dir_named custom_packages
   internal_url: "http://macbook-flo:8123"
   external_url: "https://home.janeandgraham.com"
-
+#######################################################################################
 http:
   use_x_forwarded_for: true
   trusted_proxies:
@@ -21,10 +15,10 @@ http:
   cors_allowed_origins:
     - https://janeandgraham.com
     - https://home.janeandgraham.com
-
+#######################################################################################
 tts:
   - platform: google_translate
-
+#######################################################################################
 recorder:
   db_url: !env_var HOMEASSISTANT_DB
   commit_interval: 120
@@ -34,7 +28,7 @@ recorder:
 #  exclude:
 #    entity_globs:
 #      - sensor.*
-
+#######################################################################################
 influxdb:
   api_version: 2
   ssl: false
@@ -51,7 +45,7 @@ influxdb:
   tags_attributes:
     - friendly_name
   default_measurement: state
-
+#######################################################################################
 mqtt:
   broker: !env_var VERNEMQ_HOST
   port: !env_var VERNEMQ_PORT
@@ -64,7 +58,7 @@ mqtt:
   will_message:
     topic: 'hass/status'
     payload: 'offline'
-
+#######################################################################################
 panel_custom:
   - name: weather
     sidebar_title: Weather
@@ -138,7 +132,7 @@ panel_custom:
     require_admin: false
     config:
       ingress: core_configurator
-
+#######################################################################################
 lovelace:
   mode: yaml
   resources:
@@ -158,7 +152,7 @@ lovelace:
       icon: mdi:tools
       show_in_sidebar: true
       require_admin: true
-
+#######################################################################################
 logger:
   default: info
   logs:
@@ -167,3 +161,4 @@ logger:
     custom_components.bureau_of_meteorology: info
     homeassistant.components.automation.electricity_smart_plug_polling: warn
     homeassistant.components.websocket_api.http.connection: fatal
+#######################################################################################

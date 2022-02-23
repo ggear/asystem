@@ -1,3 +1,6 @@
+#######################################################################################
+# Weather as adapted from https://github.com/DavidFW1960/bom-weather-card
+#######################################################################################
 - type: custom:bom-weather-card
   title: BOM Weather
   entity_current_conditions: sensor.darlington_forecast_icon_descriptor_0
