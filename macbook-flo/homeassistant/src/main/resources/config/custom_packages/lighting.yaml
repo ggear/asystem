@@ -2,19 +2,19 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
 light:
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Bathroom Main
     unique_id: bathroom_main
     entities:
       - light.hue_ambiance_lamp_7
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Laundry Main
     unique_id: laundry_main
     entities:
       - light.hue_ambiance_lamp_4
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Hallway Main
     unique_id: hallway_main
@@ -23,25 +23,25 @@ light:
       - light.hue_color_candle_3
       - light.hue_color_candle_4
       - light.hue_color_candle_5
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Lounge Lamp
     unique_id: lounge_lamp
     entities:
       - light.hue_ambiance_lamp_13
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Pantry Main
     unique_id: pantry_main
     entities:
       - light.hue_ambiance_lamp_5
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Wardrobe Main
     unique_id: wardrobe_main
     entities:
       - light.hue_ambiance_lamp_9
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Dining Main
     unique_id: dining_main
@@ -52,7 +52,7 @@ light:
       - light.hue_color_candle_9
       - light.hue_color_candle_10
       - light.hue_color_candle_11
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Parents Main
     unique_id: parents_main
@@ -60,25 +60,25 @@ light:
       - light.hue_color_candle_15
       - light.hue_color_candle_16
       - light.hue_color_candle_17
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Office Main
     unique_id: office_main
     entities:
       - light.hue_ambiance_lamp_6
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Ensuite Main
     unique_id: ensuite_main
     entities:
       - light.hue_ambiance_lamp_8
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Ada Lamp
     unique_id: ada_lamp
     entities:
       - light.hue_ambiance_lamp_11
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Kitchen Main
     unique_id: kitchen_main
@@ -87,13 +87,13 @@ light:
       - light.hue_ambiance_lamp_2
       - light.hue_ambiance_lamp_3
       - light.hue_ambiance_lamp_12
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Edwin Lamp
     unique_id: edwin_lamp
     entities:
       - light.hue_ambiance_lamp_10
-#######################################################################################
+  #####################################################################################
   - platform: group
     name: Lounge Main
     unique_id: lounge_main
@@ -101,10 +101,10 @@ light:
       - light.hue_color_candle_12
       - light.hue_color_candle_13
       - light.hue_color_candle_14
-################################################################################
+  ####################################################################################
 adaptive_lighting:
-#######################################################################################
-  - name: default 
+  ####################################################################################
+  - name: default
     interval: 30
     min_color_temp: 2500
     max_color_temp: 5500
@@ -117,8 +117,8 @@ adaptive_lighting:
       - light.kitchen_main
       - light.laundry_main
       - light.pantry_main
-#######################################################################################
-  - name: night_light 
+  ####################################################################################
+  - name: night_light
     interval: 30
     min_color_temp: 2500
     max_color_temp: 5500
@@ -128,8 +128,8 @@ adaptive_lighting:
     lights:
       - light.ada_lamp
       - light.edwin_lamp
-#######################################################################################
-  - name: bedroom 
+  ####################################################################################
+  - name: bedroom
     interval: 30
     min_color_temp: 2500
     max_color_temp: 5500
@@ -143,9 +143,9 @@ adaptive_lighting:
       - light.bathroom_main
       - light.ensuite_main
       - light.wardrobe_main
-################################################################################
+  ####################################################################################
 automation:
-#######################################################################################
+  ####################################################################################
   - id: lighting_sleep_adaptive_lighting
     alias: "Lighting: Sleep Adaptive Lighting "
     mode: single
@@ -154,7 +154,7 @@ automation:
         at: "01:00:00"
     condition: [ ]
     action:
-################################################################################
+      ################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_default
@@ -171,7 +171,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_default
           manual_control: false
-################################################################################
+      ################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_bedroom
@@ -188,7 +188,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_bedroom
           manual_control: false
-################################################################################
+      ################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_night_light
@@ -205,7 +205,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_night_light
           manual_control: false
-################################################################################
+      ################################################################################
   - id: lighting_reset_adaptive_lighting
     alias: "Lighting: Reset Adaptive Lighting "
     mode: single
@@ -214,7 +214,7 @@ automation:
         at: "05:00:00"
     condition: [ ]
     action:
-################################################################################
+      ################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_default
@@ -231,7 +231,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_default
           manual_control: false
-################################################################################
+      ################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_bedroom
@@ -248,7 +248,7 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_bedroom
           manual_control: false
-################################################################################
+      ################################################################################
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_night_light
@@ -265,8 +265,8 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_night_light
           manual_control: false
-################################################################################
-################################################################################
+      ################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_bathroom_main
     alias: "Lighting: Reset Adaptive Lighting - Bathroom Main"
     trigger:
@@ -297,7 +297,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.bathroom_main
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_laundry_main
     alias: "Lighting: Reset Adaptive Lighting - Laundry Main"
     trigger:
@@ -333,7 +333,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.laundry_main
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_hallway_main
     alias: "Lighting: Reset Adaptive Lighting - Hallway Main"
     trigger:
@@ -364,7 +364,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.hallway_main
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_lounge_lamp
     alias: "Lighting: Reset Adaptive Lighting - Lounge Lamp"
     trigger:
@@ -400,7 +400,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.lounge_lamp
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_pantry_main
     alias: "Lighting: Reset Adaptive Lighting - Pantry Main"
     trigger:
@@ -436,7 +436,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.pantry_main
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_wardrobe_main
     alias: "Lighting: Reset Adaptive Lighting - Wardrobe Main"
     trigger:
@@ -467,7 +467,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.wardrobe_main
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_dining_main
     alias: "Lighting: Reset Adaptive Lighting - Dining Main"
     trigger:
@@ -503,7 +503,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.dining_main
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_parents_main
     alias: "Lighting: Reset Adaptive Lighting - Parents Main"
     trigger:
@@ -534,7 +534,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.parents_main
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_ensuite_main
     alias: "Lighting: Reset Adaptive Lighting - Ensuite Main"
     trigger:
@@ -565,7 +565,7 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.ensuite_main
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_ada_lamp
     alias: "Lighting: Reset Adaptive Lighting - Ada Lamp"
     trigger:
@@ -596,7 +596,7 @@ automation:
           entity_id: switch.adaptive_lighting_night_light
           lights: light.ada_lamp
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_kitchen_main
     alias: "Lighting: Reset Adaptive Lighting - Kitchen Main"
     trigger:
@@ -632,7 +632,7 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.kitchen_main
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_edwin_lamp
     alias: "Lighting: Reset Adaptive Lighting - Edwin Lamp"
     trigger:
@@ -663,7 +663,7 @@ automation:
           entity_id: switch.adaptive_lighting_night_light
           lights: light.edwin_lamp
           manual_control: false
-################################################################################
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_lounge_main
     alias: "Lighting: Reset Adaptive Lighting - Lounge Main"
     trigger:
@@ -694,4 +694,4 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.lounge_main
           manual_control: false
-################################################################################
+  ####################################################################################
