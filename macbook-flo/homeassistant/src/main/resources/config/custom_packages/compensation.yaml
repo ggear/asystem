@@ -169,7 +169,7 @@ compensation:
     precision: 1
     data_points: 
       - [ 999, 566 ]
-      - [ 1407, 711 ]
+      - [ 1207, 711 ]
   ####################################################################################  
   compensation_sensor_netatmo_bertram_2_office_co2:
     unique_id: compensation_sensor_netatmo_bertram_2_office_co2
