@@ -117,6 +117,42 @@ if __name__ == "__main__":
                 ).strip() + "\n")
         print("Build script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
 
+    # Build compensation YAML
+    metadata_compensation_df = metadata_df[
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_namespace"].str.len() > 0) &
+        (metadata_df["unique_id"].str.len() > 0) &
+        (metadata_df["compensation_curve"].str.len() > 0)
+        ]
+    metadata_compensation_dicts = [row.dropna().to_dict() for index, row in metadata_compensation_df.iterrows()]
+    metadata_compensation_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/config/custom_packages/compensation.yaml"))
+    with open(metadata_compensation_path, 'w') as metadata_compensation_file:
+        metadata_compensation_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+compensation:
+        """.strip() + "\n")
+        for metadata_compensation_dict in metadata_compensation_dicts:
+            metadata_compensation_file.write("  " + """
+  ####################################################################################  
+  {}:
+    unique_id: {}
+    source: sensor.{}
+    precision: 1
+    data_points: {}
+            """.format(
+                metadata_compensation_dict["unique_id"],
+                metadata_compensation_dict["unique_id"],
+                metadata_compensation_dict["unique_id"].replace("compensation_sensor_", ""),
+                "\n      - " + metadata_compensation_dict["compensation_curve"].replace("],[", "]\n      - ["),
+            ).strip() + "\n")
+        metadata_compensation_file.write("  " + """
+  ####################################################################################
+        """.strip() + "\n")
+        print("Build script [homeassistant] entity compensation persisted to [{}]".format(metadata_compensation_path))
+
     # Build lighting YAML
     metadata_lighting_df = metadata_df[
         (metadata_df["entity_status"] == "Enabled") &

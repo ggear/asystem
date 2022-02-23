@@ -15,40 +15,40 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.roof_temperature
+    - entity: sensor.compensation_sensor_roof_temperature
       name: Roof
-    - entity: sensor.netatmo_ada_temperature
+    - entity: sensor.compensation_sensor_netatmo_ada_temperature
       name: Ada
-    - entity: sensor.netatmo_edwin_temperature
+    - entity: sensor.compensation_sensor_netatmo_edwin_temperature
       name: Edwin
-    - entity: sensor.netatmo_parents_temperature
+    - entity: sensor.compensation_sensor_netatmo_parents_temperature
       name: Parents
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.roof_temperature
+    - entity: sensor.compensation_sensor_roof_temperature
       name: Roof
-    - entity: sensor.netatmo_ada_temperature
+    - entity: sensor.compensation_sensor_netatmo_ada_temperature
       name: Ada
-    - entity: sensor.netatmo_edwin_temperature
+    - entity: sensor.compensation_sensor_netatmo_edwin_temperature
       name: Edwin
-    - entity: sensor.netatmo_parents_temperature
+    - entity: sensor.compensation_sensor_netatmo_parents_temperature
       name: Parents
-    - entity: sensor.netatmo_bertram_2_office_temperature
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_temperature
       name: Office
-    - entity: sensor.netatmo_bertram_2_kitchen_temperature
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_temperature
       name: Kitchen
-    - entity: sensor.netatmo_bertram_2_office_pantry_temperature
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_temperature
       name: Pantry
-    - entity: sensor.netatmo_bertram_2_office_lounge_temperature
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_temperature
       name: Lounge
-    - entity: sensor.netatmo_bertram_2_office_dining_temperature
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_temperature
       name: Dining
-    - entity: sensor.netatmo_laundry_temperature
+    - entity: sensor.compensation_sensor_netatmo_laundry_temperature
       name: Laundry
-    - entity: sensor.netatmo_bertram_2_office_basement_temperature
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_basement_temperature
       name: Basement
-    - entity: sensor.rack_temperature
+    - entity: sensor.compensation_sensor_rack_temperature
       name: Rack
 ################################################################################
 - type: custom:mini-graph-card
@@ -66,36 +66,36 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.netatmo_edwin_co2
+    - entity: sensor.compensation_sensor_netatmo_edwin_co2
       name: Edwin
     - entity: sensor.compensation_sensor_netatmo_parents_co2
       name: Parents
-    - entity: sensor.netatmo_bertram_2_kitchen_co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
       name: Kitchen
-    - entity: sensor.netatmo_bertram_2_office_pantry_co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2
       name: Pantry
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.netatmo_edwin_co2
+    - entity: sensor.compensation_sensor_netatmo_edwin_co2
       name: Edwin
       icon: mdi:molecule-co2
     - entity: sensor.compensation_sensor_netatmo_parents_co2
       name: Parents
       icon: mdi:molecule-co2
-    - entity: sensor.netatmo_bertram_2_office_co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_co2
       name: Office
       icon: mdi:molecule-co2
-    - entity: sensor.netatmo_bertram_2_kitchen_co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
       name: Kitchen
       icon: mdi:molecule-co2
-    - entity: sensor.netatmo_bertram_2_office_pantry_co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2
       name: Pantry
       icon: mdi:molecule-co2
-    - entity: sensor.netatmo_bertram_2_office_lounge_co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2
       name: Lounge
       icon: mdi:molecule-co2
-    - entity: sensor.netatmo_bertram_2_office_dining_co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2
       name: Dining
       icon: mdi:molecule-co2
 ################################################################################
@@ -113,40 +113,40 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.roof_humidity
+    - entity: sensor.compensation_sensor_roof_humidity
       name: Roof
-    - entity: sensor.netatmo_ada_humidity
+    - entity: sensor.compensation_sensor_netatmo_ada_humidity
       name: Ada
-    - entity: sensor.netatmo_edwin_humidity
+    - entity: sensor.compensation_sensor_netatmo_edwin_humidity
       name: Edwin
-    - entity: sensor.netatmo_parents_humidity
+    - entity: sensor.compensation_sensor_netatmo_parents_humidity
       name: Parents
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.roof_humidity
+    - entity: sensor.compensation_sensor_roof_humidity
       name: Roof
-    - entity: sensor.netatmo_ada_humidity
+    - entity: sensor.compensation_sensor_netatmo_ada_humidity
       name: Ada
-    - entity: sensor.netatmo_edwin_humidity
+    - entity: sensor.compensation_sensor_netatmo_edwin_humidity
       name: Edwin
-    - entity: sensor.netatmo_parents_humidity
+    - entity: sensor.compensation_sensor_netatmo_parents_humidity
       name: Parents
-    - entity: sensor.netatmo_bertram_2_office_humidity
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_humidity
       name: Office
-    - entity: sensor.netatmo_bertram_2_kitchen_humidity
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_humidity
       name: Kitchen
-    - entity: sensor.netatmo_bertram_2_office_pantry_humidity
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_humidity
       name: Pantry
-    - entity: sensor.netatmo_bertram_2_office_lounge_humidity
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_humidity
       name: Lounge
-    - entity: sensor.netatmo_bertram_2_office_dining_humidity
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_humidity
       name: Dining
-    - entity: sensor.netatmo_laundry_humidity
+    - entity: sensor.compensation_sensor_netatmo_laundry_humidity
       name: Laundry
-    - entity: sensor.netatmo_bertram_2_office_basement_humidity
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_basement_humidity
       name: Basement
-    - entity: sensor.rack_humidity
+    - entity: sensor.compensation_sensor_rack_humidity
       name: Rack
 ################################################################################
 - type: custom:mini-graph-card
@@ -163,27 +163,27 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.netatmo_ada_noise
+    - entity: sensor.compensation_sensor_netatmo_ada_noise
       name: Ada
-    - entity: sensor.netatmo_edwin_noise
+    - entity: sensor.compensation_sensor_netatmo_edwin_noise
       name: Edwin
-    - entity: sensor.netatmo_parents_noise
+    - entity: sensor.compensation_sensor_netatmo_parents_noise
       name: Parents
-    - entity: sensor.netatmo_bertram_2_office_noise
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_noise
       name: Office
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.netatmo_ada_noise
+    - entity: sensor.compensation_sensor_netatmo_ada_noise
       name: Ada
-    - entity: sensor.netatmo_edwin_noise
+    - entity: sensor.compensation_sensor_netatmo_edwin_noise
       name: Edwin
-    - entity: sensor.netatmo_parents_noise
+    - entity: sensor.compensation_sensor_netatmo_parents_noise
       name: Parents
-    - entity: sensor.netatmo_bertram_2_office_noise
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_noise
       name: Office
-    - entity: sensor.netatmo_bertram_2_kitchen_noise
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_noise
       name: Kitchen
-    - entity: sensor.netatmo_laundry_noise
+    - entity: sensor.compensation_sensor_netatmo_laundry_noise
       name: Laundry
 ################################################################################

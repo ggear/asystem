@@ -1,11 +1,365 @@
 #######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
 compensation:
-  #######################################################################################
+  ####################################################################################  
+  compensation_sensor_roof_temperature:
+    unique_id: compensation_sensor_roof_temperature
+    source: sensor.roof_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_ada_temperature:
+    unique_id: compensation_sensor_netatmo_ada_temperature
+    source: sensor.netatmo_ada_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_edwin_temperature:
+    unique_id: compensation_sensor_netatmo_edwin_temperature
+    source: sensor.netatmo_edwin_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_parents_temperature:
+    unique_id: compensation_sensor_netatmo_parents_temperature
+    source: sensor.netatmo_parents_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_temperature:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_temperature
+    source: sensor.netatmo_bertram_2_office_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_kitchen_temperature:
+    unique_id: compensation_sensor_netatmo_bertram_2_kitchen_temperature
+    source: sensor.netatmo_bertram_2_kitchen_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_pantry_temperature:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_pantry_temperature
+    source: sensor.netatmo_bertram_2_office_pantry_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_lounge_temperature:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_temperature
+    source: sensor.netatmo_bertram_2_office_lounge_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_dining_temperature:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_dining_temperature
+    source: sensor.netatmo_bertram_2_office_dining_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_laundry_temperature:
+    unique_id: compensation_sensor_netatmo_laundry_temperature
+    source: sensor.netatmo_laundry_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_basement_temperature:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_basement_temperature
+    source: sensor.netatmo_bertram_2_office_basement_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_rack_temperature:
+    unique_id: compensation_sensor_rack_temperature
+    source: sensor.rack_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_roof_apparent_temperature:
+    unique_id: compensation_sensor_roof_apparent_temperature
+    source: sensor.roof_apparent_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_roof_dew_point:
+    unique_id: compensation_sensor_roof_dew_point
+    source: sensor.roof_dew_point
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_roof_heat_index:
+    unique_id: compensation_sensor_roof_heat_index
+    source: sensor.roof_heat_index
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_roof_humidity_index:
+    unique_id: compensation_sensor_roof_humidity_index
+    source: sensor.roof_humidity_index
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_rack_dew_point:
+    unique_id: compensation_sensor_rack_dew_point
+    source: sensor.rack_dew_point
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_roof_wind_chill_temperature:
+    unique_id: compensation_sensor_roof_wind_chill_temperature
+    source: sensor.roof_wind_chill_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_ada_co2:
+    unique_id: compensation_sensor_netatmo_ada_co2
+    source: sensor.netatmo_ada_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_edwin_co2:
+    unique_id: compensation_sensor_netatmo_edwin_co2
+    source: sensor.netatmo_edwin_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
   compensation_sensor_netatmo_parents_co2:
     unique_id: compensation_sensor_netatmo_parents_co2
     source: sensor.netatmo_parents_co2
-    precision: 0
-    data_points:
+    precision: 1
+    data_points: 
       - [ 999, 566 ]
       - [ 1407, 711 ]
-  #######################################################################################
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_co2
+    source: sensor.netatmo_bertram_2_office_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_kitchen_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_kitchen_co2
+    source: sensor.netatmo_bertram_2_kitchen_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_pantry_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_pantry_co2
+    source: sensor.netatmo_bertram_2_office_pantry_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_lounge_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_co2
+    source: sensor.netatmo_bertram_2_office_lounge_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_dining_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_dining_co2
+    source: sensor.netatmo_bertram_2_office_dining_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_laundry_co2:
+    unique_id: compensation_sensor_netatmo_laundry_co2
+    source: sensor.netatmo_laundry_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_roof_humidity:
+    unique_id: compensation_sensor_roof_humidity
+    source: sensor.roof_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_ada_humidity:
+    unique_id: compensation_sensor_netatmo_ada_humidity
+    source: sensor.netatmo_ada_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_edwin_humidity:
+    unique_id: compensation_sensor_netatmo_edwin_humidity
+    source: sensor.netatmo_edwin_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_parents_humidity:
+    unique_id: compensation_sensor_netatmo_parents_humidity
+    source: sensor.netatmo_parents_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_humidity:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_humidity
+    source: sensor.netatmo_bertram_2_office_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_kitchen_humidity:
+    unique_id: compensation_sensor_netatmo_bertram_2_kitchen_humidity
+    source: sensor.netatmo_bertram_2_kitchen_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_pantry_humidity:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_pantry_humidity
+    source: sensor.netatmo_bertram_2_office_pantry_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_lounge_humidity:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_humidity
+    source: sensor.netatmo_bertram_2_office_lounge_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_dining_humidity:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_dining_humidity
+    source: sensor.netatmo_bertram_2_office_dining_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_laundry_humidity:
+    unique_id: compensation_sensor_netatmo_laundry_humidity
+    source: sensor.netatmo_laundry_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_basement_humidity:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_basement_humidity
+    source: sensor.netatmo_bertram_2_office_basement_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_rack_humidity:
+    unique_id: compensation_sensor_rack_humidity
+    source: sensor.rack_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_ada_noise:
+    unique_id: compensation_sensor_netatmo_ada_noise
+    source: sensor.netatmo_ada_noise
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_edwin_noise:
+    unique_id: compensation_sensor_netatmo_edwin_noise
+    source: sensor.netatmo_edwin_noise
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_parents_noise:
+    unique_id: compensation_sensor_netatmo_parents_noise
+    source: sensor.netatmo_parents_noise
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_office_noise:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_noise
+    source: sensor.netatmo_bertram_2_office_noise
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_bertram_2_kitchen_noise:
+    unique_id: compensation_sensor_netatmo_bertram_2_kitchen_noise
+    source: sensor.netatmo_bertram_2_kitchen_noise
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################  
+  compensation_sensor_netatmo_laundry_noise:
+    unique_id: compensation_sensor_netatmo_laundry_noise
+    source: sensor.netatmo_laundry_noise
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
