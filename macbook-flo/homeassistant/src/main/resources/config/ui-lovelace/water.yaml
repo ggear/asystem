@@ -24,6 +24,9 @@
     - entity: sensor.roof_rain_rate
       name: Rate
       icon: mdi:weather-pouring
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.roof_hourly_rain
       name: Hourly
       icon: mdi:weather-pouring

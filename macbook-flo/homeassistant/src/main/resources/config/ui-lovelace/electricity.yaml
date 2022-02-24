@@ -34,6 +34,9 @@
     - entity: sensor.home_base_power
       name: Base Load
       icon: mdi:home-lightning-bolt
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.kitchen_dish_washer_current_consumption
       name: Dish Washer
       icon: mdi:home-lightning-bolt
@@ -122,6 +125,9 @@
     - entity: sensor.home_base_energy_daily
       name: Home Base Load
       icon: mdi:battery-charging
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.kitchen_dish_washer_today_s_consumption
       name: Dish Washer
       icon: mdi:battery-charging

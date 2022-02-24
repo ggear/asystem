@@ -39,6 +39,9 @@
     - entity: sensor.compensation_sensor_netatmo_parents_temperature
       name: Parents
       icon: mdi:thermometer
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_temperature
       name: Office
       icon: mdi:thermometer
@@ -83,10 +86,10 @@
       name: Edwin
     - entity: sensor.compensation_sensor_netatmo_parents_co2
       name: Parents
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_co2
+      name: Office
     - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
       name: Kitchen
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2
-      name: Pantry
 ################################################################################
 - type: entities
   entities:
@@ -102,6 +105,9 @@
     - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
       name: Kitchen
       icon: mdi:molecule-co2
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2
       name: Pantry
       icon: mdi:molecule-co2
@@ -150,6 +156,9 @@
     - entity: sensor.compensation_sensor_netatmo_parents_humidity
       name: Parents
       icon: mdi:water-percent
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_humidity
       name: Office
       icon: mdi:water-percent
@@ -213,6 +222,9 @@
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_noise
       name: Office
       icon: mdi:volume-high
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_noise
       name: Kitchen
       icon: mdi:volume-high

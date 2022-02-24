@@ -142,7 +142,7 @@ compensation:
         """.strip() + "\n")
         for metadata_compensation_dict in metadata_compensation_dicts:
             metadata_compensation_file.write("  " + """
-  ####################################################################################  
+  ####################################################################################
   {}:
     unique_id: {}
     source: sensor.{}
@@ -489,30 +489,35 @@ automation:
                             metadata_lovelace_graph_dict["friendly_name"],
                         )).strip() + "\n")
                 if metadata_lovelace_group_domain_dicts[group][domain]:
-                    metadata_lovelace_first_dict = metadata_lovelace_group_domain_dicts[group][domain][0]
-                    metadata_lovelace_first_display_type = metadata_lovelace_first_dict["display_type"] \
-                        if "display_type" in metadata_lovelace_first_dict else "entities"
-                    if metadata_lovelace_first_display_type == "entities":
-                        metadata_lovelace_file.write("""
+                    metadata_lovelace_first_display_mode = None
+                    for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
+                        metadata_lovelace_current_display_mode = metadata_lovelace_dict["display_mode"].split("_")[0]
+                        if metadata_lovelace_current_display_mode != metadata_lovelace_first_display_mode:
+                            metadata_lovelace_first_display_mode = metadata_lovelace_current_display_mode
+                            metadata_lovelace_first_dict = metadata_lovelace_dict
+                            metadata_lovelace_first_display_type = metadata_lovelace_first_dict["display_type"] \
+                                if "display_type" in metadata_lovelace_first_dict else "entities"
+                            if metadata_lovelace_first_display_type == "entities":
+                                metadata_lovelace_file.write("""
 ################################################################################
 - type: entities
-                        """.strip() + "\n")
-                        if not metadata_lovelace_graph_dicts:
-                            metadata_lovelace_file.write("  " + """
+                                """.strip() + "\n")
+                                if not metadata_lovelace_graph_dicts:
+                                    metadata_lovelace_file.write("  " + """
   title: {}
-                            """.format(
-                                domain
-                            ).strip() + "\n")
-                            if "NoToggle" in metadata_lovelace_first_dict["display_mode"]:
-                                metadata_lovelace_file.write("  " + """
+                                    """.format(
+                                        domain
+                                    ).strip() + "\n")
+                                    if "NoToggle" in metadata_lovelace_first_dict["display_mode"]:
+                                        metadata_lovelace_file.write("  " + """
   show_header_toggle: false
-                                              """.format(
-                                    domain
-                                ).strip() + "\n")
-                        metadata_lovelace_file.write("  " + """
+                                        """.format(
+                                            domain
+                                        ).strip() + "\n")
+                                metadata_lovelace_file.write("  " + """
   entities:
-                        """.strip() + "\n")
-                        for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
+                                """.strip() + "\n")
+                        if "display_type" not in metadata_lovelace_dict or metadata_lovelace_dict["display_type"] == "entities":
                             metadata_lovelace_file.write("    " + ("""
     - entity: {}.{}
       name: {}
@@ -527,8 +532,8 @@ automation:
                                 """.format(
                                     metadata_lovelace_dict["icon"],
                                 ).strip() + "\n")
-                    else:
-                        for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
+
+                        else:
                             metadata_lovelace_file.write("""
 ################################################################################
 - type: {}
