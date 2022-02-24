@@ -138,9 +138,11 @@ lovelace:
   resources:
     - url: /local/custom_ui/bom-weather-card.js?v=0.90a-HACKED
       type: module
+    - url: /local/custom_ui/layout-card/layout-card.js?v=2.4.1
+      type: module
     - url: /local/custom_ui/bom-radar-card/bom-radar-card.js?v=v1.3.3
       type: module
-    - url: /local/custom_ui/apexcharts-card/apexcharts-card.js?v=v1.9.0
+    - url: /local/custom_ui/apexcharts-card/apexcharts-card.js?v=v1.10.0
       type: module
     - url: /local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=0.10.0
       type: module

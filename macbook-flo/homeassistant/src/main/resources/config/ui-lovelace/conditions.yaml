@@ -67,6 +67,8 @@
       name: Rack
       icon: mdi:thermometer
 ################################################################################
+- type: custom:layout-break
+################################################################################
 - type: custom:mini-graph-card
   name: Carbon Dioxide
   icon: mdi:molecule-co2
@@ -117,6 +119,8 @@
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2
       name: Dining
       icon: mdi:molecule-co2
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: custom:mini-graph-card
   name: Humidity
@@ -183,6 +187,8 @@
     - entity: sensor.compensation_sensor_rack_humidity
       name: Rack
       icon: mdi:water-percent
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: custom:mini-graph-card
   name: Noise

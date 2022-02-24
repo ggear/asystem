@@ -1,36 +1,68 @@
 #######################################################################################
 title: Home
 views:
-#######################################################################################
-  - path: default_view
-    title: Weather
+  #######################################################################################
+  - title: Weather
+    path: default_view
+    type: custom:vertical-layout
+    layout:
+      width: 300
+      max_cols: 10
     cards: !include ui-lovelace/weather.yaml
-#######################################################################################
-  - path: control
-    title: Control
+  #######################################################################################
+  - title: Control
+    path: control
+    type: custom:vertical-layout
+    layout:
+      width: 300
+      max_cols: 10
     cards: !include ui-lovelace/control.yaml
-#######################################################################################
-  - path: media
-    title: Media
+  #######################################################################################
+  - title: Media
+    path: media
+    type: custom:vertical-layout
+    layout:
+      width: 300
+      max_cols: 10
     cards: !include ui-lovelace/media.yaml
-#######################################################################################
-  - path: security
-    title: Security
+  #######################################################################################
+  - title: Security
+    path: security
+    type: custom:vertical-layout
+    layout:
+      width: 300
+      max_cols: 10
     cards: !include ui-lovelace/security.yaml
-#######################################################################################
-  - path: conditions
-    title: Conditions
+  #######################################################################################
+  - title: Conditions
+    path: conditions
+    type: custom:vertical-layout
+    layout:
+      width: 300
+      max_cols: 10
     cards: !include ui-lovelace/conditions.yaml
-#######################################################################################
-  - path: electricity
-    title: Electricity
+  #######################################################################################
+  - title: Electricity
+    path: electricity
+    type: custom:vertical-layout
+    layout:
+      width: 300
+      max_cols: 10
     cards: !include ui-lovelace/electricity.yaml
-#######################################################################################
-  - path: water
-    title: Water
+  #######################################################################################
+  - title: Water
+    path: water
+    type: custom:vertical-layout
+    layout:
+      width: 300
+      max_cols: 10
     cards: !include ui-lovelace/water.yaml
-#######################################################################################
-  - path: diagnostics
-    title: Diagnostics
+  #######################################################################################
+  - title: Diagnostics
+    path: diagnostics
+    type: custom:vertical-layout
+    layout:
+      width: 300
+      max_cols: 10
     cards: !include ui-lovelace/diagnostics.yaml
-#######################################################################################
+  #######################################################################################

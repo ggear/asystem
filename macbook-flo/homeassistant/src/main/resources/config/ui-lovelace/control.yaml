@@ -12,6 +12,8 @@
       name: Wakeup
       icon: mdi:white-balance-sunny
 ################################################################################
+- type: custom:layout-break
+################################################################################
 - type: entities
   title: Fans
   entities:
@@ -36,6 +38,8 @@
     - entity: fan.deck_west
       name: Deck West
       icon: mdi:fan
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: entities
   title: Lights
@@ -80,6 +84,8 @@
     - entity: switch.deck_lights
       name: Deck Festoons
       icon: mdi:lightbulb-group
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: entities
   title: Default Adaptive Lighting

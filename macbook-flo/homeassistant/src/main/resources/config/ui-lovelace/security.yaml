@@ -9,6 +9,8 @@
   entity: camera.uvc_edwin_medium
   camera_view: live
 ################################################################################
+- type: custom:layout-break
+################################################################################
 - type: entities
   title: Fan Motion
   entities:

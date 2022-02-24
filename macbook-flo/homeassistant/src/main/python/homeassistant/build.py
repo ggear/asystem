@@ -86,6 +86,7 @@ if __name__ == "__main__":
     # Build customise YAML
     metadata_customise_df = metadata_df[
         (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["device_via_device"] != "Lovelace") &
         (metadata_df["index"] > 0) &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
@@ -532,8 +533,7 @@ automation:
                                 """.format(
                                     metadata_lovelace_dict["icon"],
                                 ).strip() + "\n")
-
-                        else:
+                        elif metadata_lovelace_dict["display_mode"] != "Break":
                             metadata_lovelace_file.write("""
 ################################################################################
 - type: {}
@@ -547,6 +547,13 @@ automation:
                                 metadata_lovelace_file.write("  " + """
   camera_view: live
                                 """.strip() + "\n")
+                        else:
+                            metadata_lovelace_file.write("""
+################################################################################
+- type: {}
+                            """.format(
+                                metadata_lovelace_first_display_type,
+                            ).strip() + "\n")
             metadata_lovelace_file.write("""
 ################################################################################
             """.strip() + "\n")

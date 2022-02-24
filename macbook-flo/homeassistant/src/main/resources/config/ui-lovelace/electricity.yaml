@@ -92,6 +92,8 @@
       name: Adhoc Outlet
       icon: mdi:home-lightning-bolt
 ################################################################################
+- type: custom:layout-break
+################################################################################
 - type: custom:mini-graph-card
   name: Daily Energy Consumption
   icon: mdi:battery-charging
@@ -182,4 +184,6 @@
     - entity: sensor.various_adhoc_outlet_today_s_consumption
       name: Adhoc Outlet
       icon: mdi:battery-charging
+################################################################################
+- type: custom:layout-break
 ################################################################################

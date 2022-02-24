@@ -639,10 +639,10 @@ media_player.edwin_home:
   friendly_name: 'Edwin Home'
 media_player.parents_home:
   friendly_name: 'Parents Home'
-media_player.parents_speaker:
-  friendly_name: 'Parents Speaker'
 media_player.parents_tv:
   friendly_name: 'Parents TV'
+media_player.parents_speaker:
+  friendly_name: 'Parents Speaker'
 media_player.kitchen_home:
   friendly_name: 'Kitchen Home'
 media_player.kitchen_speaker:

@@ -17,6 +17,8 @@
       name: Download
       icon: mdi:cloud-download
 ################################################################################
+- type: custom:layout-break
+################################################################################
 - type: entities
   title: Soft Resets
   show_header_toggle: false
@@ -75,6 +77,8 @@
       name: Internet Modem
       icon: mdi:router-wireless
 ################################################################################
+- type: custom:layout-break
+################################################################################
 - type: entities
   title: Netatmo Battery
   entities:
@@ -110,6 +114,8 @@
     - entity: sensor.weatherstation_console_battery_voltage
       name: Console Voltage
       icon: mdi:battery-30
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: entities
   title: Davis Telemetry
