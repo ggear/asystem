@@ -19,8 +19,8 @@ if __name__ == "__main__":
 
     # Build metadata publish JSON
     metadata_publish_df = metadata_df[
-        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)

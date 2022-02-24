@@ -48,8 +48,9 @@ if __name__ == "__main__":
 
     # Verify entity IDs
     metadata_verify_df = metadata_df[
-        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["device_via_device"] != "Lovelace") &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0)
         ]
@@ -85,9 +86,9 @@ if __name__ == "__main__":
 
     # Build customise YAML
     metadata_customise_df = metadata_df[
+        (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_via_device"] != "Lovelace") &
-        (metadata_df["index"] > 0) &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["friendly_name"].str.len() > 0) &
@@ -126,8 +127,8 @@ if __name__ == "__main__":
 
     # Build compensation YAML
     metadata_compensation_df = metadata_df[
-        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["compensation_curve"].str.len() > 0)
@@ -162,8 +163,8 @@ compensation:
 
     # Build lighting YAML
     metadata_lighting_df = metadata_df[
-        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_via_device"] == "Hue") &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
@@ -427,8 +428,8 @@ automation:
 
     # Build lovelace YAML
     metadata_lovelace_df = metadata_df[
-        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["friendly_name"].str.len() > 0) &

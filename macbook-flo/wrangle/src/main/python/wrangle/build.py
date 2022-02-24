@@ -14,8 +14,8 @@ if __name__ == "__main__":
     metadata_df = load_entity_metadata()
 
     metadata_wrangle_df = metadata_df[
-        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["unique_id_device"].str.len() > 0) &
         (metadata_df["device_via_device"] == "Wrangle")

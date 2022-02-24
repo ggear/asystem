@@ -368,16 +368,16 @@ switch.adaptive_lighting_adapt_color_night_light:
   friendly_name: 'Colour'
 switch.adaptive_lighting_adapt_brightness_night_light:
   friendly_name: 'Brightness'
-sensor.home_power:
-  friendly_name: 'Home Load'
-  icon: 'mdi:home-lightning-bolt'
-  unit_of_measurement: 'W'
 sensor.home_peak_power:
   friendly_name: 'Peak Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.home_base_power:
   friendly_name: 'Base Load'
+  icon: 'mdi:home-lightning-bolt'
+  unit_of_measurement: 'W'
+sensor.home_power:
+  friendly_name: 'Home Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.kitchen_dish_washer_current_consumption:
@@ -452,16 +452,16 @@ sensor.various_adhoc_outlet_current_consumption:
   friendly_name: 'Adhoc Outlet'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.home_energy_daily:
-  friendly_name: 'Home Load'
-  icon: 'mdi:battery-charging'
-  unit_of_measurement: 'kWh'
 sensor.home_peak_energy_daily:
-  friendly_name: 'Home Peak Load'
+  friendly_name: 'Peak Load'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.home_base_energy_daily:
-  friendly_name: 'Home Base Load'
+  friendly_name: 'Base Load'
+  icon: 'mdi:battery-charging'
+  unit_of_measurement: 'kWh'
+sensor.home_energy_daily:
+  friendly_name: 'Home Load'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.kitchen_dish_washer_today_s_consumption:
