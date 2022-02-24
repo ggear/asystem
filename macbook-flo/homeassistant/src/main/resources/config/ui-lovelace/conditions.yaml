@@ -70,59 +70,6 @@
 - type: custom:layout-break
 ################################################################################
 - type: custom:mini-graph-card
-  name: Carbon Dioxide
-  icon: mdi:molecule-co2
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-    - entity: sensor.compensation_sensor_netatmo_edwin_co2
-      name: Edwin
-    - entity: sensor.compensation_sensor_netatmo_parents_co2
-      name: Parents
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_co2
-      name: Office
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
-      name: Kitchen
-################################################################################
-- type: entities
-  entities:
-    - entity: sensor.compensation_sensor_netatmo_edwin_co2
-      name: Edwin
-      icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_netatmo_parents_co2
-      name: Parents
-      icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_co2
-      name: Office
-      icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
-      name: Kitchen
-      icon: mdi:molecule-co2
-################################################################################
-- type: entities
-  entities:
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2
-      name: Pantry
-      icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2
-      name: Lounge
-      icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2
-      name: Dining
-      icon: mdi:molecule-co2
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: custom:mini-graph-card
   name: Humidity
   icon: mdi:water-percent
   font_size_header: 19
@@ -187,6 +134,59 @@
     - entity: sensor.compensation_sensor_rack_humidity
       name: Rack
       icon: mdi:water-percent
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: custom:mini-graph-card
+  name: Carbon Dioxide
+  icon: mdi:molecule-co2
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - entity: sensor.compensation_sensor_netatmo_edwin_co2
+      name: Edwin
+    - entity: sensor.compensation_sensor_netatmo_parents_co2
+      name: Parents
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_co2
+      name: Office
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
+      name: Kitchen
+################################################################################
+- type: entities
+  entities:
+    - entity: sensor.compensation_sensor_netatmo_edwin_co2
+      name: Edwin
+      icon: mdi:molecule-co2
+    - entity: sensor.compensation_sensor_netatmo_parents_co2
+      name: Parents
+      icon: mdi:molecule-co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_co2
+      name: Office
+      icon: mdi:molecule-co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
+      name: Kitchen
+      icon: mdi:molecule-co2
+################################################################################
+- type: entities
+  entities:
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2
+      name: Pantry
+      icon: mdi:molecule-co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2
+      name: Lounge
+      icon: mdi:molecule-co2
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2
+      name: Dining
+      icon: mdi:molecule-co2
 ################################################################################
 - type: custom:layout-break
 ################################################################################

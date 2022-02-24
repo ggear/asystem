@@ -147,78 +147,6 @@ compensation:
       - [ 1, 1 ]
       - [ 2, 2 ]
   ####################################################################################
-  compensation_sensor_netatmo_ada_co2:
-    unique_id: compensation_sensor_netatmo_ada_co2
-    source: sensor.netatmo_ada_co2
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_edwin_co2:
-    unique_id: compensation_sensor_netatmo_edwin_co2
-    source: sensor.netatmo_edwin_co2
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_parents_co2:
-    unique_id: compensation_sensor_netatmo_parents_co2
-    source: sensor.netatmo_parents_co2
-    precision: 1
-    data_points: 
-      - [ 999, 566 ]
-      - [ 1407, 711 ]
-  ####################################################################################
-  compensation_sensor_netatmo_bertram_2_office_co2:
-    unique_id: compensation_sensor_netatmo_bertram_2_office_co2
-    source: sensor.netatmo_bertram_2_office_co2
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_bertram_2_kitchen_co2:
-    unique_id: compensation_sensor_netatmo_bertram_2_kitchen_co2
-    source: sensor.netatmo_bertram_2_kitchen_co2
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_bertram_2_office_pantry_co2:
-    unique_id: compensation_sensor_netatmo_bertram_2_office_pantry_co2
-    source: sensor.netatmo_bertram_2_office_pantry_co2
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_bertram_2_office_lounge_co2:
-    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_co2
-    source: sensor.netatmo_bertram_2_office_lounge_co2
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_bertram_2_office_dining_co2:
-    unique_id: compensation_sensor_netatmo_bertram_2_office_dining_co2
-    source: sensor.netatmo_bertram_2_office_dining_co2
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_laundry_co2:
-    unique_id: compensation_sensor_netatmo_laundry_co2
-    source: sensor.netatmo_laundry_co2
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
   compensation_sensor_roof_humidity:
     unique_id: compensation_sensor_roof_humidity
     source: sensor.roof_humidity
@@ -310,6 +238,78 @@ compensation:
   compensation_sensor_rack_humidity:
     unique_id: compensation_sensor_rack_humidity
     source: sensor.rack_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
+  compensation_sensor_netatmo_ada_co2:
+    unique_id: compensation_sensor_netatmo_ada_co2
+    source: sensor.netatmo_ada_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
+  compensation_sensor_netatmo_edwin_co2:
+    unique_id: compensation_sensor_netatmo_edwin_co2
+    source: sensor.netatmo_edwin_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
+  compensation_sensor_netatmo_parents_co2:
+    unique_id: compensation_sensor_netatmo_parents_co2
+    source: sensor.netatmo_parents_co2
+    precision: 1
+    data_points: 
+      - [ 999, 566 ]
+      - [ 1407, 711 ]
+  ####################################################################################
+  compensation_sensor_netatmo_bertram_2_office_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_co2
+    source: sensor.netatmo_bertram_2_office_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
+  compensation_sensor_netatmo_bertram_2_kitchen_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_kitchen_co2
+    source: sensor.netatmo_bertram_2_kitchen_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
+  compensation_sensor_netatmo_bertram_2_office_pantry_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_pantry_co2
+    source: sensor.netatmo_bertram_2_office_pantry_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
+  compensation_sensor_netatmo_bertram_2_office_lounge_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_co2
+    source: sensor.netatmo_bertram_2_office_lounge_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
+  compensation_sensor_netatmo_bertram_2_office_dining_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_dining_co2
+    source: sensor.netatmo_bertram_2_office_dining_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
+  compensation_sensor_netatmo_laundry_co2:
+    unique_id: compensation_sensor_netatmo_laundry_co2
+    source: sensor.netatmo_laundry_co2
     precision: 1
     data_points: 
       - [ 1, 1 ]

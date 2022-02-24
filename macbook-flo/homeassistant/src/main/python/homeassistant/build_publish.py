@@ -1,10 +1,13 @@
 from __future__ import print_function
 
+
 import json
 import os
 import shutil
 import subprocess
 import sys
+import pandas as pd
+pd.options.mode.chained_assignment = None
 
 DIR_MODULE_ROOT = os.path.abspath("{}/..".format(os.path.dirname(os.path.realpath(__file__))))
 DIR_ROOT = os.path.abspath("{}/../../../../".format(DIR_MODULE_ROOT))
@@ -12,6 +15,8 @@ sys.path.insert(0, DIR_MODULE_ROOT)
 
 from build import load_env
 from build import load_entity_metadata
+
+
 
 if __name__ == "__main__":
     env = load_env()
@@ -25,6 +30,9 @@ if __name__ == "__main__":
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
+    metadata_publish_df["name"] = metadata_publish_df["name"].str.replace("compensation_sensor_", "")
+    metadata_publish_df["unique_id"] = metadata_publish_df["unique_id"].str.replace("compensation_sensor_", "")
+    metadata_publish_df["state_topic"] = metadata_publish_df["state_topic"].str.replace("compensation_sensor_", "")
     metadata_publish_dicts = [row.dropna().to_dict() for index, row in metadata_publish_df[[
         "unique_id",
         "name",

@@ -5,9 +5,23 @@
   entity: camera.uvc_ada_medium
   camera_view: live
 ################################################################################
+- type: entities
+  title: Ada Motion
+  entities:
+    - entity: binary_sensor.uvc_ada_motion
+      name: Ada
+################################################################################
+- type: custom:layout-break
+################################################################################
 - type: picture-entity
   entity: camera.uvc_edwin_medium
   camera_view: live
+################################################################################
+- type: entities
+  title: Edwin Motion
+  entities:
+    - entity: binary_sensor.uvc_edwin_motion
+      name: Edwin
 ################################################################################
 - type: custom:layout-break
 ################################################################################
@@ -26,12 +40,4 @@
       name: Deck East
     - entity: binary_sensor.deck_west_occupancy
       name: Deck West
-################################################################################
-- type: entities
-  title: Camera Motion
-  entities:
-    - entity: binary_sensor.uvc_ada_motion
-      name: Ada
-    - entity: binary_sensor.uvc_edwin_motion
-      name: Edwin
 ################################################################################

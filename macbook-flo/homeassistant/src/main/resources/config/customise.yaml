@@ -63,33 +63,6 @@ sensor.compensation_sensor_roof_wind_chill_temperature:
   friendly_name: 'Wind Chill'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.compensation_sensor_netatmo_ada_co2:
-  friendly_name: 'Ada'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_edwin_co2:
-  friendly_name: 'Edwin'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_parents_co2:
-  friendly_name: 'Parents'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_office_co2:
-  friendly_name: 'Office'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2:
-  friendly_name: 'Kitchen'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2:
-  friendly_name: 'Pantry'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2:
-  friendly_name: 'Lounge'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2:
-  friendly_name: 'Dining'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_laundry_co2:
-  friendly_name: 'Laundry'
-  icon: 'mdi:molecule-co2'
 sensor.compensation_sensor_roof_humidity:
   friendly_name: 'Roof'
   icon: 'mdi:water-percent'
@@ -128,6 +101,33 @@ sensor.compensation_sensor_rack_humidity:
   friendly_name: 'Rack'
   icon: 'mdi:water-percent'
   unit_of_measurement: '%'
+sensor.compensation_sensor_netatmo_ada_co2:
+  friendly_name: 'Ada'
+  icon: 'mdi:molecule-co2'
+sensor.compensation_sensor_netatmo_edwin_co2:
+  friendly_name: 'Edwin'
+  icon: 'mdi:molecule-co2'
+sensor.compensation_sensor_netatmo_parents_co2:
+  friendly_name: 'Parents'
+  icon: 'mdi:molecule-co2'
+sensor.compensation_sensor_netatmo_bertram_2_office_co2:
+  friendly_name: 'Office'
+  icon: 'mdi:molecule-co2'
+sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2:
+  friendly_name: 'Kitchen'
+  icon: 'mdi:molecule-co2'
+sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2:
+  friendly_name: 'Pantry'
+  icon: 'mdi:molecule-co2'
+sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2:
+  friendly_name: 'Lounge'
+  icon: 'mdi:molecule-co2'
+sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2:
+  friendly_name: 'Dining'
+  icon: 'mdi:molecule-co2'
+sensor.compensation_sensor_netatmo_laundry_co2:
+  friendly_name: 'Laundry'
+  icon: 'mdi:molecule-co2'
 sensor.compensation_sensor_netatmo_ada_noise:
   friendly_name: 'Ada'
   icon: 'mdi:volume-high'
@@ -618,9 +618,6 @@ sensor.parents_speaker_battery:
 sensor.kitchen_home_battery:
   friendly_name: 'Kitchen'
   icon: 'mdi:battery-30'
-sensor.weatherstation_system_battery_status:
-  friendly_name: 'System Status'
-  icon: 'mdi:battery-30'
 sensor.weatherstation_console_battery_voltage:
   friendly_name: 'Console Voltage'
   icon: 'mdi:battery-30'
@@ -655,15 +652,15 @@ media_player.lounge_tv:
   friendly_name: 'Lounge TV'
 camera.uvc_ada_medium:
   friendly_name: 'Ada'
+binary_sensor.uvc_ada_motion:
+  friendly_name: 'Ada'
 camera.uvc_edwin_medium:
+  friendly_name: 'Edwin'
+binary_sensor.uvc_edwin_motion:
   friendly_name: 'Edwin'
 binary_sensor.ada_occupancy:
   friendly_name: 'Ada'
-binary_sensor.uvc_ada_motion:
-  friendly_name: 'Ada'
 binary_sensor.edwin_occupancy:
-  friendly_name: 'Edwin'
-binary_sensor.uvc_edwin_motion:
   friendly_name: 'Edwin'
 binary_sensor.parents_occupancy:
   friendly_name: 'Parents'
