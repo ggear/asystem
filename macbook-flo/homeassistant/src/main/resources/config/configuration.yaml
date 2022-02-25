@@ -158,7 +158,7 @@ lovelace:
 logger:
   default: info
   logs:
-    custom_components.powercalc: debug
+    custom_components.powercalc: info
     homeassistant.components.mqtt: info
     custom_components.adaptive_lighting: info
     custom_components.bureau_of_meteorology: info

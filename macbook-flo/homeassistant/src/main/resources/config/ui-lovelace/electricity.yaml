@@ -37,8 +37,20 @@
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.various_adhoc_outlet_current_consumption
+      name: Adhoc Outlet
+      icon: mdi:home-lightning-bolt
+    - entity: sensor.study_battery_charger_current_consumption
+      name: Battery Charger
+      icon: mdi:home-lightning-bolt
+    - entity: sensor.laundry_vacuum_charger_current_consumption
+      name: Vacuum Charger
+      icon: mdi:home-lightning-bolt
     - entity: sensor.home_lights_power
       name: Home Lights
+      icon: mdi:home-lightning-bolt
+    - entity: sensor.home_fans_power
+      name: Home Fans
       icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_dish_washer_current_consumption
       name: Dish Washer
@@ -51,9 +63,6 @@
       icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_coffee_machine_current_consumption
       name: Coffee Machine
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.kitchen_fan_current_consumption
-      name: Kitchen Fan
       icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_fridge_current_consumption
       name: Kitchen Fridge
@@ -76,23 +85,8 @@
     - entity: sensor.office_outlet_current_consumption
       name: Office Outlet
       icon: mdi:home-lightning-bolt
-    - entity: sensor.rack_outlet_current_consumption
-      name: Server Rack
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.roof_network_switch_current_consumption
-      name: Network Switch
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.rack_internet_modem_current_consumption
-      name: Internet Modem
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.study_battery_charger_current_consumption
-      name: Battery Charger
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.laundry_vacuum_charger_current_consumption
-      name: Vacuum Charger
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.various_adhoc_outlet_current_consumption
-      name: Adhoc Outlet
+    - entity: sensor.server_network_power
+      name: Server & Network Devices
       icon: mdi:home-lightning-bolt
 ################################################################################
 - type: custom:layout-break
@@ -133,8 +127,20 @@
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.various_adhoc_outlet_today_s_consumption
+      name: Adhoc Outlet
+      icon: mdi:battery-charging
+    - entity: sensor.study_battery_charger_today_s_consumption
+      name: Battery Charger
+      icon: mdi:battery-charging
+    - entity: sensor.laundry_vacuum_charger_today_s_consumption
+      name: Vacuum Charger
+      icon: mdi:battery-charging
     - entity: sensor.home_lights_energy_daily
       name: Home Lights
+      icon: mdi:battery-charging
+    - entity: sensor.home_fans_energy_daily
+      name: Home Fans
       icon: mdi:battery-charging
     - entity: sensor.kitchen_dish_washer_today_s_consumption
       name: Dish Washer
@@ -147,9 +153,6 @@
       icon: mdi:battery-charging
     - entity: sensor.kitchen_coffee_machine_today_s_consumption
       name: Coffee Machine
-      icon: mdi:battery-charging
-    - entity: sensor.kitchen_fan_today_s_consumption
-      name: Kitchen Fan
       icon: mdi:battery-charging
     - entity: sensor.kitchen_fridge_today_s_consumption
       name: Kitchen Fridge
@@ -172,23 +175,8 @@
     - entity: sensor.office_outlet_today_s_consumption
       name: Office Outlet
       icon: mdi:battery-charging
-    - entity: sensor.rack_outlet_today_s_consumption
-      name: Server Rack
-      icon: mdi:battery-charging
-    - entity: sensor.roof_network_switch_today_s_consumption
-      name: Network Switch
-      icon: mdi:battery-charging
-    - entity: sensor.rack_internet_modem_today_s_consumption
-      name: Internet Modem
-      icon: mdi:battery-charging
-    - entity: sensor.study_battery_charger_today_s_consumption
-      name: Battery Charger
-      icon: mdi:battery-charging
-    - entity: sensor.laundry_vacuum_charger_today_s_consumption
-      name: Vacuum Charger
-      icon: mdi:battery-charging
-    - entity: sensor.various_adhoc_outlet_today_s_consumption
-      name: Adhoc Outlet
+    - entity: sensor.server_network_energy_daily
+      name: Server & Network Devices
       icon: mdi:battery-charging
 ################################################################################
 - type: custom:layout-break
