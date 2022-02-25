@@ -11,12 +11,8 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-# Bootstrap with altitude 193m
-
-# Create users manually (no option to do so programmatically currently):
-#   - jane (password $HOMEASSISTANT_KEY_JANE)
-#   - graham (password $HOMEASSISTANT_KEY_GRAHAM)
-
+# Bootstrap with altitude '193m' and create user 'graham' with password '$HOMEASSISTANT_KEY_GRAHAM'
+# Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'
 # Install integrations manually (no option to do so programmatically currently):
 #   - Sonos
 #   - Netatmo
