@@ -1,10 +1,19 @@
-#######################################################################################
+######################################################################################
 powercalc:
-  create_utility_meters: true
-#######################################################################################
-
+  scan_interval: 00:05:00
+  create_utility_meters: false
+  utility_meter_types:
+    - daily
 ######################################################################################
 sensor:
+  ####################################################################################
+  - platform: powercalc
+    create_utility_meters: true
+    create_group: home_lights
+    include:
+      template: "{{ states | selectattr('entity_id', 'search', 'light.hue') | map(attribute='entity_id') | list }}"
+
+
   ####################################################################################
   - platform: template
     sensors:
@@ -92,6 +101,98 @@ sensor:
             states('sensor.home_base_energy_daily') | float(0)
           }}
       ################################################################################
+
+
+#  ####################################################################################
+#  - platform: powercalc
+#    create_group: home_peak
+#    entities:
+#      - entity_id: sensor.home_peak
+#        power_sensor_id: sensor.home_peak_power
+#  ####################################################################################
+#  - platform: powercalc
+#    create_group: home_base
+#    entities:
+#      - entity_id: sensor.home_base
+#        power_sensor_id: sensor.home_base_power
+#  ####################################################################################
+#  - platform: powercalc
+#    create_group: home
+#    entities:
+#      - entity_id: sensor.home
+#        power_sensor_id: sensor.home_power
+#  ####################################################################################
+
+
+#  ####################################################################################
+#  - platform: powercalc
+#    create_group: home_peak
+#    entities:
+#      #- entity_id: sensor.pool_filter_power
+#      #  power_sensor_id: sensor.pool_filter_power_current_consumption
+#      #- entity_id: sensor.roof_water_heater_booster_power
+#      #  power_sensor_id: sensor.roof_water_heater_booster_power_current_consumption
+#      - entity_id: sensor.kitchen_dish_washer_current_consumption
+#        power_sensor_id: sensor.kitchen_dish_washer_current_consumption_current_consumption
+#      - entity_id: sensor.laundry_clothes_dryer_current_consumption
+#        power_sensor_id: sensor.laundry_clothes_dryer_current_consumption_current_consumption
+#      - entity_id: sensor.laundry_washing_machine_current_consumption
+#        power_sensor_id: sensor.laundry_washing_machine_current_consumption_current_consumption
+#      - entity_id: sensor.bathroom_rails_current_consumption
+#        power_sensor_id: sensor.bathroom_rails_current_consumption_current_consumption
+#  ####################################################################################
+#  - platform: powercalc
+#    create_group: home_base
+#    entities:
+#      - entity_id: sensor.home_lights
+#        fixed:
+#          power: "{{ states('sensor.home_lights_power') }}"
+#      #- entity_id: sensor.home_fans
+#      #  fixed:
+#      #    power: "{{ states('sensor.home_fans_power') }}"
+#      - entity_id: sensor.sensor.kitchen_coffee_machine
+#        power_sensor_id: sensor.kitchen_coffee_machine_current_consumption
+#      - entity_id: sensor.sensor.kitchen_fridge
+#        power_sensor_id: sensor.kitchen_fridge_current_consumption
+#      - entity_id: sensor.sensor.deck_freezer
+#        power_sensor_id: sensor.deck_freezer_current_consumption
+#      - entity_id: sensor.sensor.deck_lights
+#        power_sensor_id: sensor.deck_lights_current_consumption
+#      - entity_id: sensor.sensor.lounge_tv
+#        power_sensor_id: sensor.lounge_tv_current_consumption
+#      - entity_id: sensor.sensor.study_outlet
+#        power_sensor_id: sensor.study_outlet_current_consumption
+#      - entity_id: sensor.sensor.office_outlet
+#        power_sensor_id: sensor.office_outlet_current_consumption
+#      - entity_id: sensor.sensor.rack_outlet
+#        power_sensor_id: sensor.rack_outlet_current_consumption
+#      - entity_id: sensor.sensor.roof_network_switch
+#        power_sensor_id: sensor.roof_network_switch_current_consumption
+#      - entity_id: sensor.sensor.study_battery_charger
+#        power_sensor_id: sensor.study_battery_charger_current_consumption
+#      - entity_id: sensor.sensor.laundry_vacuum_charger
+#        power_sensor_id: sensor.laundry_vacuum_charger_current_consumption
+#      - entity_id: sensor.sensor.various_adhoc_outlet
+#        power_sensor_id: sensor.various_adhoc_outlet_current_consumption
+#  ####################################################################################
+#  - platform: powercalc
+#    create_group: home
+#    entities:
+#      - entity_id: sensor.home_peak
+#        create_utility_meters: false
+#        fixed:
+#          power: "{{ states('sensor.home_peak') }}"
+#      - entity_id: sensor.home_base
+#        create_utility_meters: false
+#        fixed:
+#          power: "{{ states('sensor.home_peak') }}"
+#  ####################################################################################
+
+
+
+
+
+
 automation:
   ####################################################################################
   - alias: "Electricity: Smart Plug Polling"

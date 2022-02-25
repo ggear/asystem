@@ -33,6 +33,7 @@ if __name__ == "__main__":
     metadata_publish_df["name"] = metadata_publish_df["name"].str.replace("compensation_sensor_", "")
     metadata_publish_df["unique_id"] = metadata_publish_df["unique_id"].str.replace("compensation_sensor_", "")
     metadata_publish_df["state_topic"] = metadata_publish_df["state_topic"].str.replace("compensation_sensor_", "")
+    metadata_publish_df["discovery_topic"] = metadata_publish_df["discovery_topic"].str.replace("compensation_sensor_", "")
     metadata_publish_dicts = [row.dropna().to_dict() for index, row in metadata_publish_df[[
         "unique_id",
         "name",

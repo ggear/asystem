@@ -380,6 +380,10 @@ sensor.home_power:
   friendly_name: 'Home Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
+sensor.home_lights_power:
+  friendly_name: 'Home Lights'
+  icon: 'mdi:home-lightning-bolt'
+  unit_of_measurement: 'W'
 sensor.kitchen_dish_washer_current_consumption:
   friendly_name: 'Dish Washer'
   icon: 'mdi:home-lightning-bolt'
@@ -462,6 +466,10 @@ sensor.home_base_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.home_energy_daily:
   friendly_name: 'Home Load'
+  icon: 'mdi:battery-charging'
+  unit_of_measurement: 'kWh'
+sensor.home_lights_energy_daily:
+  friendly_name: 'Home Lights'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.kitchen_dish_washer_today_s_consumption:
