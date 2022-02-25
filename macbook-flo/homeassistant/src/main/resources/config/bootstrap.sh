@@ -11,6 +11,8 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
+# Bootstrap with altitude 193m
+
 # Create users manually (no option to do so programmatically currently):
 #   - jane (password $HOMEASSISTANT_KEY_JANE)
 #   - graham (password $HOMEASSISTANT_KEY_GRAHAM)
