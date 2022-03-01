@@ -16,11 +16,14 @@ if [ ! -f /mnt/data/on_boot.d/05-container-common.sh ]; then
   /mnt/data/on_boot.d/05-container-common.sh
 fi
 
-if [ ! -f /mnt/data/on_boot.d/05-unifios.sh ]; then
-  cp -rvf /var/lib/asystem/install/udm-rack/_unifios/*/run.sh /mnt/data/on_boot.d/05-unifios.sh
+if [ ! -f /mnt/data/on_boot.d/06-unifios.sh ]; then
+  cp -rvf /var/lib/asystem/install/*udm-rack*/_unifios/*/run.sh /mnt/data/on_boot.d/06-unifios.sh
 fi
 
-#[ -d "/var/lib/asystem/install" ] &&
-#  [ -d "$(ls -td /var/lib/asystem/install/udm-rack*/host/* | head -1)" ] &&
-#  [ -f "$(ls -td /var/lib/asystem/install/udm-rack*/host/* | head -1)/run.sh" ] &&
-#  cp -rvf "$(ls -td /var/lib/asystem/install/udm-rack*/host/* | head -1)/run.sh" /mnt/data/on_boot.d/keys.sh
+if [ ! -f /mnt/data/on_boot.d/07-users.sh ]; then
+  cp -rvf /var/lib/asystem/install/*udm-rack*/_users/*/run.sh /mnt/data/on_boot.d/07-users.sh
+fi
+
+if [ ! -f /mnt/data/on_boot.d/08-home.sh ]; then
+  cp -rvf /var/lib/asystem/install/*udm-rack*/_home/*/run.sh /mnt/data/on_boot.d/08-home.sh
+fi
