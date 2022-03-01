@@ -25,4 +25,4 @@ fi
 
 add_on_boot_script "10-unifios" "_unifios"
 add_on_boot_script "11-users" "_users"
-add_on_boot_script "12-home" "_home"
+add_on_boot_script "12-home" "_links"
