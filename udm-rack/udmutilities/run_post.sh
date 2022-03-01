@@ -1,5 +1,13 @@
 #!/bin/sh
 
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+
+cd ${SERVICE_INSTALL} || exit
+
+chmod +x ./config/udm-utilities/on-boot-script/remote_install.sh
+./config/udm-utilities/on-boot-script/remote_install.sh
+
 #curl -fsL "https://raw.githubusercontent.com/boostchicken/udm-utilities/HEAD/on-boot-script/remote_install.sh" | /bin/sh
 
 #[ -d "/var/lib/asystem/install" ] &&
