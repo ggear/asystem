@@ -26,15 +26,3 @@ fi
 add_on_boot_script "10-unifios" "_unifios"
 add_on_boot_script "11-users" "_users"
 add_on_boot_script "12-home" "_home"
-
-if [ ! -f /mnt/data/on_boot.d/06-unifios.sh ]; then
-  cp -rvf /var/lib/asystem/install/*udm-rack*/_unifios/*/run.sh /mnt/data/on_boot.d/06-unifios.sh
-fi
-
-if [ ! -f /mnt/data/on_boot.d/07-users.sh ]; then
-  cp -rvf /var/lib/asystem/install/*udm-rack*/_users/*/run.sh /mnt/data/on_boot.d/07-users.sh
-fi
-
-if [ ! -f /mnt/data/on_boot.d/08-home.sh ]; then
-  cp -rvf /var/lib/asystem/install/*udm-rack*/_home/*/run.sh /mnt/data/on_boot.d/08-home.sh
-fi
