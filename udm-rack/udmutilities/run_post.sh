@@ -1,7 +1,5 @@
 #!/bin/sh
 
-curl -fsL "https://raw.githubusercontent.com/boostchicken/udm-utilities/HEAD/on-boot-script/remote_install.sh" | /bin/sh
-
 #curl -fsL "https://raw.githubusercontent.com/boostchicken/udm-utilities/HEAD/on-boot-script/remote_install.sh" | /bin/sh
 
 #[ -d "/var/lib/asystem/install" ] &&
