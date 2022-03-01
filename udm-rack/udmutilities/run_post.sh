@@ -15,6 +15,7 @@ cd ${SERVICE_INSTALL} || exit
 chmod a+x ./config/udm-utilities/on-boot-script/remote_install.sh
 if [ ! -d /mnt/data/on_boot.d ]; then
   ./config/udm-utilities/on-boot-script/remote_install.sh
+  podman exec unifi-os systemctl enable udm-boot
 fi
 
 chmod a+x ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh
@@ -26,3 +27,5 @@ fi
 add_on_boot_script "10-unifios" "_unifios"
 add_on_boot_script "11-users" "_users"
 add_on_boot_script "12-links" "_links"
+
+podman exec unifi-os systemctl restart udm-boot
