@@ -23,9 +23,9 @@ if [ ! -f /mnt/data/on_boot.d/05-container-common.sh ]; then
   /mnt/data/on_boot.d/05-container-common.sh
 fi
 
-add_on_boot_script "06-unifios" "_unifios"
-add_on_boot_script "07-users" "_users"
-add_on_boot_script "08-home" "_home"
+add_on_boot_script "10-unifios" "_unifios"
+add_on_boot_script "11-users" "_users"
+add_on_boot_script "12-home" "_home"
 
 if [ ! -f /mnt/data/on_boot.d/06-unifios.sh ]; then
   cp -rvf /var/lib/asystem/install/*udm-rack*/_unifios/*/run.sh /mnt/data/on_boot.d/06-unifios.sh
