@@ -6,11 +6,15 @@ SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE
 cd ${SERVICE_INSTALL} || exit
 
 chmod a+x ./config/udm-utilities/on-boot-script/remote_install.sh
-./config/udm-utilities/on-boot-script/remote_install.sh
+if [ ! -d /mnt/data/on_boot.d ]; then
+  ./config/udm-utilities/on-boot-script/remote_install.sh
+fi
 
 chmod a+x ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh
-cp -rvf ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh /mnt/data/on_boot.d
-/mnt/data/on_boot.d/05-container-common.sh
+if [ ! -f /mnt/data/on_boot.d/05-container-common.sh ]; then
+  cp -rvf ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh /mnt/data/on_boot.d
+  /mnt/data/on_boot.d/05-container-common.sh
+fi
 
 #[ -d "/var/lib/asystem/install" ] &&
 #  [ -d "$(ls -td /var/lib/asystem/install/udm-rack*/host/* | head -1)" ] &&
