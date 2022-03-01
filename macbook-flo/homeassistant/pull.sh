@@ -41,10 +41,6 @@ rm -rf src/main/resources/config/custom_components/average
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../asystem-external/homeassistant/ha-average/custom_components/average src/main/resources/config/custom_components
 
-rm -rf src/main/resources/config/custom_components/senseme
-mkdir -p src/main/resources/config/custom_components &&
-  cp -rvf ../../../asystem-external/homeassistant/senseme-hacs/custom_components/senseme src/main/resources/config/custom_components
-
 rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../asystem-external/homeassistant/bureau_of_meteorology/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
@@ -55,7 +51,15 @@ mkdir -p src/main/resources/config/custom_components &&
 
 rm -rf src/main/resources/config/custom_components/withings
 mkdir -p src/main/resources/config/custom_components &&
-  cp -rvf ../../../asystem-external/homeassistant/withings/custom_components/withings src/main/resources/config/custom_components
+  cp -rvf ../../../asystem-external/homeassistant/core-withings/homeassistant/components/withings src/main/resources/config/custom_components
+
+rm -rf src/main/resources/config/custom_components/sonos
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../../asystem-external/homeassistant/core-sonos/homeassistant/components/sonos src/main/resources/config/custom_components
+
+rm -rf src/main/resources/config/custom_components/tplink
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../../asystem-external/homeassistant/core-tplink/homeassistant/components/tplink src/main/resources/config/custom_components
 
 rm -rf src/main/resources/config/custom_components/powercalc
 mkdir -p src/main/resources/config/custom_components &&
