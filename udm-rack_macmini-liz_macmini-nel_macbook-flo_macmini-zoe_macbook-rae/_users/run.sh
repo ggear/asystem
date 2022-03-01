@@ -1,9 +1,5 @@
 #!/bin/sh
 
-SERVICE_INSTALL=/var/lib/asystem/install/*/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
-
-cd ${SERVICE_INSTALL} || exit
-
 user_add() {
   if [ -d "${3}" ]; then
     if [ ${4} ]; then
