@@ -1,5 +1,7 @@
 #!/bin/sh
 
-/letsencrypt/live/janeandgraham.com/privkey.pem
+HOSTS_STRING=$(basename $(dirname $(pwd)))
+HOSTS_ARRAY=(${HOSTS_STRING//_/ })
+HOST=${HOSTS_ARRAY[0]}
 
-ssh root@macbook-flo docker exec -e WRANGLE_REPROCESS_ALL_FILES=true wrangle telegraf --debug --once
+ssh root@${HOST} 'echo "" >>/root/install/macmini-nel/letsencrypt/latest/letsencrypt/live/janeandgraham.com/privkey.pem'
