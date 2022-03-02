@@ -30,7 +30,7 @@ if [ ! -d "$SERVICE_HOME" ]; then
   fi
   rm -rvf $SERVICE_HOME_OLDEST
 fi
-rm -f ../latest || ln -s ${SERVICE_HOME} ../latest
+rm -f ../latest && ln -sfv ${SERVICE_HOME} ../latest
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
 chmod 600 .env

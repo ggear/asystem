@@ -325,7 +325,7 @@ def _release(context):
                                     "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | xargs rm -rf'"
                            .format(ssh_pass, host, install, install), hide='err', warn=True)
 
-                _run_local(context, "{}ssh -q root@{} 'rm ../latest || ln -s {} ../latest'"
+                _run_local(context, "{}ssh -q root@{} 'rm -f ../latest && ln -sfv {} ../latest'"
                            .format(ssh_pass, host, install), hide='err', warn=True)
 
 
