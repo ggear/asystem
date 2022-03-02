@@ -31,7 +31,7 @@ if [ ! -d "$SERVICE_HOME" ]; then
   rm -rvf $SERVICE_HOME_OLDEST
 fi
 
-rm -f ../latest && ln -sfv . ../latest
+rm -f ../latest && ln -sfv $(pwd) ../latest
 rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
 
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
