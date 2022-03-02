@@ -29,8 +29,8 @@ if [ ! -d "$SERVICE_HOME" ]; then
     chmod 777 "${SERVICE_HOME}"
   fi
   rm -rvf $SERVICE_HOME_OLDEST
-  rm ${SERVICE_HOME}/../latest || ln -s ${SERVICE_HOME} ${SERVICE_HOME}/../latest
 fi
+rm -f ${SERVICE_HOME}/../latest || ln -s ${SERVICE_HOME} $(realpath ${SERVICE_HOME}/../latest)
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
 chmod 600 .env
