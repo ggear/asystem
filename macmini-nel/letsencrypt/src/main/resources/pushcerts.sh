@@ -16,9 +16,9 @@ while :; do
       if [ -f ${SERVICE_INSTALL}/hosts ]; then
         cat ${SERVICE_INSTALL}/hosts | while read host; do
           NGINX_HOME=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
-            "find /home/asystem/nginx -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
+            "find /home/asystem/nginx -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1")
           NGINX_INSTALL=$(ssh -q -n -o "StrictHostKeyChecking=no" root@${host} \
-            "find /var/lib/asystem/install/\$(hostname)/nginx -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
+            "find /var/lib/asystem/install/\$(hostname)/nginx -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1")
           if [ -n "${NGINX_HOME}" ] && [ -n "${NGINX_INSTALL}" ]; then
             scp -qo "StrictHostKeyChecking=no" \
               ./certificates/privkey.pem root@${host}:"${NGINX_HOME}/.key.pem"

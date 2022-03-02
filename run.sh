@@ -6,8 +6,8 @@
 ###############################################################################
 
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
-SERVICE_HOME_OLD=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1)
-SERVICE_HOME_OLDEST=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 2>/dev/null | sort | head -n $(($(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 2>/dev/null | wc -l) - 1)))
+SERVICE_HOME_OLD=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1)
+SERVICE_HOME_OLDEST=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | head -n $(($(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 1)))
 SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_HOST_IP=$(ifconfig $(ifconfig | grep enp | cut -d':' -f1) | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*')
 SERVICE_HOST_NAME=$(hostname)
@@ -29,6 +29,7 @@ if [ ! -d "$SERVICE_HOME" ]; then
     chmod 777 "${SERVICE_HOME}"
   fi
   rm -rvf $SERVICE_HOME_OLDEST
+  rm ${SERVICE_HOME}/../latest || ln -s ${SERVICE_HOME} ${SERVICE_HOME}/../latest
 fi
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env

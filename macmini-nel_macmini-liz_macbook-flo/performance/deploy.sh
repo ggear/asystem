@@ -12,7 +12,7 @@ HOSTS=$(echo $(basename $(dirname $(pwd))) | tr "_" "\n")
 
 rm -rf ${DIR_ROOT} && mkdir -p ${DIR_ROOT}
 for HOST in ${HOSTS}; do
-  DIR_ROOT_HOST=$(ssh root@macbook-flo "find /home/asystem/performance -maxdepth 1 -mindepth 1 2>/dev/null | sort | tail -n 1")
+  DIR_ROOT_HOST=$(ssh root@macbook-flo "find /home/asystem/performance -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1")
   ssh -o StrictHostKeyChecking=no root@${HOST} ${DIR_ROOT_HOST}/benchmark.sh
   scp -r root@${HOST}:${DIR_ROOT_HOST}/results ${DIR_ROOT}/${HOST}
   for TEST in cpu memory fileio; do

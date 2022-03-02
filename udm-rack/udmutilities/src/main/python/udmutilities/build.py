@@ -22,7 +22,10 @@ if __name__ == "__main__":
         (metadata_df["connection_ip"].str.len() > 0)
         ]
     metadata_udmutilities_df = metadata_udmutilities_df.set_index(
-        metadata_udmutilities_df["connection_ip"].str.split(".").str[-1]).sort_index()
+        metadata_udmutilities_df["connection_ip"].str.split(".").str[-1].apply(lambda x: '{0:0>3}'.format(x))).sort_index()
+
+
+
     metadata_udmutilities_dicts = [row.dropna().to_dict() for index, row in metadata_udmutilities_df.iterrows()]
     dnsmasq_conf_path = os.path.join(DIR_MODULE_ROOT, "../../../src/main/resources/config/dhcp.janeandgraham.com.conf")
     with open(dnsmasq_conf_path, "w") as dnsmasq_conf_file:

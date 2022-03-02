@@ -49,6 +49,8 @@
 #   haiku-* 192.168.1.30-39
 #   tplplug-* 192.168.1.40-59
 
+#   pihole - 192.168.1.2
+#   start servers at 10
 #   sonoffpowr3-* (5x) - statically define?
 #   nestmini-* (6x) - statically define?
 #   chromecast-parents 192.168.1.8 - re-define?
