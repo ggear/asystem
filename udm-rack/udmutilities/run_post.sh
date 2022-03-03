@@ -29,3 +29,6 @@ add_on_boot_script "12-links" "_links"
 
 podman exec unifi-os systemctl enable udm-boot
 podman exec unifi-os systemctl restart udm-boot
+
+chmod a+x ./config/udm-host-records/*.sh
+cp -rvf ./config/udm-host-records /mnt/data

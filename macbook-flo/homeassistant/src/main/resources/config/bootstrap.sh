@@ -13,18 +13,26 @@ echo "--------------------------------------------------------------------------
 
 # Bootstrap with altitude '193m' and create user 'graham' with password '$HOMEASSISTANT_KEY_GRAHAM'
 # Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'
+
+
+
 # Install integrations manually (no option to do so programmatically currently):
-#   - Sonos
-#   - Netatmo
-#   - Withings
-#   - Google Cast
-#   - Unifi Protect
-#   - Brother Printer
-#   - Philips hue (allow groups)
-#   - Apple (Lounge TV, Lounge Speaker)
-#   - SenseME (have to add for each device)
-#   - TP-Link Smart Home (have to add for each device)
-#   - Bureau of Meteorology (gooseberry_hill for observations, darlington_forecast for weather forecast, 7 day forecast)
+
+
+#   - TP-Link Smart Home (local polling, no internet, yaml config)
+#   - Brother Printer (local polling, no internet)
+
+#   - SenseME (local push, no internet)
+#   - Philips Hue (local push, no internet)
+#   - Unifi Protect (local push, no internet)
+
+#   - Apple (local push, requires internet)
+#   - Sonos (local push, requires internet)
+#   - Google Cast (local polling, requires internet)
+
+#   - Netatmo (cloud polling, requires internet)
+#   - Withings (cloud polling, requires internet)
+#   - Bureau of Meteorology - gooseberry_hill for observations, darlington_forecast for weather forecast, 7 day forecast (cloud polling, requires internet)
 
 # Delete integrations manually:
 #   - Meteorologisk institutt (Met.no)
