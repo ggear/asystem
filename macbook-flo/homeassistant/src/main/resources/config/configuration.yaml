@@ -4,7 +4,7 @@ default_config:
 homeassistant:
   customize: !include customise.yaml
   packages: !include_dir_named custom_packages
-  internal_url: "http://192.168.1.2:8123"
+  internal_url: "http://192.168.3.10:8123"
   external_url: "https://home.janeandgraham.com"
 #######################################################################################
 http:
