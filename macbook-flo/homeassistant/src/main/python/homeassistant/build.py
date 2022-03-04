@@ -90,7 +90,6 @@ if __name__ == "__main__":
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_via_device"] != "Lovelace") &
         (metadata_df["entity_namespace"].str.len() > 0) &
-        (metadata_df["entity_namespace"] != "server") &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["friendly_name"].str.len() > 0) &
         (metadata_df["entity_domain"].str.len() > 0)
