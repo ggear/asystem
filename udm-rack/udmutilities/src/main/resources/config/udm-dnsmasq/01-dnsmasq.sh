@@ -18,7 +18,7 @@ for CONF_SOURCE_FILE in $(ls ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_
     if [ $(echo -n ${CONF_CURRENT} | wc -w) -gt 0 ]; then
       if [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_IP} | wc -w) -gt 0 ] || [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_HOST} | wc -w) -gt 1 ]; then
         echo "Detected change in new and current config, deleting lease for [$CONF_HOST]"
-        echo sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
+        sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
       fi
     fi
   done <${CONF_SOURCE_FILE}
