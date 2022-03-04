@@ -14,10 +14,8 @@ for CONF_SOURCE_FILE in $(ls ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_
     CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
     CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f4)
     echo "${CONF_CMD_NET},${CONF_MAC},${CONF_IP},${CONF_HOST}" >>"${CONF_CUSTOM_FILE}"
-
     #Disable killing current DHCP leases, just rely on rebooting clients to pick up new details, perhaps flush only if details have changed?
     #sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
-
   done <${CONF_SOURCE_FILE}
 done
 
