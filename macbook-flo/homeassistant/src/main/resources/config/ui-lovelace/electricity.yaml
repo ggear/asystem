@@ -70,8 +70,8 @@
     - entity: sensor.deck_freezer_current_consumption
       name: Deck Freezer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.deck_lights_current_consumption
-      name: Deck Lights
+    - entity: sensor.deck_festoons_current_consumption
+      name: Deck Festoons
       icon: mdi:home-lightning-bolt
     - entity: sensor.lounge_tv_current_consumption
       name: Lounge TV
@@ -85,11 +85,14 @@
     - entity: sensor.office_outlet_current_consumption
       name: Office Outlet
       icon: mdi:home-lightning-bolt
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.server_network_power
       name: Server & Network Devices
       icon: mdi:home-lightning-bolt
-################################################################################
-- type: custom:layout-break
 ################################################################################
 - type: custom:mini-graph-card
   name: Daily Energy Consumption
@@ -160,8 +163,8 @@
     - entity: sensor.deck_freezer_today_s_consumption
       name: Deck Freezer
       icon: mdi:battery-charging
-    - entity: sensor.deck_lights_today_s_consumption
-      name: Deck Lights
+    - entity: sensor.deck_festoons_today_s_consumption
+      name: Deck Festoons
       icon: mdi:battery-charging
     - entity: sensor.lounge_tv_today_s_consumption
       name: Lounge TV
@@ -175,9 +178,12 @@
     - entity: sensor.office_outlet_today_s_consumption
       name: Office Outlet
       icon: mdi:battery-charging
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.server_network_energy_daily
       name: Server & Network Devices
       icon: mdi:battery-charging
-################################################################################
-- type: custom:layout-break
 ################################################################################

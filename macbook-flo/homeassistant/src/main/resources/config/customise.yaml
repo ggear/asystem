@@ -424,8 +424,8 @@ sensor.deck_freezer_current_consumption:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.deck_lights_current_consumption:
-  friendly_name: 'Deck Lights'
+sensor.deck_festoons_current_consumption:
+  friendly_name: 'Deck Festoons'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.lounge_tv_current_consumption:
@@ -444,6 +444,14 @@ sensor.office_outlet_current_consumption:
   friendly_name: 'Office Outlet'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
+sensor.roof_switch_current_consumption:
+  friendly_name: 'Network Switch'
+sensor.rack_modem_current_consumption:
+  friendly_name: 'Internet Modem'
+sensor.rack_outlet_current_consumption:
+  friendly_name: 'Rack Outlet'
+sensor.kitchen_fan_current_consumption:
+  friendly_name: 'Kitchen Fan'
 sensor.server_network_power:
   friendly_name: 'Server & Network Devices'
   icon: 'mdi:home-lightning-bolt'
@@ -504,8 +512,8 @@ sensor.deck_freezer_today_s_consumption:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.deck_lights_today_s_consumption:
-  friendly_name: 'Deck Lights'
+sensor.deck_festoons_today_s_consumption:
+  friendly_name: 'Deck Festoons'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.lounge_tv_today_s_consumption:
@@ -524,6 +532,14 @@ sensor.office_outlet_today_s_consumption:
   friendly_name: 'Office Outlet'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
+sensor.roof_switchtoday_s_consumption:
+  friendly_name: 'Network Switch'
+sensor.rack_modemtoday_s_consumption:
+  friendly_name: 'Internet Modem'
+sensor.rack_outlettoday_s_consumption:
+  friendly_name: 'Rack Outlet'
+sensor.kitchen_fantoday_s_consumption:
+  friendly_name: 'Kitchen Fan'
 sensor.server_network_energy_daily:
   friendly_name: 'Server & Network Devices'
   icon: 'mdi:battery-charging'
@@ -622,22 +638,12 @@ sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Coms Signal Quality'
   icon: 'mdi:signal'
   unit_of_measurement: '%'
-media_player.ada_home:
-  friendly_name: 'Ada Home'
-media_player.edwin_home:
-  friendly_name: 'Edwin Home'
-media_player.parents_home:
-  friendly_name: 'Parents Home'
-media_player.parents_tv:
-  friendly_name: 'Parents TV'
 media_player.parents_speaker:
   friendly_name: 'Parents Speaker'
 media_player.kitchen_home:
   friendly_name: 'Kitchen Home'
 media_player.kitchen_speaker:
   friendly_name: 'Kitchen Speaker'
-media_player.lounge_home:
-  friendly_name: 'Lounge Home'
 media_player.lounge_speaker:
   friendly_name: 'Lounge Speaker'
 media_player.lounge_tv:
@@ -662,3 +668,13 @@ binary_sensor.deck_east_occupancy:
   friendly_name: 'Deck East'
 binary_sensor.deck_west_occupancy:
   friendly_name: 'Deck West'
+server.macbook-flo:
+  friendly_name: 'MacBook Flo'
+server.macmini-liz:
+  friendly_name: 'MacMini Liz'
+server.macmini-nel:
+  friendly_name: 'MacMini Nel'
+server.hue-bridge:
+  friendly_name: 'Hue Bridge'
+printer.brother-printer:
+  friendly_name: 'Brother Printer'
