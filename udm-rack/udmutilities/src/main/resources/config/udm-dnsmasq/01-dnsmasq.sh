@@ -23,7 +23,8 @@ for CONF_SOURCE_FILE in $(ls ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_
     fi
   done <${CONF_SOURCE_FILE}
 done
-echo "wrote '${CONF_CUSTOM_FILE}'"
+echo "wrote '${CONF_CUSTOM_FILE}':"
+cat ${CONF_CUSTOM_FILE}
 
 if [ $(dnsmasq --conf-dir=/run/dnsmasq.conf.d --test) ]; then
   rm -vf ${CONF_CUSTOM_FILES}
