@@ -38,7 +38,10 @@ if __name__ == "__main__":
             metadata_udmutilities_vlan_df["connection_ip"].str.split(".").str[3].apply(lambda x: '{0:0>3}'.format(x))
         ).sort_index()
         metadata_udmutilities_dicts = [row.dropna().to_dict() for index, row in metadata_udmutilities_vlan_df.iterrows()]
-        dnsmasq_conf_path = os.path.join(DIR_MODULE_ROOT, dnsmasq_conf_root_path, "{}-{}-custom.conf".format(DNSMASQ_CONF_PREFIX, vlan, ))
+        dnsmasq_conf_path = os.path.join(DIR_MODULE_ROOT, dnsmasq_conf_root_path, "{}-{}-custom.conf".format(
+            DNSMASQ_CONF_PREFIX,
+            vlan.replace("net", "vlan" + vlan.split("_")[2].replace("br", ""))
+        ))
         with open(dnsmasq_conf_path, "w") as dnsmasq_conf_file:
             for metadata_udmutilities_dict in metadata_udmutilities_dicts:
                 dnsmasq_conf_file.write("dhcp-host=set:{},{},{},{}\n".format(
