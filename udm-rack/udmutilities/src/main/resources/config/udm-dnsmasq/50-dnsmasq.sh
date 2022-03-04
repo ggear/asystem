@@ -11,10 +11,9 @@ for CONF_SOURCE_FILE in ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_SOURC
     CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2 | awk '{print tolower($0)}')
     CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
     CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f4)
-    echo "dhcp-host=set:${CONF_NET},${CONF_MAC},${CONF_IP},${CONF_HOST}"
-    #    echo "dhcp-CONF_HOST=set:${CONF_NET},${CONF_MAC},${CONF_IP},${CONF_HOST}" >>"${CONF_CUSTOM_FILE}"
-    echo sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
+    echo "dhcp-host=set:${CONF_NET},${CONF_MAC},${CONF_IP},${CONF_HOST}" >>"${CONF_CUSTOM_FILE}"
+    sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
   done <${CONF_SOURCE_FILE}
 done
 
-echo kill -9 $(cat /run/dnsmasq.pid)
+kill -9 $(cat /run/dnsmasq.pid)
