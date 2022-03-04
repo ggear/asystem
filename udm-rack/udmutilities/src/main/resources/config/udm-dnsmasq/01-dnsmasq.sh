@@ -27,4 +27,4 @@ done
 if [ $(dnsmasq --conf-dir=/run/dnsmasq.conf.d --test) ]; then
   rm -vf ${CONF_CUSTOM_FILES}
 fi
-kill -9 $(cat /run/dnsmasq.pid)
+kill -9 $(cat /run/dnsmasq.pid) 2>/dev/null
