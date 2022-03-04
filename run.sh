@@ -23,16 +23,16 @@ if [ -f "docker-compose.yml" ]; then
 fi
 if [ ! -d "$SERVICE_HOME" ]; then
   if [ -d "$SERVICE_HOME_OLD" ]; then
-    cp -rvfp "$SERVICE_HOME_OLD" "$SERVICE_HOME"
+    cp -rfp "$SERVICE_HOME_OLD" "$SERVICE_HOME"
   else
     mkdir -p "${SERVICE_HOME}"
     chmod 777 "${SERVICE_HOME}"
   fi
-  rm -rvf $SERVICE_HOME_OLDEST
+  rm -rf $SERVICE_HOME_OLDEST
 fi
 rm -f ../latest && ln -sfv $(pwd) ../latest
 rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
-[ "$(ls -A config | wc -l)" -gt 0 ] && cp -rvfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
+[ "$(ls -A config | wc -l)" -gt 0 ] && cp -rfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
 chmod 600 .env
 [ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
