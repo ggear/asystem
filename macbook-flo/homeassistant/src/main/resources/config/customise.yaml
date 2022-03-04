@@ -668,13 +668,5 @@ binary_sensor.deck_east_occupancy:
   friendly_name: 'Deck East'
 binary_sensor.deck_west_occupancy:
   friendly_name: 'Deck West'
-server.macbook-flo:
-  friendly_name: 'MacBook Flo'
-server.macmini-liz:
-  friendly_name: 'MacMini Liz'
-server.macmini-nel:
-  friendly_name: 'MacMini Nel'
-server.hue-bridge:
-  friendly_name: 'Hue Bridge'
 printer.brother-printer:
   friendly_name: 'Brother Printer'
