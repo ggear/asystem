@@ -16,8 +16,8 @@ for CONF_SOURCE_FILE in $(ls ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_
     echo "${CONF_CMD_NET},${CONF_MAC},${CONF_IP},${CONF_HOST}" >>"${CONF_CUSTOM_FILE}"
 
     CONF_CURRENT=$(grep ${CONF_MAC} ${CONF_CURRENT_FILE})
-    if [ $(echo -n ${CONF_CURRENT} | wc -w) ]; then
-      if [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_IP} | wc -w) ] || [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_HOST} | wc -w) ]; then
+    if [ $(echo -n ${CONF_CURRENT} | wc -w) -gt 0 ]; then
+      if [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_IP} | wc -w) -gt 0 ] || [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_HOST} | wc -w) -gt 1 ]; then
         echo sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
         echo $CONF_HOST
       fi
