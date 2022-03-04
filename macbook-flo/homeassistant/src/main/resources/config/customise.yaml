@@ -668,5 +668,3 @@ binary_sensor.deck_east_occupancy:
   friendly_name: 'Deck East'
 binary_sensor.deck_west_occupancy:
   friendly_name: 'Deck West'
-printer.brother-printer:
-  friendly_name: 'Brother Printer'
