@@ -4,9 +4,9 @@ CONF_SOURCE_DIR="/mnt/data/udm-dnsmasq/dhcp.dhcpServers"
 CONF_CURRENT_FILE="/mnt/data/udapi-config/dnsmasq.lease"
 CONF_CUSTOM_DIR="/run/dnsmasq.conf.d"
 CONF_CUSTOM_FILE="${CONF_CUSTOM_DIR}/dhcp.dhcpServers-custom.conf"
-CONF_CUSTOM_FILES="${CONF_CUSTOM_DIR}/dhcp.dhcpServers*custom.conf"
+CONF_CUSTOM_FILES="${CONF_CUSTOM_DIR}/dhcp.dhcpServers"*"custom.conf"
 
-rm -f "${CONF_CUSTOM_FILES}"
+rm -vf ${CONF_CUSTOM_FILES}
 for CONF_SOURCE_FILE in ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_SOURCE_DIR}-*Unfettered*-custom.conf ${CONF_SOURCE_DIR}-*Isolated*-custom.conf; do
   # Disable killing current DHCP leases, just rely on rebooting clients to pick up new details
   cp -rvf ${CONF_SOURCE_FILE} ${CONF_CUSTOM_DIR}
