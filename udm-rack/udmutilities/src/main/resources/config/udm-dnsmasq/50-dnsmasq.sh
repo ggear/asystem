@@ -2,7 +2,7 @@
 
 CONF_SOURCE_DIR="/mnt/data/udm-dnsmasq/dhcp.dhcpServers"
 CONF_CURRENT_FILE="/mnt/data/udapi-config/dnsmasq.lease"
-CONF_CUSTOM_FILE="/run/dnsmasq.conf.d/custom_reservations.conf"
+CONF_CUSTOM_FILE="/run/dnsmasq.conf.d/dhcp.dhcpServers-custom.conf"
 
 rm -f "${CONF_CUSTOM_FILE}"
 for CONF_SOURCE_FILE in ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_SOURCE_DIR}-*Unfettered*-custom.conf ${CONF_SOURCE_DIR}-*Isolated*-custom.conf; do
@@ -16,4 +16,5 @@ for CONF_SOURCE_FILE in ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_SOURC
   done <${CONF_SOURCE_FILE}
 done
 
-kill -9 $(cat /run/dnsmasq.pid)
+#kill -9 $(cat /run/dnsmasq.pid)
+killall -9 dnsmasq
