@@ -14,15 +14,13 @@ for CONF_SOURCE_FILE in $(ls ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_
     CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
     CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f4)
     echo "${CONF_CMD_NET},${CONF_MAC},${CONF_IP},${CONF_HOST}" >>"${CONF_CUSTOM_FILE}"
-
     CONF_CURRENT=$(grep ${CONF_MAC} ${CONF_CURRENT_FILE})
     if [ $(echo -n ${CONF_CURRENT} | wc -w) -gt 0 ]; then
       if [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_IP} | wc -w) -gt 0 ] || [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_HOST} | wc -w) -gt 1 ]; then
+        echo "Detected change in new and current config, deleting lease for [$CONF_HOST]"
         echo sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
-        echo $CONF_HOST
       fi
     fi
-
   done <${CONF_SOURCE_FILE}
 done
 
