@@ -28,4 +28,5 @@ echo "wrote '${CONF_CUSTOM_FILE}'"
 if [ $(dnsmasq --conf-dir=/run/dnsmasq.conf.d --test) ]; then
   rm -vf ${CONF_CUSTOM_FILES}
 fi
+echo "killing and restarting dnsmasq"
 kill -9 $(cat /run/dnsmasq.pid) 2>/dev/null
