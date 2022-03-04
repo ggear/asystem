@@ -16,5 +16,4 @@ for CONF_SOURCE_FILE in ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_SOURC
   done <${CONF_SOURCE_FILE}
 done
 
-#kill -9 $(cat /run/dnsmasq.pid)
-killall -9 dnsmasq
+kill -9 $(cat /run/dnsmasq.pid)
