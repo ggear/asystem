@@ -41,7 +41,8 @@ if __name__ == "__main__":
         dnsmasq_conf_path = os.path.join(DIR_MODULE_ROOT, dnsmasq_conf_root_path, "{}-{}-custom.conf".format(DNSMASQ_CONF_PREFIX, vlan, ))
         with open(dnsmasq_conf_path, "w") as dnsmasq_conf_file:
             for metadata_udmutilities_dict in metadata_udmutilities_dicts:
-                dnsmasq_conf_file.write("dhcp-host=set:net_LAN_br0_192-168-1-0-24,{},{},{}\n".format(
+                dnsmasq_conf_file.write("{},{},{},{}\n".format(
+                    metadata_udmutilities_dict["connection_vlan"],
                     metadata_udmutilities_dict["connection_mac"],
                     metadata_udmutilities_dict["connection_ip"],
                     metadata_udmutilities_dict["device_name"],
