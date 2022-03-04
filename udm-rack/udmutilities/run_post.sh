@@ -34,6 +34,6 @@ chmod a+x ./config/udm-host-records/*.sh
 rm -rf /mnt/data/udm-host-records && cp -rvf ./config/udm-host-records /mnt/data
 
 chmod a+x ./config/udm-dnsmasq/50-dnsmasq.sh
-rm -rf /mnt/data/udm-dnsmasq && cp -rvf ./config/dnsmasq /mnt/data
+rm -rf /mnt/data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /mnt/data
 cp -rvf ./config/udm-dnsmasq/50-dnsmasq.sh /mnt/data/on_boot.d
 /mnt/data/on_boot.d/50-dnsmasq.sh
