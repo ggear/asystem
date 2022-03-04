@@ -1,7 +1,7 @@
 #!/bin/sh
 
 CONF_SOURCE_DIR="/mnt/data/udm-dnsmasq/dhcp.dhcpServers"
-CONF_CURRENT_FILE"/mnt/data/udapi-config/dnsmasq.lease"
+CONF_CURRENT_FILE="/mnt/data/udapi-config/dnsmasq.lease"
 CONF_CUSTOM_FILE="/run/dnsmasq.conf.d/custom_reservations.conf"
 
 rm -f "${CONF_CUSTOM_FILE}"
