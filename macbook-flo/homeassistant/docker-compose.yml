@@ -6,6 +6,8 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - HOMEASSISTANT_DB
+    - HOMEASSISTANT_INTERNAL_URL
+    - HOMEASSISTANT_EXTERNAL_URL
     - VERNEMQ_HOST
     - VERNEMQ_PORT
     - INFLUXDB_HOST
