@@ -87,8 +87,8 @@
 # Traffic & Security -> Create New Rule -> Block TPLink, Block, Internet, 18 x tplplug-*
 
 # Advanced Features -> Advanced Gateway Settings -> Create New Port Forwarding Rule ->
-#    HTTP, Enabled, WAN, Any, 80, 192.168.1.3, 9080, TCP, Logging enable
-#    HTTPS, Enabled, WAN, Any, 443, 192.168.1.3, 9443, TCP, Logging enable
+#    HTTP, Enabled, WAN, Any, 80, 192.168.3.11, 9080, TCP, Logging enable
+#    HTTPS, Enabled, WAN, Any, 443, 192.168.3.11, 9443, TCP, Logging enable
 
 
 
