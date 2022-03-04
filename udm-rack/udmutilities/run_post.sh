@@ -33,4 +33,6 @@ podman exec unifi-os systemctl restart udm-boot
 chmod a+x ./config/udm-host-records/*.sh
 cp -rvf ./config/udm-host-records /mnt/data
 
-dhcp.vlan3.janeandgraham.com.conf
+chmod a+x ./config/udm-dnsmasq/50-dnsmasq.sh
+cp -rvf ./config/udm-dnsmasq/50-dnsmasq.sh /mnt/data/on_boot.d
+/mnt/data/on_boot.d/50-dnsmasq.sh
