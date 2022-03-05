@@ -32,32 +32,32 @@
 # Network -> Networks -> LAN -> Network Name -> Management
 # Network -> Networks -> LAN -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> LAN -> Advanced -> IGMP Snooping -> True
-# Network -> Networks -> LAN -> Advanced -> Gateway IP/Subnet -> 192.168.1.1/24
-# Network -> Networks -> LAN -> Advanced -> Auto Scale Network -> DHCP range -> 192.168.1.100 to 192.168.1.254
+# Network -> Networks -> LAN -> Advanced -> Gateway IP/Subnet -> 10.0.0.1/24
+# Network -> Networks -> LAN -> Advanced -> Auto Scale Network -> DHCP range -> 10.0.0.100 to 10.0.1.254
 
 # Network -> Networks -> Add New Network -> Network Name -> Unfettered
-# Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 3
+# Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 2
 # Network -> Networks -> Add New Network -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> Add New Network -> Advanced -> IGMP Snooping -> True
-# Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 192.168.3.1/24
-# Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 192.168.3.100 to 192.168.3.254
-# Network -> Networks -> Add New Network -> Advanced -> DHCP UniFi OS Console -> 192.168.1.1
+# Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 10.0.2.1/24
+# Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 10.0.2.100 to 10.0.2.254
+# Network -> Networks -> Add New Network -> Advanced -> DHCP UniFi OS Console -> 10.0.0.1
 
 # Network -> Networks -> Add New Network -> Network Name -> Controlled
-# Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 5
+# Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 4
 # Network -> Networks -> Add New Network -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> Add New Network -> Advanced -> IGMP Snooping -> True
-# Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 192.168.5.1/24
-# Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 192.168.5.100 to 192.168.5.254
-# Network -> Networks -> Add New Network -> Advanced -> DHCP UniFi OS Console -> 192.168.1.1
+# Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 10.0.4.1/24
+# Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 10.0.4.100 to 10.0.4.254
+# Network -> Networks -> Add New Network -> Advanced -> DHCP UniFi OS Console -> 10.0.0.1
 
 # Network -> Networks -> Add New Network -> Network Name -> Isolated
-# Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 7
+# Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 6
 # Network -> Networks -> Add New Network -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> Add New Network -> Advanced -> IGMP Snooping -> True
-# Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 192.168.7.1/24
-# Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 192.168.7.100 to 192.168.7.254
-# Network -> Networks -> Add New Network -> Advanced -> DHCP UniFi OS Console -> 192.168.1.1
+# Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 10.0.6.1/24
+# Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 10.0.6.100 to 10.0.6.254
+# Network -> Networks -> Add New Network -> Advanced -> DHCP UniFi OS Console -> 10.0.0.1
 
 # Network -> WiFi -> Add New WiFi Network -> Name/SSID -> MorkAndMindy
 # Network -> WiFi -> Add New WiFi Network -> WPA Personal -> ${UNIFI_WIRELESS_MORK_AND_MINDY}
@@ -87,8 +87,8 @@
 # Traffic & Security -> Create New Rule -> Block TPLink, Block, Internet, 18 x tplplug-*
 
 # Advanced Features -> Advanced Gateway Settings -> Create New Port Forwarding Rule ->
-#    HTTP, Enabled, WAN, Any, 80, 192.168.3.11, 9080, TCP, Logging enable
-#    HTTPS, Enabled, WAN, Any, 443, 192.168.3.11, 9443, TCP, Logging enable
+#    HTTP, Enabled, WAN, Any, 80, 10.0.3.11, 9080, TCP, Logging enable
+#    HTTPS, Enabled, WAN, Any, 443, 10.0.3.11, 9443, TCP, Logging enable
 
 
 
@@ -99,24 +99,24 @@
 
 # TODO: Replace with dnsmasq configs
 # Network -> Clients ->
-#   udm-rack 192.168.1.1
-#   macbook-flo 192.168.1.2
-#   macmini-liz 192.168.1.3
-#   macmini-nel 192.168.1.4
-#   phillips-hue 192.168.1.11
-#   brother-printer 192.168.1.12
-#   uvc-ada 192.168.1.15
-#   uvc-edwin 192.168.1.16
-#   haiku-* 192.168.1.30-39
-#   tplplug-* 192.168.1.40-59
+#   udm-rack 10.0.0.1
+#   macbook-flo 10.0.1.2
+#   macmini-liz 10.0.1.3
+#   macmini-nel 10.0.1.4
+#   phillips-hue 10.0.0.11
+#   brother-printer 10.0.0.12
+#   uvc-ada 10.0.0.15
+#   uvc-edwin 10.0.0.16
+#   haiku-* 10.0.1.30-39
+#   tplplug-* 10.0.1.40-59
 
-#   pihole - 192.168.1.2
+#   pihole - 10.0.1.2
 #   start servers at 10
 #   sonoffpowr3-* (5x) - statically define?
 #   nestmini-* (6x) - statically define?
-#   chromecast-parents 192.168.1.8 - re-define?
-#   homepod-lounge 192.168.1.9 - re-define?
-#   appletv-lounge 192.168.1.10 - re-define?
+#   chromecast-parents 10.0.1.8 - re-define?
+#   homepod-lounge 10.0.1.9 - re-define?
+#   appletv-lounge 10.0.0.10 - re-define?
 #   sonos* (5x) - statically define?
 #   netatmo* (10x) - statically define?
 

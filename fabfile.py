@@ -179,7 +179,10 @@ def _clean(context, filter_module=None):
         _print_footer("asystem", "clean transients")
     for module in _get_modules(context, filter_module=filter_module, filter_changes=False):
         _print_header(module, "clean target")
-        _run_local(context, "rm -rf {}/{}/.env".format(DIR_ROOT, module))
+
+        # TODO: Disable deleting .env, leave last build in place for running build.py scripts
+        # _run_local(context, "rm -rf {}/{}/.env".format(DIR_ROOT, module))
+
         _run_local(context, "rm -rf {}/{}/target".format(DIR_ROOT, module))
         _print_footer(module, "clean target")
     _run_local(context, "find . -name .DS_Store -exec rm -r {} \;")

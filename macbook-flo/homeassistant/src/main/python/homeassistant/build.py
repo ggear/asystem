@@ -63,7 +63,13 @@ if __name__ == "__main__":
                     env["HOMEASSISTANT_PORT"],
                     metadata_verify_dict["entity_namespace"],
                     metadata_verify_dict["unique_id"]
-                ), headers={"Authorization": "Bearer {}".format(env["HOMEASSISTANT_API_TOKEN"]), "content-type": "application/json", })
+                ), headers={
+                    "Authorization": "Bearer {}".format(env["HOMEASSISTANT_API_TOKEN"]),
+                    "content-type": "application/json",
+                })
+            if state_response.status_code == 401:
+                print("Build script [homeassistant] could not connect to HAAS")
+                break
             if state_response.status_code == 200:
                 hours_since_update = (time.time() - (time.mktime(datetime.datetime.strptime(
                     state_response.json()["last_updated"].split('+')[0], '%Y-%m-%dT%H:%M:%S.%f').timetuple()) + 8 * 60 * 60)) / (60 * 60)
@@ -81,8 +87,7 @@ if __name__ == "__main__":
                 print("Build script [homeassistant] entity metadata [{}.{}] not found"
                       .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
         except:
-            print("Build script [homeassistant] could not connect to HAAS"
-                  .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
+            print("Build script [homeassistant] could not connect to HAAS")
 
     # Build customise YAML
     metadata_customise_df = metadata_df[
