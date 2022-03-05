@@ -29,7 +29,7 @@ for CONF_SOURCE_FILE in $(ls ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_
     fi
   done <${CONF_SOURCE_FILE}
 done
-echo "wrote '${CONF_BUILD_FILE}':" && cat ${CONF_BUILD_FILE} && echo ""
+echo "wrote '${CONF_BUILD_FILE}':" && cat ${CONF_BUILD_FILE} && echo "---"
 
 if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] || ! diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE}; then
   if dnsmasq --conf-dir=${CONF_BUILD_DIR} --test; then
