@@ -34,9 +34,9 @@ cat ${CONF_BUILD_FILE}
 
 if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] || ! diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE}; then
   if dnsmasq --conf-dir=${CONF_BUILD_DIR} --test; then
-    echo cp -rvf ${CONF_BUILD_FILE} ${CONF_CUSTOM_FILE}
+    cp -rvf ${CONF_BUILD_FILE} ${CONF_CUSTOM_FILE}
     echo "applied new dnsmasq config"
-    echo kill -9 $(cat /run/dnsmasq.pid) 2>/dev/null
+    kill -9 $(cat /run/dnsmasq.pid) 2>/dev/null
     echo "killed and restarted dnsmasq"
   else
     echo "new dnsmasq config failed to parse, leaving old config in place"
