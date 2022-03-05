@@ -41,4 +41,6 @@ if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] || ! dif
   else
     echo "new dnsmasq config failed to parse, leaving old config in place"
   fi
+else
+  echo "no new dnsmasq config detected, leaving old config in place"
 fi
