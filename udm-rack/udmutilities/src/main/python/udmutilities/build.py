@@ -26,11 +26,9 @@ if __name__ == "__main__":
         (metadata_df["connection_mac"].str.len() > 0) &
         (metadata_df["connection_ip"].str.len() > 0)
         ]
-
     dnsmasq_conf_root_path = os.path.join(DIR_MODULE_ROOT, "../../../src/main/resources/config/udm-dnsmasq")
     for dnsmasq_conf_path in glob.glob(os.path.join(dnsmasq_conf_root_path, "{}*".format(DNSMASQ_CONF_PREFIX))):
         os.remove(dnsmasq_conf_path)
-
     for vlan in metadata_udmutilities_df["connection_vlan"].unique():
         metadata_udmutilities_vlan_df = metadata_udmutilities_df[(metadata_udmutilities_df["connection_vlan"] == vlan)]
         metadata_udmutilities_vlan_df = metadata_udmutilities_vlan_df.set_index(
