@@ -31,6 +31,7 @@ def load_env(root_dir=None):
             env_key, env_value = env_line.split("=", 1)
             env[env_key] = env_value
     print("Build script [homeassistant] environment loaded from [{}]".format(env_path))
+    sys.stdout.flush()
     return env
 
 
@@ -39,6 +40,7 @@ def load_entity_metadata():
     metadata_df = pd.read_excel(metadata_path, header=2, dtype=unicode)
     metadata_df = metadata_df.set_index(metadata_df["index"]).sort_index()
     print("Build script [homeassistant] entity metadata loaded from [{}]".format(metadata_path))
+    sys.stdout.flush()
     return metadata_df
 
 

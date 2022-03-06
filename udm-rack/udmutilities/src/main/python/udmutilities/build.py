@@ -1,9 +1,14 @@
+from __future__ import print_function
+
 import glob
 import os
 import sys
 
 import pandas as pd
+import requests
+import urllib3
 
+urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
 DIR_MODULE_ROOT = os.path.abspath("{}/..".format(os.path.dirname(os.path.realpath(__file__))))
@@ -12,11 +17,14 @@ for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../..".format(os.pa
         sys.path.insert(0, "{}/src/main/python".format(dir_module))
 sys.path.insert(0, DIR_MODULE_ROOT)
 
+from homeassistant.build import load_env
 from homeassistant.build import load_entity_metadata
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
+UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
 
 if __name__ == "__main__":
+    env = load_env(DIR_MODULE_ROOT)
     metadata_df = load_entity_metadata()
 
     metadata_udmutilities_df = metadata_df[
@@ -29,6 +37,16 @@ if __name__ == "__main__":
     dnsmasq_conf_root_path = os.path.join(DIR_MODULE_ROOT, "../../../src/main/resources/config/udm-dnsmasq")
     for dnsmasq_conf_path in glob.glob(os.path.join(dnsmasq_conf_root_path, "{}*".format(DNSMASQ_CONF_PREFIX))):
         os.remove(dnsmasq_conf_path)
+    unifi_clients = {}
+    unifi_session = requests.Session()
+    unifi_session.post('{}/api/auth/login'.format(UNIFI_CONTROLLER_URL), json={
+        'username': env["UNIFI_ADMIN_USER"],
+        'password': env["UNIFI_ADMIN_KEY"]
+    }, verify=False).raise_for_status()
+    unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
+    unifi_clients_response.raise_for_status()
+    for unifi_client in unifi_clients_response.json()['data']:
+        unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else ""
     for vlan in metadata_udmutilities_df["connection_vlan"].unique():
         metadata_udmutilities_vlan_df = metadata_udmutilities_df[(metadata_udmutilities_df["connection_vlan"] == vlan)]
         metadata_udmutilities_vlan_df = metadata_udmutilities_vlan_df.set_index(
@@ -47,8 +65,20 @@ if __name__ == "__main__":
                     metadata_udmutilities_dict["connection_ip"],
                     metadata_udmutilities_dict["device_name"],
                 ))
-                print("Build script [udmutilities] host [{}] with IP [{}] defined".format(
-                    metadata_udmutilities_dict["device_name"],
-                    metadata_udmutilities_dict["connection_ip"],
-                ))
+                if "entity_namespace" not in metadata_udmutilities_dict or metadata_udmutilities_dict["device_via_device"] != "UniFi":
+                    if metadata_udmutilities_dict["connection_mac"] in unifi_clients:
+                        if unifi_clients[metadata_udmutilities_dict["connection_mac"]] != metadata_udmutilities_dict["device_name"]:
+                            print("Build script [udmutilities] dnsmasq config host [{}] doesn't match unifi controller alias [{}]".format(
+                                metadata_udmutilities_dict["device_name"],
+                                unifi_clients[metadata_udmutilities_dict["connection_mac"]],
+                            ), file=sys.stderr)
+                        else:
+                            print("Build script [udmutilities] dnsmasq config host [{}] matches unifi controller alias [{}]".format(
+                                metadata_udmutilities_dict["device_name"],
+                                unifi_clients[metadata_udmutilities_dict["connection_mac"]],
+                            ))
+                    else:
+                        print("Build script [udmutilities] dnsmasq config host [{}] not found in unifi controller".format(
+                            metadata_udmutilities_dict["device_name"],
+                        ), file=sys.stderr)
         print("Build script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
