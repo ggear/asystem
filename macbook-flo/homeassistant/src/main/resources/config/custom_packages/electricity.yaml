@@ -1,25 +1,54 @@
-tplink:
-  discovery: false
-  switch:
-    - host: 192.168.1.40
-    - host: 192.168.1.41
-    - host: 192.168.1.42
-    - host: 192.168.1.43
-    - host: 192.168.1.44
-    - host: 192.168.1.45
-    - host: 192.168.1.46
-    - host: 192.168.1.47
-    - host: 192.168.1.48
-    - host: 192.168.1.49
-    - host: 192.168.1.50
-    - host: 192.168.1.51
-    - host: 192.168.1.52
-    - host: 192.168.1.53
-    - host: 192.168.1.54
-    - host: 192.168.1.55
-    - host: 192.168.1.56
-    - host: 192.168.1.57
-    - host: 192.168.1.58
+#tplink:
+#  discovery: false
+#  switch:
+#    - host: 192.168.1.40
+#    - host: 192.168.1.41
+#    - host: 192.168.1.42
+#    - host: 192.168.1.43
+#    - host: 192.168.1.44
+#    - host: 192.168.1.45
+#    - host: 192.168.1.46
+#    - host: 192.168.1.47
+#    - host: 192.168.1.48
+#    - host: 192.168.1.49
+#    - host: 192.168.1.50
+#    - host: 192.168.1.51
+#    - host: 192.168.1.52
+#    - host: 192.168.1.53
+#    - host: 192.168.1.54
+#    - host: 192.168.1.55
+#    - host: 192.168.1.56
+#    - host: 192.168.1.57
+#    - host: 192.168.1.58
+
+#automation:
+#  - alias: "Electricity: Smart Plug Polling"
+#    mode: single
+#    trigger:
+#      - platform: time_pattern
+#        seconds: /5
+#    condition: [ ]
+#    action:
+#      - service: homeassistant.update_entity
+#        data:
+#          entity_id:
+#            - switch.various_adhoc_outlet
+#            - switch.study_outlet
+#            - switch.office_outlet
+#            - switch.kitchen_dish_washer
+#            - switch.laundry_clothes_dryer
+#            - switch.laundry_washing_machine
+#            - switch.kitchen_coffee_machine
+#            - switch.kitchen_fridge
+#            - switch.deck_freezer
+#            - switch.bathroom_rails
+#            - switch.study_battery_charger
+#            - switch.laundry_vacuum_charger
+#            - switch.lounge_tv
+#            - switch.rack_outlet
+#            - switch.roof_network_switch
+#            - switch.rack_internet_modem
+
 
 ######################################################################################
 powercalc:
@@ -223,32 +252,3 @@ sensor:
               states('sensor.home_base_energy_daily') | float(0)
           ) | round(3) }}
       ################################################################################
-automation:
-  ####################################################################################
-  - alias: "Electricity: Smart Plug Polling"
-    mode: single
-    trigger:
-      - platform: time_pattern
-        seconds: /5
-    condition: [ ]
-    action:
-      - service: homeassistant.update_entity
-        data:
-          entity_id:
-            - switch.various_adhoc_outlet
-            - switch.study_outlet
-            - switch.office_outlet
-            - switch.kitchen_dish_washer
-            - switch.laundry_clothes_dryer
-            - switch.laundry_washing_machine
-            - switch.kitchen_coffee_machine
-            - switch.kitchen_fridge
-            - switch.deck_freezer
-            - switch.bathroom_rails
-            - switch.study_battery_charger
-            - switch.laundry_vacuum_charger
-            - switch.lounge_tv
-            - switch.rack_outlet
-            - switch.roof_network_switch
-            - switch.rack_internet_modem
-  ####################################################################################
