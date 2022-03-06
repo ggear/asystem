@@ -258,8 +258,12 @@ light.edwin_light:
   icon: 'mdi:lightbulb-group'
 light.edwin_lamp:
   friendly_name: 'Edwin Lamp'
-light.hue_ambiance_lamp_10:
+light.hue_ambiance_lamp_13:
   friendly_name: 'Edwin Lamp'
+light.edwin_night_light:
+  friendly_name: 'Edwin Night Light'
+light.hue_ambiance_lamp_10:
+  friendly_name: 'Edwin Night Light'
 light.hallway_main:
   friendly_name: 'Hallway Main'
 light.hue_color_candle_2:
@@ -295,10 +299,6 @@ light.hue_color_candle_14:
 light.lounge_light:
   friendly_name: 'Lounge Fan'
   icon: 'mdi:lightbulb-group'
-light.lounge_lamp:
-  friendly_name: 'Lounge Lamp'
-light.hue_ambiance_lamp_13:
-  friendly_name: 'Lounge Lamp'
 light.parents_main:
   friendly_name: 'Parents Main'
 light.hue_color_candle_15:

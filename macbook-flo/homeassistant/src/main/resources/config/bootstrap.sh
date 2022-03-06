@@ -13,17 +13,21 @@ echo "--------------------------------------------------------------------------
 
 # Bootstrap with altitude '193m' and create user 'graham' with password '$HOMEASSISTANT_KEY_GRAHAM'
 # Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'
+# Install integrations manually (no option to do so programmatically):
+#   - Philips Hue (local push, requires internet)
+
+# Delete integrations manually:
+#   - Meteorologisk institutt (Met.no)
 
 
 
-# Install integrations manually (no option to do so programmatically currently):
+
 
 
 #   - TP-Link Smart Home (local polling, no internet, yaml config)
 #   - Brother Printer (local polling, no internet)
 
 #   - SenseME (local push, no internet)
-#   - Philips Hue (local push, no internet)
 #   - Unifi Protect (local push, no internet)
 
 #   - Apple (local push, requires internet)
@@ -34,8 +38,6 @@ echo "--------------------------------------------------------------------------
 #   - Withings (cloud polling, requires internet)
 #   - Bureau of Meteorology - gooseberry_hill for observations, darlington_forecast for weather forecast, 7 day forecast (cloud polling, requires internet)
 
-# Delete integrations manually:
-#   - Meteorologisk institutt (Met.no)
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"

@@ -54,6 +54,8 @@
       icon: mdi:lightbulb-group
     - entity: light.edwin_lamp
       name: Edwin Lamp
+    - entity: light.edwin_night_light
+      name: Edwin Night Light
     - entity: light.hallway_main
       name: Hallway Main
     - entity: light.dining_main
@@ -63,8 +65,6 @@
     - entity: light.lounge_light
       name: Lounge Fan
       icon: mdi:lightbulb-group
-    - entity: light.lounge_lamp
-      name: Lounge Lamp
     - entity: light.parents_main
       name: Parents Main
     - entity: light.kitchen_main

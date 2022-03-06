@@ -25,22 +25,22 @@ light:
       - light.hue_color_candle_5
   #####################################################################################
   - platform: group
-    name: Lounge Lamp
-    unique_id: lounge_lamp
+    name: Edwin Night Light
+    unique_id: edwin_night_light
     entities:
-      - light.hue_ambiance_lamp_13
-  #####################################################################################
-  - platform: group
-    name: Pantry Main
-    unique_id: pantry_main
-    entities:
-      - light.hue_ambiance_lamp_5
+      - light.hue_ambiance_lamp_10
   #####################################################################################
   - platform: group
     name: Wardrobe Main
     unique_id: wardrobe_main
     entities:
       - light.hue_ambiance_lamp_9
+  #####################################################################################
+  - platform: group
+    name: Pantry Main
+    unique_id: pantry_main
+    entities:
+      - light.hue_ambiance_lamp_5
   #####################################################################################
   - platform: group
     name: Dining Main
@@ -92,7 +92,7 @@ light:
     name: Edwin Lamp
     unique_id: edwin_lamp
     entities:
-      - light.hue_ambiance_lamp_10
+      - light.hue_ambiance_lamp_13
   #####################################################################################
   - platform: group
     name: Lounge Main
@@ -112,8 +112,8 @@ adaptive_lighting:
     take_over_control: true
     detect_non_ha_changes: true
     lights:
+      - light.edwin_lamp
       - light.dining_main
-      - light.lounge_lamp
       - light.kitchen_main
       - light.laundry_main
       - light.pantry_main
@@ -127,7 +127,7 @@ adaptive_lighting:
     detect_non_ha_changes: true
     lights:
       - light.ada_lamp
-      - light.edwin_lamp
+      - light.edwin_night_light
   ####################################################################################
   - name: bedroom
     interval: 30
@@ -365,40 +365,66 @@ automation:
           lights: light.hallway_main
           manual_control: false
   ####################################################################################
-  - id: lighting_reset_adaptive_lighting_lounge_lamp
-    alias: "Lighting: Reset Adaptive Lighting - Lounge Lamp"
+  - id: lighting_reset_adaptive_lighting_edwin_night_light
+    alias: "Lighting: Reset Adaptive Lighting - Edwin Night Light"
     trigger:
       - platform: state
-        entity_id: light.lounge_lamp
+        entity_id: light.edwin_night_light
         from: 'unavailable'
     action:
-      - service: light.turn_on
-        target:
-          entity_id: light.lounge_lamp
-        data:
-          brightness_pct: 100
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.lounge_lamp
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.edwin_night_light
           manual_control: false
       - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.lounge_lamp
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.edwin_night_light
           manual_control: false
       - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.lounge_lamp
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.edwin_night_light
           manual_control: false
       - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.lounge_lamp
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.edwin_night_light
+          manual_control: false
+  ####################################################################################
+  - id: lighting_reset_adaptive_lighting_wardrobe_main
+    alias: "Lighting: Reset Adaptive Lighting - Wardrobe Main"
+    trigger:
+      - platform: state
+        entity_id: light.wardrobe_main
+        from: 'unavailable'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
           manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_pantry_main
@@ -435,37 +461,6 @@ automation:
         data:
           entity_id: switch.adaptive_lighting_default
           lights: light.pantry_main
-          manual_control: false
-  ####################################################################################
-  - id: lighting_reset_adaptive_lighting_wardrobe_main
-    alias: "Lighting: Reset Adaptive Lighting - Wardrobe Main"
-    trigger:
-      - platform: state
-        entity_id: light.wardrobe_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.wardrobe_main
-          manual_control: false
-      - delay: '00:00:02'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.wardrobe_main
-          manual_control: false
-      - delay: '00:00:02'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.wardrobe_main
-          manual_control: false
-      - delay: '00:00:02'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.wardrobe_main
           manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_dining_main
@@ -640,27 +635,32 @@ automation:
         entity_id: light.edwin_lamp
         from: 'unavailable'
     action:
+      - service: light.turn_on
+        target:
+          entity_id: light.edwin_lamp
+        data:
+          brightness_pct: 100
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_default
           lights: light.edwin_lamp
           manual_control: false
       - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_default
           lights: light.edwin_lamp
           manual_control: false
       - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_default
           lights: light.edwin_lamp
           manual_control: false
       - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_default
           lights: light.edwin_lamp
           manual_control: false
   ####################################################################################
