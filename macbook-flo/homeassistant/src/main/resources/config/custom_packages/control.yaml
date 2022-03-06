@@ -1,0 +1,6 @@
+  - platform: group
+    name: Deck
+    unique_id: deck
+    entities:
+      - fan.deck_east
+      - fan.deck_west

@@ -246,20 +246,20 @@ fan.deck_east:
 fan.deck_west:
   friendly_name: 'Deck West'
   icon: 'mdi:fan'
-light.ada_light:
+light.ada:
   friendly_name: 'Ada Main'
   icon: 'mdi:lightbulb-group'
 light.ada_lamp:
   friendly_name: 'Ada Lamp'
 light.hue_ambiance_lamp_11:
   friendly_name: 'Ada Lamp'
-light.edwin_light:
-  friendly_name: 'Edwin Main'
-  icon: 'mdi:lightbulb-group'
 light.edwin_lamp:
   friendly_name: 'Edwin Lamp'
 light.hue_ambiance_lamp_13:
   friendly_name: 'Edwin Lamp'
+light.edwin:
+  friendly_name: 'Edwin Main'
+  icon: 'mdi:lightbulb-group'
 light.edwin_night_light:
   friendly_name: 'Edwin Night Light'
 light.hue_ambiance_lamp_10:
@@ -296,7 +296,7 @@ light.hue_color_candle_13:
   friendly_name: 'Lounge Main'
 light.hue_color_candle_14:
   friendly_name: 'Lounge Main'
-light.lounge_light:
+light.lounge:
   friendly_name: 'Lounge Fan'
   icon: 'mdi:lightbulb-group'
 light.parents_main:
