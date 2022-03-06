@@ -46,6 +46,11 @@ if __name__ == "__main__":
     unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
     unifi_clients_response.raise_for_status()
     for unifi_client in unifi_clients_response.json()['data']:
+        unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else (
+            unifi_client["hostname"] if "hostname" in unifi_client else "")
+    unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/stat/device'.format(UNIFI_CONTROLLER_URL), verify=False)
+    unifi_clients_response.raise_for_status()
+    for unifi_client in unifi_clients_response.json()['data']:
         unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else ""
     for vlan in metadata_udmutilities_df["connection_vlan"].unique():
         metadata_udmutilities_vlan_df = metadata_udmutilities_df[(metadata_udmutilities_df["connection_vlan"] == vlan)]
@@ -65,20 +70,19 @@ if __name__ == "__main__":
                     metadata_udmutilities_dict["connection_ip"],
                     metadata_udmutilities_dict["device_name"],
                 ))
-                if "entity_namespace" not in metadata_udmutilities_dict or metadata_udmutilities_dict["device_via_device"] != "UniFi":
-                    if metadata_udmutilities_dict["connection_mac"] in unifi_clients:
-                        if unifi_clients[metadata_udmutilities_dict["connection_mac"]] != metadata_udmutilities_dict["device_name"]:
-                            print("Build script [udmutilities] dnsmasq config host [{}] doesn't match unifi controller alias [{}]".format(
-                                metadata_udmutilities_dict["device_name"],
-                                unifi_clients[metadata_udmutilities_dict["connection_mac"]],
-                            ), file=sys.stderr)
-                        else:
-                            print("Build script [udmutilities] dnsmasq config host [{}] matches unifi controller alias [{}]".format(
-                                metadata_udmutilities_dict["device_name"],
-                                unifi_clients[metadata_udmutilities_dict["connection_mac"]],
-                            ))
-                    else:
-                        print("Build script [udmutilities] dnsmasq config host [{}] not found in unifi controller".format(
+                if metadata_udmutilities_dict["connection_mac"] in unifi_clients:
+                    if unifi_clients[metadata_udmutilities_dict["connection_mac"]] != metadata_udmutilities_dict["device_name"]:
+                        print("Build script [udmutilities] dnsmasq config host [{}] doesn't match unifi controller alias [{}]".format(
                             metadata_udmutilities_dict["device_name"],
+                            unifi_clients[metadata_udmutilities_dict["connection_mac"]],
                         ), file=sys.stderr)
+                    else:
+                        print("Build script [udmutilities] dnsmasq config host [{}] matches unifi controller alias [{}]".format(
+                            metadata_udmutilities_dict["device_name"],
+                            unifi_clients[metadata_udmutilities_dict["connection_mac"]],
+                        ))
+                else:
+                    print("Build script [udmutilities] dnsmasq config host [{}] not found in unifi controller".format(
+                        metadata_udmutilities_dict["device_name"],
+                    ), file=sys.stderr)
         print("Build script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
