@@ -32,11 +32,8 @@
     - entity: fan.lounge
       name: Lounge
       icon: mdi:fan
-    - entity: fan.deck_east
-      name: Deck East
-      icon: mdi:fan
-    - entity: fan.deck_west
-      name: Deck West
+    - entity: fan.deck
+      name: Deck
       icon: mdi:fan
 ################################################################################
 - type: custom:layout-break
@@ -62,7 +59,7 @@
       name: Dining Main
     - entity: light.lounge_main
       name: Lounge Main
-    - entity: light.lounge
+    - entity: light.lounge_2
       name: Lounge Fan
       icon: mdi:lightbulb-group
     - entity: light.parents_main
@@ -81,7 +78,7 @@
       name: Ensuite Main
     - entity: light.wardrobe_main
       name: Wardrobe Main
-    - entity: switch.deck_lights
+    - entity: switch.deck_festoons
       name: Deck Festoons
       icon: mdi:lightbulb-group
 ################################################################################

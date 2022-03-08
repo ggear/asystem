@@ -61,7 +61,7 @@ if __name__ == "__main__":
         try:
             state_response = get(
                 "http://{}:{}/api/states/{}.{}".format(
-                    env["HOMEASSISTANT_HOST_PROD"],
+                    env["HOMEASSISTANT_IP_PROD"],
                     env["HOMEASSISTANT_PORT"],
                     metadata_verify_dict["entity_namespace"],
                     metadata_verify_dict["unique_id"]
@@ -167,6 +167,62 @@ compensation:
   ####################################################################################
         """.strip() + "\n")
         print("Build script [homeassistant] entity compensation persisted to [{}]".format(metadata_compensation_path))
+
+    # Build control YAML
+    metadata_control_df = metadata_df[
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["device_via_device"] == "TPLink") &
+        (metadata_df["unique_id"].str.len() > 0) &
+        (metadata_df["connection_ip"].str.len() > 0)
+        ]
+    metadata_control_dicts = [row.dropna().to_dict() for index, row in metadata_control_df.iterrows()]
+    metadata_control_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/config/custom_packages/control.yaml"))
+    with open(metadata_control_path, 'w') as metadata_control_file:
+        metadata_control_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+fan:
+  - platform: group
+    name: Deck
+    unique_id: deck
+    entities:
+      - fan.deck_east
+      - fan.deck_west
+#######################################################################################
+tplink:
+  discovery: false
+  switch:
+        """.strip() + "\n")
+        for metadata_control_dict in metadata_control_dicts:
+            metadata_control_file.write("    " + """
+    - host: {}
+            """.format(
+                metadata_control_dict["connection_ip"]
+            ).strip() + "\n")
+        metadata_control_file.write("""
+#######################################################################################
+automation:
+  - alias: "Electricity: Turn off Smart Plug LED"
+    mode: single
+    trigger:
+      - platform: time
+        at: "02:00:00"
+    condition: [ ]
+    action:
+      - service: homeassistant.turn_off
+        entity_id:
+        """.strip() + "\n")
+        for metadata_control_dict in metadata_control_dicts:
+            metadata_control_file.write("          " + """
+          - switch.{}
+                """.format(
+                metadata_control_dict["unique_id"]
+            ).strip() + "\n")
+        metadata_control_file.write("""
+#######################################################################################
+            """.strip() + "\n")
 
     # Build lighting YAML
     metadata_lighting_df = metadata_df[

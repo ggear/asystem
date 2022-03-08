@@ -1,6 +1,62 @@
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+fan:
   - platform: group
     name: Deck
     unique_id: deck
     entities:
       - fan.deck_east
       - fan.deck_west
+#######################################################################################
+tplink:
+  discovery: false
+  switch:
+    - host: 10.0.6.87
+    - host: 10.0.6.79
+    - host: 10.0.6.70
+    - host: 10.0.6.82
+    - host: 10.0.6.83
+    - host: 10.0.6.73
+    - host: 10.0.6.74
+    - host: 10.0.6.75
+    - host: 10.0.6.76
+    - host: 10.0.6.77
+    - host: 10.0.6.78
+    - host: 10.0.6.81
+    - host: 10.0.6.71
+    - host: 10.0.6.72
+    - host: 10.0.6.80
+    - host: 10.0.6.86
+    - host: 10.0.6.84
+    - host: 10.0.6.85
+#######################################################################################
+automation:
+  - alias: "Electricity: Turn off Smart Plug LED"
+    mode: single
+    trigger:
+      - platform: time
+        at: "02:00:00"
+    condition: [ ]
+    action:
+      - service: homeassistant.turn_off
+        entity_id:
+          - switch.kitchen_fan
+          - switch.deck_festoons
+          - switch.various_adhoc_outlet
+          - switch.study_outlet
+          - switch.office_outlet
+          - switch.kitchen_dish_washer
+          - switch.laundry_clothes_dryer
+          - switch.laundry_washing_machine
+          - switch.kitchen_coffee_machine
+          - switch.kitchen_fridge
+          - switch.deck_freezer
+          - switch.bathroom_rails
+          - switch.study_battery_charger
+          - switch.laundry_vacuum_charger
+          - switch.lounge_tv
+          - switch.rack_outlet
+          - switch.roof_network_switch
+          - switch.rack_modem
+#######################################################################################

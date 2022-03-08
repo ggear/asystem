@@ -85,14 +85,11 @@
     - entity: sensor.office_outlet_current_consumption
       name: Office Outlet
       icon: mdi:home-lightning-bolt
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
-  entities:
     - entity: sensor.server_network_power
       name: Server & Network Devices
       icon: mdi:home-lightning-bolt
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: custom:mini-graph-card
   name: Daily Energy Consumption
@@ -178,12 +175,9 @@
     - entity: sensor.office_outlet_today_s_consumption
       name: Office Outlet
       icon: mdi:battery-charging
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
-  entities:
-    - entity: sensor.server_network_energy_daily
+    - entity: sensor.sensor
       name: Server & Network Devices
       icon: mdi:battery-charging
+################################################################################
+- type: custom:layout-break
 ################################################################################

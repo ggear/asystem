@@ -3,10 +3,19 @@
   "name": "Withings",
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/withings",
-  "requirements": ["withings-api==2.4.0"],
-  "dependencies": ["http", "webhook"],
-  "codeowners": ["@vangorra"],
+  "requirements": [
+    "withings-api==2.4.0"
+  ],
+  "dependencies": [
+    "http",
+    "webhook"
+  ],
+  "codeowners": [
+    "@vangorra"
+  ],
   "iot_class": "cloud_polling",
-  "loggers": ["withings_api"],
-  "version": "1000.0.0"
+  "loggers": [
+    "withings_api"
+  ],
+  "version": "100.100.100-ggear-withings"
 }

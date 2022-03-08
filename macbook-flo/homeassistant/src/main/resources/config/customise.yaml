@@ -240,6 +240,9 @@ switch.kitchen_fan:
 fan.lounge:
   friendly_name: 'Lounge'
   icon: 'mdi:fan'
+fan.deck:
+  friendly_name: 'Deck'
+  icon: 'mdi:fan'
 fan.deck_east:
   friendly_name: 'Deck East'
   icon: 'mdi:fan'
@@ -296,7 +299,7 @@ light.hue_color_candle_13:
   friendly_name: 'Lounge Main'
 light.hue_color_candle_14:
   friendly_name: 'Lounge Main'
-light.lounge:
+light.lounge_2:
   friendly_name: 'Lounge Fan'
   icon: 'mdi:lightbulb-group'
 light.parents_main:
@@ -341,7 +344,7 @@ light.wardrobe_main:
   friendly_name: 'Wardrobe Main'
 light.hue_ambiance_lamp_9:
   friendly_name: 'Wardrobe Main'
-switch.deck_lights:
+switch.deck_festoons:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:lightbulb-group'
 switch.adaptive_lighting_default:
@@ -444,18 +447,18 @@ sensor.office_outlet_current_consumption:
   friendly_name: 'Office Outlet'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.roof_switch_current_consumption:
-  friendly_name: 'Network Switch'
+sensor.server_network_power:
+  friendly_name: 'Server & Network Devices'
+  icon: 'mdi:home-lightning-bolt'
+  unit_of_measurement: 'W'
 sensor.rack_modem_current_consumption:
   friendly_name: 'Internet Modem'
 sensor.rack_outlet_current_consumption:
   friendly_name: 'Rack Outlet'
 sensor.kitchen_fan_current_consumption:
   friendly_name: 'Kitchen Fan'
-sensor.server_network_power:
-  friendly_name: 'Server & Network Devices'
-  icon: 'mdi:home-lightning-bolt'
-  unit_of_measurement: 'W'
+sensor.roof_network_switch_current_consumption:
+  friendly_name: 'Network Switch'
 sensor.home_peak_energy_daily:
   friendly_name: 'Peak Load'
   icon: 'mdi:battery-charging'
@@ -532,18 +535,18 @@ sensor.office_outlet_today_s_consumption:
   friendly_name: 'Office Outlet'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.roof_switchtoday_s_consumption:
+sensor.roof_network_switch_today_s_consumption:
   friendly_name: 'Network Switch'
-sensor.rack_modemtoday_s_consumption:
-  friendly_name: 'Internet Modem'
-sensor.rack_outlettoday_s_consumption:
-  friendly_name: 'Rack Outlet'
-sensor.kitchen_fantoday_s_consumption:
-  friendly_name: 'Kitchen Fan'
-sensor.server_network_energy_daily:
+sensor.sensor:
   friendly_name: 'Server & Network Devices'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
+sensor.rack_modem_today_s_consumption:
+  friendly_name: 'Internet Modem'
+sensor.rack_outlet_today_s_consumption:
+  friendly_name: 'Rack Outlet'
+sensor.kitchen_fan_today_s_consumption:
+  friendly_name: 'Kitchen Fan'
 sensor.network_internet_uptime:
   friendly_name: 'Up'
   icon: 'mdi:cloud-check'
@@ -605,7 +608,7 @@ switch.rack_outlet:
 switch.roof_network_switch:
   friendly_name: 'Network Switch'
   icon: 'mdi:server-network'
-switch.rack_internet_modem:
+switch.rack_modem:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
 sensor.netatmo_bertram_2_office_pantry_battery_percent:

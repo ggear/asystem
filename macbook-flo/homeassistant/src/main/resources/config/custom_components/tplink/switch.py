@@ -59,6 +59,7 @@ class SmartPlugLedSwitch(CoordinatedTPLinkEntity, SwitchEntity):
 
         self._attr_name = f"{device.alias} LED"
         self._attr_unique_id = f"{self.device.mac}_led"
+        self.device.set_led(False)
 
     @property
     def icon(self) -> str:
