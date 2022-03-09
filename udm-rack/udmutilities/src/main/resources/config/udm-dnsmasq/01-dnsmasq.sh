@@ -12,7 +12,7 @@ CONF_CUSTOM_FILES="dhcp.dhcpServers"*"custom.conf"
 rm -rf ${CONF_BUILD_DIR}
 cp -rvf ${CONF_CUSTOM_DIR} ${CONF_BUILD_DIR}
 rm -rf ${CONF_BUILD_DIR}/${CONF_CUSTOM_FILES}
-for CONF_SOURCE_FILE in $(ls ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_SOURCE_DIR}-*Unfettered*-custom.conf ${CONF_SOURCE_DIR}-*Isolated*-custom.conf 2>/dev/null); do
+for CONF_SOURCE_FILE in $(ls ${CONF_SOURCE_DIR}-*Management*-custom.conf ${CONF_SOURCE_DIR}-*Unfettered*-custom.conf ${CONF_SOURCE_DIR}-*Controlled*-custom.conf ${CONF_SOURCE_DIR}-*Isolated*-custom.conf 2>/dev/null); do
   while read CONF_SOURCE_LINE; do
     CONF_CMD_NET=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f1)
     CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2 | awk '{print tolower($0)}')

@@ -15,11 +15,11 @@ echo "--------------------------------------------------------------------------
 # Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'
 # Create API Long-Lived Access Tokens and store in '.env_all_key'
 # Install integrations manually (no option to do so programmatically):
-#   - Philips Hue (local push, requires internet for firmware upgrades, requires Hue Bridge adotpion button to be pressed)
+#   - Philips Hue (local push, requires internet for firmware upgrades, requires Hue Bridge adoption button to be pressed)
 #   - SenseME (local push, no internet after initial firmware upgrade, requires each fan IP and Areas to be configured)
 #   - TP-Link Smart Home (local polling, no internet, requires Areas to be manually configured)
-#   - UniFi Protect (local push, no internet, requires Protect IP, user and password config - has not been yaml configured since at least Nov 2020)
-#   - Bureau of Meteorology - gooseberry_hill for observations, darlington_forecast for weather forecast, 7 day forecast (cloud polling, requires internet, requires manual configuration)
+#   - UniFi Protect (local push, no internet, requires Protect IP, user, password and Areas config - has not been yaml configured since at least Nov 2020)
+#   - Bureau of Meteorology (cloud polling, requires internet, requires manual config - see 'custom_packages/weather.yaml' which could be hacked in)
 
 # Delete integrations manually:
 #   - Meteorologisk institutt (Met.no)

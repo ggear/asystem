@@ -2,17 +2,17 @@
 # Weather as adapted from https://github.com/DavidFW1960/bom-weather-card
 #######################################################################################
 
-#bureau_of_meteorology:
-#  latitude: -31.9474
-#  longutude: 115.8648
-#  observations_create: true
-#  observations_basename: gooseberry_hill
-#  # all observations
-#  forecasts_create: true
-#  forecasts_basename: darlington_forecast
-#  # all forecasts
-#  forecasts_days: 7
-
+# TODO: Currently not being picked up, could not be wired in config_flow or using wrong keys, think the former
+bureau_of_meteorology:
+  latitude: -31.9474
+  longutude: 115.8648
+  observations_create: true
+  observations_basename: gooseberry_hill
+  observations_monitored: [ 'temp', 'temp_feels_like', 'rain_since_9am', 'humidity', 'wind_speed_kilometre', 'wind_speed_knot', 'wind_direction', 'gust_speed_kilometre', 'gust_speed_knot' ]
+  forecasts_create: true
+  forecasts_basename: darlington_forecast
+  forecasts_monitored: [ 'temp_max', 'temp_min', 'extended_text', 'icon_descriptor', 'mdi_icon', 'short_text', 'uv_category', 'uv_max_index', 'uv_start_time', 'uv_end_time', 'rain_amount_min', 'rain_amount_max', 'rain_amount_range', 'rain_chance', 'fire_danger' ]
+  forecasts_days: 7
 
 sensor:
 
