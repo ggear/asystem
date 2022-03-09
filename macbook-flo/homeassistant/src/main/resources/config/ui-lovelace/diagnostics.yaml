@@ -1,22 +1,6 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
-- type: entities
-  title: Internet
-  entities:
-    - entity: sensor.network_internet_uptime
-      name: Up
-      icon: mdi:cloud-check
-    - entity: sensor.network_internet_ping
-      name: Ping
-      icon: mdi:cloud-refresh
-    - entity: sensor.network_internet_upload
-      name: Upload
-      icon: mdi:cloud-upload
-    - entity: sensor.network_internet_download
-      name: Download
-      icon: mdi:cloud-download
-################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: entities

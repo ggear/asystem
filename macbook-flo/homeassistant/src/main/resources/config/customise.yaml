@@ -547,22 +547,6 @@ sensor.rack_outlet_today_s_consumption:
   friendly_name: 'Rack Outlet'
 sensor.kitchen_fan_today_s_consumption:
   friendly_name: 'Kitchen Fan'
-sensor.network_internet_uptime:
-  friendly_name: 'Up'
-  icon: 'mdi:cloud-check'
-  unit_of_measurement: 'd'
-sensor.network_internet_ping:
-  friendly_name: 'Ping'
-  icon: 'mdi:cloud-refresh'
-  unit_of_measurement: 'ms'
-sensor.network_internet_upload:
-  friendly_name: 'Upload'
-  icon: 'mdi:cloud-upload'
-  unit_of_measurement: 'MB/s'
-sensor.network_internet_download:
-  friendly_name: 'Download'
-  icon: 'mdi:cloud-download'
-  unit_of_measurement: 'MB/s'
 switch.various_adhoc_outlet:
   friendly_name: 'Adhoc Outlet'
   icon: 'mdi:power-plug-outline'

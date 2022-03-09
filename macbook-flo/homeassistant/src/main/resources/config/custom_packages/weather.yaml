@@ -241,6 +241,27 @@ sensor:
           {{ states('sensor.darlington_forecast_rain_amount_range_6') | replace(" to ", "-") }}
           {% endif %}
 
+
+      bom_rain_chance_1:
+        value_template: >
+          {{ states('sensor.darlington_forecast_rain_chance_1') | float(0) }}
+
+      bom_rain_chance_2:
+        value_template: >
+          {{ states('sensor.darlington_forecast_rain_chance_2') | float(0) }}
+
+      bom_rain_chance_3:
+        value_template: >
+          {{ states('sensor.darlington_forecast_rain_chance_3') | float(0) }}
+
+      bom_rain_chance_4:
+        value_template: >
+          {{ states('sensor.darlington_forecast_rain_chance_4') | float(0) }}
+
+      bom_rain_chance_5:
+        value_template: >
+          {{ states('sensor.darlington_forecast_rain_chance_5') | float(0) }}
+
       bom_today_rain_chance:
         value_template: >
           {%- if states('sensor.darlington_forecast_rain_chance_0') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
@@ -294,7 +315,7 @@ sensor:
           {%- if states('sensor.darlington_forecast_uv_category_0') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_uv') | title }}
           {% else %}
-            {{ states('sensor.darlington_forecast_uv_category_0') | title }}
+            {{ states('sensor.darlington_forecast_uv_category_0') | replace('very', 'very ') | title }}
           {% endif %}
 
       bom_today_fire:
@@ -367,7 +388,7 @@ sensor:
   - platform: average
     name: today_rain_chance_bom
     entities:
-      - sensor.darlington_forecast_rain_chance_0
+      - sensor.bom_today_rain_chance
     start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
     end: '{{ now() }}'
 

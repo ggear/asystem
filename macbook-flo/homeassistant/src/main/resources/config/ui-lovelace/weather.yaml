@@ -48,11 +48,11 @@
   entity_pos_3: sensor.bom_rain_range_3
   entity_pos_4: sensor.bom_rain_range_4
   entity_pos_5: sensor.bom_rain_range_5
-  entity_pop_1: sensor.darlington_forecast_rain_chance_1
-  entity_pop_2: sensor.darlington_forecast_rain_chance_2
-  entity_pop_3: sensor.darlington_forecast_rain_chance_3
-  entity_pop_4: sensor.darlington_forecast_rain_chance_4
-  entity_pop_5: sensor.darlington_forecast_rain_chance_5
+  entity_pop_1: sensor.bom_rain_chance_1
+  entity_pop_2: sensor.bom_rain_chance_2
+  entity_pop_3: sensor.bom_rain_chance_3
+  entity_pop_4: sensor.bom_rain_chance_4
+  entity_pop_5: sensor.bom_rain_chance_5
   entity_current_text: sensor.bom_current_text
   entity_uv_alert: sensor.bom_uv_alert
   entity_fire_danger: sensor.bom_fire_danger
