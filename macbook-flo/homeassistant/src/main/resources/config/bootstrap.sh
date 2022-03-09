@@ -20,15 +20,13 @@ echo "--------------------------------------------------------------------------
 #   - UniFi Protect (local push, no internet, requires Protect IP, user, password and Areas config - has not been yaml configured since at least Nov 2020)
 #   - TP-Link Smart Home (local polling, no internet, requires Areas to be manually configured)
 #   - Google Cast (local polling, requires internet, requires IP CSV which could be hacked in - see 'custom_packages/media.yaml')
+#   - Brother Printer (local polling, no internet, requires manual config with IP)
 #   - Bureau of Meteorology (cloud polling, requires internet, requires manual config and then restart - see 'custom_packages/weather.yaml' which could be hacked in)
 
 # Delete integrations manually:
 #   - Meteorologisk institutt (Met.no)
 
-
-
-
-#   - Brother Printer (local polling, no internet)
+# Todo:
 #   - Apple (local push, requires internet)
 #   - Sonos (local push, requires internet)
 #   - Netatmo (cloud polling, requires internet)
