@@ -26,7 +26,10 @@ if __name__ == "__main__":
         metadata_weewx_str += ("            " + """
             [[[[{}]]]]
                 name = {}        
-              """.format(metadata_weewx_dict["unique_id_device"], metadata_weewx_dict["unique_id"]).strip() + "\n")
+              """.format(
+            metadata_weewx_dict["unique_id_device"],
+            metadata_weewx_dict["unique_id"].replace("compensation_sensor_", "")
+        ).strip() + "\n")
     weewx_conf_path = os.path.join(DIR_MODULE_ROOT, "../../../src/main/resources/config/weewx.conf")
     with open(weewx_conf_path + ".template", "rt") as weewx_conf_template_file:
         with open(weewx_conf_path, "wt") as weewx_conf_file:
