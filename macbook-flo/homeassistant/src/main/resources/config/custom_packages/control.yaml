@@ -3,11 +3,11 @@
 #######################################################################################
 fan:
   - platform: group
-    name: Deck
-    unique_id: deck
+    name: Deck Fan
+    unique_id: deck_fan
     entities:
-      - fan.deck_east
-      - fan.deck_west
+      - fan.deck_east_fan
+      - fan.deck_west_fan
 #######################################################################################
 tplink:
   discovery: false
@@ -41,22 +41,22 @@ automation:
     action:
       - service: homeassistant.turn_off
         entity_id:
-          - switch.kitchen_fan
-          - switch.deck_festoons
-          - switch.various_adhoc_outlet
-          - switch.study_outlet
-          - switch.office_outlet
-          - switch.kitchen_dish_washer
-          - switch.laundry_clothes_dryer
-          - switch.laundry_washing_machine
-          - switch.kitchen_coffee_machine
-          - switch.kitchen_fridge
-          - switch.deck_freezer
-          - switch.bathroom_rails
-          - switch.study_battery_charger
-          - switch.laundry_vacuum_charger
-          - switch.lounge_tv
-          - switch.rack_outlet
-          - switch.roof_network_switch
-          - switch.rack_modem
+          - switch.kitchen_fan_led
+          - switch.deck_festoons_led
+          - switch.various_adhoc_outlet_led
+          - switch.study_outlet_led
+          - switch.office_outlet_led
+          - switch.kitchen_dish_washer_led
+          - switch.laundry_clothes_dryer_led
+          - switch.laundry_washing_machine_led
+          - switch.kitchen_coffee_machine_led
+          - switch.kitchen_fridge_led
+          - switch.deck_freezer_led
+          - switch.bathroom_rails_led
+          - switch.study_battery_charger_led
+          - switch.laundry_vacuum_charger_led
+          - switch.lounge_tv_led
+          - switch.rack_outlet_led
+          - switch.roof_network_switch_led
+          - switch.rack_modem_led
 #######################################################################################

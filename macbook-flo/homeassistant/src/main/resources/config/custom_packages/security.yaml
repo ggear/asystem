@@ -1,3 +1,18 @@
 #######################################################################################
 stream:
 #######################################################################################
+
+# Does not work since at least Nov 2020
+#unifiprotect:
+#  host: 10.0.0.1
+#  username: protect
+#  password: test
+#
+#camera:
+#- platform: unifiprotect
+#
+#sensor:
+#- platform: unifiprotect
+#
+#binary_sensor:
+#- platform: unifiprotect

@@ -11,32 +11,32 @@ sensor:
     create_utility_meters: true
     create_group: senseme_all_fans
     entities:
-      - entity_id: fan.ada
+      - entity_id: fan.ada_fan
         standby_power: 1.3
         linear:
           min_power: 2.5
           max_power: 31.1
-      - entity_id: fan.edwin
+      - entity_id: fan.edwin_fan
         standby_power: 1.3
         linear:
           min_power: 2.5
           max_power: 31.1
-      - entity_id: fan.parents
+      - entity_id: fan.parents_fan
         standby_power: 1.3
         linear:
           min_power: 2.5
           max_power: 31.1
-      - entity_id: fan.lounge
+      - entity_id: fan.lounge_fan
         standby_power: 1.3
         linear:
           min_power: 2.5
           max_power: 31.1
-      - entity_id: fan.deck_east
+      - entity_id: fan.deck_east_fan
         standby_power: 1.3
         linear:
           min_power: 2.5
           max_power: 31.1
-      - entity_id: fan.deck_west
+      - entity_id: fan.deck_west_fan
         standby_power: 1.3
         linear:
           min_power: 2.5

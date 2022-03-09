@@ -17,22 +17,22 @@
 - type: entities
   title: Fans
   entities:
-    - entity: fan.ada
+    - entity: fan.ada_fan
       name: Ada
       icon: mdi:fan
-    - entity: fan.edwin
+    - entity: fan.edwin_fan
       name: Edwin
       icon: mdi:fan
-    - entity: fan.parents
+    - entity: fan.parents_fan
       name: Parents
       icon: mdi:fan
     - entity: switch.kitchen_fan
       name: Kitchen
       icon: mdi:fan
-    - entity: fan.lounge
+    - entity: fan.lounge_fan
       name: Lounge
       icon: mdi:fan
-    - entity: fan.deck
+    - entity: fan.deck_fan
       name: Deck
       icon: mdi:fan
 ################################################################################
@@ -41,14 +41,14 @@
 - type: entities
   title: Lights
   entities:
-    - entity: light.ada
+    - entity: light.ada_fan
       name: Ada Main
       icon: mdi:lightbulb-group
     - entity: light.ada_lamp
       name: Ada Lamp
     - entity: light.edwin_lamp
       name: Edwin Lamp
-    - entity: light.edwin
+    - entity: light.edwin_fan
       name: Edwin Main
       icon: mdi:lightbulb-group
     - entity: light.edwin_night_light
@@ -59,7 +59,7 @@
       name: Dining Main
     - entity: light.lounge_main
       name: Lounge Main
-    - entity: light.lounge_2
+    - entity: light.lounge_fan
       name: Lounge Fan
       icon: mdi:lightbulb-group
     - entity: light.parents_main

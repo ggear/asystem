@@ -175,7 +175,7 @@
     - entity: sensor.office_outlet_today_s_consumption
       name: Office Outlet
       icon: mdi:battery-charging
-    - entity: sensor.sensor
+    - entity: sensor.server_network_energy_daily
       name: Server & Network Devices
       icon: mdi:battery-charging
 ################################################################################

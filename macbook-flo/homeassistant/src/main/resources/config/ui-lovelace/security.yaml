@@ -28,16 +28,16 @@
 - type: entities
   title: Fan Motion
   entities:
-    - entity: binary_sensor.ada_occupancy
+    - entity: binary_sensor.ada_fan_occupancy
       name: Ada
-    - entity: binary_sensor.edwin_occupancy
+    - entity: binary_sensor.edwin_fan_occupancy
       name: Edwin
-    - entity: binary_sensor.parents_occupancy
+    - entity: binary_sensor.parents_fan_occupancy
       name: Parents
-    - entity: binary_sensor.lounge_occupancy
+    - entity: binary_sensor.lounge_fan_occupancy
       name: Lounge
-    - entity: binary_sensor.deck_east_occupancy
+    - entity: binary_sensor.deck_east_fan_occupancy
       name: Deck East
-    - entity: binary_sensor.deck_west_occupancy
+    - entity: binary_sensor.deck_west_fan_occupancy
       name: Deck West
 ################################################################################

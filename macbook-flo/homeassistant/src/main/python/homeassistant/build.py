@@ -185,11 +185,11 @@ compensation:
 #######################################################################################
 fan:
   - platform: group
-    name: Deck
-    unique_id: deck
+    name: Deck Fan
+    unique_id: deck_fan
     entities:
-      - fan.deck_east
-      - fan.deck_west
+      - fan.deck_east_fan
+      - fan.deck_west_fan
 #######################################################################################
 tplink:
   discovery: false
@@ -216,7 +216,7 @@ automation:
         """.strip() + "\n")
         for metadata_control_dict in metadata_control_dicts:
             metadata_control_file.write("          " + """
-          - switch.{}
+          - switch.{}_led
                 """.format(
                 metadata_control_dict["unique_id"]
             ).strip() + "\n")

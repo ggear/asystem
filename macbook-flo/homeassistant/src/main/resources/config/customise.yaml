@@ -225,31 +225,31 @@ input_boolean.home_sleep:
 input_boolean.home_wakeup:
   friendly_name: 'Wakeup'
   icon: 'mdi:white-balance-sunny'
-fan.ada:
+fan.ada_fan:
   friendly_name: 'Ada'
   icon: 'mdi:fan'
-fan.edwin:
+fan.edwin_fan:
   friendly_name: 'Edwin'
   icon: 'mdi:fan'
-fan.parents:
+fan.parents_fan:
   friendly_name: 'Parents'
   icon: 'mdi:fan'
 switch.kitchen_fan:
   friendly_name: 'Kitchen'
   icon: 'mdi:fan'
-fan.lounge:
+fan.lounge_fan:
   friendly_name: 'Lounge'
   icon: 'mdi:fan'
-fan.deck:
+fan.deck_fan:
   friendly_name: 'Deck'
   icon: 'mdi:fan'
-fan.deck_east:
+fan.deck_east_fan:
   friendly_name: 'Deck East'
   icon: 'mdi:fan'
-fan.deck_west:
+fan.deck_west_fan:
   friendly_name: 'Deck West'
   icon: 'mdi:fan'
-light.ada:
+light.ada_fan:
   friendly_name: 'Ada Main'
   icon: 'mdi:lightbulb-group'
 light.ada_lamp:
@@ -260,7 +260,7 @@ light.edwin_lamp:
   friendly_name: 'Edwin Lamp'
 light.hue_ambiance_lamp_13:
   friendly_name: 'Edwin Lamp'
-light.edwin:
+light.edwin_fan:
   friendly_name: 'Edwin Main'
   icon: 'mdi:lightbulb-group'
 light.edwin_night_light:
@@ -299,7 +299,7 @@ light.hue_color_candle_13:
   friendly_name: 'Lounge Main'
 light.hue_color_candle_14:
   friendly_name: 'Lounge Main'
-light.lounge_2:
+light.lounge_fan:
   friendly_name: 'Lounge Fan'
   icon: 'mdi:lightbulb-group'
 light.parents_main:
@@ -537,7 +537,7 @@ sensor.office_outlet_today_s_consumption:
   unit_of_measurement: 'kWh'
 sensor.roof_network_switch_today_s_consumption:
   friendly_name: 'Network Switch'
-sensor.sensor:
+sensor.server_network_energy_daily:
   friendly_name: 'Server & Network Devices'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
@@ -659,15 +659,15 @@ camera.uvc_edwin_medium:
   friendly_name: 'Edwin'
 binary_sensor.uvc_edwin_motion:
   friendly_name: 'Edwin'
-binary_sensor.ada_occupancy:
+binary_sensor.ada_fan_occupancy:
   friendly_name: 'Ada'
-binary_sensor.edwin_occupancy:
+binary_sensor.edwin_fan_occupancy:
   friendly_name: 'Edwin'
-binary_sensor.parents_occupancy:
+binary_sensor.parents_fan_occupancy:
   friendly_name: 'Parents'
-binary_sensor.lounge_occupancy:
+binary_sensor.lounge_fan_occupancy:
   friendly_name: 'Lounge'
-binary_sensor.deck_east_occupancy:
+binary_sensor.deck_east_fan_occupancy:
   friendly_name: 'Deck East'
-binary_sensor.deck_west_occupancy:
+binary_sensor.deck_west_fan_occupancy:
   friendly_name: 'Deck West'
