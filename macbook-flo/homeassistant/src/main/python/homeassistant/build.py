@@ -224,6 +224,36 @@ automation:
 #######################################################################################
             """.strip() + "\n")
 
+    # Build media YAML
+    metadata_media_df = metadata_df[
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["device_via_device"] == "Google") &
+        (metadata_df["unique_id"].str.len() > 0) &
+        (metadata_df["connection_ip"].str.len() > 0)
+        ]
+    metadata_media_dicts = [row.dropna().to_dict() for index, row in metadata_media_df.iterrows()]
+    metadata_media_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/config/custom_packages/media.yaml"))
+    with open(metadata_media_path, 'w') as metadata_media_file:
+        metadata_media_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+# TODO: Currently not being picked up, could not be wired in config_flow or using wrong keys, think the former
+#sonos:
+#  media_player:
+#    hosts:
+#      - X
+#######################################################################################
+# TODO: Currently not being picked up, could not be wired in config_flow or using wrong keys, think the former
+#google:
+#  media_player:
+#    hosts: {}
+#######################################################################################
+        """.format(
+            ','.join(map(str, [metadata_media_dict['connection_ip'] for metadata_media_dict in metadata_media_dicts]))
+        ).strip() + "\n")
+
     # Build lighting YAML
     metadata_lighting_df = metadata_df[
         (metadata_df["index"] > 0) &
