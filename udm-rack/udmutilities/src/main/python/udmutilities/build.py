@@ -67,7 +67,7 @@ if __name__ == "__main__":
         metadata_udmutilities_dnsmasq[dnsmasq_conf_path] = []
         for metadata_udmutilities_dict in metadata_udmutilities_dicts:
             if "connection_ip" in metadata_udmutilities_dict and len(metadata_udmutilities_dict["connection_ip"]) > 0:
-                metadata_udmutilities_dnsmasq[dnsmasq_conf_path].append("dhcp-host=set:{},{},{}\n".format(
+                metadata_udmutilities_dnsmasq[dnsmasq_conf_path].append("dhcp-host={},{},{}\n".format(
                     metadata_udmutilities_dict["connection_mac"],
                     metadata_udmutilities_dict["connection_ip"],
                     metadata_udmutilities_dict["device_name"],
@@ -76,8 +76,8 @@ if __name__ == "__main__":
         with open(dnsmasq_conf_path, "w") as dnsmasq_conf_file:
             for metadata_udmutilities_dnsmasq_line in metadata_udmutilities_dnsmasq[dnsmasq_conf_path]:
                 dnsmasq_conf_file.write(metadata_udmutilities_dnsmasq_line)
-                mac = metadata_udmutilities_dnsmasq_line.split("set:")[1].split(",")[0].strip()
-                name = metadata_udmutilities_dnsmasq_line.split("set:")[1].split(",")[-1].strip()
+                mac = metadata_udmutilities_dnsmasq_line.split("=")[1].split(",")[0].strip()
+                name = metadata_udmutilities_dnsmasq_line.split("=")[1].split(",")[-1].strip()
                 if mac in unifi_clients:
                     if unifi_clients[mac] != name:
                         print("Build script [udmutilities] dnsmasq config host [{}] doesn't match UniFi controller alias [{}]".format(

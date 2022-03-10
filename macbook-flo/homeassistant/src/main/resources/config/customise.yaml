@@ -537,12 +537,12 @@ sensor.office_outlet_today_s_consumption:
   unit_of_measurement: 'kWh'
 sensor.roof_network_switch_today_s_consumption:
   friendly_name: 'Network Switch'
+sensor.rack_modem_today_s_consumption:
+  friendly_name: 'Internet Modem'
 sensor.server_network_energy_daily:
   friendly_name: 'Server & Network Devices'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.rack_modem_today_s_consumption:
-  friendly_name: 'Internet Modem'
 sensor.rack_outlet_today_s_consumption:
   friendly_name: 'Rack Outlet'
 sensor.kitchen_fan_today_s_consumption:
