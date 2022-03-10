@@ -28,7 +28,7 @@ apt-get install -y --allow-downgrades 'software-properties-common=0.96.20.2-2.1'
 apt-get install -y --allow-downgrades 'mkvtoolnix=54.0.0+really52.0.0-3'
 apt-get install -y --allow-downgrades 'docker-ce=5:20.10.12~3-0~debian-bullseye'
 apt-get install -y --allow-downgrades 'docker-ce-cli=5:20.10.12~3-0~debian-bullseye'
-apt-get install -y --allow-downgrades 'containerd.io=1.4.12-1'
+apt-get install -y --allow-downgrades 'containerd.io=1.4.13-1'
 apt-get install -y --allow-downgrades 'cifs-utils=2:6.11-3.1'
 apt-get install -y --allow-downgrades 'samba=2:4.13.13+dfsg-1~deb11u3'
 apt-get install -y --allow-downgrades 'cups=2.3.3op2-3+deb11u1'
@@ -39,11 +39,12 @@ apt-get install -y --allow-downgrades 'iotop=0.6-24-g733f3f8-1.1'
 apt-get install -y --allow-downgrades 'hdparm=9.60+ds-1'
 apt-get install -y --allow-downgrades 'stress-ng=0.12.06-1'
 apt-get install -y --allow-downgrades 'memtester=4.5.0-1'
-apt-get install -y --allow-downgrades 'linux-cpupower=5.10.92-1'
+apt-get install -y --allow-downgrades 'linux-cpupower=5.10.103-1'
 apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
 apt-get install -y --allow-downgrades 'firmware-linux-nonfree=20210315-3'
 apt-get install -y --allow-downgrades 'hwinfo=21.72-1'
 apt-get install -y --allow-downgrades 'lshw=02.18.85-0.7'
+apt-get install -y --allow-downgrades 'vlan=2.0.5'
 apt-get install -y --allow-downgrades 'powertop=2.11-1'
 apt-get install -y --allow-downgrades 'libc6-i386=2.31-13+deb11u2'
 apt-get install -y --allow-downgrades 'intel-microcode=3.20210608.2'
@@ -76,6 +77,11 @@ if [ ! -f /etc/modprobe.d/blacklist-snd.conf ]; then
   echo "blacklist snd_hda_codec_generic" | tee -a /etc/modprobe.d/blacklist-snd.conf
   echo "blacklist snd_hda_codec_cirrus" | tee -a /etc/modprobe.d/blacklist-snd.conf
 fi
+
+################################################################################
+# Network
+################################################################################
+! grep 8021q /etc/modules >/dev/null && echo "8021q" | tee -a /etc/modules
 
 ################################################################################
 # Defaults

@@ -162,7 +162,7 @@ if [ ! -d /opt/brother/drivers ]; then
   lpadmin -x MFCL2700DW
 
   # TODO: Lookup from env
-  lpadmin -p Brother-Printer -E -D "Home Printer" -o printer-is-shared=true -u allow:all -v socket://192.168.1.12:9100 -i /usr/share/ppd/brother/brother-MFCL2700DW-cups-en.ppd
+  lpadmin -p Brother-Printer -E -D "Home Printer" -o printer-is-shared=true -u allow:all -v socket://10.0.6.10:9100 -i /usr/share/ppd/brother/brother-MFCL2700DW-cups-en.ppd
 
   lpstat -s
   poptions -d Brother-Printer

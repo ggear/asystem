@@ -44,6 +44,7 @@ PACKAGES=(
   firmware-linux-nonfree
   hwinfo
   lshw
+  vlan
   powertop
   libc6-i386
   intel-microcode
