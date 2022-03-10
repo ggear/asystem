@@ -63,7 +63,7 @@ if __name__ == "__main__":
         metadata_udmutilities_dicts = [row.dropna().to_dict() for index, row in metadata_udmutilities_vlan_df.iterrows()]
         dnsmasq_conf_path = os.path.join(DIR_MODULE_ROOT, dnsmasq_conf_root_path, "{}-{}-custom.conf".format(
             DNSMASQ_CONF_PREFIX,
-            vlan.replace("net", "vlan" + vlan.split("_")[2].replace("br", "")) if len(vlan)>0 else "untagged"
+            vlan.replace("net", "vlan" + vlan.split("_")[2].replace("br", "")) if len(vlan)>0 else "Untagged"
         ))
         metadata_udmutilities_dnsmasq[dnsmasq_conf_path] = []
         for metadata_udmutilities_dict in metadata_udmutilities_dicts:
