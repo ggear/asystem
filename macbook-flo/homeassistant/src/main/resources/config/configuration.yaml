@@ -59,6 +59,10 @@ mqtt:
     topic: 'hass/status'
     payload: 'offline'
 #######################################################################################
+discovery:
+  ignore:
+    - homekit
+#######################################################################################
 panel_custom:
   - name: weather
     sidebar_title: Weather

@@ -547,6 +547,8 @@ sensor.rack_outlet_today_s_consumption:
   friendly_name: 'Rack Outlet'
 sensor.kitchen_fan_today_s_consumption:
   friendly_name: 'Kitchen Fan'
+sensor.withings_weight_kg_graham:
+  friendly_name: 'Weight'
 switch.various_adhoc_outlet:
   friendly_name: 'Adhoc Outlet'
   icon: 'mdi:power-plug-outline'

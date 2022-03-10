@@ -21,6 +21,7 @@ echo "--------------------------------------------------------------------------
 #   - TP-Link Smart Home (local polling, no internet, requires Areas to be manually configured)
 #   - Google Cast (local polling, requires internet, requires IP CSV which could be hacked in - see 'custom_packages/media.yaml')
 #   - Brother Printer (local polling, no internet, requires manual config with IP)
+#   - Netatmo (cloud polling, requires internet, requires manual config by logging into 'netatmo.com' and provding Areas)
 #   - Bureau of Meteorology (cloud polling, requires internet, requires manual config and then restart - see 'custom_packages/weather.yaml' which could be hacked in)
 
 # Delete integrations manually:
@@ -29,7 +30,7 @@ echo "--------------------------------------------------------------------------
 # Todo:
 #   - Apple (local push, requires internet)
 #   - Sonos (local push, requires internet)
-#   - Netatmo (cloud polling, requires internet)
+
 #   - Withings (cloud polling, requires internet)
 
 echo "--------------------------------------------------------------------------------"
