@@ -30,14 +30,9 @@ for VLAN in 4 6; do
     cat <<EOF >>/etc/network/interfaces
 
 auto lan0.${VLAN}
-iface lan0.${VLAN} inet static
-    address 10.0.${VLAN}.11
-    netmask 255.255.255.0
-    gateway 10.0.${VLAN}.1
-    dns-nameservers 10.0.${VLAN}.1
+iface lan0.${VLAN} inet dhcp
     hwaddress ether ${VLAN}a:e0:4c:68:06:a1
 EOF
-    ifup -a
-    ifconfig "lan0.${VLAN}"
   fi
+  ifconfig "lan0.${VLAN}"
 done
