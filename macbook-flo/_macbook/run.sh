@@ -35,7 +35,6 @@ iface lan0.${VLAN} inet dhcp
 EOF
 #    ifup -a
 #    dhclient "lan0.${VLAN}"
-#    ifconfig "lan0.${VLAN}"
+    ifconfig "lan0.${VLAN}"
   fi
 done
-ip a | grep "inet 10.0."
