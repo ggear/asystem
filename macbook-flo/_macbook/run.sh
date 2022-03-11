@@ -12,7 +12,12 @@
 if [ ! -f /usr/sbin/gpu-switch ]; then
   wget https://raw.githubusercontent.com/0xbb/gpu-switch/master/gpu-switch -O /usr/sbin/gpu-switch
   chmod +x /usr/sbin/gpu-switch
-  gpu-switch -i
+fi
+gpu-switch -i
+if [ ! -f /etc/modprobe.d/blacklist-video.conf ]; then
+  echo "blacklist nvidia" | tee -a /etc/modprobe.d/blacklist-video.conf
+  echo "blacklist radeon" | tee -a /etc/modprobe.d/blacklist-video.conf
+  echo "blacklist nouveau" | tee -a /etc/modprobe.d/blacklist-video.conf
 fi
 
 ################################################################################
