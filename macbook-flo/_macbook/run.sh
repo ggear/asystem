@@ -21,3 +21,21 @@ fi
 sed -i 's/#HandleLidSwitch=suspend/HandleLidSwitch=ignore/g' /etc/systemd/logind.conf
 sed -i 's/#HandleLidSwitchExternalPower=suspend/HandleLidSwitchExternalPower=ignore/g' /etc/systemd/logind.conf
 systemctl restart systemd-logind.service
+
+################################################################################
+# Network
+################################################################################
+for VLAN in 4 6; do
+  if ifconfig lan0 >/dev/null && [ $(grep "lan0.${VLAN}" /etc/network/interfaces | wc -l) -eq 0 ]; then
+    cat <<EOF >>/etc/network/interfaces
+
+auto lan0.${VLAN}
+iface lan0.${VLAN} inet dhcp
+    hwaddress ether ${VLAN}A:e0:4c:68:06:a1
+EOF
+#    ifup -a
+#    dhclient "lan0.${VLAN}"
+#    ifconfig "lan0.${VLAN}"
+  fi
+done
+ip a | grep "inet 10.0."

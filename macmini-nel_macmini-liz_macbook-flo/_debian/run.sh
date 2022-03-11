@@ -81,20 +81,16 @@ fi
 ################################################################################
 # Network
 ################################################################################
-ip a | grep "inet 10.0."
 INTERFACE=$(lshw -C network -short 2>/dev/null | grep enx | tr -s ' ' | cut -d' ' -f2)
 if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "${INTERFACE}" /etc/network/interfaces | wc -l) -eq 0 ]; then
-  echo ${INTERFACE}
   cat <<EOF >>/etc/network/interfaces
 
-allow-hotplug ${INTERFACE}
-iface ${INTERFACE} inet dhcp
-
+rename ${INTERFACE}=lan0
+allow-hotplug lan0
+iface lan0 inet dhcp
 EOF
 fi
-ifup -a
-dhclient "${INTERFACE}"
-ifconfig "${INTERFACE}"
+ifconfig lan0
 ! grep 8021q /etc/modules >/dev/null && echo "8021q" | tee -a /etc/modules
 
 ################################################################################
