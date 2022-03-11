@@ -39,21 +39,6 @@ sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd
 systemctl restart ssh
 
 ################################################################################
-# Network USB (if required)
-################################################################################
-ip a | grep 10.0.
-lshw -C network -short
-ifconfig enx00e04c680421
-cat <<EOF >>/etc/network/interfaces
-
-allow-hotplug enx00e04c680421
-iface enx00e04c680421 inet dhcp
-
-EOF
-ifup -a
-ip a | grep 10.0.
-
-################################################################################
 # Install HDD (if required)
 ################################################################################
 fdisk -l
