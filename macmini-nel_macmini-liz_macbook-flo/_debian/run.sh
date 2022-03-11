@@ -90,7 +90,17 @@ allow-hotplug lan0
 iface lan0 inet dhcp
 EOF
 fi
-echo "on" > /sys/class/net/lan0/power/control
+
+
+# TODO: Persist between reboots?
+#echo "on" > /sys/class/net/lan0/power/control
+#echo 'on' > "/sys/bus/usb/devices/1-1.3/power/control"
+#echo "-1" > /sys/module/usbcore/parameters/autosuspend
+# /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT="quiet usbcore.autosuspend=-1 usbcore.quirks=0bda:8153:k"
+# update-grub
+
+
+
 ifconfig lan0
 ! grep 8021q /etc/modules >/dev/null && echo "8021q" | tee -a /etc/modules
 
