@@ -16,6 +16,17 @@ if [ ! -f /usr/sbin/gpu-switch ]; then
 fi
 
 ################################################################################
+# Display (enable)
+################################################################################
+cat <<EOF >>/root/d.sh
+#!/bin/sh
+rm -rf /etc/modprobe.d/blacklist-video.conf
+gpu-switch -d
+reboot now
+EOF
+chmod +x /root/d.sh
+
+################################################################################
 # Lid
 ################################################################################
 sed -i 's/#HandleLidSwitch=suspend/HandleLidSwitch=ignore/g' /etc/systemd/logind.conf
