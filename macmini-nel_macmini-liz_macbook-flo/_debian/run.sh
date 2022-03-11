@@ -54,11 +54,6 @@ apt-get install -y --allow-downgrades 'intel-microcode=3.20210608.2'
 ################################################################################
 [ ! -f /etc/modprobe.d/blacklist-b43.conf ] && echo "blacklist b43" | tee -a /etc/modprobe.d/blacklist-b43.conf
 [ ! -f /etc/modprobe.d/blacklist-btusb.conf ] && echo "blacklist btusb" | tee -a /etc/modprobe.d/blacklist-btusb.conf
-if [ ! -f /etc/modprobe.d/blacklist-video.conf ]; then
-  echo "blacklist nvidia" | tee -a /etc/modprobe.d/blacklist-video.conf
-  echo "blacklist radeon" | tee -a /etc/modprobe.d/blacklist-video.conf
-  echo "blacklist nouveau" | tee -a /etc/modprobe.d/blacklist-video.conf
-fi
 if [ ! -f /etc/modprobe.d/blacklist-snd.conf ]; then
   echo "blacklist soundcore" | tee -a /etc/modprobe.d/blacklist-snd.conf
   echo "blacklist snd" | tee -a /etc/modprobe.d/blacklist-snd.conf
