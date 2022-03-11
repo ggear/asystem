@@ -90,6 +90,7 @@ allow-hotplug lan0
 iface lan0 inet dhcp
 EOF
 fi
+echo "on" > /sys/class/net/lan0/power/control
 ifconfig lan0
 ! grep 8021q /etc/modules >/dev/null && echo "8021q" | tee -a /etc/modules
 
