@@ -43,7 +43,7 @@ chmod a+x /mnt/data/on_boot.d/05-install-cni-plugins.sh
 /mnt/data/on_boot.d/05-install-cni-plugins.sh
 cp -rvf ./config/udm-utilities/cni-plugins/20-dns.conflist /etc/cni/net.d
 podman network rm dns 2>/dev/null && podman network create dns
-cp -rvf ./config/udm-utilities/dns-common/10-dns.sh /mnt/data/on_boot.d
+cp -rvf ./config/udm-utilities/dns-common/on_boot/10-dns.sh /mnt/data/on_boot.d
 chmod a+x /mnt/data/on_boot.d/10-dns.sh
 /mnt/data/on_boot.d/10-dns.sh
 mkdir -p /mnt/data/etc-pihole
