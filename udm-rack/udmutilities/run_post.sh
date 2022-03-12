@@ -38,27 +38,12 @@ rm -rf /mnt/data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /mnt/data
 cp -rvf ./config/udm-dnsmasq/01-dnsmasq.sh /mnt/data/on_boot.d
 /mnt/data/on_boot.d/01-dnsmasq.sh
 
-
-
-
-
-
-
 cp -rvf ./config/udm-utilities/cni-plugins/05-install-cni-plugins.sh /mnt/data/on_boot.d
 chmod a+x /mnt/data/on_boot.d/05-install-cni-plugins.sh
 /mnt/data/on_boot.d/05-install-cni-plugins.sh
-
-#podman network create dns 2>/dev/null
-
-
-#cp -rvf ./config/udm-utilities/cni-plugins/20-dns.conflist /etc/cni/net.d/dns.conflist
 cp -rvf ./config/udm-utilities/cni-plugins/20-dns.conflist /mnt/data/podman/cni
-
-
 mkdir -p /mnt/data/etc-pihole
 mkdir -p /mnt/data/pihole/etc-dnsmasq.d
-
-
 podman stop pihole 2>/dev/null
 podman rm pihole 2>/dev/null
 podman create --network dns --restart always \
@@ -72,11 +57,10 @@ podman create --network dns --restart always \
   --hostname udm-pihole \
   -e VIRTUAL_HOST="udm-pihole" \
   -e PROXY_LOCATION="udm-pihole" \
-  -e ServerIP="10.0.4.10" \
+  -e ServerIP="${PIHOLE_IP}" \
   -e IPv6="False" \
   pihole/pihole:2022.02.1
-
 cp -rvf ./config/udm-utilities/dns-common/on_boot.d/10-dns.sh /mnt/data/on_boot.d
 chmod a+x /mnt/data/on_boot.d/10-dns.sh
 /mnt/data/on_boot.d/10-dns.sh
-
+podman exec -it pihole pihole -a -p ${PIHOLE_KEY}

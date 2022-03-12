@@ -11,8 +11,8 @@
         "type": "static",
         "addresses": [
           {
-            "address": "10.0.4.10/24",
-            "gateway": "10.0.4.1"
+            "address": "${PIHOLE_IP}/24",
+            "gateway": "${PIHOLE_GATEWAY}"
           }
         ],
         "routes": [
