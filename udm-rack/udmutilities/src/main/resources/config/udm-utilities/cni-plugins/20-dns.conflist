@@ -1,11 +1,11 @@
 {
   "cniVersion": "0.4.0",
-  "name": "dns",
+  "name": "Controlled",
   "plugins": [
     {
       "type": "macvlan",
       "mode": "bridge",
-      "master": "br5",
+      "master": "br4",
       "mac": "4a:9a:06:5d:53:66",
       "ipam": {
         "type": "static",
