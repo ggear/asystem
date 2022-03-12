@@ -48,3 +48,18 @@ chmod a+x /mnt/data/on_boot.d/10-dns.sh
 /mnt/data/on_boot.d/10-dns.sh
 mkdir -p /mnt/data/etc-pihole
 mkdir -p /mnt/data/pihole/etc-dnsmasq.d
+
+#podman run -d --network dns --restart always \
+#  --name pihole \
+#  -e TZ="Australia/Perth" \
+#  -v "/mnt/data/etc-pihole/:/etc/pihole/" \
+#  -v "/mnt/data/pihole/etc-dnsmasq.d/:/etc/dnsmasq.d/" \
+#  --dns=127.0.0.1 \
+#  --dns=1.1.1.1 \
+#  --dns=8.8.8.8 \
+#  --hostname udm-pihole \
+#  -e VIRTUAL_HOST="udm-pihole" \
+#  -e PROXY_LOCATION="udm-pihole" \
+#  -e ServerIP="10.0.4.10" \
+#  -e IPv6="False" \
+#  pihole/pihole:2022.02.1
