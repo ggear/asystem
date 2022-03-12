@@ -50,7 +50,8 @@ chmod a+x /mnt/data/on_boot.d/10-dns.sh
 mkdir -p /mnt/data/etc-pihole
 mkdir -p /mnt/data/pihole/etc-dnsmasq.d
 
-podman container exists pihole && (podman stop pihole 2>/dev/null || podman rm pihole)
+podman container exists pihole && podman stop pihole
+podman container exists pihole && podman rm pihole
 podman run -d --network dns --restart always \
   --name pihole \
   -e TZ="Australia/Perth" \
