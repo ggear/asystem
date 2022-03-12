@@ -37,3 +37,5 @@ chmod a+x ./config/udm-dnsmasq/01-dnsmasq.sh
 rm -rf /mnt/data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /mnt/data
 cp -rvf ./config/udm-dnsmasq/01-dnsmasq.sh /mnt/data/on_boot.d
 /mnt/data/on_boot.d/01-dnsmasq.sh
+
+#cp -rvf ./config/udm-utilities/cni-plugins /mnt/data/on_boot.d
