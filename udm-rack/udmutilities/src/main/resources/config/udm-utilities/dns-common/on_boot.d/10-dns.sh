@@ -4,10 +4,10 @@ set -x
 
 ## configuration variables:
 VLAN=4
-IPV4_IP="10.0.4.10"
+IPV4_IP="${PIHOLE_IP}"
 # This is the IP address of the container. You may want to set it to match
 # your own network structure such as 192.168.5.3 or similar.
-IPV4_GW="10.0.4.1/24"
+IPV4_GW="${PIHOLE_GATEWAY}/24"
 # As above, this should match the gateway of the VLAN for the container
 # network as above which is usually the .1/24 range of the IPV4_IP
 
