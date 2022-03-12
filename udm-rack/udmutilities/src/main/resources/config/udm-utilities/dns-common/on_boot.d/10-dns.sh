@@ -71,11 +71,11 @@ if ! grep -qxF "interface=br${VLAN}.mac" /run/dnsmasq.conf.d/custom.conf; then
     kill -9 "$(cat /run/dnsmasq.pid)"
 fi
 
-# if podman container exists "${CONTAINER}"; then
-#   podman start "${CONTAINER}"
-# else
-#   logger -s -t podman-dns -p "ERROR Container ${CONTAINER} not found, make sure you set the proper name, you can ignore this error if it is your first time setting it up"
-# fi
+if podman container exists "${CONTAINER}"; then
+  podman start "${CONTAINER}"
+else
+  logger -s -t podman-dns -p "ERROR Container ${CONTAINER} not found, make sure you set the proper name, you can ignore this error if it is your first time setting it up"
+fi
 
 # (optional) IPv4 force DNS (TCP/UDP 53) through DNS container
 for intfc in ${FORCED_INTFC}; do
