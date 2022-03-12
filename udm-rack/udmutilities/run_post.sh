@@ -42,8 +42,8 @@ cp -rvf ./config/udm-utilities/cni-plugins/05-install-cni-plugins.sh /mnt/data/o
 chmod a+x /mnt/data/on_boot.d/05-install-cni-plugins.sh
 /mnt/data/on_boot.d/05-install-cni-plugins.sh
 cp -rvf ./config/udm-utilities/cni-plugins/20-dns.conflist /mnt/data/podman/cni
-mkdir -p /mnt/data/etc-pihole
-mkdir -p /mnt/data/pihole/etc-dnsmasq.d
+mkdir -p /mnt/data/etc-pihole && chmod 777 /mnt/data/etc-pihole
+mkdir -p /mnt/data/pihole/etc-dnsmasq.d && chmod 777 /mnt/data/pihole/etc-dnsmasq.d
 podman stop pihole 2>/dev/null
 podman rm pihole 2>/dev/null
 podman create --network dns --restart always \
