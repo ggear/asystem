@@ -91,15 +91,17 @@ iface lan0 inet dhcp
 EOF
 fi
 
-
 # TODO: Persist between reboots?
 #echo "on" > /sys/class/net/lan0/power/control
 #echo 'on' > "/sys/bus/usb/devices/1-1.3/power/control"
 #echo "-1" > /sys/module/usbcore/parameters/autosuspend
 # /etc/default/grub GRUB_CMDLINE_LINUX_DEFAULT="quiet usbcore.autosuspend=-1 usbcore.quirks=0bda:8153:k"
 # update-grub
-
-
+cat <<EOF >/etc/udev/rules.d/10-usb-network-realtek.rules
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153", TEST=="power/autosuspend", ATTR{power/autosuspend}="-1"
+EOF
+chmod +x /etc/udev/rules.d/10-usb-network-realtek.rules
+echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/autosuspend -exec echo -n {}": " \; -exec cat {} \; | grep ": \-1")
 
 ifconfig lan0
 ! grep 8021q /etc/modules >/dev/null && echo "8021q" | tee -a /etc/modules

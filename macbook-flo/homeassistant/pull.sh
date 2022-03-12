@@ -53,6 +53,10 @@ rm -rf src/main/resources/config/custom_components/withings
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../asystem-external/homeassistant/core-withings/homeassistant/components/withings src/main/resources/config/custom_components
 
+rm -rf src/main/resources/config/custom_components/senseme
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../../asystem-external/homeassistant/senseme/custom_components/senseme src/main/resources/config/custom_components
+
 rm -rf src/main/resources/config/custom_components/sonos
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../asystem-external/homeassistant/core-sonos/homeassistant/components/sonos src/main/resources/config/custom_components

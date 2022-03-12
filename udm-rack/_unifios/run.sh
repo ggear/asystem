@@ -80,6 +80,12 @@
 # Network -> WiFi -> Add New WiFi Network -> Advanced Options -> Group Rekey Interval -> False
 # Network -> WiFi -> Add New WiFi Network -> Rate and Beacon Controls -> 2G Data Rate Control -> True / 6 Mbps
 
+# Advanced Features -> Switch Ports -> Add a Port Profile -> Broadcast
+# Advanced Features -> Switch Ports -> Add a Port Profile -> Broadcast -> Native Network -> Unfettered
+# Advanced Features -> Switch Ports -> Add a Port Profile -> Broadcast -> Tagged Networks -> Controlled, Isolated
+
+# Devices -> Ports -> Assign Networks appropriately
+
 # Traffic & Security -> Global Threat Management -> Detect & Block -> Detect & Block
 # Traffic & Security -> System Sensitivity -> Maximum Protection
 
