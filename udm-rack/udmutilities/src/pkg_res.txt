@@ -1,2 +1,3 @@
 ../run.sh
 ../run_post.sh
+main/resources/config/udm-utilities/cni-plugins/20-dns.conflist
