@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -x
+
 ## configuration variables:
 VLAN=4
 IPV4_IP="10.0.4.10"
@@ -41,7 +43,9 @@ fi
 ip link set "br${VLAN}" promisc on
 
 # create macvlan bridge and add IPv4 IP
+ip link delete "br${VLAN}.mac" 2>/dev/null
 ip link add "br${VLAN}.mac" link "br${VLAN}" type macvlan mode bridge
+ip addr delete "${IPV4_GW}" dev "br${VLAN}.mac" 2>/dev/null
 ip addr add "${IPV4_GW}" dev "br${VLAN}.mac" noprefixroute
 
 # (optional) add IPv6 IP to VLAN bridge macvlan bridge
@@ -67,11 +71,11 @@ if ! grep -qxF "interface=br${VLAN}.mac" /run/dnsmasq.conf.d/custom.conf; then
     kill -9 "$(cat /run/dnsmasq.pid)"
 fi
 
-if podman container exists "${CONTAINER}"; then
-  podman start "${CONTAINER}"
-else
-  logger -s -t podman-dns -p "ERROR Container ${CONTAINER} not found, make sure you set the proper name, you can ignore this error if it is your first time setting it up"
-fi
+# if podman container exists "${CONTAINER}"; then
+#   podman start "${CONTAINER}"
+# else
+#   logger -s -t podman-dns -p "ERROR Container ${CONTAINER} not found, make sure you set the proper name, you can ignore this error if it is your first time setting it up"
+# fi
 
 # (optional) IPv4 force DNS (TCP/UDP 53) through DNS container
 for intfc in ${FORCED_INTFC}; do
