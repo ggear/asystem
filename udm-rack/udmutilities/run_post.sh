@@ -72,4 +72,3 @@ cp -rvf ./config/udm-utilities/dns-common/on_boot.d/10-dns.sh /mnt/data/on_boot.
 chmod a+x /mnt/data/on_boot.d/10-dns.sh
 /mnt/data/on_boot.d/10-dns.sh
 podman exec -it pihole pihole -a -p ${PIHOLE_KEY}
-
