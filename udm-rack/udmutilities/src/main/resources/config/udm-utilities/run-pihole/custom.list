@@ -1,9 +1,7 @@
-127.0.0.1	localhost
-127.0.0.1	udm-rack
-10.0.4.10	udm-pihole
 10.0.0.2 usw-ceiling.janeandgraham.com usw-ceiling
 10.0.0.3 uap-deck.janeandgraham.com uap-deck
 10.0.0.4 uap-hallway.janeandgraham.com uap-hallway
+10.0.2.11 macbook-flo.janeandgraham.com macbook-flo
 10.0.2.12 macmini-liz.janeandgraham.com macmini-liz
 10.0.2.13 macmini-nel.janeandgraham.com macmini-nel
 10.0.2.20 hue-bridge.janeandgraham.com hue-bridge
@@ -18,7 +16,6 @@
 10.0.4.52 google-parents-home.janeandgraham.com google-parents-home
 10.0.4.53 google-parents-tv.janeandgraham.com google-parents-tv
 10.0.4.54 google-lounge-home.janeandgraham.com google-lounge-home
-10.0.6.11 macbook-flo.janeandgraham.com macbook-flo
 10.0.6.20 uvc-ada.janeandgraham.com uvc-ada
 10.0.6.21 uvc-edwin.janeandgraham.com uvc-edwin
 10.0.6.22 brother-printer.janeandgraham.com brother-printer

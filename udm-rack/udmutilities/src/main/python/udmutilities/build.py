@@ -102,14 +102,11 @@ if __name__ == "__main__":
         print("Build script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
 
     metadata_udmutilities_ips = {}
-    hosts_conf_path = os.path.join(DIR_MODULE_ROOT, "../../../src/main/resources/config/udm-utilities/run-pihole/hosts")
+    hosts_conf_path = os.path.join(DIR_MODULE_ROOT, "../../../src/main/resources/config/udm-utilities/run-pihole/custom.list")
     for metadata_udmutilities_host in metadata_udmutilities_hosts:
         metadata_udmutilities_hosts[metadata_udmutilities_host].sort()
-        metadata_udmutilities_ips[metadata_udmutilities_hosts[metadata_udmutilities_host][-1]] = metadata_udmutilities_host
+        metadata_udmutilities_ips[metadata_udmutilities_hosts[metadata_udmutilities_host][0]] = metadata_udmutilities_host
     with open(hosts_conf_path, "w") as hosts_conf_file:
-        hosts_conf_file.write("127.0.0.1	localhost\n")
-        hosts_conf_file.write("127.0.0.1	udm-rack\n")
-        hosts_conf_file.write("10.0.4.10	udm-pihole\n")
         for metadata_udmutilities_ip in sorted(metadata_udmutilities_ips):
             hosts_conf_file.write("{} {}.janeandgraham.com {}\n".format(
                 metadata_udmutilities_ip,
