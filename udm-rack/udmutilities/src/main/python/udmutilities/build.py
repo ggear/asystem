@@ -51,7 +51,7 @@ if __name__ == "__main__":
     unifi_clients_response.raise_for_status()
     for unifi_client in unifi_clients_response.json()['data']:
         unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else ""
-
+    metadata_udmutilities_hosts = {}
     metadata_udmutilities_dnsmasq = {}
     metadata_udmutilities_df = metadata_udmutilities_df.fillna('')
     for vlan in metadata_udmutilities_df["connection_vlan"].unique():
@@ -72,6 +72,12 @@ if __name__ == "__main__":
                     metadata_udmutilities_dict["connection_ip"],
                     metadata_udmutilities_dict["device_name"],
                 ))
+                if metadata_udmutilities_dict["device_name"] not in metadata_udmutilities_hosts:
+                    metadata_udmutilities_hosts[metadata_udmutilities_dict["device_name"]] = \
+                        [metadata_udmutilities_dict["connection_ip"]]
+                else:
+                    metadata_udmutilities_hosts[metadata_udmutilities_dict["device_name"]] \
+                        .append(metadata_udmutilities_dict["connection_ip"])
     for dnsmasq_conf_path in metadata_udmutilities_dnsmasq:
         with open(dnsmasq_conf_path, "w") as dnsmasq_conf_file:
             for metadata_udmutilities_dnsmasq_line in metadata_udmutilities_dnsmasq[dnsmasq_conf_path]:
@@ -94,3 +100,16 @@ if __name__ == "__main__":
                         name,
                     ), file=sys.stderr)
         print("Build script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
+
+    metadata_udmutilities_ips = {}
+    hosts_conf_path = os.path.join(DIR_MODULE_ROOT, "../../../src/main/resources/config/udm-utilities/run-pihole/custom.list")
+    for metadata_udmutilities_host in metadata_udmutilities_hosts:
+        metadata_udmutilities_hosts[metadata_udmutilities_host].sort()
+        metadata_udmutilities_ips[metadata_udmutilities_hosts[metadata_udmutilities_host][-1]] = metadata_udmutilities_host
+    with open(hosts_conf_path, "w") as hosts_conf_file:
+        for metadata_udmutilities_ip in sorted(metadata_udmutilities_ips):
+            hosts_conf_file.write("{} {}.janeandgraham.com {}\n".format(
+                metadata_udmutilities_ip,
+                metadata_udmutilities_ips[metadata_udmutilities_ip],
+                metadata_udmutilities_ips[metadata_udmutilities_ip]
+            ))
