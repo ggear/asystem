@@ -44,15 +44,6 @@ chmod a+x /mnt/data/on_boot.d/05-install-cni-plugins.sh
 cp -rvf ./config/udm-utilities/cni-plugins/20-dns.conflist /mnt/data/podman/cni
 mkdir -p /mnt/data/etc-pihole && chmod 777 /mnt/data/etc-pihole
 mkdir -p /mnt/data/pihole/etc-dnsmasq.d && chmod 777 /mnt/data/pihole/etc-dnsmasq.d
-
-if ! grep janeandgraham.com /mnt/data/pihole/etc-dnsmasq.d/01-pihole.conf; then
-  cat <<EOF >>/mnt/data/pihole/etc-dnsmasq.d/01-pihole.conf
-rev-server=10.0.0.0/8,10.0.0.1
-server=/janeandgraham.com/10.0.0.1
-server=//10.0.0.1
-EOF
-fi
-
 podman stop pihole 2>/dev/null
 podman rm pihole 2>/dev/null
 podman create --network dns --restart always \
@@ -73,3 +64,11 @@ cp -rvf ./config/udm-utilities/dns-common/on_boot.d/10-dns.sh /mnt/data/on_boot.
 chmod a+x /mnt/data/on_boot.d/10-dns.sh
 /mnt/data/on_boot.d/10-dns.sh
 podman exec -it pihole pihole -a -p ${PIHOLE_KEY}
+if [ ! -f /mnt/data/pihole/etc-dnsmasq.d/02-custom.conf ]; then
+  cat <<EOF >>/mnt/data/pihole/etc-dnsmasq.d/02-custom.conf
+rev-server=10.0.0.0/8,10.0.0.1
+server=/janeandgraham.com/10.0.0.1
+server=//10.0.0.1
+EOF
+  podman restart pihole
+fi
