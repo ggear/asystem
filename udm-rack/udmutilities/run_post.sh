@@ -70,5 +70,6 @@ rev-server=10.0.0.0/8,10.0.0.1
 server=/janeandgraham.com/10.0.0.1
 server=//10.0.0.1
 EOF
+  chmod 644 /mnt/data/pihole/etc-dnsmasq.d/02-custom.conf
   podman restart pihole
 fi
