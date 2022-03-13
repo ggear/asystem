@@ -108,7 +108,7 @@ if __name__ == "__main__":
         metadata_udmutilities_ips[metadata_udmutilities_hosts[metadata_udmutilities_host][-1]] = metadata_udmutilities_host
     with open(hosts_conf_path, "w") as hosts_conf_file:
         for metadata_udmutilities_ip in sorted(metadata_udmutilities_ips):
-            hosts_conf_file.write("{} {}.janeandgraham.com\n".format(
+            hosts_conf_file.write("{} {}\n".format(
                 metadata_udmutilities_ip,
                 metadata_udmutilities_ips[metadata_udmutilities_ip],
                 # metadata_udmutilities_ips[metadata_udmutilities_ip]
