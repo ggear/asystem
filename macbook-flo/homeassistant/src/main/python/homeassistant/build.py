@@ -314,6 +314,8 @@ adaptive_lighting:
   ####################################################################################
   - name: {}
     interval: 30
+    min_brightness: {}
+    max_brightness: 100
     min_color_temp: 2500
     max_color_temp: 5500
     only_once: false
@@ -321,7 +323,8 @@ adaptive_lighting:
     detect_non_ha_changes: true
     lights:
         """.format(
-                automation_name
+                automation_name,
+                "100" if  automation_name == "default" else "1"
             ).strip() + "\n")
             for metadata_lighting_group_dict in metadata_lighting_automations_dicts[automation_name]:
                 metadata_lighting_file.write("      " + """
@@ -411,7 +414,7 @@ automation:
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_adapt_color_default
-      - service: switch.turn_off
+      - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_adapt_brightness_default
       - service: adaptive_lighting.set_manual_control

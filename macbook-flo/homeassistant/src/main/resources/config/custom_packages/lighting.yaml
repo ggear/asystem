@@ -106,6 +106,8 @@ adaptive_lighting:
   ####################################################################################
   - name: default
     interval: 30
+    min_brightness: 100
+    max_brightness: 100
     min_color_temp: 2500
     max_color_temp: 5500
     only_once: false
@@ -120,6 +122,8 @@ adaptive_lighting:
   ####################################################################################
   - name: night_light
     interval: 30
+    min_brightness: 1
+    max_brightness: 100
     min_color_temp: 2500
     max_color_temp: 5500
     only_once: false
@@ -131,6 +135,8 @@ adaptive_lighting:
   ####################################################################################
   - name: bedroom
     interval: 30
+    min_brightness: 1
+    max_brightness: 100
     min_color_temp: 2500
     max_color_temp: 5500
     only_once: false
@@ -224,7 +230,7 @@ automation:
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_adapt_color_default
-      - service: switch.turn_off
+      - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_adapt_brightness_default
       - service: adaptive_lighting.set_manual_control
