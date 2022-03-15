@@ -69,7 +69,7 @@ if __name__ == "__main__":
                     "Authorization": "Bearer {}".format(env["HOMEASSISTANT_API_TOKEN"]),
                     "content-type": "application/json",
                 })
-            if state_response.status_code == 401:
+            if state_response.status_code != 200:
                 print("Build script [homeassistant] could not connect to HAAS")
                 break
             if state_response.status_code == 200:

@@ -43,14 +43,18 @@ if __name__ == "__main__":
         'password': env["UNIFI_ADMIN_KEY"]
     }, verify=False).raise_for_status()
     unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
-    unifi_clients_response.raise_for_status()
-    for unifi_client in unifi_clients_response.json()['data']:
-        unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else (
-            unifi_client["hostname"] if "hostname" in unifi_client else "")
-    unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/stat/device'.format(UNIFI_CONTROLLER_URL), verify=False)
-    unifi_clients_response.raise_for_status()
-    for unifi_client in unifi_clients_response.json()['data']:
-        unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else ""
+    if unifi_clients_response.status_code != 200:
+        print("Build script [udmutilities] could not connect to UniFi")
+    else:
+        for unifi_client in unifi_clients_response.json()['data']:
+            unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else (
+                unifi_client["hostname"] if "hostname" in unifi_client else "")
+        unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/stat/device'.format(UNIFI_CONTROLLER_URL), verify=False)
+        if unifi_clients_response.status_code != 200:
+            print("Build script [udmutilities] could not connect to UniFi")
+        else:
+            for unifi_client in unifi_clients_response.json()['data']:
+                unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else ""
     metadata_udmutilities_hosts = {}
     metadata_udmutilities_dnsmasq = {}
     metadata_udmutilities_df = metadata_udmutilities_df.fillna('')
