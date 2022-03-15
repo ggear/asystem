@@ -43,6 +43,6 @@ else
   echo "no new dnsmasq config detected, leaving old config in place"
 fi
 
-kill -9 $(ps aux | grep /opt/cni/bin/dhcp | grep -v grep | cut -d' ' -f1) 2> /dev/null
+kill -9 $(ps aux | grep /opt/cni/bin/dhcp | grep -v grep | cut -d' ' -f1) 2>/dev/null
 rm -f /run/cni/dhcp.sock
-/opt/cni/bin/dhcp daemon &
+/opt/cni/bin/dhcp daemon >/dev/null &
