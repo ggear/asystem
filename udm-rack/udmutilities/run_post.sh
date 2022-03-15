@@ -33,10 +33,10 @@ podman exec unifi-os systemctl restart udm-boot
 chmod a+x ./config/udm-host-records/*.sh
 rm -rf /mnt/data/udm-host-records && cp -rvf ./config/udm-host-records /mnt/data
 
-chmod a+x ./config/udm-dnsmasq/01-dnsmasq.sh
+chmod a+x ./config/udm-dnsmasq/09-dnsmasq.sh
 rm -rf /mnt/data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /mnt/data
-cp -rvf ./config/udm-dnsmasq/01-dnsmasq.sh /mnt/data/on_boot.d
-/mnt/data/on_boot.d/01-dnsmasq.sh
+cp -rvf ./config/udm-dnsmasq/09-dnsmasq.sh /mnt/data/on_boot.d
+/mnt/data/on_boot.d/09-dnsmasq.sh
 
 cp -rvf ./config/udm-utilities/cni-plugins/05-install-cni-plugins.sh /mnt/data/on_boot.d
 chmod a+x /mnt/data/on_boot.d/05-install-cni-plugins.sh
