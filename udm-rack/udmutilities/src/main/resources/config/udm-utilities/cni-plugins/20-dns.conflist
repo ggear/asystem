@@ -8,13 +8,7 @@
       "master": "br4",
       "mac": "4a:9a:06:5d:53:66",
       "ipam": {
-        "type": "static",
-        "addresses": [
-          {
-            "address": "${PIHOLE_IP}/24",
-            "gateway": "${PIHOLE_GATEWAY}"
-          }
-        ],
+        "type": "dhcp"
         "routes": [
           {"dst": "0.0.0.0/0"}
         ]
