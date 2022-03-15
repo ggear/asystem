@@ -44,4 +44,5 @@ else
 fi
 
 kill -9 $(ps aux | grep /opt/cni/bin/dhcp | grep -v grep | cut -d' ' -f1) 2> /dev/null
+rm -f /run/cni/dhcp.sock
 /opt/cni/bin/dhcp daemon &
