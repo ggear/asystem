@@ -42,3 +42,6 @@ if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] || ! dif
 else
   echo "no new dnsmasq config detected, leaving old config in place"
 fi
+
+kill -9 $(ps aux | grep /opt/cni/bin/dhcp | grep -v grep | cut -d' ' -f1) 2> /dev/null
+/opt/cni/bin/dhcp daemon &
