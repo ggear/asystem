@@ -70,12 +70,13 @@ if __name__ == "__main__":
         ))
         metadata_udmutilities_dnsmasq[dnsmasq_conf_path] = []
         for metadata_udmutilities_dict in metadata_udmutilities_dicts:
+            metadata_udmutilities_dnsmasq[dnsmasq_conf_path].append("dhcp-host={},{}{}\n".format(
+                metadata_udmutilities_dict["connection_mac"],
+                (metadata_udmutilities_dict["connection_ip"] + ",")
+                if "connection_ip" in metadata_udmutilities_dict and len(metadata_udmutilities_dict["connection_ip"]) > 0 else "",
+                metadata_udmutilities_dict["device_name"],
+            ))
             if "connection_ip" in metadata_udmutilities_dict and len(metadata_udmutilities_dict["connection_ip"]) > 0:
-                metadata_udmutilities_dnsmasq[dnsmasq_conf_path].append("dhcp-host={},{},{}\n".format(
-                    metadata_udmutilities_dict["connection_mac"],
-                    metadata_udmutilities_dict["connection_ip"],
-                    metadata_udmutilities_dict["device_name"],
-                ))
                 if metadata_udmutilities_dict["device_name"] not in metadata_udmutilities_hosts:
                     metadata_udmutilities_hosts[metadata_udmutilities_dict["device_name"]] = \
                         [metadata_udmutilities_dict["connection_ip"]]
