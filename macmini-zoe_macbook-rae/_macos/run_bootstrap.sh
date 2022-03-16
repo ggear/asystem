@@ -69,7 +69,8 @@ vi /Users/graham/.ssh/.password
 chmod 600 /Users/graham/.ssh/.password
 chsh -s /bin/bash
 git config --global credential.helper osxkeychain
-
+git config --global user.name "Graham Gear"
+git config --global user.email graham.gear@nowhere.org
 
 # Kiwi settings - notifcations
 # Sublime settings - find/replace/text
