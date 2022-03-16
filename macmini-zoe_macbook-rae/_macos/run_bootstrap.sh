@@ -64,6 +64,8 @@
 ################################################################################
 sudo passwd root
 sudo sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+vi /Users/graham/.ssh/.password
+chmod 600 /Users/graham/.ssh/.password
 chsh -s /bin/bash
 
 # Kiwi settings - notifcations
