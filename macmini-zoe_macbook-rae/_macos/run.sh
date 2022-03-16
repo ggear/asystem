@@ -38,7 +38,8 @@ brew upgrade
 brew install \
 	htop \
 	wget \
-	watch
+	watch \
+	hudochenkov/sshpass/sshpass
 
 ################################################################################
 # Python
