@@ -25,7 +25,6 @@ export PATH=/Users/graham/.conda/envs/python2/bin:/Library/Conda/anaconda2/bin:/
 
 EOF
 . /Users/graham/.bash_profile
-sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 mkdir -p /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chown graham /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chgrp staff /Users/graham/Backup /Users/graham/Code /Users/graham/Temp

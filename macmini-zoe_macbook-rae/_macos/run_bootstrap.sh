@@ -63,6 +63,7 @@
 # Init Environment
 ################################################################################
 sudo passwd root
+sudo sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 chsh -s /bin/bash
 
 # Kiwi settings - notifcations
