@@ -34,6 +34,8 @@
 *.pyc
 *egg-info
 *.pipeout
+.pytest_cache
+.gitexternal
 58861*
 Cargo.lock
 pom.xml.tag
