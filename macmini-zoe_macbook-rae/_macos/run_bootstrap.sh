@@ -68,6 +68,8 @@ sudo sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/
 vi /Users/graham/.ssh/.password
 chmod 600 /Users/graham/.ssh/.password
 chsh -s /bin/bash
+git config --global credential.helper osxkeychain
+
 
 # Kiwi settings - notifcations
 # Sublime settings - find/replace/text
