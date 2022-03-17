@@ -26,7 +26,14 @@ function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.
 export PATH=/Users/graham/.conda/envs/python2/bin:/Library/Conda/anaconda2/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:${PATH}
 
 EOF
-. /Users/graham/.bash_profile
+cat <<EOF >/Users/graham/.profile
+# .profile
+
+export CLICOLOR=1
+export LSCOLORS=ExFxCxDxBxegedabagacad
+export LS_OPTIONS='--color=auto'
+alias ls='ls $LS_OPTIONS'
+EOF
 mkdir -p /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chown graham /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chgrp staff /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
