@@ -26,7 +26,7 @@ function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.
 export PATH=/Users/graham/.conda/envs/python2/bin:/Library/Conda/anaconda2/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:${PATH}
 
 EOF
-cat <<EOF >/Users/graham/.profile
+cat <<EOF >/var/root/.profile
 # .profile
 
 export CLICOLOR=1
