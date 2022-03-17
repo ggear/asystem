@@ -58,6 +58,7 @@
 # Install from https://update-software.sonos.com/software/mac/mdcr/SonosDesktopController1341.dmg
 # Install from https://github.com/newmarcel/KeepingYouAwake/releases/download/1.6.1/KeepingYouAwake-1.6.1.zip
 # Install from https://desktop.docker.com/mac/main/amd64/Docker.dmg
+# Install from https://download-cdn.jetbrains.com/idea/ideaIU-2021.3.2.dmg
 # Remove all unnecessary apps using Clean My Mac
 
 ################################################################################
@@ -72,9 +73,12 @@ git config --global credential.helper osxkeychain
 git config --global user.name "Graham Gear"
 git config --global user.email graham.gear@nowhere.org
 
+# Universal Controlh
+
 # Kiwi settings - notifcations
 # Sublime settings - find/replace/text
 # Docker settings
+# Office 365
 
 ################################################################################
 # Brew
@@ -82,39 +86,31 @@ git config --global user.email graham.gear@nowhere.org
 ! which brew && /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 brew update
 brew upgrade
-brew install \
-	htop \
-	wget \
-	watch \
-	hudochenkov/sshpass/sshpass
 
 ################################################################################
 # Python
 ################################################################################
 if [ ! -d /Library/Conda/anaconda2/bin/conda ]; then
-	cd ~/Temp
-	rm -rf /Library/Conda && mkdir -p /Library/Conda && chmod 777 /Library/Conda
-	wget https://repo.anaconda.com/miniconda/Miniconda3-4.5.12-MacOSX-x86_64.sh
-	chmod +x Miniconda3-4.5.12-MacOSX-x86_64.sh
-	./Miniconda3-4.5.12-MacOSX-x86_64.sh -p /Library/Conda/anaconda2 -b
-	rm Miniconda3-4.5.12-MacOSX-x86_64.sh
-	conda config --set channel_priority false
-	conda config --append envs_dirs $HOME/.conda/envs
-	conda create -y -n python2 python=2.7.18
-	conda create -y -n python3 python=3.10
+  cd ~/Temp
+  rm -rf /Library/Conda && mkdir -p /Library/Conda && chmod 777 /Library/Conda
+  wget https://repo.anaconda.com/miniconda/Miniconda3-4.5.12-MacOSX-x86_64.sh
+  chmod +x Miniconda3-4.5.12-MacOSX-x86_64.sh
+  ./Miniconda3-4.5.12-MacOSX-x86_64.sh -p /Library/Conda/anaconda2 -b
+  rm Miniconda3-4.5.12-MacOSX-x86_64.sh
+  conda config --set channel_priority false
+  conda config --append envs_dirs $HOME/.conda/envs
+  conda create -y -n python2 python=2.7.18
+  conda create -y -n python3 python=3.10
 fi
 
 ################################################################################
 # Asystem
 ################################################################################
 if [ ! -d ~/Code/asystem ]; then
-	brew install pkg-config poppler
-	pip install fabric
-	cd ~/Code
-	git clone https://github.com/ggear/asystem.git
-	cd asystem
-	fab purge setup
+  brew install pkg-config poppler
+  pip install fabric
+  cd ~/Code
+  git clone https://github.com/ggear/asystem.git
+  cd asystem
+  fab purge setup
 fi
-
-
-

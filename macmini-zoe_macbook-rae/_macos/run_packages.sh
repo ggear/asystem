@@ -3,9 +3,10 @@
 ################################################################################
 # Install Brew Packages
 ################################################################################
-brew update
-brew upgrade
 brew install \
   htop \
   wget \
-  watch
+  watch \
+  rename \
+  exiftool \
+  hudochenkov/sshpass/sshpass
