@@ -23,8 +23,11 @@ EOF
         cat <<EOF >"${3}${1}/.bashrc"
 # .bashrc
 
-export CLICOLOR=1
-export LSCOLORS=ExFxCxDxBxegedabagacad
+export LS_OPTIONS='--color=auto'
+eval "$(dircolors)"
+alias ls='ls $LS_OPTIONS'
+alias ll='ls $LS_OPTIONS -l'
+alias l='ls $LS_OPTIONS -lA'
 
 bind '"\e[A":history-search-backward'
 bind '"\e[B":history-search-forward'
