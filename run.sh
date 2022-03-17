@@ -36,7 +36,7 @@ touch .env
 chmod 600 .env
 [ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
 [ -f "docker-compose.yml" ] && docker-compose --compatibility --no-ansi up --force-recreate -d && sleep 2
-[ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
+[ -f "./run_post.sh" ] && chmod +x ./run.sh && ./run.sh
 if [ -f "docker-compose.yml" ]; then
   if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
     echo && echo "Container failed to start" && echo && exit 1
