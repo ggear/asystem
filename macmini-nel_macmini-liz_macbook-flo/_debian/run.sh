@@ -52,8 +52,8 @@ apt-get install -y --allow-downgrades 'intel-microcode=3.20210608.2'
 ################################################################################
 # Shell setup
 ################################################################################
-if [ -f "${3}${1}/.bashrc" ]; then
-  cat <<EOF >"${3}${1}/.bashrc"
+if [ -f "${HOME}/.bashrc" ]; then
+  cat <<EOF >"${HOME}/.bashrc"
 # .bashrc
 
 export CLICOLOR=1
