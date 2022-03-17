@@ -19,6 +19,11 @@ EOF
       chgrp ${2} "${3}${1}" 2>/dev/null || true
       chown -R ${1} "${3}${1}/.ssh" 2>/dev/null || true
       chgrp -R ${2} "${3}${1}/.ssh" 2>/dev/null || true
+
+      if [ -f "${3}${1}/.bashrc" ]; then
+        grep 'alias ls' "${3}${1}/.bashrc" && echo 'alias ls="ls --color=always"' >>"${3}${1}/.bashrc"
+      fi
+
     fi
   fi
 }
