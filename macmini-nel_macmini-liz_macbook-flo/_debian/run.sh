@@ -50,6 +50,24 @@ apt-get install -y --allow-downgrades 'libc6-i386=2.31-13+deb11u2'
 apt-get install -y --allow-downgrades 'intel-microcode=3.20210608.2'
 
 ################################################################################
+# Shell setup
+################################################################################
+if [ -f "${3}${1}/.bashrc" ]; then
+  cat <<EOF >"${3}${1}/.bashrc"
+# .bashrc
+
+export CLICOLOR=1
+export LSCOLORS=ExFxCxDxBxegedabagacad
+export LS_OPTIONS='--color=auto'
+alias ls='ls $LS_OPTIONS'
+
+bind '"\e[A":history-search-backward'
+bind '"\e[B":history-search-forward'
+
+EOF
+fi
+
+################################################################################
 # Disable hardware
 ################################################################################
 [ ! -f /etc/modprobe.d/blacklist-b43.conf ] && echo "blacklist b43" | tee -a /etc/modprobe.d/blacklist-b43.conf

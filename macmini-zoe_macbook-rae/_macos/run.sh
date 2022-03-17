@@ -10,6 +10,8 @@ cat <<EOF >/Users/graham/.bash_profile
 
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
+export LS_OPTIONS='--color=auto'
+alias ls='ls $LS_OPTIONS'
 
 bind '"\e[A":history-search-backward'
 bind '"\e[B":history-search-forward'

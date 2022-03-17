@@ -19,21 +19,6 @@ EOF
       chgrp ${2} "${3}${1}" 2>/dev/null || true
       chown -R ${1} "${3}${1}/.ssh" 2>/dev/null || true
       chgrp -R ${2} "${3}${1}/.ssh" 2>/dev/null || true
-      if [ -f "${3}${1}/.bashrc" ]; then
-        cat <<EOF >"${3}${1}/.bashrc"
-# .bashrc
-
-export LS_OPTIONS='--color=auto'
-eval "$(dircolors)"
-alias ls='ls $LS_OPTIONS'
-alias ll='ls $LS_OPTIONS -l'
-alias l='ls $LS_OPTIONS -lA'
-
-bind '"\e[A":history-search-backward'
-bind '"\e[B":history-search-forward'
-
-EOF
-      fi
     fi
   fi
 }
