@@ -2,6 +2,7 @@ import glob
 import os.path
 import shutil
 import sys
+import string
 import subprocess
 from datetime import datetime
 import osxphotos
@@ -38,7 +39,8 @@ if __name__ == "__main__":
                 export_date = None
                 for photo in album.photos:
                     if not photo.ismissing:
-                        album_name = sanitize_filepath(album.title, platform="auto").replace(" ", "_")
+                        album_name = sanitize_filepath(album.title, platform="auto") \
+                            .translate(str.maketrans('', '', string.punctuation)).replace(" ", "_")
                         export_path = os.path.abspath(os.path.join(export_root_path, album_name))
                         if not os.path.isdir(export_path):
                             os.makedirs(export_path)
@@ -49,7 +51,6 @@ if __name__ == "__main__":
                                 update=True,
                                 location=True,
                                 persons=True,
-                                jpeg_ext="jpg",
                                 jpeg_quality=0.0,
                                 convert_to_jpeg=True,
                                 edited=photo.hasadjustments
