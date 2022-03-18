@@ -12,3 +12,9 @@ brew install \
   pkg-config \
   poppler \
   hudochenkov/sshpass/sshpass
+
+################################################################################
+# Install Brew Packages
+################################################################################
+pip install \
+  fabric

@@ -108,8 +108,6 @@ fi
 # Asystem
 ################################################################################
 if [ ! -d ~/Code/asystem ]; then
-  brew install pkg-config poppler
-  pip install fabric
   cd ~/Code
   git clone https://github.com/ggear/asystem.git
   cd asystem
