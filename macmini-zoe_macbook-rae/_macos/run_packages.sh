@@ -9,4 +9,6 @@ brew install \
   watch \
   rename \
   exiftool \
+  pkg-config \
+  poppler \
   hudochenkov/sshpass/sshpass
