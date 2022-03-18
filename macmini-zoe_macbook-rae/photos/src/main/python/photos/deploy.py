@@ -1,0 +1,90 @@
+import glob
+import os.path
+import shutil
+import sys
+import subprocess
+from datetime import datetime
+import osxphotos
+import pandas as pd
+import urllib3
+from pathvalidate import sanitize_filepath
+from osxphotos import ExportOptions
+from osxphotos import PhotoExporter
+
+urllib3.disable_warnings()
+pd.options.mode.chained_assignment = None
+
+DIR_MODULE_ROOT = os.path.abspath("{}/..".format(os.path.dirname(os.path.realpath(__file__))))
+for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../..".format(os.path.dirname(os.path.realpath(__file__))))):
+    if dir_module.split("/")[-2] == "homeassistant":
+        sys.path.insert(0, "{}/src/main/python".format(dir_module))
+sys.path.insert(0, DIR_MODULE_ROOT)
+
+from homeassistant.build import load_env
+
+DIR_PHOTOS_DB = "/Users/graham/Pictures/Photos Library.photoslibrary"
+
+if __name__ == "__main__":
+    env = load_env(DIR_MODULE_ROOT)
+
+    export_root_path = os.path.join(DIR_MODULE_ROOT, "../../main/resources/photos")
+    shutil.rmtree(export_root_path, ignore_errors=True)
+    os.mkdir(export_root_path)
+    photos_db = osxphotos.PhotosDB(os.path.expanduser(DIR_PHOTOS_DB))
+    for folder in photos_db.folder_info:
+        if folder.title == "Published":
+            for album in folder.album_info:
+                index = 1
+                export_date = None
+                for photo in album.photos:
+                    if not photo.ismissing:
+                        album_name = sanitize_filepath(album.title, platform="auto").replace(" ", "_")
+                        export_path = os.path.abspath(os.path.join(export_root_path, album_name))
+                        if not os.path.isdir(export_path):
+                            os.makedirs(export_path)
+                        photo_type = photo.filename.split(".")[-1]
+                        if photo_type.lower() in ["png", "jpg", "jpeg", "heic"]:
+                            photo_name = "{}_{:03d}.{}".format(album_name, index, photo_type)
+                            export_info = PhotoExporter(photo).export(export_path, photo_name, ExportOptions(
+                                update=True,
+                                location=True,
+                                persons=True,
+                                jpeg_ext="jpg",
+                                jpeg_quality=0.0,
+                                convert_to_jpeg=True,
+                                edited=photo.hasadjustments
+                            ))
+                            if export_date is None:
+                                try:
+                                    export_date = datetime.strptime(
+                                        subprocess.run(["exiftool", "-T", "-DateTimeOriginal", export_info.exported[0]],
+                                                       capture_output=True)
+                                            .stdout.decode("utf-8").strip().split(" ")[0], "%Y:%m:%d")
+                                except:
+                                    raise Exception("Could not parse original date time on file [{}] from album [{}]"
+                                                    .format(photo.original_filename, album.title))
+                            subprocess.run(["exiftool", "-q", "-wm", "w", "-overwrite_original", "-AllDates={} {:02d}:{:02d}:{:02d}".format(
+                                export_date.strftime("%Y:%m:%d"),
+                                12,
+                                int(index / 60),
+                                index % 60
+                            ), export_info.exported[0]])
+                            index += 1
+                            print("Build script [photos] image [{}] from album [{}] exported to {}"
+                                  .format(photo.original_filename, album.title, export_info.exported))
+                            sys.stdout.flush()
+
+                            # TODO: Add document manual process -
+                            #  if DLSR: pause iCloud,
+                            #  import, create albums, export
+                            #  if DLSR: delete last import, import new albums, unpause iCloud
+                            #  upload to Google
+                            #  if DSLR or Janes Phone delete photos on device
+
+                        else:
+                            print("Build script [photos] image [{}] from album [{}] has unsupported type [{}]"
+                                  .format(photo.original_filename, album.title, photo_type), file=sys.stderr)
+
+                    else:
+                        print("Build script [photos] image [{}] missing from album [{}]"
+                              .format(photo.original_filename, album.title), file=sys.stderr)

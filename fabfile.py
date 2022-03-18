@@ -115,7 +115,7 @@ def _setup(context):
     _print_line(
         "Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(_get_versions()[2], _get_versions()[1], _get_versions()[0]))
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) == 0:
-        _run_local(context, "conda create -y -n $ENV python=2.7.18")
+        _run_local(context, "conda create -y -n $ENV python=3")
         _print_line("Installing requirements ...")
         for requirement in glob.glob("{}/*/*/*/reqs_*.txt".format(DIR_ROOT)):
             _run_local(context, "pip install -r {}".format(requirement))
@@ -364,7 +364,7 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
     if filter_module is None:
         working_modules = []
         filter_changes = filter_changes if FAB_SKIP_DELTA not in os.environ else False
-        working_dirs = _run_local(context, "pwd", hide='out').stdout.encode("utf8").strip().split('/')
+        working_dirs = _run_local(context, "pwd", hide='out').stdout.strip().split('/')
         if working_dirs[-1] == "asystem":
             for filtered_module in filter(lambda module_tmp: isdir(module_tmp) and (
                     not filter_changes or _run_local(context, "git status --porcelain {}".format(module_tmp), DIR_ROOT, hide='out').stdout

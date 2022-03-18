@@ -79,6 +79,7 @@ git config --global user.email graham.gear@nowhere.org
 # Sublime settings - find/replace/text
 # Docker settings
 # Office 365
+# Google accounts/calendar
 
 ################################################################################
 # Brew

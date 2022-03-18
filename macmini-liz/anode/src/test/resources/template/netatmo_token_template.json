@@ -1,9 +1,0 @@
-{
-  "access_token": "57aec38265d1c4fb068b45b3|7059f974a1ba7ad2ea7f63ab5c51cadc",
-  "refresh_token": "57aec38265d1c4fb068b45b3|fa9aa9ad4e8aa4fdb66cae9bb06245aa",
-  "scope": [
-    "read_station"
-  ],
-  "expires_in": 10800,
-  "expire_in": 10800
-}

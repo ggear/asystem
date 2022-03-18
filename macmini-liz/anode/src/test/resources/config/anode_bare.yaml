@@ -1,5 +1,0 @@
-host: ${ANODE_IP}
-port: ${ANODE_PORT}
-plugin:
-  fronius:
-    poll_seconds: 1
