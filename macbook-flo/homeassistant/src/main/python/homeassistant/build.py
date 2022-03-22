@@ -38,6 +38,7 @@ def load_env(root_dir=None):
 def load_entity_metadata():
     metadata_path = os.path.abspath(os.path.join(DIR_MODULE_ROOT, "../resources/entity_metadata.xlsx"))
     metadata_df = pd.read_excel(metadata_path, header=2, dtype=str)
+    metadata_df["index"] = metadata_df["index"].astype(int)
     metadata_df = metadata_df.set_index(metadata_df["index"]).sort_index()
     print("Build script [homeassistant] entity metadata loaded from [{}]".format(metadata_path))
     sys.stdout.flush()
@@ -128,7 +129,7 @@ if __name__ == "__main__":
                 metadata_customise_file.write("  " + """
   unit_of_measurement: '{}'
                 """.format(
-                    metadata_customise_dict["unit_of_measurement"].encode('utf-8'),
+                    metadata_customise_dict["unit_of_measurement"],
                 ).strip() + "\n")
         print("Build script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
 

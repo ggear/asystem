@@ -1,4 +1,3 @@
-anode
 weewx
 grafana
 influxdb

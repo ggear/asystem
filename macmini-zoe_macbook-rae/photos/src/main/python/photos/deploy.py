@@ -28,7 +28,7 @@ DIR_PHOTOS_DB = "/Users/graham/Pictures/Photos Library.photoslibrary"
 if __name__ == "__main__":
     env = load_env(DIR_MODULE_ROOT)
 
-    export_root_path = os.path.join(DIR_MODULE_ROOT, "../../main/resources/photos")
+    export_root_path = os.path.join(DIR_MODULE_ROOT, "../../../../../../../Backup/photos")
     shutil.rmtree(export_root_path, ignore_errors=True)
     os.mkdir(export_root_path)
     photos_db = osxphotos.PhotosDB(os.path.expanduser(DIR_PHOTOS_DB))
@@ -45,47 +45,43 @@ if __name__ == "__main__":
                         if not os.path.isdir(export_path):
                             os.makedirs(export_path)
                         photo_type = photo.filename.split(".")[-1]
-                        if photo_type.lower() in ["png", "jpg", "jpeg", "heic"]:
-                            photo_name = "{}_{:03d}.{}".format(album_name, index, photo_type)
-                            export_info = PhotoExporter(photo).export(export_path, photo_name, ExportOptions(
-                                update=True,
-                                location=True,
-                                persons=True,
-                                jpeg_quality=0.0,
-                                convert_to_jpeg=True,
-                                edited=photo.hasadjustments
-                            ))
-                            if export_date is None:
-                                try:
-                                    export_date = datetime.strptime(
-                                        subprocess.run(["exiftool", "-T", "-DateTimeOriginal", export_info.exported[0]],
-                                                       capture_output=True)
-                                            .stdout.decode("utf-8").strip().split(" ")[0], "%Y:%m:%d")
-                                except:
-                                    raise Exception("Could not parse original date time on file [{}] from album [{}]"
-                                                    .format(photo.original_filename, album.title))
-                            subprocess.run(["exiftool", "-q", "-wm", "w", "-overwrite_original", "-AllDates={} {:02d}:{:02d}:{:02d}".format(
-                                export_date.strftime("%Y:%m:%d"),
-                                12,
-                                int(index / 60),
-                                index % 60
-                            ), export_info.exported[0]])
-                            index += 1
-                            print("Build script [photos] image [{}] from album [{}] exported to {}"
-                                  .format(photo.original_filename, album.title, export_info.exported))
-                            sys.stdout.flush()
+                        photo_name = "{}_{:03d}.jpg".format(album_name, index)
+                        export_info = PhotoExporter(photo).export(export_path, photo_name, ExportOptions(
+                            update=True,
+                            location=True,
+                            persons=True,
+                            jpeg_quality=0.0,
+                            convert_to_jpeg=True,
+                            edited=photo.hasadjustments
+                        ))
+                        if export_date is None:
+                            try:
+                                export_date = datetime.strptime(
+                                    subprocess.run(["exiftool", "-T", "-DateTimeOriginal", export_info.exported[0]],
+                                                   capture_output=True)
+                                        .stdout.decode("utf-8").strip().split(" ")[0], "%Y:%m:%d")
+                            except:
+                                raise Exception("Could not parse original date time on file [{}] from album [{}]"
+                                                .format(photo.original_filename, album.title))
+                        subprocess.run(["exiftool", "-q", "-wm", "w", "-m", "-overwrite_original", "-AllDates={} {:02d}:{:02d}:{:02d}".format(
+                            export_date.strftime("%Y:%m:%d"),
+                            12,
+                            int(index / 60),
+                            index % 60
+                        ), export_info.exported[0]])
+                        index += 1
+                        print("Build script [photos] image [{}] from album [{}] exported to {}"
+                              .format(photo.original_filename, album.title, export_info.exported))
+                        sys.stdout.flush()
 
-                            # TODO: Add document manual process -
-                            #  if DLSR: pause iCloud,
-                            #  import, create albums, export
-                            #  if DLSR: delete last import, import new albums, unpause iCloud
-                            #  upload to Google
-                            #  if DSLR or Janes Phone delete photos on device
-
-                        else:
-                            print("Build script [photos] image [{}] from album [{}] has unsupported type [{}]"
-                                  .format(photo.original_filename, album.title, photo_type), file=sys.stderr)
+                        # TODO: Add document manual process -
+                        #  if DLSR: pause iCloud,
+                        #  import, create albums, delete unwanted photos, empty trash, export
+                        #  if DLSR: delete last import, empty trash, import new albums, unpause iCloud
+                        #  upload new albums to Google
+                        #  if DSLR or Janes Phone delete photos on device
 
                     else:
-                        print("Build script [photos] image [{}] missing from album [{}]"
-                              .format(photo.original_filename, album.title), file=sys.stderr)
+                        print("Build script [photos] image [{}] from album [{}] has unsupported type [{}]"
+                              .format(photo.original_filename, album.title, photo_type), file=sys.stderr)
+

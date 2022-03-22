@@ -59,7 +59,7 @@ if __name__ == "__main__":
     os.makedirs(metadata_publish_dir)
     for index, metadata_publish_dict in enumerate(metadata_publish_dicts):
         metadata_publish_dict["device"] = metadata_device_pub_dicts[index]
-        metadata_publish_str = json.dumps(metadata_publish_dict, ensure_ascii=False).encode('utf8')
+        metadata_publish_str = json.dumps(metadata_publish_dict, ensure_ascii=False)
         metadata_publish_path = os.path.abspath(os.path.join(metadata_publish_dir, metadata_publish_dict["unique_id"] + ".json"))
         with open(metadata_publish_path, 'a') as metadata_publish_file:
             metadata_publish_file.write(metadata_publish_str)

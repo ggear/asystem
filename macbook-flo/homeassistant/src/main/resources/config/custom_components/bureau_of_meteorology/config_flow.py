@@ -42,15 +42,23 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_LONGITUDE],
                 )
 
+                # Make sure the BoM API is working as expected
+                result = await self.collector.get_location_name()
+                if result is None:
+                    raise CannotConnect
+
                 # Save the user input into self.data so it's retained
                 self.data = user_input
 
                 # Populate observations and daily forecasts data
-                await self.collector.async_update()
+                await self.collector.get_observations_data()
+                await self.collector.get_daily_forecasts_data()
 
                 # Move onto the next step of the config flow
                 return await self.async_step_observations()
 
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
             except Exception:
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
@@ -139,7 +147,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if self.data[CONF_FORECASTS_CREATE]:
                     return await self.async_step_forecasts_monitored()
                 else:
-                    return self.async_create_entry(title=self.collector.locations_data["data"]["name"], data=self.data)
+                    return self.async_create_entry(title=self.collector.location_name, data=self.data)
 
             except CannotConnect:
                 errors["base"] = "cannot_connect"
@@ -172,7 +180,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         }
 
         data_schema = vol.Schema({
-            vol.Required(CONF_FORECASTS_BASENAME, default=self.collector.locations_data["data"]["name"]): str,
+            vol.Required(CONF_FORECASTS_BASENAME, default=self.collector.location_name): str,
             vol.Required(CONF_FORECASTS_MONITORED): cv.multi_select(monitored),
             vol.Required(CONF_FORECASTS_DAYS): vol.All(vol.Coerce(int), vol.Range(0, 7)),
         })
@@ -181,7 +189,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 self.data.update(user_input)
-                return self.async_create_entry(title=self.collector.locations_data["data"]["name"], data=self.data)
+                return self.async_create_entry(title=self.collector.location_name, data=self.data)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
             except Exception:

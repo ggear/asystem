@@ -42,6 +42,7 @@
 # Window -> Columns -> 200
 # Window -> Rows -> 60
 # Adavanced -> Audible Bell -> Off
+# Keybaord functions keys
 
 ################################################################################
 # Install Apps
@@ -72,6 +73,7 @@ chsh -s /bin/bash
 git config --global credential.helper osxkeychain
 git config --global user.name "Graham Gear"
 git config --global user.email graham.gear@nowhere.org
+git config --global advice.detachedHead false
 
 # Universal Controlh
 
@@ -80,6 +82,7 @@ git config --global user.email graham.gear@nowhere.org
 # Docker settings
 # Office 365
 # Google accounts/calendar
+# Use tab
 
 ################################################################################
 # Brew

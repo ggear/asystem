@@ -98,9 +98,9 @@ def run(context):
 
 
 @task
-def deploy(context):
+def push(context):
     _pull(context)
-    _deploy(context)
+    _push(context)
 
 
 @task
@@ -149,11 +149,12 @@ def _backup(context):
 
 
 def _pull(context, filter_module=None, filter_host=None, is_release=False):
-    # TODO: Re-enable when I start developing on multiple machines
-    # _print_header("asystem", "pull git")
-    # _run_local(context, "git pull --all")
-    # _print_footer("asystem", "pull git")
-
+    _print_header("asystem", "pull git")
+    _run_local(context, "git pull --all")
+    _print_footer("asystem", "pull git")
+    _print_header("asystem", "pull dependencies")
+    _run_local(context, "pull.sh", DIR_ROOT)
+    _print_footer("asystem", "pull dependencies")
     for module in _get_modules(context, filter_module=filter_module):
         _print_header(module, "pull env")
         _write_env(context, module, join(DIR_ROOT, module, "target/release") if is_release else join(DIR_ROOT, module),
@@ -266,11 +267,11 @@ def _run(context):
         break
 
 
-def _deploy(context):
-    for module in _get_modules(context, "deploy.sh"):
-        _print_header(module, "deploy")
-        _run_local(context, "deploy.sh", module)
-        _print_footer(module, "deploy")
+def _push(context):
+    for module in _get_modules(context, "push.sh"):
+        _print_header(module, "push")
+        _run_local(context, "push.sh", module)
+        _print_footer(module, "push")
 
 
 def _release(context):
