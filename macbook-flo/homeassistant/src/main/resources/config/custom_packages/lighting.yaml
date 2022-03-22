@@ -303,6 +303,18 @@ automation:
           entity_id: switch.adaptive_lighting_night_light
           lights: light.ada_lamp
           manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.ada_lamp
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.ada_lamp
+          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_edwin_lamp
     alias: "Lighting: Reset Adaptive Lighting - Edwin Lamp"
@@ -316,6 +328,18 @@ automation:
           entity_id: light.edwin_lamp
         data:
           brightness_pct: 100
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.edwin_lamp
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.edwin_lamp
+          manual_control: false
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -370,6 +394,18 @@ automation:
           entity_id: switch.adaptive_lighting_night_light
           lights: light.edwin_night_light
           manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.edwin_night_light
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.edwin_night_light
+          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_hallway_main
     alias: "Lighting: Reset Adaptive Lighting - Hallway Main"
@@ -378,6 +414,18 @@ automation:
         entity_id: light.hallway_main
         from: 'unavailable'
     action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.hallway_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.hallway_main
+          manual_control: false
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
@@ -437,6 +485,18 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.dining_main
           manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.dining_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.dining_main
+          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_lounge_main
     alias: "Lighting: Reset Adaptive Lighting - Lounge Main"
@@ -468,6 +528,18 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.lounge_main
           manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.lounge_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.lounge_main
+          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_parents_main
     alias: "Lighting: Reset Adaptive Lighting - Parents Main"
@@ -476,6 +548,18 @@ automation:
         entity_id: light.parents_main
         from: 'unavailable'
     action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.parents_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.parents_main
+          manual_control: false
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
@@ -535,6 +619,18 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.kitchen_main
           manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.kitchen_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.kitchen_main
+          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_laundry_main
     alias: "Lighting: Reset Adaptive Lighting - Laundry Main"
@@ -548,6 +644,18 @@ automation:
           entity_id: light.laundry_main
         data:
           brightness_pct: 100
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.laundry_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.laundry_main
+          manual_control: false
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -607,6 +715,18 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.pantry_main
           manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.pantry_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.pantry_main
+          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_bathroom_main
     alias: "Lighting: Reset Adaptive Lighting - Bathroom Main"
@@ -615,6 +735,18 @@ automation:
         entity_id: light.bathroom_main
         from: 'unavailable'
     action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.bathroom_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.bathroom_main
+          manual_control: false
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
@@ -669,6 +801,18 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.ensuite_main
           manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.ensuite_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.ensuite_main
+          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_wardrobe_main
     alias: "Lighting: Reset Adaptive Lighting - Wardrobe Main"
@@ -677,6 +821,18 @@ automation:
         entity_id: light.wardrobe_main
         from: 'unavailable'
     action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
+          manual_control: false
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom

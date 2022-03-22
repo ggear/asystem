@@ -508,7 +508,23 @@ automation:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_{}
+          lights: light.{}
+          manual_control: false
+      - delay: '00:00:02'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_{}
+          lights: light.{}
+          manual_control: false
                   """.format(
+                    metadata_lighting_group_dicts[0]["entity_automation"],
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                    metadata_lighting_group_dicts[0]["entity_automation"],
+                    metadata_lighting_group_dicts[0]["unique_id"],
                     metadata_lighting_group_dicts[0]["entity_automation"],
                     metadata_lighting_group_dicts[0]["unique_id"],
                     metadata_lighting_group_dicts[0]["entity_automation"],
