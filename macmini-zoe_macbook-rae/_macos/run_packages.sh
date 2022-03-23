@@ -8,6 +8,7 @@ brew install \
   wget \
   watch \
   rename \
+  rustup \
   exiftool \
   pkg-config \
   poppler \

@@ -30,6 +30,7 @@
 .impalahistory
 .python-eggs
 .pydevproject
+.gitexternal
 .coverage
 .eggs
 *.pyc

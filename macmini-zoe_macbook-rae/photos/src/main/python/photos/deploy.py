@@ -21,7 +21,7 @@ for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../..".format(os.pa
         sys.path.insert(0, "{}/src/main/python".format(dir_module))
 sys.path.insert(0, DIR_MODULE_ROOT)
 
-from homeassistant.build import load_env
+from homeassistant.pull import load_env
 
 DIR_PHOTOS_DB = "/Users/graham/Pictures/Photos Library.photoslibrary"
 

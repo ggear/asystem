@@ -141,8 +141,14 @@ def _purge(context):
 def _backup(context):
     _print_header("asystem", "backup")
     _run_local(context, "mkdir -p /Users/graham/Backup/asystem && "
-                        "git check-ignore $(find . -type f -print) | grep -v ./asystem.iml | grep -v ./.git "
-                        "> /Users/graham/Backup/asystem/.gitexternal", DIR_ROOT)
+                        "git check-ignore $(find . "
+                        "-not -path './.git*' "
+                        "-not -path './.deps*' "
+                        "-not -path './.idea*' "
+                        "-not -path '*__pycache__*' "
+                        "-not -path '*.pytest_cache*' "
+                        "-not -name asystem.iml "
+                        "-type f -print) > /Users/graham/Backup/asystem/.gitexternal", DIR_ROOT)
     _run_local(context, "mkdir -p /Users/graham/Backup/asystem && "
                         "rsync -vr --files-from=/Users/graham/Backup/asystem/.gitexternal . /Users/graham/Backup/asystem", DIR_ROOT)
     _print_footer("asystem", "backup")
@@ -164,9 +170,9 @@ def _pull(context, filter_module=None, filter_host=None, is_release=False):
         _print_header(module, "pull resources")
         _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
         _print_footer(module, "pull resources")
-    for module in _get_modules(context, "src/main/python/*/build.py", filter_changes=False):
+    for module in _get_modules(context, "src/main/python/*/push.py", filter_changes=False):
         _print_header(module, "pull process")
-        _run_local(context, "python {}/{}/src/main/python/{}/build.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
+        _run_local(context, "python {}/{}/src/main/python/{}/push.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
         _print_footer(module, "pull process")
 
 
@@ -181,7 +187,7 @@ def _clean(context, filter_module=None):
     for module in _get_modules(context, filter_module=filter_module, filter_changes=False):
         _print_header(module, "clean target")
 
-        # TODO: Disable deleting .env, leave last build in place for running build.py scripts
+        # TODO: Disable deleting .env, leave last build in place for running push.py scripts
         # _run_local(context, "rm -rf {}/{}/.env".format(DIR_ROOT, module))
 
         _run_local(context, "rm -rf {}/{}/target".format(DIR_ROOT, module))
