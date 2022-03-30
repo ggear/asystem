@@ -1,1 +1,1 @@
-from equity import *
+from .equity import *

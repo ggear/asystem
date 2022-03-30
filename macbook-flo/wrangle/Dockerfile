@@ -1,14 +1,15 @@
-FROM telegraf:1.20.2 as image_base
+FROM telegraf:1.21.4 as image_base
        
 FROM image_base as image_package
 ENV PYTHONUNBUFFERED=1
 RUN apt-get update && apt-get -y --no-install-recommends install \
-  python=2.7.16-1 \
-  python-dev=2.7.16-1 \
-  python-pip=18.1-5 \
-  build-essential=12.6 \
-  poppler-utils=0.71.0-5 \
-  libpoppler-cpp-dev=0.71.0-5 && \
+  python3=3.9.2-3 \
+  python3-dev=3.9.2-3 \
+  python-is-python3=3.9.2-1 \
+  python3-pip=20.3.4-4+deb11u1 \
+  build-essential=12.9 \
+  poppler-utils=20.09.0-3.1 \
+  libpoppler-cpp-dev=20.09.0-3.1 && \
   apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 FROM image_package as image_install
@@ -22,5 +23,7 @@ COPY src/main/resources/.google_service_account.json /root
 COPY src/main/python/ /asystem/
 
 FROM image_install as image_runtime
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["telegraf"]
+#ENTRYPOINT ["/entrypoint.sh"]
+#CMD ["telegraf"]
+
+CMD ["sleep", "999999"]

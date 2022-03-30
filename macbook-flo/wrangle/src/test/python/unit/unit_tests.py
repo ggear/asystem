@@ -16,21 +16,21 @@ DIR_TARGET = "../../../../target"
 DIR_RESOURCES = "../../resources"
 DIR_SRC = "../../../../src/main/python"
 
-for key, value in library.load_profile(library.get_file(".env")).iteritems():
+for key, value in list(library.load_profile(library.get_file(".env")).items()):
     os.environ[key] = value
 
 
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("health", {"success_typical": ASSERT_RUN},
+        self.run_module("equity", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
                         random_subset_rows=False,
                         reprocess_all_files=False,
-                        disable_write_stdout=False,
+                        disable_write_stdout=True,
                         disable_upload_files=True,
-                        disable_download_files=False,
+                        disable_download_files=True,
                         )
 
     def test_currency_typical(self):
@@ -372,6 +372,5 @@ def no_op():
 
 
 if __name__ == '__main__':
-    sys.argv.extend([__file__, "-s", "-v", "--durations=50",
-                     "--cov=../../../main/python", "-o", "cache_dir=../../../../target/.pytest_cache"])
+    sys.argv.extend([__file__, "-s", "-v", "--durations=50", "-o", "cache_dir=../../../../target/.pytest_cache"])
     sys.exit(pytest.main())

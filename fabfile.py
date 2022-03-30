@@ -66,12 +66,13 @@ def build(context):
 
 
 @task
-def unittest(context):
+def test(context):
     _setup(context)
     _clean(context)
     _pull(context)
     _build(context)
     _unittest(context)
+    _systest(context)
 
 
 @task
@@ -84,12 +85,6 @@ def package(context):
 
 
 @task
-def systest(context):
-    _setup(context)
-    _systest(context)
-
-
-@task
 def run(context):
     _setup(context)
     _clean(context)
@@ -98,16 +93,16 @@ def run(context):
 
 
 @task
-def push(context):
+def pop(context):
     _pull(context)
-    _push(context)
+    _pop(context)
 
 
 @task
-def release(context):
+def push(context):
     _setup(context)
     _clean(context)
-    _release(context)
+    _push(context)
 
 
 def _setup(context):
@@ -115,7 +110,7 @@ def _setup(context):
     _print_line(
         "Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(_get_versions()[2], _get_versions()[1], _get_versions()[0]))
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) == 0:
-        _run_local(context, "conda create -y -n $ENV python=3")
+        _run_local(context, "conda create -y -n $ENV python=$PYTHON_VERSION")
         _print_line("Installing requirements ...")
         for requirement in glob.glob("{}/*/*/*/reqs_*.txt".format(DIR_ROOT)):
             _run_local(context, "pip install -r {}".format(requirement))
@@ -170,10 +165,6 @@ def _pull(context, filter_module=None, filter_host=None, is_release=False):
         _print_header(module, "pull resources")
         _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
         _print_footer(module, "pull resources")
-    for module in _get_modules(context, "src/main/python/*/push.py", filter_changes=False):
-        _print_header(module, "pull process")
-        _run_local(context, "python {}/{}/src/main/python/{}/push.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
-        _print_footer(module, "pull process")
 
 
 def _clean(context, filter_module=None):
@@ -273,14 +264,14 @@ def _run(context):
         break
 
 
+def _pop(context):
+    for module in _get_modules(context, "pop.sh"):
+        _print_header(module, "pop")
+        _run_local(context, "pop.sh", module)
+        _print_footer(module, "pop")
+
+
 def _push(context):
-    for module in _get_modules(context, "push.sh"):
-        _print_header(module, "push")
-        _run_local(context, "push.sh", module)
-        _print_footer(module, "push")
-
-
-def _release(context):
     modules = _get_modules(context)
     for module in modules:
         if FAB_SKIP_TESTS not in os.environ:
@@ -299,7 +290,7 @@ def _release(context):
             _pull(context, filter_module=module, filter_host=host, is_release=True)
             _build(context, filter_module=module, is_release=True)
             _package(context, filter_module=module)
-            _print_header(module, "release")
+            _print_header(module, "push")
             group_path = Path(join(DIR_ROOT, module, ".group"))
             if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0:
                 _run_local(context, "mkdir -p target/release", module)
@@ -342,7 +333,7 @@ def _release(context):
                 _print_footer("{}/{}".format(host, _name(module)), "release")
             else:
                 print("Module ignored")
-            _print_footer(module, "release")
+            _print_footer(module, "push")
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
@@ -373,16 +364,16 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
         filter_changes = filter_changes if FAB_SKIP_DELTA not in os.environ else False
         working_dirs = _run_local(context, "pwd", hide='out').stdout.strip().split('/')
         if working_dirs[-1] == "asystem":
-            for filtered_module in filter(lambda module_tmp: isdir(module_tmp) and (
+            for filtered_module in [module_tmp for module_tmp in glob.glob('*/*') if isdir(module_tmp) and (
                     not filter_changes or _run_local(context, "git status --porcelain {}".format(module_tmp), DIR_ROOT, hide='out').stdout
-            ), glob.glob('*/*')):
+            )]:
                 working_modules.append(filtered_module)
         else:
             root_dir_index = working_dirs.index("asystem")
             if (root_dir_index + 2) < len(working_dirs):
                 working_modules.append(working_dirs[root_dir_index + 1] + "/" + working_dirs[root_dir_index + 2])
             else:
-                for nested_modules in filter(lambda module_tmp: isdir(module_tmp), glob.glob('*')):
+                for nested_modules in [module_tmp for module_tmp in glob.glob('*') if isdir(module_tmp)]:
                     working_modules.append("{}/{}".format(working_dirs[root_dir_index + 1], nested_modules))
         working_modules[:] = [module for module in working_modules
                               if filter_path is None or glob.glob("{}/{}/{}*".format(DIR_ROOT, module, filter_path))]
@@ -492,7 +483,7 @@ def _substitue_env(context, env_path, source_root, source_path, destination_root
                 env_key, env_value = env_line.split("=", 1)
                 env[env_key] = env_value
         _run_local(context, "envsubst '{}' < {}/{} > {}.new && mv {}.new {}"
-                   .format(" ".join(["$" + sub for sub in env.keys()]),
+                   .format(" ".join(["$" + sub for sub in list(env.keys())]),
                            source_root, source_path, source_path, source_path, source_path), destination_root, env=env)
 
 
@@ -577,7 +568,7 @@ def _get_versions_next(versions=None):
     if versions is None:
         versions = _get_versions()
     version_next_numeric = abs(versions[1]) if "SNAPSHOT" in versions[0] else (abs(versions[1]) + 1)
-    version_next_absolute = u"{}.{}.{}".format(
+    version_next_absolute = "{}.{}.{}".format(
         int(version_next_numeric / 10000000) % 10000,
         int(version_next_numeric / 10000) % 10000,
         version_next_numeric % 10000)

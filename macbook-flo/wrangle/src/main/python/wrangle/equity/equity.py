@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
-
 import calendar
 import datetime
 import os
@@ -12,8 +8,11 @@ import numpy as np
 import pandas as pd
 import pdftotext
 import pytz
+from warnings import simplefilter
 
 from .. import library
+
+simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
 STATUS_FAILURE = "failure"
 STATUS_SKIPPED = "skipped"
@@ -169,8 +168,10 @@ class Equity(library.Library):
                     if files[file_name][0] and (library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or files[file_name][1]):
                         stock_files[file_name] = files[file_name]
             new_data = library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or \
-                       (all([status[0] for status in stock_files.values()]) and any([status[1] for status in stock_files.values()])) or \
-                       (all([status[0] for status in statement_files.values()]) and any([status[1] for status in statement_files.values()]))
+                       (all([status[0] for status in list(stock_files.values())]) and any(
+                           [status[1] for status in list(stock_files.values())])) or \
+                       (all([status[0] for status in list(statement_files.values())]) and any(
+                           [status[1] for status in list(statement_files.values())]))
         elif library.is_true(library.WRANGLE_REPROCESS_ALL_FILES):
             stock_files = self.file_list(self.input, "Yahoo")
             statement_files = self.file_list(self.input, "58861")
@@ -236,7 +237,7 @@ class Equity(library.Library):
                                     statement_tokens = statement_line.split()
                                     token_index = 0
                                     while token_index < len(statement_tokens):
-                                        statement_data[statement_file_name]['Parse'] += u"{:02d}:{} " \
+                                        statement_data[statement_file_name]['Parse'] += "{:02d}:{} " \
                                             .format(token_index, statement_tokens[token_index])
                                         token_index += 1
                                     statement_data[statement_file_name]['Parse'] += "\n"
@@ -322,7 +323,7 @@ class Equity(library.Library):
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     if statement_data[statement_file_name]['Status'] == STATUS_SUCCESS:
                         statement_positions = statement_data[statement_file_name]["Positions"]
-                        for statement_position in statement_positions.values():
+                        for statement_position in list(statement_positions.values()):
                             if len(statement_positions) == 0 or not all(key in statement_position for key in STATEMENT_ATTRIBUTES):
                                 statement_data[statement_file_name]['Status'] = STATUS_FAILURE
                                 statement_data[statement_file_name]["Errors"] \
@@ -337,9 +338,9 @@ class Equity(library.Library):
                 for file_name in statement_data:
                     if statement_data[file_name]['Status'] == STATUS_SUCCESS:
                         statement_position = statement_data[file_name]["Positions"]
-                        statements_positions.extend(statement_position.values())
+                        statements_positions.extend(list(statement_position.values()))
                         self.print_log("File [{}] processed as [{}] with positions {}"
-                                       .format(os.path.basename(file_name), STATUS_SUCCESS, statement_position.keys()))
+                                       .format(os.path.basename(file_name), STATUS_SUCCESS, list(statement_position.keys())))
                     elif statement_data[file_name]['Status'] == STATUS_SKIPPED:
                         self.print_log("File [{}] processed as [{}]".format(os.path.basename(file_name), STATUS_SKIPPED))
                     else:
@@ -463,7 +464,7 @@ class Equity(library.Library):
                 index_weights = index_weights[["Holdings Quantity", "Watch Quantity", "Baseline Quantity"]]
                 index_weights.columns = index_weights.columns.str.rstrip(' Quantity')
                 index_weights[index_weights.columns] = index_weights[index_weights.columns].apply(pd.to_numeric)
-                indexes = index_weights.columns.get_values().tolist()
+                indexes = index_weights.columns.values.tolist()
                 self.print_log("Data has [{}] columns and [{}] rows post externals download"
                                .format(len(equity_current_expanded_df.columns), len(equity_current_expanded_df)))
                 for ticker in tickers:

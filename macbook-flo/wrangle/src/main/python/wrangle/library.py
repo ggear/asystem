@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
-
 import collections
 import copy
 import glob
@@ -15,13 +11,13 @@ import ssl
 import sys
 import time
 import traceback
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from datetime import datetime
 from datetime import timedelta
 from ftplib import FTP
-
+import warnings
 import dropbox
 import numpy as np
 import pandas as pd
@@ -70,6 +66,8 @@ pd.set_option('display.float_format', lambda x: '%.5f' % x)
 pd.options.mode.chained_assignment = None
 
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 WRANGLE_ENABLE_LOG = 'WRANGLE_ENABLE_LOG'
 WRANGLE_RANDOM_SUBSET_ROWS = 'WRANGLE_RANDOM_SUBSET_ROWS'
@@ -90,7 +88,7 @@ def print_log(process, message, exception=None, level="debug"):
             message = [message]
         for line in message:
             if len(line) > 0:
-                print(u"{}{}".format(prefix, line))
+                print("{}{}".format(prefix, line))
         if exception is not None:
             print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc(limit=2).splitlines())))
 
@@ -141,9 +139,7 @@ def load_profile(profile_path):
     return profile
 
 
-class Library(object):
-    __metaclass__ = ABCMeta
-
+class Library(object, metaclass=ABCMeta):
     @abstractmethod
     def _run(self):
         pass
@@ -227,18 +223,18 @@ class Library(object):
             }
 
             def get_modified(response):
-                headers = response.info().getheaders("Last-Modified")
-                if len(headers) > 0:
-                    return int((datetime.strptime(headers[0], '%a, %d %b %Y %H:%M:%S GMT') -
+                headers = response.headers["Last-Modified"]
+                if headers:
+                    return int((datetime.strptime(headers, '%a, %d %b %Y %H:%M:%S GMT') -
                                 datetime.utcfromtimestamp(0)).total_seconds())
                 return None
 
             if not force and check and os.path.isfile(local_file):
                 modified_timestamp_cached = int(os.path.getmtime(local_file))
                 try:
-                    request = urllib2.Request(url_file, headers=client)
+                    request = urllib.request.Request(url_file, headers=client)
                     request.get_method = lambda: 'HEAD'
-                    response = urllib2.urlopen(request, context=ssl._create_unverified_context())
+                    response = urllib.request.urlopen(request, context=ssl._create_unverified_context())
                     modified_timestamp = get_modified(response)
                     if modified_timestamp is not None:
                         if modified_timestamp_cached == modified_timestamp:
@@ -248,7 +244,8 @@ class Library(object):
                 except:
                     pass
             try:
-                response = urllib2.urlopen(urllib2.Request(url_file, headers=client), context=ssl._create_unverified_context())
+                response = urllib.request.urlopen(urllib.request.Request(url_file, headers=client),
+                                                  context=ssl._create_unverified_context())
                 with open(local_file, 'wb') as output:
                     output.write(response.read())
                 modified_timestamp = get_modified(response)
@@ -401,8 +398,8 @@ class Library(object):
             response = service.files_list_folder(dropbox_dir) if cursor is None else service.files_list_folder_continue(cursor)
             for dropbox_file in response.entries:
                 dropbox_files[dropbox_file.name] = {
-                    "id": dropbox_file.id.encode('ascii'),
-                    "hash": dropbox_file.content_hash.encode('ascii'),
+                    "id": dropbox_file.id,
+                    "hash": dropbox_file.content_hash,
                     "modified": int((dropbox_file.client_modified - datetime.utcfromtimestamp(0)).total_seconds()),
                 }
             if response.has_more:
@@ -420,7 +417,6 @@ class Library(object):
                 with open(local_path, "wb") as local_file:
                     metadata, response = service.files_download(path="{}/{}".format(dropbox_dir, dropbox_file))
                     local_file.write(response.content)
-
                 os.utime(local_path, (dropbox_files[dropbox_file]["modified"], dropbox_files[dropbox_file]["modified"]))
                 local_files[dropbox_file] = {
                     "hash": dropbox_files[dropbox_file]["hash"],
@@ -459,8 +455,8 @@ class Library(object):
                                             fields='nextPageToken, files(id, name, modifiedTime, md5Checksum)', pageToken=token).execute()
             for drive_file in response.get('files', []):
                 drive_files[drive_file["name"]] = {
-                    "id": drive_file["id"].encode('ascii'),
-                    "hash": drive_file["md5Checksum"].encode('ascii'),
+                    "id": drive_file["id"],
+                    "hash": drive_file["md5Checksum"],
                     "modified": int((datetime.strptime(drive_file["modifiedTime"], '%Y-%m-%dT%H:%M:%S.%fZ') -
                                      datetime.utcfromtimestamp(0)).total_seconds()),
                 }
@@ -530,8 +526,8 @@ class Library(object):
         data_df_current.index.name = 'Date'
         if only_load:
             return data_df_current, data_df_current, data_df_current
-        data_columns = data_df_current.columns.get_values().tolist()
-        for data_column in data_df_update.columns.get_values().tolist():
+        data_columns = data_df_current.columns.values.tolist()
+        for data_column in data_df_update.columns.values.tolist():
             if data_column not in data_columns:
                 data_columns.append(data_column)
         for data_column in data_columns:
@@ -566,9 +562,15 @@ class Library(object):
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_current), file_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_update), file_update))
+
+        # TODO: Python3 upgrade
+        # data_df_delta = data_df_current if len(data_df_previous) == 0 else \
+        #     data_df_current.merge(data_df_previous, on=data_columns, how='outer', left_index=True, right_index=True, indicator=True) \
+        #         .loc[lambda x: x['_merge'] != 'both'].drop('_merge', 1).drop_duplicates()
         data_df_delta = data_df_current if len(data_df_previous) == 0 else \
-            data_df_current.merge(data_df_previous, on=data_columns, how='outer', left_index=True, right_index=True, indicator=True) \
-                .loc[lambda x: x['_merge'] != 'both'].drop('_merge', 1).drop_duplicates()
+            data_df_current.merge(data_df_previous, on=data_columns, how='outer', indicator=True) \
+                .loc[lambda x: x['_merge'] != 'both'].drop(labels='_merge', axis=1).drop_duplicates()
+
         data_df_delta = data_df_delta[data_columns]
         data_df_delta.sort_index().to_csv(file_delta, encoding='utf-8')
         if len(data_df_delta) == 0:
@@ -652,7 +654,7 @@ class Library(object):
                     'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
                 }, data=flux_query)
             rows = []
-            for row in response.content.strip().split("\n")[1:]:
+            for row in response.text.strip().split("\n")[1:]:
                 cols = row.strip().split(",")
                 if len(cols) > 4:
                     rows.append([parser.parse(cols[3])] + cols[4:])
@@ -673,6 +675,7 @@ class Library(object):
                 column_rename[column] = column.strip().replace(' ', '-').lower()
                 data_df[column] = pd.to_numeric(data_df[column], downcast='float')
             data_df = data_df.rename(columns=column_rename)
+            data_df.index = pd.to_datetime(data_df.index)
             import influxdb
             lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
                 data_df, self.name.lower(), tag_columns=[], global_tags=global_tags)

@@ -5,6 +5,7 @@
 ################################################################################
 PACKAGES=(
   jq
+  nut
   ntp
   ntfs-3g
   acl
@@ -45,17 +46,18 @@ PACKAGES=(
   hwinfo
   lshw
   vlan
+  ffmpeg
   powertop
   libc6-i386
   intel-microcode
 )
 apt-get update
-for PACKAGE in ${PACKAGES[@]}; do
-  apt-get install -y ${PACKAGE}
+for PACKAGE in "${PACKAGES[@]}"; do
+  apt-get install -y "${PACKAGE}"
 done
 INSTALLED="$(apt list 2>/dev/null | grep -v " i386" | column -t | awk -F"/" '{print $1"\t"$2}' | awk '{print "  "$1"="$3""}' | grep -v Listing)"
 echo "" && echo "Run script base package versions:"
-for PACKAGE in ${PACKAGES[@]}; do
+for PACKAGE in "${PACKAGES[@]}"; do
   PACKAGE_VERSION=$(echo "${INSTALLED}" | grep " "${PACKAGE}"=")
   echo "apt-get install -y --allow-downgrades '"${PACKAGE_VERSION##*( )}"'"
 done

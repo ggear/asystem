@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
-
 import calendar
 import datetime
 import os
@@ -20,7 +16,7 @@ PERIODS = OrderedDict([
     ('1 Month Delta', 30),
     ('1 Year Delta', 365),
 ])
-COLUMNS = ["{} {}".format(pair, period).strip() for pair in PAIRS for period in ([""] + PERIODS.keys())]
+COLUMNS = ["{} {}".format(pair, period).strip() for pair in PAIRS for period in ([""] + list(PERIODS.keys()))]
 
 ATO_START_MONTH = 5
 ATO_START_YEAR = 2016
@@ -85,7 +81,7 @@ class Currency(library.Library):
                                         if ato_df.columns[0] == 'Country':
                                             ato_df = ato_df[ato_df['Country'].isin(['USA', 'UK', 'SINGAPORE'])]
                                             for column in ato_df.columns:
-                                                if isinstance(column, basestring) and column != 'Country':
+                                                if isinstance(column, str) and column != 'Country':
                                                     if column[0].isdigit():
                                                         match = re.compile("(.*)-(.*)").match(column)
                                                         ato_df.rename(columns={column: "{}-{}-{}".format(
@@ -104,7 +100,12 @@ class Currency(library.Library):
                                             ato_df.columns.name = None
                                             ato_df['Source'] = 'ATO'
                                             ato_df = ato_df[['Source', 'Date'] + PAIRS]
-                                            merged_df = merged_df.append(ato_df, ignore_index=True, verify_integrity=True, sort=True)
+
+                                            # TODO: Python3 upgrade
+                                            # merged_df = merged_df.append(ato_df, ignore_index=True, verify_integrity=True, sort=True)
+                                            merged_df = pd.concat([merged_df, ato_df], axis=0, join='outer',
+                                                               ignore_index=True, verify_integrity=True, sort=True)
+
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                                             break
                                     except Exception as exception:
@@ -129,7 +130,12 @@ class Currency(library.Library):
                                 rba_itr_df['Date'] = rba_itr_df['Date'].dt.strftime("%Y-%m-%d").astype(str)
                                 rba_itr_df['Source'] = 'RBA'
                                 rba_itr_df = rba_itr_df[['Source', 'Date'] + PAIRS]
-                                rba_df = rba_df.append(rba_itr_df, ignore_index=True, verify_integrity=True, sort=True)
+
+                                # TODO: Python3 upgrade
+                                # rba_df = rba_df.append(rba_itr_df, ignore_index=True, verify_integrity=True, sort=True)
+                                rba_df = pd.concat([rba_df, rba_itr_df], axis=0, join='outer',
+                                                   ignore_index=True, verify_integrity=True, sort=True)
+
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             self.print_log("Unexpected error processing file [{}]".format(year_month_file), exception)

@@ -12,19 +12,22 @@
 # Security & Privacy -> Privacy -> Full Disk Access -> Terminal
 # Dock & Menu Bar -> Automatically hide and show the Dock
 # Displays -> More space
+# Displays -> Universal Control -> Allow cursor / Push Through / Automatically -> On
 # Displays -> Nightshift -> Sunset to Sunrise -> 75%
 # Keyboard -> Key repeat -> 100%
 # Keyboard -> Delay until repeat -> 80%
+# Keyboard -> Shortcuts -> Use keybaord navigation to moce focus -> On
 # Keyboard -> Shortcuts -> App Shortcuts -> Show Previous Tab
 # Keyboard -> Shortcuts -> App Shortcuts -> Show Next Tab
 # Sound -> Alert volume -> 0%
 # Sound -> Play user interface sounds effects -> Off
 # Sound -> Show sound in menu bar -> Always
+# Bluetooth -> Show bleutooth in menu bar -> On
+# Internet Accounts -> Google -> Calendars
 # Time Machine -> Back automatically -> On
 # Time Machine -> Show time machine in menu bar -> On
 # Time Machine -> Options -> Ignore
 #   ~/.conda
-#   ~/Backup
 #   ~/Code
 #   ~/Music
 #   ~/Temp
@@ -50,6 +53,7 @@
 # Install Calca from App Store
 # Install Infuse from App Store
 # Install WhatsApp from App Store
+# Install from https://www.office.com
 # Install from https://dl.google.com/drive-file-stream/GoogleDrive.dmg
 # Install from https://dl.devmate.com/com.macpaw.CleanMyMac4/CleanMyMacX.dmg
 # Install from https://cdn.bjango.com/files/istatmenus6/istatmenus6.60.zip
@@ -63,6 +67,31 @@
 # Remove all unnecessary apps using Clean My Mac
 
 ################################################################################
+# Kiwi Settings
+################################################################################
+# Kiwi -> Preferences -> Accounts -> graham.gear@gmail.com -> Blue
+# Kiwi -> Preferences -> Notifcations -> Use / Sound -> Off
+
+################################################################################
+# Sublime Settings
+################################################################################
+cat <<EOF >"/Users/graham/Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings"
+// Settings in here override those in "Default/Preferences.sublime-settings",
+// and are overridden in turn by syntax-specific settings.
+{
+		"font_size": 16,
+}
+EOF
+cat <<EOF >"/Users/graham/Library/Application Support/Sublime Text/Packages/User/Default (OSX).sublime-keymap"
+[
+	{ "keys": ["super+r"], "command": "show_panel", "args": {"panel": "replace", "reverse": false} },
+	{ "keys": ["alt+a"], "command": "replace_all", "args": {"close_panel": true},
+		 "context": [{"key": "panel", "operand": "replace"}, {"key": "panel_has_focus"}]
+	},
+]
+EOF
+
+################################################################################
 # Init Environment
 ################################################################################
 sudo passwd root
@@ -74,15 +103,6 @@ git config --global credential.helper osxkeychain
 git config --global user.name "Graham Gear"
 git config --global user.email graham.gear@nowhere.org
 git config --global advice.detachedHead false
-
-# Universal Controlh
-
-# Kiwi settings - notifcations
-# Sublime settings - find/replace/text
-# Docker settings
-# Office 365
-# Google accounts/calendar
-# Use tab
 
 ################################################################################
 # Brew

@@ -14,7 +14,7 @@ from tabulate import tabulate
 
 TIMEOUT_WARMUP = 30
 
-for key, value in library.load_profile(library.get_file(".env")).iteritems():
+for key, value in library.load_profile(library.get_file(".env")).items():
     os.environ[key] = value
 
 
@@ -36,6 +36,7 @@ from(bucket: "data_public")
   |> filter(fn: (r) => r._measurement == "a_non_existent_metric")
 """) is not None
         except Exception as exception:
+            print(exception)
             print("Waiting for influxdb server to come up ...")
             time.sleep(1)
     assert success is True
@@ -89,21 +90,21 @@ from(bucket: "{}")
 
 
 def query(flux):
-    response = post(url="http://{}:{}/api/v2/query?org={}"
-                    .format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_PORT"], os.environ["INFLUXDB_ORG"]),
-                    headers={
-                        'Accept': 'application/csv',
-                        'Content-type': 'application/vnd.flux',
-                        'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
-                    }, data=flux)
+    target = "http://{}:{}/api/v2/query?org={}".format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_PORT"], os.environ["INFLUXDB_ORG"])
+    response = post(url=target, headers={
+        'Accept': 'application/csv',
+        'Content-type': 'application/vnd.flux',
+        'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
+    }, data=flux)
     if response.status_code != 200:
-        raise Exception("Influxdb query:{}failed with error code [{}]".format(flux, response.status_code))
+        raise Exception("Query failed:{}with server [{}] and error code [{}]".format(flux, target, response.status_code))
     rows = []
-    for row in response.content.strip().split("\n")[1:]:
+    for row in response.text.strip().split("\n")[1:]:
         cols = row.strip().split(",")
         if len(cols) > 5:
             rows.append(cols[5:])
-    print("Executed query:{}with status code [{}] and response:\n{}".format(flux, response.status_code, tabulate(rows, tablefmt="grid")))
+    print("Executed query:{}with server [{}], status code [{}] and response:\n{}"
+          .format(flux, target, response.status_code, tabulate(rows, tablefmt="grid")))
     return rows
 
 

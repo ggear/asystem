@@ -1,1 +1,1 @@
-from interest import *
+from .interest import *

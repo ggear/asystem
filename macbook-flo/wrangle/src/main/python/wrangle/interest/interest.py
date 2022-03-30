@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
-
 import os
 from collections import OrderedDict
 
@@ -16,7 +12,7 @@ PERIODS = OrderedDict([
     ('10 Year Mean', 10 * 12),
     ('20 Year Mean', 20 * 12),
 ])
-COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + PERIODS.keys())]
+COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + list(PERIODS.keys()))]
 
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xls"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xls"

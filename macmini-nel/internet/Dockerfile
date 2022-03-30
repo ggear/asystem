@@ -1,4 +1,4 @@
-FROM telegraf:1.20.2-alpine as image_base
+FROM telegraf:1.21.4-alpine as image_base
 
 FROM image_base as image_package
 ENV PYTHONUNBUFFERED=1

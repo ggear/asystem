@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-
-from __future__ import print_function
-
 import json
 import os
 from datetime import datetime
@@ -24,9 +20,9 @@ class Health(library.Library):
             files = self.dropbox_download("/Data/Health", self.input)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, 0 if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES)
             else \
-                sum([not status[1] for status in files.values()]))
+                sum([not status[1] for status in list(files.values())]))
             new_data = library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or \
-                       all([status[0] for status in files.values()]) and any([status[1] for status in files.values()])
+                       all([status[0] for status in list(files.values())]) and any([status[1] for status in list(files.values())])
             if new_data:
                 sleep_yesterday_df = pd.DataFrame()
                 for file_name in files:
@@ -46,7 +42,7 @@ class Health(library.Library):
                         if os.path.basename(file_name).startswith("_Sleep-"):
                             if len(sleep_yesterday_df) == 0:
                                 with open(file_name) as data_file:
-                                    file_objs = json.load(data_file).items()
+                                    file_objs = list(json.load(data_file).items())
                                     if len(file_objs) > 0:
                                         try:
                                             file_df = pd.DataFrame([[
@@ -75,7 +71,7 @@ class Health(library.Library):
                         elif os.path.basename(file_name).startswith("_SleepReadiness-"):
                             if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 7:
                                 with open(file_name) as data_file:
-                                    file_objs = json.load(data_file).items()
+                                    file_objs = list(json.load(data_file).items())
                                     if len(file_objs) > 0:
                                         try:
                                             file_df = pd.DataFrame([[
@@ -99,7 +95,7 @@ class Health(library.Library):
                         elif os.path.basename(file_name).startswith("_SleepRings-"):
                             if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 12:
                                 with open(file_name) as data_file:
-                                    file_objs = json.load(data_file).items()
+                                    file_objs = list(json.load(data_file).items())
                                     if len(file_objs) > 0:
                                         try:
                                             awake = float(
@@ -245,9 +241,16 @@ class Health(library.Library):
                                 file_df = pd.read_csv(file_name, skipinitialspace=True)
                                 file_df['Start'] = pd.to_datetime(file_df['Start'], format='%Y-%m-%d %H:%M')
                                 file_df['End'] = pd.to_datetime(file_df['End'], format='%Y-%m-%d %H:%M')
-                                file_df['Duration'] = file_df['Duration'].apply(lambda x: datetime.strptime(x, '%H:%M:%S'))
-                                file_df['Duration'] = file_df['Duration'] - datetime.strptime('00:00', '%M:%S')
-                                file_df['Duration'] = file_df['Duration'].apply(lambda x: x / np.timedelta64(1, 's') * 60)
+
+                                # TODO: Python3 update
+                                # file_df['Duration'] = file_df['Duration'].apply(lambda x: datetime.strptime(x, '%H:%M:%S'))
+                                # file_df['Duration'] = file_df['Duration'] - datetime.strptime('00:00', '%M:%S')
+                                # file_df['Duration'] = file_df['Duration'].apply(lambda x: x / np.timedelta64(1, 's') * 60)
+                                if len(file_df['Duration']) > 0:
+                                    file_df['Duration'] = file_df['Duration'].fillna("00:00:00").replace(r'^\s*$', "00:00:00", regex=True)
+                                    file_df['Duration'] = \
+                                        (file_df['Duration'].str.split(':', expand=True).astype(int) * (60, 1, 1 / 60)).sum(axis=1)
+
                                 file_df = pd.concat([
                                     file_df.pivot(columns='Type', values='Start')
                                         .add_prefix('Workout-').add_suffix(' Start (dt)'),
@@ -267,7 +270,7 @@ class Health(library.Library):
                                         .add_prefix('Workout-').add_suffix(' Heart Rate Maximum (bpm)'),
                                 ], axis=1)
                                 start_columns = ['Date']
-                                for start_column in file_df.columns.get_values().tolist():
+                                for start_column in file_df.columns.values.tolist():
                                     if start_column.endswith('Start (dt)'):
                                         start_columns.append(start_column)
                                 file_df['Date'] = np.NaN
@@ -337,7 +340,7 @@ class Health(library.Library):
                 if len(workout_df) > 0:
                     workout_columns = []
                     workout_types = set()
-                    for workout_column in workout_df.columns.get_values().tolist():
+                    for workout_column in workout_df.columns.values.tolist():
                         workout_types.add(workout_column.split(' ')[0].split('-')[1])
                     for workout_type in workout_types:
                         for workout_dimension in [
