@@ -13,7 +13,7 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   zlib1g-dev=1:1.2.11.dfsg-1 \
   tar=1.30+dfsg-6 \
   wget=1.20.1-1.1 \
-  rsyslog=8.1901.0-1 \
+  rsyslog=8.1901.0-1+deb10u1 \
   gnupg2=2.2.12-1+deb10u1 \
   apache2=2.4.38-3+deb10u7 \
   default-mysql-client=1.0.5 \

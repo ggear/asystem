@@ -241,16 +241,10 @@ class Health(library.Library):
                                 file_df = pd.read_csv(file_name, skipinitialspace=True)
                                 file_df['Start'] = pd.to_datetime(file_df['Start'], format='%Y-%m-%d %H:%M')
                                 file_df['End'] = pd.to_datetime(file_df['End'], format='%Y-%m-%d %H:%M')
-
-                                # TODO: Python3 update
-                                # file_df['Duration'] = file_df['Duration'].apply(lambda x: datetime.strptime(x, '%H:%M:%S'))
-                                # file_df['Duration'] = file_df['Duration'] - datetime.strptime('00:00', '%M:%S')
-                                # file_df['Duration'] = file_df['Duration'].apply(lambda x: x / np.timedelta64(1, 's') * 60)
                                 if len(file_df['Duration']) > 0:
                                     file_df['Duration'] = file_df['Duration'].fillna("00:00:00").replace(r'^\s*$', "00:00:00", regex=True)
                                     file_df['Duration'] = \
                                         (file_df['Duration'].str.split(':', expand=True).astype(int) * (60, 1, 1 / 60)).sum(axis=1)
-
                                 file_df = pd.concat([
                                     file_df.pivot(columns='Type', values='Start')
                                         .add_prefix('Workout-').add_suffix(' Start (dt)'),

@@ -162,9 +162,13 @@ def _pull(context, filter_module=None, filter_host=None, is_release=False):
                    filter_host=filter_host, is_release=is_release)
         _print_footer(module, "pull env")
     for module in _get_modules(context, "pull.sh", filter_changes=False):
-        _print_header(module, "pull resources")
+        _print_header(module, "pull shell script")
         _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
-        _print_footer(module, "pull resources")
+        _print_footer(module, "pull shell script")
+    for module in _get_modules(context, "src/main/python/*/build/pull.py", filter_changes=False):
+        _print_header(module, "pull python script")
+        _run_local(context, "python {}/{}/src/main/python/{}/build/pull.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
+        _print_footer(module, "pull python script")
 
 
 def _clean(context, filter_module=None):
@@ -230,7 +234,7 @@ def _unittest(context, filter_module=None):
 def _package(context, filter_module=None):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package")
-        _run_local(context, "docker image build -t {}:{} .".format(_name(module), _get_versions()[0]), module)
+        _run_local(context, "docker image build --build-arg PYTHON_VERSION -t {}:{} .".format(_name(module), _get_versions()[0]), module)
         _print_footer(module, "package")
 
 
@@ -427,7 +431,9 @@ def _get_dependencies(context, module):
 def _write_env(context, module, working_path=".", filter_host=None, is_release=False):
     service = _get_service(context, module)
     _run_local(context, "mkdir -p {}".format(working_path), module)
-    _run_local(context, "echo 'SERVICE_NAME={}' > {}/.env"
+    _run_local(context, "echo 'PYTHON_VERSION=$PYTHON_VERSION\n' > {}/.env"
+               .format(working_path), module)
+    _run_local(context, "echo 'SERVICE_NAME={}' >> {}/.env"
                .format(service, working_path), module)
     _run_local(context, "echo 'SERVICE_VERSION_ABSOLUTE={}' >> {}/.env"
                .format(_get_versions()[0], working_path), module)

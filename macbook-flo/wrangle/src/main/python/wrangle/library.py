@@ -562,15 +562,9 @@ class Library(object, metaclass=ABCMeta):
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_current), file_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_update), file_update))
-
-        # TODO: Python3 upgrade
-        # data_df_delta = data_df_current if len(data_df_previous) == 0 else \
-        #     data_df_current.merge(data_df_previous, on=data_columns, how='outer', left_index=True, right_index=True, indicator=True) \
-        #         .loc[lambda x: x['_merge'] != 'both'].drop('_merge', 1).drop_duplicates()
         data_df_delta = data_df_current if len(data_df_previous) == 0 else \
             data_df_current.merge(data_df_previous, on=data_columns, how='outer', indicator=True) \
                 .loc[lambda x: x['_merge'] != 'both'].drop(labels='_merge', axis=1).drop_duplicates()
-
         data_df_delta = data_df_delta[data_columns]
         data_df_delta.sort_index().to_csv(file_delta, encoding='utf-8')
         if len(data_df_delta) == 0:

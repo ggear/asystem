@@ -101,7 +101,7 @@ def query(flux):
             'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
         }, data=flux)
     rows = []
-    for row in response.content.strip().split("\n")[1:]:
+    for row in response.text.strip().split("\n")[1:]:
         cols = row.strip().split(",")
         if len(cols) > 4:
             rows.append([parse(cols[3])] + cols[4:])
@@ -115,7 +115,7 @@ def ping():
         host_speedtest = None
         time_start = time_ms()
         run_code_iteration = RUN_CODE_FAIL_NETWORK
-        for i in xrange(PING_COUNT):
+        for i in range(PING_COUNT):
             try:
                 speedtest = Speedtest()
                 try:

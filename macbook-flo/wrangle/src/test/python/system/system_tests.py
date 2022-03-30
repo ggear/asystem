@@ -14,7 +14,7 @@ from tabulate import tabulate
 
 TIMEOUT_WARMUP = 30
 
-for key, value in library.load_profile(library.get_file(".env")).items():
+for key, value in list(library.load_profile(library.get_file(".env")).items()):
     os.environ[key] = value
 
 
