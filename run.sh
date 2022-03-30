@@ -9,8 +9,6 @@ SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_HOME_OLD=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1)
 SERVICE_HOME_OLDEST=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | head -n $(($(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 1)))
 SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
-SERVICE_HOST_IP=$(ifconfig $(ifconfig | grep enp | cut -d':' -f1) | grep -Eo 'inet (addr:)?([0-9]*\.){3}[0-9]*' | grep -Eo '([0-9]*\.){3}[0-9]*')
-SERVICE_HOST_NAME=$(hostname)
 
 cd ${SERVICE_INSTALL} || exit
 [ -f "${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz
@@ -36,7 +34,7 @@ touch .env
 chmod 600 .env
 [ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
 [ -f "docker-compose.yml" ] && docker-compose --compatibility --no-ansi up --force-recreate -d && sleep 2
-[ -f "./run_post.sh" ] && chmod +x ./run.sh && ./run.sh
+[ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
 if [ -f "docker-compose.yml" ]; then
   if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
     echo && echo "Container failed to start" && echo && exit 1
