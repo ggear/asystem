@@ -582,7 +582,7 @@ class Library(object, metaclass=ABCMeta):
                                .format(os.path.basename(self.input), self.input_drive))
         except Exception as exception:
             self.print_log("Directory [{}] failed to upload to [https://drive.google.com/drive/folders/{}]"
-                           .format(self.input, self.input_drive))
+                           .format(self.input, self.input_drive), exception)
 
     def drive_write(self, local_file, drive_dir, modified_time, service, drive_id=None):
         try:

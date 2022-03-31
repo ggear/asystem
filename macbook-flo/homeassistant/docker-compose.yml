@@ -26,9 +26,9 @@ services:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}:/config
 
-# TODO: Cant deploy with network_mode host, need to think how to run locally
-#    ports:
-#      - ${HOMEASSISTANT_PORT}:${HOMEASSISTANT_PORT}
+    # TODO: Cant deploy with network_mode host, need to think how to run locally
+    #    ports:
+    #      - ${HOMEASSISTANT_PORT}:${HOMEASSISTANT_PORT}
 
     network_mode: host
     deploy:

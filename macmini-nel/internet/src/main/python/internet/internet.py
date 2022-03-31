@@ -22,8 +22,8 @@ HOST_SPEEDTEST_THROUGHPUT_ID = "12494"
 
 RESOLVER_IPS = ["10.0.0.1", "162.159.44.190", "1.1.1.1", "8.8.8.8"]
 
+HOST_INTERNET = "udm-rack"
 HOST_INTERNET_LOCATION = "darlington"
-HOST_INTERNET_INTERFACE_ID = "udm-rack-eth8"
 
 PING_COUNT = 3
 PING_SLEEP_SECONDS = 1
@@ -308,7 +308,7 @@ def lookup():
         run_replies.add(home_host_ip)
     print(FORMAT_TEMPLATE.format(
         "lookup",
-        HOST_INTERNET_INTERFACE_ID,
+        HOST_INTERNET,
         run_code_iteration,
         ",host_location={},host_name={},host_resolver={}{}".format(
             HOST_INTERNET_LOCATION,
@@ -338,7 +338,7 @@ def lookup():
             run_replies.add(home_host_reply.address)
         print(FORMAT_TEMPLATE.format(
             "lookup",
-            HOST_INTERNET_INTERFACE_ID,
+            HOST_INTERNET,
             run_code_iteration,
             ",host_location={},host_name={},host_resolver={}{}".format(
                 HOST_INTERNET_LOCATION,
@@ -363,7 +363,7 @@ def lookup():
         run_code = RUN_CODE_FAIL_CONFIG
     print(FORMAT_TEMPLATE.format(
         "lookup",
-        HOST_INTERNET_INTERFACE_ID,
+        HOST_INTERNET,
         run_code,
         ",host_location={},host_name={},host_resolver={}{}".format(
             HOST_INTERNET_LOCATION,
@@ -412,7 +412,7 @@ def certificate():
         run_code = RUN_CODE_FAIL_CONFIG
     print(FORMAT_TEMPLATE.format(
         "certificate",
-        HOST_INTERNET_INTERFACE_ID,
+        HOST_INTERNET,
         run_code,
         ",host_location={},host_name={}{}".format(
             HOST_INTERNET_LOCATION,
@@ -492,9 +492,9 @@ def execute():
     run_code_failures = len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)
     print(FORMAT_TEMPLATE.format(
         "network",
-        HOST_INTERNET_INTERFACE_ID,
+        HOST_INTERNET,
         run_code_uptime,
-        ",host_location={},host_name={}{}metrics_suceeded={},metrics_failed={},".format(
+        ",host_location={},host_name={}{}metrics_succeeded={},metrics_failed={},".format(
             HOST_INTERNET_LOCATION,
             HOST_HOME_NAME,
             " uptime_delta_s={}{}".format(

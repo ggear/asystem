@@ -85,7 +85,8 @@ class Interest(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df,
+                                                                         library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             if len(interest_delta_df):
                 interest_delta_df = interest_delta_df.set_index(pd.to_datetime(interest_delta_df.index)).sort_index()
                 data_df = interest_current_df.copy()

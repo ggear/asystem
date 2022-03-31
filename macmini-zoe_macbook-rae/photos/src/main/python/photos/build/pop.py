@@ -63,12 +63,13 @@ if __name__ == "__main__":
                             except:
                                 raise Exception("Could not parse original date time on file [{}] from album [{}]"
                                                 .format(photo.original_filename, album.title))
-                        subprocess.run(["exiftool", "-q", "-wm", "w", "-m", "-overwrite_original", "-AllDates={} {:02d}:{:02d}:{:02d}".format(
-                            export_date.strftime("%Y:%m:%d"),
-                            12,
-                            int(index / 60),
-                            index % 60
-                        ), export_info.exported[0]])
+                        subprocess.run(
+                            ["exiftool", "-q", "-wm", "w", "-m", "-overwrite_original", "-AllDates={} {:02d}:{:02d}:{:02d}".format(
+                                export_date.strftime("%Y:%m:%d"),
+                                12,
+                                int(index / 60),
+                                index % 60
+                            ), export_info.exported[0]])
                         index += 1
                         print("Build script [photos] image [{}] from album [{}] exported to {}"
                               .format(photo.original_filename, album.title, export_info.exported))
@@ -84,4 +85,3 @@ if __name__ == "__main__":
                     else:
                         print("Build script [photos] image [{}] from album [{}] has unsupported type [{}]"
                               .format(photo.original_filename, album.title, photo_type), file=sys.stderr)
-

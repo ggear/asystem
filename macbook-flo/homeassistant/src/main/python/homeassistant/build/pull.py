@@ -323,7 +323,7 @@ adaptive_lighting:
     lights:
         """.format(
                 automation_name,
-                "100" if  automation_name == "default" else "1"
+                "100" if automation_name == "default" else "1"
             ).strip() + "\n")
             for metadata_lighting_group_dict in metadata_lighting_automations_dicts[automation_name]:
                 metadata_lighting_file.write("      " + """
