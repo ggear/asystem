@@ -38,3 +38,5 @@ EOF
 mkdir -p /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chown graham /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chgrp staff /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
+brew update
+brew upgrade
