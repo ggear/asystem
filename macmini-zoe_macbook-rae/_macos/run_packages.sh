@@ -17,6 +17,7 @@ brew install \
   telnet \
   docker-slim \
   hudochenkov/sshpass/sshpass
+brew upgrade
 brew cleanup
 
 ################################################################################
