@@ -10,6 +10,7 @@
 # Security & Privacy -> File Vault -> Turn off
 # Security & Privacy -> Use apple watch to unlock
 # Security & Privacy -> Privacy -> Full Disk Access -> Terminal
+# General -> Close windows when closing app -> Off
 # Dock & Menu Bar -> Automatically hide and show the Dock
 # Displays -> More space
 # Displays -> Universal Control -> Allow cursor / Push Through / Automatically -> On
@@ -126,6 +127,11 @@ if [ ! -d /Library/Conda/anaconda2/bin/conda ]; then
   conda create -y -n python2 python=2.7.18
   conda create -y -n python3 python=3.10
 fi
+
+################################################################################
+# Python
+################################################################################
+rustup-init --no-modify-path -y -q
 
 ################################################################################
 # Asystem

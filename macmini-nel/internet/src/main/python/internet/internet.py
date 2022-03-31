@@ -42,17 +42,6 @@ DATE_TLS = r'%b %d %H:%M:%S %Y %Z'
 
 FORMAT_TEMPLATE = "internet,metric={},host_id={},run_code={}{}run_ms={} {}"
 
-QUERY_IP = """
-from(bucket: "host_private")
-  |> range(start: -10m, stop: now())
-  |> filter(fn: (r) => r["_measurement"] == "usg")
-  |> filter(fn: (r) => r["_field"] == "ip")
-  |> keep(columns: ["_value", "_time"])
-  |> sort(columns: ["_time"])
-  |> last()
-  |> group()
-"""
-
 QUERY_UPTIME = """
 from(bucket: "host_private")
   |> range(start: -10m, stop: now())
@@ -309,32 +298,6 @@ def lookup():
     run_code_iteration = RUN_CODE_FAIL_NETWORK
     time_start_iteration = time_ms()
     try:
-        home_host_ip = query(QUERY_IP)
-    except Exception as exception:
-        print("Error processing DNS lookup - ", end="", file=sys.stderr)
-        traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
-        sys.exit(1)
-    if home_host_ip is not None and len(home_host_ip) > 0 and len(home_host_ip[0]) > 1 and home_host_ip[0][1] != "":
-        run_code_iteration = RUN_CODE_SUCCESS
-        run_reply_count += 1
-        run_replies.add(home_host_ip[0][1])
-    print(FORMAT_TEMPLATE.format(
-        "lookup",
-        HOST_INTERNET_INTERFACE_ID,
-        run_code_iteration,
-        ",host_location={},host_name={},host_resolver={}{}".format(
-            HOST_INTERNET_LOCATION,
-            HOST_HOME_NAME,
-            HOST_INTERNET_INTERFACE_ID,
-            " ip=\"{}\",".format(
-                home_host_ip[0][1]
-            ) if home_host_ip is not None and len(home_host_ip) > 0 and len(home_host_ip[0]) > 1 and home_host_ip[0][1] != "" else " "),
-        time_ms() - time_start_iteration,
-        time_ns()))
-    home_host_ip = None
-    run_code_iteration = RUN_CODE_FAIL_NETWORK
-    time_start_iteration = time_ms()
-    try:
         home_host_ip = gethostbyname(HOST_HOME_NAME)
     except Exception as exception:
         print("Error processing DNS lookup - ", end="", file=sys.stderr)
@@ -386,7 +349,7 @@ def lookup():
                 ) if (home_host_reply is not None and home_host_reply.address is not None and home_host_reply.address != "") else " "),
             time_ms() - time_start_iteration,
             time_ns()))
-    run_code = RUN_CODE_SUCCESS if (run_reply_count == len(RESOLVER_IPS) + 2 and len(run_replies) == 1) else RUN_CODE_FAIL_NETWORK
+    run_code = RUN_CODE_SUCCESS if (run_reply_count == len(RESOLVER_IPS) + 1 and len(run_replies) == 1) else RUN_CODE_FAIL_NETWORK
     uptime_delta = 0
     uptime_now = datetime.now(pytz.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
@@ -465,7 +428,7 @@ def certificate():
     return run_code
 
 
-if __name__ == "__main__":
+def execute():
     time_start_all = time_ms()
     run_code_all = []
     up_code_network = True
@@ -526,6 +489,7 @@ if __name__ == "__main__":
             except Exception as exception:
                 print("Error processing network - ", end="", file=sys.stderr)
                 traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
+    run_code_failures = len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)
     print(FORMAT_TEMPLATE.format(
         "network",
         HOST_INTERNET_INTERFACE_ID,
@@ -539,6 +503,11 @@ if __name__ == "__main__":
                     uptime_new
                 ) if uptime_new is not None else ","
             ),
-            run_code_all.count(0) + (1 if run_code_uptime == RUN_CODE_SUCCESS else 0),
-            len(run_code_all) - run_code_all.count(0) + (1 if run_code_uptime != RUN_CODE_SUCCESS else 0)),
+            len(run_code_all) + 1 - run_code_failures,
+            run_code_failures),
         time_ms() - time_start_all, uptime_epoch))
+    return run_code_failures
+
+
+if __name__ == "__main__":
+    execute()
