@@ -21,7 +21,7 @@ for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../../..".format(os
         sys.path.insert(0, "{}/src/main/python".format(dir_module))
 sys.path.insert(0, DIR_MODULE_ROOT)
 
-from homeassistant.build.pull import load_env
+from homeassistant.build.generate import load_env
 
 DIR_PHOTOS_DB = "/Users/graham/Pictures/Photos Library.photoslibrary"
 
@@ -71,7 +71,7 @@ if __name__ == "__main__":
                                 index % 60
                             ), export_info.exported[0]])
                         index += 1
-                        print("Build script [photos] image [{}] from album [{}] exported to {}"
+                        print("Build generate script [photos] image [{}] from album [{}] exported to {}"
                               .format(photo.original_filename, album.title, export_info.exported))
                         sys.stdout.flush()
 
@@ -83,5 +83,5 @@ if __name__ == "__main__":
                         #  if DSLR or Janes Phone delete photos on device
 
                     else:
-                        print("Build script [photos] image [{}] from album [{}] has unsupported type [{}]"
+                        print("Build generate script [photos] image [{}] from album [{}] has unsupported type [{}]"
                               .format(photo.original_filename, album.title, photo_type), file=sys.stderr)

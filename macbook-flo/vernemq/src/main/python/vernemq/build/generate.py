@@ -14,8 +14,8 @@ for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../../..".format(os
         sys.path.insert(0, "{}/src/main/python".format(dir_module))
 sys.path.insert(0, DIR_MODULE_ROOT)
 
-from homeassistant.build.pull import load_env
-from homeassistant.build.pull import load_entity_metadata
+from homeassistant.build.generate import load_env
+from homeassistant.build.generate import load_entity_metadata
 
 if __name__ == "__main__":
     env = load_env()
@@ -61,5 +61,5 @@ if __name__ == "__main__":
         metadata_publish_path = os.path.abspath(os.path.join(metadata_publish_dir, metadata_publish_dict["unique_id"] + ".json"))
         with open(metadata_publish_path, 'a') as metadata_publish_file:
             metadata_publish_file.write(metadata_publish_str)
-            print("Build script [homeassistant] entity metadata [sensor.{}] persisted to [{}]"
+            print("Build generate script [homeassistant] entity metadata [sensor.{}] persisted to [{}]"
                   .format(metadata_publish_dict["unique_id"], metadata_publish_path))

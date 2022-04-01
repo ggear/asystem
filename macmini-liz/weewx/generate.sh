@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. $(pwd)/../../pull.sh
+. $(pwd)/../../generate.sh
 
 pull_repo $(pwd) weewx weewx-core ggear/weewx v4.6.2-ggear
 pull_repo $(pwd) weewx neowx-material ggear/neowx-material 1.11-ggear

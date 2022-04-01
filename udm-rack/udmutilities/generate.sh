@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. $(pwd)/../../pull.sh
+. $(pwd)/../../generate.sh
 
 pull_repo $(pwd) udmutilities udm-utilities ggear/udm-utilities 54f3bdab8a7cff7e11185a34bd32dff92a6dfa6f-ggear
 rm -rf src/main/resources/config/udm-utilities

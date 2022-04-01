@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. $(pwd)/../../pull.sh
+. $(pwd)/../../generate.sh
 
 pull_repo $(pwd) homeassistant bom-weather-card davidfw1960/bom-weather-card 0.90a
 rm -rf src/main/resources/config/www/custom_ui/bom-weather-card

@@ -11,7 +11,7 @@ for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../../..".format(os
         sys.path.insert(0, "{}/src/main/python".format(dir_module))
 sys.path.insert(0, DIR_MODULE_ROOT)
 
-from homeassistant.build.pull import load_entity_metadata
+from homeassistant.build.generate import load_entity_metadata
 
 DIR_DASHBOARDS_ROOT = DIR_MODULE_ROOT + "/../../main/resources/config/dashboards"
 

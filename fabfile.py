@@ -25,7 +25,7 @@ FAB_SKIP_DELTA = 'FAB_SKIP_DELTA'
 def default(context):
     _setup(context)
     _clean(context)
-    _pull(context)
+    _generate(context)
     _build(context)
     _unittest(context)
     _systest(context)
@@ -48,8 +48,8 @@ def backup(context):
 
 
 @task
-def pull(context):
-    _pull(context)
+def generate(context):
+    _generate(context)
 
 
 @task
@@ -61,7 +61,7 @@ def clean(context):
 def build(context):
     _setup(context)
     _clean(context)
-    _pull(context)
+    _generate(context)
     _build(context)
 
 
@@ -69,7 +69,7 @@ def build(context):
 def test(context):
     _setup(context)
     _clean(context)
-    _pull(context)
+    _generate(context)
     _build(context)
     _unittest(context)
     _systest(context)
@@ -79,7 +79,7 @@ def test(context):
 def package(context):
     _setup(context)
     _clean(context)
-    _pull(context)
+    _generate(context)
     _build(context)
     _package(context)
 
@@ -88,21 +88,21 @@ def package(context):
 def run(context):
     _setup(context)
     _clean(context)
-    _pull(context)
+    _generate(context)
     _run(context)
 
 
 @task
-def pop(context):
-    _pull(context)
-    _pop(context)
+def deploy(context):
+    _generate(context)
+    _deploy(context)
 
 
 @task
-def push(context):
+def release(context):
     _setup(context)
     _clean(context)
-    _push(context)
+    _release(context)
 
 
 def _setup(context):
@@ -149,26 +149,26 @@ def _backup(context):
     _print_footer("asystem", "backup")
 
 
-def _pull(context, filter_module=None, filter_host=None, is_release=False):
-    _print_header("asystem", "pull git")
+def _generate(context, filter_module=None, filter_host=None, is_release=False):
+    _print_header("asystem", "generate git")
     _run_local(context, "git pull --all")
-    _print_footer("asystem", "pull git")
-    _print_header("asystem", "pull dependencies")
-    _run_local(context, "pull.sh", DIR_ROOT)
-    _print_footer("asystem", "pull dependencies")
+    _print_footer("asystem", "generate git")
+    _print_header("asystem", "generate dependencies")
+    _run_local(context, "generate.sh", DIR_ROOT)
+    _print_footer("asystem", "generate dependencies")
     for module in _get_modules(context, filter_module=filter_module):
-        _print_header(module, "pull env")
+        _print_header(module, "generate env")
         _write_env(context, module, join(DIR_ROOT, module, "target/release") if is_release else join(DIR_ROOT, module),
                    filter_host=filter_host, is_release=is_release)
-        _print_footer(module, "pull env")
-    for module in _get_modules(context, "pull.sh", filter_changes=False):
-        _print_header(module, "pull shell script")
-        _run_local(context, "{}/{}/pull.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
-        _print_footer(module, "pull shell script")
-    for module in _get_modules(context, "src/main/python/*/build/pull.py", filter_changes=False):
-        _print_header(module, "pull python script")
-        _run_local(context, "python {}/{}/src/main/python/{}/build/pull.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
-        _print_footer(module, "pull python script")
+        _print_footer(module, "generate env")
+    for module in _get_modules(context, "generate.sh", filter_changes=False):
+        _print_header(module, "generate shell script")
+        _run_local(context, "{}/{}/generate.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
+        _print_footer(module, "generate shell script")
+    for module in _get_modules(context, "src/main/python/*/build/generate.py", filter_changes=False):
+        _print_header(module, "generate python script")
+        _run_local(context, "python {}/{}/src/main/python/{}/build/generate.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
+        _print_footer(module, "generate python script")
 
 
 def _clean(context, filter_module=None):
@@ -268,18 +268,18 @@ def _run(context):
         break
 
 
-def _pop(context):
-    for module in _get_modules(context, "pop.sh"):
-        _print_header(module, "pop")
-        _run_local(context, "pop.sh", module)
-        _print_footer(module, "pop")
+def _deploy(context):
+    for module in _get_modules(context, "deploy.sh"):
+        _print_header(module, "deploy")
+        _run_local(context, "deploy.sh", module)
+        _print_footer(module, "deploy")
 
 
-def _push(context):
+def _release(context):
     modules = _get_modules(context)
     for module in modules:
         if FAB_SKIP_TESTS not in os.environ:
-            _pull(context, filter_module=module)
+            _generate(context, filter_module=module)
             _build(context, filter_module=module)
             _unittest(context, filter_module=module)
             _systest(context, filter_module=module)
@@ -291,10 +291,10 @@ def _push(context):
     for module in modules:
         for host in _get_hosts(context, module):
             _clean(context, filter_module=module)
-            _pull(context, filter_module=module, filter_host=host, is_release=True)
+            _generate(context, filter_module=module, filter_host=host, is_release=True)
             _build(context, filter_module=module, is_release=True)
             _package(context, filter_module=module)
-            _print_header(module, "push")
+            _print_header(module, "release")
             group_path = Path(join(DIR_ROOT, module, ".group"))
             if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0:
                 _run_local(context, "mkdir -p target/release", module)
@@ -337,7 +337,7 @@ def _push(context):
                 _print_footer("{}/{}".format(host, _name(module)), "release")
             else:
                 print("Module ignored")
-            _print_footer(module, "push")
+            _print_footer(module, "release")
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
@@ -530,7 +530,7 @@ def _up_module(context, module, up_this=True):
     if isfile(join(DIR_ROOT, module, "docker-compose.yml")):
         for run_dep in _get_dependencies(context, module):
             _clean(context, filter_module=run_dep)
-            _pull(context, filter_module=run_dep)
+            _generate(context, filter_module=run_dep)
             _build(context, filter_module=run_dep)
             _package(context, filter_module=run_dep)
             _print_header(run_dep, "run prepare")

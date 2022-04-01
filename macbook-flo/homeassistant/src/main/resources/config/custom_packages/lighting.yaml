@@ -285,13 +285,25 @@ automation:
           entity_id: switch.adaptive_lighting_night_light
           lights: light.ada_lamp
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_night_light
           lights: light.ada_lamp
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.ada_lamp
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.ada_lamp
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_night_light
@@ -333,13 +345,25 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.edwin_lamp
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
           lights: light.edwin_lamp
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.edwin_lamp
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.edwin_lamp
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -376,13 +400,25 @@ automation:
           entity_id: switch.adaptive_lighting_night_light
           lights: light.edwin_night_light
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_night_light
           lights: light.edwin_night_light
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.edwin_night_light
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_night_light
+          lights: light.edwin_night_light
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_night_light
@@ -419,13 +455,25 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.hallway_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.hallway_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.hallway_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.hallway_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
@@ -467,13 +515,25 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.dining_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
           lights: light.dining_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.dining_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.dining_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -510,13 +570,25 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.lounge_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.lounge_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.lounge_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.lounge_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
@@ -553,13 +625,25 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.parents_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.parents_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.parents_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.parents_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
@@ -601,13 +685,25 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.kitchen_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
           lights: light.kitchen_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.kitchen_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.kitchen_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -649,13 +745,25 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.laundry_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
           lights: light.laundry_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.laundry_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.laundry_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -697,13 +805,25 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.pantry_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
           lights: light.pantry_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.pantry_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.pantry_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_default
@@ -740,13 +860,25 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.bathroom_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.bathroom_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.bathroom_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.bathroom_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
@@ -783,13 +915,25 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.ensuite_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.ensuite_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.ensuite_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.ensuite_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
@@ -826,13 +970,25 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.wardrobe_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.wardrobe_main
           manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
+          manual_control: false
+      - delay: '00:00:01'
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.wardrobe_main
+          manual_control: false
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_bedroom

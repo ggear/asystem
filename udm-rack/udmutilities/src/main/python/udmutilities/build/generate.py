@@ -15,8 +15,8 @@ for dir_module in glob.glob("{}/*/*/".format("{}/../../../../../../..".format(os
         sys.path.insert(0, "{}/src/main/python".format(dir_module))
 sys.path.insert(0, DIR_MODULE_ROOT)
 
-from homeassistant.build.pull import load_env
-from homeassistant.build.pull import load_entity_metadata
+from homeassistant.build.generate import load_env
+from homeassistant.build.generate import load_entity_metadata
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
 UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
@@ -42,14 +42,14 @@ if __name__ == "__main__":
     }, verify=False).raise_for_status()
     unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
     if unifi_clients_response.status_code != 200:
-        print("Build script [udmutilities] could not connect to UniFi")
+        print("Build generate script [udmutilities] could not connect to UniFi")
     else:
         for unifi_client in unifi_clients_response.json()['data']:
             unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else (
                 unifi_client["hostname"] if "hostname" in unifi_client else "")
         unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/stat/device'.format(UNIFI_CONTROLLER_URL), verify=False)
         if unifi_clients_response.status_code != 200:
-            print("Build script [udmutilities] could not connect to UniFi")
+            print("Build generate script [udmutilities] could not connect to UniFi")
         else:
             for unifi_client in unifi_clients_response.json()['data']:
                 unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else ""
@@ -89,20 +89,20 @@ if __name__ == "__main__":
                 name = metadata_udmutilities_dnsmasq_line.split("=")[1].split(",")[-1].strip()
                 if mac in unifi_clients:
                     if unifi_clients[mac] != name:
-                        print("Build script [udmutilities] dnsmasq config host [{}] doesn't match UniFi controller alias [{}]".format(
+                        print("Build generate script [udmutilities] dnsmasq config host [{}] doesn't match UniFi controller alias [{}]".format(
                             name,
                             unifi_clients[mac],
                         ), file=sys.stderr)
                     else:
-                        print("Build script [udmutilities] dnsmasq config host [{}] matches UniFi controller alias [{}]".format(
+                        print("Build generate script [udmutilities] dnsmasq config host [{}] matches UniFi controller alias [{}]".format(
                             name,
                             unifi_clients[mac],
                         ))
                 else:
-                    print("Build script [udmutilities] dnsmasq config host [{}] not found in UniFi controller".format(
+                    print("Build generate script [udmutilities] dnsmasq config host [{}] not found in UniFi controller".format(
                         name,
                     ), file=sys.stderr)
-        print("Build script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
+        print("Build generate script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
 
     metadata_udmutilities_ips = {}
     hosts_conf_path = os.path.join(DIR_MODULE_ROOT, "../../../src/main/resources/config/udm-utilities/run-pihole/custom.list")
