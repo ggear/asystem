@@ -26,12 +26,12 @@ def setup(context):
     _setup(context)
 
 
-@task(aliases=["prg"] + ["purge"[0:i] for i in range(2, len("purge"))])
+@task(aliases=["prg", "f"] + ["purge"[0:i] for i in range(2, len("purge"))])
 def purge(context):
     _purge(context)
 
 
-@task(aliases=["bup"] + ["backup"[0:i] for i in range(2, len("backup"))])
+@task(aliases=["bup", "a"] + ["backup"[0:i] for i in range(2, len("backup"))])
 def backup(context):
     _clean(context)
     _backup(context)
