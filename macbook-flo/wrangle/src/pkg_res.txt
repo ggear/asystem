@@ -1,2 +1,2 @@
-../run.sh
-../run_post.sh
+../install.sh
+../install_post.sh

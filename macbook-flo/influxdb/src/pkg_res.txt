@@ -1,1 +1,1 @@
-../run.sh
+../install.sh

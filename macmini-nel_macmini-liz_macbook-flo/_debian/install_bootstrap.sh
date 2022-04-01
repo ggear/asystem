@@ -29,7 +29,7 @@ diskutil eject /dev/disk2
 ################################################################################
 # Install packages
 ################################################################################
-# Run run.sh apt-get install commands, ignore errors (eg docker/containerio)
+# Run install.sh apt-get install commands, ignore errors (eg docker/containerio)
 # Run run_upgrade script
 
 ################################################################################

@@ -32,9 +32,9 @@ rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../la
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
 chmod 600 .env
-[ -f "./run_pre.sh" ] && chmod +x ./run_pre.sh && ./run_pre.sh
+[ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh
 [ -f "docker-compose.yml" ] && docker-compose --compatibility --no-ansi up --force-recreate -d && sleep 2
-[ -f "./run_post.sh" ] && chmod +x ./run_post.sh && ./run_post.sh
+[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh
 if [ -f "docker-compose.yml" ]; then
   if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
     echo && echo "Container failed to start" && echo && exit 1

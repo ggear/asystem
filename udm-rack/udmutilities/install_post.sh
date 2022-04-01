@@ -6,8 +6,8 @@ SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE
 add_on_boot_script() {
   [ ! -f "/mnt/data/on_boot.d/${1}.sh" ] &&
     [ -d "/var/lib/asystem/install" ] &&
-    [ -f "/var/lib/asystem/install/*udm-rack*/${2}/latest/run.sh" ] &&
-    cp -rvf "/var/lib/asystem/install/*udm-rack*/${2}/latest/run.sh" "/mnt/data/on_boot.d/${1}.sh"
+    [ -f "/var/lib/asystem/install/*udm-rack*/${2}/latest/install.sh" ] &&
+    cp -rvf "/var/lib/asystem/install/*udm-rack*/${2}/latest/install.sh" "/mnt/data/on_boot.d/${1}.sh"
 }
 
 cd ${SERVICE_INSTALL} || exit

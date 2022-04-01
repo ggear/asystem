@@ -21,43 +21,33 @@ FAB_SKIP_TESTS = 'FAB_SKIP_TESTS'
 FAB_SKIP_DELTA = 'FAB_SKIP_DELTA'
 
 
-@task(default=True)
-def default(context):
-    _setup(context)
-    _clean(context)
-    _generate(context)
-    _build(context)
-    _unittest(context)
-    _systest(context)
-
-
-@task
+@task(aliases=["sup"] + ["setup"[0:i] for i in range(1, len("setup"))])
 def setup(context):
     _setup(context)
 
 
-@task
+@task(aliases=["prg"] + ["purge"[0:i] for i in range(2, len("purge"))])
 def purge(context):
     _purge(context)
 
 
-@task
+@task(aliases=["bup"] + ["backup"[0:i] for i in range(2, len("backup"))])
 def backup(context):
     _clean(context)
     _backup(context)
 
 
-@task
+@task(aliases=["gnr"] + ["generate"[0:i] for i in range(1, len("generate"))])
 def generate(context):
     _generate(context)
 
 
-@task
+@task(aliases=["cln"] + ["clean"[0:i] for i in range(1, len("clean"))])
 def clean(context):
     _clean(context)
 
 
-@task
+@task(default=True, aliases=["bld"] + ["build"[0:i] for i in range(1, len("build"))])
 def build(context):
     _setup(context)
     _clean(context)
@@ -65,7 +55,7 @@ def build(context):
     _build(context)
 
 
-@task
+@task(aliases=["tst"] + ["test"[0:i] for i in range(1, len("test"))])
 def test(context):
     _setup(context)
     _clean(context)
@@ -75,7 +65,7 @@ def test(context):
     _systest(context)
 
 
-@task
+@task(aliases=["pkg"] + ["package"[0:i] for i in range(1, len("package"))])
 def package(context):
     _setup(context)
     _clean(context)
@@ -84,21 +74,21 @@ def package(context):
     _package(context)
 
 
-@task
-def run(context):
+@task(aliases=["ect"] + ["execute"[0:i] for i in range(1, len("execute"))])
+def execute(context):
     _setup(context)
     _clean(context)
     _generate(context)
-    _run(context)
+    _execute(context)
 
 
-@task
+@task(aliases=["dpy"] + ["deploy"[0:i] for i in range(1, len("deploy"))])
 def deploy(context):
     _generate(context)
     _deploy(context)
 
 
-@task
+@task(aliases=["rls"] + ["release"[0:i] for i in range(1, len("release"))])
 def release(context):
     _setup(context)
     _clean(context)
@@ -250,10 +240,10 @@ def _systest(context, filter_module=None):
         _print_footer(module, "systest")
 
 
-def _run(context):
+def _execute(context):
     for module in _get_modules(context, "docker-compose.yml"):
         _up_module(context, module, up_this=False)
-        _print_header(module, "run")
+        _print_header(module, "execute")
 
         def server_stop(signal, frame):
             _down_module(context, module)
@@ -264,7 +254,7 @@ def _run(context):
             _run_local(context, "run_dev.sh", module)
         else:
             _run_local(context, "docker-compose --ansi never up --force-recreate --remove-orphans", module)
-        _print_footer(module, "run")
+        _print_footer(module, "execute")
         break
 
 
@@ -311,10 +301,10 @@ def _release(context):
                                                    .format(DIR_ROOT), hide='out').stdout.replace(DIR_ROOT + "/", "")
                                    .replace("_", "\n").split("\n")))
                 Path(join(DIR_ROOT, module, "target/release/hosts")).write_text("\n".join(hosts) + "\n")
-                if glob.glob(join(DIR_ROOT, module, "target/package/run*")):
-                    _run_local(context, "cp -rvfp target/package/run* target/release", module)
+                if glob.glob(join(DIR_ROOT, module, "target/package/install*")):
+                    _run_local(context, "cp -rvfp target/package/install* target/release", module)
                 else:
-                    _run_local(context, "touch target/release/run.sh", module)
+                    _run_local(context, "touch target/release/install.sh", module)
                 _print_header("{}/{}".format(host, _name(module)), "release")
                 ssh_pass = _ssh_pass(context, host)
                 install = "{}/{}/{}".format(DIR_INSTALL, module, _get_versions()[0])
@@ -324,11 +314,9 @@ def _release(context):
                            module)
                 _run_local(context, "{}scp -qpr target/release/config root@{}:{}".format(ssh_pass, host, install), module)
                 print("Installing release to {} ... ".format(host))
-
                 _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
                            .format(ssh_pass, host, install, install, install))
-
-                _run_local(context, "{}ssh -q root@{} 'chmod +x {}/run.sh && {}/run.sh'".format(ssh_pass, host, install, install))
+                _run_local(context, "{}ssh -q root@{} 'chmod +x {}/install.sh && {}/install.sh'".format(ssh_pass, host, install, install))
                 _run_local(context, "{}ssh -q root@{} 'docker system prune --volumes -f'".format(ssh_pass, host), hide='err', warn=True)
                 _run_local(context, "{}ssh -q root@{} 'find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
                                     "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
@@ -494,15 +482,15 @@ def _substitue_env(context, env_path, source_root, source_path, destination_root
 
 
 def _process_target(context, module, is_release=False):
-    _run_local(context, "mkdir -p target/package && cp -rvfp src/* run* target/package", module, hide='err', warn=True)
+    _run_local(context, "mkdir -p target/package && cp -rvfp src/* install* target/package", module, hide='err', warn=True)
     package_resource_path = join(DIR_ROOT, module, "src/pkg_res.txt")
     if isfile(package_resource_path):
         with open(package_resource_path, "r") as package_resource_file:
             for package_resource in package_resource_file:
                 package_resource = package_resource.strip()
                 if package_resource != "" and not package_resource.startswith("#"):
-                    package_resource = package_resource.replace("../run", "run")
-                    package_resource_source = DIR_ROOT if package_resource == "run.sh" and \
+                    package_resource = package_resource.replace("../install", "install")
+                    package_resource_source = DIR_ROOT if package_resource == "install.sh" and \
                                                           not isfile(join(DIR_ROOT, module, package_resource)) \
                         else join(DIR_ROOT, module, "target/package")
                     _substitue_env(context, join(DIR_ROOT, module, "target/release/.env" if is_release else ".env"),
