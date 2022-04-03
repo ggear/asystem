@@ -74,7 +74,7 @@ automation:
     mode: single
     trigger:
       - platform: time
-        at: "17:45:00"
+        at: "08:00:00"
     condition: [ ]
     action:
       - service: light.turn_off
@@ -101,7 +101,7 @@ automation:
     mode: single
     trigger:
       - platform: time
-        at: "08:00:00"
+        at: "17:45:00"
     condition: [ ]
     action:
       - service: light.turn_on

@@ -65,6 +65,7 @@
 # Install from https://update-software.sonos.com/software/mac/mdcr/SonosDesktopController1341.dmg
 # Install from https://github.com/newmarcel/KeepingYouAwake/releases/download/1.6.1/KeepingYouAwake-1.6.1.zip
 # Install from https://desktop.docker.com/mac/main/amd64/Docker.dmg
+# Install from https://update-software.sonos.com/software/mac/mdcr/SonosDesktopController144.dmg
 # Install from https://download-cdn.jetbrains.com/idea/ideaIU-2021.3.2.dmg
 # Remove all unnecessary apps using Clean My Mac
 
