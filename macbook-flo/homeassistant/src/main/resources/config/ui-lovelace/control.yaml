@@ -5,12 +5,15 @@
   title: Routines
   show_header_toggle: false
   entities:
+    - entity: input_boolean.home_tv
+      name: TV
+      icon: mdi:youtube-tv
     - entity: input_boolean.home_sleep
       name: Sleep
       icon: mdi:chat-sleep
-    - entity: input_boolean.home_wakeup
-      name: Wakeup
-      icon: mdi:white-balance-sunny
+    - entity: input_boolean.home_reset
+      name: Reset
+      icon: mdi:refresh-circle
 ################################################################################
 - type: custom:layout-break
 ################################################################################

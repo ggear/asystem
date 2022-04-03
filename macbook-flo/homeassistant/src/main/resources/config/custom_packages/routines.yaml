@@ -1,18 +1,42 @@
 ################################################################################
 input_boolean:
   ################################################################################
+  home_tv:
+    name: Tv
+    initial: off
+  ################################################################################
   home_sleep:
     name: Sleep
     initial: off
   ################################################################################
-  home_wakeup:
-    name: Wakeup
+  home_reset:
+    name: Reset
     initial: off
   ################################################################################
 automation:
   ################################################################################
+  - id: routine_home_tv
+    alias: "Routine: Put home into TV mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_tv
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+      - service: light.turn_on
+        target:
+          entity_id: light.lounge_main
+        data:
+          brightness: 50
+          color_temp: 500
+      - delay: '00:00:01'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.home_tv
+  ################################################################################
   - id: routine_home_sleep
-    alias: "Routine: Put the home to sleep"
+    alias: "Routine: Put home to sleep"
     mode: single
     trigger:
       - platform: state
@@ -28,12 +52,12 @@ automation:
       - service: input_boolean.turn_off
         entity_id: input_boolean.home_sleep
   ################################################################################
-  - id: routine_home_wakeup
-    alias: "Routine: Wake the home up"
+  - id: routine_home_reset
+    alias: "Routine: Reset home to defaults"
     mode: single
     trigger:
       - platform: state
-        entity_id: input_boolean.home_wakeup
+        entity_id: input_boolean.home_reset
         from: 'off'
         to: 'on'
     condition: [ ]
@@ -43,5 +67,74 @@ automation:
           entity_id: automation.lighting_reset_adaptive_lighting
       - delay: '00:00:01'
       - service: input_boolean.turn_off
-        entity_id: input_boolean.home_wakeup
+        entity_id: input_boolean.home_reset
+  ################################################################################
+  - id: routine_home_lights_off
+    alias: "Routine: Turn night lights off"
+    mode: single
+    trigger:
+      - platform: time
+        at: "17:45:00"
+    condition: [ ]
+    action:
+      - service: light.turn_off
+        target:
+          entity_id:
+            - light.ada_fan
+            - light.ada_lamp
+            - light.edwin_lamp
+            - light.edwin_fan
+            - light.edwin_night_light
+      - service: switch.turn_on
+        target:
+          entity_id:
+            - switch.ada_fan_light_motion
+            - switch.edwin_fan_light_motion
+      - service: light.turn_on
+        target:
+          entity_id:
+            - light.ada_fan
+            - light.edwin_fan
+  ################################################################################
+  - id: routine_home_lights_on
+    alias: "Routine: Turn night lights on"
+    mode: single
+    trigger:
+      - platform: time
+        at: "08:00:00"
+    condition: [ ]
+    action:
+      - service: light.turn_on
+        target:
+          entity_id:
+            - light.edwin_night_light
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.ada_fan_light_motion
+            - switch.edwin_fan_light_motion
+      - service: light.turn_off
+        target:
+          entity_id:
+            - light.ada_fan
+            - light.ada_lamp
+            - light.edwin_lamp
+            - light.edwin_fan
+  ################################################################################
+  - id: routine_home_fans_off
+    alias: "Routine: Turn fans off"
+    mode: single
+    trigger:
+      - platform: time
+        at: "03:00:00"
+    condition: [ ]
+    action:
+      - service: fan.turn_off
+        target:
+          entity_id:
+            - fan.ada_fan
+            - fan.edwin_fan
+            - fan.parents_fan
+            - fan.lounge_fan
+            - fan.deck_fan
   ################################################################################

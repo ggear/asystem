@@ -54,6 +54,7 @@
 # Install Calca from App Store
 # Install Infuse from App Store
 # Install WhatsApp from App Store
+# Install MQTT Explorer from App Store
 # Install from https://www.office.com
 # Install from https://dl.google.com/drive-file-stream/GoogleDrive.dmg
 # Install from https://dl.devmate.com/com.macpaw.CleanMyMac4/CleanMyMacX.dmg

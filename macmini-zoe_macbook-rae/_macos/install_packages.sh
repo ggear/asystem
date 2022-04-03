@@ -5,6 +5,7 @@
 ################################################################################
 brew update
 brew install \
+  jq \
   htop \
   wget \
   watch \
@@ -12,9 +13,10 @@ brew install \
   ffmpeg \
   rustup \
   exiftool \
-  pkg-config \
   poppler \
   telnet \
+  mosquitto \
+  pkg-config \
   docker-slim \
   hudochenkov/sshpass/sshpass
 brew upgrade
