@@ -90,11 +90,14 @@ automation:
           entity_id:
             - switch.ada_fan_light_motion
             - switch.edwin_fan_light_motion
-      - service: light.turn_on
+      - service: media_player.turn_off
         target:
           entity_id:
-            - light.ada_fan
-            - light.edwin_fan
+            - media_player.ada_home
+            - media_player.edwin_home
+            - media_player.parents_home
+            - media_player.parents_tv
+            - media_player.lounge_home
   ################################################################################
   - id: routine_home_lights_on
     alias: "Routine: Turn night lights on"

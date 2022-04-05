@@ -164,7 +164,7 @@ logger:
   logs:
     custom_components.powercalc: info
     homeassistant.components.mqtt: info
-    custom_components.adaptive_lighting: info
+    custom_components.adaptive_lighting: debug
     custom_components.bureau_of_meteorology: info
     homeassistant.components.automation.electricity_smart_plug_polling: warn
     homeassistant.components.websocket_api.http.connection: fatal
