@@ -33,7 +33,7 @@ if __name__ == "__main__":
     os.mkdir(export_root_path)
     photos_db = osxphotos.PhotosDB(os.path.expanduser(DIR_PHOTOS_DB))
     for folder in photos_db.folder_info:
-        if folder.title == "Published":
+        if folder.title == "Draft":
             for album in folder.album_info:
                 index = 1
                 export_date = None
