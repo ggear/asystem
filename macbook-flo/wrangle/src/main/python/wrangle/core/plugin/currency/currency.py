@@ -62,56 +62,61 @@ class Currency(library.Library):
             new_data = False
             ato_df = pd.DataFrame()
             merged_df = pd.DataFrame()
-            for year in range(ATO_START_YEAR, ATO_FINISH_YEAR):
-                for month in range(1 if year != ATO_START_YEAR else ATO_START_MONTH,
-                                   13 if year < datetime.datetime.now().year else datetime.datetime.now().month):
-                    month_string = datetime.date(2000, month, 1).strftime('%B')
-                    year_month_file = os.path.join(self.input, "ato_fx_{}-{}.xls".format(year, str(month).zfill(2)))
-                    year_month_file_downloaded = False
-                    for url_suffix in ATO_URL_SUFFIX:
-                        file_status = self.http_download((ATO_URL_PREFIX + url_suffix)
-                                                         .format(month_string, year), year_month_file, check=False, ignore=True)
-                        if file_status[0]:
-                            year_month_file_downloaded = True
-                            if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
-                                new_data = True
-                                for header_rows in ATO_XLS_HEADER_ROWS:
-                                    try:
-                                        ato_df = pd.read_excel(year_month_file, skiprows=header_rows)
-                                        if ato_df.columns[0] == 'Country':
-                                            ato_df = ato_df[ato_df['Country'].isin(['USA', 'UK', 'SINGAPORE'])]
-                                            for column in ato_df.columns:
-                                                if isinstance(column, str) and column != 'Country':
-                                                    if column[0].isdigit():
-                                                        match = re.compile("(.*)-(.*)").match(column)
-                                                        ato_df.rename(columns={column: "{}-{}-{}".format(
-                                                            year,
-                                                            str(list(calendar.month_abbr).index(match.group(2))).zfill(2),
-                                                            match.group(1).zfill(2)
-                                                        )}, inplace=True)
-                                                    else:
-                                                        ato_df.drop(column, axis=1, inplace=True)
-                                                elif isinstance(column, datetime.datetime):
-                                                    ato_df.rename(columns={column: column.strftime("{}-%m-%d".format(year))}, inplace=True)
-                                            ato_df = ato_df.melt('Country', var_name='Date', value_name='Rate'). \
-                                                pivot_table('Rate', ['Date'], 'Country', aggfunc='first').ffill().bfill().reset_index()
-                                            ato_df.rename(columns={'USA': 'AUD/USD', 'UK': 'AUD/GBP', 'SINGAPORE': 'AUD/SGD'}, inplace=True)
-                                            ato_df.index.name = None
-                                            ato_df.columns.name = None
-                                            ato_df['Source'] = 'ATO'
-                                            ato_df = ato_df[['Source', 'Date'] + PAIRS]
-                                            merged_df = pd.concat([merged_df, ato_df], axis=0, join='outer',
-                                                                  ignore_index=True, verify_integrity=True, sort=True)
-                                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
-                                            break
-                                    except Exception as exception:
-                                        self.print_log("Unexpected error processing file [{}]".format(year_month_file), exception)
-                            else:
-                                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
-                            break
-                    if not year_month_file_downloaded:
-                        self.print_log("Error downloading file [{}]".format(os.path.basename(year_month_file)))
-                        self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+
+            # TODO: Disable ATO downloads since the ATO has removed them
+            # for year in range(ATO_START_YEAR, ATO_FINISH_YEAR):
+            #     for month in range(1 if year != ATO_START_YEAR else ATO_START_MONTH,
+            #                        13 if year < datetime.datetime.now().year else datetime.datetime.now().month):
+            #         month_string = datetime.date(2000, month, 1).strftime('%B')
+            #         year_month_file = os.path.join(self.input, "ato_fx_{}-{}.xls".format(year, str(month).zfill(2)))
+            #         year_month_file_downloaded = False
+            #         for url_suffix in ATO_URL_SUFFIX:
+            #             file_status = self.http_download((ATO_URL_PREFIX + url_suffix)
+            #                                              .format(month_string, year), year_month_file, check=False, ignore=True)
+            #             if file_status[0]:
+            #                 year_month_file_downloaded = True
+            #                 if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
+            #                     new_data = True
+            #                     for header_rows in ATO_XLS_HEADER_ROWS:
+            #                         try:
+            #                             ato_df = pd.read_excel(year_month_file, skiprows=header_rows)
+            #                             if ato_df.columns[0] == 'Country':
+            #                                 ato_df = ato_df[ato_df['Country'].isin(['USA', 'UK', 'SINGAPORE'])]
+            #                                 for column in ato_df.columns:
+            #                                     if isinstance(column, str) and column != 'Country':
+            #                                         if column[0].isdigit():
+            #                                             match = re.compile("(.*)-(.*)").match(column)
+            #                                             ato_df.rename(columns={column: "{}-{}-{}".format(
+            #                                                 year,
+            #                                                 str(list(calendar.month_abbr).index(match.group(2))).zfill(2),
+            #                                                 match.group(1).zfill(2)
+            #                                             )}, inplace=True)
+            #                                         else:
+            #                                             ato_df.drop(column, axis=1, inplace=True)
+            #                                     elif isinstance(column, datetime.datetime):
+            #                                         ato_df.rename(columns=
+            #                                                       {column: column.strftime("{}-%m-%d".format(year))}, inplace=True)
+            #                                 ato_df = ato_df.melt('Country', var_name='Date', value_name='Rate'). \
+            #                                     pivot_table('Rate', ['Date'], 'Country', aggfunc='first').ffill().bfill().reset_index()
+            #                                 ato_df.rename(columns=
+            #                                               {'USA': 'AUD/USD', 'UK': 'AUD/GBP', 'SINGAPORE': 'AUD/SGD'}, inplace=True)
+            #                                 ato_df.index.name = None
+            #                                 ato_df.columns.name = None
+            #                                 ato_df['Source'] = 'ATO'
+            #                                 ato_df = ato_df[['Source', 'Date'] + PAIRS]
+            #                                 merged_df = pd.concat([merged_df, ato_df], axis=0, join='outer',
+            #                                                       ignore_index=True, verify_integrity=True, sort=True)
+            #                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
+            #                                 break
+            #                         except Exception as exception:
+            #                             self.print_log("Unexpected error processing file [{}]".format(year_month_file), exception)
+            #                 else:
+            #                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
+            #                 break
+            #         if not year_month_file_downloaded:
+            #             self.print_log("Error downloading file [{}]".format(os.path.basename(year_month_file)))
+            #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+
             for years in RBA_YEARS:
                 years_file = os.path.join(self.input, "rba_fx_{}.xls".format(years))
                 file_status = self.http_download(RBA_URL.format(years), years_file, check='current' in years)

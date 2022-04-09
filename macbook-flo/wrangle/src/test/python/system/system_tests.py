@@ -6,7 +6,7 @@ import os
 import glob
 import shutil
 import pytest
-from wrangle import library
+from wrangle.core.plugin import library
 from requests import post
 import time
 import subprocess

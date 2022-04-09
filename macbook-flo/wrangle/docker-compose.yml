@@ -19,6 +19,7 @@ services:
       - WRANGLE_ENABLE_LOG
       - WRANGLE_REPROCESS_ALL_FILES
       - WRANGLE_DISABLE_UPLOAD_FILES
+      - PYTHONPATH=/asystem
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/runtime
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro

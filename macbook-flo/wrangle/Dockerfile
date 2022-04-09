@@ -24,7 +24,5 @@ COPY src/main/resources/.google_service_account.json /root
 COPY src/main/python/ /asystem/
 
 FROM image_install as image_runtime
-#ENTRYPOINT ["/entrypoint.sh"]
-#CMD ["telegraf"]
-
-CMD ["sleep", "999999"]
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["telegraf"]

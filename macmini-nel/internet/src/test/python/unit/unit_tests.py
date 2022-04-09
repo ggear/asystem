@@ -4,7 +4,7 @@ sys.path.append('../../../main/python')
 
 import unittest
 import pytest
-from internet import internet
+from internet.core import main
 from unittest.mock import patch, MagicMock
 
 
@@ -14,7 +14,7 @@ class InternetTest(unittest.TestCase):
         print("")
         sys.stdout.flush()
         with patch("internet.internet.query", MagicMock(return_value=[])):
-            self.assertEqual(internet.execute(), 0, "Script execution failed with non-zero return")
+            self.assertEqual(main.execute(), 0, "Script execution failed with non-zero return")
 
 
 if __name__ == '__main__':

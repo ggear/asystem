@@ -8,13 +8,14 @@ import shutil
 import unittest
 import importlib
 import pytest
-from wrangle import library
+from wrangle.core.plugin import library
 from mock import patch
 import contextlib
 
-DIR_TARGET = "../../../../target"
-DIR_RESOURCES = "../../resources"
-DIR_SRC = "../../../../src/main/python"
+DIR_MODULE_ROOT = os.path.abspath("{}/../..".format(os.path.dirname(os.path.realpath(__file__))))
+DIR_SRC = os.path.abspath("{}/../main/python".format(DIR_MODULE_ROOT))
+DIR_DATA = os.path.abspath("{}/resources/data".format(DIR_MODULE_ROOT))
+DIR_TARGET = os.path.abspath("{}/../../target".format(DIR_MODULE_ROOT))
 
 for key, value in list(library.load_profile(library.get_file(".env")).items()):
     os.environ[key] = value
@@ -23,14 +24,14 @@ for key, value in list(library.load_profile(library.get_file(".env")).items()):
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("equity", {"success_typical": ASSERT_RUN},
+        self.run_module("currency", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
                         random_subset_rows=False,
                         reprocess_all_files=False,
                         disable_write_stdout=True,
                         disable_upload_files=True,
-                        disable_download_files=True,
+                        disable_download_files=False,
                         )
 
     def test_currency_typical(self):
@@ -179,12 +180,13 @@ class WrangleTest(unittest.TestCase):
         os.environ[library.WRANGLE_DISABLE_DOWNLOAD_FILES] = str(disable_download_files)
         if not os.path.isdir(DIR_TARGET):
             os.makedirs(DIR_TARGET)
-        module = getattr(importlib.import_module("wrangle.{}".format(module_name)), module_name.title())()
+        module = getattr(importlib.import_module("wrangle.core.plugin.{}".format(module_name)), module_name.title())()
 
         def load_caches(source, destination):
             shutil.rmtree(destination, ignore_errors=True)
             if os.path.isdir(source):
                 shutil.copytree(source, destination)
+            module.print_log("Files written from [{}] to [{}]".format(source, destination))
 
         def assert_counters(counters_this, counters_that):
             for counter_source in counters_this:
@@ -219,7 +221,7 @@ class WrangleTest(unittest.TestCase):
 
         print("")
         for test in tests_asserts:
-            load_caches("{}{}/{}".format(DIR_RESOURCES, module.input.split("target")[-1], test), module.input)
+            load_caches("{}/{}/{}".format(DIR_DATA, module_name, test), module.input)
             counters = {}
             if not prepare_only:
                 with patch.object(library.Library, "sheet_write") if disable_upload_files else no_op():

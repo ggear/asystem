@@ -1,11 +1,10 @@
-import sys
 import os
-import glob
-import shutil
+import subprocess
+import sys
+import time
+
 import pytest
 from requests import post
-import time
-import subprocess
 from tabulate import tabulate
 
 sys.path.append('../../../main/python')

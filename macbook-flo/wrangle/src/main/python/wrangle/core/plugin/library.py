@@ -100,9 +100,9 @@ def get_file(file_name):
     working = os.path.dirname(__file__)
     paths = [
         "/root/{}".format(file_name),
-        "{}/../../resources/{}".format(working, file_name),
-        "{}/../../resources/config/{}".format(working, file_name),
-        "{}/../../../../{}".format(working, file_name),
+        "{}/../../../../resources/{}".format(working, file_name),
+        "{}/../../../../resources/config/{}".format(working, file_name),
+        "{}/../../../../../../{}".format(working, file_name),
     ]
     for path in paths:
         if os.path.isfile(path):
@@ -114,7 +114,7 @@ def get_dir(dir_name):
     working = os.path.dirname(__file__)
     parent_paths = [
         "/asystem/runtime",
-        "{}/../../../../../wrangle/target".format(working),
+        "{}/../../../../../../target".format(working),
     ]
     for parent_path in parent_paths:
         if os.path.isdir(parent_path):
@@ -206,10 +206,10 @@ class Library(object, metaclass=ABCMeta):
             ])),
         ])
 
-    def http_download(self, url_file, local_file, check=True, force=False, ignore=False):
-        local_file = os.path.abspath(local_file)
-        if not force and not check and os.path.isfile(local_file):
-            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
+    def http_download(self, url_file, local_path, check=True, force=False, ignore=False):
+        local_path = os.path.abspath(local_path)
+        if not force and not check and os.path.isfile(local_path):
+            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_path), local_path))
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return True, False
         else:
@@ -229,8 +229,8 @@ class Library(object, metaclass=ABCMeta):
                                 datetime.utcfromtimestamp(0)).total_seconds())
                 return None
 
-            if not force and check and os.path.isfile(local_file):
-                modified_timestamp_cached = int(os.path.getmtime(local_file))
+            if not force and check and os.path.isfile(local_path):
+                modified_timestamp_cached = int(os.path.getmtime(local_path))
                 try:
                     request = urllib.request.Request(url_file, headers=client)
                     request.get_method = lambda: 'HEAD'
@@ -238,7 +238,7 @@ class Library(object, metaclass=ABCMeta):
                     modified_timestamp = get_modified(response)
                     if modified_timestamp is not None:
                         if modified_timestamp_cached == modified_timestamp:
-                            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
+                            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_path), local_path))
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return True, False
                 except:
@@ -246,17 +246,19 @@ class Library(object, metaclass=ABCMeta):
             try:
                 response = urllib.request.urlopen(urllib.request.Request(url_file, headers=client),
                                                   context=ssl._create_unverified_context())
-                with open(local_file, 'wb') as output:
-                    output.write(response.read())
+                if not os.path.exists(os.path.dirname(local_path)):
+                    os.makedirs(os.path.dirname(local_path))
+                with open(local_path, 'wb') as local_file:
+                    local_file.write(response.read())
                 modified_timestamp = get_modified(response)
                 if modified_timestamp is not None:
-                    os.utime(local_file, (modified_timestamp, modified_timestamp))
-                self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
+                    os.utime(local_path, (modified_timestamp, modified_timestamp))
+                self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_path), local_path))
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 return True, True
             except Exception as exception:
                 if not ignore:
-                    self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file), exception)
+                    self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_path), url_file), exception)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return False, False
 
@@ -281,6 +283,8 @@ class Library(object, metaclass=ABCMeta):
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                         client.quit()
                         return True, False
+                if not os.path.exists(os.path.dirname(local_file)):
+                    os.makedirs(os.path.dirname(local_file))
                 client.retrbinary("RETR {}".format(url_path), open(local_file, 'wb').write)
                 os.utime(local_file, (modified_timestamp, modified_timestamp))
                 self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
@@ -295,26 +299,26 @@ class Library(object, metaclass=ABCMeta):
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return False, False
 
-    def stock_download(self, local_file, ticker, start, end, end_of_day='17:00', check=True, force=False, ignore=False):
-        local_file = os.path.abspath(local_file)
+    def stock_download(self, local_path, ticker, start, end, end_of_day='17:00', check=True, force=False, ignore=False):
+        local_path = os.path.abspath(local_path)
         now = datetime.now()
         end_exclusive = datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)
         if start != end_exclusive:
-            if not force and not check and os.path.isfile(local_file):
-                self.print_log("File [{}: {} {}] cached at [{}]".format(os.path.basename(local_file), start, end, local_file))
+            if not force and not check and os.path.isfile(local_path):
+                self.print_log("File [{}: {} {}] cached at [{}]".format(os.path.basename(local_path), start, end, local_path))
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return True, False
             else:
                 try:
-                    if not force and check and os.path.isfile(local_file):
+                    if not force and check and os.path.isfile(local_path):
                         if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]):
-                            end_data = datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d').date()
+                            end_data = datetime.strptime(pd.read_csv(local_path).values[-1][0], '%Y-%m-%d').date()
                             end_expected = BDay().rollback(now).date()
                             if now.date() == end_expected and now.strftime('%H:%M') < end_of_day:
                                 end_expected = end_expected - timedelta(days=1)
                             if end_data == end_expected:
                                 self.print_log("File [{}: {} {}] cached at [{}]"
-                                               .format(os.path.basename(local_file), start, end, local_file))
+                                               .format(os.path.basename(local_path), start, end, local_path))
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return True, False
                     data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, debug=False)
@@ -326,11 +330,13 @@ class Library(object, metaclass=ABCMeta):
                             self.print_log("No data returned for [{} - {} {}]".format(ticker, start, end_exclusive))
                         else:
                             raise Exception("No data returned for [{} - {} {}]".format(ticker, start, end_exclusive))
-                    data_df.to_csv(local_file, encoding='utf-8')
-                    modified_timestamp = int((datetime.strptime(pd.read_csv(local_file).values[-1][0], '%Y-%m-%d') +
+                    if not os.path.exists(os.path.dirname(local_path)):
+                        os.makedirs(os.path.dirname(local_path))
+                    data_df.to_csv(local_path, encoding='utf-8')
+                    modified_timestamp = int((datetime.strptime(pd.read_csv(local_path).values[-1][0], '%Y-%m-%d') +
                                               timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
-                    os.utime(local_file, (modified_timestamp, modified_timestamp))
-                    self.print_log("File [{}: {} {}] downloaded to [{}]".format(os.path.basename(local_file), start, end, local_file))
+                    os.utime(local_path, (modified_timestamp, modified_timestamp))
+                    self.print_log("File [{}: {} {}] downloaded to [{}]".format(os.path.basename(local_path), start, end, local_path))
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                     return True, True
                 except Exception as exception:
@@ -414,6 +420,8 @@ class Library(object, metaclass=ABCMeta):
                     dropbox_files[dropbox_file]["modified"] != local_files[dropbox_file]["modified"] or
                     dropbox_files[dropbox_file]["hash"] != local_files[dropbox_file]["hash"]
             )):
+                if not os.path.exists(os.path.dirname(local_path)):
+                    os.makedirs(os.path.dirname(local_path))
                 with open(local_path, "wb") as local_file:
                     metadata, response = service.files_download(path="{}/{}".format(dropbox_dir, dropbox_file))
                     local_file.write(response.content)
@@ -477,6 +485,8 @@ class Library(object, metaclass=ABCMeta):
                     done = False
                     while not done:
                         _, done = downloader.next_chunk()
+                    if not os.path.exists(os.path.dirname(local_path)):
+                        os.makedirs(os.path.dirname(local_path))
                     with open(local_path, 'wb') as local_file:
                         local_file.write(buffer_file.getvalue())
                     os.utime(local_path, (drive_files[drive_file]["modified"], drive_files[drive_file]["modified"]))

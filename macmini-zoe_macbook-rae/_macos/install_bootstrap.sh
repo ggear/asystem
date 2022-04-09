@@ -73,7 +73,8 @@
 # Kiwi Settings
 ################################################################################
 # Kiwi -> Preferences -> Accounts -> graham.gear@gmail.com -> Blue
-# Kiwi -> Preferences -> Notifcations -> Use / Sound -> Off
+# Kiwi -> Preferences -> Notifications -> Use / Sound -> Off
+# Kiwi -> Preferences -> General -> Save download files to -> ~/Desktop
 
 ################################################################################
 # Sublime Settings

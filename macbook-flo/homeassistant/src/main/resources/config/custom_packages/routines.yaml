@@ -80,16 +80,27 @@ automation:
       - service: light.turn_off
         target:
           entity_id:
-            - light.ada_fan
             - light.ada_lamp
             - light.edwin_lamp
-            - light.edwin_fan
             - light.edwin_night_light
       - service: switch.turn_on
         target:
           entity_id:
             - switch.ada_fan_light_motion
             - switch.edwin_fan_light_motion
+      - service: light.turn_on
+        target:
+          entity_id:
+            - light.ada_fan
+            - light.edwin_fan
+      - service: fan.turn_off
+        target:
+          entity_id:
+            - fan.ada_fan
+            - fan.edwin_fan
+            - fan.parents_fan
+            - fan.lounge_fan
+            - fan.deck_fan
       - service: media_player.turn_off
         target:
           entity_id:

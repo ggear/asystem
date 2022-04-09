@@ -64,6 +64,7 @@
 # Network -> WiFi -> Add New WiFi Network -> Network -> Unfettered
 # Network -> WiFi -> Add New WiFi Network -> Advanced Options -> WiFi Band -> 2.4Ghz
 # Network -> WiFi -> Add New WiFi Network -> Advanced Options -> Group Rekey Interval -> False
+# Network -> WiFi -> Add New WiFi Network -> Advanced Options -> Multicast Enhancement -> True
 # Network -> WiFi -> Add New WiFi Network -> Rate and Beacon Controls -> 2G Data Rate Control -> True / 6 Mbps
 
 # Network -> WiFi -> Add New WiFi Network -> Name/SSID -> BertAndErnie
@@ -71,6 +72,7 @@
 # Network -> WiFi -> Add New WiFi Network -> Network -> Controlled
 # Network -> WiFi -> Add New WiFi Network -> Advanced Options -> WiFi Band -> 2.4Ghz
 # Network -> WiFi -> Add New WiFi Network -> Advanced Options -> Group Rekey Interval -> False
+# Network -> WiFi -> Add New WiFi Network -> Advanced Options -> Multicast Enhancement -> True
 # Network -> WiFi -> Add New WiFi Network -> Rate and Beacon Controls -> 2G Data Rate Control -> True / 6 Mbps
 
 # Network -> WiFi -> Add New WiFi Network -> Name/SSID -> BeavisAndButthead
@@ -78,6 +80,7 @@
 # Network -> WiFi -> Add New WiFi Network -> Network -> Isolated
 # Network -> WiFi -> Add New WiFi Network -> Advanced Options -> WiFi Band -> 2.4Ghz
 # Network -> WiFi -> Add New WiFi Network -> Advanced Options -> Group Rekey Interval -> False
+# Network -> WiFi -> Add New WiFi Network -> Advanced Options -> Multicast Enhancement -> True
 # Network -> WiFi -> Add New WiFi Network -> Rate and Beacon Controls -> 2G Data Rate Control -> True / 6 Mbps
 
 # Advanced Features -> Switch Ports -> Add a Port Profile -> Broadcast
@@ -89,8 +92,12 @@
 # Traffic & Security -> Global Threat Management -> Detect & Block -> Detect & Block
 # Traffic & Security -> System Sensitivity -> Maximum Protection
 
+# Advanced Features -> Advanced Gateway Settings -> Multicast DNS -> True
 # Advanced Features -> Advanced Gateway Settings -> Create New Port Forwarding Rule ->
 #    HTTP, Enabled, WAN, Any, 80, 10.0.2.12, 9080, TCP, Logging enable
 #    HTTPS, Enabled, WAN, Any, 443, 10.0.2.12, 9443, TCP, Logging enable
+
+# Classic UI -> Site -> Auto-optimize network -> False
+# Classic UI -> All Wireless Networks -> Block LAN to WLAN multicast and broadcast data -> False
 
 mkdir -p /home
