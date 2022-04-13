@@ -5,5 +5,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE
 
 cd ${SERVICE_INSTALL} || exit
 
+chmod -R 777 ${SERVICE_HOME}/data
+
 #TODO
 #docker exec -e WRANGLE_REPROCESS_ALL_FILES=true wrangle telegraf --debug --once
