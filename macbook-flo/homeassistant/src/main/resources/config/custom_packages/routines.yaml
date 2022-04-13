@@ -15,7 +15,7 @@ input_boolean:
   ################################################################################
 automation:
   ################################################################################
-  - id: routine_home_tv
+  - id: routine_home_tv_on
     alias: "Routine: Put home into TV mode"
     mode: single
     trigger:
@@ -25,15 +25,29 @@ automation:
         to: 'on'
     condition: [ ]
     action:
+      - service: switch.turn_off
+        target:
+          entity_id: switch.adaptive_lighting_lounge
       - service: light.turn_on
         target:
           entity_id: light.lounge_main
         data:
-          brightness: 50
+          brightness: 200
           color_temp: 500
-      - delay: '00:00:01'
-      - service: input_boolean.turn_off
+  ################################################################################
+  - id: routine_home_tv_off
+    alias: "Routine: Put home out of TV mode"
+    mode: single
+    trigger:
+      - platform: state
         entity_id: input_boolean.home_tv
+        from: 'on'
+        to: 'off'
+    condition: [ ]
+    action:
+      - service: switch.turn_on
+        target:
+          entity_id: switch.adaptive_lighting_lounge
   ################################################################################
   - id: routine_home_sleep
     alias: "Routine: Put home to sleep"

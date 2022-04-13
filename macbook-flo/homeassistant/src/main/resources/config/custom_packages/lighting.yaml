@@ -144,11 +144,22 @@ adaptive_lighting:
     detect_non_ha_changes: true
     lights:
       - light.hallway_main
-      - light.lounge_main
       - light.parents_main
       - light.bathroom_main
       - light.ensuite_main
       - light.wardrobe_main
+  ####################################################################################
+  - name: lounge
+    interval: 30
+    min_brightness: 1
+    max_brightness: 100
+    min_color_temp: 2500
+    max_color_temp: 5500
+    only_once: false
+    take_over_control: true
+    detect_non_ha_changes: true
+    lights:
+      - light.lounge_main
   ####################################################################################
 automation:
   ####################################################################################
@@ -567,49 +578,49 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_lounge
           lights: light.lounge_main
           manual_control: false
       - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_lounge
           lights: light.lounge_main
           manual_control: false
       - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_lounge
           lights: light.lounge_main
           manual_control: false
       - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_lounge
           lights: light.lounge_main
           manual_control: false
       - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_lounge
           lights: light.lounge_main
           manual_control: false
       - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_lounge
           lights: light.lounge_main
           manual_control: false
       - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_lounge
           lights: light.lounge_main
           manual_control: false
       - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_lounge
           lights: light.lounge_main
           manual_control: false
   ####################################################################################
