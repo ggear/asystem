@@ -79,3 +79,8 @@ pull_repo $(pwd) homeassistant tplink-component ggear/homeassistant-core ggear-t
 rm -rf src/main/resources/config/custom_components/tplink
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../.deps/homeassistant/tplink-component/homeassistant/components/tplink src/main/resources/config/custom_components
+
+pull_repo $(pwd) homeassistant homekit-component ggear/homeassistant-core ggear-homekit
+rm -rf src/main/resources/config/custom_components/homekit
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../.deps/homeassistant/homekit-component/homeassistant/components/homekit src/main/resources/config/custom_components
