@@ -36,6 +36,7 @@ class LightModel:
             self._model = model_parts[0]
             self._lut_subdirectory = model_parts[1]
 
+        self._model = self._model.replace("#slash#", "/")
         self._custom_model_directory = custom_model_directory
         self._hass = hass
         self._directory: str = None
@@ -90,7 +91,7 @@ class LightModel:
 
         manufacturer_directory = (
             MANUFACTURER_DIRECTORY_MAPPING.get(self._manufacturer) or self._manufacturer
-        )
+        ).lower()
 
         model_directory = self._model
         if isinstance(
