@@ -21,9 +21,9 @@ RUN cat /asystem/reqs_run.txt | xargs -n 1 pip install && rm -rf /asystem/reqs_r
 RUN mkdir -p /root/.config
 COPY src/main/resources/.gspread_pandas /root/.config/gspread_pandas
 COPY src/main/resources/.google_service_account.json /root
-RUN mkdir -p /telegraf/.config
-COPY src/main/resources/.gspread_pandas /telegraf/.config/gspread_pandas
-COPY src/main/resources/.google_service_account.json /telegraf
+RUN mkdir -p /etc/telegraf/.config
+COPY src/main/resources/.gspread_pandas /etc/telegraf/.config/gspread_pandas
+COPY src/main/resources/.google_service_account.json /etc/telegraf
 COPY src/main/python/ /asystem/
 
 FROM image_install as image_runtime

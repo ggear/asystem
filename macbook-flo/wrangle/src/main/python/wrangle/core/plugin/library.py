@@ -100,6 +100,7 @@ def get_file(file_name):
     working = os.path.dirname(__file__)
     paths = [
         "/root/{}".format(file_name),
+        "/etc/telegraf/{}".format(file_name),
         "{}/../../../../resources/{}".format(working, file_name),
         "{}/../../../../resources/config/{}".format(working, file_name),
         "{}/../../../../../../{}".format(working, file_name),
