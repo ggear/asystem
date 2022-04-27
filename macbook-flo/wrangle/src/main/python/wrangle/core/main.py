@@ -23,7 +23,7 @@ def main(arguments=[]):
                         if action == library.CTR_ACT_ERRORED and counters[source][action] > 0:
                             module_errored = True
             except Exception as exception:
-                module.print_log("Module threw unexpected exception", exception)
+                module.print_log("Module threw unexpected exception:", exception)
                 module_errored = True
             if module_errored:
                 module_errored_count += 1

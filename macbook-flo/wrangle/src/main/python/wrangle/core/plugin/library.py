@@ -90,7 +90,7 @@ def print_log(process, message, exception=None, level="debug"):
             if len(line) > 0:
                 print("{}{}".format(prefix, line))
         if exception is not None:
-            print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc(limit=2).splitlines())))
+            print("{}{}".format(prefix, ("\n" + prefix).join(traceback.format_exc().splitlines())))
 
 
 def get_file(file_name):
