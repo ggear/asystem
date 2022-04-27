@@ -426,7 +426,11 @@ class Library(object, metaclass=ABCMeta):
                 with open(local_path, "wb") as local_file:
                     metadata, response = service.files_download(path="{}/{}".format(dropbox_dir, dropbox_file))
                     local_file.write(response.content)
-                os.utime(local_path, (dropbox_files[dropbox_file]["modified"], dropbox_files[dropbox_file]["modified"]))
+
+                try:
+                    os.utime(local_path, (dropbox_files[dropbox_file]["modified"], dropbox_files[dropbox_file]["modified"]))
+                except Exception as exception:
+                    self.print_log("File [{}] unable to be modified at [{}]".format(os.path.basename(local_path), local_path), exception)
                 local_files[dropbox_file] = {
                     "hash": dropbox_files[dropbox_file]["hash"],
                     "modified": dropbox_files[dropbox_file]["modified"]
