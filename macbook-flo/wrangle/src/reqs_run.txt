@@ -10,9 +10,9 @@ influxdb==5.3.1
 yfinance==0.1.70
 pdftotext==2.1.5
 pyicloud==1.0.0
-google-oauth==1.0.1
 cryptography==36.0.2
 gspread-pandas==3.2.0
+google-auth==2.6.6
 google-auth-httplib2==0.1.0
 google-auth-oauthlib==0.5.1
-google-api-python-client==2.42.0
+google-api-python-client==2.45.0
