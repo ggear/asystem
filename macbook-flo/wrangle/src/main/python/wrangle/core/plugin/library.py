@@ -252,8 +252,11 @@ class Library(object, metaclass=ABCMeta):
                 with open(local_path, 'wb') as local_file:
                     local_file.write(response.read())
                 modified_timestamp = get_modified(response)
-                if modified_timestamp is not None:
-                    os.utime(local_path, (modified_timestamp, modified_timestamp))
+                try:
+                    if modified_timestamp is not None:
+                        os.utime(local_path, (modified_timestamp, modified_timestamp))
+                except Exception as exception:
+                    self.print_log("File [{}] modified timestamp set failed [{}]".format(local_path, modified_timestamp), exception)
                 self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_path), local_path))
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 return True, True
@@ -287,7 +290,10 @@ class Library(object, metaclass=ABCMeta):
                 if not os.path.exists(os.path.dirname(local_file)):
                     os.makedirs(os.path.dirname(local_file))
                 client.retrbinary("RETR {}".format(url_path), open(local_file, 'wb').write)
-                os.utime(local_file, (modified_timestamp, modified_timestamp))
+                try:
+                    os.utime(local_file, (modified_timestamp, modified_timestamp))
+                except Exception as exception:
+                    self.print_log("File [{}] modified timestamp set failed [{}]".format(local_file, modified_timestamp), exception)
                 self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 client.quit()
@@ -336,7 +342,10 @@ class Library(object, metaclass=ABCMeta):
                     data_df.to_csv(local_path, encoding='utf-8')
                     modified_timestamp = int((datetime.strptime(pd.read_csv(local_path).values[-1][0], '%Y-%m-%d') +
                                               timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
-                    os.utime(local_path, (modified_timestamp, modified_timestamp))
+                    try:
+                        os.utime(local_path, (modified_timestamp, modified_timestamp))
+                    except Exception as exception:
+                        self.print_log("File [{}] modified timestamp set failed [{}]".format(local_path, modified_timestamp), exception)
                     self.print_log("File [{}: {} {}] downloaded to [{}]".format(os.path.basename(local_path), start, end, local_path))
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                     return True, True
@@ -426,7 +435,6 @@ class Library(object, metaclass=ABCMeta):
                 with open(local_path, "wb") as local_file:
                     metadata, response = service.files_download(path="{}/{}".format(dropbox_dir, dropbox_file))
                     local_file.write(response.content)
-
                 try:
                     os.utime(local_path, (dropbox_files[dropbox_file]["modified"], dropbox_files[dropbox_file]["modified"]))
                 except Exception as exception:
@@ -495,7 +503,11 @@ class Library(object, metaclass=ABCMeta):
                         os.makedirs(os.path.dirname(local_path))
                     with open(local_path, 'wb') as local_file:
                         local_file.write(buffer_file.getvalue())
-                    os.utime(local_path, (drive_files[drive_file]["modified"], drive_files[drive_file]["modified"]))
+                    try:
+                        os.utime(local_path, (drive_files[drive_file]["modified"], drive_files[drive_file]["modified"]))
+                    except Exception as exception:
+                        self.print_log("File [{}] modified timestamp set failed [{}]"
+                                       .format(local_path, drive_files[drive_file]["modified"]), exception)
                     local_files[drive_file] = {
                         "hash": drive_files[drive_file]["hash"],
                         "modified": drive_files[drive_file]["modified"]
