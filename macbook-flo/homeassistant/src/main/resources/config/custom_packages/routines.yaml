@@ -32,7 +32,7 @@ automation:
         target:
           entity_id: light.lounge_main
         data:
-          brightness: 200
+          brightness: 150
           color_temp: 500
   ################################################################################
   - id: routine_home_tv_off
