@@ -1,4 +1,4 @@
-FROM telegraf:1.21.4 as image_base
+FROM telegraf:1.22.2 as image_base
 
 FROM image_base as image_package
 ARG PYTHON_VERSION
