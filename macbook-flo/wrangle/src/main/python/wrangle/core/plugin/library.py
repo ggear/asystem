@@ -430,7 +430,8 @@ class Library(object, metaclass=ABCMeta):
                 try:
                     os.utime(local_path, (dropbox_files[dropbox_file]["modified"], dropbox_files[dropbox_file]["modified"]))
                 except Exception as exception:
-                    self.print_log("File [{}] unable to be modified at [{}]".format(os.path.basename(local_path), local_path), exception)
+                    self.print_log("File [{}] modified timestamp set failed [{}]"
+                                   .format(local_path, dropbox_files[dropbox_file]["modified"]), exception)
                 local_files[dropbox_file] = {
                     "hash": dropbox_files[dropbox_file]["hash"],
                     "modified": dropbox_files[dropbox_file]["modified"]
