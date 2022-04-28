@@ -25,6 +25,7 @@ RUN mkdir -p /etc/telegraf/.config
 COPY src/main/resources/.gspread_pandas /etc/telegraf/.config/gspread_pandas
 COPY src/main/resources/.google_service_account.json /etc/telegraf
 COPY src/main/python/ /asystem/
+COPY src/main/resources/entrypoint.sh ./
 
 FROM image_install as image_runtime
 ENTRYPOINT ["/entrypoint.sh"]
