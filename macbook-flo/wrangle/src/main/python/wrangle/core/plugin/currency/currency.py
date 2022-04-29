@@ -135,7 +135,7 @@ class Currency(library.Library):
                                                    ignore_index=True, verify_integrity=True, sort=True)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
-                            self.print_log("Unexpected error processing file [{}]".format(year_month_file), exception)
+                            self.print_log("Unexpected error processing file [{}]".format(years_file), exception)
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     else:
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)

@@ -29,7 +29,7 @@ class WrangleTest(unittest.TestCase):
                         enable_log=True,
                         random_subset_rows=False,
                         reprocess_all_files=False,
-                        disable_write_stdout=True,
+                        disable_write_stdout=False,
                         disable_upload_files=True,
                         disable_download_files=False,
                         )
