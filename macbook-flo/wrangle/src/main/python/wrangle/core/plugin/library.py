@@ -697,7 +697,7 @@ class Library(object, metaclass=ABCMeta):
             data_df.index = pd.to_datetime(data_df.index)
             import influxdb
             lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
-                data_df, self.name.lower(), tag_columns=[], global_tags=global_tags, time_precision="s")
+                data_df, self.name.lower(), tag_columns=[], global_tags=global_tags)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
         except Exception as exception:
