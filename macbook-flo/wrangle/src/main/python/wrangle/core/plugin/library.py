@@ -591,6 +591,7 @@ class Library(object, metaclass=ABCMeta):
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_current), file_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_update), file_update))
         data_df_delta = pd.concat([data_df_current, data_df_previous]).drop_duplicates(keep=False)
+        data_df_delta = data_df_delta[data_columns]
         data_df_delta.sort_index().to_csv(file_delta, encoding='utf-8')
         if len(data_df_delta) == 0:
             data_df_delta = pd.DataFrame()
@@ -702,7 +703,6 @@ class Library(object, metaclass=ABCMeta):
             #     data_df, self.name.lower(), tag_columns=[], global_tags=global_tags, time_precision="s")
             lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
                 data_df, self.name.lower(), tag_columns=[], global_tags=global_tags)
-
 
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
