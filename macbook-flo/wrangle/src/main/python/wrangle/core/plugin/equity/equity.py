@@ -329,7 +329,6 @@ class Equity(library.Library):
                                 statement_data[statement_file_name]["Errors"] \
                                     .append("Statement parse failed to resolve all keys {} in {}"
                                             .format(STATEMENT_ATTRIBUTES, statement_position))
-
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
         try:

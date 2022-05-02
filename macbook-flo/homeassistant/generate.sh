@@ -70,11 +70,6 @@ rm -rf src/main/resources/config/custom_components/senseme
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../.deps/homeassistant/senseme-component/custom_components/senseme src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant withings-component ggear/homeassistant-core ggear-withings
-rm -rf src/main/resources/config/custom_components/withings
-mkdir -p src/main/resources/config/custom_components &&
-  cp -rvf ../../.deps/homeassistant/withings-component/homeassistant/components/withings src/main/resources/config/custom_components
-
 pull_repo $(pwd) homeassistant tplink-component ggear/homeassistant-core ggear-tplink
 rm -rf src/main/resources/config/custom_components/tplink
 mkdir -p src/main/resources/config/custom_components &&
