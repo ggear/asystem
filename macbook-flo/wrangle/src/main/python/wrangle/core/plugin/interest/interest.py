@@ -72,10 +72,6 @@ class Interest(library.Library):
                     interest_df = retail_df.merge(inflation_df, left_index=True, right_index=True, how='outer')
                     interest_df = interest_df.dropna(subset=['Retail', 'Inflation'], how='all').ffill().bfill()
                     interest_df['Net'] = interest_df['Retail'] - interest_df['Inflation']
-                    for int_rate in LABELS:
-                        for int_period in PERIODS:
-                            interest_df['{} {}'.format(int_rate, int_period)] = interest_df[int_rate].rolling(PERIODS[int_period]).mean()
-                    interest_df = interest_df.fillna(0)
                     interest_df = interest_df.reindex(columns=COLUMNS)
                     interest_df = interest_df[interest_df.index > '1982-03-01']
             except Exception as exception:
@@ -88,13 +84,17 @@ class Interest(library.Library):
             interest_delta_df, interest_current_df, _ = self.state_cache(interest_df,
                                                                          library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             if len(interest_delta_df):
-                interest_delta_df = interest_delta_df.set_index(pd.to_datetime(interest_delta_df.index)).sort_index()
                 data_df = interest_current_df.copy()
+                data_df = data_df.set_index(pd.to_datetime(data_df.index)).sort_index()
                 data_df.insert(0, "Date", data_df.index.strftime('%Y-%m-%d'))
                 data_df = data_df[data_df['Date'] > '2015-01-01'].sort_index(ascending=False)
+                data_df[LABELS] = data_df[LABELS].apply(pd.to_numeric)
+                for int_rate in LABELS:
+                    for int_period in PERIODS:
+                        data_df['{} {}'.format(int_rate, int_period)] = data_df[int_rate].rolling(PERIODS[int_period]).mean()
+                data_df = data_df.fillna(0)
                 self.sheet_write(data_df, DRIVE_URL, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
-                interest_delta_df[LABELS] = interest_delta_df[LABELS].apply(pd.to_numeric)
-                self.database_write(interest_delta_df[LABELS], global_tags={
+                self.database_write(data_df[LABELS], global_tags={
                     "type": "mean",
                     "period": "1mo",
                     "unit": "%"
@@ -104,8 +104,7 @@ class Interest(library.Library):
                     columns_rename = {}
                     for column in columns:
                         columns_rename[column] = column.split(" ")[0]
-                    interest_delta_df[columns] = interest_delta_df[columns].apply(pd.to_numeric)
-                    self.database_write(interest_delta_df[columns].rename(columns=columns_rename), global_tags={
+                    self.database_write(data_df[columns].rename(columns=columns_rename), global_tags={
                         "type": "mean",
                         "period": "{}y".format(PERIODS[int_period] / 12),
                         "unit": "%"
