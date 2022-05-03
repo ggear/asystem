@@ -24,7 +24,7 @@ for key, value in list(library.load_profile(library.get_file(".env")).items()):
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("currency", {"success_typical": ASSERT_RUN},
+        self.run_module("interest", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
                         random_subset_rows=False,

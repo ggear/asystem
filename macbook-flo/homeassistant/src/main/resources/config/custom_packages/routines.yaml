@@ -32,8 +32,11 @@ automation:
         target:
           entity_id: light.lounge_main
         data:
-          brightness: 150
+          brightness: 125
           color_temp: 500
+      - service: switch.turn_on
+        target:
+          entity_id: switch.lounge_tv
   ################################################################################
   - id: routine_home_tv_off
     alias: "Routine: Put home out of TV mode"
@@ -48,6 +51,9 @@ automation:
       - service: switch.turn_on
         target:
           entity_id: switch.adaptive_lighting_lounge
+      - service: switch.turn_off
+        target:
+          entity_id: switch.lounge_tv
   ################################################################################
   - id: routine_home_sleep
     alias: "Routine: Put home to sleep"
