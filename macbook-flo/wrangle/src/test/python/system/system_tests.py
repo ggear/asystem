@@ -6,13 +6,14 @@ import os
 import glob
 import shutil
 import pytest
-from wrangle.core.plugin import library
+from wrangle.plugin import library
 from requests import post
 import time
 import subprocess
 from tabulate import tabulate
 
 TIMEOUT_WARMUP = 30
+DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
 
 for key, value in list(library.load_profile(library.get_file(".env")).items()):
     os.environ[key] = value
@@ -20,8 +21,8 @@ for key, value in list(library.load_profile(library.get_file(".env")).items()):
 
 def test_warmup():
     print("")
-    dir_test = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../../src/test/resources/data")
-    dir_runtime = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../../target/runtime-system/data")
+    dir_test = os.path.join(DIR_ROOT, "src/test/resources/data")
+    dir_runtime = os.path.join(DIR_ROOT, "target/runtime-system/data")
     shutil.rmtree(dir_runtime, ignore_errors=True)
     os.makedirs(dir_runtime)
     for dir_typical in glob.glob("{}/*/success_typical".format(dir_test)):

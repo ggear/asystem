@@ -18,7 +18,7 @@ WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem
 RUN cat /asystem/reqs_run.txt | xargs -n 1 pip install && rm -rf /asystem/reqs_run.txt
 COPY src/main/resources/mqtt_metadata.csv /asystem
-COPY src/main/python/internet/internet.py /asystem
+COPY src/main/python/ /asystem/
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["telegraf"]

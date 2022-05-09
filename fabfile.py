@@ -155,9 +155,9 @@ def _generate(context, filter_module=None, filter_host=None, is_release=False):
         _print_header(module, "generate shell script")
         _run_local(context, "{}/{}/generate.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
         _print_footer(module, "generate shell script")
-    for module in _get_modules(context, "src/main/python/*/build/generate.py", filter_changes=False):
+    for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
         _print_header(module, "generate python script")
-        _run_local(context, "python {}/{}/src/main/python/{}/build/generate.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
+        _run_local(context, "python {}/{}/src/build/python/{}/generate.py".format(DIR_ROOT, module, _name(module)), DIR_ROOT)
         _print_footer(module, "generate python script")
 
 

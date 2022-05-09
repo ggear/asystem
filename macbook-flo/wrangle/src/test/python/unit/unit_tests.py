@@ -8,26 +8,23 @@ import shutil
 import unittest
 import importlib
 import pytest
-from wrangle.core.plugin import library
+from wrangle.plugin import library
 from mock import patch
 import contextlib
 
-DIR_MODULE_ROOT = os.path.abspath("{}/../..".format(os.path.dirname(os.path.realpath(__file__))))
-DIR_SRC = os.path.abspath("{}/../main/python".format(DIR_MODULE_ROOT))
-DIR_DATA = os.path.abspath("{}/resources/data".format(DIR_MODULE_ROOT))
-DIR_TARGET = os.path.abspath("{}/../../target".format(DIR_MODULE_ROOT))
+DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
 
-for key, value in list(library.load_profile(library.get_file(".env")).items()):
+for key, value in list(library.load_profile(os.path.join(DIR_ROOT, ".env")).items()):
     os.environ[key] = value
 
 
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("interest", {"success_typical": ASSERT_RUN},
+        self.run_module("equity", {"success_typical": ASSERT_RUN},
                         one_test=True,
                         enable_log=True,
-                        random_subset_rows=False,
+                        random_subset_rows=True,
                         reprocess_all_files=False,
                         disable_write_stdout=False,
                         disable_upload_files=True,
@@ -72,7 +69,7 @@ class WrangleTest(unittest.TestCase):
                     library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
-        })})
+        })}, one_test=True)
 
     def test_equity_partial(self):
         self.run_module("equity", {"success_partial": merge_asserts(ASSERT_RUN, {
@@ -88,7 +85,7 @@ class WrangleTest(unittest.TestCase):
                     library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
-        })})
+        })}, one_test=True)
 
     def test_health_typical(self):
         self.run_module("health", {"success_typical": merge_asserts(ASSERT_RUN, {
@@ -178,9 +175,10 @@ class WrangleTest(unittest.TestCase):
         os.environ[library.WRANGLE_REPROCESS_ALL_FILES] = str(reprocess_all_files)
         os.environ[library.WRANGLE_DISABLE_UPLOAD_FILES] = str(disable_upload_files)
         os.environ[library.WRANGLE_DISABLE_DOWNLOAD_FILES] = str(disable_download_files)
-        if not os.path.isdir(DIR_TARGET):
-            os.makedirs(DIR_TARGET)
-        module = getattr(importlib.import_module("wrangle.core.plugin.{}".format(module_name)), module_name.title())()
+        dir_target = os.path.join(DIR_ROOT, "target")
+        if not os.path.isdir(dir_target):
+            os.makedirs(dir_target)
+        module = getattr(importlib.import_module("wrangle.plugin.{}".format(module_name)), module_name.title())()
 
         def load_caches(source, destination):
             shutil.rmtree(destination, ignore_errors=True)
@@ -221,7 +219,7 @@ class WrangleTest(unittest.TestCase):
 
         print("")
         for test in tests_asserts:
-            load_caches("{}/{}/{}".format(DIR_DATA, module_name, test), module.input)
+            load_caches(os.path.join(DIR_ROOT, "src/test/resources/data", module_name, test), module.input)
             counters = {}
             if not prepare_only:
                 with patch.object(library.Library, "sheet_write") if disable_upload_files else no_op():

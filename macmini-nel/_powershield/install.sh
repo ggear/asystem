@@ -40,6 +40,19 @@ MONITOR powershield@localhost 1 upsmonitor ${_UPS_KEY} master
 
 EOF
 fi
+if [ $(grep "${_UPS_KEY}" /etc/nut/upssched.conf | wc -l) -eq 0 ]; then
+  cat <<EOF >>/etc/nut/upssched.conf
+
+#CMDSCRIPT /bin/your-script.sh
+#AT ONBATT * EXECUTE emailonbatt
+#AT ONBATT * START-TIMER upsonbatt 300
+#AT ONLINE * EXECUTE emailonline
+#AT ONLINE * CANCEL-TIMER upsonbatt upsonline
+#AT LOWBATT * EXECUTE low-batt
+#AT SHUTDOWN * EXECUTE shutdown
+
+EOF
+fi
 systemctl enable nut-driver.service
 systemctl enable nut-server.service
 systemctl enable nut-monitor.service

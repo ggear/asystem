@@ -4,11 +4,11 @@ FROM image_base as image_package
 USER root
 RUN apk add --no-cache \
   jq==1.6-r1 \
-  git==2.34.1-r0 \
-  curl==7.80.0-r0 \
+  git==2.34.2-r0 \
+  curl==7.80.0-r1 \
   make==4.3-r0 \
   musl-dev==1.2.2-r7 \
-  go==1.17.4-r
+  go==1.17.9-r0
 
 FROM image_package as image_install
 ARG GOLANG_VERSION=1.16.4

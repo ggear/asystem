@@ -54,6 +54,10 @@ automation:
       - service: switch.turn_off
         target:
           entity_id: switch.lounge_tv
+      - delay: '00:00:05'
+      - service: light.turn_off
+        target:
+          entity_id: light.lounge_main
   ################################################################################
   - id: routine_home_sleep
     alias: "Routine: Put home to sleep"
