@@ -11,6 +11,9 @@ sensor.compensation_sensor_netatmo_ada_temperature:
 sensor.compensation_sensor_netatmo_edwin_temperature:
   friendly_name: 'Edwin'
   icon: 'mdi:thermometer'
+sensor.compensation_sensor_netatmo_bertram_2_office_lounge_temperature:
+  friendly_name: 'Lounge'
+  icon: 'mdi:thermometer'
 sensor.compensation_sensor_netatmo_parents_temperature:
   friendly_name: 'Parents'
   icon: 'mdi:thermometer'
@@ -22,9 +25,6 @@ sensor.compensation_sensor_netatmo_bertram_2_kitchen_temperature:
   icon: 'mdi:thermometer'
 sensor.compensation_sensor_netatmo_bertram_2_office_pantry_temperature:
   friendly_name: 'Pantry'
-  icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_bertram_2_office_lounge_temperature:
-  friendly_name: 'Lounge'
   icon: 'mdi:thermometer'
 sensor.compensation_sensor_netatmo_bertram_2_office_dining_temperature:
   friendly_name: 'Dining'
@@ -73,6 +73,9 @@ sensor.compensation_sensor_netatmo_ada_humidity:
 sensor.compensation_sensor_netatmo_edwin_humidity:
   friendly_name: 'Edwin'
   icon: 'mdi:water-percent'
+sensor.compensation_sensor_netatmo_bertram_2_office_lounge_humidity:
+  friendly_name: 'Lounge'
+  icon: 'mdi:water-percent'
 sensor.compensation_sensor_netatmo_parents_humidity:
   friendly_name: 'Parents'
   icon: 'mdi:water-percent'
@@ -84,9 +87,6 @@ sensor.compensation_sensor_netatmo_bertram_2_kitchen_humidity:
   icon: 'mdi:water-percent'
 sensor.compensation_sensor_netatmo_bertram_2_office_pantry_humidity:
   friendly_name: 'Pantry'
-  icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_bertram_2_office_lounge_humidity:
-  friendly_name: 'Lounge'
   icon: 'mdi:water-percent'
 sensor.compensation_sensor_netatmo_bertram_2_office_dining_humidity:
   friendly_name: 'Dining'
@@ -113,14 +113,14 @@ sensor.compensation_sensor_netatmo_parents_co2:
 sensor.compensation_sensor_netatmo_bertram_2_office_co2:
   friendly_name: 'Office'
   icon: 'mdi:molecule-co2'
+sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2:
+  friendly_name: 'Lounge'
+  icon: 'mdi:molecule-co2'
 sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2:
   friendly_name: 'Kitchen'
   icon: 'mdi:molecule-co2'
 sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2:
   friendly_name: 'Pantry'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2:
-  friendly_name: 'Lounge'
   icon: 'mdi:molecule-co2'
 sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2:
   friendly_name: 'Dining'

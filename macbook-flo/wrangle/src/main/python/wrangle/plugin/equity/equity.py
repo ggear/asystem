@@ -402,9 +402,10 @@ class Equity(library.Library):
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            equity_delta_df, equity_current_df, _ = self.state_cache(
-                equity_df, not library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) and
-                           library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+            equity_delta_df, equity_current_df, _ = self.state_cache(equity_df,
+                                                                     only_load=not library.is_true(
+                                                                         library.WRANGLE_REPROCESS_ALL_FILES) and
+                                                                               library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             if len(equity_delta_df):
                 tickers = []
                 for column in equity_current_df.columns:

@@ -306,7 +306,7 @@ class Health(library.Library):
                     ]]
                     sleep_df = sleep_df[~sleep_df.index.duplicated(keep='last')]
                 if len(health_df) > 0:
-                    health_df = health_df[[
+                    health_columns = [
                         'Energy Basal Burned (kJ)',
                         'Energy Active Burned (kJ)',
                         'Stand Duration (min)',
@@ -329,7 +329,11 @@ class Health(library.Library):
                         'Body Mass (kg)',
                         'Body Mass Index (count)',
                         'Body Lean Mass (kg)'
-                    ]]
+                    ]
+                    for column in health_columns:
+                        if column not in health_df:
+                            health_df[column] = np.NaN
+                    health_df = health_df[health_columns]
                     health_df = health_df[~health_df.index.duplicated(keep='last')]
                 if len(workout_df) > 0:
                     workout_columns = []
@@ -359,7 +363,8 @@ class Health(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            data_delta_df, _, _ = self.state_cache(data_df, library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+            data_delta_df, _, _ = self.state_cache(data_df,
+                                                   only_load=library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             if len(data_delta_df):
                 buckets = {}
                 for column in data_delta_df.columns.tolist():
@@ -371,13 +376,14 @@ class Health(library.Library):
                     buckets[(type, unit)][0].append(column)
                     buckets[(type, unit)][1].update(column_rename)
                 for bucket in buckets:
-                    data_df = data_delta_df[buckets[bucket][0]].dropna(axis=0, how='all')
-                    for column in data_df.columns.tolist():
+                    data_bucket_df = data_delta_df[buckets[bucket][0]].dropna(axis=0, how='all')
+                    for column in data_bucket_df.columns.tolist():
                         if column.endswith("(dt)"):
-                            data_df[column] = pd.to_datetime(data_df[data_df[column].notna()][column]).astype('int64') // 10 ** 9
+                            data_bucket_df[column] = \
+                                pd.to_datetime(data_bucket_df[data_bucket_df[column].notna()][column]).astype('int64') // 10 ** 9
                         else:
-                            data_df[column] = pd.to_numeric(data_df[column])
-                    self.database_write(data_df.rename(columns=buckets[bucket][1]), global_tags={
+                            data_bucket_df[column] = pd.to_numeric(data_bucket_df[column])
+                    self.database_write(data_bucket_df.rename(columns=buckets[bucket][1]), global_tags={
                         "type": bucket[0],
                         "period": "1d",
                         "unit": bucket[1]

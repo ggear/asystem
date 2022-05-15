@@ -81,20 +81,21 @@ class Interest(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df,
-                                                                         library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
-            if len(interest_delta_df):
-                data_df = interest_current_df.copy()
-                data_df = data_df.set_index(pd.to_datetime(data_df.index)).sort_index()
-                data_df.insert(0, "Date", data_df.index.strftime('%Y-%m-%d'))
-                data_df = data_df[data_df['Date'] > '2015-01-01'].sort_index(ascending=False)
-                data_df[LABELS] = data_df[LABELS].apply(pd.to_numeric)
+            def aggregate_function(data_df):
+                data_df = data_df.apply(pd.to_numeric).round(2)
                 for int_rate in LABELS:
                     for int_period in PERIODS:
                         data_df['{} {}'.format(int_rate, int_period)] = data_df[int_rate].rolling(PERIODS[int_period]).mean()
-                data_df = data_df.fillna(0)
-                self.sheet_write(data_df, DRIVE_URL, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
-                self.database_write(data_df[LABELS], global_tags={
+                return data_df.fillna(0).apply(pd.to_numeric).round(2)
+
+            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, aggregate_function,
+                                                                         library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+            if len(interest_delta_df):
+                interest_current_df = interest_current_df.set_index(pd.to_datetime(interest_current_df.index)).sort_index()
+                interest_current_df.insert(0, "Date", interest_current_df.index.strftime('%Y-%m-%d'))
+                interest_current_df = interest_current_df[interest_current_df['Date'] > '2015-01-01'].sort_index(ascending=False)
+                self.sheet_write(interest_current_df, DRIVE_URL, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
+                self.database_write(interest_current_df[LABELS], global_tags={
                     "type": "mean",
                     "period": "1mo",
                     "unit": "%"
@@ -104,7 +105,7 @@ class Interest(library.Library):
                     columns_rename = {}
                     for column in columns:
                         columns_rename[column] = column.split(" ")[0]
-                    self.database_write(data_df[columns].rename(columns=columns_rename), global_tags={
+                    self.database_write(interest_current_df[columns].rename(columns=columns_rename), global_tags={
                         "type": "mean",
                         "period": "{}y".format(PERIODS[int_period] / 12),
                         "unit": "%"

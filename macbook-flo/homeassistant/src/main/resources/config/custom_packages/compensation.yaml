@@ -27,6 +27,14 @@ compensation:
       - [ 1, 1 ]
       - [ 2, 2 ]
   ####################################################################################
+  compensation_sensor_netatmo_bertram_2_office_lounge_temperature:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_temperature
+    source: sensor.netatmo_bertram_2_office_lounge_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
   compensation_sensor_netatmo_parents_temperature:
     unique_id: compensation_sensor_netatmo_parents_temperature
     source: sensor.netatmo_parents_temperature
@@ -54,14 +62,6 @@ compensation:
   compensation_sensor_netatmo_bertram_2_office_pantry_temperature:
     unique_id: compensation_sensor_netatmo_bertram_2_office_pantry_temperature
     source: sensor.netatmo_bertram_2_office_pantry_temperature
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_bertram_2_office_lounge_temperature:
-    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_temperature
-    source: sensor.netatmo_bertram_2_office_lounge_temperature
     precision: 1
     data_points: 
       - [ 1, 1 ]
@@ -171,6 +171,14 @@ compensation:
       - [ 1, 1 ]
       - [ 2, 2 ]
   ####################################################################################
+  compensation_sensor_netatmo_bertram_2_office_lounge_humidity:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_humidity
+    source: sensor.netatmo_bertram_2_office_lounge_humidity
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
   compensation_sensor_netatmo_parents_humidity:
     unique_id: compensation_sensor_netatmo_parents_humidity
     source: sensor.netatmo_parents_humidity
@@ -198,14 +206,6 @@ compensation:
   compensation_sensor_netatmo_bertram_2_office_pantry_humidity:
     unique_id: compensation_sensor_netatmo_bertram_2_office_pantry_humidity
     source: sensor.netatmo_bertram_2_office_pantry_humidity
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_bertram_2_office_lounge_humidity:
-    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_humidity
-    source: sensor.netatmo_bertram_2_office_lounge_humidity
     precision: 1
     data_points: 
       - [ 1, 1 ]
@@ -275,6 +275,14 @@ compensation:
       - [ 1, 1 ]
       - [ 2, 2 ]
   ####################################################################################
+  compensation_sensor_netatmo_bertram_2_office_lounge_co2:
+    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_co2
+    source: sensor.netatmo_bertram_2_office_lounge_co2
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  ####################################################################################
   compensation_sensor_netatmo_bertram_2_kitchen_co2:
     unique_id: compensation_sensor_netatmo_bertram_2_kitchen_co2
     source: sensor.netatmo_bertram_2_kitchen_co2
@@ -286,14 +294,6 @@ compensation:
   compensation_sensor_netatmo_bertram_2_office_pantry_co2:
     unique_id: compensation_sensor_netatmo_bertram_2_office_pantry_co2
     source: sensor.netatmo_bertram_2_office_pantry_co2
-    precision: 1
-    data_points: 
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  ####################################################################################
-  compensation_sensor_netatmo_bertram_2_office_lounge_co2:
-    unique_id: compensation_sensor_netatmo_bertram_2_office_lounge_co2
-    source: sensor.netatmo_bertram_2_office_lounge_co2
     precision: 1
     data_points: 
       - [ 1, 1 ]

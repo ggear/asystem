@@ -22,8 +22,8 @@
       name: Ada
     - entity: sensor.compensation_sensor_netatmo_edwin_temperature
       name: Edwin
-    - entity: sensor.compensation_sensor_netatmo_parents_temperature
-      name: Parents
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_temperature
+      name: Lounge
 ################################################################################
 - type: entities
   entities:
@@ -36,12 +36,15 @@
     - entity: sensor.compensation_sensor_netatmo_edwin_temperature
       name: Edwin
       icon: mdi:thermometer
-    - entity: sensor.compensation_sensor_netatmo_parents_temperature
-      name: Parents
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_temperature
+      name: Lounge
       icon: mdi:thermometer
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.compensation_sensor_netatmo_parents_temperature
+      name: Parents
+      icon: mdi:thermometer
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_temperature
       name: Office
       icon: mdi:thermometer
@@ -50,9 +53,6 @@
       icon: mdi:thermometer
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_temperature
       name: Pantry
-      icon: mdi:thermometer
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_temperature
-      name: Lounge
       icon: mdi:thermometer
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_temperature
       name: Dining
@@ -90,8 +90,8 @@
       name: Ada
     - entity: sensor.compensation_sensor_netatmo_edwin_humidity
       name: Edwin
-    - entity: sensor.compensation_sensor_netatmo_parents_humidity
-      name: Parents
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_humidity
+      name: Lounge
 ################################################################################
 - type: entities
   entities:
@@ -104,12 +104,15 @@
     - entity: sensor.compensation_sensor_netatmo_edwin_humidity
       name: Edwin
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_netatmo_parents_humidity
-      name: Parents
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_humidity
+      name: Lounge
       icon: mdi:water-percent
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.compensation_sensor_netatmo_parents_humidity
+      name: Parents
+      icon: mdi:water-percent
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_humidity
       name: Office
       icon: mdi:water-percent
@@ -118,9 +121,6 @@
       icon: mdi:water-percent
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_humidity
       name: Pantry
-      icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_humidity
-      name: Lounge
       icon: mdi:water-percent
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_humidity
       name: Dining
@@ -158,8 +158,8 @@
       name: Parents
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_co2
       name: Office
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
-      name: Kitchen
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2
+      name: Lounge
 ################################################################################
 - type: entities
   entities:
@@ -172,17 +172,17 @@
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_co2
       name: Office
       icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
-      name: Kitchen
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2
+      name: Lounge
       icon: mdi:molecule-co2
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2
+      name: Kitchen
+      icon: mdi:molecule-co2
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2
       name: Pantry
-      icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2
-      name: Lounge
       icon: mdi:molecule-co2
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2
       name: Dining

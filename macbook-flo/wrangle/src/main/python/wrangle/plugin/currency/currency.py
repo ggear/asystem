@@ -171,19 +171,21 @@ class Currency(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
-            if len(rba_delta_df):
-                data_df = rba_current_df[PAIRS]
-                data_df.insert(0, "Date", data_df.index.strftime('%Y-%m-%d'))
-                data_df = data_df[data_df['Date'] > '2006-01-01'].sort_index(ascending=False)
-                data_df = data_df.set_index(pd.to_datetime(data_df.index)).sort_index()
-                data_df[PAIRS] = data_df[PAIRS].apply(pd.to_numeric)
+            def aggregate_function(data_df):
+                data_df = data_df.copy().apply(pd.to_numeric).round(4)
                 for fx_pair in PAIRS:
                     for fx_period in PERIODS:
                         data_df['{} {}'.format(fx_pair, fx_period)] = (data_df[fx_pair].pct_change(PERIODS[fx_period])) * 100
-                data_df = data_df.fillna(0)
-                self.sheet_write(data_df, DRIVE_URL, {'index': False, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
-                self.database_write(data_df[PAIRS], global_tags={
+                return data_df.fillna(0).apply(pd.to_numeric).round(4)
+
+            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, aggregate_function,
+                                                               library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+            if len(rba_delta_df):
+                rba_current_df.insert(0, "Date", rba_current_df.index.strftime('%Y-%m-%d'))
+                rba_current_df = rba_current_df[rba_current_df['Date'] > '2006-01-01'].sort_index(ascending=False)
+                rba_current_df = rba_current_df.set_index(pd.to_datetime(rba_current_df.index)).sort_index()
+                self.sheet_write(rba_current_df, DRIVE_URL, {'index': False, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
+                self.database_write(rba_current_df[PAIRS], global_tags={
                     "type": "snapshot",
                     "period": "1d",
                     "unit": "$"
@@ -193,8 +195,8 @@ class Currency(library.Library):
                     columns_rename = {}
                     for column in columns:
                         columns_rename[column] = column.split(" ")[0]
-                    data_df[columns] = data_df[columns].apply(pd.to_numeric)
-                    self.database_write(data_df[columns].rename(columns=columns_rename), global_tags={
+                    rba_current_df[columns] = rba_current_df[columns].apply(pd.to_numeric)
+                    self.database_write(rba_current_df[columns].rename(columns=columns_rename), global_tags={
                         "type": "delta",
                         "period": "{}d".format(PERIODS[fx_period]),
                         "unit": "%"

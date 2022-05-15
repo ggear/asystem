@@ -539,7 +539,7 @@ class Library(object, metaclass=ABCMeta):
                     actioned_files[local_path] = True, file_actioned
         return collections.OrderedDict(sorted(actioned_files.items()))
 
-    def state_cache(self, data_df_update, only_load=False):
+    def state_cache(self, data_df_update, aggregate_function=None, only_load=False):
         file_delta = os.path.abspath("{}/__{}_Delta.csv".format(self.input, self.name.title()))
         file_update = os.path.abspath("{}/__{}_Update.csv".format(self.input, self.name.title()))
         file_current = os.path.abspath("{}/__{}_Current.csv".format(self.input, self.name.title()))
@@ -561,6 +561,7 @@ class Library(object, metaclass=ABCMeta):
         for data_column in data_columns:
             if data_column not in data_df_current:
                 data_df_current[data_column] = np.nan
+        data_df_update = data_df_update.copy()
         data_df_update.index.name = 'Date'
         data_df_update.index = pd.to_datetime(data_df_update.index)
         data_df_update.sort_index().to_csv(file_update, encoding='utf-8')
@@ -580,9 +581,11 @@ class Library(object, metaclass=ABCMeta):
             if data_column not in data_df_previous:
                 data_df_previous[data_column] = ""
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_previous), file_previous))
-        data_df_current = pd.concat([data_df_current, data_df_update], sort=True)
+        data_df_current = pd.concat([data_df_current, data_df_update])
         data_df_current = data_df_current[~data_df_current.index.duplicated(keep='last')]
         data_df_current = data_df_current[data_columns]
+        if aggregate_function is not None:
+            data_df_current = aggregate_function(data_df_current)
         data_df_current.sort_index().to_csv(file_current, encoding='utf-8')
         data_df_current = pd.read_csv(file_current, index_col=0, dtype=str)
         data_df_current.index = pd.to_datetime(data_df_current.index)
@@ -590,7 +593,12 @@ class Library(object, metaclass=ABCMeta):
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_current), file_current))
         self.print_log("File [{}] written to [{}]".format(os.path.basename(file_update), file_update))
-        data_df_delta = pd.concat([data_df_current, data_df_previous]).drop_duplicates(keep=False)
+        data_df_delta = pd.concat([data_df_current, data_df_previous])
+        data_df_delta['Date'] = data_df_delta.index
+        data_df_delta = data_df_delta.drop_duplicates(keep=False)
+        data_df_delta = data_df_delta[~data_df_delta.index.duplicated(keep='first')]
+        del data_df_delta['Date']
+        data_df_delta.index.name = 'Date'
         data_df_delta = data_df_delta[data_columns]
         data_df_delta.sort_index().to_csv(file_delta, encoding='utf-8')
         if len(data_df_delta) == 0:

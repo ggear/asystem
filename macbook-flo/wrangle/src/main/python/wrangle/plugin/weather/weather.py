@@ -100,7 +100,7 @@ class Weather(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
             weather_delta_df, weather_current_df, _ = self.state_cache(pd.DataFrame({"some_dummy_data": [1.0]}),
-                                                                       library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+                                                                       only_load=library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
             self.state_write()
         except Exception as exception:
             self.print_log("Unexpected error processing weather data", exception)
