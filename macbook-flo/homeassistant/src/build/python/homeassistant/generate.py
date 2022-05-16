@@ -233,12 +233,13 @@ automation:
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-sonos:
-  media_player:
-    hosts:
-      - 10.0.2.40
-      - 10.0.2.41
-      - 10.0.2.42
+# TODO: Doesn't seem to be necessary?
+# sonos:
+#   media_player:
+#     hosts:
+#       - 10.0.4.40
+#       - 10.0.4.41
+#       - 10.0.4.42
 #######################################################################################
 # TODO: Currently not being picked up, could not be wired in config_flow or using wrong keys, think the former
 #google:
