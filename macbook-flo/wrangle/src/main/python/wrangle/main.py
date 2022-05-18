@@ -6,7 +6,7 @@ import sys
 from wrangle.plugin import library
 
 
-def main(arguments=[]):
+def main():
     module_count = 0
     module_errored_count = 0
     for module_path in glob.glob("{}/plugin/*/*.py".format(os.path.dirname(os.path.realpath(__file__)))):
@@ -31,4 +31,4 @@ def main(arguments=[]):
 
 
 if __name__ == "__main__":
-    sys.exit(0 if main(sys.argv) else 1)
+    sys.exit(0 if main() else 1)

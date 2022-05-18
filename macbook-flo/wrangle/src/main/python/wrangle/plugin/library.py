@@ -11,14 +11,18 @@ import ssl
 import sys
 import time
 import traceback
-import urllib.request, urllib.error, urllib.parse
+import urllib.error
+import urllib.parse
+import urllib.request
+import warnings
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
 from datetime import datetime
 from datetime import timedelta
 from ftplib import FTP
-import warnings
+
 import dropbox
+import influxdb
 import numpy as np
 import pandas as pd
 import requests
@@ -70,18 +74,18 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 WRANGLE_ENABLE_LOG = 'WRANGLE_ENABLE_LOG'
-WRANGLE_RANDOM_SUBSET_ROWS = 'WRANGLE_RANDOM_SUBSET_ROWS'
-WRANGLE_REPROCESS_ALL_FILES = 'WRANGLE_REPROCESS_ALL_FILES'
-WRANGLE_DISABLE_UPLOAD_FILES = 'WRANGLE_DISABLE_UPLOAD_FILES'
-WRANGLE_DISABLE_DOWNLOAD_FILES = 'WRANGLE_DISABLE_DOWNLOAD_FILES'
+WRANGLE_ENABLE_RANDOM_ROWS = 'WRANGLE_ENABLE_RANDOM_ROWS'
+WRANGLE_DISABLE_DATA_DELTA = 'WRANGLE_DISABLE_DATA_DELTA'
+WRANGLE_DISABLE_FILE_UPLOAD = 'WRANGLE_DISABLE_FILE_UPLOAD'
+WRANGLE_DISABLE_FILE_DOWNLOAD = 'WRANGLE_DISABLE_FILE_DOWNLOAD'
 
 
-def is_true(variable, default=False):
+def test(variable, default=False):
     return os.getenv(variable, "{}".format(default).lower()).lower() == "true"
 
 
 def print_log(process, message, exception=None, level="debug"):
-    if is_true(WRANGLE_ENABLE_LOG):
+    if test(WRANGLE_ENABLE_LOG):
         prefix = "{} [{}] [{}]: " \
             .format(level.upper() if exception is None else 'ERROR', process, datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3])
         if type(message) is not list:
@@ -140,6 +144,7 @@ def load_profile(profile_path):
     return profile
 
 
+# noinspection DuplicatedCode
 class Library(object, metaclass=ABCMeta):
     @abstractmethod
     def _run(self):
@@ -171,6 +176,7 @@ class Library(object, metaclass=ABCMeta):
     def get_counters(self):
         return copy.deepcopy(self.counters)
 
+    # noinspection PyAttributeOutsideInit
     def reset_counters(self):
         self.counters = OrderedDict([
             (CTR_SRC_SOURCES, OrderedDict([
@@ -207,6 +213,7 @@ class Library(object, metaclass=ABCMeta):
             ])),
         ])
 
+    # noinspection PyProtectedMember
     def http_download(self, url_file, local_path, check=True, force=False, ignore=False):
         local_path = os.path.abspath(local_path)
         if not force and not check and os.path.isfile(local_path):
@@ -223,10 +230,9 @@ class Library(object, metaclass=ABCMeta):
                 'Connection': 'keep-alive'
             }
 
-            def get_modified(response):
-                headers = response.headers["Last-Modified"]
-                if headers:
-                    return int((datetime.strptime(headers, '%a, %d %b %Y %H:%M:%S GMT') -
+            def get_modified(headers):
+                if headers["Last-Modified"]:
+                    return int((datetime.strptime(headers["Last-Modified"], '%a, %d %b %Y %H:%M:%S GMT') -
                                 datetime.utcfromtimestamp(0)).total_seconds())
                 return None
 
@@ -236,13 +242,13 @@ class Library(object, metaclass=ABCMeta):
                     request = urllib.request.Request(url_file, headers=client)
                     request.get_method = lambda: 'HEAD'
                     response = urllib.request.urlopen(request, context=ssl._create_unverified_context())
-                    modified_timestamp = get_modified(response)
+                    modified_timestamp = get_modified(response.headers)
                     if modified_timestamp is not None:
                         if modified_timestamp_cached == modified_timestamp:
                             self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_path), local_path))
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return True, False
-                except:
+                except (Exception,):
                     pass
             try:
                 response = urllib.request.urlopen(urllib.request.Request(url_file, headers=client),
@@ -251,7 +257,7 @@ class Library(object, metaclass=ABCMeta):
                     os.makedirs(os.path.dirname(local_path))
                 with open(local_path, 'wb') as local_file:
                     local_file.write(response.read())
-                modified_timestamp = get_modified(response)
+                modified_timestamp = get_modified(response.headers)
                 try:
                     if modified_timestamp is not None:
                         os.utime(local_path, (modified_timestamp, modified_timestamp))
@@ -275,6 +281,7 @@ class Library(object, metaclass=ABCMeta):
         else:
             url_server = url_file.replace("ftp://", "").split("/")[0]
             url_path = url_file.split(url_server)[-1]
+            client = None
             try:
                 client = FTP(url_server)
                 client.login()
@@ -321,8 +328,12 @@ class Library(object, metaclass=ABCMeta):
                         if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]):
                             end_data = datetime.strptime(pd.read_csv(local_path).values[-1][0], '%Y-%m-%d').date()
                             end_expected = BDay().rollback(now).date()
-                            if now.date() == end_expected and now.strftime('%H:%M') < end_of_day:
-                                end_expected = end_expected - timedelta(days=1)
+                            if now.date() == end_expected:
+                                if -1 < now.weekday() < 5:
+                                    if now.strftime('%H:%M') < end_of_day:
+                                        end_expected = end_expected - timedelta(days=3 if now.weekday() == 0 else 1)
+                                else:
+                                    end_expected = end_expected - timedelta(days=2 if now.weekday() == 5 else 1)
                             if end_data == end_expected:
                                 self.print_log("File [{}: {} {}] cached at [{}]"
                                                .format(os.path.basename(local_path), start, end, local_path))
@@ -539,20 +550,20 @@ class Library(object, metaclass=ABCMeta):
                     actioned_files[local_path] = True, file_actioned
         return collections.OrderedDict(sorted(actioned_files.items()))
 
-    def state_cache(self, data_df_update, aggregate_function=None, only_load=False):
+    def state_cache(self, data_df_update, aggregate_function=None):
         file_delta = os.path.abspath("{}/__{}_Delta.csv".format(self.input, self.name.title()))
         file_update = os.path.abspath("{}/__{}_Update.csv".format(self.input, self.name.title()))
         file_current = os.path.abspath("{}/__{}_Current.csv".format(self.input, self.name.title()))
         file_previous = os.path.abspath("{}/__{}_Previous.csv".format(self.input, self.name.title()))
         if not os.path.isdir(self.input):
             os.makedirs(self.input)
-        if not only_load and is_true(WRANGLE_REPROCESS_ALL_FILES):
+        if not test(WRANGLE_DISABLE_FILE_DOWNLOAD) and test(WRANGLE_DISABLE_DATA_DELTA):
             if os.path.isfile(file_current):
                 os.remove(file_current)
         data_df_current = pd.read_csv(file_current, index_col=0, dtype=str) if os.path.isfile(file_current) else pd.DataFrame()
-        data_df_current.index = pd.to_datetime(data_df_current.index)
+        data_df_current.index = pd.to_datetime(data_df_current.index)  # type: ignore
         data_df_current.index.name = 'Date'
-        if only_load:
+        if test(WRANGLE_DISABLE_FILE_DOWNLOAD):
             return data_df_current, data_df_current, data_df_current
         data_columns = data_df_current.columns.values.tolist()
         for data_column in data_df_update.columns.values.tolist():
@@ -574,7 +585,7 @@ class Library(object, metaclass=ABCMeta):
         elif os.path.isfile(file_previous):
             os.remove(file_previous)
         data_df_previous = pd.read_csv(file_previous, index_col=0, dtype=str) if os.path.isfile(file_previous) else pd.DataFrame()
-        data_df_previous.index = pd.to_datetime(data_df_previous.index)
+        data_df_previous.index = pd.to_datetime(data_df_previous.index)  # type: ignore
         self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, len(data_df_previous))
         for data_column in data_columns:
@@ -610,7 +621,7 @@ class Library(object, metaclass=ABCMeta):
 
     def state_write(self):
         try:
-            if not is_true(WRANGLE_DISABLE_UPLOAD_FILES):
+            if not test(WRANGLE_DISABLE_FILE_UPLOAD):
                 self.drive_sync(self.input_drive, self.input, check=True, download=False, upload=True)
                 self.print_log("Directory [{}] uploaded to [https://drive.google.com/drive/folders/{}]"
                                .format(os.path.basename(self.input), self.input_drive))
@@ -622,7 +633,7 @@ class Library(object, metaclass=ABCMeta):
         try:
             data = MediaFileUpload(local_file)
             metadata = {'modifiedTime': datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
-            if not is_true(WRANGLE_DISABLE_UPLOAD_FILES):
+            if not test(WRANGLE_DISABLE_FILE_UPLOAD):
                 if drive_id is None:
                     metadata['name'] = os.path.basename(local_file)
                     metadata['parents'] = [drive_dir]
@@ -637,7 +648,9 @@ class Library(object, metaclass=ABCMeta):
                            .format(local_file, drive_dir), exception)
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
 
-    def sheet_read(self, drive_url, file_cache, read_cache=False, write_cache=True, sheet_params={}):
+    def sheet_read(self, drive_url, file_cache, read_cache=False, write_cache=True, sheet_params=None):
+        if sheet_params is None:
+            sheet_params = {}
         file_path = os.path.abspath("{}/{}.csv".format(self.input, file_cache))
         if read_cache:
             if not os.path.isfile(file_path):
@@ -653,9 +666,11 @@ class Library(object, metaclass=ABCMeta):
             self.print_log("Dataframe [{}] cached at [{}]".format(file_cache, file_path))
         return data_df
 
-    def sheet_write(self, data_df, drive_url, sheet_params={}):
+    def sheet_write(self, data_df, drive_url, sheet_params=None):
+        if sheet_params is None:
+            sheet_params = {}
         try:
-            if not is_true(WRANGLE_DISABLE_UPLOAD_FILES):
+            if not test(WRANGLE_DISABLE_FILE_UPLOAD):
                 Spread(drive_url).df_to_sheet(data_df, **sheet_params)
                 self.print_log("Dataframe uploaded to [{}]".format(drive_url))
                 self.add_counter(CTR_SRC_EGRESS, CTR_ACT_SHEET_COLUMNS, len(data_df.columns))
@@ -685,7 +700,7 @@ class Library(object, metaclass=ABCMeta):
             for row in response.text.strip().split("\n")[1:]:
                 cols = row.strip().split(",")
                 if len(cols) > 4:
-                    rows.append([parser.parse(cols[3])] + cols[4:])
+                    rows.append([parser.parse(cols[3])] + cols[4:])  # type: ignore
             data_df = pd.DataFrame(rows, columns=column_names)
             self.print_log("Dataframe [{}] queried from [{}]".format(file_cache, flux_query.replace("\n", "").replace(" ", "")))
         if not read_cache and write_cache:
@@ -693,10 +708,13 @@ class Library(object, metaclass=ABCMeta):
             self.print_log("Dataframe [{}] cached at [{}]".format(file_cache, file_path))
         return data_df
 
-    def database_write(self, data_df, global_tags={}):
+    # noinspection PyProtectedMember
+    def database_write(self, data_df, global_tags=None):
+        if global_tags is None:
+            global_tags = {}
         lines = []
         try:
-            if is_true(WRANGLE_RANDOM_SUBSET_ROWS) and len(data_df) > 0:
+            if test(WRANGLE_ENABLE_RANDOM_ROWS) and len(data_df) > 0:
                 data_df = data_df.sample(1, replace=True).sort_index()
             column_rename = {}
             for column in data_df.columns:
@@ -704,14 +722,8 @@ class Library(object, metaclass=ABCMeta):
                 data_df[column] = pd.to_numeric(data_df[column], downcast='float')
             data_df = data_df.rename(columns=column_rename)
             data_df.index = pd.to_datetime(data_df.index)
-            import influxdb
-
-            # TODO: Implement sec precision
-            # lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
-            #     data_df, self.name.lower(), tag_columns=[], global_tags=global_tags, time_precision="s")
             lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
-                data_df, self.name.lower(), tag_columns=[], global_tags=global_tags)
-
+                data_df, self.name.lower(), tag_columns=[], global_tags=global_tags, time_precision="s")
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
         except Exception as exception:
@@ -731,6 +743,7 @@ class Library(object, metaclass=ABCMeta):
                 self.print_log("File [{}] found at [{}]".format(file_name, file_path))
         return files
 
+    # noinspection PyMethodMayBeStatic
     def stdout_write(self, line=None):
         if line is not None:
             print(line)

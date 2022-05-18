@@ -17,8 +17,8 @@ services:
       - INFLUXDB_TOKEN
       - DROPBOX_TOKEN
       - WRANGLE_ENABLE_LOG
-      - WRANGLE_REPROCESS_ALL_FILES
-      - WRANGLE_DISABLE_UPLOAD_FILES
+      - WRANGLE_DISABLE_DATA_DELTA
+      - WRANGLE_DISABLE_FILE_UPLOAD
       - PYTHONPATH=/asystem
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/runtime

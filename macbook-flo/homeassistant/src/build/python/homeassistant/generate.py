@@ -241,7 +241,7 @@ automation:
 #       - 10.0.4.41
 #       - 10.0.4.42
 #######################################################################################
-# TODO: Currently not being picked up, could not be wired in config_flow or using wrong keys, think the former
+# TODO: Currently not being picked up, could not be wired in config_flow or using wrong keys, think the former?
 #google:
 #  media_player:
 #    hosts: {}
@@ -485,25 +485,25 @@ automation:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
-      - delay: '00:00:01'
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
-      - delay: '00:00:01'
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
-      - delay: '00:00:01'
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
-      - delay: '00:00:01'
+      - delay: '00:00:02'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_{}

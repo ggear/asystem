@@ -1,7 +1,5 @@
-import calendar
 import datetime
 import os
-import re
 from collections import OrderedDict
 
 import pandas as pd
@@ -58,12 +56,12 @@ class Currency(library.Library):
     def _run(self):
         rba_df = pd.DataFrame()
         rba_delta_df = pd.DataFrame()
-        if not library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES):
+        if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD):
             new_data = False
-            ato_df = pd.DataFrame()
-            merged_df = pd.DataFrame()
 
             # TODO: Disable ATO downloads since the ATO has removed them
+            # ato_df = pd.DataFrame()
+            # merged_df = pd.DataFrame()
             # for year in range(ATO_START_YEAR, ATO_FINISH_YEAR):
             #     for month in range(1 if year != ATO_START_YEAR else ATO_START_MONTH,
             #                        13 if year < datetime.datetime.now().year else datetime.datetime.now().month):
@@ -75,7 +73,7 @@ class Currency(library.Library):
             #                                              .format(month_string, year), year_month_file, check=False, ignore=True)
             #             if file_status[0]:
             #                 year_month_file_downloaded = True
-            #                 if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
+            #                 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
             #                     new_data = True
             #                     for header_rows in ATO_XLS_HEADER_ROWS:
             #                         try:
@@ -121,10 +119,10 @@ class Currency(library.Library):
                 years_file = os.path.join(self.input, "rba_fx_{}.xls".format(years))
                 file_status = self.http_download(RBA_URL.format(years), years_file, check='current' in years)
                 if file_status[0]:
-                    if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
+                    if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
                         new_data = True
                         try:
-                            rba_itr_df = pd.read_excel(years_file, skiprows=10)
+                            rba_itr_df = pd.read_excel(years_file, sheet_name=0, skiprows=10)
                             if rba_itr_df.columns[0] == 'Series ID':
                                 rba_itr_df = rba_itr_df.filter(['Series ID', 'FXRUSD', 'FXRUKPS', 'FXRSD']). \
                                     rename(columns={'Series ID': 'Date', 'FXRUSD': 'AUD/USD', 'FXRUKPS': 'AUD/GBP', 'FXRSD': 'AUD/SGD'})
@@ -173,13 +171,12 @@ class Currency(library.Library):
         try:
             def aggregate_function(data_df):
                 data_df = data_df.copy().apply(pd.to_numeric).round(4)
-                for fx_pair in PAIRS:
-                    for fx_period in PERIODS:
-                        data_df['{} {}'.format(fx_pair, fx_period)] = (data_df[fx_pair].pct_change(PERIODS[fx_period])) * 100
+                for pair in PAIRS:
+                    for period in PERIODS:
+                        data_df['{} {}'.format(pair, period)] = (data_df[pair].pct_change(PERIODS[period])) * 100
                 return data_df.fillna(0).apply(pd.to_numeric).round(4)
 
-            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, aggregate_function,
-                                                               library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, aggregate_function)
             if len(rba_delta_df):
                 rba_current_df.insert(0, "Date", rba_current_df.index.strftime('%Y-%m-%d'))
                 rba_current_df = rba_current_df[rba_current_df['Date'] > '2006-01-01'].sort_index(ascending=False)

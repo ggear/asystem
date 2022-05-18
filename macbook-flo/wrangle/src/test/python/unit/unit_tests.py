@@ -22,13 +22,13 @@ class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
         self.run_module("interest", {"success_typical": ASSERT_RUN},
-                        one_test=True,
                         enable_log=True,
-                        random_subset_rows=False,
-                        reprocess_all_files=False,
+                        enable_rerun=False,
+                        enable_random_rows=False,
                         disable_write_stdout=True,
-                        disable_upload_files=True,
-                        disable_download_files=False,
+                        disable_data_delta=False,
+                        disable_file_upload=True,
+                        disable_file_download=False,
                         )
 
     def test_currency_typical(self):
@@ -59,7 +59,7 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 117,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 144,
                 },
             },
             "counter_greater": {
@@ -69,29 +69,29 @@ class WrangleTest(unittest.TestCase):
                     library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
-        })}, one_test=True)
+        })})
 
     def test_equity_partial(self):
         self.run_module("equity", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 117,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 144,
                 },
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_CURRENT_COLUMNS: 144,
-                    library.CTR_ACT_UPDATE_COLUMNS: 144,
+                    library.CTR_ACT_UPDATE_COLUMNS: 135,
                     library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
-        })}, one_test=True)
+        })})
 
     def test_health_typical(self):
         self.run_module("health", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 88,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 99,
                 },
             },
             "counter_greater": {
@@ -107,7 +107,7 @@ class WrangleTest(unittest.TestCase):
         self.run_module("health", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 88,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 99,
                 },
             },
             "counter_greater": {
@@ -168,13 +168,13 @@ class WrangleTest(unittest.TestCase):
     #         },
     #     })})
 
-    def run_module(self, module_name, tests_asserts, prepare_only=False, one_test=False, enable_log=True, random_subset_rows=False,
-                   reprocess_all_files=False, disable_write_stdout=True, disable_upload_files=True, disable_download_files=False):
+    def run_module(self, module_name, tests_asserts, enable_log=True, prepare_only=False, enable_rerun=True, enable_random_rows=False,
+                   disable_write_stdout=True, disable_data_delta=False, disable_file_upload=True, disable_file_download=False):
         os.environ[library.WRANGLE_ENABLE_LOG] = str(enable_log)
-        os.environ[library.WRANGLE_RANDOM_SUBSET_ROWS] = str(random_subset_rows)
-        os.environ[library.WRANGLE_REPROCESS_ALL_FILES] = str(reprocess_all_files)
-        os.environ[library.WRANGLE_DISABLE_UPLOAD_FILES] = str(disable_upload_files)
-        os.environ[library.WRANGLE_DISABLE_DOWNLOAD_FILES] = str(disable_download_files)
+        os.environ[library.WRANGLE_ENABLE_RANDOM_ROWS] = str(enable_random_rows)
+        os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = str(disable_data_delta)
+        os.environ[library.WRANGLE_DISABLE_FILE_UPLOAD] = str(disable_file_upload)
+        os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = str(disable_file_download)
         dir_target = os.path.join(DIR_ROOT, "target")
         if not os.path.isdir(dir_target):
             os.makedirs(dir_target)
@@ -222,14 +222,14 @@ class WrangleTest(unittest.TestCase):
             load_caches(os.path.join(DIR_ROOT, "src/test/resources/data", module_name, test), module.input)
             counters = {}
             if not prepare_only:
-                with patch.object(library.Library, "sheet_write") if disable_upload_files else no_op():
-                    with patch.object(library.Library, "drive_write") if disable_upload_files else no_op():
+                with patch.object(library.Library, "sheet_write") if disable_file_upload else no_op():
+                    with patch.object(library.Library, "drive_write") if disable_file_upload else no_op():
                         with patch.object(library.Library, "stdout_write") if disable_write_stdout else no_op():
                             print("STARTING (run)     [{}]   [{}]".format(module_name.title(), test))
                             module.run()
                             print("FINISHED (run)     [{}]   [{}]\n".format(module_name.title(), test))
                             assert_counters(module.get_counters(), tests_asserts[test])
-                            if not one_test:
+                            if enable_rerun:
                                 module.reset_counters()
                                 print("STARTING (no-op)   [{}]   [{}]".format(module_name.title(), test))
                                 module.run()
@@ -237,9 +237,9 @@ class WrangleTest(unittest.TestCase):
                                 assert_counters(module.get_counters(), ASSERT_NOOP)
                                 module.reset_counters()
                                 print("STARTING (reload)   [{}]   [{}]".format(module_name.title(), test))
-                                os.environ['WRANGLE_REPROCESS_ALL_FILES'] = 'true'
+                                os.environ['WRANGLE_DISABLE_DATA_DELTA'] = 'true'
                                 module.run()
-                                os.environ['WRANGLE_REPROCESS_ALL_FILES'] = 'false'
+                                os.environ['WRANGLE_DISABLE_DATA_DELTA'] = 'false'
                                 print("FINISHED (reload)   [{}]   [{}]\n\n".format(module_name.title(), test))
                                 assert_counters(module.get_counters(), ASSERT_RELOAD)
         return counters

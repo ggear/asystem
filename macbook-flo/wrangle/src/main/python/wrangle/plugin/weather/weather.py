@@ -20,10 +20,11 @@ WEEKLY_FORECAST_URL = "ftp://ftp.bom.gov.au/anon/gen/fwo/IDW12300.xml"
 
 class Weather(library.Library):
 
+    # noinspection PyUnusedLocal
     def _run(self):
         weather_df = pd.DataFrame()
         weather_delta_df = pd.DataFrame()
-        if not library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES):
+        if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD):
             new_data = False
             now = datetime.datetime.now()
 
@@ -34,7 +35,7 @@ class Weather(library.Library):
             #         daily_file = os.path.join(self.input, daily_url.split("/")[-1])
             #         file_status = self.ftp_download(daily_url, daily_file, check=year == now.year and month == now.month)
             #         if file_status[0]:
-            #             if library.is_true(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
+            #             if library.test(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
             #                 try:
             #                     new_data = True
             #
@@ -53,7 +54,7 @@ class Weather(library.Library):
             # monthly_stats_file = os.path.join(self.input, MONTHLY_STATS_URL.split("/")[-1])
             # file_status = self.http_download(MONTHLY_STATS_URL, monthly_stats_file)
             # if file_status[0]:
-            #     if library.is_true(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
+            #     if library.test(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
             #         try:
             #             new_data = True
             #
@@ -72,7 +73,7 @@ class Weather(library.Library):
             # weekly_forecast_file = os.path.join(self.input, WEEKLY_FORECAST_URL.split("/")[-1])
             # file_status = self.ftp_download(WEEKLY_FORECAST_URL, weekly_forecast_file)
             # if file_status[0]:
-            #     if library.is_true(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
+            #     if library.test(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
             #         try:
             #             new_data = True
             #
@@ -99,8 +100,7 @@ class Weather(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            weather_delta_df, weather_current_df, _ = self.state_cache(pd.DataFrame({"some_dummy_data": [1.0]}),
-                                                                       only_load=library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+            weather_delta_df, weather_current_df, _ = self.state_cache(pd.DataFrame({"some_dummy_data": [1.0]}))
             self.state_write()
         except Exception as exception:
             self.print_log("Unexpected error processing weather data", exception)

@@ -25,16 +25,16 @@ class Interest(library.Library):
     def _run(self):
         interest_df = pd.DataFrame()
         interest_delta_df = pd.DataFrame()
-        if not library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES):
+        if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD):
             new_data = False
             retail_df = pd.DataFrame()
             retail_file = os.path.join(self.input, "retail.xls")
             file_status = self.http_download(RETAIL_URL, retail_file)
             if file_status[0]:
-                if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
+                if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
                     try:
                         new_data = True
-                        retail_raw_df = pd.read_excel(retail_file, skiprows=11, header=None)
+                        retail_raw_df = pd.read_excel(retail_file, sheet_name=0, skiprows=11, header=None)
                         retail_df['Date'] = pd.to_datetime(retail_raw_df.iloc[:, [0]][0].dt.strftime('%Y-%m-01'))
                         # Column O: Retail deposit and investment rates; Banks' term deposits ($10000); 3 years
                         retail_df['Retail'] = retail_raw_df.iloc[:, [14]]
@@ -51,10 +51,10 @@ class Interest(library.Library):
             inflation_file = os.path.join(self.input, "inflation.xls")
             file_status = self.http_download(INFLATION_URL, inflation_file)
             if file_status[0]:
-                if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or file_status[1]:
+                if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
                     try:
                         new_data = True
-                        inflation_raw_df = pd.read_excel(inflation_file, skiprows=11, header=None)
+                        inflation_raw_df = pd.read_excel(inflation_file, sheet_name=0, skiprows=11, header=None)
                         inflation_df['Date'] = pd.to_datetime(inflation_raw_df.iloc[:, [0]][0].dt.strftime('%Y-%m-01'))
                         # Column E: Year-ended inflation – excluding volatile items
                         inflation_df['Inflation'] = inflation_raw_df.iloc[:, [4]]
@@ -84,12 +84,11 @@ class Interest(library.Library):
             def aggregate_function(data_df):
                 data_df = data_df.apply(pd.to_numeric).round(2)
                 for int_rate in LABELS:
-                    for int_period in PERIODS:
-                        data_df['{} {}'.format(int_rate, int_period)] = data_df[int_rate].rolling(PERIODS[int_period]).mean()
+                    for period in PERIODS:
+                        data_df['{} {}'.format(int_rate, period)] = data_df[int_rate].rolling(PERIODS[period]).mean()
                 return data_df.fillna(0).apply(pd.to_numeric).round(2)
 
-            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, aggregate_function,
-                                                                         library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, aggregate_function)
             if len(interest_delta_df):
                 interest_current_df = interest_current_df.set_index(pd.to_datetime(interest_current_df.index)).sort_index()
                 interest_current_df.insert(0, "Date", interest_current_df.index.strftime('%Y-%m-%d'))

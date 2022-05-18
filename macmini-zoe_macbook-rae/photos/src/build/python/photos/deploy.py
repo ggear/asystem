@@ -59,7 +59,7 @@ if __name__ == "__main__":
                                     subprocess.run(["exiftool", "-T", "-DateTimeOriginal", export_info.exported[0]],
                                                    capture_output=True)
                                         .stdout.decode("utf-8").strip().split(" ")[0], "%Y:%m:%d")
-                            except:
+                            except (Exception,):
                                 raise Exception("Could not parse original date time on file [{}] from album [{}]"
                                                 .format(photo.original_filename, album.title))
                         subprocess.run(

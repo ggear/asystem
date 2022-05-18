@@ -10,34 +10,34 @@ from .. import library
 
 class Health(library.Library):
 
+    # noinspection PyUnusedLocal
     def _run(self):
         data_df = pd.DataFrame()
         data_delta_df = pd.DataFrame()
-        if not library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES):
+        if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD):
             sleep_df = pd.DataFrame()
             health_df = pd.DataFrame()
             workout_df = pd.DataFrame()
             files = self.dropbox_download("/Data/Health", self.input)
-            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, 0 if library.is_true(library.WRANGLE_REPROCESS_ALL_FILES)
-            else \
+            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED, 0 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) else \
                 sum([not status[1] for status in list(files.values())]))
-            new_data = library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or \
+            new_data = library.test(library.WRANGLE_DISABLE_DATA_DELTA) or \
                        all([status[0] for status in list(files.values())]) and any([status[1] for status in list(files.values())])
             if new_data:
                 sleep_yesterday_df = pd.DataFrame()
                 for file_name in files:
-                    if files[file_name][0] and (library.is_true(library.WRANGLE_REPROCESS_ALL_FILES) or files[file_name][1]):
+                    if files[file_name][0] and (library.test(library.WRANGLE_DISABLE_DATA_DELTA) or files[file_name][1]):
 
                         def normalise(df):
                             df['Date'] = pd.to_datetime(df['Date'])
                             df = df.set_index('Date')
                             return df
 
-                        def get(list, label):
-                            for item in list:
+                        def get(labels, label):
+                            for item in labels:
                                 if item[0] == label:
                                     return item[1]
-                            raise Exception("Health label [{}] not found in list {}".format(label, list))
+                            raise Exception("Health label [{}] not found in list {}".format(label, labels))
 
                         if os.path.basename(file_name).startswith("_Sleep-"):
                             if len(sleep_yesterday_df) == 0:
@@ -134,17 +134,17 @@ class Health(library.Library):
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                         elif os.path.basename(file_name).startswith("Sleep-"):
 
-                            def duration_normalise(df, column):
-                                df[column] = df[column].replace('--', 0)
-                                df[column] = file_df[column].apply(lambda x: x if ':' in str(x) else "0:{}".format(x))
-                                return df[column]
+                            def duration_normalise(df, name):
+                                df[name] = df[name].replace('--', 0)
+                                df[name] = file_df[name].apply(lambda x: x if ':' in str(x) else "0:{}".format(x))
+                                return df[name]
 
-                            def duration_decimalise(df, column, scale=1.0 / (60 * 60)):
-                                df[column] = duration_normalise(df, column)
-                                df[column] = file_df[column].apply(lambda x: datetime.strptime(x, '%M:%S'))
-                                df[column] = df[column] - datetime.strptime('00:00', '%M:%S')
-                                df[column] = df[column].apply(lambda x: x / np.timedelta64(1, 's') * 60 * scale)
-                                return df[column]
+                            def duration_decimalise(df, name, scale=1.0 / (60 * 60)):
+                                df[name] = duration_normalise(df, name)
+                                df[name] = file_df[name].apply(lambda x: datetime.strptime(x, '%M:%S'))
+                                df[name] = df[name] - datetime.strptime('00:00', '%M:%S')
+                                df[name] = df[name].apply(lambda x: x / np.timedelta64(1, 's') * 60 * scale)
+                                return df[name]
 
                             try:
                                 sleep_history_df = pd.DataFrame()
@@ -363,18 +363,17 @@ class Health(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            data_delta_df, _, _ = self.state_cache(data_df,
-                                                   only_load=library.is_true(library.WRANGLE_DISABLE_DOWNLOAD_FILES))
+            data_delta_df, _, _ = self.state_cache(data_df)
             if len(data_delta_df):
                 buckets = {}
                 for column in data_delta_df.columns.tolist():
                     column_rename = {column: ' '.join(column.split('(')[0].split(' ')[1:])}
-                    type = column.split(' ')[0].lower()
-                    unit = column.split('(')[-1].replace(')', '').strip()
-                    if (type, unit) not in buckets:
-                        buckets[(type, unit)] = ([], {})
-                    buckets[(type, unit)][0].append(column)
-                    buckets[(type, unit)][1].update(column_rename)
+                    bucket_type = column.split(' ')[0].lower()
+                    bucket_unit = column.split('(')[-1].replace(')', '').strip()
+                    if (bucket_type, bucket_unit) not in buckets:
+                        buckets[(bucket_type, bucket_unit)] = ([], {})
+                    buckets[(bucket_type, bucket_unit)][0].append(column)
+                    buckets[(bucket_type, bucket_unit)][1].update(column_rename)
                 for bucket in buckets:
                     data_bucket_df = data_delta_df[buckets[bucket][0]].dropna(axis=0, how='all')
                     for column in data_bucket_df.columns.tolist():
