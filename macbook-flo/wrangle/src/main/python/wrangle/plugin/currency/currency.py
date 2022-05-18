@@ -181,7 +181,7 @@ class Currency(library.Library):
                 rba_current_df.insert(0, "Date", rba_current_df.index.strftime('%Y-%m-%d'))
                 rba_current_df = rba_current_df[rba_current_df['Date'] > '2006-01-01'].sort_index(ascending=False)
                 rba_current_df = rba_current_df.set_index(pd.to_datetime(rba_current_df.index)).sort_index()
-                self.sheet_write(rba_current_df, DRIVE_URL, {'index': False, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
+                self.sheet_write(rba_current_df[["Date"] + PAIRS], DRIVE_URL, {'index': False, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
                 self.database_write(rba_current_df[PAIRS], global_tags={
                     "type": "snapshot",
                     "period": "1d",
