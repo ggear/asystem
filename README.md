@@ -19,4 +19,4 @@ To build, test and package this project the following is required:
 Each service is specified by at least one `host` name, multiple names demarcated by the `_`
 character and a globally unique `service` name directory as per specification:
 
-`<host>[_<host>[_<host]]/<service>`
+`<host>[_<host>]*/<service>`
