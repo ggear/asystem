@@ -92,8 +92,8 @@ class Interest(library.Library):
             if len(interest_delta_df):
                 interest_current_df = interest_current_df.set_index(pd.to_datetime(interest_current_df.index)).sort_index()
                 interest_current_df.insert(0, "Date", interest_current_df.index.strftime('%Y-%m-%d'))
-                interest_current_df = interest_current_df[interest_current_df['Date'] > '2015-01-01'].sort_index(ascending=False)
-                self.sheet_write(interest_current_df, DRIVE_URL, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
+                self.sheet_write(interest_current_df[interest_current_df['Date'] > '2015-01-01'].sort_index(ascending=False),
+                                 DRIVE_URL, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
                 self.database_write(interest_current_df[LABELS], global_tags={
                     "type": "mean",
                     "period": "1mo",
