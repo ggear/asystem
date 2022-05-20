@@ -195,7 +195,7 @@ class Currency(library.Library):
                     rba_current_df[columns] = rba_current_df[columns].apply(pd.to_numeric)
                     self.database_write(rba_current_df[columns].rename(columns=columns_rename), global_tags={
                         "type": "delta",
-                        "period": "{}d".format(PERIODS[fx_period]),
+                        "period": "{:0.0f}d".format(PERIODS[fx_period]),
                         "unit": "%"
                     })
                 self.state_write()

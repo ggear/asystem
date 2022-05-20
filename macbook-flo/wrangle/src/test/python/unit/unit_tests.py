@@ -21,11 +21,11 @@ for key, value in list(library.load_profile(os.path.join(DIR_ROOT, ".env")).item
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("equity", {"success_typical": ASSERT_RUN},
+        self.run_module("interest", {"success_typical": ASSERT_RUN},
                         enable_log=True,
                         enable_rerun=False,
-                        enable_random_rows=False,
-                        disable_write_stdout=True,
+                        enable_random_rows=True,
+                        disable_write_stdout=False,
                         disable_data_delta=False,
                         disable_file_upload=True,
                         disable_file_download=False,

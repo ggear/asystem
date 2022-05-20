@@ -104,9 +104,9 @@ class Interest(library.Library):
                     columns_rename = {}
                     for column in columns:
                         columns_rename[column] = column.split(" ")[0]
-                    self.database_write(interest_current_df[columns].rename(columns=columns_rename), global_tags={
+                    self.database_write(interest_delta_df[columns].rename(columns=columns_rename), global_tags={
                         "type": "mean",
-                        "period": "{}y".format(PERIODS[int_period] / 12),
+                        "period": "{:0.0f}y".format(PERIODS[int_period] / 12),
                         "unit": "%"
                     })
                 self.state_write()
