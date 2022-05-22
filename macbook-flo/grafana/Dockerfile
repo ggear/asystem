@@ -8,6 +8,7 @@ RUN apk add --no-cache \
   curl==7.80.0-r1 \
   make==4.3-r0 \
   musl-dev==1.2.2-r7 \
+  gcc==10.3.1_git20211027-r0 \
   go==1.17.10-r0
 
 FROM image_package as image_install

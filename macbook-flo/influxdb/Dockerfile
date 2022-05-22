@@ -1,4 +1,4 @@
-FROM influxdb:2.1.1-alpine as image_base
+FROM influxdb:2.2.0-alpine as image_base
 
 FROM image_base as image_package
 USER root
