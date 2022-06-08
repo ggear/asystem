@@ -39,12 +39,17 @@ influxdb:
   bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
   precision: s
   measurement_attr: domain__device_class
+  default_measurement: state
   tags:
     instance: production
     source: home_assistant
   tags_attributes:
     - friendly_name
-  default_measurement: state
+    - unit_of_measurement_str
+    - state_class_str
+  ignore_attributes:
+    - icon_str
+    - attribution_str
 #######################################################################################
 mqtt:
   broker: !env_var VERNEMQ_HOST
