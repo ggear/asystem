@@ -5,12 +5,8 @@ from typing import Optional
 
 from homeassistant.helpers.typing import HomeAssistantType
 
-from .const import (
-    MANUFACTURER_DIRECTORY_MAPPING,
-    MODE_FIXED,
-    MODE_LINEAR,
-    MODEL_DIRECTORY_MAPPING,
-)
+from .aliases import MANUFACTURER_DIRECTORY_MAPPING, MODEL_DIRECTORY_MAPPING
+from .const import MODE_FIXED, MODE_LINEAR
 from .errors import ModelNotSupported, UnsupportedMode
 
 _LOGGER = logging.getLogger(__name__)
@@ -120,6 +116,9 @@ class LightModel:
         )
 
     def get_lut_directory(self) -> str:
+        if self.linked_lut:
+            return os.path.join(os.path.dirname(__file__), "data", self.linked_lut)
+
         model_directory = self.get_directory()
         if self._lut_subdirectory:
             model_directory = os.path.join(model_directory, self._lut_subdirectory)
@@ -144,6 +143,10 @@ class LightModel:
     @property
     def supported_modes(self) -> list:
         return self._json_data.get("supported_modes") or []
+
+    @property
+    def linked_lut(self) -> Optional[str]:
+        return self._json_data.get("linked_lut")
 
     @property
     def linear_mode_config(self) -> Optional[dict]:
