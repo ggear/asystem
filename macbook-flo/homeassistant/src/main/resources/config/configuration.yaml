@@ -37,20 +37,65 @@ influxdb:
   token: !env_var INFLUXDB_TOKEN
   organization: !env_var INFLUXDB_ORG
   bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
-  precision: s
-  measurement_attr: domain__device_class
-  default_measurement: state
+  precision: 's'
+  measurement_attr: 'domain__device_class'
+  default_measurement: 'state'
   tags:
-    instance: production
-    source: home_assistant
+    source: 'home_assistant'
   tags_attributes:
-    - friendly_name
-    - unit_of_measurement_str
-    - state_class_str
+    - 'state_class'
+    - 'friendly_name'
+    - 'unit_of_measurement'
   ignore_attributes:
-    - icon_str
-    - attribution_str
-#######################################################################################
+    - 'id'
+    - 'fps'
+    - 'end'
+    - 'icon'
+    - 'mode'
+    - 'model'
+    - 'start'
+    - 'count'
+    - 'width'
+    - 'height'
+    - 'repeat'
+    - 'source'
+    - 'user_id'
+    - 'shuffle'
+    - 'bitrate'
+    - 'dynamics'
+    - 'excludes'
+    - 'workdays'
+    - 'editable'
+    - 'max_value'
+    - 'min_value'
+    - 'entity_id'
+    - 'channel_id'
+    - 'queue_size'
+    - 'source_list'
+    - 'days_offset'
+    - 'preset_mode'
+    - 'sources_str'
+    - 'attribution'
+    - 'power_source'
+    - 'coefficients'
+    - 'access_token'
+    - 'group_members'
+    - 'entity_picture'
+    - 'count_sources'
+    - 'queue_position'
+    - 'media_position'
+    - 'percentage_step'
+    - 'media_content_id'
+    - 'available_sources'
+    - 'supported_features'
+    - 'frontend_stream_type'
+    - 'supported_color_modes'
+    - 'media_position_updated_at'
+  exclude:
+    domains:
+      - 'scene'
+      - 'select'
+      #######################################################################################
 mqtt:
   broker: !env_var VERNEMQ_HOST
   port: !env_var VERNEMQ_PORT

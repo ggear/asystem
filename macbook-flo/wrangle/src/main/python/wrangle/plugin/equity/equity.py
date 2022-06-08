@@ -28,7 +28,7 @@ STOCK = OrderedDict([
         "prefix": "^",
         "exchange": "",
     }),
-    ('WPL', {
+    ('WDS', {
         "start": "2009-01",
         "end of day": "16:00",
         "prefix": "",
