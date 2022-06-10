@@ -70,6 +70,11 @@ rm -rf src/main/resources/config/custom_components/senseme
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../.deps/homeassistant/senseme-component/custom_components/senseme src/main/resources/config/custom_components
 
+pull_repo $(pwd) homeassistant influxdb-component ggear/homeassistant-core ggear-influxdb
+rm -rf src/main/resources/config/custom_components/influxdb
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../.deps/homeassistant/influxdb-component/homeassistant/components/influxdb src/main/resources/config/custom_components
+
 pull_repo $(pwd) homeassistant tplink-component ggear/homeassistant-core ggear-tplink
 rm -rf src/main/resources/config/custom_components/tplink
 mkdir -p src/main/resources/config/custom_components &&
