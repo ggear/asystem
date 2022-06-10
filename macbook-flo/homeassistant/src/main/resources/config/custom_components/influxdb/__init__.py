@@ -9,6 +9,7 @@ import math
 import queue
 import threading
 import time
+import string
 import dateutil.parser
 
 from typing import Any
@@ -292,28 +293,37 @@ def _generate_event_to_json(conf: dict) -> Callable[[dict], str]:
                 if key in json[INFLUX_CONF_FIELDS]:
                     key = f"{key}_"
                 # Prevent column data errors in influxDB.
-                # For each value we try to cast it as float
-                # But if we can not do it we store the value
-                # as string add "_str" postfix to the field key
-                try:
-                    json[INFLUX_CONF_FIELDS][key] = float(value)
-                except (ValueError, TypeError):
-                    key_str = f"{key}_str"
-                    value_str = str(value)
+                # Attempt first to cast as a float (unless
+                # the float key is in the ignore list).
+                # If this fails, we attempt as a str, timestamp
+                # and float (non-numeric  char's stripped out),
+                # adding the appropriate type suffix to the key
+
+                def key_format(_key, _suffix):
+                    return f"{_key}_{_suffix}".lower().replace(' ', '_') \
+                        .translate(str.maketrans('', '', r"""!"#$%&'()*+,-./:;<=>?@[\]^`{|}~"""))
+
+                def value_format(_json, _key, _value):
+                    key_str = key_format(_key, "str")
+                    value_str = str(_value)
                     if key_str not in ignore_attributes:
-                        json[INFLUX_CONF_FIELDS][key_str] = value_str
-                    key_timestamp = f"{key}_timestamp"
+                        _json[key_str] = value_str
+                    key_timestamp = key_format(_key, "timestamp")
                     if key_timestamp not in ignore_attributes and RE_DIGIT_TAIL.match(value_str):
                         try:
-                            json[INFLUX_CONF_FIELDS][key_timestamp] = dateutil.parser.parse(value_str).timestamp()
+                            _json[key_timestamp] = dateutil.parser.parse(value_str).timestamp()
                         except (ValueError, OverflowError):
                             pass
-                    key_float = f"{key}_float"
                     if key_float not in ignore_attributes and RE_DIGIT_TAIL.match(value_str):
-                        json[INFLUX_CONF_FIELDS][key_float] = float(
-                            RE_DECIMAL.sub("", value_str)
-                        )
+                        _json[key_float] = float(RE_DECIMAL.sub("", value_str))
 
+                key_float = key_format(key, "float")
+                try:
+                    if key_float in ignore_attributes:
+                        value_format(json[INFLUX_CONF_FIELDS], key, value)
+                    json[INFLUX_CONF_FIELDS][key_float] = float(value)
+                except (ValueError, TypeError):
+                    value_format(json[INFLUX_CONF_FIELDS], key, value)
 
                 # Infinity and NaN are not valid floats in InfluxDB
                 with suppress(KeyError, TypeError):
