@@ -1,0 +1,72 @@
+- name: weather
+  sidebar_title: Weather
+  sidebar_icon: mdi:weather-partly-cloudy
+  js_url: /api/hassio/app/entrypoint.js
+  url_path: 'lovelace/default_view'
+  embed_iframe: true
+  require_admin: false
+  config:
+    ingress: core_configurator
+- name: control
+  sidebar_title: Control
+  sidebar_icon: mdi:power
+  js_url: /api/hassio/app/entrypoint.js
+  url_path: 'lovelace/control'
+  embed_iframe: true
+  require_admin: false
+  config:
+    ingress: core_configurator
+- name: media
+  sidebar_title: Media
+  sidebar_icon: mdi:play
+  js_url: /api/hassio/app/entrypoint.js
+  url_path: 'lovelace/media'
+  embed_iframe: true
+  require_admin: false
+  config:
+    ingress: core_configurator
+- name: security
+  sidebar_title: Security
+  sidebar_icon: mdi:camera
+  js_url: /api/hassio/app/entrypoint.js
+  url_path: 'lovelace/security'
+  embed_iframe: true
+  require_admin: false
+  config:
+    ingress: core_configurator
+- name: conditions
+  sidebar_title: Conditions
+  sidebar_icon: mdi:home-thermometer
+  js_url: /api/hassio/app/entrypoint.js
+  url_path: 'lovelace/conditions'
+  embed_iframe: true
+  require_admin: false
+  config:
+    ingress: core_configurator
+- name: electricity
+  sidebar_title: Electricity
+  sidebar_icon: mdi:lightning-bolt
+  js_url: /api/hassio/app/entrypoint.js
+  url_path: 'lovelace/electricity'
+  embed_iframe: true
+  require_admin: false
+  config:
+    ingress: core_configurator
+- name: water
+  sidebar_title: Water
+  sidebar_icon: mdi:water
+  js_url: /api/hassio/app/entrypoint.js
+  url_path: 'lovelace/water'
+  embed_iframe: true
+  require_admin: false
+  config:
+    ingress: core_configurator
+- name: diagnostics
+  sidebar_title: Diagnostics
+  sidebar_icon: mdi:wrench
+  js_url: /api/hassio/app/entrypoint.js
+  url_path: 'lovelace/diagnostics'
+  embed_iframe: true
+  require_admin: false
+  config:
+    ingress: core_configurator

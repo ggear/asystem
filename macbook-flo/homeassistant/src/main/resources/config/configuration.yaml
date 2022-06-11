@@ -39,89 +39,13 @@ influxdb:
   bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
   precision: 's'
   measurement_attr: 'domain__device_class'
-  default_measurement: 'state'
+  default_measurement: 'sensor'
   tags:
-    source: 'home_assistant'
+    source: 'haas'
   tags_attributes:
     - 'state_class'
     - 'friendly_name'
     - 'unit_of_measurement'
-  ignore_attributes:
-    - 'id'
-    - 'fps'
-    - 'end'
-    - 'icon'
-    - 'mode'
-    - 'model'
-    - 'start'
-    - 'count'
-    - 'width'
-    - 'types'
-    - 'zones'
-    - 'height'
-    - 'repeat'
-    - 'source'
-    - 'status'
-    - 'app_id'
-    - 'sources'
-    - 'user_id'
-    - 'shuffle'
-    - 'bitrate'
-    - 'current'
-    - 'is_group'
-    - 'dynamics'
-    - 'excludes'
-    - 'workdays'
-    - 'editable'
-    - 'entities'
-    - 'xy_color'
-    - 'hs_color'
-    - 'max_value'
-    - 'min_value'
-    - 'entity_id'
-    - 'color_mode'
-    - 'last_reset'
-    - 'channel_id'
-    - 'queue_size'
-    - 'max_mireds'
-    - 'min_mireds'
-    - 'name_float'
-    - 'source_list'
-    - 'days_offset'
-    - 'attribution'
-    - 'integration'
-    - 'last_period'
-    - 'preset_mode'
-    - 'preset_modes'
-    - 'power_source'
-    - 'coefficients'
-    - 'access_token'
-    - 'cron_pattern'
-    - 'meter_period'
-    - 'group_members'
-    - 'source_domain'
-    - 'source_entity'
-    - 'count_sources'
-    - 'rgb_color_str'
-    - 'available_str'
-    - 'queue_position'
-    - 'media_position'
-    - 'entity_picture'
-    - 'percentage_step'
-    - 'calculation_mode'
-    - 'media_content_id'
-    - 'areas_of_interest'
-    - 'postal_code_float'
-    - 'available_sources'
-    - 'supported_features'
-    - 'last_triggered_str'
-    - 'available_important'
-    - 'entity_picture_local'
-    - 'frontend_stream_type'
-    - 'last_triggered_float'
-    - 'supported_color_modes'
-    - 'available_opportunistic'
-    - 'media_position_updated_at'
   exclude:
     domains:
       - 'zone'
@@ -133,7 +57,8 @@ influxdb:
       - '*_sim_*'
       - '*_microphone_level'
       - 'adaptive_lighting_bedroom_*'
-      #######################################################################################
+  ignore_attributes: !include influxdb-ignores.yaml
+  #####################################################################################
 mqtt:
   broker: !env_var VERNEMQ_HOST
   port: !env_var VERNEMQ_PORT
@@ -151,79 +76,7 @@ discovery:
   ignore:
     - homekit
 #######################################################################################
-panel_custom:
-  - name: weather
-    sidebar_title: Weather
-    sidebar_icon: mdi:weather-partly-cloudy
-    js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/default_view'
-    embed_iframe: true
-    require_admin: false
-    config:
-      ingress: core_configurator
-  - name: control
-    sidebar_title: Control
-    sidebar_icon: mdi:power
-    js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/control'
-    embed_iframe: true
-    require_admin: false
-    config:
-      ingress: core_configurator
-  - name: media
-    sidebar_title: Media
-    sidebar_icon: mdi:play
-    js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/media'
-    embed_iframe: true
-    require_admin: false
-    config:
-      ingress: core_configurator
-  - name: security
-    sidebar_title: Security
-    sidebar_icon: mdi:camera
-    js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/security'
-    embed_iframe: true
-    require_admin: false
-    config:
-      ingress: core_configurator
-  - name: conditions
-    sidebar_title: Conditions
-    sidebar_icon: mdi:home-thermometer
-    js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/conditions'
-    embed_iframe: true
-    require_admin: false
-    config:
-      ingress: core_configurator
-  - name: electricity
-    sidebar_title: Electricity
-    sidebar_icon: mdi:lightning-bolt
-    js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/electricity'
-    embed_iframe: true
-    require_admin: false
-    config:
-      ingress: core_configurator
-  - name: water
-    sidebar_title: Water
-    sidebar_icon: mdi:water
-    js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/water'
-    embed_iframe: true
-    require_admin: false
-    config:
-      ingress: core_configurator
-  - name: diagnostics
-    sidebar_title: Diagnostics
-    sidebar_icon: mdi:wrench
-    js_url: /api/hassio/app/entrypoint.js
-    url_path: 'lovelace/diagnostics'
-    embed_iframe: true
-    require_admin: false
-    config:
-      ingress: core_configurator
+panel_custom: !include ui-panel-custom.yaml
 #######################################################################################
 lovelace:
   mode: yaml

@@ -281,54 +281,67 @@ def _generate_event_to_json(conf: dict) -> Callable[[dict], str]:
 
         ignore_attributes = set(entity_config.get(CONF_IGNORE_ATTRIBUTES, []))
         ignore_attributes.update(global_ignore_attributes)
+
+        # Build a unique key (recursively add '_' until unique) with optional type suffix
+        def format_key(_key, _suffix=None):
+            _suffix = "" if _suffix is None else f"_{_suffix}"
+            key_suffix = f"{_key}{_suffix}".lower().replace(' ', '_') \
+                .translate(str.maketrans('', '', r"""!"#$%&'()*+,-./:;<=>?@[\]^`{|}~"""))
+            while key_suffix in json[INFLUX_CONF_FIELDS]:
+                key_suffix = f"{key_suffix}_"
+            return key_suffix
+
+        # Format value as either float_only or as multiple infered types
+        def format_value(_json, _key, _value, _float_only=False):
+            key_str = format_key(_key, "str")
+            key_float = format_key(key, "float")
+            key_timestamp = format_key(_key, "timestamp")
+            if _float_only:
+                json[INFLUX_CONF_FIELDS][key_float] = float(value)
+            else:
+                value_str = str(_value)
+                if key_str not in ignore_attributes:
+                    _json[key_str] = value_str
+                if key_timestamp not in ignore_attributes and RE_DIGIT_TAIL.match(value_str):
+                    try:
+                        _json[key_timestamp] = dateutil.parser.parse(value_str).timestamp()
+                    except (ValueError, OverflowError):
+                        pass
+                if key_float not in ignore_attributes and RE_DIGIT_TAIL.match(value_str):
+                    _json[key_float] = float(RE_DECIMAL.sub("", value_str))
+
         for key, value in state.attributes.items():
             if key in tags_attributes:
                 json[INFLUX_CONF_TAGS][key] = value
             elif (
                 (key != CONF_UNIT_OF_MEASUREMENT or include_uom)
                 and (key != "device_class" or include_dc)
-                and key not in ignore_attributes
+                and format_key(key) not in ignore_attributes
             ):
-                # If the key is already in fields
-                if key in json[INFLUX_CONF_FIELDS]:
-                    key = f"{key}_"
-                # Prevent column data errors in influxDB.
-                # Attempt first to cast as a float (unless
-                # the float key is in the ignore list).
-                # If this fails, we attempt as a str, timestamp
-                # and float (non-numeric  char's stripped out),
-                # adding the appropriate type suffix to the key
-
-                def key_format(_key, _suffix):
-                    return f"{_key}_{_suffix}".lower().replace(' ', '_') \
-                        .translate(str.maketrans('', '', r"""!"#$%&'()*+,-./:;<=>?@[\]^`{|}~"""))
-
-                def value_format(_json, _key, _value):
-                    key_str = key_format(_key, "str")
-                    value_str = str(_value)
-                    if key_str not in ignore_attributes:
-                        _json[key_str] = value_str
-                    key_timestamp = key_format(_key, "timestamp")
-                    if key_timestamp not in ignore_attributes and RE_DIGIT_TAIL.match(value_str):
-                        try:
-                            _json[key_timestamp] = dateutil.parser.parse(value_str).timestamp()
-                        except (ValueError, OverflowError):
-                            pass
-                    if key_float not in ignore_attributes and RE_DIGIT_TAIL.match(value_str):
-                        _json[key_float] = float(RE_DECIMAL.sub("", value_str))
-
-                key_float = key_format(key, "float")
+                # Prevent column data errors in influxDB. Attempt first to
+                # cast as a float, if this fails (or the float key is in
+                # ignore attributes list), convert to a str and if possible a
+                # timestamp and float (with non-numeric  char's stripped out).
                 try:
-                    if key_float in ignore_attributes:
-                        value_format(json[INFLUX_CONF_FIELDS], key, value)
-                    json[INFLUX_CONF_FIELDS][key_float] = float(value)
+                    if format_key(key, "float") not in ignore_attributes:
+                        format_value(json[INFLUX_CONF_FIELDS], key, value, _float_only=True)
+                    else:
+                        format_value(json[INFLUX_CONF_FIELDS], key, value)
                 except (ValueError, TypeError):
-                    value_format(json[INFLUX_CONF_FIELDS], key, value)
+                    format_value(json[INFLUX_CONF_FIELDS], key, value)
 
                 # Infinity and NaN are not valid floats in InfluxDB
                 with suppress(KeyError, TypeError):
                     if not math.isfinite(json[INFLUX_CONF_FIELDS][key]):
                         del json[INFLUX_CONF_FIELDS][key]
+
+        # If possible, reduce keys down to their root form without type suffixes
+        for key in list(json[INFLUX_CONF_FIELDS].keys()):
+            for suffix in ["_float", "_str", "_timestamp"]:
+                key_root = key.replace(suffix, "")
+                if key_root not in json[INFLUX_CONF_FIELDS] and key in json[INFLUX_CONF_FIELDS]:
+                    json[INFLUX_CONF_FIELDS][key_root] = json[INFLUX_CONF_FIELDS][key]
+                    del json[INFLUX_CONF_FIELDS][key]
 
         json[INFLUX_CONF_TAGS].update(tags)
 

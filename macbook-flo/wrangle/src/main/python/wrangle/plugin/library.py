@@ -712,6 +712,7 @@ class Library(object, metaclass=ABCMeta):
     def database_write(self, data_df, global_tags=None):
         if global_tags is None:
             global_tags = {}
+        global_tags["source"] = "wrangle"
         lines = []
         try:
             if test(WRANGLE_ENABLE_RANDOM_ROWS) and len(data_df) > 0:
