@@ -4,6 +4,7 @@ x-common: &common
   user: root
   environment:
     - TZ=Australia/Perth
+    - SERVICE_VERSION_COMPACT
     - HOMEASSISTANT_DB
     - HOMEASSISTANT_INTERNAL_URL
     - HOMEASSISTANT_EXTERNAL_URL

@@ -81,7 +81,6 @@
 - 'next_setting_float'
 - 'supported_features'
 - 'media_artist_float'
-- 'media_artist_float'
 - 'last_triggered_str'
 - 'media_channel_float'
 - 'media_playlist_float'

@@ -26,7 +26,7 @@ def setup(context):
     _setup(context)
 
 
-@task(aliases=["prg", "f"] + ["purge"[0:i] for i in range(2, len("purge"))])
+@task(aliases=["prg", "f"] + ["purge"[0:i] for i in range(3, len("purge"))])
 def purge(context):
     _purge(context)
 
@@ -36,6 +36,9 @@ def backup(context):
     _clean(context)
     _backup(context)
 
+@task(aliases=["pll", "u"] + ["pull"[0:i] for i in range(3, len("pull"))])
+def pull(context):
+    _pull(context)
 
 @task(aliases=["gnr"] + ["generate"[0:i] for i in range(1, len("generate"))])
 def generate(context):
@@ -138,13 +141,15 @@ def _backup(context):
                         "rsync -vr --files-from=/Users/graham/Backup/asystem/.gitexternal . /Users/graham/Backup/asystem", DIR_ROOT)
     _print_footer("asystem", "backup")
 
-
-def _generate(context, filter_module=None, filter_host=None, is_release=False):
-    _print_header("asystem", "generate git")
+def _pull(context):
+    _print_header("asystem", "pull main")
     _run_local(context, "git pull --all")
-    _print_footer("asystem", "generate git")
+    _print_footer("asystem", "pull main")
+    _generate(context, is_pull=True)
+
+def _generate(context, filter_module=None, filter_host=None, is_release=False, is_pull=False):
     _print_header("asystem", "generate dependencies")
-    _run_local(context, "generate.sh", DIR_ROOT)
+    _run_local(context, "generate.sh {}".format(is_pull), DIR_ROOT)
     _print_footer("asystem", "generate dependencies")
     for module in _get_modules(context, filter_module=filter_module):
         _print_header(module, "generate env")
@@ -153,7 +158,7 @@ def _generate(context, filter_module=None, filter_host=None, is_release=False):
         _print_footer(module, "generate env")
     for module in _get_modules(context, "generate.sh", filter_changes=False):
         _print_header(module, "generate shell script")
-        _run_local(context, "{}/{}/generate.sh".format(DIR_ROOT, module), join(DIR_ROOT, module))
+        _run_local(context, "{}/{}/generate.sh {}".format(DIR_ROOT, module, is_pull), join(DIR_ROOT, module))
         _print_footer(module, "generate shell script")
     for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
         _print_header(module, "generate python script")

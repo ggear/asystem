@@ -4,7 +4,7 @@ WORKING_DIR=${PWD}
 
 export $(xargs <.env)
 
-export GOROOT=/usr/local/opt/go/libexec
+export GOROOT=/opt/homebrew/Cellar/go\@1.16/1.16.15/libexec
 export GOPATH=${HOME}/.go
 export PATH=${GOPATH}/bin:${GOROOT}/bin:$PATH
 

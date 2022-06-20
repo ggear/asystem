@@ -20,6 +20,25 @@
                 simpleErrors=false,
             ) +
 
+
+
+
+
+
+// TODO: Withings weight data from Home Assistant!
+//from(bucket: "home_private")
+//  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+//  |> filter(fn: (r) => r["entity_id"] == "withings_muscle_mass_kg_graham" or r["entity_id"] == "withings_bone_mass_kg_graham" or r["entity_id"] == "withings_fat_free_mass_kg_graham" or r["entity_id"] == "withings_fat_mass_kg_graham" or r["entity_id"] == "withings_fat_ratio_pct_graham" or r["entity_id"] == "withings_weight_kg_graham")
+//  |> filter(fn: (r) => r["_field"] == "value")
+
+
+
+
+
+
+
+
+
             [
 
 //                  stat.new(

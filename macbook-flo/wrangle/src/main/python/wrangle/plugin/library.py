@@ -713,6 +713,7 @@ class Library(object, metaclass=ABCMeta):
         if global_tags is None:
             global_tags = {}
         global_tags["source"] = "wrangle"
+        global_tags["version"] = os.getenv("SERVICE_VERSION_COMPACT", "-1")
         lines = []
         try:
             if test(WRANGLE_ENABLE_RANDOM_ROWS) and len(data_df) > 0:

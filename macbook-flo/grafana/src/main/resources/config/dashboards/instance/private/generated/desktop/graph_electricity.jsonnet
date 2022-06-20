@@ -1,6 +1,6 @@
 {
       graphs()::
-      
+
             local grafana = import 'grafonnet/grafana.libsonnet';
             local asystem = import 'default/generated/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
@@ -14,7 +14,7 @@
 
             header.new(
                 style='maximal',
-                formFactor='Desktop',   
+                formFactor='Desktop',
                 datasource='InfluxDB_V2',
 
 // TODO: Update this to include metadata rows when re-implemented in Go
@@ -26,7 +26,7 @@
             [
 
                   graph.new(
-                        title='Power Consumption',
+                        title='Current Power Consumption',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='short',
@@ -44,15 +44,15 @@
                         legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "various_adhoc_power_consumption" or r["entity_id"] == "rack_modem_power_consumption" or r["entity_id"] == "rack_power_power_consumption" or r["entity_id"] == "roof_switch_power_consumption" or r["entity_id"] == "kitchen_fan_power_consumption" or r["entity_id"] == "kitchen_fridge_power_consumption" or r["entity_id"] == "kitchen_coffee_power_consumption" or r["entity_id"] == "deck_freezer_power_consumption" or r["entity_id"] == "deck_festoons_power_consumption" or r["entity_id"] == "office_power_power_consumption" or r["entity_id"] == "lounge_tv_power_consumption" or r["entity_id"] == "study_power_power_consumption" or r["entity_id"] == "bathroom_towelrails_power_consumption")
-  |> keep(columns: ["_time", "_value", "friendly_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "home_peak_power" or r["entity_id"] == "home_base_power" or r["entity_id"] == "home_power")
+|> keep(columns: ["_time", "_value", "friendly_name"])
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
                   '))
                   { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 
                   graph.new(
-                        title='Energy Consumption',
+                        title='Current Power Consumption',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='short',
@@ -70,10 +70,62 @@ from(bucket: "home_private")
                         legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "various_adhoc_energy_consumption" or r["entity_id"] == "rack_modem_energy_consumption" or r["entity_id"] == "rack_power_energy_consumption" or r["entity_id"] == "roof_switch_energy_consumption" or r["entity_id"] == "kitchen_fan_energy_consumption" or r["entity_id"] == "kitchen_fridge_energy_consumption" or r["entity_id"] == "kitchen_coffee_energy_consumption" or r["entity_id"] == "deck_freezer_energy_consumption" or r["entity_id"] == "deck_festoons_energy_consumption" or r["entity_id"] == "lounge_tv_energy_consumption" or r["entity_id"] == "study_power_energy_consumption" or r["entity_id"] == "office_power_energy_consumption" or r["entity_id"] == "bathroom_towelrails_energy_consumption")
-  |> keep(columns: ["_time", "_value", "friendly_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "various_adhoc_outlet_current_consumption" or r["entity_id"] == "study_battery_charger_current_consumption" or r["entity_id"] == "laundry_vacuum_charger_current_consumption" or r["entity_id"] == "home_lights_power" or r["entity_id"] == "home_fans_power" or r["entity_id"] == "kitchen_dish_washer_current_consumption" or r["entity_id"] == "laundry_clothes_dryer_current_consumption" or r["entity_id"] == "laundry_washing_machine_current_consumption" or r["entity_id"] == "kitchen_coffee_machine_current_consumption" or r["entity_id"] == "kitchen_fridge_current_consumption" or r["entity_id"] == "deck_freezer_current_consumption" or r["entity_id"] == "deck_festoons_current_consumption" or r["entity_id"] == "lounge_tv_current_consumption" or r["entity_id"] == "bathroom_rails_current_consumption" or r["entity_id"] == "study_outlet_current_consumption" or r["entity_id"] == "office_outlet_current_consumption" or r["entity_id"] == "server_network_power" or r["entity_id"] == "rack_modem_current_consumption" or r["entity_id"] == "rack_outlet_current_consumption" or r["entity_id"] == "kitchen_fan_current_consumption" or r["entity_id"] == "roof_network_switch_current_consumption")
+|> keep(columns: ["_time", "_value", "friendly_name"])
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+                  '))
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
+
+                  graph.new(
+                        title='Daily Energy Consumption',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='short',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=false,
+                        legend_total=false,
+                        legend_avg=true,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=330,
+                  ).addTarget(influxdb.target(query='
+from(bucket: "home_private")
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "home_peak_energy_daily" or r["entity_id"] == "home_base_energy_daily" or r["entity_id"] == "home_energy_daily")
+|> keep(columns: ["_time", "_value", "friendly_name"])
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+                  '))
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
+
+                  graph.new(
+                        title='Daily Energy Consumption',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='short',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=false,
+                        legend_total=false,
+                        legend_avg=true,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=330,
+                  ).addTarget(influxdb.target(query='
+from(bucket: "home_private")
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "various_adhoc_outlet_today_s_consumption" or r["entity_id"] == "study_battery_charger_today_s_consumption" or r["entity_id"] == "laundry_vacuum_charger_today_s_consumption" or r["entity_id"] == "home_lights_energy_daily" or r["entity_id"] == "home_fans_energy_daily" or r["entity_id"] == "kitchen_dish_washer_today_s_consumption" or r["entity_id"] == "laundry_clothes_dryer_today_s_consumption" or r["entity_id"] == "laundry_washing_machine_today_s_consumption" or r["entity_id"] == "kitchen_coffee_machine_today_s_consumption" or r["entity_id"] == "kitchen_fridge_today_s_consumption" or r["entity_id"] == "deck_freezer_today_s_consumption" or r["entity_id"] == "deck_festoons_today_s_consumption" or r["entity_id"] == "lounge_tv_today_s_consumption" or r["entity_id"] == "bathroom_rails_today_s_consumption" or r["entity_id"] == "study_outlet_today_s_consumption" or r["entity_id"] == "office_outlet_today_s_consumption" or r["entity_id"] == "roof_network_switch_today_s_consumption" or r["entity_id"] == "rack_modem_today_s_consumption" or r["entity_id"] == "server_network_energy_daily" or r["entity_id"] == "rack_outlet_today_s_consumption" or r["entity_id"] == "kitchen_fan_today_s_consumption")
+|> keep(columns: ["_time", "_value", "friendly_name"])
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
                   { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 

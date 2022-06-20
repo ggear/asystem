@@ -1,7 +1,7 @@
-//ASDASHBOARD_DEFAULTS time_from='now-3d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+//ASDASHBOARD_DEFAULTS time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
 {
       graphs()::
-      
+
             local grafana = import 'grafonnet/grafana.libsonnet';
             local asystem = import 'default/generated/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
@@ -19,7 +19,7 @@
 //ASD           style='maximal',
 //ASM           formFactor='Mobile',
 //AST           formFactor='Tablet',
-//ASD           formFactor='Desktop',   
+//ASD           formFactor='Desktop',
                 datasource='InfluxDB_V2',
 
 // TODO: Update this to include metadata rows when re-implemented in Go
@@ -49,10 +49,62 @@
 //ASD                   legend_sideWidth=330,
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "last_30_min_rain")
-  |> keep(columns: ["_time", "_value", "friendly_name"])
-  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "roof_hourly_rain")
+|> keep(columns: ["_time", "_value", "friendly_name"])
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+                  '))
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
+
+                  graph.new(
+                        title='Rain',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='short',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=false,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=true,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=330,
+                  ).addTarget(influxdb.target(query='
+from(bucket: "home_private")
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "roof_daily_rain")
+|> keep(columns: ["_time", "_value", "friendly_name"])
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+                  '))
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
+
+                  graph.new(
+                        title='Rain',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='short',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+//ASD                   legend_values=true,
+//ASD                   legend_min=true,
+//ASD                   legend_max=true,
+//ASD                   legend_current=false,
+//ASD                   legend_total=false,
+//ASD                   legend_avg=true,
+//ASD                   legend_alignAsTable=true,
+//ASD                   legend_rightSide=true,
+//ASD                   legend_sideWidth=330,
+                  ).addTarget(influxdb.target(query='
+from(bucket: "home_private")
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "roof_yearly_rain")
+|> keep(columns: ["_time", "_value", "friendly_name"])
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
                   '))
                   { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 

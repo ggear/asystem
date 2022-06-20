@@ -42,6 +42,7 @@ influxdb:
   default_measurement: 'sensor'
   tags:
     source: 'haas'
+    version: !env_var SERVICE_VERSION_COMPACT
   tags_attributes:
     - 'state_class'
     - 'friendly_name'
@@ -101,12 +102,13 @@ lovelace:
       require_admin: true
 #######################################################################################
 logger:
-  default: info
+  default: critical
   logs:
-    custom_components.powercalc: info
-    homeassistant.components.mqtt: info
-    custom_components.adaptive_lighting: info
-    custom_components.bureau_of_meteorology: info
-    homeassistant.components.automation.electricity_smart_plug_polling: warn
-    homeassistant.components.websocket_api.http.connection: fatal
+    homeassistant.core: fatal
+  #   custom_components.powercalc: info
+  #   homeassistant.components.mqtt: info
+  #   custom_components.adaptive_lighting: info
+  #   custom_components.bureau_of_meteorology: info
+  #   homeassistant.components.automation.electricity_smart_plug_polling: warn
+  #   homeassistant.components.websocket_api.http.connection: fatal
 #######################################################################################

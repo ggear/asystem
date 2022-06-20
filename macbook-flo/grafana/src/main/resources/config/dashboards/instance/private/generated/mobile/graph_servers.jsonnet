@@ -493,10 +493,10 @@ union(tables: [
     |> keep(columns: ["_time", "_value", "host"]),
   from(bucket: "home_private")
     |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - int(v: bin)))), stop: v.timeRangeStop)
-    |> filter(fn: (r) => r["entity_id"] == "utility_temperature")
+    |> filter(fn: (r) => r["entity_id"] == "rack_temperature")
     |> keep(columns: ["_time", "_value"])
     |> aggregateWindow(every: bin, fn: mean, createEmpty: false)
-    |> set(key: "host", value: "ambient-rack")
+    |> set(key: "host", value: "rack-ambient")
     |> keep(columns: ["_time", "_value", "host"])
 ])
   |> group(columns: ["host"], mode:"by")
