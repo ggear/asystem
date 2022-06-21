@@ -50,42 +50,49 @@
                   ).addTarget(influxdb.target(query='
 import "strings"
 bin=1d
+metric="min"
+entity_id="darlington_forecast_temp_" + metric + "_0"
+label=strings.title(v: metric)
 timeRangeStart=v.timeRangeStart
 // timeRangeStart=-5m
 // timeRangeStart=now()
 // timeRangeStart="2022-06-14T02:55:42.581000000Z"
 from(bucket: "home_private")
-  |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - int(v: bin)))), stop: v.timeRangeStop)//   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "darlington_forecast_temp_min_0")
+  |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - 2*int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - 2*int(v: bin)))), stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["entity_id"] == entity_id)
   |> filter(fn: (r) => r["_field"] == "value")
   |> group()
   |> aggregateWindow(every:  bin, fn: last, createEmpty: true)
   |> fill(column: "_value", usePrevious: true)
-  |> keep(columns: ["_time", "_value", "friendly_name"])
-  |> rename(columns: {_value: "Min"})
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: label})
                   ')).addTarget(influxdb.target(query='
 import "strings"
 bin=1d
+metric="max"
+entity_id="darlington_forecast_temp_" + metric + "_0"
+label=strings.title(v: metric)
 timeRangeStart=v.timeRangeStart
 // timeRangeStart=-5m
 // timeRangeStart=now()
 // timeRangeStart="2022-06-14T02:55:42.581000000Z"
 from(bucket: "home_private")
-  |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - int(v: bin)))), stop: v.timeRangeStop)//   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["entity_id"] == "darlington_forecast_temp_max_0")
+  |> range(start: time(v: if strings.hasPrefix(v: string(v: timeRangeStart), prefix: "-" ) then string(v: time(v: int(v: now()) + int(v: timeRangeStart) - 2*int(v: bin))) else string(v: time(v: int(v: time(v: timeRangeStart)) - 2*int(v: bin)))), stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["entity_id"] == entity_id)
   |> filter(fn: (r) => r["_field"] == "value")
   |> group()
   |> aggregateWindow(every:  bin, fn: last, createEmpty: true)
   |> fill(column: "_value", usePrevious: true)
-  |> keep(columns: ["_time", "_value", "friendly_name"])
-  |> rename(columns: {_value: "Max"})
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: label})
                     ')).addTarget(influxdb.target(query='
 from(bucket: "home_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["entity_id"] == "roof_temperature")
-  |> keep(columns: ["_time", "_value", "friendly_name"])
+  |> keep(columns: ["_time", "_value"])
   |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
-  |> map(fn: (r) => ({ r with friendly_name: "Actual" }))
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: {_value: "Actual"})
                   ')) { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
                   graph.new(
                         title='Temperature',
