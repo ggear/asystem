@@ -23,11 +23,11 @@ function pull_repo() {
         fi
       done
     fi
+    git remote set-url origin https://github.com/$(git remote get-url origin | sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')
     until git pull --all; do
       echo "Sleeping to avoid Github throttling ..."
       sleep 90
     done
-    git remote set-url origin https://github.com/$(git remote get-url origin | sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')
     git -c advice.detachedHead=false checkout "${5}"
   fi
   cd "${1}"
