@@ -40,19 +40,11 @@ if __name__ == "__main__":
         domain = metadata_dashboard_dict["entity_domain"]
         if domain not in metadata_dashboard_dicts[group]:
             metadata_dashboard_dicts[group][domain] = [[]]
-
-
-
-        # TODO
         if metadata_dashboard_dict["device_via_device"] == "_":
             if metadata_dashboard_dict["unique_id"] == "graph_break":
                 metadata_dashboard_dicts[group][domain].append([])
         else:
             metadata_dashboard_dicts[group][domain][-1].append(metadata_dashboard_dict)
-
-
-
-
     for group in metadata_dashboard_dicts:
         with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/graph_{}.jsonnet".format(group.lower()), "w") as file:
             file.write((PREFIX_DASHBOARD_DEFAULTS + "time_from='now-7d', refresh='', "
@@ -98,7 +90,7 @@ if __name__ == "__main__":
                     if metadata_dashboard_dicts[group][domain][domain_index]:
                         type = metadata_dashboard_dicts[group][domain][domain_index][0]["display_points"]
                         filter = " or ".join([('r["entity_id"] == "' + _dict["unique_id"] + '"') \
-                            for _dict in metadata_dashboard_dicts[group][domain][domain_index]])
+                                              for _dict in metadata_dashboard_dicts[group][domain][domain_index]])
                         flux = """from(bucket: "home_private")
 |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
 |> filter(fn: (r) => {})

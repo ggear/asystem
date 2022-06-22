@@ -29,6 +29,10 @@ function pull_repo() {
       sleep 90
     done
     git -c advice.detachedHead=false checkout "${5}"
+    git status
+    echo "" && echo "Repo: "$(cd ${1}/../../.deps/${2}/${3}; pwd)
+    echo -n "Checked out tag: " && git describe --tags --abbrev=0
+    echo -n "Most recent tag: " && git describe --tags $(git rev-list --tags --max-count=1) && echo ""
   fi
   cd "${1}"
 }
