@@ -36,9 +36,11 @@ def backup(context):
     _clean(context)
     _backup(context)
 
+
 @task(aliases=["pll", "u"] + ["pull"[0:i] for i in range(3, len("pull"))])
 def pull(context):
     _pull(context)
+
 
 @task(aliases=["gnr"] + ["generate"[0:i] for i in range(1, len("generate"))])
 def generate(context):
@@ -141,11 +143,15 @@ def _backup(context):
                         "rsync -vr --files-from=/Users/graham/Backup/asystem/.gitexternal . /Users/graham/Backup/asystem", DIR_ROOT)
     _print_footer("asystem", "backup")
 
+
 def _pull(context):
     _print_header("asystem", "pull main")
+    _run_local(context, "git remote set-url origin https://github.com/$(git remote get-url origin | "
+                        "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
     _run_local(context, "git pull --all")
     _print_footer("asystem", "pull main")
     _generate(context, is_pull=True)
+
 
 def _generate(context, filter_module=None, filter_host=None, is_release=False, is_pull=False):
     _print_header("asystem", "generate dependencies")
