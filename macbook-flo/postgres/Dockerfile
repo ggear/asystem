@@ -1,4 +1,4 @@
-FROM postgres:14.4-buster as image_base
+FROM postgres:14.4-bullseye as image_base
 
 FROM image_base as image_package
 RUN localedef -i en_AU -c -f UTF-8 -A /usr/share/locale/locale.alias en_AU.UTF-8
