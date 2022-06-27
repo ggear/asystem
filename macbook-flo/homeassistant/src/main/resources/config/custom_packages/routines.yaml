@@ -1,8 +1,8 @@
 ################################################################################
 input_boolean:
   ################################################################################
-  home_tv:
-    name: Tv
+  home_movie:
+    name: Movie
     initial: off
   ################################################################################
   home_sleep:
@@ -15,12 +15,12 @@ input_boolean:
   ################################################################################
 automation:
   ################################################################################
-  - id: routine_home_tv_on
-    alias: "Routine: Put home into TV mode"
+  - id: routine_home_movie_on
+    alias: "Routine: Put home into Movie mode"
     mode: single
     trigger:
       - platform: state
-        entity_id: input_boolean.home_tv
+        entity_id: input_boolean.home_movie
         from: 'off'
         to: 'on'
     condition: [ ]
@@ -38,12 +38,12 @@ automation:
         target:
           entity_id: switch.lounge_tv
   ################################################################################
-  - id: routine_home_tv_off
-    alias: "Routine: Put home out of TV mode"
+  - id: routine_home_movie_off
+    alias: "Routine: Put home out of Movie mode"
     mode: single
     trigger:
       - platform: state
-        entity_id: input_boolean.home_tv
+        entity_id: input_boolean.home_movie
         from: 'on'
         to: 'off'
     condition: [ ]
@@ -90,7 +90,7 @@ automation:
         data:
           entity_id: automation.lighting_reset_adaptive_lighting
       - service: input_boolean.turn_off
-        entity_id: input_boolean.home_tv
+        entity_id: input_boolean.home_movie
       - delay: '00:00:01'
       - service: input_boolean.turn_off
         entity_id: input_boolean.home_reset

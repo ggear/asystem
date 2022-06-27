@@ -219,15 +219,18 @@ sensor.roof_storm_rain:
   friendly_name: 'Storm'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'cm'
-input_boolean.home_tv:
-  friendly_name: 'TV'
+input_boolean.home_movie:
+  friendly_name: 'Movie Mode'
   icon: 'mdi:youtube-tv'
 input_boolean.home_sleep:
-  friendly_name: 'Sleep'
+  friendly_name: 'Home Sleep'
   icon: 'mdi:chat-sleep'
 input_boolean.home_reset:
-  friendly_name: 'Reset'
+  friendly_name: 'Reset Home'
   icon: 'mdi:refresh-circle'
+switch.roof_water_heater_booster:
+  friendly_name: 'Hot Water'
+  icon: 'mdi:water-boiler'
 fan.ada_fan:
   friendly_name: 'Ada'
   icon: 'mdi:fan'

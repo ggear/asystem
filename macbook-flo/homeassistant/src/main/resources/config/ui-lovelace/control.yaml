@@ -5,15 +5,18 @@
   title: Routines
   show_header_toggle: false
   entities:
-    - entity: input_boolean.home_tv
-      name: TV
+    - entity: input_boolean.home_movie
+      name: Movie Mode
       icon: mdi:youtube-tv
     - entity: input_boolean.home_sleep
-      name: Sleep
+      name: Home Sleep
       icon: mdi:chat-sleep
     - entity: input_boolean.home_reset
-      name: Reset
+      name: Reset Home
       icon: mdi:refresh-circle
+    - entity: switch.roof_water_heater_booster
+      name: Hot Water
+      icon: mdi:water-boiler
 ################################################################################
 - type: custom:layout-break
 ################################################################################

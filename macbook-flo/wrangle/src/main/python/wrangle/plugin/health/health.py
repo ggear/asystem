@@ -246,7 +246,7 @@ class Health(library.Library):
                                     file_df['Duration'] = \
                                         (file_df['Duration'].str.split(':', expand=True).astype(int) * (60, 1, 1 / 60)).sum(axis=1)
                                 file_df = pd.concat([
-                                    file_df.pivot(columns='Type', values='Start')
+                                    file_df.pivot(columns='Type', values='Start') \
                                         .add_prefix('Workout-').add_suffix(' Start (dt)'),
                                     file_df.pivot(columns='Type', values='End')
                                         .add_prefix('Workout-').add_suffix(' Finish (dt)'),

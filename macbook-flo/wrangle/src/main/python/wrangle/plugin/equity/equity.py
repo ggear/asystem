@@ -388,10 +388,8 @@ class Equity(library.Library):
                 del equity_df_manual["Date"]
                 equity_df_manual = equity_df_manual.apply(pd.to_numeric)
 
-
                 equity_df_manual = equity_df_manual.resample('D').interpolate(limit_direction='both', limit_area='inside') \
                     .replace('', np.nan).ffill()
-
 
                 equity_df.update(equity_df_manual)
                 equity_df = equity_df.sort_index(axis=1).interpolate(limit_direction='both', limit_area='inside') \
