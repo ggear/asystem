@@ -102,12 +102,11 @@ lovelace:
       require_admin: true
 #######################################################################################
 logger:
-  default: info
+  default: critical
   logs:
-    homeassistant.core: info
+    homeassistant.core: fatal
     homeassistant.loader: error
     custom_components.tplink: error
-
   #   custom_components.powercalc: info
   #   homeassistant.components.mqtt: info
   #   custom_components.adaptive_lighting: info
