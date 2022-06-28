@@ -102,14 +102,12 @@ lovelace:
       require_admin: true
 #######################################################################################
 logger:
-  default: warn # critical fatal error warning warn info debug
+  default: warn # critical fatal error warning warn info debug notset
   logs:
     homeassistant.core: warn
     homeassistant.loader: error
     homeassistant.components.websocket_api.http.connection: fatal
-
     custom_components.tplink: error
-
   #   custom_components.powercalc: info
   #   homeassistant.components.mqtt: info
   #   custom_components.adaptive_lighting: info
