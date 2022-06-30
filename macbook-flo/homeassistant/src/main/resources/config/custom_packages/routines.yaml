@@ -178,3 +178,113 @@ automation:
             - fan.lounge_fan
             - fan.deck_fan
   ################################################################################
+  - id: routine_water_heater_booster_on
+    alias: "Water Heating: Turn on water heater booster"
+    mode: single
+    trigger:
+      - platform: time
+        at: '04:30:00'
+      - platform: time
+        at: '05:30:00'
+      - platform: time
+        at: '15:30:00'
+    condition:
+      or:
+        - condition: template
+          value_template: '{{ now().month == 5 }}'
+        - condition: template
+          value_template: '{{ now().month == 6 }}'
+        - condition: template
+          value_template: '{{ now().month == 7 }}'
+        - condition: template
+          value_template: '{{ now().month == 8 }}'
+    action:
+      - service: switch.turn_on
+        entity_id: switch.roof_water_heater_booster
+  ################################################################################
+  - id: routine_water_heater_booster_off
+    alias: "Water Heating: Turn off water heater booster"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.roof_water_heater_booster
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+      - delay: '00:45:00'
+      - service: switch.turn_off
+        target:
+          entity_id: switch.roof_water_heater_booster
+  ################################################################################
+  - id: routine_water_heater_booster_off_failsafe
+    alias: "Water Heating: Turn off water heater booster fail-safe"
+    mode: single
+    trigger:
+      platform: time_pattern
+      minutes: '/15'
+    condition:
+      and:
+        - condition: time
+          after: '22:00:00'
+          before: '04:00:00'
+        - condition: state
+          entity_id: switch.roof_water_heater_booster
+          state: 'on'
+    action:
+      - service: switch.turn_off
+        entity_id: switch.roof_water_heater_booster
+  ################################################################################
+  - id: routine_bathroom_rails_on
+    alias: "Water Heating: Turn on towel rails"
+    mode: single
+    trigger:
+      - platform: time
+        at: '03:00:00'
+    condition:
+      or:
+        - condition: template
+          value_template: '{{ now().month == 5 }}'
+        - condition: template
+          value_template: '{{ now().month == 6 }}'
+        - condition: template
+          value_template: '{{ now().month == 7 }}'
+        - condition: template
+          value_template: '{{ now().month == 8 }}'
+    action:
+      - service: switch.turn_on
+        entity_id: switch.roof_bathroom_rails
+  ################################################################################
+  - id: routine_bathroom_rails_off
+    alias: "Water Heating: Turn off towel rails"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.roof_bathroom_rails
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+      - delay: '04:00:00'
+      - service: switch.turn_off
+        target:
+          entity_id: switch.roof_bathroom_rails
+  ################################################################################
+  - id: routine_bathroom_rails_off_failsafe
+    alias: "Water Heating: Turn off towel rails fail-safe"
+    mode: single
+    trigger:
+      platform: time_pattern
+      minutes: '/15'
+    condition:
+      and:
+        - condition: time
+          after: '22:00:00'
+          before: '02:00:00'
+        - condition: state
+          entity_id: switch.roof_bathroom_rails
+          state: 'on'
+    action:
+      - service: switch.turn_off
+        entity_id: switch.roof_bathroom_rails
+  ################################################################################

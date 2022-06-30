@@ -220,17 +220,20 @@ sensor.roof_storm_rain:
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'cm'
 input_boolean.home_movie:
-  friendly_name: 'Movie Mode'
+  friendly_name: 'Movie'
   icon: 'mdi:youtube-tv'
 input_boolean.home_sleep:
-  friendly_name: 'Home Sleep'
+  friendly_name: 'Sleep'
   icon: 'mdi:chat-sleep'
 input_boolean.home_reset:
-  friendly_name: 'Reset Home'
+  friendly_name: 'Reset'
   icon: 'mdi:refresh-circle'
+switch.bathroom_rails:
+  friendly_name: 'Towel Rails'
+  icon: 'mdi:radiator'
 switch.roof_water_heater_booster:
-  friendly_name: 'Hot Water'
-  icon: 'mdi:water-boiler'
+  friendly_name: 'Water Booster'
+  icon: 'mdi:thermometer-water'
 fan.ada_fan:
   friendly_name: 'Ada'
   icon: 'mdi:fan'
@@ -409,6 +412,10 @@ sensor.home_fans_power:
   friendly_name: 'Home Fans'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
+sensor.roof_water_heater_booster_energy_power:
+  friendly_name: 'Water Booster'
+  icon: 'mdi:home-lightning-bolt'
+  unit_of_measurement: 'W'
 sensor.kitchen_dish_washer_current_consumption:
   friendly_name: 'Dish Washer'
   icon: 'mdi:home-lightning-bolt'
@@ -442,7 +449,7 @@ sensor.lounge_tv_current_consumption:
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.bathroom_rails_current_consumption:
-  friendly_name: 'Bathroom Rails'
+  friendly_name: 'Towel Rails'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.study_outlet_current_consumption:
@@ -497,6 +504,10 @@ sensor.home_fans_energy_daily:
   friendly_name: 'Home Fans'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
+sensor.roof_water_heater_booster_energy_today:
+  friendly_name: 'Water Booster'
+  icon: 'mdi:battery-charging'
+  unit_of_measurement: 'kWh'
 sensor.kitchen_dish_washer_today_s_consumption:
   friendly_name: 'Dish Washer'
   icon: 'mdi:battery-charging'
@@ -530,7 +541,7 @@ sensor.lounge_tv_today_s_consumption:
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.bathroom_rails_today_s_consumption:
-  friendly_name: 'Bathroom Rails'
+  friendly_name: 'Towel Rails'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.study_outlet_today_s_consumption:
@@ -582,9 +593,6 @@ switch.kitchen_fridge:
 switch.deck_freezer:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:fridge-top'
-switch.bathroom_rails:
-  friendly_name: 'Bathroom Rails'
-  icon: 'mdi:radiator'
 switch.study_battery_charger:
   friendly_name: 'Battery Charger'
   icon: 'mdi:battery-charging-30'

@@ -12,6 +12,7 @@ fan:
 tplink:
   discovery: false
   switch:
+    - host: 10.0.6.81
     - host: 10.0.6.87
     - host: 10.0.6.79
     - host: 10.0.6.70
@@ -23,7 +24,6 @@ tplink:
     - host: 10.0.6.76
     - host: 10.0.6.77
     - host: 10.0.6.78
-    - host: 10.0.6.81
     - host: 10.0.6.71
     - host: 10.0.6.72
     - host: 10.0.6.80
@@ -41,6 +41,7 @@ automation:
     action:
       - service: homeassistant.turn_off
         entity_id:
+          - switch.bathroom_rails_led
           - switch.kitchen_fan_led
           - switch.deck_festoons_led
           - switch.various_adhoc_outlet_led
@@ -52,7 +53,6 @@ automation:
           - switch.kitchen_coffee_machine_led
           - switch.kitchen_fridge_led
           - switch.deck_freezer_led
-          - switch.bathroom_rails_led
           - switch.study_battery_charger_led
           - switch.laundry_vacuum_charger_led
           - switch.lounge_tv_led

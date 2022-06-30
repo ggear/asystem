@@ -6,17 +6,20 @@
   show_header_toggle: false
   entities:
     - entity: input_boolean.home_movie
-      name: Movie Mode
+      name: Movie
       icon: mdi:youtube-tv
     - entity: input_boolean.home_sleep
-      name: Home Sleep
+      name: Sleep
       icon: mdi:chat-sleep
     - entity: input_boolean.home_reset
-      name: Reset Home
+      name: Reset
       icon: mdi:refresh-circle
+    - entity: switch.bathroom_rails
+      name: Towel Rails
+      icon: mdi:radiator
     - entity: switch.roof_water_heater_booster
-      name: Hot Water
-      icon: mdi:water-boiler
+      name: Water Booster
+      icon: mdi:thermometer-water
 ################################################################################
 - type: custom:layout-break
 ################################################################################

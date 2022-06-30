@@ -34,9 +34,6 @@
     - entity: switch.deck_freezer
       name: Deck Freezer
       icon: mdi:fridge-top
-    - entity: switch.bathroom_rails
-      name: Bathroom Rails
-      icon: mdi:radiator
     - entity: switch.study_battery_charger
       name: Battery Charger
       icon: mdi:battery-charging-30

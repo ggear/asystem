@@ -52,6 +52,9 @@
     - entity: sensor.home_fans_power
       name: Home Fans
       icon: mdi:home-lightning-bolt
+    - entity: sensor.roof_water_heater_booster_energy_power
+      name: Water Booster
+      icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_dish_washer_current_consumption
       name: Dish Washer
       icon: mdi:home-lightning-bolt
@@ -77,7 +80,7 @@
       name: Lounge TV
       icon: mdi:home-lightning-bolt
     - entity: sensor.bathroom_rails_current_consumption
-      name: Bathroom Rails
+      name: Towel Rails
       icon: mdi:home-lightning-bolt
     - entity: sensor.study_outlet_current_consumption
       name: Study Outlet
@@ -142,6 +145,9 @@
     - entity: sensor.home_fans_energy_daily
       name: Home Fans
       icon: mdi:battery-charging
+    - entity: sensor.roof_water_heater_booster_energy_today
+      name: Water Booster
+      icon: mdi:battery-charging
     - entity: sensor.kitchen_dish_washer_today_s_consumption
       name: Dish Washer
       icon: mdi:battery-charging
@@ -167,7 +173,7 @@
       name: Lounge TV
       icon: mdi:battery-charging
     - entity: sensor.bathroom_rails_today_s_consumption
-      name: Bathroom Rails
+      name: Towel Rails
       icon: mdi:battery-charging
     - entity: sensor.study_outlet_today_s_consumption
       name: Study Outlet
