@@ -15,7 +15,7 @@ homeassistant:
 serial:
   port: /dev/ttyACM0
 devices:
-  0x9035eafffe404425:
+  '0x9035eafffe404425':
     friendly_name: 'air_purifier'
     retain: true
     qos: 1
