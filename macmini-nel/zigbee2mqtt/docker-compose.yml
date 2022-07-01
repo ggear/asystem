@@ -13,7 +13,7 @@ services:
     ports:
       - ${ZIGBEE2MQTT_PORT}:${ZIGBEE2MQTT_PORT}
     devices:
-      - /dev/ttyUSB0:/dev/ttyACM0
+      - /dev/ttyACM0:/dev/ttyACM0
     deploy:
       resources:
         limits:
