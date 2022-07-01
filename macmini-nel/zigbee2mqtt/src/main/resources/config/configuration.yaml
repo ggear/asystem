@@ -3,9 +3,8 @@ permit_join: true
 mqtt:
   base_topic: zigbee
   server: 'mqtt://10.0.4.146:1883'
-  # MQTT server authentication, uncomment if required:
-  # user: my_user
-  # password: my_password
-
+frontend:
+  port: 8087
+  url: 'http://macmini-nel:8087'
 serial:
   port: /dev/ttyACM0
