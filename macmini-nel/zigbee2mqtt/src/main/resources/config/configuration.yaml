@@ -8,8 +8,8 @@ frontend:
   port: $ZIGBEE2MQTT_PORT
   url: 'http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_PORT'
 homeassistant:
-  discovery_topic: 'haas/entity/sensor/zigbee'
-  status_topic: 'haas/entity/sensor/zigbee/status'
+  discovery_topic: 'haas/entity'
+  status_topic: 'haas/status'
   legacy_entity_attributes: true
   legacy_triggers: true
 serial:
