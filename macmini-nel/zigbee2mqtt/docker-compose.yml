@@ -7,7 +7,10 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
+      - ZIGBEE2MQTT_IP
       - ZIGBEE2MQTT_PORT
+      - VERNEMQ_IP
+      - VERNEMQ_PORT
     volumes:
       - ${SERVICE_DATA_DIR}:/app/data
       - /run/udev:/run/udev:ro
