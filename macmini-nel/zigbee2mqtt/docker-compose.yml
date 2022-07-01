@@ -1,0 +1,20 @@
+version: '3.7'
+services:
+  zigbee2mqtt:
+    container_name: zigbee2mqtt
+    image: koenkk/zigbee2mqtt:1.25.2
+    init: true
+    restart: ${SERVICE_RESTART}
+    environment:
+      - TZ=Australia/Perth
+    volumes:
+      - ${SERVICE_DATA_DIR}:/app/data
+      - /run/udev:/run/udev:ro
+    ports:
+      - ${ZIGBEE2MQTT_PORT}:${ZIGBEE2MQTT_PORT}
+    devices:
+      - /dev/ttyUSB0:/dev/ttyACM0
+    deploy:
+      resources:
+        limits:
+          memory: 5G
