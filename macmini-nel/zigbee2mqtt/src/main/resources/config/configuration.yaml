@@ -4,7 +4,7 @@ mqtt:
   base_topic: zigbee
   server: 'mqtt://10.0.4.146:1883'
 frontend:
-  port: 8087
+  port: $ZIGBEE2MQTT_PORT
   url: 'http://macmini-nel:8087'
 serial:
   port: /dev/ttyACM0
