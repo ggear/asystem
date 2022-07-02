@@ -4,4 +4,4 @@
   qos: 1
   debounce: 0.5
   homeassistant:
-    expire_after: 30
+    expire_after: 3600
