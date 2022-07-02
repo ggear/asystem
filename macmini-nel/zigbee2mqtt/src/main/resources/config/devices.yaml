@@ -1,0 +1,7 @@
+'0x9035eafffe404425':
+  friendly_name: 'lounge_air_purifier'
+  retain: true
+  qos: 1
+  debounce: 0.5
+  homeassistant:
+    expire_after: 30
