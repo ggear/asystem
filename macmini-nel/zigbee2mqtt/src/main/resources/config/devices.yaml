@@ -10,5 +10,6 @@
   retain: true
   qos: 1
   debounce: 0.5
+  legacy: true
   homeassistant:
     expire_after: 3600
