@@ -45,6 +45,13 @@
       name: Deck
       icon: mdi:fan
 ################################################################################
+- type: entities
+  title: Air Purifiers
+  entities:
+    - entity: fan.air_purifier
+      name: Lounge
+      icon: mdi:air-purifier
+################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: entities

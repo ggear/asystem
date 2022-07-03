@@ -5,3 +5,10 @@
   debounce: 0.5
   homeassistant:
     expire_after: 3600
+'0x00158d0005d9d088':
+  friendly_name: 'home_remote_cube'
+  retain: true
+  qos: 1
+  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
