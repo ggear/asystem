@@ -48,7 +48,7 @@
 - type: entities
   title: Air Purifiers
   entities:
-    - entity: fan.air_purifier
+    - entity: fan.lounge_air_purifier
       name: Lounge
       icon: mdi:air-purifier
 ################################################################################

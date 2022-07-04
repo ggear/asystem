@@ -192,6 +192,7 @@
 ################################################################################
 - type: custom:mini-graph-card
   name: Air Quality
+  icon: mdi:virus-outline
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 24
@@ -204,13 +205,14 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.air_purifier_pm25
+    - entity: sensor.lounge_air_purifier_pm25
       name: Lounge
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.air_purifier_pm25
+    - entity: sensor.lounge_air_purifier_pm25
       name: Lounge
+      icon: mdi:virus-outline
 ################################################################################
 - type: custom:layout-break
 ################################################################################

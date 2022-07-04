@@ -128,8 +128,9 @@ sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2:
 sensor.compensation_sensor_netatmo_laundry_co2:
   friendly_name: 'Laundry'
   icon: 'mdi:molecule-co2'
-sensor.air_purifier_pm25:
+sensor.lounge_air_purifier_pm25:
   friendly_name: 'Lounge'
+  icon: 'mdi:virus-outline'
 sensor.compensation_sensor_netatmo_ada_noise:
   friendly_name: 'Ada'
   icon: 'mdi:volume-high'
@@ -260,7 +261,7 @@ fan.deck_east_fan:
 fan.deck_west_fan:
   friendly_name: 'Deck West'
   icon: 'mdi:fan'
-fan.air_purifier:
+fan.lounge_air_purifier:
   friendly_name: 'Lounge'
   icon: 'mdi:air-purifier'
 light.ada_fan:
