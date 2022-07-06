@@ -4,9 +4,12 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
-  title: Soft Resets
+  title: Power Resets
   show_header_toggle: false
   entities:
+    - entity: switch.lounge_tv
+      name: Lounge TV
+      icon: mdi:television
     - entity: switch.various_adhoc_outlet
       name: Adhoc Outlet
       icon: mdi:power-plug-outline
@@ -40,14 +43,6 @@
     - entity: switch.laundry_vacuum_charger
       name: Vacuum Charger
       icon: mdi:battery-charging-30
-################################################################################
-- type: entities
-  title: Hard Resets
-  show_header_toggle: false
-  entities:
-    - entity: switch.lounge_tv
-      name: Lounge TV
-      icon: mdi:television
     - entity: switch.rack_outlet
       name: Server Rack
       icon: mdi:server
@@ -61,36 +56,31 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
-  title: Netatmo Battery
+  title: Battery
   entities:
     - entity: sensor.netatmo_bertram_2_office_pantry_battery_percent
-      name: Pantry
+      name: Netatmo Pantry
       icon: mdi:battery-30
     - entity: sensor.netatmo_bertram_2_office_lounge_battery_percent
-      name: Lounge
+      name: Netatmo Lounge
       icon: mdi:battery-30
     - entity: sensor.netatmo_bertram_2_office_dining_battery_percent
-      name: Dining
+      name: Netatmo Dining
       icon: mdi:battery-30
     - entity: sensor.netatmo_bertram_2_office_basement_battery_percent
-      name: Basement
+      name: Netatmo Basement
       icon: mdi:battery-30
-################################################################################
-- type: entities
-  title: Sonos Battery
-  entities:
     - entity: sensor.parents_speaker_battery
-      name: Parents
+      name: Sonos Parents
       icon: mdi:battery-30
     - entity: sensor.kitchen_home_battery
-      name: Kitchen
+      name: Sonos Kitchen
       icon: mdi:battery-30
-################################################################################
-- type: entities
-  title: Davis Battery
-  entities:
+    - entity: sensor.home_remote_cube_battery
+      name: Xiaomi Cube Remote
+      icon: mdi:battery-30
     - entity: sensor.weatherstation_console_battery_voltage
-      name: Console Voltage
+      name: Davis Console Voltage
       icon: mdi:battery-30
 ################################################################################
 - type: custom:layout-break
@@ -98,9 +88,6 @@
 - type: entities
   title: Davis Telemetry
   entities:
-    - entity: sensor.weatherstation_sample_period
-      name: Sample Period
-      icon: mdi:clipboard-clock-outline
     - entity: sensor.weatherstation_coms_signal_quality
       name: Coms Signal Quality
       icon: mdi:signal

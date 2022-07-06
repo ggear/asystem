@@ -95,6 +95,18 @@ automation:
       - service: input_boolean.turn_off
         entity_id: input_boolean.home_reset
   ################################################################################
+  - id: routine_home_reset_cube
+    alias: "Routine: Reset home to defaults via cube"
+    mode: single
+    trigger:
+      platform: state
+      entity_id: sensor.home_remote_cube_action
+      to: "shake"
+    condition: [ ]
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.home_reset
+  ################################################################################
   - id: routine_home_lights_off
     alias: "Routine: Turn night lights off"
     mode: single

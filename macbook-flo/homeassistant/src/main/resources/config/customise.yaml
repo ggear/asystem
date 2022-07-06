@@ -572,6 +572,9 @@ sensor.kitchen_fan_today_s_consumption:
   friendly_name: 'Kitchen Fan'
 sensor.withings_weight_kg_graham:
   friendly_name: 'Weight'
+switch.lounge_tv:
+  friendly_name: 'Lounge TV'
+  icon: 'mdi:television'
 switch.various_adhoc_outlet:
   friendly_name: 'Adhoc Outlet'
   icon: 'mdi:power-plug-outline'
@@ -605,9 +608,6 @@ switch.study_battery_charger:
 switch.laundry_vacuum_charger:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging-30'
-switch.lounge_tv:
-  friendly_name: 'Lounge TV'
-  icon: 'mdi:television'
 switch.rack_outlet:
   friendly_name: 'Server Rack'
   icon: 'mdi:server'
@@ -618,31 +618,30 @@ switch.rack_modem:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
 sensor.netatmo_bertram_2_office_pantry_battery_percent:
-  friendly_name: 'Pantry'
+  friendly_name: 'Netatmo Pantry'
   icon: 'mdi:battery-30'
 sensor.netatmo_bertram_2_office_lounge_battery_percent:
-  friendly_name: 'Lounge'
+  friendly_name: 'Netatmo Lounge'
   icon: 'mdi:battery-30'
 sensor.netatmo_bertram_2_office_dining_battery_percent:
-  friendly_name: 'Dining'
+  friendly_name: 'Netatmo Dining'
   icon: 'mdi:battery-30'
 sensor.netatmo_bertram_2_office_basement_battery_percent:
-  friendly_name: 'Basement'
+  friendly_name: 'Netatmo Basement'
   icon: 'mdi:battery-30'
 sensor.parents_speaker_battery:
-  friendly_name: 'Parents'
+  friendly_name: 'Sonos Parents'
   icon: 'mdi:battery-30'
 sensor.kitchen_home_battery:
-  friendly_name: 'Kitchen'
+  friendly_name: 'Sonos Kitchen'
+  icon: 'mdi:battery-30'
+sensor.home_remote_cube_battery:
+  friendly_name: 'Xiaomi Cube Remote'
   icon: 'mdi:battery-30'
 sensor.weatherstation_console_battery_voltage:
-  friendly_name: 'Console Voltage'
+  friendly_name: 'Davis Console Voltage'
   icon: 'mdi:battery-30'
   unit_of_measurement: 'V'
-sensor.weatherstation_sample_period:
-  friendly_name: 'Sample Period'
-  icon: 'mdi:clipboard-clock-outline'
-  unit_of_measurement: 'min'
 sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Coms Signal Quality'
   icon: 'mdi:signal'
