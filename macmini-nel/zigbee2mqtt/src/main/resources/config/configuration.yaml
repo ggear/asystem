@@ -10,8 +10,8 @@ frontend:
 homeassistant:
   discovery_topic: 'haas/entity'
   status_topic: 'haas/status'
-  legacy_entity_attributes: true
-  legacy_triggers: true
+  legacy_entity_attributes: false
+  legacy_triggers: false
 serial:
   port: /dev/ttyACM0
 devices: devices.yaml
