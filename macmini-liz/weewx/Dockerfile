@@ -1,3 +1,4 @@
+# https://github.com/weewx/weewx/releases
 FROM python:3.8.5-slim-buster as image_base
 
 ENV WEEWX_VERSION="4.6.2"

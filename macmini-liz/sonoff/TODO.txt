@@ -1,5 +1,0 @@
-# Implement Sonos local API
-
-# https://notenoughtech.com/sonoff/flashing-tasmota-on-sonoff-powr3/
-# https://github.com/tasmota/tasmotizer
-
