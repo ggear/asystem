@@ -1,11 +1,12 @@
-FROM grafana/grafana:9.0.0 as image_base
+# https://github.com/grafana/grafana/releases
+FROM grafana/grafana:9.0.2 as image_base
 
 FROM image_base as image_package
 USER root
 RUN apk add --no-cache \
   jq==1.6-r1 \
   git==2.34.2-r0 \
-  curl==7.80.0-r1 \
+  curl==7.80.0-r2 \
   make==4.3-r0 \
   musl-dev==1.2.2-r7 \
   gcc==10.3.1_git20211027-r0 \

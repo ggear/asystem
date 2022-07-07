@@ -1,3 +1,4 @@
+# https://github.com/influxdata/influxdb/releases
 FROM influxdb:2.3.0-alpine as image_base
 
 FROM image_base as image_package

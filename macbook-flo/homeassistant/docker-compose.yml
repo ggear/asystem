@@ -1,3 +1,4 @@
+# https://github.com/home-assistant/core/releases
 version: '3.7'
 x-common: &common
   image: homeassistant/home-assistant:2022.6.7
