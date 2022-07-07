@@ -32,30 +32,28 @@ if __name__ == "__main__":
     metadata_publish_df["unique_id"] = metadata_publish_df["unique_id"].str.replace("compensation_sensor_", "")
     metadata_publish_df["state_topic"] = metadata_publish_df["state_topic"].str.replace("compensation_sensor_", "")
     metadata_publish_df["discovery_topic"] = metadata_publish_df["discovery_topic"].str.replace("compensation_sensor_", "")
-    metadata_publish_dicts = [row.dropna().to_dict() for index, row in metadata_publish_df[[
-        "unique_id",
-        "name",
-        "state_class",
-        "unit_of_measurement",
-        "device_class",
-        "icon",
-        "force_update",
-        "state_topic",
-        "value_template",
-        "qos",
-    ]].iterrows()]
     metadata_device_columns = [column for column in metadata_publish_df.columns
                                if (column.startswith("device_") and column != "device_class")]
     metadata_device_columns_rename = {column: column.replace("device_", "") for column in metadata_device_columns}
-    metadata_device_pub_dicts = [row.dropna().to_dict() for index, row in
-                                 metadata_publish_df[metadata_device_columns]
-                                     .rename(columns=metadata_device_columns_rename).iterrows()]
-    metadata_publish_dir = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/entity_metadata"))
-    if os.path.exists(metadata_publish_dir):
-        shutil.rmtree(metadata_publish_dir)
-    os.makedirs(metadata_publish_dir)
-    for index, metadata_publish_dict in enumerate(metadata_publish_dicts):
-        metadata_publish_dict["device"] = metadata_device_pub_dicts[index]
+    for index, row in metadata_publish_df.iterrows():
+        metadata_publish_dict = row[[
+            "unique_id",
+            "name",
+            "state_class",
+            "unit_of_measurement",
+            "device_class",
+            "icon",
+            "force_update",
+            "state_topic",
+            "value_template",
+            "qos",
+        ]].dropna().to_dict()
+        metadata_publish_dict["device"] = \
+            row[metadata_device_columns].rename(metadata_device_columns_rename).dropna().to_dict()
+        metadata_publish_dir = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/entity_metadata", row['discovery_topic']))
+        if os.path.exists(metadata_publish_dir):
+            shutil.rmtree(metadata_publish_dir)
+        os.makedirs(metadata_publish_dir)
         metadata_publish_str = json.dumps(metadata_publish_dict, ensure_ascii=False)
         metadata_publish_path = os.path.abspath(os.path.join(metadata_publish_dir, metadata_publish_dict["unique_id"] + ".json"))
         with open(metadata_publish_path, 'a') as metadata_publish_file:

@@ -16,7 +16,7 @@ echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
 # TODO: Implement
-# /bootstrap/entity_metadata_publish.sh
+# /bootstrap/publish.sh
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"

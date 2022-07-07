@@ -1,3 +1,5 @@
 #!/bin/sh
 
-./src/main/resources/config/entity_metadata_publish.sh
+export $(xargs <.env)
+
+./src/main/resources/config/publish.sh
