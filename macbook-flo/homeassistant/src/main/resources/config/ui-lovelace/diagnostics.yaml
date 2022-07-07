@@ -70,14 +70,14 @@
     - entity: sensor.netatmo_bertram_2_office_basement_battery_percent
       name: Netatmo Basement
       icon: mdi:battery-30
+    - entity: sensor.home_remote_cube_battery
+      name: Xiaomi Cube Remote
+      icon: mdi:battery-30
     - entity: sensor.parents_speaker_battery
       name: Sonos Parents
       icon: mdi:battery-30
     - entity: sensor.kitchen_home_battery
       name: Sonos Kitchen
-      icon: mdi:battery-30
-    - entity: sensor.home_remote_cube_battery
-      name: Xiaomi Cube Remote
       icon: mdi:battery-30
     - entity: sensor.weatherstation_console_battery_voltage
       name: Davis Console Voltage
