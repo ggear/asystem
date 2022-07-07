@@ -1,3 +1,3 @@
 #!/bin/sh
 
-./src/build/resources/entity_metadata_publish.sh
+./src/main/resources/config/entity_metadata_publish.sh

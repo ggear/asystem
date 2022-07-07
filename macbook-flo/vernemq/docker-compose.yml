@@ -1,15 +1,17 @@
 # https://github.com/vernemq/vernemq/releases
-version: '3.7'
+x-common: &common
+  image: vernemq/vernemq:1.12.3-alpine
+  init: true
+  user: root
+  environment:
+    - TZ=Australia/Perth
+    - DOCKER_VERNEMQ_ACCEPT_EULA=yes
+    - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
 services:
   vernemq:
     container_name: vernemq
-    image: vernemq/vernemq:1.12.3-alpine
-    init: true
+    <<: *common
     restart: ${SERVICE_RESTART}
-    environment:
-      - TZ=Australia/Perth
-      - DOCKER_VERNEMQ_ACCEPT_EULA=yes
-      - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
 
     # TODO: Get permission denied?
     #    volumes:
@@ -21,3 +23,14 @@ services:
       resources:
         limits:
           memory: 5G
+  vernemq_bootstrap:
+    container_name: vernemq_bootstrap
+    <<: *common
+    restart: 'no'
+    volumes:
+      - ${SERVICE_DATA_DIR}:/bootstrap
+    entrypoint: /bin/bash
+    command:
+      - /bootstrap/bootstrap.sh
+    depends_on:
+      - vernemq

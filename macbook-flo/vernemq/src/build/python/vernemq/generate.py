@@ -50,7 +50,7 @@ if __name__ == "__main__":
     metadata_device_pub_dicts = [row.dropna().to_dict() for index, row in
                                  metadata_publish_df[metadata_device_columns]
                                      .rename(columns=metadata_device_columns_rename).iterrows()]
-    metadata_publish_dir = os.path.abspath(os.path.join(DIR_ROOT, "src/build/resources/entity_metadata"))
+    metadata_publish_dir = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/entity_metadata"))
     if os.path.exists(metadata_publish_dir):
         shutil.rmtree(metadata_publish_dir)
     os.makedirs(metadata_publish_dir)
