@@ -203,7 +203,7 @@ version = 4.1.1
 
     [[MQTT]]
         server_url = mqtt://$VERNEMQ_ACCESS_KEY:$VERNEMQ_SECRET_KEY@$VERNEMQ_IP:$VERNEMQ_PORT
-        topic = haas/entity/sensor/weewx
+        topic = weewx
         qos = 1
         retain = true
         unit_system = METRIC
