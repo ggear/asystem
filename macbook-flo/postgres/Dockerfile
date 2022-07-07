@@ -1,3 +1,4 @@
+# https://www.postgresql.org/docs/release
 FROM postgres:14.4-bullseye as image_base
 
 FROM image_base as image_package

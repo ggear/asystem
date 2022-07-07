@@ -1,3 +1,4 @@
+# https://github.com/greghesp/assistant-relay/releases
 FROM node:10.24 as image_base
 
 ENV ASSISTANTRELAY_VERSION="v3.2.0"
