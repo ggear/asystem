@@ -1,10 +1,11 @@
-# https://github.com/vernemq/vernemq/releases
 x-common: &common
-  image: vernemq/vernemq:1.12.3-alpine
+  image: vernemq:${SERVICE_VERSION_ABSOLUTE}
   init: true
   user: root
   environment:
     - TZ=Australia/Perth
+    - VERNEMQ_HOST
+    - VERNEMQ_PORT
     - DOCKER_VERNEMQ_ACCEPT_EULA=yes
     - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
 services:

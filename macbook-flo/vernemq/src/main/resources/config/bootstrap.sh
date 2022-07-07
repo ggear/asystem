@@ -4,9 +4,9 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-#while ! curl -sf ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
-#  echo "Waiting for service to come up ..." && sleep 1
-#done
+while ! mosquitto_sub -h ${VERNEMQ_HOST} -p ${VERNEMQ_PORT} -t '#' -E >>/dev/null 2>&1; do
+  echo "Waiting for service to come up ..." && sleep 1
+done
 
 set -e
 set -o pipefail
@@ -15,8 +15,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-# TODO: Implement
-# /bootstrap/publish.sh
+/bootstrap/publish.sh
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
