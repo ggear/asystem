@@ -15,6 +15,7 @@ echo "--------------------------------------------------------------------------
 # Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'
 # Create API Long-Lived Access Tokens and store in '.env_all_key'
 # Install integrations manually (no option to do so programmatically):
+#   - Tasmota (local push, no internet, devices are configured via their inbuilt webserver (see sonoff module) then are automatically discovered)
 #   - Philips Hue (local push, requires internet for firmware upgrades, requires Hue Bridge adoption button to be pressed)
 #   - SenseME (local push, no internet after initial firmware upgrade, requires each fan IP and Areas to be configured)
 #   - UniFi Protect (local push, no internet, requires Protect IP, user, password and Areas config - has not been yaml configured since at least Nov 2020)

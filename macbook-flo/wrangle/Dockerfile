@@ -1,4 +1,5 @@
-FROM telegraf:1.22.3 as image_base
+# https://github.com/influxdata/telegraf/releases
+FROM telegraf:1.23.1 as image_base
        
 FROM image_base as image_package
 ARG PYTHON_VERSION
