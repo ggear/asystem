@@ -45,7 +45,7 @@ if [ -f "docker-compose.yml" ]; then
     echo && echo "Container failed to start" && echo "" && exit 1
   else
     docker system prune --volumes -f -a 2>&1 >/dev/null
-    echo && echo "Container started ..." && echo "----------"
+    echo "Container started successfully ..." && echo "----------"
   fi
 fi
-[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh
+#[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh
