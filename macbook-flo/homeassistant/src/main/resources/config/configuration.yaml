@@ -85,8 +85,12 @@ google_assistant:
   report_state: true
   exposed_domains:
     - fan
-    - switch
-    - light
+  entity_config:
+    fan.lounge_air_purifier:
+      name: Air Purifier
+      aliases:
+        - Lounge Air Purifier
+      room: Lounge
 #######################################################################################
 panel_custom: !include ui-panel-custom.yaml
 #######################################################################################
