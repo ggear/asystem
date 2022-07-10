@@ -84,6 +84,7 @@ google_assistant:
   service_account: !include .google_service_account.json
   report_state: true
   exposed_domains:
+    - fan
     - switch
     - light
 #######################################################################################
