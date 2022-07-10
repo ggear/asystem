@@ -79,6 +79,14 @@ discovery:
   ignore:
     - homekit
 #######################################################################################
+google_assistant:
+  project_id: home-assistant-19744
+  service_account: !include .google_service_account.json
+  report_state: true
+  exposed_domains:
+    - switch
+    - light
+#######################################################################################
 panel_custom: !include ui-panel-custom.yaml
 #######################################################################################
 lovelace:
