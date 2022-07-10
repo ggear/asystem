@@ -19,7 +19,8 @@ if __name__ == "__main__":
         (metadata_df["device_name"].str.len() > 0)
         ]
     metadata_sonoff_dicts = [row.dropna().to_dict() for index, row in metadata_sonoff_df.iterrows()]
+    sonoff_device_backup_type = "dmp"
     for device_dict in metadata_sonoff_dicts:
         sonoff_device_path = os.path.join(DIR_ROOT, "src/build/resources", device_dict["device_name"])
-        os.system("decode-config.py -s {} --backup-type dmp --backup-file {}".format(device_dict["device_name"], sonoff_device_path))
-        print("Build generate script [sonoff] device config persisted to [{}.dmp]".format(sonoff_device_path))
+        os.system("decode-config.py -s {} --backup-type {} --backup-file {}".format(device_dict["device_name"], sonoff_device_backup_type, sonoff_device_path))
+        print("Build generate script [sonoff] device config persisted to [{}.{}]".format(sonoff_device_path, sonoff_device_backup_type))
