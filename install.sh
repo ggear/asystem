@@ -35,11 +35,12 @@ touch .env
 chmod 600 .env
 [ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh
 [ -f "docker-compose.yml" ] && docker-compose --compatibility --no-ansi up --force-recreate -d && sleep 2
-[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh
 if [ -f "docker-compose.yml" ]; then
   if [ $(docker ps | grep "${SERVICE_NAME}_bootstrap" | wc -l) -eq 1 ]; then
     docker logs "${SERVICE_NAME}_bootstrap" -f
   fi
+fi
+if [ -f "docker-compose.yml" ]; then
   echo "----------" && docker ps -f name="${SERVICE_NAME}" && echo "----------"
   sleep 5 && docker logs "${SERVICE_NAME}" && echo "----------"
   if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
@@ -48,3 +49,4 @@ if [ -f "docker-compose.yml" ]; then
     docker system prune --volumes -f -a 2>&1 >/dev/null
   fi
 fi
+[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh
