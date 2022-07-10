@@ -11,7 +11,7 @@ SERVICE_HOME_OLDEST=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! 
 SERVICE_INSTALL=/var/lib/asystem/install/*$(hostname)*/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
 cd ${SERVICE_INSTALL} || exit
-[ -f "./install_prep.sh" ] && chmod +x ./install_prep.sh && ./install_prep.sh
+[ -f "./install_prep.sh" ] && chmod +x ./install_prep.sh && ./install_prep.sh || true
 [ -f "${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz
 if [ -f "docker-compose.yml" ]; then
   docker stop "${SERVICE_NAME}" >/dev/null 2>&1
@@ -33,7 +33,7 @@ rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../la
 [ "$(ls -A config | wc -l)" -gt 0 ] && cp -rfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
 chmod 600 .env
-[ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh
+[ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
 if [ -f "docker-compose.yml" ]; then
   docker-compose --compatibility --no-ansi up --force-recreate -d
   if [ $(docker ps | grep "${SERVICE_NAME}_bootstrap" | wc -l) -eq 1 ]; then
@@ -48,4 +48,4 @@ if [ -f "docker-compose.yml" ]; then
     echo "Container started successfully ..." && echo "----------"
   fi
 fi
-#[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh
+[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh || true
