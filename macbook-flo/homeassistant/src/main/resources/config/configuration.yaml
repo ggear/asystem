@@ -83,14 +83,8 @@ google_assistant:
   project_id: home-assistant-19744
   service_account: !include .google_service_account.json
   report_state: true
-  exposed_domains:
-    - fan
-  entity_config:
-    fan.lounge_air_purifier:
-      name: Air Purifier
-      aliases:
-        - Lounge Air Purifier
-      room: Lounge
+  expose_by_default: false
+  entity_config: !include haas-entities.yaml
 #######################################################################################
 panel_custom: !include ui-panel-custom.yaml
 #######################################################################################

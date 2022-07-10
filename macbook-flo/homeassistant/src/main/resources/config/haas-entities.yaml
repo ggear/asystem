@@ -1,0 +1,8 @@
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+fan.lounge_air_purifier:
+  name: Air Purifier
+  aliases:
+    - Lounge Air Purifier
+  room: Lounge
