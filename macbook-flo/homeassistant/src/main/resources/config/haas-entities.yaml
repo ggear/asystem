@@ -3,19 +3,19 @@
 #######################################################################################
 input_boolean.home_movie:
   name: Home Movie
-  aliases: ['Movie']
+  aliases: ['Home Movie Mode', 'Movie', 'Movie Mode']
   room: Home
 input_boolean.home_sleep:
   name: Home Sleep
-  aliases: ['Sleep']
+  aliases: ['Home Sleep Mode', 'Sleep', 'Sleep Mode']
   room: Home
 input_boolean.home_wakeup:
   name: Home Wakeup
-  aliases: ['Wakeup']
+  aliases: ['Home Wakeup Mode', 'Wakeup', 'Wakeup Mode']
   room: Home
 input_boolean.home_reset:
   name: Home Reset
-  aliases: ['Reset']
+  aliases: ['Home Reset Mode', 'Reset', 'Reset Mode']
   room: Home
 switch.bathroom_rails:
   name: Bathroom Towel Rails
@@ -52,5 +52,17 @@ fan.deck_fan:
 fan.lounge_air_purifier:
   name: Lounge Air Purifier
   aliases: ['Air Purifier']
+  room: Lounge
+light.ada_fan:
+  name: Ada Main
+  aliases: ['Main']
+  room: Ada
+light.edwin_fan:
+  name: Edwin Main
+  aliases: ['Main']
+  room: Edwin
+light.lounge_fan:
+  name: Lounge Fan
+  aliases: ['Fan']
   room: Lounge
 #######################################################################################
