@@ -9,10 +9,6 @@ input_boolean:
     name: Sleep
     initial: off
   ################################################################################
-  home_wakeup:
-    name: Wakeup
-    initial: off
-  ################################################################################
   home_reset:
     name: Reset
     initial: off
@@ -65,7 +61,7 @@ automation:
   ################################################################################
   - id: routine_home_sleep
     alias: "Routine: Put home to sleep"
-    mode: single
+    mode: restart
     trigger:
       - platform: state
         entity_id: input_boolean.home_sleep
@@ -73,11 +69,31 @@ automation:
         to: 'on'
     condition: [ ]
     action:
-      - service: automation.trigger
+      - service: light.turn_off
+        target:
+          entity_id:
+            - light.parents_main
+      - service: media_player.volume_set
         data:
-          entity_id: automation.lighting_sleep_adaptive_lighting
-      - delay: '00:00:01'
-      - service: input_boolean.turn_off
+          entity_id: media_player.parents_home
+          volume_level: '0.45'
+      - service: media_player.turn_off
+        target:
+          entity_id:
+            - media_player.ada_home
+            - media_player.edwin_home
+      - service: script.play_ambient_sounds_parents
+  ################################################################################
+  - id: routine_home_sleep_cube
+    alias: "Routine: Put home to sleep via cube"
+    mode: restart
+    trigger:
+      platform: state
+      entity_id: sensor.home_remote_cube_action
+      to: "flip90"
+    condition: [ ]
+    action:
+      - service: input_boolean.turn_on
         entity_id: input_boolean.home_sleep
   ################################################################################
   - id: routine_home_wakeup
@@ -85,14 +101,38 @@ automation:
     mode: single
     trigger:
       - platform: state
-        entity_id: input_boolean.home_wakeup
-        from: 'off'
-        to: 'on'
+        entity_id: input_boolean.home_sleep
+        from: 'on'
+        to: 'off'
     condition: [ ]
     action:
-      - delay: '00:00:01'
+      - service: media_player.turn_off
+        target:
+          entity_id:
+            - media_player.parents_home
+      - service: media_player.volume_set
+        data:
+          entity_id: media_player.parents_home
+          volume_level: '0.3'
+      - service: light.turn_on
+        target:
+          entity_id:
+            - light.parents_main
+      - service: automation.trigger
+        data:
+          entity_id: automation.lighting_reset_adaptive_lighting
+  ################################################################################
+  - id: routine_home_wakeup_cube
+    alias: "Routine: Wake home up via cube"
+    mode: restart
+    trigger:
+      platform: state
+      entity_id: sensor.home_remote_cube_action
+      to: "shake"
+    condition: [ ]
+    action:
       - service: input_boolean.turn_off
-        entity_id: input_boolean.home_wakeup
+        entity_id: input_boolean.home_sleep
   ################################################################################
   - id: routine_home_reset
     alias: "Routine: Reset home to defaults"
@@ -111,18 +151,6 @@ automation:
         entity_id: input_boolean.home_movie
       - delay: '00:00:01'
       - service: input_boolean.turn_off
-        entity_id: input_boolean.home_reset
-  ################################################################################
-  - id: routine_home_reset_cube
-    alias: "Routine: Reset home to defaults via cube"
-    mode: single
-    trigger:
-      platform: state
-      entity_id: sensor.home_remote_cube_action
-      to: "shake"
-    condition: [ ]
-    action:
-      - service: input_boolean.turn_on
         entity_id: input_boolean.home_reset
   ################################################################################
   - id: routine_home_lights_off
@@ -317,4 +345,31 @@ automation:
     action:
       - service: switch.turn_off
         entity_id: switch.bathroom_rails
-  ################################################################################
+##################################################################################
+script:
+  play_ambient_sounds_parents:
+    mode: restart
+    sequence:
+      - repeat:
+          until:
+            - condition: template
+              value_template: >-
+                {{ state_attr('media_player.parents_home', 'media_title') != 'Ocean sounds' or not states('media_player.parents_home') != 'idle' }}
+          sequence:
+            - service: media_player.play_media
+              data:
+                media_content_type: music
+                extra:
+                  title: Ocean sounds
+                  thumb: 'http://www.gstatic.com/voice_delight/images/relaxation_sounds/icons/ocean.png'
+                media_content_id: 'https://storage.googleapis.com/relaxation-sounds/ocean_3600.mp3'
+              target:
+                entity_id: media_player.parents_home
+            - delay: '00:00:02'
+            - wait_for_trigger:
+                - platform: template
+                  value_template: >-
+                    {{ state_attr('media_player.parents_home', 'media_title') == 'Ocean sounds' and is_state('media_player.parents_home', 'idle') }}
+              continue_on_timeout: false
+              timeout: '01:01:01'
+##################################################################################

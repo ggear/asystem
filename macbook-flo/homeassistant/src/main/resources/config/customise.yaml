@@ -228,9 +228,6 @@ input_boolean.home_movie:
 input_boolean.home_sleep:
   friendly_name: 'Sleep'
   icon: 'mdi:chat-sleep'
-input_boolean.home_wakeup:
-  friendly_name: 'Wakeup'
-  icon: 'mdi:sun-clock'
 input_boolean.home_reset:
   friendly_name: 'Reset'
   icon: 'mdi:refresh-circle'

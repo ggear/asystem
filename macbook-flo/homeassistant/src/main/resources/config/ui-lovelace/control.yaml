@@ -11,9 +11,6 @@
     - entity: input_boolean.home_sleep
       name: Sleep
       icon: mdi:chat-sleep
-    - entity: input_boolean.home_wakeup
-      name: Wakeup
-      icon: mdi:sun-clock
     - entity: input_boolean.home_reset
       name: Reset
       icon: mdi:refresh-circle

@@ -9,10 +9,6 @@ input_boolean.home_sleep:
   name: Home Sleep
   aliases: ['Home Sleep Mode', 'Sleep', 'Sleep Mode']
   room: Home
-input_boolean.home_wakeup:
-  name: Home Wakeup
-  aliases: ['Home Wakeup Mode', 'Wakeup', 'Wakeup Mode']
-  room: Home
 input_boolean.home_reset:
   name: Home Reset
   aliases: ['Home Reset Mode', 'Reset', 'Reset Mode']
@@ -62,7 +58,7 @@ light.edwin_fan:
   aliases: ['Main']
   room: Edwin
 light.lounge_fan:
-  name: Lounge Fan
+  name: Home Fan
   aliases: ['Fan']
-  room: Lounge
+  room: Home
 #######################################################################################
