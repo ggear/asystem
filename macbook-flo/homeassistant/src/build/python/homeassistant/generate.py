@@ -73,7 +73,7 @@ if __name__ == "__main__":
                     print("Build generate script [homeassistant] entity metadata [{}.{}] not recently updated, [{:.1f}] hours"
                           .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"], hours_since_update),
                           file=sys.stderr if \
-                              "display_mode" in metadata_verify_dict and \
+                              "haas_display_mode" in metadata_verify_dict and \
                               metadata_verify_dict["entity_namespace"] == "sensor"
                           else sys.stdout)
                 else:
@@ -218,6 +218,45 @@ automation:
 #######################################################################################
             """.strip() + "\n")
 
+        # Build HAAS integration YAML
+        metadata_haas_df = metadata_df[
+            (metadata_df["index"] > 0) &
+            (metadata_df["entity_status"] == "Enabled") &
+            (metadata_df["entity_namespace"].str.len() > 0) &
+            (metadata_df["unique_id"].str.len() > 0) &
+            (metadata_df["entity_namespace"].str.len() > 0) &
+            (metadata_df["google_aliases"].str.len() > 0) &
+            (metadata_df["device_suggested_area"].str.len() > 0)
+            ]
+        metadata_haas_dicts = [row.dropna().to_dict() for index, row in metadata_haas_df.iterrows()]
+        metadata_haas_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/haas-entities.yaml"))
+        with open(metadata_haas_path, 'w') as metadata_haas_file:
+            metadata_haas_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+            """.strip() + "\n")
+            for metadata_haas_dict in metadata_haas_dicts:
+                metadata_haas_aliases = ["{} {}".format(metadata_haas_dict["device_suggested_area"], alias)
+                                         for alias in metadata_haas_dict["google_aliases"].split(',')]
+                metadata_haas_name = metadata_haas_aliases.pop(0)
+                metadata_haas_aliases.extend(metadata_haas_dict["google_aliases"].split(','))
+                metadata_haas_file.write("""
+{}.{}:
+  name: {}
+  aliases: {}
+  room: {}
+                    """.format(
+                    metadata_haas_dict["entity_namespace"],
+                    metadata_haas_dict["unique_id"],
+                    metadata_haas_name,
+                    metadata_haas_aliases,
+                    metadata_haas_dict["device_suggested_area"],
+                ).strip() + "\n")
+            metadata_haas_file.write("""
+#######################################################################################
+                """.strip() + "\n")
+
     # Build media YAML
     metadata_media_df = metadata_df[
         (metadata_df["index"] > 0) &
@@ -293,7 +332,7 @@ light:
                 metadata_lighting_group_dicts[0]["unique_id"]
             ).strip() + "\n")
             for metadata_lighting_group_dict in metadata_lighting_group_dicts:
-                if "display_mode" not in metadata_lighting_group_dict:
+                if "haas_display_mode" not in metadata_lighting_group_dict:
                     metadata_lighting_file.write("      " + """
       - {}.{}
                     """.format(
@@ -559,7 +598,7 @@ automation:
         (metadata_df["friendly_name"].str.len() > 0) &
         (metadata_df["entity_domain"].str.len() > 0) &
         (metadata_df["entity_group"].str.len() > 0) &
-        (metadata_df["display_mode"].str.len() > 0)
+        (metadata_df["haas_display_mode"].str.len() > 0)
         ]
     metadata_lovelace_dicts = [row.dropna().to_dict() for index, row in metadata_lovelace_df.iterrows()]
     metadata_lovelace_group_domain_dicts = OrderedDict()
@@ -581,7 +620,7 @@ automation:
             for domain in metadata_lovelace_group_domain_dicts[group]:
                 metadata_lovelace_graph_dicts = []
                 for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
-                    if metadata_lovelace_dict["display_mode"] == "Graph":
+                    if metadata_lovelace_dict["haas_display_mode"] == "Graph":
                         metadata_lovelace_graph_dicts.append(metadata_lovelace_dict)
                 if metadata_lovelace_graph_dicts:
                     metadata_lovelace_file.write("""
@@ -616,12 +655,12 @@ automation:
                 if metadata_lovelace_group_domain_dicts[group][domain]:
                     metadata_lovelace_first_display_mode = None
                     for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
-                        metadata_lovelace_current_display_mode = metadata_lovelace_dict["display_mode"].split("_")[0]
+                        metadata_lovelace_current_display_mode = metadata_lovelace_dict["haas_display_mode"].split("_")[0]
                         if metadata_lovelace_current_display_mode != metadata_lovelace_first_display_mode:
                             metadata_lovelace_first_display_mode = metadata_lovelace_current_display_mode
                             metadata_lovelace_first_dict = metadata_lovelace_dict
-                            metadata_lovelace_first_display_type = metadata_lovelace_first_dict["display_type"] \
-                                if "display_type" in metadata_lovelace_first_dict else "entities"
+                            metadata_lovelace_first_display_type = metadata_lovelace_first_dict["haas_display_type"] \
+                                if "haas_display_type" in metadata_lovelace_first_dict else "entities"
                             if metadata_lovelace_first_display_type == "entities":
                                 metadata_lovelace_file.write("""
 ################################################################################
@@ -633,7 +672,7 @@ automation:
                                     """.format(
                                         domain
                                     ).strip() + "\n")
-                                    if "NoToggle" in metadata_lovelace_first_dict["display_mode"]:
+                                    if "NoToggle" in metadata_lovelace_first_dict["haas_display_mode"]:
                                         metadata_lovelace_file.write("  " + """
   show_header_toggle: false
                                         """.format(
@@ -642,7 +681,7 @@ automation:
                                 metadata_lovelace_file.write("  " + """
   entities:
                                 """.strip() + "\n")
-                        if "display_type" not in metadata_lovelace_dict or metadata_lovelace_dict["display_type"] == "entities":
+                        if "haas_display_type" not in metadata_lovelace_dict or metadata_lovelace_dict["haas_display_type"] == "entities":
                             metadata_lovelace_file.write("    " + ("""
     - entity: {}.{}
       name: {}
@@ -657,7 +696,7 @@ automation:
                                 """.format(
                                     metadata_lovelace_dict["icon"],
                                 ).strip() + "\n")
-                        elif metadata_lovelace_dict["display_mode"] != "Break":
+                        elif metadata_lovelace_dict["haas_display_mode"] != "Break":
                             metadata_lovelace_file.write("""
 ################################################################################
 - type: {}

@@ -9,6 +9,10 @@ input_boolean:
     name: Sleep
     initial: off
   ################################################################################
+  home_wakeup:
+    name: Wakeup
+    initial: off
+  ################################################################################
   home_reset:
     name: Reset
     initial: off
@@ -75,6 +79,20 @@ automation:
       - delay: '00:00:01'
       - service: input_boolean.turn_off
         entity_id: input_boolean.home_sleep
+  ################################################################################
+  - id: routine_home_wakeup
+    alias: "Routine: Wake home up"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_wakeup
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+      - delay: '00:00:01'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.home_wakeup
   ################################################################################
   - id: routine_home_reset
     alias: "Routine: Reset home to defaults"

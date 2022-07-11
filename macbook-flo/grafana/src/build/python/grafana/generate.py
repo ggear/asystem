@@ -29,7 +29,7 @@ if __name__ == "__main__":
         (metadata_df["device_via_device"].str.len() > 0) &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["display_points"].str.len() > 0) &
+        (metadata_df["grafana_display_type"].str.len() > 0) &
         (metadata_df["entity_group"].str.len() > 0)
         ]
     metadata_dashboard_dicts = {}
@@ -88,7 +88,7 @@ if __name__ == "__main__":
             for domain in metadata_dashboard_dicts[group]:
                 for domain_index, _ in enumerate(metadata_dashboard_dicts[group][domain]):
                     if metadata_dashboard_dicts[group][domain][domain_index]:
-                        type = metadata_dashboard_dicts[group][domain][domain_index][0]["display_points"]
+                        type = metadata_dashboard_dicts[group][domain][domain_index][0]["grafana_display_type"]
                         filter = " or ".join([('r["entity_id"] == "' + _dict["unique_id"] + '"') \
                                               for _dict in metadata_dashboard_dicts[group][domain][domain_index]])
                         flux = """from(bucket: "home_private")

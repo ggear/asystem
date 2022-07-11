@@ -11,6 +11,9 @@
     - entity: input_boolean.home_sleep
       name: Sleep
       icon: mdi:chat-sleep
+    - entity: input_boolean.home_wakeup
+      name: Wakeup
+      icon: mdi:sun-clock
     - entity: input_boolean.home_reset
       name: Reset
       icon: mdi:refresh-circle
@@ -116,14 +119,5 @@
     - entity: switch.adaptive_lighting_bedroom
       name: Status
     - entity: switch.adaptive_lighting_sleep_mode_bedroom
-      name: Sleep
-################################################################################
-- type: entities
-  title: Night Light Adaptive Lighting
-  show_header_toggle: false
-  entities:
-    - entity: switch.adaptive_lighting_night_light
-      name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_night_light
       name: Sleep
 ################################################################################
