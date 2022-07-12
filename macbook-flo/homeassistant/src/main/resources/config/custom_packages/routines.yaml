@@ -156,8 +156,6 @@ automation:
       - service: automation.trigger
         data:
           entity_id: automation.lighting_reset_adaptive_lighting
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.home_movie
       - delay: '00:00:01'
       - service: input_boolean.turn_off
         entity_id: input_boolean.home_reset
