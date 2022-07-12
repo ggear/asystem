@@ -386,16 +386,16 @@ switch.adaptive_lighting_adapt_color_night_light:
   friendly_name: 'Colour'
 switch.adaptive_lighting_adapt_brightness_night_light:
   friendly_name: 'Brightness'
-sensor.home_peak_power:
-  friendly_name: 'Peak Load'
+sensor.home_power:
+  friendly_name: 'Home Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.home_base_power:
   friendly_name: 'Base Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.home_power:
-  friendly_name: 'Home Load'
+sensor.home_peak_power:
+  friendly_name: 'Peak Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.various_adhoc_outlet_current_consumption:
@@ -478,16 +478,16 @@ sensor.kitchen_fan_current_consumption:
   friendly_name: 'Kitchen Fan'
 sensor.roof_network_switch_current_consumption:
   friendly_name: 'Network Switch'
-sensor.home_peak_energy_daily:
-  friendly_name: 'Peak Load'
+sensor.home_energy_daily:
+  friendly_name: 'Home Load'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.home_base_energy_daily:
   friendly_name: 'Base Load'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.home_energy_daily:
-  friendly_name: 'Home Load'
+sensor.home_peak_energy_daily:
+  friendly_name: 'Peak Load'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.various_adhoc_outlet_today_s_consumption:
