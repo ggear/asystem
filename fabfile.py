@@ -520,12 +520,6 @@ def _process_target(context, module, is_release=False):
                                        .format(package_resource, package_resource, package_resource, package_resource),
                                        join(module, "target/package"))
 
-                    # TODO: I think this can be removed, was causing issues
-                    # runtime_resource = join(DIR_ROOT, module,
-                    #                         package_resource.replace("main/resources/config", "target/runtime-system"))
-                    # if isfile(runtime_resource):
-                    #     _run_local(context, "cp -rvf {}/{} {}".format(package_resource_source, package_resource, runtime_resource))
-
 
 def _up_module(context, module, up_this=True):
     if isfile(join(DIR_ROOT, module, "docker-compose.yml")):

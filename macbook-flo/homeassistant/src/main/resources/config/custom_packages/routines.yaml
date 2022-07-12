@@ -61,7 +61,7 @@ automation:
   ################################################################################
   - id: routine_home_sleep
     alias: "Routine: Put home to sleep"
-    mode: restart
+    mode: single
     trigger:
       - platform: state
         entity_id: input_boolean.home_sleep
@@ -75,14 +75,26 @@ automation:
             - light.parents_main
       - service: media_player.volume_set
         data:
-          entity_id: media_player.parents_home
-          volume_level: '0.45'
+          entity_id: media_player.parents_speaker
+          volume_level: '0.2'
       - service: media_player.turn_off
         target:
           entity_id:
             - media_player.ada_home
             - media_player.edwin_home
-      - service: script.play_ambient_sounds_parents
+      - service: media_player.play_media
+        data:
+          media_content_type: music
+          extra:
+            title: Ocean sounds
+            thumb: 'http://www.gstatic.com/voice_delight/images/relaxation_sounds/icons/ocean.png'
+          media_content_id: 'https://storage.googleapis.com/relaxation-sounds/ocean_3600.mp3'
+        target:
+          entity_id: media_player.parents_speaker
+      - service: media_player.repeat_set
+        data:
+          repeat: all
+        entity_id: media_player.parents_speaker
   ################################################################################
   - id: routine_home_sleep_cube
     alias: "Routine: Put home to sleep via cube"
@@ -106,14 +118,14 @@ automation:
         to: 'off'
     condition: [ ]
     action:
-      - service: media_player.turn_off
+      - service: media_player.media_stop
         target:
           entity_id:
-            - media_player.parents_home
+            - media_player.parents_speaker
       - service: media_player.volume_set
         data:
-          entity_id: media_player.parents_home
-          volume_level: '0.3'
+          entity_id: media_player.parents_speaker
+          volume_level: '0.2'
       - service: light.turn_on
         target:
           entity_id:
@@ -190,8 +202,6 @@ automation:
           entity_id:
             - media_player.ada_home
             - media_player.edwin_home
-            - media_player.parents_home
-            - media_player.parents_tv
             - media_player.lounge_home
   ################################################################################
   - id: routine_home_lights_on
@@ -345,31 +355,4 @@ automation:
     action:
       - service: switch.turn_off
         entity_id: switch.bathroom_rails
-##################################################################################
-script:
-  play_ambient_sounds_parents:
-    mode: restart
-    sequence:
-      - repeat:
-          until:
-            - condition: template
-              value_template: >-
-                {{ state_attr('media_player.parents_home', 'media_title') != 'Ocean sounds' or not states('media_player.parents_home') != 'idle' }}
-          sequence:
-            - service: media_player.play_media
-              data:
-                media_content_type: music
-                extra:
-                  title: Ocean sounds
-                  thumb: 'http://www.gstatic.com/voice_delight/images/relaxation_sounds/icons/ocean.png'
-                media_content_id: 'https://storage.googleapis.com/relaxation-sounds/ocean_3600.mp3'
-              target:
-                entity_id: media_player.parents_home
-            - delay: '00:00:02'
-            - wait_for_trigger:
-                - platform: template
-                  value_template: >-
-                    {{ state_attr('media_player.parents_home', 'media_title') == 'Ocean sounds' and is_state('media_player.parents_home', 'idle') }}
-              continue_on_timeout: false
-              timeout: '01:01:01'
 ##################################################################################
