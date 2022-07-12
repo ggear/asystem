@@ -16,6 +16,7 @@ services:
       - ${SERVICE_DATA_DIR}/.key.pem:/etc/nginx/.key.pem
       - ${SERVICE_DATA_DIR}/certificate.pem:/etc/nginx/certificate.pem
       - ${SERVICE_DATA_DIR}/html:/usr/share/nginx/html
+    network_mode: host
     deploy:
       resources:
         limits:
