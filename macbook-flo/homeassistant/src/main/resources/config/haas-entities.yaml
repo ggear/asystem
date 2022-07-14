@@ -3,12 +3,52 @@
 #######################################################################################
 sensor.roof_temperature:
   name: Roof Temperature
-  aliases: ['Temperature']
+  aliases: ['Roof Room Temperature', 'Temperature', 'Room Temperature']
   room: Roof
+sensor.netatmo_ada_temperature:
+  name: Adas Temperature
+  aliases: ['Adas Room Temperature', 'Temperature', 'Room Temperature']
+  room: Ada
+sensor.netatmo_edwin_temperature:
+  name: Edwins Temperature
+  aliases: ['Edwins Room Temperature', 'Temperature', 'Room Temperature']
+  room: Edwin
 sensor.netatmo_bertram_2_office_lounge_temperature:
   name: Lounge Temperature
-  aliases: ['Temperature']
+  aliases: ['Lounge Room Temperature', 'Temperature', 'Room Temperature']
   room: Lounge
+sensor.netatmo_parents_temperature:
+  name: Parents Temperature
+  aliases: ['Parents Room Temperature', 'Temperature', 'Room Temperature']
+  room: Parents
+sensor.netatmo_bertram_2_office_temperature:
+  name: Office Temperature
+  aliases: ['Office Room Temperature', 'Temperature', 'Room Temperature']
+  room: Office
+sensor.netatmo_bertram_2_kitchen_temperature:
+  name: Kitchen Temperature
+  aliases: ['Kitchen Room Temperature', 'Temperature', 'Room Temperature']
+  room: Kitchen
+sensor.netatmo_bertram_2_office_pantry_temperature:
+  name: Pantry Temperature
+  aliases: ['Pantry Room Temperature', 'Temperature', 'Room Temperature']
+  room: Pantry
+sensor.netatmo_bertram_2_office_dining_temperature:
+  name: Dining Temperature
+  aliases: ['Dining Room Temperature', 'Temperature', 'Room Temperature']
+  room: Dining
+sensor.netatmo_laundry_temperature:
+  name: Laundry Temperature
+  aliases: ['Laundry Room Temperature', 'Temperature', 'Room Temperature']
+  room: Laundry
+sensor.netatmo_bertram_2_office_basement_temperature:
+  name: Basement Temperature
+  aliases: ['Basement Room Temperature', 'Temperature', 'Room Temperature']
+  room: Basement
+sensor.rack_temperature:
+  name: Rack Temperature
+  aliases: ['Rack Room Temperature', 'Temperature', 'Room Temperature']
+  room: Rack
 input_boolean.home_movie:
   name: Home Movie
   aliases: ['Home Movie Mode', 'Movie', 'Movie Mode']
@@ -30,11 +70,11 @@ switch.roof_water_heater_booster:
   aliases: ['Water Booster']
   room: Roof
 fan.ada_fan:
-  name: Ada Fan
+  name: Adas Fan
   aliases: ['Fan']
   room: Ada
 fan.edwin_fan:
-  name: Edwin Fan
+  name: Edwins Fan
   aliases: ['Fan']
   room: Edwin
 fan.parents_fan:
@@ -58,11 +98,11 @@ fan.lounge_air_purifier:
   aliases: ['Air Purifier']
   room: Lounge
 light.ada_fan:
-  name: Ada Main
+  name: Adas Main
   aliases: ['Main']
   room: Ada
 light.edwin_fan:
-  name: Edwin Main
+  name: Edwins Main
   aliases: ['Main']
   room: Edwin
 light.lounge_fan:

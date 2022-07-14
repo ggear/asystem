@@ -237,10 +237,10 @@ automation:
 #######################################################################################
             """.strip() + "\n")
             for metadata_haas_dict in metadata_haas_dicts:
-                metadata_haas_aliases = ["{} {}".format(metadata_haas_dict["device_suggested_area"], alias)
+                metadata_haas_aliases = ["{}{}{}".format(metadata_haas_dict["device_suggested_area"], "" if alias.startswith("s ") else " ", alias)
                                          for alias in metadata_haas_dict["google_aliases"].split(',')]
                 metadata_haas_name = metadata_haas_aliases.pop(0)
-                metadata_haas_aliases.extend(metadata_haas_dict["google_aliases"].split(','))
+                metadata_haas_aliases.extend([alias.removeprefix("s ") for alias in metadata_haas_dict["google_aliases"].split(',')])
                 metadata_haas_file.write("""
 {}.{}:
   name: {}

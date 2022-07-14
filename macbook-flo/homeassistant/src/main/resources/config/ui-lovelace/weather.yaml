@@ -108,8 +108,6 @@
   slot_r4: uv_summary
   slot_r5: fire_summary
 
-- type: custom:layout-break
-
 - type: 'custom:bom-radar-card'
   map_style: 'light'
   frame_count: 10
