@@ -3,6 +3,7 @@
 ################################################################################
 # Settings
 ################################################################################
+# View -> Organize Alphabetically
 # Sharing -> Computer Name
 # Sharing -> Computer Name -> Edit
 # Sharing -> Remote Login
@@ -12,6 +13,8 @@
 # Security & Privacy -> Privacy -> Full Disk Access -> Terminal
 # General -> Close windows when closing app -> Off
 # Dock & Menu Bar -> Automatically hide and show the Dock
+# Dock & Menu Bar -> Show recent applications in Dock -> Off
+# Desktop & Screen Saver -> Screen Saver -> Hot Corners -> Turn off all
 # Displays -> More space
 # Displays -> Universal Control -> Allow cursor / Push Through / Automatically -> On
 # Displays -> Nightshift -> Sunset to Sunrise -> 75%
@@ -20,6 +23,7 @@
 # Keyboard -> Shortcuts -> Use keybaord navigation to moce focus -> On
 # Keyboard -> Shortcuts -> App Shortcuts -> Show Previous Tab
 # Keyboard -> Shortcuts -> App Shortcuts -> Show Next Tab
+# Extensions -> Share -> Reduce to minimal set
 # Sound -> Alert volume -> 0%
 # Sound -> Play user interface sounds effects -> Off
 # Sound -> Show sound in menu bar -> Always

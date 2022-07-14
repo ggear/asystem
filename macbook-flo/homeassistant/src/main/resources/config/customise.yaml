@@ -1,6 +1,10 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
+sensor.roof_temperature:
+  friendly_name: 'Roof'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
 sensor.compensation_sensor_roof_temperature:
   friendly_name: 'Roof'
   icon: 'mdi:thermometer'
@@ -10,6 +14,9 @@ sensor.compensation_sensor_netatmo_ada_temperature:
   icon: 'mdi:thermometer'
 sensor.compensation_sensor_netatmo_edwin_temperature:
   friendly_name: 'Edwin'
+  icon: 'mdi:thermometer'
+sensor.netatmo_bertram_2_office_lounge_temperature:
+  friendly_name: 'Lounge'
   icon: 'mdi:thermometer'
 sensor.compensation_sensor_netatmo_bertram_2_office_lounge_temperature:
   friendly_name: 'Lounge'

@@ -1,6 +1,14 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
+sensor.roof_temperature:
+  name: Roof Temperature
+  aliases: ['Temperature']
+  room: Roof
+sensor.netatmo_bertram_2_office_lounge_temperature:
+  name: Lounge Temperature
+  aliases: ['Temperature']
+  room: Lounge
 input_boolean.home_movie:
   name: Home Movie
   aliases: ['Home Movie Mode', 'Movie', 'Movie Mode']
