@@ -3,7 +3,7 @@
 ROOT_DIR="$(
   cd -- "$(dirname "$0")" >/dev/null 2>&1
   pwd -P
-)/entity_metadata"
+)/mqtt"
 
 find ${ROOT_DIR} -name "*.json" -print0 | while read -d $'\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${METADATA_FILE/${ROOT_DIR}\//}")
