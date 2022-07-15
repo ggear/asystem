@@ -1,12 +1,15 @@
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
 '0x9035eafffe404425':
-  friendly_name: 'lounge_air_purifier'
+  friendly_name: 'lounge-air-purifier'
   retain: true
   qos: 1
   debounce: 0.5
   homeassistant:
     expire_after: 3600
 '0x00158d0005d9d088':
-  friendly_name: 'home_remote_cube'
+  friendly_name: 'home-cube-remote'
   retain: true
   qos: 1
   debounce: 0.5

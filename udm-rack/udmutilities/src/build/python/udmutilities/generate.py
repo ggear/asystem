@@ -28,6 +28,7 @@ if __name__ == "__main__":
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_name"].str.len() > 0) &
+        (metadata_df["connection_vlan"].str.len() > 0) &
         (metadata_df["connection_mac"].str.len() > 0)
         ]
     dnsmasq_conf_root_path = os.path.join(DIR_ROOT, "src/main/resources/config/udm-dnsmasq")
