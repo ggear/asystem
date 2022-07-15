@@ -667,7 +667,7 @@ sensor.netatmo_bertram_2_office_dining_battery_percent:
 sensor.netatmo_bertram_2_office_basement_battery_percent:
   friendly_name: 'Netatmo Basement'
   icon: 'mdi:battery-30'
-sensor.home_remote_cube_battery:
+sensor.home_cube_remote_battery:
   friendly_name: 'Xiaomi Cube Remote'
   icon: 'mdi:battery-30'
 sensor.parents_speaker_battery:

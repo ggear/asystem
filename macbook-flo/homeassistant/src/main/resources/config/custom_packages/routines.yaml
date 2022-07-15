@@ -98,7 +98,7 @@ automation:
     mode: restart
     trigger:
       platform: state
-      entity_id: sensor.home_remote_cube_action
+      entity_id: sensor.home_cube_remote_action
       to: "flip90"
     condition: [ ]
     action:
@@ -136,7 +136,7 @@ automation:
     mode: restart
     trigger:
       platform: state
-      entity_id: sensor.home_remote_cube_action
+      entity_id: sensor.home_cube_remote_action
       to: "shake"
     condition: [ ]
     action:

@@ -8,6 +8,13 @@
   debounce: 0.5
   homeassistant:
     expire_after: 3600
+'0x00178801039f585a':
+  friendly_name: 'Parents Light Candle 1'
+  retain: true
+  qos: 1
+  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00158d0005d9d088':
   friendly_name: 'Home Cube Remote'
   retain: true
