@@ -9,7 +9,7 @@
   homeassistant:
     expire_after: 3600
 '0x00178801039f585a':
-  friendly_name: 'Parents Light Candle 1'
+  friendly_name: 'Parents Main Candle 1'
   retain: true
   qos: 1
   debounce: 0.5
