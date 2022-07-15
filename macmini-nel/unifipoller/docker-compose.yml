@@ -3,7 +3,7 @@ version: '3.7'
 services:
   unifipoller:
     container_name: unifipoller
-    image: golift/unifi-poller:2.1.3
+    image: golift/unifi-poller:2.0.1
     init: true
     restart: ${SERVICE_RESTART}
     environment:
