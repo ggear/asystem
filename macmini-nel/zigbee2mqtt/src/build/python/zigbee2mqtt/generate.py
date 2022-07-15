@@ -47,7 +47,7 @@ if __name__ == "__main__":
 {}
                 """.format(
                 metadata_zigbee2mqtt_dict["connection_mac"],
-                metadata_zigbee2mqtt_dict["device_name"],
+                metadata_zigbee2mqtt_dict["device_name"].replace("-", " ").title(),
                 metadata_zigbee2mqtt_dict["zigbee2mqtt_config"],
             ).strip() + "\n")
         print("Build generate script [zigbee2mqtt] entity metadata persisted to [{}]".format(metadata_zigbee2mqtt_devices_path))
