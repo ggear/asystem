@@ -66,32 +66,33 @@ if [ $(influx v1 dbrp list --org ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${I
   influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_HOST_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOST_PRIVATE} -t ${INFLUXDB_TOKEN}
 fi
 
-if [ $(influx auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep "Read public buckets" | wc -l) -eq 0 ]; then
-  influx auth create -o ${INFLUXDB_ORG} \
-    --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
-    --read-bucket ${BUCKET_ID_DATA_PUBLIC} \
-    -d "Read public buckets" -t ${INFLUXDB_TOKEN}
+if [ $(influx auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep "Read public buckets" | wc -l) -ne 0 ]; then
+  influx auth delete --id $(influx auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} --json | jq -r '.[1].id')
 fi
-if [ $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_USER_PUBLIC} | wc -l) -ne 1 ]; then
-  influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_PUBLIC} \
-    --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
-    --read-bucket ${BUCKET_ID_DATA_PUBLIC} \
-    --password ${INFLUXDB_TOKEN_PUBLIC_V1} -d "Read public buckets" -t ${INFLUXDB_TOKEN}
-fi
-if [ $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLUXDB_USER_PRIVATE} | wc -l) -ne 1 ]; then
-  influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_PRIVATE} \
-    --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
-    --read-bucket ${BUCKET_ID_HOME_PRIVATE} \
-    --read-bucket ${BUCKET_ID_DATA_PUBLIC} \
-    --read-bucket ${BUCKET_ID_DATA_PRIVATE} \
-    --read-bucket ${BUCKET_ID_HOST_PRIVATE} \
-    --write-bucket ${BUCKET_ID_HOME_PUBLIC} \
-    --write-bucket ${BUCKET_ID_HOME_PRIVATE} \
-    --write-bucket ${BUCKET_ID_DATA_PUBLIC} \
-    --write-bucket ${BUCKET_ID_DATA_PRIVATE} \
-    --write-bucket ${BUCKET_ID_HOST_PRIVATE} \
-    --password ${INFLUXDB_TOKEN} -d "Read/Write all buckets" -t ${INFLUXDB_TOKEN}
-fi
+influx auth create -o ${INFLUXDB_ORG} \
+  --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
+  --read-bucket ${BUCKET_ID_DATA_PUBLIC} \
+  -d "Read public buckets" -t ${INFLUXDB_TOKEN}
+
+influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep -v "^ID" | while read LINE; do
+  influx v1 auth delete --id $(influx v1 auth list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id')
+done
+influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_PUBLIC} \
+  --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
+  --read-bucket ${BUCKET_ID_DATA_PUBLIC} \
+  --password ${INFLUXDB_TOKEN_PUBLIC_V1} -d "Read public buckets" -t ${INFLUXDB_TOKEN}
+influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_PRIVATE} \
+  --read-bucket ${BUCKET_ID_HOME_PUBLIC} \
+  --read-bucket ${BUCKET_ID_HOME_PRIVATE} \
+  --read-bucket ${BUCKET_ID_DATA_PUBLIC} \
+  --read-bucket ${BUCKET_ID_DATA_PRIVATE} \
+  --read-bucket ${BUCKET_ID_HOST_PRIVATE} \
+  --write-bucket ${BUCKET_ID_HOME_PUBLIC} \
+  --write-bucket ${BUCKET_ID_HOME_PRIVATE} \
+  --write-bucket ${BUCKET_ID_DATA_PUBLIC} \
+  --write-bucket ${BUCKET_ID_DATA_PRIVATE} \
+  --write-bucket ${BUCKET_ID_HOST_PRIVATE} \
+  --password ${INFLUXDB_TOKEN} -d "Read/Write all buckets" -t ${INFLUXDB_TOKEN}
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
