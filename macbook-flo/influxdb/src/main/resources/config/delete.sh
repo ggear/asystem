@@ -1,7 +1,7 @@
 #!/bin/sh
 
-for MEASUREMENT in media_player; do
-    influx delete --org ${INFLUXDB_ORG} --bucket ${INFLUXDB_BUCKET_HOME_PRIVATE} --predicate '_measurement="'${MEASUREMENT}'"' --start '1970-01-01T00:00:00Z' --stop $(date +"%Y-%m-%dT%H:%M:%SZ") -t ${INFLUXDB_TOKEN}
+for MEASUREMENT in disk; do
+    influx delete --org ${INFLUXDB_ORG} --bucket ${INFLUXDB_BUCKET_HOST_PRIVATE} --predicate '_measurement="'${MEASUREMENT}'"' --start '1970-01-01T00:00:00Z' --stop $(date +"%Y-%m-%dT%H:%M:%SZ") -t ${INFLUXDB_TOKEN}
 done
 
 for MEASUREMENT in currency interest weather; do
