@@ -28,6 +28,7 @@ def setup(context):
 
 @task(aliases=["prg", "f"] + ["purge"[0:i] for i in range(3, len("purge"))])
 def purge(context):
+    _clean(context)
     _backup(context)
     _purge(context)
 
@@ -40,6 +41,7 @@ def backup(context):
 
 @task(aliases=["pll", "u"] + ["pull"[0:i] for i in range(3, len("pull"))])
 def pull(context):
+    _clean(context)
     _backup(context)
     _pull(context)
 

@@ -70,6 +70,11 @@ rm -rf src/main/resources/config/custom_components/senseme
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../.deps/homeassistant/senseme-component/custom_components/senseme src/main/resources/config/custom_components
 
+pull_repo $(pwd) homeassistant dyson-component shenxn/ha-dyson v0.16.4 ${1}
+rm -rf src/main/resources/config/custom_components/dyson
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../.deps/homeassistant/dyson-component/custom_components/dyson_local src/main/resources/config/custom_components/dyson-component
+
 pull_repo $(pwd) homeassistant influxdb-component ggear/homeassistant-core ggear-influxdb ${1}
 rm -rf src/main/resources/config/custom_components/influxdb
 mkdir -p src/main/resources/config/custom_components &&
@@ -79,8 +84,3 @@ pull_repo $(pwd) homeassistant tplink-component ggear/homeassistant-core ggear-t
 rm -rf src/main/resources/config/custom_components/tplink
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../.deps/homeassistant/tplink-component/homeassistant/components/tplink src/main/resources/config/custom_components
-
-pull_repo $(pwd) homeassistant homekit-component ggear/homeassistant-core ggear-homekit ${1}
-rm -rf src/main/resources/config/custom_components/homekit
-mkdir -p src/main/resources/config/custom_components &&
-  cp -rvf ../../.deps/homeassistant/homekit-component/homeassistant/components/homekit src/main/resources/config/custom_components
