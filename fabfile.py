@@ -307,7 +307,7 @@ def _release(context):
                 if isfile(join(DIR_ROOT, module, "Dockerfile")):
                     file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
                     print("docker -> target/release/{}".format(file_image))
-                    _run_local(context, "docker image save {}:{} | gzip > {}"
+                    _run_local(context, "docker image save {}:{} | gzip -9 > {}"
                                .format(_name(module), _get_versions()[0], file_image), join(module, "target/release"))
                 if glob.glob(join(DIR_ROOT, module, "target/package/main/resources/*")):
                     _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
