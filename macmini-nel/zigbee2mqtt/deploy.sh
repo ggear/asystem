@@ -5,6 +5,8 @@ ROOT_DIR="$(
   pwd -P
 )"
 
+export $(xargs <${ROOT_DIR}/.env)
+
 HOST=$(basename $(dirname ${ROOT_DIR}))
 INSTALL=$(ssh root@${HOST} "find /var/lib/asystem/install/${HOST}/$(basename ${ROOT_DIR}) -maxdepth 1 -mindepth 1 ! -name latest ! -name latest 2>/dev/null | sort | tail -n 1")
 
