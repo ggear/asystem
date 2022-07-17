@@ -9,5 +9,7 @@ export $(xargs <${ROOT_DIR}/.env)
 
 HOST=$(basename $(dirname ${ROOT_DIR}))
 INSTALL=$(ssh root@${HOST} "find /var/lib/asystem/install/${HOST}/$(basename ${ROOT_DIR}) -maxdepth 1 -mindepth 1 ! -name latest ! -name latest 2>/dev/null | sort | tail -n 1")
+export VERNEMQ_HOST=${VERNEMQ_HOST_PROD}
 
+${ROOT_DIR}/src/main/resources/config/mqtt.sh
 ssh root@${HOST} "cd ${INSTALL} && docker-compose --compatibility restart"

@@ -6,7 +6,8 @@ ROOT_DIR="$(
 )/mqtt"
 
 echo "Entity Metadata publish script dropping topics:"
-mosquitto_sub -h ${VERNEMQ_IP_PROD} -p ${VERNEMQ_PORT} --remove-retained -F '%t' -t 'haas/entity/sensor/weewx/#' -W 1 2>/dev/null
+mosquitto_sub -h ${VERNEMQ_HOST} -p ${VERNEMQ_PORT} --remove-retained -F '%t' -t 'weewx/#' -W 1 2>/dev/null
+mosquitto_sub -h ${VERNEMQ_HOST} -p ${VERNEMQ_PORT} --remove-retained -F '%t' -t 'haas/entity/sensor/weewx/#' -W 1 2>/dev/null
 echo "Entity Metadata publish script dropping topics complete"
 
 echo "Entity Metadata publish script sleeping before publishing ... " && sleep 1
