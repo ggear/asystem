@@ -7,7 +7,9 @@ ROOT_DIR="$(
 
 export $(xargs <${ROOT_DIR}/.env)
 
-mosquitto_sub -h ${VERNEMQ_IP_PROD} -p ${VERNEMQ_PORT} --remove-retained -t '#' -W 1 2>/dev/null
+echo "Entity Metadata publish script dropping topics:"
+mosquitto_sub -h ${VERNEMQ_IP_PROD} -p ${VERNEMQ_PORT} --remove-retained -F '%t' -t '#' -W 1 2>/dev/null
+echo "Entity Metadata publish script dropping topics complete"
 
 ${ROOT_DIR}/../../macmini-liz/weewx/deploy.sh
 ${ROOT_DIR}/../../macmini-nel/zigbee2mqtt/deploy.sh

@@ -1,9 +1,8 @@
-# https://github.com/Koenkk/zigbee2mqtt/releases
 version: '3.7'
 services:
   zigbee2mqtt:
     container_name: zigbee2mqtt
-    image: koenkk/zigbee2mqtt:1.26.0
+    image: zigbee2mqtt:${SERVICE_VERSION_ABSOLUTE}
     init: true
     restart: ${SERVICE_RESTART}
     environment:
