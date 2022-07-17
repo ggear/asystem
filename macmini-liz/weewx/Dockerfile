@@ -19,7 +19,7 @@ RUN apt-get update && apt-get -y --no-install-recommends install \
   apache2=2.4.38-3+deb10u7 \
   default-mysql-client=1.0.5 \
   apache2-utils=2.4.38-3+deb10u7 \
-  mosquitto-clients==1.5.7-1+deb10u1 \
+  mosquitto-clients=1.5.7-1+deb10u1 \
   && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 WORKDIR /tmp
 RUN wget https://downloads.python.org/pypy/pypy3.8-v7.3.7-linux64.tar.bz2
