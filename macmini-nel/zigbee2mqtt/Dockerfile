@@ -4,7 +4,7 @@ FROM koenkk/zigbee2mqtt:1.26.0 as image_base
 FROM image_base as image_package
 USER root
 RUN apk add --no-cache \
-  mosquitto-clients
+  mosquitto-clients==2.0.14-r0
 
 FROM image_package as image_install
 
