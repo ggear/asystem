@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 echo "Entity Metadata publish script dropping topics:"
 mosquitto_sub -h ${VERNEMQ_HOST} -p ${VERNEMQ_PORT} --remove-retained -F '%t' -t 'zigbee/#' -W 1 2>/dev/null

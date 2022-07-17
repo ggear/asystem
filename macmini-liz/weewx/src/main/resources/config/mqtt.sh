@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 ROOT_DIR="$(
   cd -- "$(dirname "$0")" >/dev/null 2>&1
