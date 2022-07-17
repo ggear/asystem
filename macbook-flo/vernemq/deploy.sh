@@ -5,9 +5,9 @@ ROOT_DIR="$(
   pwd -P
 )"
 
-HOST=$(basename $(dirname ${ROOT_DIR}))
-INSTALL=$(ssh root@${HOST} "find /var/lib/asystem/install/${HOST}/$(basename ${ROOT_DIR}) -maxdepth 1 -mindepth 1 ! -name latest ! -name latest 2>/dev/null | sort | tail -n 1")
+export $(xargs <${ROOT_DIR}/.env)
 
-ssh root@${HOST} "cd ${INSTALL} && docker-compose --compatibility restart"
-#./../../macmini-liz/weewx/deploy.sh
-#./../../macmini-nel/zigbee2mqtt/deploy.sh
+mosquitto_sub -h ${VERNEMQ_IP_PROD} -p ${VERNEMQ_PORT} --remove-retained -t '#' -W 1 2>/dev/null
+
+${ROOT_DIR}/../../macmini-liz/weewx/deploy.sh
+${ROOT_DIR}/../../macmini-nel/zigbee2mqtt/deploy.sh
