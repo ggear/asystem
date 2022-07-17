@@ -10,5 +10,7 @@ FROM image_package as image_install
 
 FROM image_install as image_runtime
 
-ENTRYPOINT ["docker-entrypoint.sh"]
-CMD [ "/sbin/tini", "--", "node", "index.js"]
+#ENTRYPOINT ["docker-entrypoint.sh"]
+#CMD [ "/sbin/tini", "--", "node", "index.js"]
+
+CMD [ "sleep", "1000" ]
