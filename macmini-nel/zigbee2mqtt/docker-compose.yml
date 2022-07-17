@@ -9,7 +9,7 @@ services:
       - TZ=Australia/Perth
       - ZIGBEE2MQTT_IP
       - ZIGBEE2MQTT_PORT
-      - VERNEMQ_IP
+      - VERNEMQ_HOST
       - VERNEMQ_PORT
     volumes:
       - ${SERVICE_DATA_DIR}:/app/data
