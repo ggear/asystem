@@ -1,5 +1,6 @@
 # https://github.com/Koenkk/zigbee2mqtt/releases
-FsROM koenkk/zigbee2mqtt:1.26.0 as image_base
+#FROM koenkk/zigbee2mqtt:1.26.0 as image_base
+FROM python:3.8.5-slim-buster as image_base
 
 #FROM image_base as image_package
 #USER root
