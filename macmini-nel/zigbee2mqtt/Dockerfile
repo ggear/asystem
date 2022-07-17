@@ -1,5 +1,5 @@
 # https://github.com/Koenkk/zigbee2mqtt/releases
-FROM koenkk/zigbee2mqtt:1.26.0 as image_base
+FsROM koenkk/zigbee2mqtt:1.26.0 as image_base
 
 #FROM image_base as image_package
 #USER root
