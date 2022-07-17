@@ -1,10 +1,5 @@
 #!/bin/bash
 
-ROOT_DIR="$(
-  cd -- "$(dirname "$0")" >/dev/null 2>&1
-  pwd -P
-)/mqtt"
-
 echo "Entity Metadata publish script dropping topics:"
 mosquitto_sub -h ${VERNEMQ_HOST} -p ${VERNEMQ_PORT} --remove-retained -F '%t' -t 'zigbee/#' -W 1 2>/dev/null
 mosquitto_sub -h ${VERNEMQ_HOST} -p ${VERNEMQ_PORT} -F '%t' -t 'haas/entity/#' -W 1 2> /dev/null | while read METADATA_TOPIC; do
