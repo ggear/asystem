@@ -1,3 +1,6 @@
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
 '1':
   friendly_name: 'Parents Main'
   retain: true
