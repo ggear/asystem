@@ -50,11 +50,6 @@ light:
       - light.hue_color_candle_14
   #####################################################################################
   - platform: group
-    name: Parents Main
-    unique_id: parents_main
-    entities:
-  #####################################################################################
-  - platform: group
     name: Kitchen Main
     unique_id: kitchen_main
     entities:
