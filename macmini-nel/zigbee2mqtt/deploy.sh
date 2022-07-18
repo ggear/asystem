@@ -12,4 +12,5 @@ INSTALL=$(ssh root@${HOST} "find /var/lib/asystem/install/${HOST}/$(basename ${R
 export VERNEMQ_HOST=${VERNEMQ_HOST_PROD}
 
 ${ROOT_DIR}/src/main/resources/config/mqtt.sh
+
 ssh root@${HOST} "cd ${INSTALL} && docker-compose --compatibility restart"

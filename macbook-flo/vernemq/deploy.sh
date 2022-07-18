@@ -7,7 +7,7 @@ ROOT_DIR="$(
 
 export $(xargs <${ROOT_DIR}/.env)
 
-echo "Entity Metadata publish script dropping topics:"
+echo "Entity Metadata publish script dropping topics ..."
 mosquitto_sub -h ${VERNEMQ_IP_PROD} -p ${VERNEMQ_PORT} --remove-retained -F '%t' -t '#' -W 1 2>/dev/null
 echo "Entity Metadata publish script dropping topics complete"
 
