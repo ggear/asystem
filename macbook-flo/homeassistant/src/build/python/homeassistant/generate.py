@@ -237,7 +237,8 @@ automation:
 #######################################################################################
             """.strip() + "\n")
             for metadata_haas_dict in metadata_haas_dicts:
-                metadata_haas_aliases = ["{}{}{}".format(metadata_haas_dict["device_suggested_area"], "" if alias.startswith("s ") else " ", alias)
+                metadata_haas_aliases = ["{}{}{}".format(metadata_haas_dict["device_suggested_area"],
+                                                         "" if alias.startswith("s ") else " ", alias)
                                          for alias in metadata_haas_dict["google_aliases"].split(',')]
                 metadata_haas_name = metadata_haas_aliases.pop(0)
                 metadata_haas_aliases.extend([alias.removeprefix("s ") for alias in metadata_haas_dict["google_aliases"].split(',')])
@@ -293,7 +294,7 @@ automation:
     metadata_lighting_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "Hue") &
+        ((metadata_df["device_via_device"] == "Hue") | (metadata_df["device_via_device"] == "Phillips")) &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["friendly_name"].str.len() > 0) &

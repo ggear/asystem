@@ -98,15 +98,19 @@ fan.lounge_air_purifier:
   aliases: ['Air Purifier']
   room: Lounge
 light.ada_fan:
-  name: Adas Main
-  aliases: ['Main']
+  name: Adas Main Light
+  aliases: ['Adas Main', 'Main Light', 'Main']
   room: Ada
 light.edwin_fan:
-  name: Edwins Main
-  aliases: ['Main']
+  name: Edwins Main Light
+  aliases: ['Edwins Main', 'Main Light', 'Main']
   room: Edwin
 light.lounge_fan:
-  name: Home Fan
-  aliases: ['Fan']
+  name: Home Fan Light
+  aliases: ['Home Fan', 'Fan Light', 'Fan']
   room: Home
+light.parents_main:
+  name: Parents Main Light
+  aliases: ['Parents Main', 'Main Light', 'Main']
+  room: Parents
 #######################################################################################

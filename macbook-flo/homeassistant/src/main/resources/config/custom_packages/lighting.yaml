@@ -53,8 +53,6 @@ light:
     name: Parents Main
     unique_id: parents_main
     entities:
-      - light.hue_color_candle_16
-      - light.hue_color_candle_17
   #####################################################################################
   - platform: group
     name: Kitchen Main

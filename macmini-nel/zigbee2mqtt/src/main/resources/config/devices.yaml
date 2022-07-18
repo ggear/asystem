@@ -9,7 +9,17 @@
   homeassistant:
     expire_after: 3600
 '0x00178801039f585a':
-  friendly_name: 'Parents Main Bulb 1'
+  friendly_name: 'Parents Main 1'
+  retain: true
+  qos: 1
+  debounce: 0.5
+'0x00178801039f69d1':
+  friendly_name: 'Parents Main 2'
+  retain: true
+  qos: 1
+  debounce: 0.5
+'0x001788010432a064':
+  friendly_name: 'Parents Main 3'
   retain: true
   qos: 1
   debounce: 0.5

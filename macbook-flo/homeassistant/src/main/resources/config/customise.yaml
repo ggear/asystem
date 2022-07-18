@@ -357,10 +357,7 @@ light.lounge_fan:
   icon: 'mdi:lightbulb-group'
 light.parents_main:
   friendly_name: 'Parents Main'
-light.hue_color_candle_16:
-  friendly_name: 'Parents Main'
-light.hue_color_candle_17:
-  friendly_name: 'Parents Main'
+  icon: 'mdi:lightbulb-group'
 light.kitchen_main:
   friendly_name: 'Kitchen Main'
 light.hue_ambiance_lamp_1:
