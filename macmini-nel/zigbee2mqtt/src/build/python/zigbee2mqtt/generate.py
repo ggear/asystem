@@ -23,31 +23,78 @@ if __name__ == "__main__":
     env = load_env(DIR_ROOT)
     metadata_df = load_entity_metadata()
 
-    metadata_zigbee2mqtt_df = metadata_df[
+    metadata_devices_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_name"].str.len() > 0) &
+        (metadata_df["zigbee2mqtt_type"] == "Device") &
         (metadata_df["zigbee2mqtt_config"].str.len() > 0) &
         (metadata_df["connection_mac"].str.len() > 0)
         ]
-    metadata_zigbee2mqtt_dicts = [row.dropna().to_dict() for index, row in metadata_zigbee2mqtt_df.iterrows()]
-    metadata_zigbee2mqtt_devices_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/devices.yaml"))
-    with open(metadata_zigbee2mqtt_devices_path, 'w') as metadata_zigbee2mqtt_devices_file:
-        metadata_zigbee2mqtt_devices_file.write("""
+    metadata_devices_dicts = [row.dropna().to_dict() for index, row in metadata_devices_df.iterrows()]
+    metadata_devices_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/devices.yaml"))
+    with open(metadata_devices_path, 'w') as metadata_devices_file:
+        metadata_devices_file.write("""
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
             """.strip() + "\n")
-        for metadata_zigbee2mqtt_dict in metadata_zigbee2mqtt_dicts:
-            metadata_zigbee2mqtt_devices_file.write("""
+        for metadata_devices_dict in metadata_devices_dicts:
+            metadata_devices_file.write("""
 '{}':
   friendly_name: '{}'
   retain: true
   qos: 1
 {}
                 """.format(
-                metadata_zigbee2mqtt_dict["connection_mac"],
-                metadata_zigbee2mqtt_dict["device_name"].replace("-", " ").title(),
-                metadata_zigbee2mqtt_dict["zigbee2mqtt_config"],
+                metadata_devices_dict["connection_mac"],
+                metadata_devices_dict["device_name"].replace("-", " ").title(),
+                metadata_devices_dict["zigbee2mqtt_config"],
             ).strip() + "\n")
-        print("Build generate script [zigbee2mqtt] entity metadata persisted to [{}]".format(metadata_zigbee2mqtt_devices_path))
+        print("Build generate script [zigbee2mqtt] entity device metadata persisted to [{}]".format(metadata_devices_path))
+
+    metadata_groups_devices_df = metadata_df[
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["device_name"].str.len() > 0) &
+        (metadata_df["zigbee2mqtt_type"].str.len() > 0) &
+        (metadata_df["zigbee2mqtt_group"].str.len() > 0) &
+        (metadata_df["zigbee2mqtt_config"].str.len() > 0)
+        ]
+    metadata_groups_devices_dicts = [row.dropna().to_dict() for index, row in metadata_groups_devices_df.iterrows()]
+    metadata_groups_dict = {}
+    metadata_grouped_devices_dict = {}
+    for metadata_groups_devices_dict in metadata_groups_devices_dicts:
+        if metadata_groups_devices_dict["zigbee2mqtt_type"] == "Group":
+            metadata_groups_dict[metadata_groups_devices_dict["zigbee2mqtt_group"]] = metadata_groups_devices_dict
+            metadata_grouped_devices_dict[metadata_groups_devices_dict["zigbee2mqtt_group"]] = []
+    for metadata_groups_devices_dict in metadata_groups_devices_dicts:
+        if metadata_groups_devices_dict["zigbee2mqtt_type"] == "Device" and \
+                metadata_groups_devices_dict["zigbee2mqtt_group"] in metadata_grouped_devices_dict:
+            metadata_grouped_devices_dict[metadata_groups_devices_dict["zigbee2mqtt_group"]].append(metadata_groups_devices_dict)
+    metadata_groups_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/groups.yaml"))
+    with open(metadata_groups_path, 'w') as metadata_groups_file:
+        metadata_groups_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+            """.strip() + "\n")
+        for metadata_groups_id in metadata_groups_dict:
+            metadata_groups_file.write("""
+'{}':
+  friendly_name: '{}'
+  retain: true
+{}
+  devices:
+            """.format(
+                metadata_groups_id,
+                metadata_groups_dict[metadata_groups_id]["device_name"].replace("-", " ").title(),
+                metadata_groups_dict[metadata_groups_id]["zigbee2mqtt_config"],
+            ).strip() + "\n")
+            for metadata_device_dict in metadata_grouped_devices_dict[metadata_groups_id]:
+                metadata_groups_file.write("    " + """
+    - '{}'
+                """.format(
+                    metadata_device_dict["connection_mac"]
+                ).strip() + "\n")
+        print("Build generate script [zigbee2mqtt] entity group metadata persisted to [{}]".format(metadata_groups_path))
