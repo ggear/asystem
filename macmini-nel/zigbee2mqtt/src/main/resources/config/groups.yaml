@@ -1,0 +1,8 @@
+'1':
+  friendly_name: 'Parents Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x00178801039f585a'
