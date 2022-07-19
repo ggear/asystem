@@ -88,7 +88,7 @@
 # Advanced Features -> Switch Ports -> Add a Port Profile -> Broadcast -> Tagged Networks -> Controlled, Isolated
 
 # Devices -> Ports -> Assign Networks appropriately
-# Devices -> uap-deck -> Settings -> 2.4 GHz Channel -> 11
+# Devices -> uap-deck -> Settings -> 2.4 GHz Channel -> 11 (Potentially use 3 8 13 to squeeze a third in around Zigbee 11?)
 # Devices -> uap-hallway -> Settings -> 2.4 GHz Channel -> 6
 
 # Traffic & Security -> Global Threat Management -> Detect & Block -> Detect & Block
