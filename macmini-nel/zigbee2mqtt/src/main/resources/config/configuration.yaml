@@ -1,5 +1,6 @@
 permit_join: false
 advanced:
+  log_level: debug
   channel: 11
 
 # TODO: Doesnt seem to work?
@@ -8,6 +9,10 @@ advanced:
 #    timeout: 1
 #  passive:
 #    timeout: 1500
+
+#availability: true
+#experimental:
+#  availability_new: true
 
 mqtt:
   base_topic: zigbee
