@@ -5,159 +5,185 @@
   friendly_name: 'Lounge Air Purifier'
   retain: true
   qos: 1
-  debounce: 0.5
   homeassistant:
     expire_after: 3600
 '0x0017880103433075':
   friendly_name: 'Ada Lamp Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x0017880102b8fd87':
   friendly_name: 'Edwin Lamp Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x001788010343c36f':
   friendly_name: 'Edwin Night Light Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801043283b0':
   friendly_name: 'Hallway Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x0017880104329975':
   friendly_name: 'Hallway Main Bulb 2'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x001788010432996f':
   friendly_name: 'Hallway Main Bulb 3'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x001788010444db4e':
   friendly_name: 'Hallway Main Bulb 4'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f69d5':
   friendly_name: 'Dining Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f56c4':
   friendly_name: 'Dining Main Bulb 2'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f584a':
   friendly_name: 'Dining Main Bulb 3'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f69d4':
   friendly_name: 'Dining Main Bulb 4'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f574e':
   friendly_name: 'Dining Main Bulb 5'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f4eed':
   friendly_name: 'Dining Main Bulb 6'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f6b78':
   friendly_name: 'Lounge Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x001788010444ef85':
   friendly_name: 'Lounge Main Bulb 2'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f6b4a':
   friendly_name: 'Lounge Main Bulb 3'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f585a':
   friendly_name: 'Parents Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f69d1':
   friendly_name: 'Parents Main Bulb 2'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x001788010432a064':
   friendly_name: 'Parents Main Bulb 3'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801040f8db2':
   friendly_name: 'Kitchen Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x001788010343c34f':
   friendly_name: 'Kitchen Main Bulb 2'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x001788010343c147':
   friendly_name: 'Kitchen Main Bulb 3'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x001788010343b9d8':
   friendly_name: 'Kitchen Main Bulb 4'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x0017880104eaa288':
   friendly_name: 'Laundry Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x0017880104eaa272':
   friendly_name: 'Pantry Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801040edfae':
   friendly_name: 'Office Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801040edcad':
   friendly_name: 'Bathroom Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801040eddb2':
   friendly_name: 'Ensuite Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00178801040ede93':
   friendly_name: 'Wardrobe Main Bulb 1'
   retain: true
   qos: 1
-  debounce: 0.5
+  homeassistant:
+    expire_after: 3600
 '0x00158d0005d9d088':
   friendly_name: 'Home Cube Remote'
   retain: true
   qos: 1
-  debounce: 0.5
-  legacy: true
   homeassistant:
     expire_after: 3600

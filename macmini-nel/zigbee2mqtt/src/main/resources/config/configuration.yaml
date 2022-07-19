@@ -19,5 +19,10 @@ homeassistant:
   legacy_triggers: true
 serial:
   port: /dev/ttyACM0
+device_options:
+  retain: true
+  qos: 1
+  debounce: 0.5
+  optimistic: false
 devices: devices.yaml
 groups: groups.yaml
