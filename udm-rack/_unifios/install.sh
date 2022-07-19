@@ -88,6 +88,8 @@
 # Advanced Features -> Switch Ports -> Add a Port Profile -> Broadcast -> Tagged Networks -> Controlled, Isolated
 
 # Devices -> Ports -> Assign Networks appropriately
+# Devices -> uap-deck -> Settings -> 2.4 GHz Channel -> 11
+# Devices -> uap-hallway -> Settings -> 2.4 GHz Channel -> 6
 
 # Traffic & Security -> Global Threat Management -> Detect & Block -> Detect & Block
 # Traffic & Security -> System Sensitivity -> Maximum Protection
