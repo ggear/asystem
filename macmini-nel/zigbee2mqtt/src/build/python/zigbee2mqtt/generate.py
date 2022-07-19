@@ -43,8 +43,6 @@ if __name__ == "__main__":
             metadata_devices_file.write("""
 '{}':
   friendly_name: '{}'
-  retain: true
-  qos: 1
 {}
                 """.format(
                 metadata_devices_dict["connection_mac"],
