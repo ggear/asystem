@@ -319,30 +319,6 @@ automation:
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-light:
-        """.strip() + "\n")
-        for group_name, metadata_lighting_group_dicts in list(metadata_lighting_groups_dicts.items()):
-            if metadata_lighting_group_dicts[0]["device_via_device"] == "Hue":
-                metadata_lighting_file.write("  " + """
-  #####################################################################################
-  - platform: group
-    name: {}
-    unique_id: {}
-    entities:
-                """.format(
-                    group_name,
-                    metadata_lighting_group_dicts[0]["unique_id"]
-                ).strip() + "\n")
-                for metadata_lighting_group_dict in metadata_lighting_group_dicts:
-                    if "haas_display_mode" not in metadata_lighting_group_dict:
-                        metadata_lighting_file.write("      " + """
-      - {}.{}
-                        """.format(
-                            metadata_lighting_group_dict["entity_namespace"],
-                            metadata_lighting_group_dict["unique_id"],
-                        ).strip() + "\n")
-        metadata_lighting_file.write("  " + """
-  ####################################################################################
 adaptive_lighting:
         """.strip() + "\n")
         for automation_name in metadata_lighting_automations_dicts:

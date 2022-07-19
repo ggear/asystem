@@ -307,51 +307,25 @@ light.ada_fan:
   icon: 'mdi:lightbulb-group'
 light.ada_lamp:
   friendly_name: 'Ada Lamp'
-light.hue_ambiance_lamp_11:
-  friendly_name: 'Ada Lamp'
+  icon: 'mdi:lightbulb-group'
 light.edwin_lamp:
   friendly_name: 'Edwin Lamp'
-light.hue_ambiance_lamp_13:
-  friendly_name: 'Edwin Lamp'
+  icon: 'mdi:lightbulb-group'
 light.edwin_fan:
   friendly_name: 'Edwin Main'
   icon: 'mdi:lightbulb-group'
 light.edwin_night_light:
   friendly_name: 'Edwin Night Light'
-light.hue_ambiance_lamp_10:
-  friendly_name: 'Edwin Night Light'
+  icon: 'mdi:lightbulb-group'
 light.hallway_main:
   friendly_name: 'Hallway Main'
-light.hue_color_candle_2:
-  friendly_name: 'Hallway Main'
-light.hue_color_candle_3:
-  friendly_name: 'Hallway Main'
-light.hue_color_candle_4:
-  friendly_name: 'Hallway Main'
-light.hue_color_candle_5:
-  friendly_name: 'Hallway Main'
+  icon: 'mdi:lightbulb-group'
 light.dining_main:
   friendly_name: 'Dining Main'
-light.hue_color_candle_6:
-  friendly_name: 'Dining Main'
-light.hue_color_candle_7:
-  friendly_name: 'Dining Main'
-light.hue_color_candle_8:
-  friendly_name: 'Dining Main'
-light.hue_color_candle_9:
-  friendly_name: 'Dining Main'
-light.hue_color_candle_10:
-  friendly_name: 'Dining Main'
-light.hue_color_candle_11:
-  friendly_name: 'Dining Main'
+  icon: 'mdi:lightbulb-group'
 light.lounge_main:
   friendly_name: 'Lounge Main'
-light.hue_color_candle_12:
-  friendly_name: 'Lounge Main'
-light.hue_color_candle_13:
-  friendly_name: 'Lounge Main'
-light.hue_color_candle_14:
-  friendly_name: 'Lounge Main'
+  icon: 'mdi:lightbulb-group'
 light.lounge_fan:
   friendly_name: 'Lounge Fan'
   icon: 'mdi:lightbulb-group'
@@ -360,38 +334,25 @@ light.parents_main:
   icon: 'mdi:lightbulb-group'
 light.kitchen_main:
   friendly_name: 'Kitchen Main'
-light.hue_ambiance_lamp_1:
-  friendly_name: 'Kitchen Main'
-light.hue_ambiance_lamp_2:
-  friendly_name: 'Kitchen Main'
-light.hue_ambiance_lamp_3:
-  friendly_name: 'Kitchen Main'
-light.hue_ambiance_lamp_12:
-  friendly_name: 'Kitchen Main'
+  icon: 'mdi:lightbulb-group'
 light.laundry_main:
   friendly_name: 'Laundry Main'
-light.hue_ambiance_lamp_4:
-  friendly_name: 'Laundry Main'
+  icon: 'mdi:lightbulb-group'
 light.pantry_main:
   friendly_name: 'Pantry Main'
-light.hue_ambiance_lamp_5:
-  friendly_name: 'Pantry Main'
+  icon: 'mdi:lightbulb-group'
 light.office_main:
   friendly_name: 'Office Main'
-light.hue_ambiance_lamp_6:
-  friendly_name: 'Office Main'
+  icon: 'mdi:lightbulb-group'
 light.bathroom_main:
   friendly_name: 'Bathroom Main'
-light.hue_ambiance_lamp_7:
-  friendly_name: 'Bathroom Main'
+  icon: 'mdi:lightbulb-group'
 light.ensuite_main:
   friendly_name: 'Ensuite Main'
-light.hue_ambiance_lamp_8:
-  friendly_name: 'Ensuite Main'
+  icon: 'mdi:lightbulb-group'
 light.wardrobe_main:
   friendly_name: 'Wardrobe Main'
-light.hue_ambiance_lamp_9:
-  friendly_name: 'Wardrobe Main'
+  icon: 'mdi:lightbulb-group'
 switch.deck_festoons:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:lightbulb-group'

@@ -80,21 +80,23 @@ if __name__ == "__main__":
 #######################################################################################
             """.strip() + "\n")
         for metadata_groups_id in metadata_groups_dict:
-            metadata_groups_file.write("""
+            if sum(1 for k in metadata_grouped_devices_dict[metadata_groups_id] if k.get('connection_mac')) > 0:
+                metadata_groups_file.write("""
 '{}':
   friendly_name: '{}'
   retain: true
 {}
   devices:
-            """.format(
-                metadata_groups_id,
-                metadata_groups_dict[metadata_groups_id]["device_name"].replace("-", " ").title(),
-                metadata_groups_dict[metadata_groups_id]["zigbee2mqtt_config"],
-            ).strip() + "\n")
-            for metadata_device_dict in metadata_grouped_devices_dict[metadata_groups_id]:
-                metadata_groups_file.write("    " + """
-    - '{}'
                 """.format(
-                    metadata_device_dict["connection_mac"]
+                    metadata_groups_id,
+                    metadata_groups_dict[metadata_groups_id]["device_name"].replace("-", " ").title(),
+                    metadata_groups_dict[metadata_groups_id]["zigbee2mqtt_config"],
                 ).strip() + "\n")
+                for metadata_device_dict in metadata_grouped_devices_dict[metadata_groups_id]:
+                    if "connection_mac" in metadata_device_dict:
+                        metadata_groups_file.write("    " + """
+    - '{}'
+                        """.format(
+                            metadata_device_dict["connection_mac"]
+                        ).strip() + "\n")
         print("Build generate script [zigbee2mqtt] entity group metadata persisted to [{}]".format(metadata_groups_path))

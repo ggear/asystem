@@ -1,7 +1,65 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-'1':
+'100':
+  friendly_name: 'Ada Lamp'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x0017880103433075'
+'200':
+  friendly_name: 'Edwin Lamp'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x0017880102b8fd87'
+'300':
+  friendly_name: 'Edwin Night Light'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x001788010343c36f'
+'400':
+  friendly_name: 'Hallway Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x00178801043283b0'
+    - '0x0017880104329975'
+    - '0x001788010432996f'
+    - '0x001788010444db4e'
+'500':
+  friendly_name: 'Dining Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x00178801039f69d5'
+    - '0x00178801039f56c4'
+    - '0x00178801039f584a'
+    - '0x00178801039f69d4'
+    - '0x00178801039f574e'
+    - '0x00178801039f4eed'
+'600':
+  friendly_name: 'Lounge Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x00178801039f6b78'
+    - '0x001788010444ef85'
+    - '0x00178801039f6b4a'
+'700':
   friendly_name: 'Parents Main'
   retain: true
   transition: 2
@@ -11,3 +69,62 @@
     - '0x00178801039f585a'
     - '0x00178801039f69d1'
     - '0x001788010432a064'
+'800':
+  friendly_name: 'Kitchen Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x00178801040f8db2'
+    - '0x001788010343c34f'
+    - '0x001788010343c147'
+    - '0x001788010343b9d8'
+'900':
+  friendly_name: 'Laundry Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x0017880104eaa288'
+'1000':
+  friendly_name: 'Pantry Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x0017880104eaa272'
+'1100':
+  friendly_name: 'Office Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x00178801040edfae'
+'1200':
+  friendly_name: 'Bathroom Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x00178801040edcad'
+'1300':
+  friendly_name: 'Ensuite Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x00178801040eddb2'
+'1400':
+  friendly_name: 'Wardrobe Main'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x00178801040ede93'

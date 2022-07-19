@@ -105,6 +105,18 @@ light.edwin_fan:
   name: Edwins Main Light
   aliases: ['Edwins Main', 'Main Light', 'Main']
   room: Edwin
+light.hallway_main:
+  name: Hallway Main Light
+  aliases: ['Hallway Main', 'Main Light', 'Main']
+  room: Hallway
+light.dining_main:
+  name: Dining Main Light
+  aliases: ['Dining Main', 'Main Light', 'Main']
+  room: Dining
+light.lounge_main:
+  name: Lounge Main Light
+  aliases: ['Lounge Main', 'Main Light', 'Main']
+  room: Lounge
 light.lounge_fan:
   name: Home Fan Light
   aliases: ['Home Fan', 'Fan Light', 'Fan']
@@ -113,4 +125,32 @@ light.parents_main:
   name: Parents Main Light
   aliases: ['Parents Main', 'Main Light', 'Main']
   room: Parents
+light.kitchen_main:
+  name: Kitchen Main Light
+  aliases: ['Kitchen Main', 'Main Light', 'Main']
+  room: Kitchen
+light.laundry_main:
+  name: Laundry Main Light
+  aliases: ['Laundry Main', 'Main Light', 'Main']
+  room: Laundry
+light.pantry_main:
+  name: Pantry Main Light
+  aliases: ['Pantry Main', 'Main Light', 'Main']
+  room: Pantry
+light.office_main:
+  name: Office Main Light
+  aliases: ['Office Main', 'Main Light', 'Main']
+  room: Office
+light.bathroom_main:
+  name: Bathroom Main Light
+  aliases: ['Bathroom Main', 'Main Light', 'Main']
+  room: Bathroom
+light.ensuite_main:
+  name: Ensuite Main Light
+  aliases: ['Ensuite Main', 'Main Light', 'Main']
+  room: Ensuite
+light.wardrobe_main:
+  name: Wardrobe Main Light
+  aliases: ['Wardrobe Main', 'Main Light', 'Main']
+  room: Wardrobe
 #######################################################################################
