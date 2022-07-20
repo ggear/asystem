@@ -4,7 +4,7 @@ frontend:
   url: 'http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_PORT'
 mqtt:
   base_topic: zigbee
-  server: 'mqtt://$VERNEMQ_IP:$VERNEMQ_PORT'
+  server: 'mqtt://VERNEMQ_HOST:$VERNEMQ_PORT'
 homeassistant:
   discovery_topic: 'haas/entity'
   status_topic: 'haas/status'
@@ -15,13 +15,13 @@ homeassistant:
 
 
 # TODO: Doesnt seem to work?
-availability: true
+#availability: true
 
-#availability:
-#  active:
-#    timeout: 1
-#  passive:
-#    timeout: 1500
+availability:
+  active:
+    timeout: 1
+  passive:
+    timeout: 1500
 
 
 

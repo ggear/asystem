@@ -11,6 +11,8 @@
     expire_after: 3600
 '0x0017880102b8fd87':
   friendly_name: 'Edwin Lamp Bulb 1'
+  availability:
+    timeout: 1
   homeassistant:
     expire_after: 3600
 '0x001788010343c36f':

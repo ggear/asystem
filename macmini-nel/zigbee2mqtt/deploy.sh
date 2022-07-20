@@ -14,6 +14,5 @@ export VERNEMQ_HOST=${VERNEMQ_HOST_PROD}
 
 ${ROOT_DIR}/src/main/resources/config/mqtt.sh
 
-scp -r ${ROOT_DIR}/src/main/resources/config/devices.yaml root@${HOST}:${HOME}
-scp -r ${ROOT_DIR}/src/main/resources/config/groups.yaml root@${HOST}:${HOME}
+scp -r ${ROOT_DIR}/src/main/resources/config/* root@${HOST}:${HOME}
 ssh root@${HOST} "cd ${INSTALL} && docker-compose --compatibility restart"
