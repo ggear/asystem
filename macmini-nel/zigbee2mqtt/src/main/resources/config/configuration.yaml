@@ -1,10 +1,10 @@
 permit_join: false
 frontend:
   port: $ZIGBEE2MQTT_PORT
-  url: 'http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_PORT'
+#  url: 'http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_PORT'
 mqtt:
   base_topic: zigbee
-  server: 'mqtt://VERNEMQ_HOST:$VERNEMQ_PORT'
+#  server: 'mqtt://$VERNEMQ_HOST:$VERNEMQ_PORT'
 homeassistant:
   discovery_topic: 'haas/entity'
   status_topic: 'haas/status'
