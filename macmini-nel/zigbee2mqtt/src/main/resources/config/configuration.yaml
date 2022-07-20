@@ -1,32 +1,30 @@
 permit_join: false
-advanced:
-  log_level: debug
-  channel: 11
-
-# TODO: Doesnt seem to work?
-#availability:
-#  active:
-#    timeout: 1
-#  passive:
-#    timeout: 1500
-
-availability: true
-experimental:
-  availability_new: true
-
-mqtt:
-  base_topic: zigbee
-  server: 'mqtt://$VERNEMQ_IP:$VERNEMQ_PORT'
 frontend:
   port: $ZIGBEE2MQTT_PORT
   url: 'http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_PORT'
+mqtt:
+  base_topic: zigbee
+  server: 'mqtt://$VERNEMQ_IP:$VERNEMQ_PORT'
 homeassistant:
   discovery_topic: 'haas/entity'
   status_topic: 'haas/status'
   legacy_entity_attributes: false
   legacy_triggers: true
-serial:
-  port: /dev/ttyACM0
+
+
+
+
+# TODO: Doesnt seem to work?
+#availability: true
+
+availability:
+  active:
+    timeout: 1
+  passive:
+    timeout: 1500
+
+
+
 device_options:
   retain: true
   qos: 1
@@ -34,3 +32,12 @@ device_options:
   optimistic: false
 devices: devices.yaml
 groups: groups.yaml
+serial:
+  port: /dev/ttyACM0
+advanced:
+  channel: 11
+  log_level: debug
+experimental:
+  availability_new: true
+
+
