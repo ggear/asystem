@@ -10,9 +10,9 @@ advanced:
 #  passive:
 #    timeout: 1500
 
-#availability: true
-#experimental:
-#  availability_new: true
+availability: true
+experimental:
+  availability_new: true
 
 mqtt:
   base_topic: zigbee
