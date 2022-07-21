@@ -36,4 +36,5 @@ serial:
   port: /dev/ttyACM0
 advanced:
   channel: 11
+  last_seen: ISO_8601_local
   log_level: debug
