@@ -101,9 +101,21 @@ light.ada_fan:
   name: Adas Main Light
   aliases: ['Adas Main', 'Main Light', 'Main']
   room: Ada
+light.ada_lamp:
+  name: Ada Lamp
+  aliases: ['Lamp']
+  room: Ada
+light.edwin_lamp:
+  name: Edwin Lamp
+  aliases: ['Lamp']
+  room: Edwin
 light.edwin_fan:
   name: Edwins Main Light
   aliases: ['Edwins Main', 'Main Light', 'Main']
+  room: Edwin
+light.edwin_night_light:
+  name: Edwin Night Light
+  aliases: ['Night Light']
   room: Edwin
 light.hallway_main:
   name: Hallway Main Light

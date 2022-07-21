@@ -94,6 +94,7 @@ if __name__ == "__main__":
                         flux = """from(bucket: "home_private")
 |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
 |> filter(fn: (r) => {})
+|> filter(fn: (r) => r["_field"] == "value")
 |> keep(columns: ["_time", "_value", "friendly_name"])
 |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: {})
                         """.format(
