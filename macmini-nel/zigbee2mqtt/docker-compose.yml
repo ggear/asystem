@@ -7,12 +7,12 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
+      - DEBUG=zigbee-herdsman*
       - ZIGBEE2MQTT_IP
       - ZIGBEE2MQTT_PORT
       - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=$ZIGBEE2MQTT_PORT
       - ZIGBEE2MQTT_CONFIG_FRONTEND_URL=http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_PORT
       - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://$VERNEMQ_IP:$VERNEMQ_PORT
-      - DEBUG=zigbee-herdsman*
       - VERNEMQ_IP
       - VERNEMQ_PORT
     volumes:
