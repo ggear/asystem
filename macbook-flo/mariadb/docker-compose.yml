@@ -12,6 +12,11 @@ x-common: &common
     - MARIADB_DATABASE=${MARIADB_DATABASE_WEEWX}
     - MARIADB_USER=${MARIADB_USER_WEEWX}
     - MARIADB_PASSWORD=${MARIADB_KEY_WEEWX}
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
 services:
   mariadb:
     container_name: mariadb
