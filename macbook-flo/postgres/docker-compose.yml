@@ -14,6 +14,11 @@ x-common: &common
     - POSTGRES_KEY_HAAS
     - POSTGRES_DATABASE_HAAS
     - PGDATA=/var/lib/postgresql/data/pgdata
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
 services:
   postgres:
     container_name: postgres

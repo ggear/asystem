@@ -12,6 +12,11 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}/letsencrypt:/etc/letsencrypt
       - ${SERVICE_DATA_DIR}/dnsrobocert:/etc/dnsrobocert
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
     deploy:
       resources:
         limits:

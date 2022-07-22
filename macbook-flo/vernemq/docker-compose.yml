@@ -8,6 +8,11 @@ x-common: &common
     - VERNEMQ_PORT
     - DOCKER_VERNEMQ_ACCEPT_EULA=yes
     - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
 services:
   vernemq:
     container_name: vernemq

@@ -20,6 +20,11 @@ x-common: &common
     - INFLUXDB_TOKEN
     - INFLUXDB_TOKEN_PUBLIC_V1
     - INFLUXDB_TOKEN_PUBLIC_V2
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
 services:
   influxdb:
     container_name: influxdb

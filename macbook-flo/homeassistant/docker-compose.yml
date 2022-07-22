@@ -18,6 +18,11 @@ x-common: &common
     - INFLUXDB_BUCKET_HOME_PRIVATE
     - WITHINGS_CLIENTID
     - WITHINGS_CONSUMERSECRET
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
 services:
   homeassistant:
     container_name: homeassistant

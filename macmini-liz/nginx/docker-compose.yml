@@ -18,6 +18,11 @@ services:
       - ${SERVICE_DATA_DIR}/.key.pem:/etc/nginx/.key.pem
       - ${SERVICE_DATA_DIR}/certificate.pem:/etc/nginx/certificate.pem
       - ${SERVICE_DATA_DIR}/html:/usr/share/nginx/html
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
     deploy:
       resources:
         limits:

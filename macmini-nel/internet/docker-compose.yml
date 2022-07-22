@@ -14,6 +14,11 @@ services:
       - INFLUXDB_TOKEN
     volumes:
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
     deploy:
       resources:
         limits:

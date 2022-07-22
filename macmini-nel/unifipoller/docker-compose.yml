@@ -15,6 +15,11 @@ services:
       - INFLUXDB_BUCKET_HOST_PRIVATE
     volumes:
       - ${SERVICE_DATA_DIR}:/config
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
     deploy:
       resources:
         limits:
