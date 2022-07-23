@@ -611,6 +611,9 @@ switch.roof_network_switch:
 switch.rack_modem:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
+input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
+  friendly_name: 'Edwin Lamp'
+  icon: 'mdi:lightbulb-group'
 sensor.netatmo_bertram_2_office_pantry_battery_percent:
   friendly_name: 'Netatmo Pantry'
   icon: 'mdi:battery-30'

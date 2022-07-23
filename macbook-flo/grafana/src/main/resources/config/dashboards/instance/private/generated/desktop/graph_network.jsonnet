@@ -219,7 +219,7 @@ from(bucket: "host_private")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=330
+                        legend_sideWidth=380
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -264,7 +264,7 @@ from(bucket: "host_private")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=330
+                        legend_sideWidth=380
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -310,7 +310,7 @@ from(bucket: "host_private")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=330
+                        legend_sideWidth=380
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -340,7 +340,7 @@ from(bucket: "host_private")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=330
+                        legend_sideWidth=380
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -370,7 +370,7 @@ from(bucket: "host_private")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=330
+                        legend_sideWidth=380
                   ).addTarget(influxdb.target(query='
 from(bucket: "host_private")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

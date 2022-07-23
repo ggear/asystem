@@ -165,4 +165,8 @@ light.wardrobe_main:
   name: Wardrobe Main Light
   aliases: ['Wardrobe Main', 'Main Light', 'Main']
   room: Wardrobe
+input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
+  name: Edwin Lamp Adaptive Lighting
+  aliases: ['Lamp Adaptive Lighting']
+  room: Edwin
 #######################################################################################

@@ -118,7 +118,7 @@ if __name__ == "__main__":
 //ASD                   legend_avg=true,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=330,
+//ASD                   legend_sideWidth=380,
                   ).addTarget(influxdb.target(query='
 {}
                   '))

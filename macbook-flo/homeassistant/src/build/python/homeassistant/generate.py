@@ -346,6 +346,21 @@ adaptive_lighting:
                 ).strip() + "\n")
         metadata_lighting_file.write("  " + """
   ####################################################################################
+input_boolean:
+        """.strip() + "\n")
+        for group_name, metadata_lighting_group_dicts in list(metadata_lighting_groups_dicts.items()):
+            if "entity_automation" in metadata_lighting_group_dicts[0]:
+                metadata_lighting_file.write("  " + """
+  ####################################################################################
+  lighting_reset_adaptive_lighting_{}:
+    name: {}
+    initial: on
+                  """.format(
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                    metadata_lighting_group_dicts[0]["friendly_name"],
+                ).strip() + "\n")
+        metadata_lighting_file.write("  " + """
+  ####################################################################################
 automation:
   ####################################################################################
   - id: lighting_sleep_adaptive_lighting
@@ -473,6 +488,56 @@ automation:
             if "entity_automation" in metadata_lighting_group_dicts[0]:
                 metadata_lighting_file.write("  " + """
   ####################################################################################
+  - id: lighting_reset_adaptive_lighting_on_{}
+    alias: "Lighting: Reset Adaptive Lighting On - {}"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
+        from: 'off'
+        to: 'on'
+    action:
+                  """.format(
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                    metadata_lighting_group_dicts[0]["friendly_name"],
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                ).strip() + "\n")
+                metadata_lighting_file.write("      " + """
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_{}
+          lights: light.{}
+          manual_control: false
+                  """.format(
+                    metadata_lighting_group_dicts[0]["entity_automation"],
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                ).strip() + "\n")
+                metadata_lighting_file.write("  " + """
+  ####################################################################################
+  - id: lighting_reset_adaptive_lighting_off_{}
+    alias: "Lighting: Reset Adaptive Lighting Off - {}"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
+        from: 'on'
+        to: 'off'
+    action:
+                  """.format(
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                    metadata_lighting_group_dicts[0]["friendly_name"],
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                ).strip() + "\n")
+                metadata_lighting_file.write("      " + """
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_{}
+          lights: light.{}
+          manual_control: true
+                  """.format(
+                    metadata_lighting_group_dicts[0]["entity_automation"],
+                    metadata_lighting_group_dicts[0]["unique_id"],
+                ).strip() + "\n")
+                metadata_lighting_file.write("  " + """
+  ####################################################################################
   - id: lighting_reset_adaptive_lighting_{}
     alias: "Lighting: Reset Adaptive Lighting - {}"
     trigger:
@@ -485,77 +550,19 @@ automation:
                     metadata_lighting_group_dicts[0]["friendly_name"],
                     metadata_lighting_group_dicts[0]["unique_id"],
                 ).strip() + "\n")
-                if metadata_lighting_group_dicts[0]["entity_automation"] == "default":
-                    metadata_lighting_file.write("      " + """
-      - service: light.turn_on
-        target:
-          entity_id: light.{}
-        data:
-          brightness_pct: 100
-                      """.format(
-                        metadata_lighting_group_dicts[0]["unique_id"],
-                    ).strip() + "\n")
                 metadata_lighting_file.write("      " + """
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
-      - delay: '00:00:02'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_{}
-          lights: light.{}
-          manual_control: false
-      - delay: '00:00:02'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_{}
-          lights: light.{}
-          manual_control: false
-      - delay: '00:00:02'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_{}
-          lights: light.{}
-          manual_control: false
-      - delay: '00:00:02'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_{}
-          lights: light.{}
-          manual_control: false
-      - delay: '00:00:02'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_{}
-          lights: light.{}
-          manual_control: false
-      - delay: '00:00:02'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_{}
-          lights: light.{}
-          manual_control: false
-      - delay: '00:00:02'
+      - delay: '00:00:01'
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
                   """.format(
-                    metadata_lighting_group_dicts[0]["entity_automation"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                    metadata_lighting_group_dicts[0]["entity_automation"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                    metadata_lighting_group_dicts[0]["entity_automation"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                    metadata_lighting_group_dicts[0]["entity_automation"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                    metadata_lighting_group_dicts[0]["entity_automation"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                    metadata_lighting_group_dicts[0]["entity_automation"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
                     metadata_lighting_group_dicts[0]["entity_automation"],
                     metadata_lighting_group_dicts[0]["unique_id"],
                     metadata_lighting_group_dicts[0]["entity_automation"],

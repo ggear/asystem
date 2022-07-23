@@ -1,20 +1,20 @@
-################################################################################
+#######################################################################################
 input_boolean:
-  ################################################################################
+  #####################################################################################
   home_movie:
     name: Movie
     initial: off
-  ################################################################################
+  #####################################################################################
   home_sleep:
     name: Sleep
     initial: off
-  ################################################################################
+  #####################################################################################
   home_reset:
     name: Reset
     initial: off
-  ################################################################################
+  #####################################################################################
 automation:
-  ################################################################################
+  #####################################################################################
   - id: routine_home_movie_on
     alias: "Routine: Put home into Movie mode"
     mode: single
@@ -37,7 +37,7 @@ automation:
       - service: switch.turn_on
         target:
           entity_id: switch.lounge_tv
-  ################################################################################
+  #####################################################################################
   - id: routine_home_movie_off
     alias: "Routine: Put home out of Movie mode"
     mode: single
@@ -58,7 +58,7 @@ automation:
       - service: light.turn_off
         target:
           entity_id: light.lounge_main
-  ################################################################################
+  #####################################################################################
   - id: routine_home_sleep
     alias: "Routine: Put home to sleep"
     mode: single
@@ -92,7 +92,7 @@ automation:
         data:
           repeat: all
         entity_id: media_player.parents_speaker
-  ################################################################################
+  #####################################################################################
   - id: routine_home_sleep_cube
     alias: "Routine: Put home to sleep via cube"
     mode: restart
@@ -104,7 +104,7 @@ automation:
     action:
       - service: input_boolean.turn_on
         entity_id: input_boolean.home_sleep
-  ################################################################################
+  #####################################################################################
   - id: routine_home_wakeup
     alias: "Routine: Wake home up"
     mode: single
@@ -130,7 +130,7 @@ automation:
       - service: automation.trigger
         data:
           entity_id: automation.lighting_reset_adaptive_lighting
-  ################################################################################
+  #####################################################################################
   - id: routine_home_wakeup_cube
     alias: "Routine: Wake home up via cube"
     mode: restart
@@ -142,7 +142,7 @@ automation:
     action:
       - service: input_boolean.turn_off
         entity_id: input_boolean.home_sleep
-  ################################################################################
+  #####################################################################################
   - id: routine_home_reset
     alias: "Routine: Reset home to defaults"
     mode: single
@@ -159,7 +159,7 @@ automation:
       - delay: '00:00:01'
       - service: input_boolean.turn_off
         entity_id: input_boolean.home_reset
-  ################################################################################
+  #####################################################################################
   - id: routine_home_lights_off
     alias: "Routine: Turn night lights off"
     mode: single
@@ -198,7 +198,7 @@ automation:
             - media_player.ada_home
             - media_player.edwin_home
             - media_player.lounge_home
-  ################################################################################
+  #####################################################################################
   - id: routine_home_lights_on
     alias: "Routine: Turn night lights on"
     mode: single
@@ -223,7 +223,7 @@ automation:
             - light.ada_lamp
             - light.edwin_lamp
             - light.edwin_fan
-  ################################################################################
+  #####################################################################################
   - id: routine_home_fans_off
     alias: "Routine: Turn fans off"
     mode: single
@@ -240,7 +240,7 @@ automation:
             - fan.parents_fan
             - fan.lounge_fan
             - fan.deck_fan
-  ################################################################################
+  #####################################################################################
   - id: routine_water_heater_booster_on
     alias: "Water Heating: Turn on water heater booster"
     mode: single
@@ -264,7 +264,7 @@ automation:
     action:
       - service: switch.turn_on
         entity_id: switch.roof_water_heater_booster
-  ################################################################################
+  #####################################################################################
   - id: routine_water_heater_booster_off
     alias: "Water Heating: Turn off water heater booster"
     mode: single
@@ -279,7 +279,7 @@ automation:
       - service: switch.turn_off
         target:
           entity_id: switch.roof_water_heater_booster
-  ################################################################################
+  #####################################################################################
   - id: routine_water_heater_booster_off_failsafe
     alias: "Water Heating: Turn off water heater booster fail-safe"
     mode: single
@@ -297,7 +297,7 @@ automation:
     action:
       - service: switch.turn_off
         entity_id: switch.roof_water_heater_booster
-  ################################################################################
+  #####################################################################################
   - id: routine_bathroom_rails_on
     alias: "Water Heating: Turn on towel rails"
     mode: single
@@ -317,7 +317,7 @@ automation:
     action:
       - service: switch.turn_on
         entity_id: switch.bathroom_rails
-  ################################################################################
+  #####################################################################################
   - id: routine_bathroom_rails_off
     alias: "Water Heating: Turn off towel rails"
     mode: single
@@ -332,7 +332,7 @@ automation:
       - service: switch.turn_off
         target:
           entity_id: switch.bathroom_rails
-  ################################################################################
+  #####################################################################################
   - id: routine_bathroom_rails_off_failsafe
     alias: "Water Heating: Turn off towel rails fail-safe"
     mode: single
@@ -350,4 +350,4 @@ automation:
     action:
       - service: switch.turn_off
         entity_id: switch.bathroom_rails
-##################################################################################
+#######################################################################################

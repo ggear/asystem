@@ -304,7 +304,7 @@ from(bucket: "data_public")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=330,
+                        legend_sideWidth=380,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 field = "aud/gbp"
@@ -376,7 +376,7 @@ series
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=330,
+                        legend_sideWidth=380,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -412,7 +412,7 @@ from(bucket: "data_public")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=330,
+                        legend_sideWidth=380,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -448,7 +448,7 @@ from(bucket: "data_public")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=330,
+                        legend_sideWidth=380,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
