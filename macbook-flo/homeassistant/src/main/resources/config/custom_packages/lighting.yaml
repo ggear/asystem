@@ -265,25 +265,6 @@ automation:
           lights: light.ada_lamp
           manual_control: true
   ####################################################################################
-  - id: lighting_reset_adaptive_lighting_ada_lamp
-    alias: "Lighting: Reset Adaptive Lighting - Ada Lamp"
-    trigger:
-      - platform: state
-        entity_id: light.ada_lamp
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_night_light
-          lights: light.ada_lamp
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_night_light
-          lights: light.ada_lamp
-          manual_control: false
-  ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_edwin_lamp
     alias: "Lighting: Reset Adaptive Lighting On - Edwin Lamp"
     trigger:
@@ -311,25 +292,6 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.edwin_lamp
           manual_control: true
-  ####################################################################################
-  - id: lighting_reset_adaptive_lighting_edwin_lamp
-    alias: "Lighting: Reset Adaptive Lighting - Edwin Lamp"
-    trigger:
-      - platform: state
-        entity_id: light.edwin_lamp
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.edwin_lamp
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.edwin_lamp
-          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_edwin_night_light
     alias: "Lighting: Reset Adaptive Lighting On - Edwin Night Light"
@@ -359,25 +321,6 @@ automation:
           lights: light.edwin_night_light
           manual_control: true
   ####################################################################################
-  - id: lighting_reset_adaptive_lighting_edwin_night_light
-    alias: "Lighting: Reset Adaptive Lighting - Edwin Night Light"
-    trigger:
-      - platform: state
-        entity_id: light.edwin_night_light
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_night_light
-          lights: light.edwin_night_light
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_night_light
-          lights: light.edwin_night_light
-          manual_control: false
-  ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_hallway_main
     alias: "Lighting: Reset Adaptive Lighting On - Hallway Main"
     trigger:
@@ -405,25 +348,6 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.hallway_main
           manual_control: true
-  ####################################################################################
-  - id: lighting_reset_adaptive_lighting_hallway_main
-    alias: "Lighting: Reset Adaptive Lighting - Hallway Main"
-    trigger:
-      - platform: state
-        entity_id: light.hallway_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.hallway_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.hallway_main
-          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_dining_main
     alias: "Lighting: Reset Adaptive Lighting On - Dining Main"
@@ -453,25 +377,6 @@ automation:
           lights: light.dining_main
           manual_control: true
   ####################################################################################
-  - id: lighting_reset_adaptive_lighting_dining_main
-    alias: "Lighting: Reset Adaptive Lighting - Dining Main"
-    trigger:
-      - platform: state
-        entity_id: light.dining_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.dining_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.dining_main
-          manual_control: false
-  ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_lounge_main
     alias: "Lighting: Reset Adaptive Lighting On - Lounge Main"
     trigger:
@@ -499,25 +404,6 @@ automation:
           entity_id: switch.adaptive_lighting_lounge
           lights: light.lounge_main
           manual_control: true
-  ####################################################################################
-  - id: lighting_reset_adaptive_lighting_lounge_main
-    alias: "Lighting: Reset Adaptive Lighting - Lounge Main"
-    trigger:
-      - platform: state
-        entity_id: light.lounge_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_lounge
-          lights: light.lounge_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_lounge
-          lights: light.lounge_main
-          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_parents_main
     alias: "Lighting: Reset Adaptive Lighting On - Parents Main"
@@ -547,25 +433,6 @@ automation:
           lights: light.parents_main
           manual_control: true
   ####################################################################################
-  - id: lighting_reset_adaptive_lighting_parents_main
-    alias: "Lighting: Reset Adaptive Lighting - Parents Main"
-    trigger:
-      - platform: state
-        entity_id: light.parents_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.parents_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.parents_main
-          manual_control: false
-  ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_kitchen_main
     alias: "Lighting: Reset Adaptive Lighting On - Kitchen Main"
     trigger:
@@ -593,25 +460,6 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.kitchen_main
           manual_control: true
-  ####################################################################################
-  - id: lighting_reset_adaptive_lighting_kitchen_main
-    alias: "Lighting: Reset Adaptive Lighting - Kitchen Main"
-    trigger:
-      - platform: state
-        entity_id: light.kitchen_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.kitchen_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.kitchen_main
-          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_laundry_main
     alias: "Lighting: Reset Adaptive Lighting On - Laundry Main"
@@ -641,25 +489,6 @@ automation:
           lights: light.laundry_main
           manual_control: true
   ####################################################################################
-  - id: lighting_reset_adaptive_lighting_laundry_main
-    alias: "Lighting: Reset Adaptive Lighting - Laundry Main"
-    trigger:
-      - platform: state
-        entity_id: light.laundry_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.laundry_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.laundry_main
-          manual_control: false
-  ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_pantry_main
     alias: "Lighting: Reset Adaptive Lighting On - Pantry Main"
     trigger:
@@ -687,25 +516,6 @@ automation:
           entity_id: switch.adaptive_lighting_default
           lights: light.pantry_main
           manual_control: true
-  ####################################################################################
-  - id: lighting_reset_adaptive_lighting_pantry_main
-    alias: "Lighting: Reset Adaptive Lighting - Pantry Main"
-    trigger:
-      - platform: state
-        entity_id: light.pantry_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.pantry_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          lights: light.pantry_main
-          manual_control: false
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_bathroom_main
     alias: "Lighting: Reset Adaptive Lighting On - Bathroom Main"
@@ -735,25 +545,6 @@ automation:
           lights: light.bathroom_main
           manual_control: true
   ####################################################################################
-  - id: lighting_reset_adaptive_lighting_bathroom_main
-    alias: "Lighting: Reset Adaptive Lighting - Bathroom Main"
-    trigger:
-      - platform: state
-        entity_id: light.bathroom_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.bathroom_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.bathroom_main
-          manual_control: false
-  ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_ensuite_main
     alias: "Lighting: Reset Adaptive Lighting On - Ensuite Main"
     trigger:
@@ -782,25 +573,6 @@ automation:
           lights: light.ensuite_main
           manual_control: true
   ####################################################################################
-  - id: lighting_reset_adaptive_lighting_ensuite_main
-    alias: "Lighting: Reset Adaptive Lighting - Ensuite Main"
-    trigger:
-      - platform: state
-        entity_id: light.ensuite_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.ensuite_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.ensuite_main
-          manual_control: false
-  ####################################################################################
   - id: lighting_reset_adaptive_lighting_on_wardrobe_main
     alias: "Lighting: Reset Adaptive Lighting On - Wardrobe Main"
     trigger:
@@ -828,23 +600,4 @@ automation:
           entity_id: switch.adaptive_lighting_bedroom
           lights: light.wardrobe_main
           manual_control: true
-  ####################################################################################
-  - id: lighting_reset_adaptive_lighting_wardrobe_main
-    alias: "Lighting: Reset Adaptive Lighting - Wardrobe Main"
-    trigger:
-      - platform: state
-        entity_id: light.wardrobe_main
-        from: 'unavailable'
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.wardrobe_main
-          manual_control: false
-      - delay: '00:00:01'
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          lights: light.wardrobe_main
-          manual_control: false
   ####################################################################################

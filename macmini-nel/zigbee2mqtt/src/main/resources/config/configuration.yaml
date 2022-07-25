@@ -11,19 +11,12 @@ homeassistant:
   legacy_entity_attributes: false
   legacy_triggers: true
 
-
-
-
 # TODO: Doesnt seem to work?
-#availability: true
-
 availability:
   active:
     timeout: 1
   passive:
     timeout: 1500
-
-
 
 device_options:
   retain: true
@@ -37,4 +30,4 @@ serial:
 advanced:
   channel: 11
   last_seen: ISO_8601_local
-  log_level: debug
+  log_level: info
