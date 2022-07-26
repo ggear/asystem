@@ -169,6 +169,9 @@ sensor.compensation_sensor_netatmo_laundry_co2:
 sensor.lounge_air_purifier_pm25:
   friendly_name: 'Lounge'
   icon: 'mdi:virus-outline'
+sensor.dining_air_purifier_pm25:
+  friendly_name: 'Dining'
+  icon: 'mdi:virus-outline'
 sensor.compensation_sensor_netatmo_ada_noise:
   friendly_name: 'Ada'
   icon: 'mdi:volume-high'
@@ -301,6 +304,9 @@ fan.deck_west_fan:
   icon: 'mdi:fan'
 fan.lounge_air_purifier:
   friendly_name: 'Lounge'
+  icon: 'mdi:air-purifier'
+fan.dining_air_purifier:
+  friendly_name: 'Dining'
   icon: 'mdi:air-purifier'
 light.ada_fan:
   friendly_name: 'Ada Main'

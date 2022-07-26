@@ -51,6 +51,9 @@
     - entity: fan.lounge_air_purifier
       name: Lounge
       icon: mdi:air-purifier
+    - entity: fan.dining_air_purifier
+      name: Dining
+      icon: mdi:air-purifier
 ################################################################################
 - type: custom:layout-break
 ################################################################################

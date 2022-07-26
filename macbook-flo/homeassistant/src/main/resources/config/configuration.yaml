@@ -86,6 +86,8 @@ google_assistant:
   expose_by_default: false
   entity_config: !include haas-entities.yaml
 #######################################################################################
+automation: !include automations.yaml
+#######################################################################################
 panel_custom: !include ui-panel-custom.yaml
 #######################################################################################
 lovelace:

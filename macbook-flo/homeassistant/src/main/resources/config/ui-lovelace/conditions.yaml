@@ -207,11 +207,16 @@
   entities:
     - entity: sensor.lounge_air_purifier_pm25
       name: Lounge
+    - entity: sensor.dining_air_purifier_pm25
+      name: Dining
 ################################################################################
 - type: entities
   entities:
     - entity: sensor.lounge_air_purifier_pm25
       name: Lounge
+      icon: mdi:virus-outline
+    - entity: sensor.dining_air_purifier_pm25
+      name: Dining
       icon: mdi:virus-outline
 ################################################################################
 - type: custom:layout-break

@@ -354,7 +354,7 @@ input_boolean:
   ####################################################################################
   lighting_reset_adaptive_lighting_{}:
     name: {}
-    initial: on
+    initial: off
                   """.format(
                     metadata_lighting_group_dicts[0]["unique_id"],
                     metadata_lighting_group_dicts[0]["friendly_name"],
@@ -364,7 +364,7 @@ input_boolean:
 automation:
   ####################################################################################
   - id: lighting_sleep_adaptive_lighting
-    alias: "Lighting: Sleep Adaptive Lighting "
+    alias: "Lighting: Sleep Adaptive Lighting"
     mode: single
     trigger:
       - platform: time
@@ -424,7 +424,7 @@ automation:
           manual_control: false
       ################################################################################
   - id: lighting_reset_adaptive_lighting
-    alias: "Lighting: Reset Adaptive Lighting "
+    alias: "Lighting: Reset Adaptive Lighting"
     mode: single
     trigger:
       - platform: time
@@ -483,96 +483,126 @@ automation:
           entity_id: switch.adaptive_lighting_night_light
           manual_control: false
       ################################################################################
+  - id: lighting_reset_adaptive_lighting_announce
+    alias: 'Lighting: Reset Adaptive Lighting on bulb announce'
+    mode: single
+    trigger:
+      - platform: mqtt
+        topic: zigbee/bridge/event
+    condition:
+      - condition: template
+        value_template: '{{ trigger.payload_json.data.friendly_name | regex_search(" Bulb 1$") }}'
+    action:
+      ################################################################################
+      - variables:
+          light: '{{ "light." + (trigger.payload_json.data.friendly_name | regex_replace(" Bulb 1$") | replace(" ", "_") | lower) }}'
+          light_reset: '{{ "input_boolean.lighting_reset_adaptive_lighting_" + (light | replace("light.", "")) }}'
+      ################################################################################
+      - if:
+          - condition: template
+            value_template: '{{ is_state(light_reset, "off") }}'
+        then:
+          - service: input_boolean.turn_on
+            data_template:
+              entity_id: '{{ light_reset }}'
+        else:
+          - service: light.turn_on
+            data_template:
+              brightness_pct: 100
+              entity_id: '{{ light }}'
         """.strip() + "\n")
         for group_name, metadata_lighting_group_dicts in list(metadata_lighting_groups_dicts.items()):
             if "entity_automation" in metadata_lighting_group_dicts[0]:
                 metadata_lighting_file.write("  " + """
   ####################################################################################
-  - id: lighting_reset_adaptive_lighting_on_{}
-    alias: "Lighting: Reset Adaptive Lighting On - {}"
+  - id: lighting_reset_adaptive_lighting_{}
+    alias: "Lighting: Reset Adaptive Lighting on request of {}"
     trigger:
       - platform: state
         entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
         from: 'off'
         to: 'on'
-    action:
                   """.format(
                     metadata_lighting_group_dicts[0]["unique_id"],
                     metadata_lighting_group_dicts[0]["friendly_name"],
                     metadata_lighting_group_dicts[0]["unique_id"],
                 ).strip() + "\n")
-                metadata_lighting_file.write("      " + """
+                metadata_lighting_file.write("    " + """
+    action:
       - service: adaptive_lighting.set_manual_control
         data:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
-                  """.format(
-                    metadata_lighting_group_dicts[0]["entity_automation"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                ).strip() + "\n")
-                metadata_lighting_file.write("  " + """
-  ####################################################################################
-  - id: lighting_reset_adaptive_lighting_off_{}
-    alias: "Lighting: Reset Adaptive Lighting Off - {}"
-    trigger:
-      - platform: state
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
-        from: 'on'
-        to: 'off'
-    action:
-                  """.format(
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                    metadata_lighting_group_dicts[0]["friendly_name"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                ).strip() + "\n")
-                metadata_lighting_file.write("      " + """
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_{}
-          lights: light.{}
-          manual_control: true
                   """.format(
                     metadata_lighting_group_dicts[0]["entity_automation"],
                     metadata_lighting_group_dicts[0]["unique_id"],
+                    metadata_lighting_group_dicts[0]["unique_id"],
                 ).strip() + "\n")
 
+        #               metadata_lighting_file.write("  " + """
+        # ####################################################################################
+        # - id: lighting_reset_adaptive_lighting_off_{}
+        #   alias: "Lighting: Reset Adaptive Lighting Off - {}"
+        #   trigger:
+        #     - platform: state
+        #       entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
+        #       from: 'on'
+        #       to: 'off'
+        #   action:
+        #                 """.format(
+        #                   metadata_lighting_group_dicts[0]["unique_id"],
+        #                   metadata_lighting_group_dicts[0]["friendly_name"],
+        #                   metadata_lighting_group_dicts[0]["unique_id"],
+        #               ).strip() + "\n")
+        #               metadata_lighting_file.write("      " + """
+        #     - service: adaptive_lighting.set_manual_control
+        #       data:
+        #         entity_id: switch.adaptive_lighting_{}
+        #         lights: light.{}
+        #         manual_control: true
+        #                 """.format(
+        #                   metadata_lighting_group_dicts[0]["entity_automation"],
+        #                   metadata_lighting_group_dicts[0]["unique_id"],
+        #               ).strip() + "\n")
 
+        # TODO
 
-  #               metadata_lighting_file.write("  " + """
-  # ####################################################################################
-  # - id: lighting_reset_adaptive_lighting_{}
-  #   alias: "Lighting: Reset Adaptive Lighting - {}"
-  #   trigger:
-  #     - platform: state
-  #       entity_id: light.{}
-  #       from: 'unavailable'
-  #   action:
-  #                 """.format(
-  #                   metadata_lighting_group_dicts[0]["unique_id"],
-  #                   metadata_lighting_group_dicts[0]["friendly_name"],
-  #                   metadata_lighting_group_dicts[0]["unique_id"],
-  #               ).strip() + "\n")
-  #               metadata_lighting_file.write("      " + """
-  #     - service: adaptive_lighting.set_manual_control
-  #       data:
-  #         entity_id: switch.adaptive_lighting_{}
-  #         lights: light.{}
-  #         manual_control: false
-  #     - delay: '00:00:01'
-  #     - service: adaptive_lighting.set_manual_control
-  #       data:
-  #         entity_id: switch.adaptive_lighting_{}
-  #         lights: light.{}
-  #         manual_control: false
-  #                 """.format(
-  #                   metadata_lighting_group_dicts[0]["entity_automation"],
-  #                   metadata_lighting_group_dicts[0]["unique_id"],
-  #                   metadata_lighting_group_dicts[0]["entity_automation"],
-  #                   metadata_lighting_group_dicts[0]["unique_id"],
-  #               ).strip() + "\n")
-
-
+        #               metadata_lighting_file.write("  " + """
+        # ####################################################################################
+        # - id: lighting_reset_adaptive_lighting_{}
+        #   alias: "Lighting: Reset Adaptive Lighting - {}"
+        #   trigger:
+        #     - platform: state
+        #       entity_id: light.{}
+        #       from: 'unavailable'
+        #   action:
+        #                 """.format(
+        #                   metadata_lighting_group_dicts[0]["unique_id"],
+        #                   metadata_lighting_group_dicts[0]["friendly_name"],
+        #                   metadata_lighting_group_dicts[0]["unique_id"],
+        #               ).strip() + "\n")
+        #               metadata_lighting_file.write("      " + """
+        #     - service: adaptive_lighting.set_manual_control
+        #       data:
+        #         entity_id: switch.adaptive_lighting_{}
+        #         lights: light.{}
+        #         manual_control: false
+        #     - delay: '00:00:01'
+        #     - service: adaptive_lighting.set_manual_control
+        #       data:
+        #         entity_id: switch.adaptive_lighting_{}
+        #         lights: light.{}
+        #         manual_control: false
+        #                 """.format(
+        #                   metadata_lighting_group_dicts[0]["entity_automation"],
+        #                   metadata_lighting_group_dicts[0]["unique_id"],
+        #                   metadata_lighting_group_dicts[0]["entity_automation"],
+        #                   metadata_lighting_group_dicts[0]["unique_id"],
+        #               ).strip() + "\n")
 
         metadata_lighting_file.write("  " + """
   ####################################################################################

@@ -97,6 +97,10 @@ fan.lounge_air_purifier:
   name: Lounge Air Purifier
   aliases: ['Air Purifier']
   room: Lounge
+fan.dining_air_purifier:
+  name: Dining Air Purifier
+  aliases: ['Air Purifier']
+  room: Dining
 light.ada_fan:
   name: Adas Main Light
   aliases: ['Adas Main', 'Main Light', 'Main']

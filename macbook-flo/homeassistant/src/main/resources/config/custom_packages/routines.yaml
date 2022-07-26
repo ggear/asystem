@@ -39,7 +39,7 @@ automation:
           entity_id: switch.lounge_tv
   #####################################################################################
   - id: routine_home_movie_off
-    alias: "Routine: Put home out of Movie mode"
+    alias: "Routine: Take home out of Movie mode"
     mode: single
     trigger:
       - platform: state
