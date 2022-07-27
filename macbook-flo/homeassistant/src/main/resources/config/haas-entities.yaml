@@ -69,30 +69,6 @@ switch.roof_water_heater_booster:
   name: Roof Water Booster
   aliases: ['Water Booster']
   room: Roof
-fan.ada_fan:
-  name: Adas Fan
-  aliases: ['Fan']
-  room: Ada
-fan.edwin_fan:
-  name: Edwins Fan
-  aliases: ['Fan']
-  room: Edwin
-fan.parents_fan:
-  name: Parents Fan
-  aliases: ['Fan']
-  room: Parents
-switch.kitchen_fan:
-  name: Kitchen Fan
-  aliases: ['Fan']
-  room: Kitchen
-fan.lounge_fan:
-  name: Lounge Fan
-  aliases: ['Fan']
-  room: Lounge
-fan.deck_fan:
-  name: Deck Fans
-  aliases: ['Fans']
-  room: Deck
 light.ada_fan:
   name: Adas Main Light
   aliases: ['Adas Main', 'Main Light', 'Main']
@@ -161,6 +137,30 @@ light.wardrobe_main:
   name: Wardrobe Main Light
   aliases: ['Wardrobe Main', 'Main Light', 'Main']
   room: Wardrobe
+fan.ada_fan:
+  name: Adas Fan
+  aliases: ['Fan']
+  room: Ada
+fan.edwin_fan:
+  name: Edwins Fan
+  aliases: ['Fan']
+  room: Edwin
+fan.parents_fan:
+  name: Parents Fan
+  aliases: ['Fan']
+  room: Parents
+switch.kitchen_fan:
+  name: Kitchen Fan
+  aliases: ['Fan']
+  room: Kitchen
+fan.lounge_fan:
+  name: Lounge Fan
+  aliases: ['Fan']
+  room: Lounge
+fan.deck_fan:
+  name: Deck Fans
+  aliases: ['Fans']
+  room: Deck
 fan.lounge_air_purifier:
   name: Lounge Air Purifier
   aliases: ['Air Purifier']

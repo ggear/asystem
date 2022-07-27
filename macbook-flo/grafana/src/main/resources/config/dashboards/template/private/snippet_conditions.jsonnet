@@ -86,6 +86,14 @@ from(bucket: "home_private")
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
 |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "compensation_sensor_roof_temperature")
+|> filter(fn: (r) => r["_field"] == "value")
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+|> keep(columns: ["_time", "_value"])
+|> rename(columns: {_value: "Roof Temperature"})
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "home_private")
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
 |> filter(fn: (r) => r["entity_id"] == "compensation_sensor_netatmo_bertram_2_office_lounge_temperature")
 |> filter(fn: (r) => r["_field"] == "value")
 |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
@@ -98,7 +106,15 @@ from(bucket: "home_private")
 |> filter(fn: (r) => r["_field"] == "value")
 |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
 |> keep(columns: ["_time", "_value"])
-|> rename(columns: {_value: "Air Quality"})
+|> rename(columns: {_value: "Lounge Air Quality"})
+                  ')).addTarget(influxdb.target(query='
+from(bucket: "home_private")
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "dining_air_purifier_pm25")
+|> filter(fn: (r) => r["_field"] == "value")
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+|> keep(columns: ["_time", "_value"])
+|> rename(columns: {_value: "Dining Air Quality"})
                   ')).addSeriesOverride(
                         { "alias": "/.*Temperature.*/", "steppedLine": false, "bars": false, "lines" :true, "yaxis": 1 }
                   ).addSeriesOverride(
