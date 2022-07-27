@@ -169,8 +169,56 @@ light.wardrobe_main:
   name: Wardrobe Main Light
   aliases: ['Wardrobe Main', 'Main Light', 'Main']
   room: Wardrobe
+input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
+  name: Ada Lamp Reset
+  aliases: ['Lamp Reset']
+  room: Ada
 input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
   name: Edwin Lamp Reset
   aliases: ['Lamp Reset']
   room: Edwin
+input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
+  name: Edwin Night Light Reset
+  aliases: ['Night Light Reset']
+  room: Edwin
+input_boolean.lighting_reset_adaptive_lighting_hallway_main:
+  name: Hallway Main Reset
+  aliases: ['Main Reset']
+  room: Hallway
+input_boolean.lighting_reset_adaptive_lighting_dining_main:
+  name: Dining Main Reset
+  aliases: ['Main Reset']
+  room: Dining
+input_boolean.lighting_reset_adaptive_lighting_lounge_main:
+  name: Lounge Main Reset
+  aliases: ['Main Reset']
+  room: Lounge
+input_boolean.lighting_reset_adaptive_lighting_parents_main:
+  name: Parents Main Reset
+  aliases: ['Main Reset']
+  room: Parents
+input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
+  name: Kitchen Main Reset
+  aliases: ['Main Reset']
+  room: Kitchen
+input_boolean.lighting_reset_adaptive_lighting_laundry_main:
+  name: Laundry Main Reset
+  aliases: ['Main Reset']
+  room: Laundry
+input_boolean.lighting_reset_adaptive_lighting_pantry_main:
+  name: Pantry Main Reset
+  aliases: ['Main Reset']
+  room: Pantry
+input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
+  name: Bathroom Main Reset
+  aliases: ['Main Reset']
+  room: Bathroom
+input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
+  name: Ensuite Main Reset
+  aliases: ['Main Reset']
+  room: Ensuite
+input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
+  name: Wardrobe Main Reset
+  aliases: ['Main Reset']
+  room: Wardrobe
 #######################################################################################

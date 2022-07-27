@@ -617,8 +617,44 @@ switch.roof_network_switch:
 switch.rack_modem:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
+input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
+  friendly_name: 'Ada Lamp'
+  icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
   friendly_name: 'Edwin Lamp'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
+  friendly_name: 'Edwin Night Light'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_hallway_main:
+  friendly_name: 'Hallway Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_dining_main:
+  friendly_name: 'Dining Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_lounge_main:
+  friendly_name: 'Lounge Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_parents_main:
+  friendly_name: 'Parents Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
+  friendly_name: 'Kitchen Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_laundry_main:
+  friendly_name: 'Laundry Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_pantry_main:
+  friendly_name: 'Pantry Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
+  friendly_name: 'Bathroom Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
+  friendly_name: 'Ensuite Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
+  friendly_name: 'Wardrobe Main'
   icon: 'mdi:lightbulb-group'
 sensor.netatmo_bertram_2_office_pantry_battery_percent:
   friendly_name: 'Netatmo Pantry'

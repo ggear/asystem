@@ -56,8 +56,44 @@
 - type: entities
   title: Reset Lights
   entities:
+    - entity: input_boolean.lighting_reset_adaptive_lighting_ada_lamp
+      name: Ada Lamp
+      icon: mdi:lightbulb-group
     - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
       name: Edwin Lamp
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_night_light
+      name: Edwin Night Light
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_hallway_main
+      name: Hallway Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_dining_main
+      name: Dining Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_main
+      name: Lounge Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_parents_main
+      name: Parents Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_kitchen_main
+      name: Kitchen Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_laundry_main
+      name: Laundry Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_pantry_main
+      name: Pantry Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_bathroom_main
+      name: Bathroom Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_ensuite_main
+      name: Ensuite Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
+      name: Wardrobe Main
       icon: mdi:lightbulb-group
 ################################################################################
 - type: custom:layout-break
