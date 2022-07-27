@@ -54,6 +54,15 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
+  title: Reset Lights
+  entities:
+    - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
+      name: Edwin Lamp
+      icon: mdi:lightbulb-group
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
   title: Battery Charge
   entities:
     - entity: sensor.netatmo_bertram_2_office_pantry_battery_percent
