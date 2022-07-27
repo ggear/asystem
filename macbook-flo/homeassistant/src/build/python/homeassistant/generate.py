@@ -508,6 +508,10 @@ automation:
         else:
           - service: light.turn_on
             data_template:
+              brightness_pct: 99
+              entity_id: '{{ light }}'
+          - service: light.turn_on
+            data_template:
               brightness_pct: 100
               entity_id: '{{ light }}'
         """.strip() + "\n")

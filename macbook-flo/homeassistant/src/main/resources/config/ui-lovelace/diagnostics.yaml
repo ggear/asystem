@@ -1,8 +1,6 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
-- type: custom:layout-break
-################################################################################
 - type: entities
   title: Power Plugs
   show_header_toggle: false
@@ -52,16 +50,6 @@
     - entity: switch.rack_modem
       name: Internet Modem
       icon: mdi:router-wireless
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
-  title: Adaptive Lighting
-  show_header_toggle: false
-  entities:
-    - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
-      name: Edwin Lamp
-      icon: mdi:lightbulb-group
 ################################################################################
 - type: custom:layout-break
 ################################################################################

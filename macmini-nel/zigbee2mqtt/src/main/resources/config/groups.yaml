@@ -4,7 +4,7 @@
 '100':
   friendly_name: 'Ada Lamp'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -12,7 +12,7 @@
 '200':
   friendly_name: 'Edwin Lamp'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -20,7 +20,7 @@
 '300':
   friendly_name: 'Edwin Night Light'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -28,7 +28,7 @@
 '400':
   friendly_name: 'Hallway Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -39,7 +39,7 @@
 '500':
   friendly_name: 'Dining Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -52,7 +52,7 @@
 '600':
   friendly_name: 'Lounge Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -62,7 +62,7 @@
 '700':
   friendly_name: 'Parents Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -72,7 +72,7 @@
 '800':
   friendly_name: 'Kitchen Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -83,7 +83,7 @@
 '900':
   friendly_name: 'Laundry Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -91,7 +91,7 @@
 '1000':
   friendly_name: 'Pantry Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -99,7 +99,7 @@
 '1100':
   friendly_name: 'Office Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -107,7 +107,7 @@
 '1200':
   friendly_name: 'Bathroom Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -115,7 +115,7 @@
 '1300':
   friendly_name: 'Ensuite Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
@@ -123,7 +123,7 @@
 '1400':
   friendly_name: 'Wardrobe Main'
   retain: true
-  transition: 5
+  transition: 3
   optimistic: true
   off_state: 'all_members_off'
   devices:
