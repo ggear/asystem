@@ -45,16 +45,6 @@
       name: Deck
       icon: mdi:fan
 ################################################################################
-- type: entities
-  title: Air Purifiers
-  entities:
-    - entity: fan.lounge_air_purifier
-      name: Lounge
-      icon: mdi:air-purifier
-    - entity: fan.dining_air_purifier
-      name: Dining
-      icon: mdi:air-purifier
-################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: entities
@@ -118,20 +108,12 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
-  title: Default Adaptive Lighting
-  show_header_toggle: false
+  title: Air Purifiers
   entities:
-    - entity: switch.adaptive_lighting_default
-      name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_default
-      name: Sleep
-################################################################################
-- type: entities
-  title: Bedroom Adaptive Lighting
-  show_header_toggle: false
-  entities:
-    - entity: switch.adaptive_lighting_bedroom
-      name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_bedroom
-      name: Sleep
+    - entity: fan.lounge_air_purifier
+      name: Lounge
+      icon: mdi:air-purifier
+    - entity: fan.dining_air_purifier
+      name: Dining
+      icon: mdi:air-purifier
 ################################################################################

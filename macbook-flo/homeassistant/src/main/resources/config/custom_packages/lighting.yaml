@@ -28,6 +28,7 @@ adaptive_lighting:
     lights:
       - light.edwin_lamp
       - light.dining_main
+      - light.lounge_main
       - light.kitchen_main
       - light.laundry_main
       - light.pantry_main
@@ -47,18 +48,6 @@ adaptive_lighting:
       - light.bathroom_main
       - light.ensuite_main
       - light.wardrobe_main
-  ####################################################################################
-  - name: lounge
-    interval: 30
-    min_brightness: 1
-    max_brightness: 100
-    min_color_temp: 2500
-    max_color_temp: 5500
-    only_once: false
-    take_over_control: true
-    detect_non_ha_changes: true
-    lights:
-      - light.lounge_main
   ####################################################################################
 input_boolean:
   ####################################################################################
@@ -363,7 +352,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_lounge
+          entity_id: switch.adaptive_lighting_default
           lights: light.lounge_main
           manual_control: false
       - delay: '00:00:10'

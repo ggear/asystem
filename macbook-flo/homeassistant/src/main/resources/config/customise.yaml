@@ -302,12 +302,6 @@ fan.deck_east_fan:
 fan.deck_west_fan:
   friendly_name: 'Deck West'
   icon: 'mdi:fan'
-fan.lounge_air_purifier:
-  friendly_name: 'Lounge'
-  icon: 'mdi:air-purifier'
-fan.dining_air_purifier:
-  friendly_name: 'Dining'
-  icon: 'mdi:air-purifier'
 light.ada_fan:
   friendly_name: 'Ada Main'
   icon: 'mdi:lightbulb-group'
@@ -362,30 +356,12 @@ light.wardrobe_main:
 switch.deck_festoons:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:lightbulb-group'
-switch.adaptive_lighting_default:
-  friendly_name: 'Status'
-switch.adaptive_lighting_sleep_mode_default:
-  friendly_name: 'Sleep'
-switch.adaptive_lighting_adapt_color_default:
-  friendly_name: 'Colour'
-switch.adaptive_lighting_adapt_brightness_default:
-  friendly_name: 'Brightness'
-switch.adaptive_lighting_bedroom:
-  friendly_name: 'Status'
-switch.adaptive_lighting_sleep_mode_bedroom:
-  friendly_name: 'Sleep'
-switch.adaptive_lighting_adapt_color_bedroom:
-  friendly_name: 'Colour'
-switch.adaptive_lighting_adapt_brightness_bedroom:
-  friendly_name: 'Brightness'
-switch.adaptive_lighting_night_light:
-  friendly_name: 'Status'
-switch.adaptive_lighting_sleep_mode_night_light:
-  friendly_name: 'Sleep'
-switch.adaptive_lighting_adapt_color_night_light:
-  friendly_name: 'Colour'
-switch.adaptive_lighting_adapt_brightness_night_light:
-  friendly_name: 'Brightness'
+fan.lounge_air_purifier:
+  friendly_name: 'Lounge'
+  icon: 'mdi:air-purifier'
+fan.dining_air_purifier:
+  friendly_name: 'Dining'
+  icon: 'mdi:air-purifier'
 sensor.home_power:
   friendly_name: 'Home Load'
   icon: 'mdi:home-lightning-bolt'
@@ -572,6 +548,69 @@ sensor.kitchen_fan_today_s_consumption:
   friendly_name: 'Kitchen Fan'
 sensor.withings_weight_kg_graham:
   friendly_name: 'Weight'
+switch.adaptive_lighting_default:
+  friendly_name: 'Status'
+switch.adaptive_lighting_sleep_mode_default:
+  friendly_name: 'Sleep'
+switch.adaptive_lighting_adapt_color_default:
+  friendly_name: 'Colour'
+switch.adaptive_lighting_adapt_brightness_default:
+  friendly_name: 'Brightness'
+switch.adaptive_lighting_bedroom:
+  friendly_name: 'Status'
+switch.adaptive_lighting_sleep_mode_bedroom:
+  friendly_name: 'Sleep'
+switch.adaptive_lighting_adapt_color_bedroom:
+  friendly_name: 'Colour'
+switch.adaptive_lighting_adapt_brightness_bedroom:
+  friendly_name: 'Brightness'
+switch.adaptive_lighting_night_light:
+  friendly_name: 'Status'
+switch.adaptive_lighting_sleep_mode_night_light:
+  friendly_name: 'Sleep'
+switch.adaptive_lighting_adapt_color_night_light:
+  friendly_name: 'Colour'
+switch.adaptive_lighting_adapt_brightness_night_light:
+  friendly_name: 'Brightness'
+input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
+  friendly_name: 'Ada Lamp'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
+  friendly_name: 'Edwin Lamp'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
+  friendly_name: 'Edwin Night Light'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_hallway_main:
+  friendly_name: 'Hallway Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_dining_main:
+  friendly_name: 'Dining Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_lounge_main:
+  friendly_name: 'Lounge Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_parents_main:
+  friendly_name: 'Parents Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
+  friendly_name: 'Kitchen Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_laundry_main:
+  friendly_name: 'Laundry Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_pantry_main:
+  friendly_name: 'Pantry Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
+  friendly_name: 'Bathroom Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
+  friendly_name: 'Ensuite Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
+  friendly_name: 'Wardrobe Main'
+  icon: 'mdi:lightbulb-group'
 switch.lounge_tv:
   friendly_name: 'Lounge TV'
   icon: 'mdi:television'
@@ -617,45 +656,6 @@ switch.roof_network_switch:
 switch.rack_modem:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
-input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
-  friendly_name: 'Ada Lamp'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
-  friendly_name: 'Edwin Lamp'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
-  friendly_name: 'Edwin Night Light'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_hallway_main:
-  friendly_name: 'Hallway Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_dining_main:
-  friendly_name: 'Dining Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_lounge_main:
-  friendly_name: 'Lounge Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_parents_main:
-  friendly_name: 'Parents Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
-  friendly_name: 'Kitchen Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_laundry_main:
-  friendly_name: 'Laundry Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_pantry_main:
-  friendly_name: 'Pantry Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
-  friendly_name: 'Bathroom Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
-  friendly_name: 'Ensuite Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
-  friendly_name: 'Wardrobe Main'
-  icon: 'mdi:lightbulb-group'
 sensor.netatmo_bertram_2_office_pantry_battery_percent:
   friendly_name: 'Netatmo Pantry'
   icon: 'mdi:battery-30'
@@ -682,7 +682,7 @@ sensor.weatherstation_console_battery_voltage:
   icon: 'mdi:battery-30'
   unit_of_measurement: 'V'
 sensor.weatherstation_coms_signal_quality:
-  friendly_name: 'Coms Signal Quality'
+  friendly_name: 'Davis Signal Quality'
   icon: 'mdi:signal'
   unit_of_measurement: '%'
 media_player.ada_home:

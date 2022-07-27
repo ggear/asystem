@@ -93,14 +93,6 @@ fan.deck_fan:
   name: Deck Fans
   aliases: ['Fans']
   room: Deck
-fan.lounge_air_purifier:
-  name: Lounge Air Purifier
-  aliases: ['Air Purifier']
-  room: Lounge
-fan.dining_air_purifier:
-  name: Dining Air Purifier
-  aliases: ['Air Purifier']
-  room: Dining
 light.ada_fan:
   name: Adas Main Light
   aliases: ['Adas Main', 'Main Light', 'Main']
@@ -169,6 +161,14 @@ light.wardrobe_main:
   name: Wardrobe Main Light
   aliases: ['Wardrobe Main', 'Main Light', 'Main']
   room: Wardrobe
+fan.lounge_air_purifier:
+  name: Lounge Air Purifier
+  aliases: ['Air Purifier']
+  room: Lounge
+fan.dining_air_purifier:
+  name: Dining Air Purifier
+  aliases: ['Air Purifier']
+  room: Dining
 input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
   name: Ada Lamp Reset
   aliases: ['Lamp Reset']
@@ -182,43 +182,43 @@ input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
   aliases: ['Night Light Reset']
   room: Edwin
 input_boolean.lighting_reset_adaptive_lighting_hallway_main:
-  name: Hallway Main Reset
-  aliases: ['Main Reset']
+  name: Hallway Diagnostics
+  aliases: ['Diagnostics']
   room: Hallway
 input_boolean.lighting_reset_adaptive_lighting_dining_main:
-  name: Dining Main Reset
-  aliases: ['Main Reset']
+  name: Dining Light Reset
+  aliases: ['Light Reset']
   room: Dining
 input_boolean.lighting_reset_adaptive_lighting_lounge_main:
-  name: Lounge Main Reset
-  aliases: ['Main Reset']
+  name: Lounge Light Reset
+  aliases: ['Light Reset']
   room: Lounge
 input_boolean.lighting_reset_adaptive_lighting_parents_main:
-  name: Parents Main Reset
-  aliases: ['Main Reset']
+  name: Parents Light Reset
+  aliases: ['Light Reset']
   room: Parents
 input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
-  name: Kitchen Main Reset
-  aliases: ['Main Reset']
+  name: Kitchen Light Reset
+  aliases: ['Light Reset']
   room: Kitchen
 input_boolean.lighting_reset_adaptive_lighting_laundry_main:
-  name: Laundry Main Reset
-  aliases: ['Main Reset']
+  name: Laundry Light Reset
+  aliases: ['Light Reset']
   room: Laundry
 input_boolean.lighting_reset_adaptive_lighting_pantry_main:
-  name: Pantry Main Reset
-  aliases: ['Main Reset']
+  name: Pantry Light Reset
+  aliases: ['Light Reset']
   room: Pantry
 input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
-  name: Bathroom Main Reset
-  aliases: ['Main Reset']
+  name: Bathroom Light Reset
+  aliases: ['Light Reset']
   room: Bathroom
 input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
-  name: Ensuite Main Reset
-  aliases: ['Main Reset']
+  name: Ensuite Light Reset
+  aliases: ['Light Reset']
   room: Ensuite
 input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
-  name: Wardrobe Main Reset
-  aliases: ['Main Reset']
+  name: Wardrobe Light Reset
+  aliases: ['Light Reset']
   room: Wardrobe
 #######################################################################################
