@@ -1,14 +1,6 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-'0x9035eafffe404425':
-  friendly_name: 'Lounge Air Purifier'
-  homeassistant:
-    expire_after: 3600
-'0x9035eafffe82fef8':
-  friendly_name: 'Dining Air Purifier'
-  homeassistant:
-    expire_after: 3600
 '0x0017880103433075':
   friendly_name: 'Ada Lamp Bulb 1'
   homeassistant:
@@ -123,6 +115,14 @@
     expire_after: 3600
 '0x00178801040ede93':
   friendly_name: 'Wardrobe Main Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x9035eafffe404425':
+  friendly_name: 'Lounge Air Purifier'
+  homeassistant:
+    expire_after: 3600
+'0x9035eafffe82fef8':
+  friendly_name: 'Dining Air Purifier'
   homeassistant:
     expire_after: 3600
 '0x00158d0005d9d088':

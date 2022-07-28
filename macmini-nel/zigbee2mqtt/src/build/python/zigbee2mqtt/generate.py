@@ -23,12 +23,36 @@ if __name__ == "__main__":
     env = load_env(DIR_ROOT)
     metadata_df = load_entity_metadata()
 
+    metadata_config_df = metadata_df[
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["device_name"].str.len() > 0) &
+        (metadata_df["zigbee_type"] == "Device") &
+        (metadata_df["zigbee_device_config"].str.len() > 0)
+        ]
+    metadata_config_dicts = [row.dropna().to_dict() for index, row in metadata_config_df.iterrows()]
+    metadata_config_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/mqtt_config.sh"))
+    with open(metadata_config_path, 'w') as metadata_config_file:
+        metadata_config_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+            """.strip() + "\n")
+        for metadata_config_dict in metadata_config_dicts:
+            metadata_config_file.write("""
+mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t '{}/set' -m '{}'
+                """.format(
+                metadata_config_dict["device_name"].replace("-", " ").title(),
+                metadata_config_dict["zigbee_device_config"].replace("'", "\""),
+            ).strip() + "\n")
+        print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
+
     metadata_devices_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_name"].str.len() > 0) &
-        (metadata_df["zigbee2mqtt_type"] == "Device") &
-        (metadata_df["zigbee2mqtt_config"].str.len() > 0) &
+        (metadata_df["zigbee_type"] == "Device") &
+        (metadata_df["zigbee_config"].str.len() > 0) &
         (metadata_df["connection_mac"].str.len() > 0)
         ]
     metadata_devices_dicts = [row.dropna().to_dict() for index, row in metadata_devices_df.iterrows()]
@@ -47,7 +71,7 @@ if __name__ == "__main__":
                 """.format(
                 metadata_devices_dict["connection_mac"],
                 metadata_devices_dict["device_name"].replace("-", " ").title(),
-                metadata_devices_dict["zigbee2mqtt_config"],
+                metadata_devices_dict["zigbee_config"],
             ).strip() + "\n")
         print("Build generate script [zigbee2mqtt] entity device metadata persisted to [{}]".format(metadata_devices_path))
 
@@ -55,21 +79,21 @@ if __name__ == "__main__":
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_name"].str.len() > 0) &
-        (metadata_df["zigbee2mqtt_type"].str.len() > 0) &
-        (metadata_df["zigbee2mqtt_group"].str.len() > 0) &
-        (metadata_df["zigbee2mqtt_config"].str.len() > 0)
+        (metadata_df["zigbee_type"].str.len() > 0) &
+        (metadata_df["zigbee_group"].str.len() > 0) &
+        (metadata_df["zigbee_config"].str.len() > 0)
         ]
     metadata_groups_devices_dicts = [row.dropna().to_dict() for index, row in metadata_groups_devices_df.iterrows()]
     metadata_groups_dict = {}
     metadata_grouped_devices_dict = {}
     for metadata_groups_devices_dict in metadata_groups_devices_dicts:
-        if metadata_groups_devices_dict["zigbee2mqtt_type"] == "Group":
-            metadata_groups_dict[metadata_groups_devices_dict["zigbee2mqtt_group"]] = metadata_groups_devices_dict
-            metadata_grouped_devices_dict[metadata_groups_devices_dict["zigbee2mqtt_group"]] = []
+        if metadata_groups_devices_dict["zigbee_type"] == "Group":
+            metadata_groups_dict[metadata_groups_devices_dict["zigbee_group"]] = metadata_groups_devices_dict
+            metadata_grouped_devices_dict[metadata_groups_devices_dict["zigbee_group"]] = []
     for metadata_groups_devices_dict in metadata_groups_devices_dicts:
-        if metadata_groups_devices_dict["zigbee2mqtt_type"] == "Device" and \
-                metadata_groups_devices_dict["zigbee2mqtt_group"] in metadata_grouped_devices_dict:
-            metadata_grouped_devices_dict[metadata_groups_devices_dict["zigbee2mqtt_group"]].append(metadata_groups_devices_dict)
+        if metadata_groups_devices_dict["zigbee_type"] == "Device" and \
+                metadata_groups_devices_dict["zigbee_group"] in metadata_grouped_devices_dict:
+            metadata_grouped_devices_dict[metadata_groups_devices_dict["zigbee_group"]].append(metadata_groups_devices_dict)
     metadata_groups_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/groups.yaml"))
     with open(metadata_groups_path, 'w') as metadata_groups_file:
         metadata_groups_file.write("""
@@ -88,7 +112,7 @@ if __name__ == "__main__":
                 """.format(
                     metadata_groups_id,
                     metadata_groups_dict[metadata_groups_id]["device_name"].replace("-", " ").title(),
-                    metadata_groups_dict[metadata_groups_id]["zigbee2mqtt_config"],
+                    metadata_groups_dict[metadata_groups_id]["zigbee_config"],
                 ).strip() + "\n")
                 for metadata_device_dict in metadata_grouped_devices_dict[metadata_groups_id]:
                     if "connection_mac" in metadata_device_dict:
