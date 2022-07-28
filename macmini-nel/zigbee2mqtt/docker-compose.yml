@@ -1,20 +1,28 @@
 version: '3.7'
+x-common: &common
+  image: zigbee2mqtt:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  user: root
+  environment:
+    - TZ=Australia/Perth
+    - DEBUG=zigbee-herdsman*
+    - ZIGBEE2MQTT_IP
+    - ZIGBEE2MQTT_PORT
+    - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=$ZIGBEE2MQTT_PORT
+    - ZIGBEE2MQTT_CONFIG_FRONTEND_URL=http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_PORT
+    - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://$VERNEMQ_IP:$VERNEMQ_PORT
+    - VERNEMQ_IP
+    - VERNEMQ_PORT
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
 services:
   zigbee2mqtt:
     container_name: zigbee2mqtt
-    image: zigbee2mqtt:${SERVICE_VERSION_ABSOLUTE}
-    init: true
+    <<: *common
     restart: ${SERVICE_RESTART}
-    environment:
-      - TZ=Australia/Perth
-      - DEBUG=zigbee-herdsman*
-      - ZIGBEE2MQTT_IP
-      - ZIGBEE2MQTT_PORT
-      - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=$ZIGBEE2MQTT_PORT
-      - ZIGBEE2MQTT_CONFIG_FRONTEND_URL=http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_PORT
-      - ZIGBEE2MQTT_CONFIG_MQTT_SERVER=mqtt://$VERNEMQ_IP:$VERNEMQ_PORT
-      - VERNEMQ_IP
-      - VERNEMQ_PORT
     volumes:
       - ${SERVICE_DATA_DIR}:/app/data
       - /run/udev:/run/udev:ro
@@ -22,12 +30,19 @@ services:
       - ${ZIGBEE2MQTT_PORT}:${ZIGBEE2MQTT_PORT}
     devices:
       - /dev/ttyACM0:/dev/ttyACM0
-    logging:
-      driver: "json-file"
-      options:
-        max-file: "5"
-        max-size: "100m"
     deploy:
       resources:
         limits:
           memory: 5G
+  zigbee2mqtt_bootstrap:
+    container_name: zigbee2mqtt_bootstrap
+    <<: *common
+    restart: 'no'
+    volumes:
+      - ${SERVICE_DATA_DIR}:/app/data
+      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
+    entrypoint: /bin/bash
+    command:
+      - /bootstrap/bootstrap.sh
+    depends_on:
+      - zigbee2mqtt

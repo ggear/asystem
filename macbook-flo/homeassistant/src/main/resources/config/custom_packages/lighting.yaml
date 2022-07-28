@@ -16,23 +16,6 @@ adaptive_lighting:
       - light.ada_lamp
       - light.edwin_night_light
   ####################################################################################
-  - name: default
-    interval: 30
-    min_brightness: 100
-    max_brightness: 100
-    min_color_temp: 2500
-    max_color_temp: 5500
-    only_once: false
-    take_over_control: true
-    detect_non_ha_changes: true
-    lights:
-      - light.edwin_lamp
-      - light.dining_main
-      - light.lounge_main
-      - light.kitchen_main
-      - light.laundry_main
-      - light.pantry_main
-  ####################################################################################
   - name: bedroom
     interval: 30
     min_brightness: 1
@@ -43,11 +26,28 @@ adaptive_lighting:
     take_over_control: true
     detect_non_ha_changes: true
     lights:
+      - light.edwin_lamp
       - light.hallway_main
       - light.parents_main
       - light.bathroom_main
       - light.ensuite_main
       - light.wardrobe_main
+  ####################################################################################
+  - name: default
+    interval: 30
+    min_brightness: 100
+    max_brightness: 100
+    min_color_temp: 2500
+    max_color_temp: 5500
+    only_once: false
+    take_over_control: true
+    detect_non_ha_changes: true
+    lights:
+      - light.dining_main
+      - light.lounge_main
+      - light.kitchen_main
+      - light.laundry_main
+      - light.pantry_main
   ####################################################################################
 input_boolean:
   ####################################################################################
@@ -250,10 +250,7 @@ automation:
         else:
           - service: light.turn_on
             data_template:
-              brightness_pct: 99
-              entity_id: '{{ light }}'
-          - service: light.turn_on
-            data_template:
+              color_temp: 366
               brightness_pct: 100
               entity_id: '{{ light }}'
   ####################################################################################
@@ -284,7 +281,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_bedroom
           lights: light.edwin_lamp
           manual_control: false
       - delay: '00:00:10'
