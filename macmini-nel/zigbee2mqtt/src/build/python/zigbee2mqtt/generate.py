@@ -41,7 +41,7 @@ while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/st
             """.strip() + "\n")
         for metadata_config_dict in metadata_config_dicts:
             metadata_config_file.write("""
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/{}/set' -m '{}' && echo 'Published to [zigbee/{}/set] config {}'
+mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/{}/set' -m '{}' && echo 'Published to [zigbee/{}/set] config {}' && sleep 1
                 """.format(
                 metadata_config_dict["device_name"].replace("-", " ").title(),
                 metadata_config_dict["zigbee_device_config"].replace("'", "\""),
