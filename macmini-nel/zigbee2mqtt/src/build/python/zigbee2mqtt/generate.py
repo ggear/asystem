@@ -37,6 +37,7 @@ if __name__ == "__main__":
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
+while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
             """.strip() + "\n")
         for metadata_config_dict in metadata_config_dicts:
             metadata_config_file.write("""

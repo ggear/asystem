@@ -1,16 +1,13 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-# TODO: Doesn't seem to be necessary?
-# sonos:
-#   media_player:
-#     hosts:
-#       - 10.0.4.40
-#       - 10.0.4.41
-#       - 10.0.4.42
+cast:
+ known_hosts: 10.0.4.50,10.0.4.51,10.0.4.52,10.0.4.53,10.0.4.54
 #######################################################################################
-# TODO: Currently not being picked up, could not be wired in config_flow or using wrong keys, think the former?
-#google:
-#  media_player:
-#    hosts: 10.0.4.50,10.0.4.51,10.0.4.52,10.0.4.53,10.0.4.54
+sonos:
+  media_player:
+    hosts:
+      - 10.0.4.40
+      - 10.0.4.41
+      - 10.0.4.42
 #######################################################################################

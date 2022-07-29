@@ -1,10 +1,10 @@
 import datetime
 import os
-import sys
-import time
 from collections import OrderedDict
 
 import pandas as pd
+import sys
+import time
 from requests import get
 
 DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
@@ -262,33 +262,42 @@ automation:
     metadata_media_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "Google") &
+        ((metadata_df["device_via_device"] == "Google") | (metadata_df["device_via_device"] == "Sonos")) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["connection_ip"].str.len() > 0)
         ]
-    metadata_media_dicts = [row.dropna().to_dict() for index, row in metadata_media_df.iterrows()]
+    metadata_media_google_dicts = [row.dropna().to_dict()
+                                   for index, row in metadata_media_df.query("device_via_device == 'Google'").iterrows()]
+    metadata_media_sonos_dicts = [row.dropna().to_dict()
+                                  for index, row in metadata_media_df.query("device_via_device == 'Sonos'").iterrows()]
     metadata_media_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/media.yaml"))
     with open(metadata_media_path, 'w') as metadata_media_file:
         metadata_media_file.write("""
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-# TODO: Doesn't seem to be necessary?
-# sonos:
-#   media_player:
-#     hosts:
-#       - 10.0.4.40
-#       - 10.0.4.41
-#       - 10.0.4.42
-#######################################################################################
-# TODO: Currently not being picked up, could not be wired in config_flow or using wrong keys, think the former?
-#google:
-#  media_player:
-#    hosts: {}
-#######################################################################################
+        """.strip() + "\n")
+        metadata_media_file.write("""
+cast:
+ known_hosts: {}
         """.format(
-            ','.join(map(str, [metadata_media_dict['connection_ip'] for metadata_media_dict in metadata_media_dicts]))
+            ','.join(map(str, [metadata_media_dict['connection_ip'] for metadata_media_dict in metadata_media_google_dicts]))
         ).strip() + "\n")
+        metadata_media_file.write("""
+#######################################################################################
+sonos:
+  media_player:
+    hosts:
+        """.strip() + "\n")
+        for metadata_media_sonos_dict in metadata_media_sonos_dicts:
+            metadata_media_file.write("      " + """
+      - {}
+            """.format(
+                metadata_media_sonos_dict['connection_ip']
+            ).strip() + "\n")
+        metadata_media_file.write("""      
+#######################################################################################
+            """.strip() + "\n")
 
     # Build lighting YAML
     metadata_lighting_df = metadata_df[
