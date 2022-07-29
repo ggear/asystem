@@ -10,14 +10,11 @@ homeassistant:
   status_topic: 'haas/status'
   legacy_entity_attributes: false
   legacy_triggers: true
-
-# TODO: Doesnt seem to work?
 availability:
   active:
     timeout: 1
   passive:
     timeout: 1500
-
 device_options:
   retain: true
   qos: 1

@@ -40,9 +40,8 @@ services:
     restart: 'no'
     volumes:
       - ${SERVICE_DATA_DIR}:/app/data
-      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
-    entrypoint: /bin/bash
+    entrypoint: /bin/sh
     command:
-      - /bootstrap/bootstrap.sh
+      - /app/data/bootstrap.sh
     depends_on:
       - zigbee2mqtt
