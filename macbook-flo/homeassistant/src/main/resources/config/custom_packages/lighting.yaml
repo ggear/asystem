@@ -91,6 +91,10 @@ input_boolean:
     name: Pantry Main
     initial: off
   ####################################################################################
+  lighting_reset_adaptive_lighting_office_main:
+    name: Office Main
+    initial: off
+  ####################################################################################
   lighting_reset_adaptive_lighting_bathroom_main:
     name: Bathroom Main
     initial: off
@@ -423,6 +427,23 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_pantry_main
+  ####################################################################################
+  - id: lighting_reset_adaptive_lighting_office_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Office Main"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_office_main
+        from: 'off'
+        to: 'on'
+    action:
+      - service: light.turn_on
+        data_template:
+          color_temp: 250
+          brightness_pct: 100
+          entity_id: light.office_main
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_office_main
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_bathroom_main
     alias: "Lighting: Reset Adaptive Lighting on request of Bathroom Main"

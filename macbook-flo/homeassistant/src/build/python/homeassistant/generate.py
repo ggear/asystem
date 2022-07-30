@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 from collections import OrderedDict
 
@@ -278,8 +279,9 @@ automation:
 #######################################################################################
         """.strip() + "\n")
         metadata_media_file.write("""
-cast:
- known_hosts: {}
+# NOTE: Use for populating the Google Cast UI integration 'known_hosts' field 
+# cast:
+#  known_hosts: {}
         """.format(
             ','.join(map(str, [metadata_media_dict['connection_ip'] for metadata_media_dict in metadata_media_google_dicts]))
         ).strip() + "\n")
@@ -306,16 +308,9 @@ sonos:
         ((metadata_df["device_via_device"] == "Hue") | (metadata_df["device_via_device"] == "Phillips")) &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["friendly_name"].str.len() > 0) &
-        (metadata_df["entity_domain"] == "Lights") &
-        (metadata_df["entity_group"] == "Control")
+        (metadata_df["friendly_name"].str.len() > 0)
         ]
     metadata_lighting_dicts = [row.dropna().to_dict() for index, row in metadata_lighting_df.iterrows()]
-    metadata_lighting_groups_dicts = {}
-    for metadata_lighting_dict in metadata_lighting_dicts:
-        if metadata_lighting_dict["friendly_name"] not in metadata_lighting_groups_dicts:
-            metadata_lighting_groups_dicts[metadata_lighting_dict["friendly_name"]] = []
-        metadata_lighting_groups_dicts[metadata_lighting_dict["friendly_name"]].append(metadata_lighting_dict)
     metadata_lighting_automations_dicts = {}
     for metadata_lighting_dict in metadata_lighting_dicts:
         if "entity_automation" in metadata_lighting_dict:
@@ -357,17 +352,16 @@ adaptive_lighting:
   ####################################################################################
 input_boolean:
         """.strip() + "\n")
-        for group_name, metadata_lighting_group_dicts in list(metadata_lighting_groups_dicts.items()):
-            if "entity_automation" in metadata_lighting_group_dicts[0]:
-                metadata_lighting_file.write("  " + """
+        for metadata_lighting_dict in metadata_lighting_dicts:
+            metadata_lighting_file.write("  " + """
   ####################################################################################
   lighting_reset_adaptive_lighting_{}:
     name: {}
     initial: off
-                  """.format(
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                    metadata_lighting_group_dicts[0]["friendly_name"],
-                ).strip() + "\n")
+              """.format(
+                metadata_lighting_dict["unique_id"],
+                metadata_lighting_dict["friendly_name"],
+            ).strip() + "\n")
         metadata_lighting_file.write("  " + """
   ####################################################################################
 automation:
@@ -492,6 +486,8 @@ automation:
           entity_id: switch.adaptive_lighting_night_light
           manual_control: false
       ################################################################################
+        """.strip() + "\n")
+        metadata_lighting_file.write("  " + """
   - id: lighting_reset_adaptive_lighting_announce
     alias: 'Lighting: Reset Adaptive Lighting on bulb announce'
     mode: single
@@ -521,9 +517,8 @@ automation:
               brightness_pct: 100
               entity_id: '{{ light }}'
         """.strip() + "\n")
-        for group_name, metadata_lighting_group_dicts in list(metadata_lighting_groups_dicts.items()):
-            if "entity_automation" in metadata_lighting_group_dicts[0]:
-                metadata_lighting_file.write("  " + """
+        for metadata_lighting_dict in metadata_lighting_dicts:
+            metadata_lighting_file.write("  " + """
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_{}
     alias: "Lighting: Reset Adaptive Lighting on request of {}"
@@ -532,11 +527,13 @@ automation:
         entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
         from: 'off'
         to: 'on'
-                  """.format(
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                    metadata_lighting_group_dicts[0]["friendly_name"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                ).strip() + "\n")
+            """.format(
+                metadata_lighting_dict["unique_id"],
+                metadata_lighting_dict["friendly_name"],
+                metadata_lighting_dict["unique_id"],
+            ).strip() + "\n")
+            reset_double_trigger_timeout = "'00:00:10'"
+            if "entity_automation" in metadata_lighting_dict:
                 metadata_lighting_file.write("    " + """
     action:
       - service: adaptive_lighting.set_manual_control
@@ -544,13 +541,33 @@ automation:
           entity_id: switch.adaptive_lighting_{}
           lights: light.{}
           manual_control: false
-      - delay: '00:00:10'
+      - delay: {}
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
-                  """.format(
-                    metadata_lighting_group_dicts[0]["entity_automation"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
-                    metadata_lighting_group_dicts[0]["unique_id"],
+                """.format(
+                    metadata_lighting_dict["entity_automation"],
+                    metadata_lighting_dict["unique_id"],
+                    reset_double_trigger_timeout,
+                    metadata_lighting_dict["unique_id"],
+                ).strip() + "\n")
+            else:
+                device_config = json.loads(metadata_lighting_dict["zigbee_device_config"])
+                metadata_lighting_file.write("    " + """
+    action:
+      - service: light.turn_on
+        data_template:
+          color_temp: {}
+          brightness_pct: {}
+          entity_id: light.{}
+      - delay: {}
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
+                """.format(
+                    device_config["color_temp_startup"] if "color_temp_startup" in device_config else 366,
+                    int(device_config["hue_power_on_brightness"] / 254 * 100) if "hue_power_on_brightness" in device_config else 100,
+                    metadata_lighting_dict["unique_id"],
+                    reset_double_trigger_timeout,
+                    metadata_lighting_dict["unique_id"],
                 ).strip() + "\n")
         metadata_lighting_file.write("  " + """
   ####################################################################################

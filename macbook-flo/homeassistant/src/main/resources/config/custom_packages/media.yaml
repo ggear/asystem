@@ -1,8 +1,9 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-cast:
- known_hosts: 10.0.4.50,10.0.4.51,10.0.4.52,10.0.4.53,10.0.4.54
+# NOTE: Use for populating the Google Cast UI integration 'known_hosts' field 
+# cast:
+#  known_hosts: 10.0.4.50,10.0.4.51,10.0.4.52,10.0.4.53,10.0.4.54
 #######################################################################################
 sonos:
   media_player:

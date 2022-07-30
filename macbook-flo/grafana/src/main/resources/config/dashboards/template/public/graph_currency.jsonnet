@@ -323,7 +323,7 @@ from(bucket: "data_public")
 //ASD                   legend_avg=true,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=380,
+//ASD                   legend_sideWidth=400,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 field = "aud/gbp"
@@ -397,7 +397,7 @@ series
 //ASD                   legend_avg=true,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=380,
+//ASD                   legend_sideWidth=400,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -435,7 +435,7 @@ from(bucket: "data_public")
 //ASD                   legend_avg=true,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=380,
+//ASD                   legend_sideWidth=400,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
@@ -473,7 +473,7 @@ from(bucket: "data_public")
 //ASD                   legend_avg=true,
 //ASD                   legend_alignAsTable=true,
 //ASD                   legend_rightSide=true,
-//ASD                   legend_sideWidth=380,
+//ASD                   legend_sideWidth=400,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")

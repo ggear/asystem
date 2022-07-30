@@ -304,7 +304,7 @@ from(bucket: "data_private")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=380,
+                        legend_sideWidth=400,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 import "strings"
@@ -359,7 +359,7 @@ from(bucket: "data_private")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=380,
+                        legend_sideWidth=400,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 import "strings"
@@ -435,7 +435,7 @@ series
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=380,
+                        legend_sideWidth=400,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 import "strings"
@@ -628,7 +628,7 @@ series
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=380,
+                        legend_sideWidth=400,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
 import "strings"

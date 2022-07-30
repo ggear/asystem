@@ -209,6 +209,10 @@ input_boolean.lighting_reset_adaptive_lighting_pantry_main:
   name: Pantry Main Reset
   aliases: ['Main Reset']
   room: Pantry
+input_boolean.lighting_reset_adaptive_lighting_office_main:
+  name: Office Main Reset
+  aliases: ['Main Reset']
+  room: Office
 input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
   name: Bathroom Main Reset
   aliases: ['Main Reset']

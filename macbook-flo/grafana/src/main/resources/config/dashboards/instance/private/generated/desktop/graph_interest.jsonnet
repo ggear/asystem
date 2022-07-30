@@ -262,7 +262,7 @@ from(bucket: "data_public")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=380
+                        legend_sideWidth=400
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -313,7 +313,7 @@ from(bucket: "data_public")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=380
+                        legend_sideWidth=400
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -364,7 +364,7 @@ from(bucket: "data_public")
                         legend_avg=true,
                         legend_alignAsTable=true,
                         legend_rightSide=true,
-                        legend_sideWidth=380
+                        legend_sideWidth=400
                   ).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)

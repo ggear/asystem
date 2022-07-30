@@ -602,6 +602,9 @@ input_boolean.lighting_reset_adaptive_lighting_laundry_main:
 input_boolean.lighting_reset_adaptive_lighting_pantry_main:
   friendly_name: 'Pantry Main'
   icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_office_main:
+  friendly_name: 'Office Main'
+  icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
   friendly_name: 'Bathroom Main'
   icon: 'mdi:lightbulb-group'
