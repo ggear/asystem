@@ -130,6 +130,10 @@ if [ $(grep "net.ipv6.conf.all.disable_ipv6" /etc/sysctl.conf | wc -l) -eq 0 ]; 
   echo "net.ipv6.conf.all.disable_ipv6 = 1" >>/etc/sysctl.conf
   sysctl -p
 fi
+if [ $(grep "vm.swappiness" /etc/sysctl.conf | wc -l) -eq 0 ]; then
+  echo "vm.swappiness = 1" >>/etc/sysctl.conf
+  sysctl vm.swappiness=1
+fi
 
 ################################################################################
 # Shell
