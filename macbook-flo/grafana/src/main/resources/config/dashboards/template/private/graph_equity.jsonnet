@@ -131,7 +131,7 @@ from(bucket: "data_private")
                   ,
 
                   bar.new(
-                        title='Portfolio Range Deltas',
+                        title='Portfolio Range Performance',
                         datasource='InfluxDB_V2',
                         unit='percent',
                         min=-30,
@@ -202,7 +202,7 @@ series
                   ,
 
                   gauge.new(
-                        title='Holdings Daily Delta',
+                        title='Holdings Daily Performance',
                         datasource='InfluxDB_V2',
                         reducerFunction='last',
                         showThresholdLabels=false,
@@ -236,7 +236,7 @@ from(bucket: "data_private")
                   ,
 
                   gauge.new(
-                        title='Holdings Monthly Delta',
+                        title='Holdings Monthly Performance',
                         datasource='InfluxDB_V2',
                         reducerFunction='last',
                         showThresholdLabels=false,
@@ -270,7 +270,7 @@ from(bucket: "data_private")
                   ,
 
                   gauge.new(
-                        title='Holdings Quarterly Delta',
+                        title='Holdings Quarterly Performance',
                         datasource='InfluxDB_V2',
                         reducerFunction='last',
                         showThresholdLabels=false,
@@ -304,7 +304,7 @@ from(bucket: "data_private")
                   ,
 
                   graph.new(
-                        title='Holdings Value',
+                        title='Holdings Performance',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -326,6 +326,15 @@ from(bucket: "data_private")
 //ASD                   legend_sideWidth=400,
                         maxDataPoints=10000
                   ).addTarget(influxdb.target(query='
+from(bucket: "data_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["_measurement"] == "equity")
+  |> filter(fn: (r) => r["_field"] == "holdings")
+  |> filter(fn: (r) => r["period"] == "1d")
+  |> filter(fn: (r) => r["type"] == "price-close-spot")
+  |> keep(columns: ["_time", "_value"])
+  |> rename(columns: { _value: "Daily Value"})
+                  ')).addTarget(influxdb.target(query='
 import "strings"
 bin=1mo
 timeRangeStart=v.timeRangeStart
@@ -341,20 +350,11 @@ from(bucket: "data_private")
   |> filter(fn: (r) => r["type"] == "price-change-spot")
   // |> aggregateWindow(every:  bin, fn: last)
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: { _value: "Monthly Delta"})
-                  ')).addTarget(influxdb.target(query='
-from(bucket: "data_private")
-  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-  |> filter(fn: (r) => r["_measurement"] == "equity")
-  |> filter(fn: (r) => r["_field"] == "holdings")
-  |> filter(fn: (r) => r["period"] == "1d")
-  |> filter(fn: (r) => r["type"] == "price-close-spot")
-  |> keep(columns: ["_time", "_value"])
-  |> rename(columns: { _value: "Daily Value"})
+  |> rename(columns: { _value: "30 Day Delta"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*Monthly.*/", "steppedLine": false, "bars": true, "lines" :false, "color": "#a6de9f5e", "yaxis": 1 }
+                        { "alias": "/.*Daily.*/", "steppedLine": false, "bars": false, "lines" :true, "color": "#ffd11a", "yaxis": 1 }
                   ).addSeriesOverride(
-                        { "alias": "/.*Daily.*/", "steppedLine": false, "bars": false, "lines" :true, "yaxis": 2 }
+                        { "alias": "/.*Day.*/", "steppedLine": false, "bars": true, "lines" :false, "color": "#a6de9f5e", "yaxis": 2 }
                   )
 //ASM                 { gridPos: { x: 0, y: 34, w: 24, h: 7 } }
 //AST                 { gridPos: { x: 0, y: 10, w: 24, h: 12 } }
@@ -362,7 +362,7 @@ from(bucket: "data_private")
                   ,
 
                   graph.new(
-                        title='Portfolio Deltas',
+                        title='Portfolio Performance',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -440,7 +440,7 @@ series
                   ,
 
                   graph.new(
-                        title='Equities Deltas',
+                        title='Equities Performance',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
@@ -635,7 +635,7 @@ series
                   ,
 
                   graph.new(
-                        title='Fund Deltas',
+                        title='Fund Performance',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='',
