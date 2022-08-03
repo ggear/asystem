@@ -3,9 +3,9 @@
 ################################################################################
 # Hardware specs
 ################################################################################
-# macmini-nel: Mid 2011 (5,2) https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-mid-2011-specs.html
-# macmini-liz: Late 2012 (6,1) https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-late-2012-specs.html
-# macbook-flo: Late 2013 (11,3) https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-core-i7-2.3-15-dual-graphics-late-2013-retina-display-specs.html
+# macmini-nel: Mid 2011 (5,2)   16GB RAM 500GB SSD https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-mid-2011-specs.html
+# macmini-liz: Late 2012 (6,1)  8GB RAM  480GB SSD https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-late-2012-specs.html
+# macbook-flo: Late 2013 (11,3) 8GB RAM  500GB SSD https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-core-i7-2.3-15-dual-graphics-late-2013-retina-display-specs.html
 
 ################################################################################
 # Bootable USB

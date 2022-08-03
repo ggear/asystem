@@ -460,11 +460,11 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
             host_ips_prod.append(_run_local(context, "dig +short {}".format(host), hide='out').stdout.strip())
         host_ip_prod = ",".join(host_ips_prod)
         host_name_prod = ",".join(host_names_prod)
+        host_name_dev = "host.docker.internal"
         host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
                                  hide='out').stdout.strip()
-        host_name_dev = "host.docker.internal"
-        if host_ip_prod == "" or host_ip_prod == "":
-            raise Exception("Cannot resolve service production and or development IP's")
+        if host_ip_prod == "" or host_ip_dev == "":
+            raise Exception("Cannot resolve service production [{}] and or development [{}] IP's".format(host_ip_prod, host_ip_dev))
         dependency_service = _get_service(context, dependency).upper()
         _run_local(context, "echo '' >> {}/.env".format(working_path))
         _run_local(context, "echo '{}_HOST={}' >> {}/.env"
