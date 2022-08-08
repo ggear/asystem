@@ -70,6 +70,37 @@
 - type: custom:layout-break
 ################################################################################
 - type: custom:mini-graph-card
+  name: Air Quality
+  icon: mdi:virus-outline
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - entity: sensor.lounge_air_purifier_pm25
+      name: Lounge
+    - entity: sensor.dining_air_purifier_pm25
+      name: Dining
+################################################################################
+- type: entities
+  entities:
+    - entity: sensor.lounge_air_purifier_pm25
+      name: Lounge
+      icon: mdi:virus-outline
+    - entity: sensor.dining_air_purifier_pm25
+      name: Dining
+      icon: mdi:virus-outline
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: custom:mini-graph-card
   name: Humidity
   icon: mdi:water-percent
   font_size_header: 19
@@ -187,37 +218,6 @@
     - entity: sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2
       name: Dining
       icon: mdi:molecule-co2
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: custom:mini-graph-card
-  name: Air Quality
-  icon: mdi:virus-outline
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
-    - entity: sensor.lounge_air_purifier_pm25
-      name: Lounge
-    - entity: sensor.dining_air_purifier_pm25
-      name: Dining
-################################################################################
-- type: entities
-  entities:
-    - entity: sensor.lounge_air_purifier_pm25
-      name: Lounge
-      icon: mdi:virus-outline
-    - entity: sensor.dining_air_purifier_pm25
-      name: Dining
-      icon: mdi:virus-outline
 ################################################################################
 - type: custom:layout-break
 ################################################################################
