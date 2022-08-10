@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# Packages (from update script)
+# Packages install (from update script)
 ################################################################################
 apt-get update
 apt-get install -y --allow-downgrades 'jq=1.6-2.1'
@@ -50,6 +50,13 @@ apt-get install -y --allow-downgrades 'vlan=2.0.5'
 apt-get install -y --allow-downgrades 'ffmpeg=7:4.3.4-0+deb11u1'
 apt-get install -y --allow-downgrades 'powertop=2.11-1'
 apt-get install -y --allow-downgrades 'locales=2.31-13+deb11u3'
+
+################################################################################
+# Packages purge
+################################################################################
+systemctl stop unattended-upgrades
+systemctl disable unattended-upgrades
+apt remove --assume-yes --purge unattended-upgrades
 
 ################################################################################
 # Localisation
