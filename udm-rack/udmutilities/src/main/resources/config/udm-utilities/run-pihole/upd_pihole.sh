@@ -1,7 +1,7 @@
 
 # Change to boostchicken/pihole:latest for DoH
 # Change to boostchicken/pihole-dote:latest for DoTE
-IMAGE=pihole/pihole:latest
+IMAGE=pihole/pihole:2022.07.1
 
 podman pull $IMAGE
 podman stop pihole
