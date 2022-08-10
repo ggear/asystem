@@ -1,4 +1,5 @@
-ARG VERSION=2022.02.1
+# https://hub.docker.com/r/pihole/pihole/tags
+ARG VERSION=2022.07.1
 FROM pihole/pihole:${VERSION}
 
 ENV CLOUDFLARED_OPTS="--port 5053 --address 0.0.0.0"
