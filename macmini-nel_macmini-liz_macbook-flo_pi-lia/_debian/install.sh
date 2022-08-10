@@ -7,49 +7,57 @@ apt-get update
 apt-get install -y --allow-downgrades 'jq=1.6-2.1'
 apt-get install -y --allow-downgrades 'nut=2.7.4-13'
 apt-get install -y --allow-downgrades 'ntp=1:4.2.8p15+dfsg-1'
-apt-get install -y --allow-downgrades 'ntfs-3g=1:2017.3.23AR.3-4+deb11u1'
+apt-get install -y --allow-downgrades 'ntfs-3g=1:2017.3.23AR.3-4+deb11u2'
 apt-get install -y --allow-downgrades 'acl=2.2.53-10'
-apt-get install -y --allow-downgrades 'unrar=1:6.0.3-1'
+apt-get install -y --allow-downgrades 'unrar=1:6.0.3-1+deb11u1'
 apt-get install -y --allow-downgrades 'rsync=3.2.3-4+deb11u1'
 apt-get install -y --allow-downgrades 'vim=2:8.2.2434-3+deb11u1'
 apt-get install -y --allow-downgrades 'rename=1.13-1'
-apt-get install -y --allow-downgrades 'curl=7.74.0-1.3+deb11u1'
+apt-get install -y --allow-downgrades 'curl=7.74.0-1.3+deb11u2'
 apt-get install -y --allow-downgrades 'screen=4.8.0-6'
 apt-get install -y --allow-downgrades 'fswatch=1.14.0+repack-13'
+apt-get install -y --allow-downgrades 'util-linux=2.36.1-8+deb11u1'
+apt-get install -y --allow-downgrades 'bsdmainutils=12.1.7+nmu3'
 apt-get install -y --allow-downgrades 'netselect-apt=0.3.ds1-29'
 apt-get install -y --allow-downgrades 'smartmontools=7.2-1'
 apt-get install -y --allow-downgrades 'avahi-daemon=0.8-5'
 apt-get install -y --allow-downgrades 'net-tools=1.60+git20181103.0eebece-1'
-apt-get install -y --allow-downgrades 'mbpfan=2.2.1-1'
 apt-get install -y --allow-downgrades 'lm-sensors=1:3.6.0-7'
 apt-get install -y --allow-downgrades 'apt-transport-https=2.2.4'
 apt-get install -y --allow-downgrades 'ca-certificates=20210119'
-apt-get install -y --allow-downgrades 'gnupg-agent=2.2.27-2+deb11u1'
+apt-get install -y --allow-downgrades 'gnupg-agent=2.2.27-2+deb11u2'
 apt-get install -y --allow-downgrades 'software-properties-common=0.96.20.2-2.1'
 apt-get install -y --allow-downgrades 'mkvtoolnix=54.0.0+really52.0.0-3'
-apt-get install -y --allow-downgrades 'docker-ce=5:20.10.14~3-0~debian-bullseye'
-apt-get install -y --allow-downgrades 'docker-ce-cli=5:20.10.14~3-0~debian-bullseye'
-apt-get install -y --allow-downgrades 'containerd.io=1.5.11-1'
-apt-get install -y --allow-downgrades 'cifs-utils=2:6.11-3.1'
-apt-get install -y --allow-downgrades 'samba=2:4.13.13+dfsg-1~deb11u3'
-apt-get install -y --allow-downgrades 'cups=2.3.3op2-3+deb11u1'
-apt-get install -y --allow-downgrades 'smbclient=2:4.13.13+dfsg-1~deb11u3'
+apt-get install -y --allow-downgrades 'docker-ce=5:20.10.17~3-0~debian-bullseye'
+apt-get install -y --allow-downgrades 'docker-ce-cli=5:20.10.17~3-0~debian-bullseye'
+apt-get install -y --allow-downgrades 'containerd.io=1.6.7-1'
+apt-get install -y --allow-downgrades 'cifs-utils=2:6.11-3.1+deb11u1'
+apt-get install -y --allow-downgrades 'samba=2:4.13.13+dfsg-1~deb11u4'
+apt-get install -y --allow-downgrades 'cups=2.3.3op2-3+deb11u2'
+apt-get install -y --allow-downgrades 'smbclient=2:4.13.13+dfsg-1~deb11u4'
 apt-get install -y --allow-downgrades 'inotify-tools=3.14-8.1'
 apt-get install -y --allow-downgrades 'htop=3.0.5-7'
 apt-get install -y --allow-downgrades 'iotop=0.6-24-g733f3f8-1.1'
 apt-get install -y --allow-downgrades 'hdparm=9.60+ds-1'
 apt-get install -y --allow-downgrades 'stress-ng=0.12.06-1'
 apt-get install -y --allow-downgrades 'memtester=4.5.0-1'
-apt-get install -y --allow-downgrades 'linux-cpupower=5.10.106-1'
+apt-get install -y --allow-downgrades 'linux-cpupower=5.10.127-2'
 apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
 apt-get install -y --allow-downgrades 'firmware-linux-nonfree=20210315-3'
 apt-get install -y --allow-downgrades 'hwinfo=21.72-1'
 apt-get install -y --allow-downgrades 'lshw=02.18.85-0.7'
 apt-get install -y --allow-downgrades 'vlan=2.0.5'
-apt-get install -y --allow-downgrades 'ffmpeg=7:4.3.3-0+deb11u1'
+apt-get install -y --allow-downgrades 'ffmpeg=7:4.3.4-0+deb11u1'
 apt-get install -y --allow-downgrades 'powertop=2.11-1'
-apt-get install -y --allow-downgrades 'libc6-i386=2.31-13+deb11u3'
-apt-get install -y --allow-downgrades 'intel-microcode=3.20220207.1~deb11u1'
+apt-get install -y --allow-downgrades 'locales=2.31-13+deb11u3'
+
+################################################################################
+# Localisation
+################################################################################
+export LANGUAGE=en_AU.UTF-8
+export LANG=en_AU.UTF-8
+export LC_ALL=en_AU.UTF-8
+locale-gen en_AU.UTF-8
 
 ################################################################################
 # Shell setup
@@ -61,7 +69,7 @@ if [ -f "${HOME}/.bashrc" ]; then
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
-alias ls='ls $LS_OPTIONS'
+alias ls='ls \$LS_OPTIONS'
 
 EOF
 fi

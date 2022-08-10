@@ -16,11 +16,12 @@ PACKAGES=(
   curl
   screen
   fswatch
+  util-linux
+  bsdmainutils
   netselect-apt
   smartmontools
   avahi-daemon
   net-tools
-  mbpfan
   lm-sensors
   apt-transport-https
   ca-certificates
@@ -48,8 +49,7 @@ PACKAGES=(
   vlan
   ffmpeg
   powertop
-  libc6-i386
-  intel-microcode
+  locales
 )
 apt-get update
 for PACKAGE in "${PACKAGES[@]}"; do
