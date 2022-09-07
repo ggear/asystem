@@ -379,7 +379,10 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
     if filter_module is None:
         working_modules = []
         filter_changes = filter_changes if \
-            (FAB_SKIP_DELTA not in os.environ or FAB_SKIP_GROUP_BELOW in os.environ or FAB_SKIP_GROUP_ABOVE in os.environ) else False
+            (FAB_SKIP_DELTA not in os.environ and
+             FAB_SKIP_GROUP_BELOW not in os.environ and
+             FAB_SKIP_GROUP_ABOVE not in os.environ) \
+            else False
         working_dirs = _run_local(context, "pwd", hide='out').stdout.strip().split('/')
         root_dir_index = working_dirs.index("asystem")
         if "module" not in working_dirs or working_dirs.index("module") == (len(working_dirs) - 1):
