@@ -6,6 +6,7 @@
 
 # TODO: Rewrite as BundleWrap/pyinfra/K8s?
 
+import collections
 import glob
 import math
 import os
@@ -409,6 +410,10 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
         sorted_modules = []
         for group in sorted(grouped_modules):
             sorted_modules.extend(grouped_modules[group])
+        module_services = [_get_service(context, module) for module in sorted_modules]
+        if (len(set(module_services)) != len(module_services)):
+            raise Exception("Non-unique service names {} detected in module definitions"
+                            .format([service for service, count in collections.Counter(module_services).items() if count > 1]))
         return sorted_modules
     else:
         return [filter_module] if filter_path is None or os.path.exists(join(DIR_ROOT_MODULE, filter_module, filter_path)) else []
