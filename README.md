@@ -16,7 +16,7 @@ To build, test and package this project the following is required:
 
 ## Layout
 
-Each service is specified by at least one `host` name, multiple names demarcated by the `_`
-character and a globally unique `service` name directory as per specification:
+Each module is specified by at least one `host-label`, multiple hosts demarcated by the `_`
+character and a globally unique `service-name` directory as per specification:
 
-`<host>[_<host>]*/<service>`
+`module/<host-label>[_<host-label>]*/<service-name>`

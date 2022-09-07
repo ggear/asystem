@@ -1,7 +1,7 @@
-rack=(udm, arm64)
-rae=(macbook, arm64)
-lia=(raspbpi, arm64)
-flo=(macbook, x86_64)
-liz=(macmini, x86_64)
-nel=(macmini, x86_64)
-zoe=(macmini, x86_64)
+net=udm,arm64
+rae=macbook,arm64
+lia=raspbpi,arm64
+flo=macbook,x86_64
+liz=macmini,x86_64
+nel=macmini,x86_64
+zoe=macmini,x86_64

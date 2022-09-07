@@ -36,7 +36,6 @@
 *egg-info
 *.pipeout
 .pytest_cache
-58861*
 Cargo.lock
 pom.xml.tag
 pom.xml.releaseBackup
@@ -49,3 +48,5 @@ phantomjsdriver.log
 /spark-defaults.conf
 target
 dist
+58861*
+*.mbox
