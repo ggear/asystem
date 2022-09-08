@@ -5,4 +5,4 @@ ROOT_DIR="$(
   pwd -P
 )"
 
-${ROOT_DIR}/deploy.sh
+#${ROOT_DIR}/deploy.sh

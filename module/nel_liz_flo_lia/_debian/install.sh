@@ -75,7 +75,7 @@ if [ -f "${HOME}/.bashrc" ]; then
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
-alias ls='ls \$LS_OPTIONS'
+alias ls='ls -v1 \$LS_OPTIONS'
 
 EOF
 fi
