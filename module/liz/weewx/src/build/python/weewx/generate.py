@@ -3,6 +3,7 @@ import json
 import os
 import shutil
 import sys
+import pandas as pd
 
 DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
 for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
@@ -10,6 +11,8 @@ for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
         sys.path.insert(0, "{}/src/build/python".format(dir_module))
 
 from homeassistant.generate import load_entity_metadata
+
+pd.options.mode.chained_assignment = None
 
 if __name__ == "__main__":
     metadata_df = load_entity_metadata()
