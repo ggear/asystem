@@ -22,6 +22,11 @@ FAB_SKIP_TESTS = 'FAB_SKIP_TESTS'
 FAB_SKIP_DELTA = 'FAB_SKIP_DELTA'
 FAB_SKIP_GROUP_BELOW = 'FAB_SKIP_GROUP_BELOW'
 FAB_SKIP_GROUP_ABOVE = 'FAB_SKIP_GROUP_ABOVE'
+FAB_SKIP_GROUP_ALLBUT = 'FAB_SKIP_GROUP_ALLBUT'
+
+if FAB_SKIP_GROUP_ALLBUT in os.environ:
+    os.environ[FAB_SKIP_GROUP_BELOW] = str(int(os.environ[FAB_SKIP_GROUP_ALLBUT]) + 1)
+    os.environ[FAB_SKIP_GROUP_ABOVE] = str(int(os.environ[FAB_SKIP_GROUP_ALLBUT]) - 1)
 
 
 @task(aliases=["sup"] + ["setup"[0:i] for i in range(1, len("setup"))])
