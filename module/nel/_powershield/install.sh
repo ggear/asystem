@@ -4,6 +4,11 @@ SERVICE_INSTALL=/var/lib/asystem/install/_powershield/latest
 
 . ${SERVICE_INSTALL}/.env
 
+apt-get install -y --allow-downgrades 'nut=2.7.4-13'
+systemctl disable nut-driver.service
+systemctl disable nut-server.service
+systemctl disable nut-monitor.service
+
 ################################################################################
 # UPS
 ################################################################################

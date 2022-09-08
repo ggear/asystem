@@ -5,7 +5,6 @@
 ################################################################################
 apt-get update
 apt-get install -y --allow-downgrades 'jq=1.6-2.1'
-apt-get install -y --allow-downgrades 'nut=2.7.4-13'
 apt-get install -y --allow-downgrades 'ntp=1:4.2.8p15+dfsg-1'
 apt-get install -y --allow-downgrades 'ntfs-3g=1:2017.3.23AR.3-4+deb11u2'
 apt-get install -y --allow-downgrades 'acl=2.2.53-10'
@@ -110,13 +109,6 @@ if [ ! -f /etc/modprobe.d/blacklist-snd.conf ]; then
   echo "blacklist snd_hda_codec_generic" | tee -a /etc/modprobe.d/blacklist-snd.conf
   echo "blacklist snd_hda_codec_cirrus" | tee -a /etc/modprobe.d/blacklist-snd.conf
 fi
-
-################################################################################
-# UPS
-################################################################################
-systemctl disable nut-driver.service
-systemctl disable nut-server.service
-systemctl disable nut-monitor.service
 
 ################################################################################
 # Defaults
