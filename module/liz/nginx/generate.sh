@@ -5,10 +5,9 @@ ROOT_DIR="$(
   pwd -P
 )"
 
-HOST_NGINX=$(basename $(find ${ROOT_DIR}/../../.. -type d -mindepth 3 -maxdepth 3 -name nginx))
-HOST_LETSENCRYPT=$(basename $(find ${ROOT_DIR}/../../.. -type d -mindepth 3 -maxdepth 3 -name letsencrypt))
-DIR_LETSENCRYPT=$(sshpass -f /Users/graham/.ssh/.password ssh -q "root@${HOST_LETSENCRYPT}" 'find /home/asystem/letsencrypt -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1')
+HOST_NGINX="$(grep $(basename $(dirname ${ROOT_DIR})) ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-$(basename $(dirname ${ROOT_DIR}))"
+HOST_LETSENCRYPT="$(grep $(basename $(dirname $(find ${ROOT_DIR}/../../.. -type d -mindepth 3 -maxdepth 3 -name letsencrypt))) ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-$(basename $(dirname $(find ${ROOT_DIR}/../../.. -type d -mindepth 3 -maxdepth 3 -name letsencrypt)))"
 
-sshpass -f /Users/graham/.ssh/.password scp -qpr "root@${HOST_LETSENCRYPT}:${DIR_LETSENCRYPT}/certificates/privkey.pem" "${ROOT_DIR}/${HOST_NGINX}/nginx/src/main/resources/config/.key.pem" 2>/dev/null
-sshpass -f /Users/graham/.ssh/.password scp -qpr "root@${HOST_LETSENCRYPT}:${DIR_LETSENCRYPT}/certificates/fullchain.pem" "${ROOT_DIR}/${HOST_NGINX}/nginx/src/main/resources/config/certificate.pem" 2>/dev/null
+sshpass -f /Users/graham/.ssh/.password scp -qpr "root@${HOST_LETSENCRYPT}:/home/asystem/letsencrypt/latest/certificates/privkey.pem" "${ROOT_DIR}/src/main/resources/config/.key.pem"
+sshpass -f /Users/graham/.ssh/.password scp -qpr "root@${HOST_LETSENCRYPT}:/home/asystem/letsencrypt/latest/certificates/fullchain.pem" "${ROOT_DIR}/src/main/resources/config/certificate.pem"
 echo "Pulled latest nginx certificate"
