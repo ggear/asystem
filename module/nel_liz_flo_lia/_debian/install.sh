@@ -49,6 +49,7 @@ apt-get install -y --allow-downgrades 'vlan=2.0.5'
 apt-get install -y --allow-downgrades 'ffmpeg=7:4.3.4-0+deb11u1'
 apt-get install -y --allow-downgrades 'powertop=2.11-1'
 apt-get install -y --allow-downgrades 'locales=2.31-13+deb11u3'
+apt-get install -y --allow-downgrades 'python3=3.9.2-3'
 
 ################################################################################
 # Packages purge
@@ -204,7 +205,13 @@ mkdir -p /root/.config/htop && rm -rf /root/.config/htop/htoprc
 ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
 
 ################################################################################
-# Utilities
+# Python
+################################################################################
+update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
+update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
+
+################################################################################
+# Go
 ################################################################################
 if [ ! -d /usr/local/go ]; then
   mkdir /tmp/go && cd /tmp/go
@@ -270,8 +277,9 @@ fi
 # Docker
 ################################################################################
 rm -rf /usr/local/bin/docker-compose
-curl -sL "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
+pip uninstall -y docker-compose
+pip install --no-input docker-compose==1.29.2
+docker-compose -v
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
 if [ -f /etc/default/grub ] && [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq 0 ]; then

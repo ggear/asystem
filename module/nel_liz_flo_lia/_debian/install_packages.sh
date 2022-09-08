@@ -49,6 +49,7 @@ PACKAGES=(
   ffmpeg
   powertop
   locales
+  python3
 )
 apt-get update
 for PACKAGE in "${PACKAGES[@]}"; do
