@@ -42,7 +42,6 @@ PACKAGES=(
   stress-ng
   memtester
   linux-cpupower
-  firmware-realtek
   firmware-linux-nonfree
   hwinfo
   lshw
