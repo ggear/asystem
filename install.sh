@@ -22,6 +22,7 @@ if [ -f "docker-compose.yml" ]; then
 fi
 if [ ! -d "$SERVICE_HOME" ]; then
   if [ -d "$SERVICE_HOME_OLD" ]; then
+    echo "Copying old home to new ... "
     cp -rfp "$SERVICE_HOME_OLD" "$SERVICE_HOME"
   else
     mkdir -p "${SERVICE_HOME}"
