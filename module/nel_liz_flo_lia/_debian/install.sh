@@ -50,6 +50,7 @@ apt-get install -y --allow-downgrades 'ffmpeg=7:4.3.4-0+deb11u1'
 apt-get install -y --allow-downgrades 'powertop=2.11-1'
 apt-get install -y --allow-downgrades 'locales=2.31-13+deb11u3'
 apt-get install -y --allow-downgrades 'python3=3.9.2-3'
+apt-get install -y --allow-downgrades 'python3-pip=20.3.4-4+deb11u1'
 
 ################################################################################
 # Packages purge
