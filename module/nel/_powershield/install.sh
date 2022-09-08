@@ -1,6 +1,8 @@
 #!/bin/sh
 
-. ./.env
+SERVICE_INSTALL=/var/lib/asystem/install/_powershield/latest
+
+. ${SERVICE_INSTALL}/.env
 
 ################################################################################
 # UPS
