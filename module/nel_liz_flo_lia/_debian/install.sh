@@ -6,6 +6,8 @@
 apt-get update
 apt-get install -y --allow-downgrades 'jq=1.6-2.1'
 apt-get install -y --allow-downgrades 'ntp=1:4.2.8p15+dfsg-1'
+apt-get install -y --allow-downgrades 'dnsutils=1:9.16.27-1~deb11u1'
+apt-get install -y --allow-downgrades 'ntpdate=1:4.2.8p15+dfsg-1'
 apt-get install -y --allow-downgrades 'ntfs-3g=1:2017.3.23AR.3-4+deb11u2'
 apt-get install -y --allow-downgrades 'acl=2.2.53-10'
 apt-get install -y --allow-downgrades 'unrar=1:6.0.3-1+deb11u1'
@@ -244,6 +246,7 @@ systemctl status avahi-daemon
 # Time
 ################################################################################
 systemctl mask systemd-timesyncd.service
+timedatectl set-timezone "Australia/Perth"
 sed -i 's/0.debian.pool.ntp.org/216.239.35.0/g' /etc/ntp.conf
 sed -i 's/1.debian.pool.ntp.org/216.239.35.4/g' /etc/ntp.conf
 sed -i 's/2.debian.pool.ntp.org/216.239.35.8/g' /etc/ntp.conf

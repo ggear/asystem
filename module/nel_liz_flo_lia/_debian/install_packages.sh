@@ -6,6 +6,8 @@
 PACKAGES=(
   jq
   ntp
+  dnsutils
+  ntpdate
   ntfs-3g
   acl
   unrar
