@@ -50,6 +50,7 @@ PACKAGES=(
   powertop
   locales
   python3
+  python3-pip
 )
 apt-get update
 for PACKAGE in "${PACKAGES[@]}"; do
