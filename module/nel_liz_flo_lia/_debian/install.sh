@@ -75,6 +75,7 @@ if [ -f "${HOME}/.bashrc" ]; then
   cat <<EOF >"${HOME}/.bashrc"
 # .bashrc
 
+export LC_COLLATE=C
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
