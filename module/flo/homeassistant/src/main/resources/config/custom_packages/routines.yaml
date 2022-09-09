@@ -102,6 +102,8 @@ automation:
       to: "flip90"
     condition: [ ]
     action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.home_sleep
       - service: input_boolean.turn_on
         entity_id: input_boolean.home_sleep
   #####################################################################################
@@ -123,10 +125,6 @@ automation:
         data:
           entity_id: media_player.parents_speaker
           volume_level: '0.2'
-      - service: light.turn_on
-        target:
-          entity_id:
-            - light.parents_main
       - service: automation.trigger
         data:
           entity_id: automation.lighting_reset_adaptive_lighting
