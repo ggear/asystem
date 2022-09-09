@@ -1,6 +1,9 @@
 #!/bin/bash
-
-# TODO: Update to check docker and git versions check - is there a newer version available?
+###############################################################################
+#
+# Generic service generate script, to be invoked by the fabric management script
+#
+###############################################################################
 
 function pull_repo() {
   [ ! -d "${1}/../../../.deps" ] && mkdir -p "${1}/../../../.deps"
