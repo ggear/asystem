@@ -321,7 +321,7 @@ def _release(context):
                     _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
                 _run_local(context, "mkdir -p target/release/config", module)
                 Path(join(DIR_ROOT_MODULE, module, "target/release/hosts")) \
-                    .write_text("\n".join(["{}-{}".format(HOSTS[host], host) for host in HOSTS]) + "\n")
+                    .write_text("\n".join(["{}-{}".format(HOSTS[host][0], host) for host in HOSTS]) + "\n")
                 if glob.glob(join(DIR_ROOT_MODULE, module, "target/package/install*")):
                     _run_local(context, "cp -rvfp target/package/install* target/release", module)
                 else:
