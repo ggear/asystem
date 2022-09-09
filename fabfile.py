@@ -320,10 +320,8 @@ def _release(context):
                 if glob.glob(join(DIR_ROOT_MODULE, module, "target/package/main/resources/*")):
                     _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
                 _run_local(context, "mkdir -p target/release/config", module)
-                hosts = set(filter(len, _run_local(context, "find {} -type d ! -name '.*' -mindepth 1 -maxdepth 1"
-                                                   .format(DIR_ROOT_MODULE), hide='out').stdout.replace(DIR_ROOT_MODULE + "/", "")
-                                   .replace("_", "\n").split("\n")))
-                Path(join(DIR_ROOT_MODULE, module, "target/release/hosts")).write_text("\n".join(hosts) + "\n")
+                Path(join(DIR_ROOT_MODULE, module, "target/release/hosts")) \
+                    .write_text("\n".join(["{}-{}".format(HOSTS[host], host) for host in HOSTS]) + "\n")
                 if glob.glob(join(DIR_ROOT_MODULE, module, "target/package/install*")):
                     _run_local(context, "cp -rvfp target/package/install* target/release", module)
                 else:
