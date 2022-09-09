@@ -1,7 +1,7 @@
 #!/bin/bash
 ###############################################################################
 #
-# Generic service generate script, to be invoked by the fabric management script
+# Generic module generate script, to be invoked by the fabric management script
 #
 ###############################################################################
 
