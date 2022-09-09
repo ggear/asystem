@@ -6,7 +6,7 @@ USER root
 RUN apk add --no-cache \
   jq==1.6-r1 \
   git==2.34.4-r0 \
-  curl==7.80.0-r2 \
+  curl==7.80.0-r3 \
   make==4.3-r0 \
   musl-dev==1.2.2-r7 \
   gcc==10.3.1_git20211027-r0 \
