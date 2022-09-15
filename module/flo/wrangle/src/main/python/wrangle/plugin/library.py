@@ -33,7 +33,7 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.http import MediaIoBaseDownload
 from gspread_pandas import Spread
-from pandas.tseries.offsets import BDay
+from pandas.tseries.offsets import BDay 
 
 CTR_LBL_PAD = '.'
 CTR_LBL_WIDTH = 26

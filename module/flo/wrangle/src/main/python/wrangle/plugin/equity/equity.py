@@ -433,21 +433,28 @@ class Equity(library.Library):
                 equity_subset_df = equity_subset_df.set_index(equity_subset_df.index.date).sort_index()
                 equity_subset_df = equity_subset_df.sort_index(axis=1)
                 self.print_log("Data has [{}] columns and [{}] rows post copy".format(len(equity_subset_df.columns), len(equity_subset_df)))
-                fx_rates = self.database_read("""
-                    from(bucket: "data_public")
-                        |> range(start: {}, stop: now())
-                        |> filter(fn: (r) => r["_measurement"] == "currency")
-                        |> filter(fn: (r) => r["period"] == "1d")
-                        |> filter(fn: (r) => r["type"] == "snapshot")
-                        |> keep(columns: ["_time", "_value", "_field"])
-                        |> group()
-                        |> sort(columns: ["_time"])
-                                """.format(pytz.UTC.localize(pd.to_datetime(equity_subset_df.index[0])).isoformat()),
-                                              ["Date", "Rate", "Pair"], "RBA_FX_rates",
-                                              read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
-                fx_rates = fx_rates.set_index(pd.to_datetime(fx_rates["Date"]).dt.date).sort_index()
-                del fx_rates["Date"]
-                fx_rates["Rate"] = fx_rates["Rate"].apply(pd.to_numeric)
+                fx_rates = {}
+                for fx_pair_right in STATEMENT_CURRENCIES:
+                    fx_rates[fx_pair_right] = self.database_read("""
+                        from(bucket: "data_public")
+                            |> range(start: {}, stop: now())
+                            |> filter(fn: (r) => r["_measurement"] == "currency")
+                            |> filter(fn: (r) => r["period"] == "1d")
+                            |> filter(fn: (r) => r["type"] == "snapshot")
+                            |> filter(fn: (r) => r["_field"] == "aud/{}")
+                            |> sort(columns: ["_time", "version"])
+                            |> keep(columns: ["_time", "_value"])
+                            |> unique(column: "_time")
+                                    """.format(
+                        pytz.UTC.localize(pd.to_datetime(equity_subset_df.index[0])).isoformat(),
+                        fx_pair_right.lower(),
+                    ),
+                        ["Date", "Rate"], "RBA_FX_{}_rates".format(fx_pair_right),
+                        read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
+                    fx_rates[fx_pair_right] = fx_rates[fx_pair_right] \
+                        .set_index(pd.to_datetime(fx_rates[fx_pair_right]["Date"]).dt.date).sort_index()
+                    del fx_rates[fx_pair_right]["Date"]
+                    fx_rates[fx_pair_right]["Rate"] = fx_rates[fx_pair_right]["Rate"].apply(pd.to_numeric)
                 index_weights = self.sheet_read(DRIVE_URL_PORTFOLIO, "Index_weights",
                                                 read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
                                                 sheet_params={"sheet": "Indexes", "index": None, "start_row": 2})
@@ -465,10 +472,8 @@ class Equity(library.Library):
                     if base_currency == "AUD":
                         equity_subset_df[ticker + " Currency Rate Spot"] = 1.0
                     else:
-                        fx_rates_pair = fx_rates[fx_rates["Pair"] == "aud/" + base_currency.lower()]
-                        del fx_rates_pair["Pair"]
-                        fx_rates_pair.columns = [ticker + " Currency Rate Spot"]
-                        equity_subset_df = equity_subset_df.join(fx_rates_pair)
+                        equity_subset_df = equity_subset_df.join(fx_rates[base_currency]) \
+                            .rename(columns={"Rate": ticker + " Currency Rate Spot"})
                     for index in index_weights.columns:
                         index_weight = index_weights[index_weights.index == ticker][index]
                         index_weght_value = index_weight.values[0] if len(index_weight) > 0 else 0.0
