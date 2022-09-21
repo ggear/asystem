@@ -721,7 +721,7 @@ class Library(object, metaclass=ABCMeta):
                                .format(file_cache, query_url, exception))
             data_df = pd.DataFrame(rows, columns=column_names)
             self.print_log("Dataframe [{}] queried from [{}]".format(file_cache, flux_query.replace("\n", "").replace(" ", "")))
-        if not read_cache and write_cache:
+        if not read_cache and write_cache and len(data_df) > 0:
             data_df.to_csv(file_path, index=False, encoding='utf-8')
             self.print_log("Dataframe [{}] cached at [{}]".format(file_cache, file_path))
         return data_df
@@ -744,7 +744,7 @@ class Library(object, metaclass=ABCMeta):
                     'Accept': 'application/csv',
                     'Content-type': 'application/vnd.flux',
                     'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
-                }, data=trunc_query)
+                }, data=trunc_query, timeout=10 * 60)
                 if not response.ok:
                     self.print_log("Measurement [{}] could not be truncated with query [{}] and HTTP code [{}] at [{}]"
                                    .format(self.name.lower(), trunc_query, response.status_code, trunc_url))
