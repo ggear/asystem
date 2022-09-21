@@ -1,8 +1,10 @@
 import collections
 import copy
+import datetime
 import glob
 import hashlib
 import io
+import json
 import logging
 import os
 import os.path
@@ -17,6 +19,7 @@ import urllib.request
 import warnings
 from abc import ABCMeta, abstractmethod
 from collections import OrderedDict
+from datetime import date
 from datetime import datetime
 from datetime import timedelta
 from ftplib import FTP
@@ -33,7 +36,8 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from googleapiclient.http import MediaIoBaseDownload
 from gspread_pandas import Spread
-from pandas.tseries.offsets import BDay 
+from pandas.tseries.offsets import BDay
+from requests import post
 
 CTR_LBL_PAD = '.'
 CTR_LBL_WIDTH = 26
@@ -150,9 +154,14 @@ class Library(object, metaclass=ABCMeta):
     def _run(self):
         pass
 
+    def _trunc(self):
+        if test(WRANGLE_DISABLE_DATA_DELTA):
+            self.database_trunc()
+
     def run(self):
         time_now = time.time()
         self.print_log("Starting ...")
+        self._trunc()
         self._run()
         self.print_counters()
         self.print_log("Finished in [{:.3f}] sec".format(time.time() - time_now))
@@ -683,30 +692,66 @@ class Library(object, metaclass=ABCMeta):
         file_path = os.path.abspath("{}/{}.csv".format(self.input, file_cache))
         if read_cache:
             if not os.path.isfile(file_path):
-                raise Exception("Dataframe [{}] could not be loaded from [{}] because file does not exist"
-                                .format(file_cache, file_path))
-            data_df = pd.read_csv(file_path, dtype=str)
-            self.print_log("Dataframe [{}] loaded from [{}]".format(file_cache, file_path))
+                data_df = pd.DataFrame(columns=column_names)
+                self.print_log("Dataframe [{}] unavailable at [{}]".format(file_cache, file_path))
+            else:
+                data_df = pd.read_csv(file_path, dtype=str)
+                self.print_log("Dataframe [{}] loaded from [{}]".format(file_cache, file_path))
         else:
-            response = requests.post(
-                url="http://{}:{}/api/v2/query?org={}".format(
-                    os.environ["INFLUXDB_IP_PROD"], os.environ["INFLUXDB_PORT"], os.environ["INFLUXDB_ORG"]),
-                headers={
+            rows = []
+            try:
+                query_url = "http://{}:{}/api/v2/query?org={}".format(
+                    os.environ["INFLUXDB_IP_PROD"],
+                    os.environ["INFLUXDB_PORT"],
+                    os.environ["INFLUXDB_ORG"],
+                )
+                response = requests.post(url=query_url, headers={
                     'Accept': 'application/csv',
                     'Content-type': 'application/vnd.flux',
                     'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
                 }, data=flux_query)
-            rows = []
-            for row in response.text.strip().split("\n")[1:]:
-                cols = row.strip().split(",")
-                if len(cols) > 4:
-                    rows.append([parser.parse(cols[3])] + cols[4:])  # type: ignore
+                if not response.ok:
+                    raise SystemError("HTTP [{}] returned with response [{}]".format(response.status_code, response.text.strip()))
+                for row in response.text.strip().split("\n")[1:]:
+                    cols = row.strip().split(",")
+                    if len(cols) > 4:
+                        rows.append([parser.parse(cols[3])] + cols[4:])  # type: ignore
+            except Exception as exception:
+                self.print_log("Dataframe [{}] unavailable at [{}] with exception [{}]"
+                               .format(file_cache, query_url, exception))
             data_df = pd.DataFrame(rows, columns=column_names)
             self.print_log("Dataframe [{}] queried from [{}]".format(file_cache, flux_query.replace("\n", "").replace(" ", "")))
         if not read_cache and write_cache:
             data_df.to_csv(file_path, index=False, encoding='utf-8')
             self.print_log("Dataframe [{}] cached at [{}]".format(file_cache, file_path))
         return data_df
+
+    def database_trunc(self):
+        for bucket in [os.environ["INFLUXDB_BUCKET_DATA_PUBLIC"], os.environ["INFLUXDB_BUCKET_DATA_PRIVATE"]]:
+            try:
+                trunc_url = "http://{}:{}/api/v2/delete?org={}&bucket={}".format(
+                    os.environ["INFLUXDB_IP"],
+                    os.environ["INFLUXDB_PORT"],
+                    os.environ["INFLUXDB_ORG"],
+                    bucket,
+                )
+                trunc_query = json.dumps({
+                    "start": "1900-01-01T00:00:00Z",
+                    "stop": (date.today() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "predicate": "_measurement=\"" + self.name.lower() + "\""
+                })
+                response = post(url=trunc_url, headers={
+                    'Accept': 'application/csv',
+                    'Content-type': 'application/vnd.flux',
+                    'Authorization': 'Token {}'.format(os.environ["INFLUXDB_TOKEN"])
+                }, data=trunc_query)
+                if not response.ok:
+                    self.print_log("Measurement [{}] could not be truncated with query [{}] and HTTP code [{}] at [{}]"
+                                   .format(self.name.lower(), trunc_query, response.status_code, trunc_url))
+                else:
+                    self.print_log("Measurement [{}] truncated at [{}]".format(self.name.lower(), trunc_url))
+            except Exception:
+                self.print_log("Measurement [{}] could not be truncated at [{}]".format(self.name.lower(), trunc_url))
 
     # noinspection PyProtectedMember
     def database_write(self, data_df, global_tags=None):

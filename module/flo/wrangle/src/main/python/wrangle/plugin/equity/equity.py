@@ -18,7 +18,8 @@ STATUS_FAILURE = "failure"
 STATUS_SKIPPED = "skipped"
 STATUS_SUCCESS = "success"
 
-STATEMENT_CURRENCIES = ["GBP", "USD", "SGD"]
+CURRENCIES = ["GBP", "USD", "SGD"]
+
 STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
 
 STOCK = OrderedDict([
@@ -258,15 +259,15 @@ class Equity(library.Library):
                                                 else:
                                                     raise Exception("Could not parse date [{}]".format(statement_date_str))
                                             if statement_type:
-                                                for currency in STATEMENT_CURRENCIES:
+                                                for currency in CURRENCIES:
                                                     if statement_line.startswith(currency):
                                                         statement_rates[currency] = \
                                                             float(statement_tokens[4].replace(',', ''))
                                         if statement_type:
                                             for indexes in [
-                                                (2, "Situations", STATEMENT_CURRENCIES, 5, 10, 2, 6),
-                                                (2, "Situations", STATEMENT_CURRENCIES, 8, 13, 2, 6),
-                                                (3, "Situations", STATEMENT_CURRENCIES, 5, 9, 2, 6),
+                                                (2, "Situations", CURRENCIES, 5, 10, 2, 6),
+                                                (2, "Situations", CURRENCIES, 8, 13, 2, 6),
+                                                (3, "Situations", CURRENCIES, 5, 9, 2, 6),
                                                 (2, "Shares", ["USD"], 2, 7),
                                                 (3, "Shares", ["USD"], 2, 6),
                                             ]:
@@ -387,10 +388,8 @@ class Equity(library.Library):
                 equity_df_manual.index = pd.to_datetime(equity_df_manual["Date"])
                 del equity_df_manual["Date"]
                 equity_df_manual = equity_df_manual.apply(pd.to_numeric)
-
                 equity_df_manual = equity_df_manual.resample('D').interpolate(limit_direction='both', limit_area='inside') \
                     .replace('', np.nan).ffill()
-
                 equity_df.update(equity_df_manual)
                 equity_df = equity_df.sort_index(axis=1).interpolate(limit_direction='both', limit_area='inside') \
                     .replace('', np.nan).ffill()
@@ -432,29 +431,33 @@ class Equity(library.Library):
                 equity_subset_df.loc[:, column] = equity_subset_df.loc[:, column].fillna(0.0)
                 equity_subset_df = equity_subset_df.set_index(equity_subset_df.index.date).sort_index()
                 equity_subset_df = equity_subset_df.sort_index(axis=1)
-                self.print_log("Data has [{}] columns and [{}] rows post copy".format(len(equity_subset_df.columns), len(equity_subset_df)))
+                self.print_log("Data has [{}] columns and [{}] rows post copy"
+                               .format(len(equity_subset_df.columns), len(equity_subset_df)))
                 fx_rates = {}
-                for fx_pair_right in STATEMENT_CURRENCIES:
-                    fx_rates[fx_pair_right] = self.database_read("""
-                        from(bucket: "data_public")
-                            |> range(start: {}, stop: now())
-                            |> filter(fn: (r) => r["_measurement"] == "currency")
-                            |> filter(fn: (r) => r["period"] == "1d")
-                            |> filter(fn: (r) => r["type"] == "snapshot")
-                            |> filter(fn: (r) => r["_field"] == "aud/{}")
-                            |> sort(columns: ["_time", "version"])
-                            |> keep(columns: ["_time", "_value"])
-                            |> unique(column: "_time")
-                                    """.format(
+                for fx_pair in CURRENCIES:
+                    fx_name = "RBA_FX_{}_rates".format(fx_pair)
+                    fx_cols = ["Date", "Rate"]
+                    fx_query = """
+from(bucket: "data_public")
+    |> range(start: {}, stop: now())
+    |> filter(fn: (r) => r["_measurement"] == "currency")
+    |> filter(fn: (r) => r["period"] == "1d")
+    |> filter(fn: (r) => r["type"] == "snapshot")
+    |> filter(fn: (r) => r["_field"] == "aud/{}")
+    |> sort(columns: ["_time", "version"])
+    |> keep(columns: ["_time", "_value"])
+    |> unique(column: "_time")
+                    """.format(
                         pytz.UTC.localize(pd.to_datetime(equity_subset_df.index[0])).isoformat(),
-                        fx_pair_right.lower(),
-                    ),
-                        ["Date", "Rate"], "RBA_FX_{}_rates".format(fx_pair_right),
-                        read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
-                    fx_rates[fx_pair_right] = fx_rates[fx_pair_right] \
-                        .set_index(pd.to_datetime(fx_rates[fx_pair_right]["Date"]).dt.date).sort_index()
-                    del fx_rates[fx_pair_right]["Date"]
-                    fx_rates[fx_pair_right]["Rate"] = fx_rates[fx_pair_right]["Rate"].apply(pd.to_numeric)
+                        fx_pair.lower(),
+                    )
+                    fx_rates[fx_pair] = self.database_read(fx_query, fx_cols, fx_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
+                    if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(fx_rates[fx_pair]) == 0:
+                        fx_rates[fx_pair] = self.database_read(fx_query, fx_cols, fx_name, True)
+                    fx_rates[fx_pair] = fx_rates[fx_pair] \
+                        .set_index(pd.to_datetime(fx_rates[fx_pair]["Date"]).dt.date).sort_index()
+                    del fx_rates[fx_pair]["Date"]
+                    fx_rates[fx_pair]["Rate"] = fx_rates[fx_pair]["Rate"].apply(pd.to_numeric)
                 index_weights = self.sheet_read(DRIVE_URL_PORTFOLIO, "Index_weights",
                                                 read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
                                                 sheet_params={"sheet": "Indexes", "index": None, "start_row": 2})
