@@ -53,7 +53,7 @@ from(bucket: "data_public")
                   ,
 
                   stat.new(
-                        title='Retail Rate Last Month Mean',
+                        title='Bank Rate Last Month Mean',
                         datasource='InfluxDB_V2',
                         unit='percent',
                         decimals=2,
@@ -74,7 +74,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
-  |> filter(fn: (r) => r["_field"] == "retail")
+  |> filter(fn: (r) => r["_field"] == "'bank'")
   |> filter(fn: (r) => r["period"] == "1mo")
   |> last()
   |> keep(columns: ["_value"])
@@ -136,11 +136,11 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
-  |> filter(fn: (r) => r["_field"] == "retail")
+  |> filter(fn: (r) => r["_field"] == "'bank'")
   |> filter(fn: (r) => r["period"] == "1mo")
   |> keep(columns: ["_time", "_value"])
   |> mean(column: "_value")
-  |> rename(fn: (column) => "Retail")
+  |> rename(fn: (column) => "Bank")
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -185,7 +185,7 @@ from(bucket: "data_public")
                   ,
 
                   gauge.new(
-                        title='Retail Rate 10 Year Mean',
+                        title='Bank Rate 10 Year Mean',
                         datasource='InfluxDB_V2',
                         reducerFunction='last',
                         showThresholdLabels=false,
@@ -206,7 +206,7 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
-  |> filter(fn: (r) => r["_field"] == "retail")
+  |> filter(fn: (r) => r["_field"] == "'bank'")
   |> filter(fn: (r) => r["period"] == "10y")
   |> last()
   |> keep(columns: ["_value"])
@@ -275,10 +275,10 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
-  |> filter(fn: (r) => r["_field"] == "retail")
+  |> filter(fn: (r) => r["_field"] == "'bank'")
   |> filter(fn: (r) => r["period"] == "1mo")
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: "Retail"})
+  |> rename(columns: {_value: "Bank"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -288,7 +288,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "Inflation"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*Retail.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
+                        { "alias": "/.*Bank.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   ).addSeriesOverride(
                         { "alias": "/.*Inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   )
@@ -326,10 +326,10 @@ from(bucket: "data_public")
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
   |> filter(fn: (r) => r["_measurement"] == "interest")
-  |> filter(fn: (r) => r["_field"] == "retail")
+  |> filter(fn: (r) => r["_field"] == "'bank'")
   |> filter(fn: (r) => r["period"] == "10y")
   |> keep(columns: ["_time", "_value"])
-  |> rename(columns: {_value: "Retail"})
+  |> rename(columns: {_value: "Bank"})
                   ')).addTarget(influxdb.target(query='
 from(bucket: "data_public")
   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
@@ -339,7 +339,7 @@ from(bucket: "data_public")
   |> keep(columns: ["_time", "_value"])
   |> rename(columns: {_value: "Inflation"})
                   ')).addSeriesOverride(
-                        { "alias": "/.*Retail.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
+                        { "alias": "/.*Bank.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   ).addSeriesOverride(
                         { "alias": "/.*Inflation.*/", "bars": false, "lines": true, "linewidth": 2, "zindex": 3, "yaxis": 1 }
                   )
