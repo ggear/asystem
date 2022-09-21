@@ -5,7 +5,7 @@ import pandas as pd
 
 from .. import library
 
-LABELS = ['Retail', 'Inflation', 'Net']
+LABELS = ['Bank', 'Inflation', 'Net']
 PERIODS = OrderedDict([
     ('1 Year Mean', 12),
     ('5 Year Mean', 5 * 12),
@@ -37,7 +37,7 @@ class Interest(library.Library):
                         retail_raw_df = pd.read_excel(retail_file, sheet_name=0, skiprows=11, header=None)
                         retail_df['Date'] = pd.to_datetime(retail_raw_df.iloc[:, [0]][0].dt.strftime('%Y-%m-01'))
                         # Column O: Retail deposit and investment rates; Banks' term deposits ($10000); 3 years
-                        retail_df['Retail'] = retail_raw_df.iloc[:, [14]]
+                        retail_df['Bank'] = retail_raw_df.iloc[:, [14]]
                         retail_df = retail_df.set_index('Date')
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                     except Exception as exception:
@@ -70,8 +70,8 @@ class Interest(library.Library):
             try:
                 if new_data:
                     interest_df = retail_df.merge(inflation_df, left_index=True, right_index=True, how='outer')
-                    interest_df = interest_df.dropna(subset=['Retail', 'Inflation'], how='all').ffill().bfill()
-                    interest_df['Net'] = interest_df['Retail'] - interest_df['Inflation']
+                    interest_df = interest_df.dropna(subset=['Bank', 'Inflation'], how='all').ffill().bfill()
+                    interest_df['Net'] = interest_df['Bank'] - interest_df['Inflation']
                     interest_df = interest_df.reindex(columns=COLUMNS)
                     interest_df = interest_df[interest_df.index > '1982-03-01']
             except Exception as exception:

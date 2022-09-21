@@ -22,7 +22,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
         self.run_module("equity", {"success_typical": ASSERT_RUN},
-                        enable_log=True,
+                        enable_log=False,
                         enable_rerun=False,
                         enable_random_rows=True,
                         disable_write_stdout=True,

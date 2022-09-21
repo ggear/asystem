@@ -458,6 +458,46 @@ from(bucket: "data_public")
                         .set_index(pd.to_datetime(fx_rates[fx_pair]["Date"]).dt.date).sort_index()
                     del fx_rates[fx_pair]["Date"]
                     fx_rates[fx_pair]["Rate"] = fx_rates[fx_pair]["Rate"].apply(pd.to_numeric)
+
+
+
+
+
+
+
+
+                bank_name = "RBA_Interest_Bank_rates"
+                bank_cols = ["Date", "Bank Rate"]
+                bank_query = """
+from(bucket: "data_public")
+  |> range(start: 1993-01-01T00:00:00.000Z, stop: now())
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "retail")
+  |> filter(fn: (r) => r["period"] == "1mo")
+  |> unique(column: "_time")
+  |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
+                """
+                bank_rates = self.database_read(bank_query, bank_cols, bank_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
+                if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(bank_rates) == 0:
+                    bank_rates = self.database_read(bank_query, bank_cols, bank_name, True)
+                bank_rates = bank_rates \
+                    .set_index(pd.to_datetime(bank_rates["Date"]).dt.date).sort_index()
+                del bank_rates["Date"]
+                bank_rates["Bank Rate"] = bank_rates["Bank Rate"].apply(pd.to_numeric)
+
+
+                # TODO: Extraportlate to today, dailies
+                # cols = ["AORD Currency Base","AORD Currency Rate Base","AORD Market Volume","AORD Paid Dividends","AORD Price Close","AORD Price High","AORD Price Low","AORD Price Open","AORD Stock Splits"]
+                # print((bank_rates))
+
+
+
+
+
+
+
+
                 index_weights = self.sheet_read(DRIVE_URL_PORTFOLIO, "Index_weights",
                                                 read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
                                                 sheet_params={"sheet": "Indexes", "index": None, "start_row": 2})
