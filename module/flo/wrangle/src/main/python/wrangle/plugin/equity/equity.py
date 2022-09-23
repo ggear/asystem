@@ -4,7 +4,7 @@ import os
 from collections import OrderedDict
 from datetime import datetime
 from warnings import simplefilter
-
+import traceback
 import numpy as np
 import pandas as pd
 import pdftotext
@@ -91,6 +91,12 @@ STOCK = OrderedDict([
     }),
     ('ERTH', {
         "start": "2021-04",
+        "end of day": "16:00",
+        "prefix": "",
+        "exchange": "AX",
+    }),
+    ('URNM', {
+        "start": "2022-07",
         "end of day": "16:00",
         "prefix": "",
         "exchange": "AX",
@@ -376,6 +382,45 @@ class Equity(library.Library):
                         equity_df = pd.concat([equity_df, stocks_df[stock][~stocks_df[stock].index.duplicated()]], axis=1, sort=True)
                 equity_df.index = pd.to_datetime(equity_df.index)  # type: ignore
                 equity_df = equity_df.resample('D').ffill().replace('', np.nan).ffill()
+                bank_name = "RBA_Interest_Bank_rates"
+                bank_cols = ["Date", "Bank Rate"]
+                bank_query = """
+from(bucket: "data_public")
+  |> range(start: 1993-01-01T00:00:00.000Z, stop: now())
+  |> filter(fn: (r) => r["_measurement"] == "interest")
+  |> filter(fn: (r) => r["_field"] == "bank")
+  |> filter(fn: (r) => r["period"] == "1mo")
+  |> unique(column: "_time")
+  |> keep(columns: ["_time", "_value"])
+  |> sort(columns: ["_time"])
+                """
+                bank_rates = self.database_read(bank_query, bank_cols, bank_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
+                if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(bank_rates) == 0:
+                    bank_rates = self.database_read(bank_query, bank_cols, bank_name, True)
+                bank_rates.loc[len(bank_rates.index)] = \
+                    [datetime.today().strftime('%Y-%m-%d 00:00:00+00:00'), bank_rates.loc[len(bank_rates.index) - 1, "Bank Rate"]]
+                bank_rates["Bank Rate"] = bank_rates["Bank Rate"].apply(pd.to_numeric)
+                bank_rates["BSAV Price Open"] = 1
+                bank_rates["BSAV Price Close"] = bank_rates["Bank Rate"] / 1200 + 1
+                for i in range(1, len(bank_rates)):
+                    bank_rates.loc[i, "BSAV Price Open"] = bank_rates.loc[i - 1, "BSAV Price Close"]
+                    bank_rates.loc[i, "BSAV Price Close"] = bank_rates.loc[i, "BSAV Price Open"] * \
+                                                            (bank_rates.loc[i, "Bank Rate"] / 1200 + 1)
+                bank_rates.index = pd.to_datetime(pd.to_datetime(bank_rates["Date"], utc=True).dt.date)
+                bank_rates.sort_index(inplace=True)
+                bank_rates = bank_rates.resample('D').interpolate(limit_direction='both', limit_area='inside').replace('', np.nan).ffill()
+                bank_rates["BSAV Price Close"] = bank_rates["BSAV Price Open"]
+                bank_rates["BSAV Price Low"] = bank_rates[["BSAV Price Open", "BSAV Price Close"]].min(axis=1)
+                bank_rates["BSAV Price High"] = bank_rates[["BSAV Price Open", "BSAV Price Close"]].max(axis=1)
+                bank_rates["BSAV Currency Base"] = "AUD"
+                bank_rates["BSAV Paid Dividends"] = 0.0
+                bank_rates["BSAV Currency Rate Base"] = 1.0
+                bank_rates["BSAV Currency Rate Spot"] = 1.0
+                bank_rates["BSAV Stock Splits"] = 0.0
+                bank_rates["BSAV Market Volume"] = 0.0
+                del bank_rates["Date"]
+                del bank_rates["Bank Rate"]
+                equity_df = pd.concat([equity_df, bank_rates], axis=1, sort=True)
                 equity_df = pd.concat([equity_df, statement_df], axis=1, sort=True)
                 equity_df.index = pd.to_datetime(equity_df.index)
                 equity_df = equity_df[~equity_df.index.duplicated(keep='last')]
@@ -454,8 +499,7 @@ from(bucket: "data_public")
                     fx_rates[fx_pair] = self.database_read(fx_query, fx_cols, fx_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
                     if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(fx_rates[fx_pair]) == 0:
                         fx_rates[fx_pair] = self.database_read(fx_query, fx_cols, fx_name, True)
-                    fx_rates[fx_pair] = fx_rates[fx_pair] \
-                        .set_index(pd.to_datetime(fx_rates[fx_pair]["Date"]).dt.date).sort_index()
+                    fx_rates[fx_pair] = fx_rates[fx_pair].set_index(pd.to_datetime(fx_rates[fx_pair]["Date"]).dt.date).sort_index()
                     del fx_rates[fx_pair]["Date"]
                     fx_rates[fx_pair]["Rate"] = fx_rates[fx_pair]["Rate"].apply(pd.to_numeric)
 
@@ -466,30 +510,8 @@ from(bucket: "data_public")
 
 
 
-                bank_name = "RBA_Interest_Bank_rates"
-                bank_cols = ["Date", "Bank Rate"]
-                bank_query = """
-from(bucket: "data_public")
-  |> range(start: 1993-01-01T00:00:00.000Z, stop: now())
-  |> filter(fn: (r) => r["_measurement"] == "interest")
-  |> filter(fn: (r) => r["_field"] == "bank")
-  |> filter(fn: (r) => r["period"] == "1mo")
-  |> unique(column: "_time")
-  |> keep(columns: ["_time", "_value"])
-  |> sort(columns: ["_time"])
-                """
-                bank_rates = self.database_read(bank_query, bank_cols, bank_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
-                if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(bank_rates) == 0:
-                    bank_rates = self.database_read(bank_query, bank_cols, bank_name, True)
-                bank_rates = bank_rates \
-                    .set_index(pd.to_datetime(bank_rates["Date"]).dt.date).sort_index()
-                del bank_rates["Date"]
-                bank_rates["Bank Rate"] = bank_rates["Bank Rate"].apply(pd.to_numeric)
+                #TODO: Add Bank to spreadsheet, rename Baseline to Market, add Bank to indexes
 
-
-                # TODO: Extraportlate to today, dailies
-                # cols = ["AORD Currency Base","AORD Currency Rate Base","AORD Market Volume","AORD Paid Dividends","AORD Price Close","AORD Price High","AORD Price Low","AORD Price Open","AORD Stock Splits"]
-                # print((bank_rates))
 
 
 

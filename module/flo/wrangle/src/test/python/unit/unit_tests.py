@@ -22,7 +22,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
         self.run_module("equity", {"success_typical": ASSERT_RUN},
-                        enable_log=False,
+                        enable_log=True,
                         enable_rerun=False,
                         enable_random_rows=True,
                         disable_write_stdout=True,
@@ -59,14 +59,14 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 144,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 162,
                 },
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_CURRENT_COLUMNS: 144,
+                    library.CTR_ACT_CURRENT_COLUMNS: 162,
                     library.CTR_ACT_UPDATE_COLUMNS: 108,
-                    library.CTR_ACT_DELTA_COLUMNS: 144,
+                    library.CTR_ACT_DELTA_COLUMNS: 162,
                 },
             },
         })})
@@ -75,14 +75,14 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 144,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 162,
                 },
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_CURRENT_COLUMNS: 144,
-                    library.CTR_ACT_UPDATE_COLUMNS: 135,
-                    library.CTR_ACT_DELTA_COLUMNS: 144,
+                    library.CTR_ACT_CURRENT_COLUMNS: 162,
+                    library.CTR_ACT_UPDATE_COLUMNS: 117,
+                    library.CTR_ACT_DELTA_COLUMNS: 162,
                 },
             },
         })})

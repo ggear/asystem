@@ -80,6 +80,7 @@ warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 WRANGLE_ENABLE_LOG = 'WRANGLE_ENABLE_LOG'
 WRANGLE_ENABLE_RANDOM_ROWS = 'WRANGLE_ENABLE_RANDOM_ROWS'
 WRANGLE_DISABLE_DATA_DELTA = 'WRANGLE_DISABLE_DATA_DELTA'
+WRANGLE_DISABLE_DATA_TRUNC = 'WRANGLE_DISABLE_DATA_TRUNC'
 WRANGLE_DISABLE_FILE_UPLOAD = 'WRANGLE_DISABLE_FILE_UPLOAD'
 WRANGLE_DISABLE_FILE_DOWNLOAD = 'WRANGLE_DISABLE_FILE_DOWNLOAD'
 
@@ -155,7 +156,7 @@ class Library(object, metaclass=ABCMeta):
         pass
 
     def _trunc(self):
-        if test(WRANGLE_DISABLE_DATA_DELTA):
+        if test(WRANGLE_DISABLE_DATA_DELTA) and not test(WRANGLE_DISABLE_DATA_TRUNC):
             self.database_trunc()
 
     def run(self):
