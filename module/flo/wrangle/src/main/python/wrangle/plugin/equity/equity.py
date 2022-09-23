@@ -4,7 +4,7 @@ import os
 from collections import OrderedDict
 from datetime import datetime
 from warnings import simplefilter
-import traceback
+
 import numpy as np
 import pandas as pd
 import pdftotext
@@ -386,13 +386,14 @@ class Equity(library.Library):
                 bank_cols = ["Date", "Bank Rate"]
                 bank_query = """
 from(bucket: "data_public")
-  |> range(start: 1993-01-01T00:00:00.000Z, stop: now())
-  |> filter(fn: (r) => r["_measurement"] == "interest")
-  |> filter(fn: (r) => r["_field"] == "bank")
-  |> filter(fn: (r) => r["period"] == "1mo")
-  |> unique(column: "_time")
-  |> keep(columns: ["_time", "_value"])
-  |> sort(columns: ["_time"])
+    |> range(start: 1993-01-01T00:00:00.000Z, stop: now())
+    |> filter(fn: (r) => r["_measurement"] == "interest")
+    |> filter(fn: (r) => r["_field"] == "bank")
+    |> filter(fn: (r) => r["period"] == "1mo")
+    |> keep(columns: ["_time", "_value"])
+    |> sort(columns: ["_time"])
+    |> sort(columns: ["_time"])
+    |> unique(column: "_time")
                 """
                 bank_rates = self.database_read(bank_query, bank_cols, bank_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
                 if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(bank_rates) == 0:
@@ -408,6 +409,7 @@ from(bucket: "data_public")
                                                             (bank_rates.loc[i, "Bank Rate"] / 1200 + 1)
                 bank_rates.index = pd.to_datetime(pd.to_datetime(bank_rates["Date"], utc=True).dt.date)
                 bank_rates.sort_index(inplace=True)
+                bank_rates = bank_rates[~bank_rates.index.duplicated(keep='last')]
                 bank_rates = bank_rates.resample('D').interpolate(limit_direction='both', limit_area='inside').replace('', np.nan).ffill()
                 bank_rates["BSAV Price Close"] = bank_rates["BSAV Price Open"]
                 bank_rates["BSAV Price Low"] = bank_rates[["BSAV Price Open", "BSAV Price Close"]].min(axis=1)
@@ -489,8 +491,8 @@ from(bucket: "data_public")
     |> filter(fn: (r) => r["period"] == "1d")
     |> filter(fn: (r) => r["type"] == "snapshot")
     |> filter(fn: (r) => r["_field"] == "aud/{}")
-    |> sort(columns: ["_time", "version"])
     |> keep(columns: ["_time", "_value"])
+    |> sort(columns: ["_time"])
     |> unique(column: "_time")
                     """.format(
                         pytz.UTC.localize(pd.to_datetime(equity_subset_df.index[0])).isoformat(),
@@ -500,25 +502,11 @@ from(bucket: "data_public")
                     if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(fx_rates[fx_pair]) == 0:
                         fx_rates[fx_pair] = self.database_read(fx_query, fx_cols, fx_name, True)
                     fx_rates[fx_pair] = fx_rates[fx_pair].set_index(pd.to_datetime(fx_rates[fx_pair]["Date"]).dt.date).sort_index()
+                    fx_rates[fx_pair] = fx_rates[fx_pair][~fx_rates[fx_pair].index.duplicated(keep='last')]
                     del fx_rates[fx_pair]["Date"]
                     fx_rates[fx_pair]["Rate"] = fx_rates[fx_pair]["Rate"].apply(pd.to_numeric)
 
-
-
-
-
-
-
-
-                #TODO: Add Bank to spreadsheet, rename Baseline to Market, add Bank to indexes
-
-
-
-
-
-
-
-
+                # TODO: Add Bank to spreadsheet, rename Baseline to Market, add Bank to indexes
 
                 index_weights = self.sheet_read(DRIVE_URL_PORTFOLIO, "Index_weights",
                                                 read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),

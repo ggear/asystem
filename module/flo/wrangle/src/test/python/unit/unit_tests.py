@@ -28,7 +28,7 @@ class WrangleTest(unittest.TestCase):
                         disable_write_stdout=True,
                         disable_data_delta=True,
                         disable_file_upload=True,
-                        disable_file_download=True,
+                        disable_file_download=False,
                         )
 
     def test_currency_typical(self):
