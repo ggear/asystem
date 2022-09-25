@@ -20,89 +20,6 @@ STATUS_SUCCESS = "success"
 
 CURRENCIES = ["GBP", "USD", "SGD"]
 
-STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
-
-STOCK = OrderedDict([
-    ('AORD', {
-        "start": "1985-01",
-        "end of day": "16:00",
-        "prefix": "^",
-        "exchange": "",
-    }),
-    ('WDS', {
-        "start": "2009-01",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('SIG', {
-        "start": "2006-01",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('OZL', {
-        "start": "2009-01",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('VAS', {
-        "start": "2010-01",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('VHY', {
-        "start": "2011-01",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('VAE', {
-        "start": "2016-01",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('VDHG', {
-        "start": "2018-01",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('CLNE', {
-        "start": "2021-04",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('IAF', {
-        "start": "2012-04",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('GOLD', {
-        "start": "2008-01",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('ERTH', {
-        "start": "2021-04",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-    ('URNM', {
-        "start": "2022-07",
-        "end of day": "16:00",
-        "prefix": "",
-        "exchange": "AX",
-    }),
-])
-
 DIMENSIONS = [
     "Price Open",
     "Price High",
@@ -114,6 +31,24 @@ DIMENSIONS = [
     "Currency Rate Base",
     "Currency Base",
 ]
+
+STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "Value")
+
+STOCK = OrderedDict([
+    ('WDS', {"start": "2009-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('SIG', {"start": "2006-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('OZL', {"start": "2009-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('VAS', {"start": "2010-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('VHY', {"start": "2011-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('VAE', {"start": "2016-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('IAF', {"start": "2012-04", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('AORD', {"start": "1985-01", "end of day": "16:00", "prefix": "^", "exchange": "", }),
+    ('VDHG', {"start": "2018-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('CLNE', {"start": "2021-04", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('GOLD', {"start": "2008-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('ERTH', {"start": "2021-04", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('URNM', {"start": "2022-07", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+])
 
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
 DRIVE_URL_PORTFOLIO = "https://docs.google.com/spreadsheets/d/1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
