@@ -59,6 +59,13 @@
     - '0x00178801039f6b78'
     - '0x001788010444ef85'
     - '0x00178801039f6b4a'
+'1500':
+  friendly_name: 'Lounge Lamp'
+  retain: true
+  transition: 2
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
     - '0x0017880106bc4f2d'
 '700':
   friendly_name: 'Parents Main'
