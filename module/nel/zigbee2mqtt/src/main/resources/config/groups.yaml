@@ -9,6 +9,7 @@
   off_state: 'all_members_off'
   devices:
     - '0x0017880103433075'
+    - '0x0017880106bc4f2d'
 '200':
   friendly_name: 'Edwin Lamp'
   retain: true
@@ -50,7 +51,7 @@
     - '0x00178801039f574e'
     - '0x00178801039f4eed'
 '600':
-  friendly_name: 'Lounge Main'
+  friendly_name: 'Lounge Lamp'
   retain: true
   transition: 2
   optimistic: true

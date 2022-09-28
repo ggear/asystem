@@ -65,6 +65,10 @@
   friendly_name: 'Lounge Main Bulb 3'
   homeassistant:
     expire_after: 3600
+'0x0017880106bc4f2d':
+  friendly_name: 'Lounge Lamp Bulb 1'
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f585a':
   friendly_name: 'Parents Main Bulb 1'
   homeassistant:

@@ -137,6 +137,10 @@ light.wardrobe_main:
   name: Wardrobe Main Light
   aliases: ['Wardrobe Main', 'Main Light', 'Main']
   room: Wardrobe
+switch.deck_festoons:
+  name: Deck Festoons
+  aliases: ['Festoons']
+  room: Deck
 fan.ada_fan:
   name: Adas Fan
   aliases: ['Fan']
