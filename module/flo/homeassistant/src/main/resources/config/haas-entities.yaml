@@ -105,6 +105,10 @@ light.lounge_fan:
   name: Home Fan Light
   aliases: ['Home Fan', 'Fan Light', 'Fan']
   room: Home
+light.lounge_lamp:
+  name: Lounge Lamp
+  aliases: ['Lamp']
+  room: Lounge
 light.parents_main:
   name: Parents Main Light
   aliases: ['Parents Main', 'Main Light', 'Main']
@@ -138,8 +142,8 @@ light.wardrobe_main:
   aliases: ['Wardrobe Main', 'Main Light', 'Main']
   room: Wardrobe
 switch.deck_festoons:
-  name: Deck Festoons
-  aliases: ['Festoons']
+  name: Deck Festoon Lights
+  aliases: ['Deck  Festoons', 'Festoon Lights', ' Festoons']
   room: Deck
 fan.ada_fan:
   name: Adas Fan

@@ -29,6 +29,7 @@ adaptive_lighting:
       - light.edwin_lamp
       - light.dining_main
       - light.lounge_main
+      - light.lounge_lamp
       - light.kitchen_main
       - light.laundry_main
       - light.pantry_main
@@ -73,6 +74,10 @@ input_boolean:
   ####################################################################################
   lighting_reset_adaptive_lighting_lounge_main:
     name: Lounge Main
+    initial: off
+  ####################################################################################
+  lighting_reset_adaptive_lighting_lounge_lamp:
+    name: Lounge Lamp
     initial: off
   ####################################################################################
   lighting_reset_adaptive_lighting_parents_main:
@@ -359,6 +364,23 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_main
+  ####################################################################################
+  - id: lighting_reset_adaptive_lighting_lounge_lamp
+    alias: "Lighting: Reset Adaptive Lighting on request of Lounge Lamp"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
+        from: 'off'
+        to: 'on'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.lounge_lamp
+          manual_control: false
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
   ####################################################################################
   - id: lighting_reset_adaptive_lighting_parents_main
     alias: "Lighting: Reset Adaptive Lighting on request of Parents Main"

@@ -84,6 +84,9 @@ WRANGLE_DISABLE_DATA_DELTA = 'WRANGLE_DISABLE_DATA_DELTA'
 WRANGLE_DISABLE_FILE_UPLOAD = 'WRANGLE_DISABLE_FILE_UPLOAD'
 WRANGLE_DISABLE_FILE_DOWNLOAD = 'WRANGLE_DISABLE_FILE_DOWNLOAD'
 
+# TODO: Remove once incremental load fixed
+os.environ["WRANGLE_DISABLE_DATA_DELTA"] = "True"
+
 
 def test(variable, default=False):
     return os.getenv(variable, "{}".format(default).lower()).lower() == "true"

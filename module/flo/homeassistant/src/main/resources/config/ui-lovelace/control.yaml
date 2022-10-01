@@ -53,6 +53,9 @@
     - entity: light.lounge_fan
       name: Lounge Fan
       icon: mdi:lightbulb-group
+    - entity: light.lounge_lamp
+      name: Lounge Lamp
+      icon: mdi:lightbulb-group
     - entity: light.parents_main
       name: Parents Main
       icon: mdi:lightbulb-group
