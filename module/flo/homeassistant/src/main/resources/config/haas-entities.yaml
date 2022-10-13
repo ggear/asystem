@@ -117,6 +117,10 @@ light.kitchen_main:
   name: Kitchen Main Light
   aliases: ['Kitchen Main', 'Main Light', 'Main']
   room: Kitchen
+switch.kitchen_bench:
+  name: Kitchen Bench Lights
+  aliases: ['Kitchen Main', 'Bench Lights', 'Main']
+  room: Kitchen
 light.laundry_main:
   name: Laundry Main Light
   aliases: ['Laundry Main', 'Main Light', 'Main']
@@ -143,8 +147,12 @@ light.wardrobe_main:
   room: Wardrobe
 switch.deck_festoons:
   name: Deck Festoon Lights
-  aliases: ['Deck  Festoons', 'Festoon Lights', ' Festoons']
+  aliases: ['Deck Festoons', 'Festoon Lights', 'Festoons']
   room: Deck
+switch.landing_festoons:
+  name: Landing Landing Lights
+  aliases: ['Landing Landing', 'Landing Lights', 'Landing']
+  room: Landing
 fan.ada_fan:
   name: Adas Fan
   aliases: ['Fan']

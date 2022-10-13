@@ -14,6 +14,8 @@ tplink:
   switch:
     - host: 10.0.6.81
     - host: 10.0.6.79
+    - host: 10.0.6.88
+    - host: 10.0.6.89
     - host: 10.0.6.87
     - host: 10.0.6.80
     - host: 10.0.6.70
@@ -42,7 +44,9 @@ automation:
       - service: homeassistant.turn_off
         entity_id:
           - switch.bathroom_rails_led
+          - switch.kitchen_bench_led
           - switch.deck_festoons_led
+          - switch.landing_festoons_led
           - switch.kitchen_fan_led
           - switch.lounge_tv_led
           - switch.various_adhoc_outlet_led
