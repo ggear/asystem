@@ -12,7 +12,7 @@ homeassistant:
   legacy_triggers: true
 availability:
   active:
-    timeout: 1
+    timeout: 10
   passive:
     timeout: 1500
 device_options:
