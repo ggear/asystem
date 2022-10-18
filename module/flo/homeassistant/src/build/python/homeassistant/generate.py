@@ -1,11 +1,11 @@
 import datetime
 import json
 import os
+import sys
+import time
 from collections import OrderedDict
 
 import pandas as pd
-import sys
-import time
 from requests import get
 
 DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
@@ -172,6 +172,7 @@ compensation:
         (metadata_df["connection_ip"].str.len() > 0)
         ]
     metadata_control_dicts = [row.dropna().to_dict() for index, row in metadata_control_df.iterrows()]
+    metadata_control_dicts = sorted(metadata_control_dicts, key=lambda metadata_control_dict: metadata_control_dict['connection_ip'])
     metadata_control_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/control.yaml"))
     with open(metadata_control_path, 'w') as metadata_control_file:
         metadata_control_file.write("""

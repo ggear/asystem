@@ -341,6 +341,12 @@ switch.deck_festoons:
 switch.landing_festoons:
   friendly_name: 'Landing Festoons'
   icon: 'mdi:lightbulb-group'
+light.garden_pedestals:
+  friendly_name: 'Garden Pedestals'
+  icon: 'mdi:lightbulb-group'
+light.tree_spotlights:
+  friendly_name: 'Tree Spotlights'
+  icon: 'mdi:lightbulb-group'
 fan.ada_fan:
   friendly_name: 'Ada'
   icon: 'mdi:fan'

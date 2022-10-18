@@ -12,26 +12,26 @@ fan:
 tplink:
   discovery: false
   switch:
-    - host: 10.0.6.81
-    - host: 10.0.6.79
-    - host: 10.0.6.88
-    - host: 10.0.6.89
-    - host: 10.0.6.87
-    - host: 10.0.6.80
     - host: 10.0.6.70
-    - host: 10.0.6.82
-    - host: 10.0.6.83
+    - host: 10.0.6.71
+    - host: 10.0.6.72
     - host: 10.0.6.73
     - host: 10.0.6.74
     - host: 10.0.6.75
     - host: 10.0.6.76
     - host: 10.0.6.77
     - host: 10.0.6.78
-    - host: 10.0.6.71
-    - host: 10.0.6.72
-    - host: 10.0.6.86
+    - host: 10.0.6.79
+    - host: 10.0.6.80
+    - host: 10.0.6.81
+    - host: 10.0.6.82
+    - host: 10.0.6.83
     - host: 10.0.6.84
     - host: 10.0.6.85
+    - host: 10.0.6.86
+    - host: 10.0.6.87
+    - host: 10.0.6.88
+    - host: 10.0.6.89
 #######################################################################################
 automation:
   - alias: "Electricity: Turn off Smart Plug LED"
@@ -43,24 +43,24 @@ automation:
     action:
       - service: homeassistant.turn_off
         entity_id:
-          - switch.bathroom_rails_led
-          - switch.kitchen_bench_led
-          - switch.deck_festoons_led
-          - switch.landing_festoons_led
-          - switch.kitchen_fan_led
-          - switch.lounge_tv_led
           - switch.various_adhoc_outlet_led
-          - switch.study_outlet_led
-          - switch.office_outlet_led
+          - switch.study_battery_charger_led
+          - switch.laundry_vacuum_charger_led
           - switch.kitchen_dish_washer_led
           - switch.laundry_clothes_dryer_led
           - switch.laundry_washing_machine_led
           - switch.kitchen_coffee_machine_led
           - switch.kitchen_fridge_led
           - switch.deck_freezer_led
-          - switch.study_battery_charger_led
-          - switch.laundry_vacuum_charger_led
-          - switch.rack_outlet_led
+          - switch.kitchen_bench_led
+          - switch.lounge_tv_led
+          - switch.bathroom_rails_led
+          - switch.study_outlet_led
+          - switch.office_outlet_led
           - switch.roof_network_switch_led
           - switch.rack_modem_led
+          - switch.rack_outlet_led
+          - switch.kitchen_fan_led
+          - switch.deck_festoons_led
+          - switch.landing_festoons_led
 #######################################################################################
