@@ -155,3 +155,4 @@
   off_state: 'all_members_off'
   devices:
     - '0x00178801097ed42c'
+    - '0x0017880109c40c33'

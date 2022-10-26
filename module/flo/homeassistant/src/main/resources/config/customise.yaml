@@ -314,8 +314,8 @@ light.parents_main:
 light.kitchen_main:
   friendly_name: 'Kitchen Main'
   icon: 'mdi:lightbulb-group'
-switch.kitchen_bench:
-  friendly_name: 'Kitchen Bench'
+switch.kitchen_downlights:
+  friendly_name: 'Kitchen Downlights'
   icon: 'mdi:lightbulb-group'
 light.laundry_main:
   friendly_name: 'Laundry Main'

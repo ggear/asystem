@@ -1,0 +1,27 @@
+Requirements:
+# Low power <50w at steady state
+# Cool running <50°C at steady state
+# Isolated workloads >3 physical servers
+# Fast ~Intel i5-2520M equivalent
+# High memory per node >8GB
+# High/slow storage nodes >2TB per node, >6TB total, >2 nodes
+# High/slow storage nodes >2TB per node, >2 nodes
+
+1 x Rack & Switch ($159 + $537):
+# https://www.iot-store.com.au/products/raspberry-pi-rackmount-poe-ssd
+# https://ubwh.com.au/Ubiquiti/UniFi-Switching-and-Routing/USW-16-POE
+
+5 x (8GB RAM, Quad Core 1.5Ghz, 32GB boot storage) (5x$135 + 5x$40 + 5x$30 + 5x$12)
+# https://raspberry.piaustralia.com.au/products/raspberry-pi-4 (https://rpilocator.com/?country=AU)
+# https://raspberry.piaustralia.com.au/products/raspberry-pi-poe-hat
+# https://www.amazon.com.au/Lexar-JumpDrive-Flash-3-Pack-LJDV040032G-B3BNU/dp/B087BJ6Q2P/ref=sr_1_4
+# https://www.amazon.com.au/Onvian-Driver-Adapter-Power-Cable/dp/B0793LXX5M/ref=sr_1_5
+
+3 x 4TB slow storage (3x$269)
+# https://www.scorptec.com.au/product/hard-drives-&-ssds/hdd-2.5-drives/66202-st4000lm024
+
+2 x 4TB fast storage (2x$545):
+# https://www.scorptec.com.au/product/hard-drives-&-ssds/ssd-2.5-&-pci-express/94488-ct4000mx500ssd1
+
+Total ($3678):
+A pretty awesome cluster!

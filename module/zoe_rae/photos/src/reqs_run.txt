@@ -1,2 +1,2 @@
-click==8.0.4
-osxphotos==0.47.5
+click==8.1.3
+osxphotos==0.51.8

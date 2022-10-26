@@ -117,9 +117,9 @@ light.kitchen_main:
   name: Kitchen Main Light
   aliases: ['Kitchen Main', 'Main Light', 'Main']
   room: Kitchen
-switch.kitchen_bench:
-  name: Kitchen Bench Lights
-  aliases: ['Kitchen Main', 'Bench Lights', 'Main']
+switch.kitchen_downlights:
+  name: Kitchen Downlights
+  aliases: ['Downlights']
   room: Kitchen
 light.laundry_main:
   name: Laundry Main Light
@@ -146,20 +146,20 @@ light.wardrobe_main:
   aliases: ['Wardrobe Main', 'Main Light', 'Main']
   room: Wardrobe
 switch.deck_festoons:
-  name: Deck Festoon Lights
-  aliases: ['Deck Festoons', 'Festoon Lights', 'Festoons']
+  name: Deck Lights
+  aliases: ['Deck Festoons', 'Lights', 'Festoons']
   room: Deck
 switch.landing_festoons:
-  name: Landing Landing Lights
-  aliases: ['Landing Landing', 'Landing Lights', 'Landing']
+  name: Landing Lights
+  aliases: ['Landing Festoons', 'Lights', 'Festoons']
   room: Landing
 light.garden_pedestals:
-  name: Garden Garden Lights
-  aliases: ['Garden Garden', 'Garden Pedestals', 'Garden Pool Lights', 'Garden Pool', 'Garden Path', 'Garden Lights', 'Garden', 'Pedestals', 'Pool Lights', 'Pool', 'Path']
+  name: Garden Lights
+  aliases: ['Garden Pedestals', 'Lights', 'Pedestals']
   room: Garden
 light.tree_spotlights:
-  name: Tree Tree Lights
-  aliases: ['Tree Tree', 'Tree Spotlights', 'Tree Lights', 'Tree', 'Spotlights']
+  name: Tree Lights
+  aliases: ['Tree Spotlights', 'Lights', 'Spotlights']
   room: Tree
 fan.ada_fan:
   name: Adas Fan

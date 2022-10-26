@@ -1,0 +1,51 @@
+Open questions:
+- Where to place mains flow meter? Wireless/Power/Water - does later branch off before house? Maybe cut through driway, repair and put a water barrier/drain in place?
+- Where to place front sprinkler controller? Wireless/Power proximity to Solenoids/Water
+
+Water:
+# Main flow/volume (at source 17m from meter box or downstream close to house)
+# House flow/volume (under landing)
+# Garden flow/volume (calculated)
+# Automated fast leak detection
+# Slow Leak detection process for house/garden/all
+
+Atlas Scientific Flow Meter kit (2 x $549):
+# https://www.iot-store.com.au/collections/sensors/products/flow-meter-kit-3-4-atlas-scientific
+# https://atlas-scientific.com/cables/ezo-sensor-extension-cable
+# Where to place house for easy power and no water damage
+# How to power mains sensors, <3.6m between
+
+Pool:
+# Pump on/off
+# Pump power/energy
+# Pump temp
+# Water Temp/pH/ORP
+# Water level
+
+Atlas Sci Kit ($1299 + $789/4 years)
+# https://www.iot-store.com.au/products/wifi-pool-kit-water-quality-monitoring
+# https://www.iot-store.com.au/collections/atlas-scientific/products/industrial-ph-orp-temperature-sensor-probe
+# https://www.iot-store.com.au/collections/sensors/products/industrial-ph-probe-atlas-scientific
+# https://github.com/Atlas-Scientific/Ezo_I2c_lib/blob/master/Examples/IOT_kits/pool_kit/pool_kit.ino
+# https://github.com/esphome/feature-requests/issues/766
+# https://esphome.io/components/sensor/ezo.html
+
+Irrigation:
+# Front sprinklers (west of driveway, 17m from meter box or from garage)
+# Back sprinklers (under deck)
+# Schedule
+# Manual
+# Visualise usage
+# Power/Energy
+
+Bush Fire Protection:
+# Roof sprinklers (under deck)
+# Fed from pool/water tank
+# Powered by pump/batteries
+# Visualise usage
+# Power/Energy
+
+Open Sprinkler ($500 - OSPi/OS3.0DC/Expander2.1AC - 32 zones)
+# https://opensprinkler.com/product/opensprinkler
+# https://github.com/vinteo/hass-opensprinkler
+# https://openthings.freshdesk.com/support/solutions/articles/5000716363-os-api-documents
