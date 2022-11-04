@@ -12,7 +12,7 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}/config:/config
       - ${SERVICE_DATA_DIR}/transcode:/transcode
-      - ${SERVICE_DATA_DIR}/media:/media
+      - /data/media/Series:/media/series
     network_mode: host
     deploy:
       resources:
