@@ -3,10 +3,14 @@
 ################################################################################
 # Hardware specs
 ################################################################################
-# macmini-nel: Mid 2011 (5,2)   8GB RAM 500GB SSD https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-mid-2011-specs.html
-# macmini-liz: Late 2012 (6,1)  8GB RAM  480GB SSD https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-late-2012-specs.html
-# macbook-flo: Late 2013 (11,3) 16GB RAM  500GB SSD https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-core-i7-2.3-15-dual-graphics-late-2013-retina-display-specs.html
-# raspbpi-lia: Raspberry Pi 3 (Model B) 1GB RAM 120GB SSD https://www.raspberrypi.com/products/raspberry-pi-3-model-b
+# macmini-nel: Mid 2011        (5,2)     8GB RAM   500GB SSD https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-mid-2011-specs.html
+# macmini-liz: Late 2012       (6,1)     8GB RAM   480GB SSD https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-late-2012-specs.html
+
+# macmini-mae: Late 2012       (6,1)     8GB RAM   480GB SSD https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-late-2012-specs.html
+# macmini-meg:
+
+# macbook-flo: Late 2013       (11,3)    16GB RAM  500GB SSD https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-core-i7-2.3-15-dual-graphics-late-2013-retina-display-specs.html
+# raspbpi-lia: Raspberry Pi 3  (Model B) 1GB RAM   120GB SSD https://www.raspberrypi.com/products/raspberry-pi-3-model-b
 
 ################################################################################
 # Bootable USB

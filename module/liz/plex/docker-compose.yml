@@ -1,0 +1,20 @@
+# https://hub.docker.com/r/plexinc/pms-docker/tags
+version: '3.7'
+services:
+  plex:
+    container_name: plex
+    image: plexinc/pms-docker:1.29.1.6316-f4cdfea9c
+    init: true
+    restart: ${SERVICE_RESTART}
+    environment:
+      - TZ=Australia/Perth
+      - PLEX_CLAIM=something
+    volumes:
+      - ${SERVICE_DATA_DIR}/config:/config
+      - ${SERVICE_DATA_DIR}/transcode:/transcode
+      - ${SERVICE_DATA_DIR}/media:/media
+    network_mode: host
+    deploy:
+      resources:
+        limits:
+          memory: 5G

@@ -1,3 +1,7 @@
+-------------------------------------------------------------------------------
+- Replacement
+-------------------------------------------------------------------------------
+
 Requirements:
 # Low power <50w at steady state
 # Cool running <50°C at steady state
@@ -25,3 +29,19 @@ Requirements:
 
 Total ($3678):
 A pretty awesome cluster!
+
+-------------------------------------------------------------------------------
+- Add node
+-------------------------------------------------------------------------------
+
+1 x Macmini 8GB ($200)
+# https://www.gumtree.com.au/s-ad/perth/desktops/mac-mini-server-2011-perfect-working-order/1302686104
+
+1 x 5TB slow storage ($339)
+# https://www.scorptec.com.au/product/hard-drives-&-ssds/hdd-2.5-drives/66715-st5000lm000
+
+1 x 500GB fast storage ($69)
+# https://www.scorptec.com.au/product/hard-drives-&-ssds/ssd-2.5-&-pci-express/71046-ct500mx500ssd1
+
+Total ($608)
+Not bad additional backup/storage!
