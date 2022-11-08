@@ -4,7 +4,7 @@
 # Bootstrap tests
 ################################################################################
 
-DIR_RESULTS=$(find /home/asystem/performance -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1)/results
+DIR_RESULTS=$(find /home/asystem/_hardware -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1)/results
 NUM_THREADS=1
 NUM_THREADS_MAX=4
 MAX_RUNTIME_SEC=180
