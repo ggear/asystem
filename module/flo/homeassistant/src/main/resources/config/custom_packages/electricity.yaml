@@ -142,7 +142,7 @@ sensor:
               states('sensor.kitchen_fridge_current_consumption') | float(0) +
               states('sensor.deck_freezer_current_consumption') | float(0) +
               states('sensor.deck_lights_current_consumption') | float(0) +
-              states('sensor.lounge_tv_current_consumption') | float(0) +
+              states('sensor.lounge_tv_outlet_current_consumption') | float(0) +
               states('sensor.study_outlet_current_consumption') | float(0) +
               states('sensor.office_outlet_current_consumption') | float(0) +
               states('sensor.server_network_power') | float(0) +
@@ -185,7 +185,7 @@ sensor:
               states('sensor.kitchen_fridge_today_s_consumption') | float(0) +
               states('sensor.deck_freezer_today_s_consumption') | float(0) +
               states('sensor.deck_lights_today_s_consumption') | float(0) +
-              states('sensor.lounge_tv_today_s_consumption') | float(0) +
+              states('sensor.lounge_tv_outlet_today_s_consumption') | float(0) +
               states('sensor.study_outlet_today_s_consumption') | float(0) +
               states('sensor.office_outlet_today_s_consumption') | float(0) +
               states('sensor.server_network_energy_daily') | float(0) +

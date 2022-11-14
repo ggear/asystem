@@ -441,7 +441,7 @@ sensor.deck_festoons_current_consumption:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.lounge_tv_current_consumption:
+sensor.lounge_tv_outlet_current_consumption:
   friendly_name: 'Lounge TV'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
@@ -533,7 +533,7 @@ sensor.deck_festoons_today_s_consumption:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.lounge_tv_today_s_consumption:
+sensor.lounge_tv_outlet_today_s_consumption:
   friendly_name: 'Lounge TV'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
@@ -629,7 +629,7 @@ input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
 input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
   friendly_name: 'Wardrobe Main'
   icon: 'mdi:lightbulb-group'
-switch.lounge_tv:
+switch.lounge_tv_outlet:
   friendly_name: 'Lounge TV'
   icon: 'mdi:television'
 switch.various_adhoc_outlet:
@@ -717,6 +717,8 @@ media_player.kitchen_home:
   friendly_name: 'Kitchen Home'
 media_player.kitchen_speaker:
   friendly_name: 'Kitchen Speaker'
+media_player.lounge_speaker:
+  friendly_name: 'Lounge Speaker'
 media_player.lounge_home:
   friendly_name: 'Lounge Home'
 media_player.lounge_tv:

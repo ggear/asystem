@@ -83,7 +83,7 @@
   title: Power Plugs
   show_header_toggle: false
   entities:
-    - entity: switch.lounge_tv
+    - entity: switch.lounge_tv_outlet
       name: Lounge TV
       icon: mdi:television
     - entity: switch.various_adhoc_outlet

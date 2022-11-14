@@ -53,7 +53,7 @@ automation:
           - switch.kitchen_fridge_led
           - switch.deck_freezer_led
           - switch.kitchen_downlights_led
-          - switch.lounge_tv_led
+          - switch.lounge_tv_outlet_led
           - switch.bathroom_rails_led
           - switch.study_outlet_led
           - switch.office_outlet_led

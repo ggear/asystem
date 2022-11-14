@@ -288,6 +288,29 @@ automation:
         ).strip() + "\n")
         metadata_media_file.write("""
 #######################################################################################
+wake_on_lan:
+# webostv:
+#   host: 10.0.4.49
+#   name: Lounge TV
+#   customize:
+#     sources:
+#       - livetv
+#       - youtube
+#       - netflix
+#       - hdmi1
+automation:
+  - id: media_lounge_tv_on
+    alias: "Media: Turn on lounge TV"
+    trigger:
+      - platform: webostv.turn_on
+        entity_id: media_player.lounge_tv
+    action:
+      # wakeonlan -i 10.0.4.255 -p 9 4c:ba:d7:bf:94:d0 works!
+      - service: wake_on_lan.send_magic_packet
+        data:
+          mac: 4c:ba:d7:bf:94:d0
+          broadcast_address: 10.0.4.255
+          broadcast_port: 9
 sonos:
   media_player:
     hosts:
