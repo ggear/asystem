@@ -719,8 +719,6 @@ media_player.kitchen_speaker:
   friendly_name: 'Kitchen Speaker'
 media_player.lounge_home:
   friendly_name: 'Lounge Home'
-media_player.lounge_speaker:
-  friendly_name: 'Lounge Speaker'
 media_player.lounge_tv:
   friendly_name: 'Lounge TV'
 camera.uvc_ada_medium:

@@ -1,0 +1,2 @@
+
+find /data/media -type f -exec echo -n {} \; -exec echo -n " " \; -exec mediainfo --Output=$'Video;%Format%' {} \;

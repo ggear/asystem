@@ -18,6 +18,7 @@ PACKAGES=(
   screen
   fswatch
   util-linux
+  mediainfo
   bsdmainutils
   netselect-apt
   smartmontools
