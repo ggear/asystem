@@ -26,14 +26,14 @@
 - type: media-control
   entity: media_player.kitchen_speaker
 ################################################################################
-- type: media-control
-  entity: media_player.lounge_speaker
-################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: media-control
-  entity: media_player.lounge_home
+  entity: media_player.lounge_tv
 ################################################################################
 - type: media-control
-  entity: media_player.lounge_tv
+  entity: media_player.lounge_speaker
+################################################################################
+- type: media-control
+  entity: media_player.lounge_home
 ################################################################################
