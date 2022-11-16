@@ -1,5 +1,5 @@
-# https://github.com/influxdata/influxdb/releases
-FROM influxdb:2.4.0-alpine as image_base
+# https://docs.influxdata.com/influxdb/v2.5/reference/release-notes/influxdb
+FROM influxdb:2.5.1-alpine as image_base
 
 FROM image_base as image_package
 USER root
