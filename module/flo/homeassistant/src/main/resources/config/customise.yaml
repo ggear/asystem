@@ -441,6 +441,10 @@ sensor.deck_festoons_current_consumption:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
+sensor.landing_festoons_current_consumption:
+  friendly_name: 'Landing Festoons'
+  icon: 'mdi:home-lightning-bolt'
+  unit_of_measurement: 'W'
 sensor.lounge_tv_outlet_current_consumption:
   friendly_name: 'Lounge TV'
   icon: 'mdi:home-lightning-bolt'
@@ -533,6 +537,10 @@ sensor.deck_festoons_today_s_consumption:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
+sensor.landing_festoons_today_s_consumption:
+  friendly_name: 'Landing Festoons'
+  icon: 'mdi:battery-charging'
+  unit_of_measurement: 'kWh'
 sensor.lounge_tv_outlet_today_s_consumption:
   friendly_name: 'Lounge TV'
   icon: 'mdi:battery-charging'
@@ -604,6 +612,9 @@ input_boolean.lighting_reset_adaptive_lighting_dining_main:
   icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_lounge_main:
   friendly_name: 'Lounge Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_lounge_lamp:
+  friendly_name: 'Lounge Lamp'
   icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_parents_main:
   friendly_name: 'Parents Main'
@@ -707,22 +718,20 @@ media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:
   friendly_name: 'Edwin Home'
+media_player.lounge_home:
+  friendly_name: 'Lounge Home'
 media_player.parents_home:
   friendly_name: 'Parents Home'
-media_player.parents_tv:
-  friendly_name: 'Parents TV'
-media_player.parents_speaker:
-  friendly_name: 'Parents Speaker'
-media_player.kitchen_home:
-  friendly_name: 'Kitchen Home'
-media_player.kitchen_speaker:
-  friendly_name: 'Kitchen Speaker'
 media_player.lounge_tv:
   friendly_name: 'Lounge TV'
 media_player.lounge_speaker:
   friendly_name: 'Lounge Speaker'
-media_player.lounge_home:
-  friendly_name: 'Lounge Home'
+media_player.kitchen_home:
+  friendly_name: 'Kitchen Home'
+media_player.kitchen_speaker:
+  friendly_name: 'Kitchen Speaker'
+media_player.parents_speaker:
+  friendly_name: 'Parents Speaker'
 camera.uvc_ada_medium:
   friendly_name: 'Ada'
 binary_sensor.uvc_ada_motion:

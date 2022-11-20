@@ -52,6 +52,9 @@
     - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_main
       name: Lounge Main
       icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
+      name: Lounge Lamp
+      icon: mdi:lightbulb-group
     - entity: input_boolean.lighting_reset_adaptive_lighting_parents_main
       name: Parents Main
       icon: mdi:lightbulb-group

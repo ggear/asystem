@@ -315,7 +315,8 @@ sonos:
   media_player:
     hosts:
         """.strip() + "\n")
-        for metadata_media_sonos_dict in metadata_media_sonos_dicts:
+        for metadata_media_sonos_dict in \
+                sorted(metadata_media_sonos_dicts, key=lambda metadata_media_sonos_dicts: metadata_media_sonos_dicts['connection_ip']):
             metadata_media_file.write("      " + """
       - {}
             """.format(

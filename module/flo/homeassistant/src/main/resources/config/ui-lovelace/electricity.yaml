@@ -76,6 +76,9 @@
     - entity: sensor.deck_festoons_current_consumption
       name: Deck Festoons
       icon: mdi:home-lightning-bolt
+    - entity: sensor.landing_festoons_current_consumption
+      name: Landing Festoons
+      icon: mdi:home-lightning-bolt
     - entity: sensor.lounge_tv_outlet_current_consumption
       name: Lounge TV
       icon: mdi:home-lightning-bolt
@@ -168,6 +171,9 @@
       icon: mdi:battery-charging
     - entity: sensor.deck_festoons_today_s_consumption
       name: Deck Festoons
+      icon: mdi:battery-charging
+    - entity: sensor.landing_festoons_today_s_consumption
+      name: Landing Festoons
       icon: mdi:battery-charging
     - entity: sensor.lounge_tv_outlet_today_s_consumption
       name: Lounge TV

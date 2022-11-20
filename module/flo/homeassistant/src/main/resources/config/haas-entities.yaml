@@ -217,6 +217,10 @@ input_boolean.lighting_reset_adaptive_lighting_lounge_main:
   name: Lounge Main Reset
   aliases: ['Main Reset']
   room: Lounge
+input_boolean.lighting_reset_adaptive_lighting_lounge_lamp:
+  name: Home Lamp Reset
+  aliases: ['Lamp Reset']
+  room: Home
 input_boolean.lighting_reset_adaptive_lighting_parents_main:
   name: Parents Main Reset
   aliases: ['Main Reset']

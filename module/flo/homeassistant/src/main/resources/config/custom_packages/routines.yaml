@@ -73,6 +73,9 @@ automation:
         target:
           entity_id:
             - light.parents_main
+      - service: media_player.unjoin
+        target:
+          entity_id: media_player.parents_speaker
       - service: media_player.volume_set
         data:
           entity_id: media_player.parents_speaker
