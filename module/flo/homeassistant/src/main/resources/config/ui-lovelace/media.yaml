@@ -7,16 +7,13 @@
 - type: media-control
   entity: media_player.edwin_home
 ################################################################################
-- type: media-control
-  entity: media_player.lounge_home
-################################################################################
-- type: media-control
-  entity: media_player.parents_home
-################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: media-control
   entity: media_player.lounge_tv
+################################################################################
+- type: media-control
+  entity: media_player.parents_tv
 ################################################################################
 - type: custom:layout-break
 ################################################################################
@@ -28,6 +25,9 @@
 ################################################################################
 - type: media-control
   entity: media_player.kitchen_speaker
+################################################################################
+- type: media-control
+  entity: media_player.parents_home
 ################################################################################
 - type: media-control
   entity: media_player.parents_speaker
