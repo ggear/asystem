@@ -152,7 +152,7 @@
     - entity: sensor.home_cube_remote_battery
       name: Xiaomi Cube Remote
       icon: mdi:battery-30
-    - entity: sensor.parents_speaker_battery
+    - entity: sensor.parents_home_battery
       name: Sonos Parents
       icon: mdi:battery-30
     - entity: sensor.kitchen_home_battery

@@ -29,6 +29,3 @@
 - type: media-control
   entity: media_player.parents_home
 ################################################################################
-- type: media-control
-  entity: media_player.parents_speaker
-################################################################################

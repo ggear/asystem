@@ -75,10 +75,10 @@ automation:
             - light.parents_main
       - service: media_player.unjoin
         target:
-          entity_id: media_player.parents_speaker
+          entity_id: media_player.parents_home
       - service: media_player.volume_set
         data:
-          entity_id: media_player.parents_speaker
+          entity_id: media_player.parents_home
           volume_level: '0.2'
       - service: media_player.turn_off
         target:
@@ -90,11 +90,11 @@ automation:
           media_content_type: music
           media_content_id: 'https://macmini-liz.janeandgraham.com/relaxation-sounds/ocean.mp3'
         target:
-          entity_id: media_player.parents_speaker
+          entity_id: media_player.parents_home
       - service: media_player.repeat_set
         data:
           repeat: all
-        entity_id: media_player.parents_speaker
+        entity_id: media_player.parents_home
   #####################################################################################
   - id: routine_home_sleep_cube
     alias: "Routine: Put home to sleep via cube"
@@ -123,10 +123,10 @@ automation:
       - service: media_player.media_stop
         target:
           entity_id:
-            - media_player.parents_speaker
+            - media_player.parents_home
       - service: media_player.volume_set
         data:
-          entity_id: media_player.parents_speaker
+          entity_id: media_player.parents_home
           volume_level: '0.2'
       - service: automation.trigger
         data:
