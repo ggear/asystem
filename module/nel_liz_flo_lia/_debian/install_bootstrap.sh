@@ -5,8 +5,8 @@
 ################################################################################
 diskutil list /dev/disk4
 umount /dev/disk4
-wget https://laotzu.ftp.acc.umu.se/debian-cd/current/amd64/iso-cd/debian-11.1.0-amd64-netinst.iso
-dd if=/Users/graham/Desktop/debian-11.1.0-amd64-netinst.iso bs=1m | pv /Users/graham/Desktop/debian-11.1.0-amd64-netinst.iso | dd of=/dev/disk4 bs=1m
+wget http://debian.mirror.digitalpacific.com.au/debian-cd/11.5.0/amd64/iso-cd/debian-11.5.0-amd64-netinst.iso
+dd if=/Users/graham/Desktop/debian-11.5.0-amd64-netinst.iso bs=1m | /opt/homebrew/bin/pv /Users/graham/Desktop/debian-11.5.0-amd64-netinst.iso | dd of=/dev/disk4 bs=1m
 diskutil eject /dev/disk4
 
 ################################################################################
