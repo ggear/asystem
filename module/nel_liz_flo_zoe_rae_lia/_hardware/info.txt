@@ -1,14 +1,14 @@
 ################################################################################
 # Hardware specs
 ################################################################################
-# raspbpi-lia: Raspberry Pi 3   Early 2016  (Model B)  ARMv8 Cortex A53       1xQuadx1.2GHz  1GB RAM   120GB SSD             https://www.raspberrypi.com/products/raspberry-pi-3-model-b
-# macmini-nel: Mac Mini         Mid 2011    (5,2)      Intel i5 Sandy Bridge  1xDualx2.5GHz  8GB RAM   500GB SSD & 2TB HDD   https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-mid-2011-specs.html
-# macmini-liz: Mac Mini         Late 2012   (6,1)      Intel i5 Ivy Bridge    1xDualx2.5GHz  8GB RAM   480GB SSD & 2TB HDD   https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-late-2012-specs.html
-# macmini-mae: Mac Mini         Late 2014   (7,1)      Intel i5 Haswell       1xDualx2.8GHz  8GB RAM   121GB SSD & 1TB HDD   https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.8-late-2014-specs.html
-# macmini-meg: Mac Mini         Mid 2011    (5,3)      Intel i7 Sandy Bridge  1xQuadx2.0GHz  8GB RAM   420GB SSD & 4TB SSD   https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i7-2.0-mid-2011-server-specs.html
-# macbook-flo: MacBook Pro      Late 2013   (11,3)     Intel i7 Haswell       1xQuadx2.3GHz  16GB RAM  500GB SSD             https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-core-i7-2.3-15-dual-graphics-late-2013-retina-display-specs.html
-# macmini-zoe: Mac Mini         Late 2018   (8,1)      Intel i7 Coffee Lake   1xHexax3.2GHz  32GB RAM  932GB SSD             https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i7-3.2-late-2018-specs.html
-# macbook-rae: MacBook Pro      Late 2021   (18,1)     Apple M1 Pro           1xDecax3.2GHz  32GB RAM  926GB SSD             https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-m1-pro-10-core-cpu-16-core-gpu-16-2021-specs.html
+# raspbpi-lia: Raspberry Pi 3   Early 2016  (Model B)  ARMv8 Cortex A53       1xQuadx1.2GHz  1GB RAM   120GB SSD              https://www.raspberrypi.com/products/raspberry-pi-3-model-b
+# macmini-nel: Mac Mini         Mid 2011    (5,2)      Intel i5 Sandy Bridge  1xDualx2.5GHz  8GB RAM   500GB SSD & 1.8TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-mid-2011-specs.html
+# macmini-liz: Mac Mini         Late 2012   (6,1)      Intel i5 Ivy Bridge    1xDualx2.5GHz  8GB RAM   480GB SSD & 1.8TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-late-2012-specs.html
+# macmini-mae: Mac Mini         Mid 2011    (5,3)      Intel i7 Sandy Bridge  1xQuadx2.0GHz  8GB RAM   450GB SSD & 3.6TB SSD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i7-2.0-mid-2011-server-specs.html
+# macmini-meg: Mac Mini         Late 2014   (7,1)      Intel i5 Haswell       1xDualx2.8GHz  8GB RAM   121GB SSD & 0.9TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.8-late-2014-specs.html
+# macbook-flo: MacBook Pro      Late 2013   (11,3)     Intel i7 Haswell       1xQuadx2.3GHz  16GB RAM  500GB SSD              https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-core-i7-2.3-15-dual-graphics-late-2013-retina-display-specs.html
+# macmini-zoe: Mac Mini         Late 2018   (8,1)      Intel i7 Coffee Lake   1xHexax3.2GHz  32GB RAM  932GB SSD              https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i7-3.2-late-2018-specs.html
+# macbook-rae: MacBook Pro      Late 2021   (18,1)     Apple M1 Pro           1xDecax3.2GHz  32GB RAM  926GB SSD              https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-m1-pro-10-core-cpu-16-core-gpu-16-2021-specs.html
 
 # TODO:
 # Rename to be phonetically distinct and sort to both alphabetical and speed/service deployment order - don't forget udm-net
