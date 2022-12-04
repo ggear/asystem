@@ -52,9 +52,6 @@
     - entity: sensor.home_fans_power
       name: Home Fans
       icon: mdi:home-lightning-bolt
-    - entity: sensor.roof_water_heater_booster_energy_power
-      name: Water Booster
-      icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_dish_washer_current_consumption
       name: Dish Washer
       icon: mdi:home-lightning-bolt
@@ -147,9 +144,6 @@
       icon: mdi:battery-charging
     - entity: sensor.home_fans_energy_daily
       name: Home Fans
-      icon: mdi:battery-charging
-    - entity: sensor.roof_water_heater_booster_energy_today
-      name: Water Booster
       icon: mdi:battery-charging
     - entity: sensor.kitchen_dish_washer_today_s_consumption
       name: Dish Washer

@@ -17,9 +17,6 @@
     - entity: switch.bathroom_rails
       name: Towel Rails
       icon: mdi:radiator
-    - entity: switch.roof_water_heater_booster
-      name: Water Booster
-      icon: mdi:thermometer-water
 ################################################################################
 - type: custom:layout-break
 ################################################################################

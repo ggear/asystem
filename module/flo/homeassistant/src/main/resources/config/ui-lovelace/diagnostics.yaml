@@ -122,6 +122,9 @@
     - entity: switch.laundry_vacuum_charger
       name: Vacuum Charger
       icon: mdi:battery-charging-30
+    - entity: switch.rack_fans
+      name: Rack Fans
+      icon: mdi:fan
     - entity: switch.rack_outlet
       name: Server Rack
       icon: mdi:server

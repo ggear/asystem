@@ -1,0 +1,2 @@
+# https://digiblur.pages.dev/wiki/devices/other/Tasmota-Infrared-Remote
+# https://www.printables.com/model/277579-esp8266-ir-blaster-case

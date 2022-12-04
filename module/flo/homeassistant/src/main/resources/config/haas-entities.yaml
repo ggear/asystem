@@ -65,10 +65,6 @@ switch.bathroom_rails:
   name: Bathroom Towel Rails
   aliases: ['Towel Rails']
   room: Bathroom
-switch.roof_water_heater_booster:
-  name: Roof Water Booster
-  aliases: ['Water Booster']
-  room: Roof
 light.ada_fan:
   name: Adas Main Light
   aliases: ['Adas Main', 'Main Light', 'Main']

@@ -275,9 +275,6 @@ input_boolean.home_reset:
 switch.bathroom_rails:
   friendly_name: 'Towel Rails'
   icon: 'mdi:radiator'
-switch.roof_water_heater_booster:
-  friendly_name: 'Water Booster'
-  icon: 'mdi:thermometer-water'
 light.ada_fan:
   friendly_name: 'Ada Main'
   icon: 'mdi:lightbulb-group'
@@ -409,10 +406,6 @@ sensor.home_fans_power:
   friendly_name: 'Home Fans'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.roof_water_heater_booster_energy_power:
-  friendly_name: 'Water Booster'
-  icon: 'mdi:home-lightning-bolt'
-  unit_of_measurement: 'W'
 sensor.kitchen_dish_washer_current_consumption:
   friendly_name: 'Dish Washer'
   icon: 'mdi:home-lightning-bolt'
@@ -503,10 +496,6 @@ sensor.home_lights_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.home_fans_energy_daily:
   friendly_name: 'Home Fans'
-  icon: 'mdi:battery-charging'
-  unit_of_measurement: 'kWh'
-sensor.roof_water_heater_booster_energy_today:
-  friendly_name: 'Water Booster'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.kitchen_dish_washer_today_s_consumption:
@@ -676,6 +665,9 @@ switch.study_battery_charger:
 switch.laundry_vacuum_charger:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging-30'
+switch.rack_fans:
+  friendly_name: 'Rack Fans'
+  icon: 'mdi:fan'
 switch.rack_outlet:
   friendly_name: 'Server Rack'
   icon: 'mdi:server'
