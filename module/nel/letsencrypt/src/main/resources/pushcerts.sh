@@ -15,15 +15,12 @@ while :; do
         logger -t pushcerts "Cached new certificates"
       if [ -f ${SERVICE_INSTALL}/hosts ]; then
         cat ${SERVICE_INSTALL}/hosts | while read host; do
-          NGINX_HOME=/home/asystem/nginx/latest
-          NGINX_INSTALL=/var/lib/asystem/install/nginx/latest
-          if [ -d "${NGINX_HOME}" ] && [ -d "${NGINX_INSTALL}" ]; then
-            scp -qo "StrictHostKeyChecking=no" \
-              ./certificates/privkey.pem root@${host}:"${NGINX_HOME}/.key.pem"
-            scp -qo "StrictHostKeyChecking=no" \
-              ./certificates/fullchain.pem root@${host}:"${NGINX_HOME}/certificate.pem"
-            ssh -qno "StrictHostKeyChecking=no" root@${host} \
-              "docker-compose --compatibility -f '${NGINX_INSTALL}/docker-compose.yml' --env-file '${NGINX_INSTALL}/.env' restart"
+          NGINX_HOME=$(ssh -q -n -o "StrictHostKeyChecking=no" -o ConnectTimeout=2 root@${host} "[[ -d /home/asystem/nginx/latest ]] && echo /home/asystem/nginx/latest")
+          NGINX_INSTALL=$(ssh -q -n -o "StrictHostKeyChecking=no" -o ConnectTimeout=2 root@${host} "[[ -d /var/lib/asystem/install/nginx/latest ]] && echo /var/lib/asystem/install/nginx/latest")
+          if [ "${NGINX_HOME}" != ""  ] && [ "${NGINX_INSTALL}" != "" ]; then
+            scp -qo "StrictHostKeyChecking=no" ./certificates/privkey.pem root@${host}:"${NGINX_HOME}/.key.pem"
+            scp -qo "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@${host}:"${NGINX_HOME}/certificate.pem"
+            ssh -qno "StrictHostKeyChecking=no" root@${host} "cd ${NGINX_INSTALL} && docker-compose --compatibility restart"
             logger -t pushcerts "Loaded new nginx certificates on ${host}"
           fi
         done
