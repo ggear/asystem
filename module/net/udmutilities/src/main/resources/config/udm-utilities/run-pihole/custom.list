@@ -29,7 +29,7 @@
 10.0.6.70 tplink-various-adhoc-outlet.janeandgraham.com tplink-various-adhoc-outlet
 10.0.6.71 tplink-study-battery-charger.janeandgraham.com tplink-study-battery-charger
 10.0.6.72 tplink-laundry-vacuum-charger.janeandgraham.com tplink-laundry-vacuum-charger
-10.0.6.73 sonoff-rack-fans.janeandgraham.com sonoff-rack-fans
+10.0.6.73 tplink-kitchen-dish_washer.janeandgraham.com tplink-kitchen-dish_washer
 10.0.6.74 tplink-laundry-clothes-dryer.janeandgraham.com tplink-laundry-clothes-dryer
 10.0.6.75 tplink-laundry-washing-machine.janeandgraham.com tplink-laundry-washing-machine
 10.0.6.77 tplink-kitchen-fridge.janeandgraham.com tplink-kitchen-fridge
@@ -45,3 +45,4 @@
 10.0.6.87 tplink-kitchen-fan.janeandgraham.com tplink-kitchen-fan
 10.0.6.88 tplink-deck-festoons.janeandgraham.com tplink-deck-festoons
 10.0.6.89 tplink-landing-festoons.janeandgraham.com tplink-landing-festoons
+10.0.6.90 sonoff-rack-fans.janeandgraham.com sonoff-rack-fans
