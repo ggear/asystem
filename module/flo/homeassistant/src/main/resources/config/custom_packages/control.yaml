@@ -18,7 +18,6 @@ tplink:
     - host: 10.0.6.73
     - host: 10.0.6.74
     - host: 10.0.6.75
-    - host: 10.0.6.76
     - host: 10.0.6.77
     - host: 10.0.6.78
     - host: 10.0.6.79
@@ -49,7 +48,6 @@ automation:
           - switch.kitchen_dish_washer_led
           - switch.laundry_clothes_dryer_led
           - switch.laundry_washing_machine_led
-          - switch.kitchen_coffee_machine_led
           - switch.kitchen_fridge_led
           - switch.deck_freezer_led
           - switch.kitchen_downlights_led

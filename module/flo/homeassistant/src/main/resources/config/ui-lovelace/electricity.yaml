@@ -61,9 +61,6 @@
     - entity: sensor.laundry_washing_machine_current_consumption
       name: Washing Machine
       icon: mdi:home-lightning-bolt
-    - entity: sensor.kitchen_coffee_machine_current_consumption
-      name: Coffee Machine
-      icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_fridge_current_consumption
       name: Kitchen Fridge
       icon: mdi:home-lightning-bolt
@@ -153,9 +150,6 @@
       icon: mdi:battery-charging
     - entity: sensor.laundry_washing_machine_today_s_consumption
       name: Washing Machine
-      icon: mdi:battery-charging
-    - entity: sensor.kitchen_coffee_machine_today_s_consumption
-      name: Coffee Machine
       icon: mdi:battery-charging
     - entity: sensor.kitchen_fridge_today_s_consumption
       name: Kitchen Fridge

@@ -418,10 +418,6 @@ sensor.laundry_washing_machine_current_consumption:
   friendly_name: 'Washing Machine'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.kitchen_coffee_machine_current_consumption:
-  friendly_name: 'Coffee Machine'
-  icon: 'mdi:home-lightning-bolt'
-  unit_of_measurement: 'W'
 sensor.kitchen_fridge_current_consumption:
   friendly_name: 'Kitchen Fridge'
   icon: 'mdi:home-lightning-bolt'
@@ -508,10 +504,6 @@ sensor.laundry_clothes_dryer_today_s_consumption:
   unit_of_measurement: 'kWh'
 sensor.laundry_washing_machine_today_s_consumption:
   friendly_name: 'Washing Machine'
-  icon: 'mdi:battery-charging'
-  unit_of_measurement: 'kWh'
-sensor.kitchen_coffee_machine_today_s_consumption:
-  friendly_name: 'Coffee Machine'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.kitchen_fridge_today_s_consumption:
@@ -650,9 +642,6 @@ switch.laundry_clothes_dryer:
 switch.laundry_washing_machine:
   friendly_name: 'Washing Machine'
   icon: 'mdi:washing-machine'
-switch.kitchen_coffee_machine:
-  friendly_name: 'Coffee Machine'
-  icon: 'mdi:coffee-maker'
 switch.kitchen_fridge:
   friendly_name: 'Kitchen Fridge'
   icon: 'mdi:fridge-outline'
