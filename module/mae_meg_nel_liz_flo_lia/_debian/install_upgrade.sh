@@ -13,6 +13,7 @@ echo "" && cat /etc/debian_version && echo ""
 ################################################################################
 # Update repos
 ################################################################################
+apt-get update && apt-get install -y curl gnupg-agent
 cat <<EOF >/etc/apt/sources.list
 deb http://deb.debian.org/debian bullseye main contrib non-free
 #deb-src http://deb.debian.org/debian bullseye main contrib non-free
@@ -30,7 +31,7 @@ deb [signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.
 #deb-src [signed-by=/usr/share/keyrings/docker-archive-keyring.gpg]] https://download.docker.com/linux/debian bullseye stable
 
 EOF
-curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --batch --yes --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
 ################################################################################
 # Upgrade system
