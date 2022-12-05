@@ -58,3 +58,6 @@ EOF
 fi
 systemctl restart smbd
 systemctl enable smbd
+systemctl restart nmbd
+systemctl enable nmbd
+

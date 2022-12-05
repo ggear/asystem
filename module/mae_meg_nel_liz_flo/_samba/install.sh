@@ -41,8 +41,8 @@ if [ $(grep "/data/tmp" /etc/samba/smb.conf | wc -l) -eq 0 ]; then
   guest ok = yes
 
 EOF
-  systemctl restart smbd
-  systemctl enable smbd
-  systemctl restart nmbd
-  systemctl enable nmbd
 fi
+systemctl restart smbd
+systemctl enable smbd
+systemctl restart nmbd
+systemctl enable nmbd
