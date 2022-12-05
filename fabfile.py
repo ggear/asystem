@@ -485,8 +485,8 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
         host_name_dev = "host.docker.internal"
         host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
                                  hide='out').stdout.strip()
-        if host_ip_prod == "" or host_ip_dev == "":
-            raise Exception("Cannot resolve service production [{}] and or development [{}] IP's".format(host_ip_prod, host_ip_dev))
+        # if host_ip_prod == "" or host_ip_dev == "":
+        #     raise Exception("Cannot resolve service production [{}] and or development [{}] IP's".format(host_ip_prod, host_ip_dev))
         dependency_service = _get_service(context, dependency).upper()
         _run_local(context, "echo '' >> {}/.env".format(working_path))
         _run_local(context, "echo '{}_HOST={}' >> {}/.env"
