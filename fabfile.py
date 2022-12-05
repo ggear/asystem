@@ -311,7 +311,7 @@ def _release(context):
             ssh_pass = _ssh_pass(context, host)
             group_path = Path(join(DIR_ROOT_MODULE, module, ".group"))
             if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0 \
-                    or ssh_pass == "":
+                    and ssh_pass != "":
                 _run_local(context, "mkdir -p target/release", module)
                 _run_local(context, "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
                 if isfile(join(DIR_ROOT_MODULE, module, "Dockerfile")):
