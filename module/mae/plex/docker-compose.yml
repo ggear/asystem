@@ -8,7 +8,7 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
-      - PLEX_CLAIM=claim-sZFJxzAkZq3KxSJqhuUY
+      - PLEX_CLAIM=claim-DFQjE-wpz9Es8SzEs6ER
     volumes:
       - ${SERVICE_DATA_DIR}/config:/config
       - ${SERVICE_DATA_DIR}/transcode:/transcode
