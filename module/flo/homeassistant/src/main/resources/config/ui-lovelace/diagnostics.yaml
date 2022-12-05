@@ -121,7 +121,7 @@
       icon: mdi:battery-charging-30
     - entity: switch.rack_fans
       name: Rack Fans
-      icon: mdi:fan
+      icon: mdi:server-remove
     - entity: switch.rack_outlet
       name: Server Rack
       icon: mdi:server

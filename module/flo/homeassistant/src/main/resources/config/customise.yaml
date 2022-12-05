@@ -656,7 +656,7 @@ switch.laundry_vacuum_charger:
   icon: 'mdi:battery-charging-30'
 switch.rack_fans:
   friendly_name: 'Rack Fans'
-  icon: 'mdi:fan'
+  icon: 'mdi:server-remove'
 switch.rack_outlet:
   friendly_name: 'Server Rack'
   icon: 'mdi:server'
