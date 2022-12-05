@@ -3,5 +3,7 @@ rae=macbook,arm64
 lia=raspbpi,arm64
 flo=macbook,x86_64
 liz=macmini,x86_64
+mae=macmini,x86_64
+meg=macmini,x86_64
 nel=macmini,x86_64
 zoe=macmini,x86_64
