@@ -8,12 +8,12 @@
 
 import collections
 import glob
-import math
 import os
 import signal
-import sys
 from os.path import *
 
+import math
+import sys
 from fabric import task
 from pathlib2 import Path
 
@@ -308,8 +308,10 @@ def _release(context):
             _build(context, filter_module=module, is_release=True)
             _package(context, filter_module=module)
             _print_header(module, "release")
+            ssh_pass = _ssh_pass(context, host)
             group_path = Path(join(DIR_ROOT_MODULE, module, ".group"))
-            if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0:
+            if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0 \
+                    or ssh_pass == "":
                 _run_local(context, "mkdir -p target/release", module)
                 _run_local(context, "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
                 if isfile(join(DIR_ROOT_MODULE, module, "Dockerfile")):
@@ -327,7 +329,6 @@ def _release(context):
                 else:
                     _run_local(context, "touch target/release/install.sh", module)
                 _print_header("{}/{}".format(host, _name(module)), "release")
-                ssh_pass = _ssh_pass(context, host)
                 install = "{}/{}/{}".format(DIR_INSTALL, _get_service(context, module), _get_versions()[0])
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
@@ -431,7 +432,7 @@ def _ssh_pass(context, host):
                       .format(host), hide="err", warn=True).exited > 0 else ""
     if _run_local(context, "{}ssh -q root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err", warn=True).exited > 0:
         print("Error: Cannot connect via [{}ssh -q root@{}]".format(ssh_prefix, host))
-        exit(1)
+        return ""
     return ssh_prefix
 
 
@@ -485,8 +486,6 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
         host_name_dev = "host.docker.internal"
         host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
                                  hide='out').stdout.strip()
-        # if host_ip_prod == "" or host_ip_dev == "":
-        #     raise Exception("Cannot resolve service production [{}] and or development [{}] IP's".format(host_ip_prod, host_ip_dev))
         dependency_service = _get_service(context, dependency).upper()
         _run_local(context, "echo '' >> {}/.env".format(working_path))
         _run_local(context, "echo '{}_HOST={}' >> {}/.env"
