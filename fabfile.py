@@ -435,7 +435,7 @@ def _ssh_pass(context, host):
                       .format(host), hide="err", warn=True).exited > 0 else ""
     if _run_local(context, "{}ssh -q root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err", warn=True).exited > 0:
         print("Error: Cannot connect via [{}ssh -q root@{}]".format(ssh_prefix, host))
-        return ""
+        return "poo"
     return ssh_prefix
 
 
