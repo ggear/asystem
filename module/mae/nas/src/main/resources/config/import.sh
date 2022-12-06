@@ -7,7 +7,7 @@ chmod -R a+rwX /data
 chown -R nobody:nogroup /data
 find /data -type f -name nohup -exec rm -f {} \;
 find /data -type f -name .DS_Store -exec rm -f {} \;
-echo "done" && echo ""
+echo "done"
 
 import_files() {
   if [ -b /dev/sdc1 ] && [ -d /data/media/${1} ]; then
@@ -17,8 +17,8 @@ import_files() {
     if [ -d /media/usbdrive/${1} ]; then
       echo "Copying /media/usbdrive/${1} to /data/tmp/${1} ... "
       rsync -avP /media/usbdrive/${1} /data/tmp
-      echo "Copy /media/usbdrive/${1} to /data/tmp/${1} complete "
-      echo "" && echo "Example renaming command: rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv" && echo ""
+      echo "Copy /media/usbdrive/${1} to /data/tmp/${1} complete"
+      echo "Example renaming command: rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv"
     fi
     umount -fq /media/usbdrive
   fi

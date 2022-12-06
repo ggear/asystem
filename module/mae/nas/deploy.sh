@@ -9,7 +9,6 @@ HOSTS=$(echo $(basename $(dirname $(pwd))) | tr "_" "\n")
 
 for HOST in ${HOSTS}; do
   HOST="$(grep ${HOST} ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-${HOST}"
-  echo "------------------------------------------------------------" && echo "IMPORT MEDIA: ${HOST}" && echo ""
+  echo "------------------------------------------------------------" && echo "Importing data on ${HOST} ..."
   ssh -o StrictHostKeyChecking=no root@${HOST} "/root/install/nas/latest/config/import.sh"
-  echo "------------------------------------------------------------"
 done
