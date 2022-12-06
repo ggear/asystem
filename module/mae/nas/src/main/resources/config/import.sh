@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "" && echo "ssh root@$(hostname)" && echo -n "Normalising /data ... "
+echo -n "Normalising /data ... "
 setfacl -bR /data
 chmod -R 644 /data
 chmod -R a+rwX /data
@@ -15,10 +15,12 @@ import_files() {
     umount -fq /media/usbdrive
     mount /dev/sdc1 /media/usbdrive
     if [ -d /media/usbdrive/${1} ]; then
+      echo "Copying /media/usbdrive/${1} to /data/tmp/${1} ... "
       rsync -avP /media/usbdrive/${1} /data/tmp
+      echo "Copy /media/usbdrive/${1} to /data/tmp/${1} complete "
+      echo "" && echo "Example renaming command: rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv" && echo ""
     fi
     umount -fq /media/usbdrive
-    echo "" && echo "ssh root@$(hostname)" && echo "rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv" && echo ""
   fi
 }
 
