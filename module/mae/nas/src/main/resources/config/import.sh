@@ -1,10 +1,13 @@
 #!/bin/bash
 
+echo "" && echo "ssh root@$(hostname)" && echo -n "Normalising /data ... "
 setfacl -bR /data
 chmod -R 644 /data
 chmod -R a+rwX /data
 chown -R nobody:nogroup /data
+find /data -type f -name nohup -exec rm -f {} \;
 find /data -type f -name .DS_Store -exec rm -f {} \;
+echo "done" && echo ""
 
 import_files() {
   if [ -b /dev/sdc1 ] && [ -d /data/media/${1} ]; then
