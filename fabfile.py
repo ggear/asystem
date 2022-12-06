@@ -309,6 +309,9 @@ def _release(context):
             _package(context, filter_module=module)
             _print_header(module, "release")
             ssh_pass = _ssh_pass(context, host)
+
+            print(ssh_pass)
+
             group_path = Path(join(DIR_ROOT_MODULE, module, ".group"))
             if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0 \
                     and ssh_pass != "":
