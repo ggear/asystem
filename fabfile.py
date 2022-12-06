@@ -310,7 +310,7 @@ def _release(context):
             _print_header(module, "release")
             ssh_pass = _ssh_pass(context, host)
 
-            print(ssh_pass)
+            print("test=" + ssh_pass)
 
             group_path = Path(join(DIR_ROOT_MODULE, module, ".group"))
             if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0 \
@@ -435,7 +435,7 @@ def _ssh_pass(context, host):
                       .format(host), hide="err", warn=True).exited > 0 else ""
     if _run_local(context, "{}ssh -q root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err", warn=True).exited > 0:
         print("Error: Cannot connect via [{}ssh -q root@{}]".format(ssh_prefix, host))
-        return "poo"
+        return ""
     return ssh_prefix
 
 
