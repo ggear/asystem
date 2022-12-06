@@ -308,13 +308,13 @@ def _release(context):
             _build(context, filter_module=module, is_release=True)
             _package(context, filter_module=module)
             _print_header(module, "release")
-            ssh_pass = _ssh_pass(context, host)
-
-            print("test=" + ssh_pass)
-
+            host_up = True
+            try:
+                ssh_pass = _ssh_pass(context, host)
+            except:
+                host_up = False
             group_path = Path(join(DIR_ROOT_MODULE, module, ".group"))
-            if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0 \
-                    and ssh_pass != "":
+            if group_path.exists() and group_path.read_text().strip().isnumeric() and int(group_path.read_text().strip()) >= 0 and host_up:
                 _run_local(context, "mkdir -p target/release", module)
                 _run_local(context, "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
                 if isfile(join(DIR_ROOT_MODULE, module, "Dockerfile")):
@@ -434,11 +434,7 @@ def _ssh_pass(context, host):
         if _run_local(context, "ssh -qo StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
                       .format(host), hide="err", warn=True).exited > 0 else ""
     if _run_local(context, "{}ssh -q root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err", warn=True).exited > 0:
-        print("Error: Cannot connect via [{}ssh -q root@{}]".format(ssh_prefix, host))
-        return ""
-
-    print("test2=" + ssh_prefix)
-
+        raise Exception("Error: Cannot connect via [{}ssh -q root@{}]".format(ssh_prefix, host))
     return ssh_prefix
 
 
