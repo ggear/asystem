@@ -34,7 +34,7 @@ ifconfig lan0
 cat <<EOF >/etc/mbpfan.conf
 [general]
 min_fan_speed = 1800
-max_fan_speed = 5500
+max_fan_speed = 6500
 low_temp = 40
 high_temp = 60
 max_temp = 65
