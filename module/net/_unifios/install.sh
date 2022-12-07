@@ -96,8 +96,8 @@
 
 # Advanced Features -> Advanced Gateway Settings -> Multicast DNS -> True
 # Advanced Features -> Advanced Gateway Settings -> Create New Port Forwarding Rule ->
-#    HTTP, Enabled, WAN, Any, 80, 10.0.2.12, 9080, TCP, Logging enable
-#    HTTPS, Enabled, WAN, Any, 443, 10.0.2.12, 9443, TCP, Logging enable
+#    HTTP, Enabled, WAN, Any, 80, 10.0.2.14, 9080, TCP, Logging enable
+#    HTTPS, Enabled, WAN, Any, 443, 10.0.2.14, 9443, TCP, Logging enable
 
 # Classic UI -> Site -> Auto-optimize network -> False
 # Classic UI -> All Wireless Networks -> Block LAN to WLAN multicast and broadcast data -> False
