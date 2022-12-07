@@ -14,5 +14,5 @@ logger -t pushcerts "Loaded new nginx certificates on ${NGINX_HOST}"
 
 scp -o "StrictHostKeyChecking=no" ./certificates/privkey.pem root@${UDMUTILITIES_HOST}:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
 scp -o "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@${UDMUTILITIES_HOST}:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
-ssh -qno "StrictHostKeyChecking=no" root@${UDMUTILITIES_HOST} "unifi-os restart"
+ssh -qo "StrictHostKeyChecking=no" root@${UDMUTILITIES_HOST} "unifi-os restart"
 logger -t pushcerts "Loaded new unifi certificates on ${UDMUTILITIES_HOST}"
