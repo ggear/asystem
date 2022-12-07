@@ -1,26 +1,26 @@
 # https://github.com/weewx/weewx/releases
 FROM python:3.8.5-slim-buster as image_base
 
-ENV WEEWX_VERSION="4.8.0"
+ENV WEEWX_VERSION="4.9.1"
 ENV WEEWX_HOME="/home/weewx"
 ENV WEEWX_ARCHIVE="weewx-${WEEWX_VERSION}.tar.gz"
 
 FROM image_base as image_package
-RUN apt-get update && apt-get -y --no-install-recommends install \
-  build-essential=12.6 \
-  lbzip2=2.5-2 \
-  libjpeg-dev=1:1.5.2-2+deb10u1 \
-  zlib1g=1:1.2.11.dfsg-1 \
-  zlib1g-dev=1:1.2.11.dfsg-1 \
-  tar=1.30+dfsg-6 \
-  wget=1.20.1-1.1 \
-  rsyslog=8.1901.0-1+deb10u1 \
-  gnupg2=2.2.12-1+deb10u1 \
-  apache2=2.4.38-3+deb10u7 \
-  default-mysql-client=1.0.5 \
-  apache2-utils=2.4.38-3+deb10u7 \
-  mosquitto-clients=1.5.7-1+deb10u1 \
-  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apt-get update
+RUN apt-get -y --no-install-recommends install build-essential=12.6
+RUN apt-get -y --no-install-recommends install lbzip2=2.5-2
+RUN apt-get -y --no-install-recommends install libjpeg-dev=1:1.5.2-2+deb10u1
+RUN apt-get -y --no-install-recommends install zlib1g=1:1.2.11.dfsg-1
+RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.11.dfsg-1+deb10u2
+RUN apt-get -y --no-install-recommends install tar=1.30+dfsg-6
+RUN apt-get -y --no-install-recommends install wget=1.20.1-1.1
+RUN apt-get -y --no-install-recommends install rsyslog=8.1901.0-1+deb10u2
+RUN apt-get -y --no-install-recommends install gnupg2=2.2.12-1+deb10u2
+RUN apt-get -y --no-install-recommends install apache2=2.4.38-3+deb10u8
+RUN apt-get -y --no-install-recommends install default-mysql-client=1.0.5
+RUN apt-get -y --no-install-recommends install apache2-utils=2.4.38-3+deb10u8
+RUN apt-get -y --no-install-recommends install mosquitto-clients=1.5.7-1+deb10u1
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 WORKDIR /tmp
 RUN wget https://downloads.python.org/pypy/pypy3.8-v7.3.7-linux64.tar.bz2
 RUN tar xf pypy3.8-v7.3.7-linux64.tar.bz2

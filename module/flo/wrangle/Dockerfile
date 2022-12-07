@@ -4,15 +4,15 @@ FROM telegraf:1.23.2 as image_base
 FROM image_base as image_package
 ARG PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
-RUN apt-get update && apt-get -y --no-install-recommends install \
-  python3=$PYTHON_VERSION-3 \
-  python3-dev=$PYTHON_VERSION-3 \
-  python-is-python3=$PYTHON_VERSION-1 \
-  python3-pip=20.3.4-4+deb11u1 \
-  build-essential=12.9 \
-  poppler-utils=20.09.0-3.1 \
-  libpoppler-cpp-dev=20.09.0-3.1 \
-  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+RUN apt-get update
+RUN apt-get -y --no-install-recommends install python3=$PYTHON_VERSION-3
+RUN apt-get -y --no-install-recommends install python3-dev=$PYTHON_VERSION-3
+RUN apt-get -y --no-install-recommends install python-is-python3=$PYTHON_VERSION-1
+RUN apt-get -y --no-install-recommends install python3-pip=20.3.4-4+deb11u1
+RUN apt-get -y --no-install-recommends install build-essential=12.9
+RUN apt-get -y --no-install-recommends install poppler-utils=20.09.0-3.1+deb11u1
+RUN apt-get -y --no-install-recommends install libpoppler-cpp-dev=20.09.0-3.1+deb11u1
+RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 FROM image_package as image_install
 RUN mkdir -p /asystem/runtime

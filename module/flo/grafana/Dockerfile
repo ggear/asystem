@@ -3,14 +3,13 @@ FROM grafana/grafana:9.1.3 as image_base
 
 FROM image_base as image_package
 USER root
-RUN apk add --no-cache \
-  jq==1.6-r1 \
-  git==2.34.4-r0 \
-  curl==7.80.0-r3 \
-  make==4.3-r0 \
-  musl-dev==1.2.2-r7 \
-  gcc==10.3.1_git20211027-r0 \
-  go==1.17.10-r0
+RUN apk add --no-cache jq==1.6-r1
+RUN apk add --no-cache git==2.34.5-r0
+RUN apk add --no-cache curl==7.80.0-r4
+RUN apk add --no-cache make==4.3-r0
+RUN apk add --no-cache musl-dev==1.2.2-r7
+RUN apk add --no-cache gcc==10.3.1_git20211027-r0
+RUN apk add --no-cache go==1.17.10-r0
 
 FROM image_package as image_install
 ARG GOLANG_VERSION=1.16.4
