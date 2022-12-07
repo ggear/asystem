@@ -249,7 +249,7 @@ def _package(context, filter_module=None, is_release=False):
         _print_header(module, "package")
 
 
-        print(HOSTS[_get_host(context, module)])
+        print(HOSTS[_get_host(context, module)][1])
         sys.exit()
         # docker buildx build --platform linux/arm64 --output type=docker --tag weewx:10.100.3331 .
         _run_local(context, "docker image build --build-arg PYTHON_VERSION -t {}:{} .".format(_name(module), _get_versions()[0]), module)
