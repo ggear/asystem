@@ -5,13 +5,13 @@ services:
     container_name: letsencrypt
     image: adferrand/dnsrobocert:3.22.1
     init: true
-    restart: always
     environment:
       - TZ=Australia/Perth
       - CLOUDFLARE_TOKEN
       - LETSENCRYPT_STAGING
       - UDMUTILITIES_HOST
       - NGINX_HOST
+    restart: ${SERVICE_RESTART}
     volumes:
       - ${SERVICE_DATA_DIR}/letsencrypt:/etc/letsencrypt
       - ${SERVICE_DATA_DIR}/dnsrobocert:/etc/dnsrobocert
