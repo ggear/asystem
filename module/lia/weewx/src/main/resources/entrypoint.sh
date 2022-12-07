@@ -9,4 +9,6 @@ service rsyslog start
 service apache2 start
 
 [ ! -f /data/weewx.conf ] && cp -f /home/weewx/weewx.conf /data
-/var/lib/pypy/bin/pypy /home/weewx/bin/weewxd "$@"
+# Disable pypy
+#/var/lib/pypy/bin/pypy /home/weewx/bin/weewxd "$@"
+python /home/weewx/bin/weewxd "$@"

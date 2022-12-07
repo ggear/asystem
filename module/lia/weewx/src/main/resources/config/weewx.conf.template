@@ -242,7 +242,7 @@ version = 4.1.1
     [[DefaultReport]]
         # The SeasonsReport uses the 'Seasons' skin, which contains the
         # images, templates and plots for the report.
-        skin = Material
+        skin = Seasons
         enable = true
 
     [[SmartphoneReport]]
