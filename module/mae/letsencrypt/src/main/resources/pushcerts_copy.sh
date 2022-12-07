@@ -18,6 +18,7 @@ cd "${SERVICE_HOME}" || exit
 #  done
 #fi
 
+. .env
 echo ${NGINX_HOST}
 
 #scp -qo "StrictHostKeyChecking=no" ./certificates/privkey.pem root@udm-net:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
