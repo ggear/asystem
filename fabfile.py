@@ -247,7 +247,6 @@ def _unittest(context, filter_module=None):
 def _package(context, filter_module=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package")
-
         host_arch = HOSTS[_get_host(context, module)][1]
         if is_release and host_arch != "x86_64":
             _run_local(context, "docker buildx build --build-arg PYTHON_VERSION --platform linux/arm64 --output type=docker --tag {}:{} ."
@@ -255,7 +254,6 @@ def _package(context, filter_module=None, is_release=False):
         else:
             _run_local(context, "docker image build --build-arg PYTHON_VERSION --tag {}:{} ."
                        .format(_name(module), _get_versions()[0]), module)
-
         _print_footer(module, "package")
 
 
