@@ -5,7 +5,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 
 cd "${SERVICE_HOME}" || exit
 
-. .env
+. ${SERVICE_INSTALL}/.env
 
 scp -qo "StrictHostKeyChecking=no" ./certificates/privkey.pem root@${NGINX_HOST}:/home/asystem/nginx/latest/.key.pem
 scp -qo "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@${NGINX_HOST}:/home/asystem/nginx/latest/certificate.pem
