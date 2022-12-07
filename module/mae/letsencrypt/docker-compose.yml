@@ -10,6 +10,8 @@ services:
       - TZ=Australia/Perth
       - CLOUDFLARE_TOKEN
       - LETSENCRYPT_STAGING
+      - UDMUTILITIES_HOST
+      - NGINX_HOST
     volumes:
       - ${SERVICE_DATA_DIR}/letsencrypt:/etc/letsencrypt
       - ${SERVICE_DATA_DIR}/dnsrobocert:/etc/dnsrobocert
