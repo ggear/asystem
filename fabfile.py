@@ -8,12 +8,12 @@
 
 import collections
 import glob
+import math
 import os
 import signal
+import sys
 from os.path import *
 
-import math
-import sys
 from fabric import task
 from pathlib2 import Path
 
@@ -248,12 +248,13 @@ def _package(context, filter_module=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package")
 
-
-        print(HOSTS[_get_host(context, module)][1])
-        sys.exit()
-        # docker buildx build --platform linux/arm64 --output type=docker --tag weewx:10.100.3331 .
-        _run_local(context, "docker image build --build-arg PYTHON_VERSION -t {}:{} .".format(_name(module), _get_versions()[0]), module)
-
+        host_arch = HOSTS[_get_host(context, module)][1]
+        if is_release and host_arch != "x86_64":
+            _run_local(context, "docker buildx build --build-arg PYTHON_VERSION --platform linux/arm64 --output type=docker --tag {}:{} ."
+                       .format(_name(module), _get_versions()[0]), module)
+        else:
+            _run_local(context, "docker image build --build-arg PYTHON_VERSION --tag {}:{} ."
+                       .format(_name(module), _get_versions()[0]), module)
 
         _print_footer(module, "package")
 
@@ -447,6 +448,7 @@ def _ssh_pass(context, host):
 
 def _get_service(context, module):
     return module.split("/")[1]
+
 
 def _get_host(context, module):
     return module.split("/")[0].split("_")[0]
