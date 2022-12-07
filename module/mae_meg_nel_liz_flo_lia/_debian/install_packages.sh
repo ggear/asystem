@@ -6,6 +6,7 @@
 PACKAGES=(
   jq
   ntp
+  usbutils
   dnsutils
   ntpdate
   ntfs-3g
