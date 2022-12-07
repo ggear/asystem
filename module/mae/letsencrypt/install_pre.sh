@@ -5,6 +5,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 
 cd ${SERVICE_INSTALL} || exit
 chmod +x "./pushcerts.sh"
+chmod +x "./pushcerts_copy.sh"
 cp -rvfp "./pushcerts.service" /etc/systemd/system
 systemctl daemon-reload
 systemctl enable pushcerts.service
