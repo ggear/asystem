@@ -12,16 +12,6 @@ add_on_boot_script() {
 
 cd ${SERVICE_INSTALL} || exit
 
-mkdir -p /mnt/data/asystem
-if [[ ! -L /var/lib/asystem ]]; then
-  if [[ -d /var/lib/asystem ]]; then
-    mv /var/lib/asystem/* /mnt/data/asystem
-    rm -r /mnt/data/asystem
-  fi
-  ln -s /mnt/data/asystem /var/lib/asystem
-fi
-cp -rvf /mnt/data/asystem/* /var/lib/asystem
-
 chmod a+x ./config/udm-utilities/on-boot-script/remote_install.sh
 if [ ! -d /mnt/data/on_boot.d ]; then
   ./config/udm-utilities/on-boot-script/remote_install.sh
