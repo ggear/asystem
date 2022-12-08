@@ -18,7 +18,10 @@ import_files() {
       echo "Copying /media/usbdrive/${1} to /data/tmp/${1} ... "
       rsync -avP /media/usbdrive/${1} /data/tmp
       echo "Copy /media/usbdrive/${1} to /data/tmp/${1} complete"
-      echo "Example renaming command: rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv"
+      echo "Metadata commands:"
+      echo "rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv"
+      echo "find . -name \"*.mkv\" -exec echo mediainfo \"'--Output=Audio;[%Language/String%, ][%BitRate/String%, ][%SamplingRate/String%, ][%BitDepth/String%, ][%Channel(s)/String%, ]%Format%\n'\" \\\"{}\\\" \;"
+      echo 'find . -name "*.mkv" -exec echo ffmpeg -i \"{}\" -c:v copy -ac 6 -ar 48000 -ab 400k -c:a aac \"/data/media/Movies/{}\" \;'
     fi
     umount -fq /media/usbdrive
   fi

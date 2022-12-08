@@ -50,6 +50,7 @@
 # Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 10.0.4.1/24
 # Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 10.0.4.100 to 10.0.4.254
 # Network -> Networks -> Add New Network -> Advanced -> DHCP UniFi OS Console -> 10.0.0.1
+# Network -> Networks -> Add New Network -> Advanced -> DHCP Name Server -> Manual -> 10.0.4.10
 
 # Network -> Networks -> Add New Network -> Network Name -> Isolated
 # Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 6

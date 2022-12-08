@@ -12,6 +12,16 @@ add_on_boot_script() {
 
 cd ${SERVICE_INSTALL} || exit
 
+if [[ ! -L /var/lib/asystem ]]; then
+  if [[ -d /var/lib/asystem ]]; then
+    mkdir -p /mnt/data/asystem
+    mv /var/lib/asystem/* /mnt/data/asystem
+    rm -r /mnt/data/asystem
+  fi
+  ln -s /mnt/data/asystem /var/lib/asystem
+fi
+cp -rvf /mnt/data/asystem/* /var/lib/asystem
+
 chmod a+x ./config/udm-utilities/on-boot-script/remote_install.sh
 if [ ! -d /mnt/data/on_boot.d ]; then
   ./config/udm-utilities/on-boot-script/remote_install.sh
@@ -75,6 +85,6 @@ chmod a+x /mnt/data/on_boot.d/10-dns.sh
 podman exec -it pihole pihole -a -p ${PIHOLE_KEY}
 
 #rm -rf /mnt/data/udm-cloudflare-ddns && cp -rvf ./config/udm-cloudflare-ddns /mnt/data
-  #cp -rvf ./config/udm-cloudflare-ddns/13-cloudflare-ddns.sh /mnt/data/on_boot.d
+#cp -rvf ./config/udm-cloudflare-ddns/13-cloudflare-ddns.sh /mnt/data/on_boot.d
 #chmod a+x /mnt/data/on_boot.d/13-cloudflare-ddns.sh
 #/mnt/data/on_boot.d/13-cloudflare-ddns.sh
