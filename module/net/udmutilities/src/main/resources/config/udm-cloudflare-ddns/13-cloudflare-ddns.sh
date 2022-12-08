@@ -2,13 +2,11 @@
 
 CONTAINER=cloudflare-ddns
 
-if podman container exists "${CONTAINER}"; then
-  podman start "${CONTAINER}"
-else
-  podman run -i -d --rm \
-    --net=host \
-    --name "${CONTAINER}" \
-    --security-opt=no-new-privileges \
-    -v /mnt/data/udm-cloudflare-ddns/config.json:/config.json \
-    timothyjmiller/cloudflare-ddns:latest
-fi
+podman stop "${CONTAINER}" 2>/dev/null
+podman rm "${CONTAINER}" 2>/dev/null
+podman create --restart always \
+  --name "${CONTAINER}" \
+  -e TZ="Australia/Perth" \
+  -v "/mnt/data/udm-cloudflare-ddns/config.json:/config.json" \
+  --security-opt=no-new-privileges \
+  timothyjmiller/cloudflare-ddns:latest
