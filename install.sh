@@ -31,23 +31,23 @@ if [ ! -d "$SERVICE_HOME" ]; then
   fi
   rm -rf $SERVICE_HOME_OLDEST
 fi
-rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
-[ "$(ls -A config | wc -l)" -gt 0 ] && cp -rfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
-touch .env
-chmod 600 .env
-[ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
-if [ -f "docker-compose.yml" ]; then
-  docker-compose --compatibility --no-ansi up --force-recreate -d
-  if [ $(docker ps | grep "${SERVICE_NAME}_bootstrap" | wc -l) -eq 1 ]; then
-    docker logs "${SERVICE_NAME}_bootstrap" -f
-  fi
-  echo "----------" && docker ps -f name="${SERVICE_NAME}" && echo "----------"
-  sleep 5 && docker logs "${SERVICE_NAME}" && echo "----------"
-  if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
-    echo && echo "Container failed to start" && echo "" && exit 1
-  else
-    docker system prune --volumes -f -a 2>&1 >/dev/null
-    echo "Container started successfully ..." && echo "----------"
-  fi
-fi
-[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh || true
+#rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
+#[ "$(ls -A config | wc -l)" -gt 0 ] && cp -rfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
+#touch .env
+#chmod 600 .env
+#[ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
+#if [ -f "docker-compose.yml" ]; then
+#  docker-compose --compatibility --no-ansi up --force-recreate -d
+#  if [ $(docker ps | grep "${SERVICE_NAME}_bootstrap" | wc -l) -eq 1 ]; then
+#    docker logs "${SERVICE_NAME}_bootstrap" -f
+#  fi
+#  echo "----------" && docker ps -f name="${SERVICE_NAME}" && echo "----------"
+#  sleep 5 && docker logs "${SERVICE_NAME}" && echo "----------"
+#  if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
+#    echo && echo "Container failed to start" && echo "" && exit 1
+#  else
+#    docker system prune --volumes -f -a 2>&1 >/dev/null
+#    echo "Container started successfully ..." && echo "----------"
+#  fi
+#fi
+#[ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh || true
