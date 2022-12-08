@@ -100,6 +100,8 @@
 #    HTTP, Enabled, WAN, Any, 80, 10.0.2.14, 9080, TCP, Logging enable
 #    HTTPS, Enabled, WAN, Any, 443, 10.0.2.14, 9443, TCP, Logging enable
 
+# Advanced Features -> Advanced Gateway Settings -> Dynamic DNS -> Create a Dummy entry
+
 # Classic UI -> Site -> Auto-optimize network -> False
 # Classic UI -> All Wireless Networks -> Block LAN to WLAN multicast and broadcast data -> False
 
