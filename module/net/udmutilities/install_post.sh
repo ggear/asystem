@@ -7,7 +7,7 @@ add_on_boot_script() {
   [ ! -f "/mnt/data/on_boot.d/${1}.sh" ] &&
     [ -d "/var/lib/asystem/install" ] &&
     [ -f "/var/lib/asystem/install/*udm-net*/${2}/latest/install.sh" ] &&
-    cp -rvf "/var/lib/asystem/install/*udm-net*/${2}/latest/install.sh" "/mnt/data/on_boot.d/${1}.sh"
+    cp -rvf "/var/lib/asystem/install/${2}/latest/install.sh" "/mnt/data/on_boot.d/${1}.sh"
 }
 
 cd ${SERVICE_INSTALL} || exit
@@ -42,6 +42,7 @@ cp -rvf ./config/udm-utilities/cni-plugins/05-install-cni-plugins.sh /mnt/data/o
 chmod a+x /mnt/data/on_boot.d/05-install-cni-plugins.sh
 /mnt/data/on_boot.d/05-install-cni-plugins.sh
 cp -rvf ./config/udm-utilities/cni-plugins/20-dns.conflist /mnt/data/podman/cni
+
 mkdir -p /mnt/data/etc-pihole && chmod 777 /mnt/data/etc-pihole
 mkdir -p /mnt/data/pihole/etc-dnsmasq.d && chmod 777 /mnt/data/pihole/etc-dnsmasq.d
 if [ ! -f /mnt/data/pihole/etc-dnsmasq.d/02-custom.conf ]; then
@@ -72,3 +73,8 @@ cp -rvf ./config/udm-utilities/dns-common/on_boot.d/10-dns.sh /mnt/data/on_boot.
 chmod a+x /mnt/data/on_boot.d/10-dns.sh
 /mnt/data/on_boot.d/10-dns.sh
 podman exec -it pihole pihole -a -p ${PIHOLE_KEY}
+
+rm -rf /mnt/data/udm-cloudflare-ddns && cp -rvf ./config/udm-cloudflare-ddns /mnt/data
+cp -rvf ./config/udm-cloudflare-ddns/13-cloudflare-ddns.sh /mnt/data/on_boot.d
+chmod a+x /mnt/data/on_boot.d/13-cloudflare-ddns.sh
+/mnt/data/on_boot.d/13-cloudflare-ddns.sh
