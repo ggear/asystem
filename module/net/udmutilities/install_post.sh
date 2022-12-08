@@ -12,9 +12,9 @@ add_on_boot_script() {
 
 cd ${SERVICE_INSTALL} || exit
 
+mkdir -p /mnt/data/asystem
 if [[ ! -L /var/lib/asystem ]]; then
   if [[ -d /var/lib/asystem ]]; then
-    mkdir -p /mnt/data/asystem
     mv /var/lib/asystem/* /mnt/data/asystem
     rm -r /mnt/data/asystem
   fi
