@@ -9,6 +9,6 @@ else
     --net=host \
     --name "${CONTAINER}" \
     --security-opt=no-new-privileges \
-    -v /mnt/data/cloudflare-ddns/config.json:/config.json \
+    -v /mnt/data/udm-cloudflare-ddns/config.json:/config.json \
     timothyjmiller/cloudflare-ddns:latest
 fi
