@@ -74,7 +74,7 @@ chmod a+x /mnt/data/on_boot.d/10-dns.sh
 /mnt/data/on_boot.d/10-dns.sh
 podman exec -it pihole pihole -a -p ${PIHOLE_KEY}
 
-rm -rf /mnt/data/udm-cloudflare-ddns && cp -rvf ./config/udm-cloudflare-ddns /mnt/data
-cp -rvf ./config/udm-cloudflare-ddns/13-cloudflare-ddns.sh /mnt/data/on_boot.d
-chmod a+x /mnt/data/on_boot.d/13-cloudflare-ddns.sh
-/mnt/data/on_boot.d/13-cloudflare-ddns.sh
+#rm -rf /mnt/data/udm-cloudflare-ddns && cp -rvf ./config/udm-cloudflare-ddns /mnt/data
+  #cp -rvf ./config/udm-cloudflare-ddns/13-cloudflare-ddns.sh /mnt/data/on_boot.d
+#chmod a+x /mnt/data/on_boot.d/13-cloudflare-ddns.sh
+#/mnt/data/on_boot.d/13-cloudflare-ddns.sh
