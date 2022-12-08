@@ -80,3 +80,6 @@ podman exec -it pihole pihole -a -p ${PIHOLE_KEY}
 cp -rvf ./config/udm-cloudflare-ddns/13-cloudflare-ddns.sh /mnt/data/on_boot.d
 chmod a+x /mnt/data/on_boot.d/13-cloudflare-ddns.sh
 /mnt/data/on_boot.d/13-cloudflare-ddns.sh
+rm -rf /.inadyn
+rm -rf /root/.inadyn
+time /usr/sbin/inadyn -n -s -C -f /run/ddns-eth8-inadyn.conf -1 -l debug --foreground
