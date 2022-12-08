@@ -11,7 +11,7 @@ SERVICE_HOME_OLDEST=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! 
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
 cd ${SERVICE_INSTALL} || exit
-#[ -f "./install_prep.sh" ] && chmod +x ./install_prep.sh && ./install_prep.sh || true
+[ -f "./install_prep.sh" ] && chmod +x ./install_prep.sh && ./install_prep.sh || true
 #cd ${SERVICE_INSTALL} || exit
 #[ -f "${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz
 #if [ -f "docker-compose.yml" ]; then
