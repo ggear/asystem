@@ -5,12 +5,13 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 
 cd ${SERVICE_INSTALL} || exit
 
-mkdir -p /mnt/data/asystem
-#if [[ ! -L /var/lib/asystem ]]; then
-#  if [[ -d /var/lib/asystem ]]; then
-#    mv /var/lib/asystem/* /mnt/data/asystem
-#    rm -r /mnt/data/asystem
-#  fi
-#  ln -s /mnt/data/asystem /var/lib/asystem
-#fi
-#cp -rvf /mnt/data/asystem/* /var/lib/asystem
+mkdir -p /var/lib/asystem
+mkdir -p /mnt/data/asystem/install
+if [[ ! -L /var/lib/asystem/install ]]; then
+  if [[ -d /var/lib/asystem/install ]]; then
+    mv /var/lib/asystem/install/* /mnt/data/asystem/install
+    rm -r /mnt/data/asystem/install
+  fi
+  ln -s /mnt/data/asystem/install /var/lib/asystem/install
+fi
+cp -rvf /mnt/data/asystem/install/* /var/lib/asystem/install
