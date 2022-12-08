@@ -102,4 +102,6 @@
 # Classic UI -> Site -> Auto-optimize network -> False
 # Classic UI -> All Wireless Networks -> Block LAN to WLAN multicast and broadcast data -> False
 
+# TODO: https://wiki.dd-wrt.com/wiki/index.php/Access_To_Modem_Configuration
+
 mkdir -p /home
