@@ -437,9 +437,9 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
 
 def _ssh_pass(context, host):
     ssh_prefix = "sshpass -f /Users/graham/.ssh/.password " \
-        if _run_local(context, "ssh -qo StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes root@{} exit"
+        if _run_local(context, "ssh -q -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes -o ConnectTimeout=1 root@{} exit"
                       .format(host), hide="err", warn=True).exited > 0 else ""
-    if _run_local(context, "{}ssh -q root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err", warn=True).exited > 0:
+    if _run_local(context, "{}ssh -q -o ConnectTimeout=1 root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err", warn=True).exited > 0:
         raise Exception("Error: Cannot connect via [{}ssh -q root@{}]".format(ssh_prefix, host))
     return ssh_prefix
 
