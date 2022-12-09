@@ -275,7 +275,7 @@ input_boolean.home_reset:
 switch.bathroom_rails:
   friendly_name: 'Towel Rails'
   icon: 'mdi:radiator'
-light.ada_fan:
+light.ada_fan_light:
   friendly_name: 'Ada Main'
   icon: 'mdi:lightbulb-group'
 light.ada_lamp:
@@ -284,7 +284,7 @@ light.ada_lamp:
 light.edwin_lamp:
   friendly_name: 'Edwin Lamp'
   icon: 'mdi:lightbulb-group'
-light.edwin_fan:
+light.edwin_fan_light:
   friendly_name: 'Edwin Main'
   icon: 'mdi:lightbulb-group'
 light.edwin_night_light:
@@ -299,7 +299,7 @@ light.dining_main:
 light.lounge_main:
   friendly_name: 'Lounge Main'
   icon: 'mdi:lightbulb-group'
-light.lounge_fan:
+light.lounge_fan_light:
   friendly_name: 'Lounge Fan'
   icon: 'mdi:lightbulb-group'
 light.lounge_lamp:
@@ -719,15 +719,15 @@ camera.uvc_edwin_medium:
   friendly_name: 'Edwin'
 binary_sensor.uvc_edwin_motion:
   friendly_name: 'Edwin'
-binary_sensor.ada_fan_occupancy:
+binary_sensor.ada_fan_light_motion:
   friendly_name: 'Ada'
-binary_sensor.edwin_fan_occupancy:
+binary_sensor.edwin_fan_light_motion:
   friendly_name: 'Edwin'
-binary_sensor.parents_fan_occupancy:
+binary_sensor.parents_fan_light_motion:
   friendly_name: 'Parents'
-binary_sensor.lounge_fan_occupancy:
+binary_sensor.lounge_fan_light_motion:
   friendly_name: 'Lounge'
-binary_sensor.deck_east_fan_occupancy:
+binary_sensor.deck_east_fan_light_motion:
   friendly_name: 'Deck East'
-binary_sensor.deck_west_fan_occupancy:
+binary_sensor.deck_west_fan_light_motion:
   friendly_name: 'Deck West'

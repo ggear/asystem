@@ -15,7 +15,8 @@ echo "--------------------------------------------------------------------------
 # Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'
 # Create API Long-Lived Access Tokens and store in '.env_all_key'
 # Install integrations manually (no option to do so programmatically):
-#   - Tasmota (local push, no internet, devices are configured via their inbuilt webserver (see sonoff module) then are automatically discovered)
+#   - MQTT (local push, no internet, yaml has details but is now unfortuantely deprecated)
+#   - Tasmota (local push, no internet, devices are configured via their inbuilt webserver (see sonoff module) then are automatically discovered after a tasmota/deploy.sh)
 #   - SenseME (local push, no internet after initial firmware upgrade, requires each fan IP and Areas to be configured)
 #   - UniFi Protect (local push, no internet, requires Protect IP, user, password and Areas config - has not been yaml configured since at least Nov 2020)
 #   - TP-Link Smart Home (local polling, no internet, requires Areas to be manually configured)

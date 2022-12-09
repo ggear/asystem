@@ -65,7 +65,7 @@ switch.bathroom_rails:
   name: Bathroom Towel Rails
   aliases: ['Towel Rails']
   room: Bathroom
-light.ada_fan:
+light.ada_fan_light:
   name: Adas Main Light
   aliases: ['Adas Main', 'Main Light', 'Main']
   room: Ada
@@ -77,7 +77,7 @@ light.edwin_lamp:
   name: Edwin Lamp
   aliases: ['Lamp']
   room: Edwin
-light.edwin_fan:
+light.edwin_fan_light:
   name: Edwins Main Light
   aliases: ['Edwins Main', 'Main Light', 'Main']
   room: Edwin
@@ -97,7 +97,7 @@ light.lounge_main:
   name: Lounge Main Light
   aliases: ['Lounge Main', 'Main Light', 'Main']
   room: Lounge
-light.lounge_fan:
+light.lounge_fan_light:
   name: Home Fan Light
   aliases: ['Home Fan', 'Fan Light', 'Fan']
   room: Home

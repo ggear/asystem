@@ -23,7 +23,7 @@
 - type: entities
   title: Lights
   entities:
-    - entity: light.ada_fan
+    - entity: light.ada_fan_light
       name: Ada Main
       icon: mdi:lightbulb-group
     - entity: light.ada_lamp
@@ -32,7 +32,7 @@
     - entity: light.edwin_lamp
       name: Edwin Lamp
       icon: mdi:lightbulb-group
-    - entity: light.edwin_fan
+    - entity: light.edwin_fan_light
       name: Edwin Main
       icon: mdi:lightbulb-group
     - entity: light.edwin_night_light
@@ -47,7 +47,7 @@
     - entity: light.lounge_main
       name: Lounge Main
       icon: mdi:lightbulb-group
-    - entity: light.lounge_fan
+    - entity: light.lounge_fan_light
       name: Lounge Fan
       icon: mdi:lightbulb-group
     - entity: light.lounge_lamp
