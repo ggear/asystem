@@ -68,3 +68,23 @@ cat <<EOF >>/etc/fstab
 #/dev/mapper/macmini--nel--vg-swap_1        none            swap    sw                                    0       0
 #UUID=89b36041-a92a-4364-8080-339e84280eb4  /data           ext4    rw,user,exec,auto,async,nofail        0       2
 EOF
+
+################################################################################
+# Network
+################################################################################
+apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
+INTERFACE=$(lshw -C network -short 2>/dev/null | grep enx | tr -s ' ' | cut -d' ' -f2)
+if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "${INTERFACE}" /etc/network/interfaces | wc -l) -eq 0 ]; then
+  cat <<EOF >>/etc/network/interfaces
+
+rename ${INTERFACE}=lan0
+allow-hotplug lan0
+iface lan0 inet dhcp
+EOF
+fi
+cat <<EOF >/etc/udev/rules.d/10-usb-network-realtek.rules
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153", TEST=="power/autosuspend", ATTR{power/autosuspend}="-1"
+EOF
+chmod +x /etc/udev/rules.d/10-usb-network-realtek.rules
+echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/autosuspend -exec echo -n {}": " \; -exec cat {} \; | grep ": \-1")
+ifconfig lan0

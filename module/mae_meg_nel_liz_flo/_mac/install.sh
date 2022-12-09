@@ -5,27 +5,10 @@
 ################################################################################
 apt-get update
 apt-get install -y --allow-downgrades 'mbpfan=2.2.1-1'
-apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
 
 ################################################################################
 # Network
 ################################################################################
-INTERFACE=$(lshw -C network -short 2>/dev/null | grep enx | tr -s ' ' | cut -d' ' -f2)
-if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "${INTERFACE}" /etc/network/interfaces | wc -l) -eq 0 ]; then
-  cat <<EOF >>/etc/network/interfaces
-
-rename ${INTERFACE}=lan0
-allow-hotplug lan0
-iface lan0 inet dhcp
-EOF
-fi
-cat <<EOF >/etc/udev/rules.d/10-usb-network-realtek.rules
-ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153", TEST=="power/autosuspend", ATTR{power/autosuspend}="-1"
-EOF
-chmod +x /etc/udev/rules.d/10-usb-network-realtek.rules
-echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/autosuspend -exec echo -n {}": " \; -exec cat {} \; | grep ": \-1")
-
-ifconfig lan0
 ! grep 8021q /etc/modules >/dev/null && echo "8021q" | tee -a /etc/modules
 
 ################################################################################
