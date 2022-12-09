@@ -62,11 +62,11 @@ sensor:
     create_utility_meters: true
     create_group: senseme_all_lights
     entities:
-      - entity_id: light.ada_light
+      - entity_id: light.ada_fan_light
         linear:
           min_power: 0.5
           max_power: 16.3
-      - entity_id: light.edwin_light
+      - entity_id: light.edwin_fan_light
         linear:
           min_power: 0.5
           max_power: 16.3

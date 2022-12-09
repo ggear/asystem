@@ -719,15 +719,15 @@ camera.uvc_edwin_medium:
   friendly_name: 'Edwin'
 binary_sensor.uvc_edwin_motion:
   friendly_name: 'Edwin'
-binary_sensor.ada_fan_light_motion:
+binary_sensor.ada_fan_motion:
   friendly_name: 'Ada'
-binary_sensor.edwin_fan_light_motion:
+binary_sensor.edwin_fan_motion:
   friendly_name: 'Edwin'
-binary_sensor.parents_fan_light_motion:
+binary_sensor.parents_fan_motion:
   friendly_name: 'Parents'
-binary_sensor.lounge_fan_light_motion:
+binary_sensor.lounge_fan_motion:
   friendly_name: 'Lounge'
-binary_sensor.deck_east_fan_light_motion:
+binary_sensor.deck_east_fan_motion:
   friendly_name: 'Deck East'
-binary_sensor.deck_west_fan_light_motion:
+binary_sensor.deck_west_fan_motion:
   friendly_name: 'Deck West'
