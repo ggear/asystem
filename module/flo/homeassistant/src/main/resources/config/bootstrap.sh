@@ -19,6 +19,7 @@ echo "--------------------------------------------------------------------------
 #   - Tasmota (local push, no internet, devices are configured via their inbuilt webserver (see sonoff module) then are automatically discovered after a tasmota/deploy.sh)
 #   - SenseME (local push, no internet after initial firmware upgrade, requires each fan IP and Areas to be configured)
 #   - UniFi Protect (local push, no internet, requires Protect IP, user, password and Areas config - has not been yaml configured since at least Nov 2020)
+#   - Apple (local push, no internet, add tv/home-pod through UI with paring code prompts)
 #   - TP-Link Smart Home (local polling, no internet, requires Areas to be manually configured)
 #   - Google Cast (local polling, requires internet, requires IP CSV which could be hacked in - see 'custom_packages/media.yaml')
 #   - Brother Printer (local polling, no internet, requires manual config with IP)
@@ -31,7 +32,7 @@ echo "--------------------------------------------------------------------------
 #   - Internet Radio
 
 # Todo:
-#   - Apple (local push, no internet)
+
 #   - WebOS (local push, no internet)
 
 echo "--------------------------------------------------------------------------------"

@@ -303,7 +303,7 @@ automation:
     alias: "Media: Turn on lounge TV"
     trigger:
       - platform: webostv.turn_on
-        entity_id: media_player.lounge_tv
+        entity_id: media_player.lg_webos_smart_tv
     action:
       # wakeonlan -i 10.0.4.255 -p 9 4c:ba:d7:bf:94:d0 works!
       - service: wake_on_lan.send_magic_packet

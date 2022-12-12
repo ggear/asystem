@@ -699,7 +699,7 @@ media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:
   friendly_name: 'Edwin Home'
-media_player.lounge_tv:
+media_player.lg_webos_smart_tv:
   friendly_name: 'Lounge TV'
 media_player.parents_tv:
   friendly_name: 'Parents TV'
@@ -711,6 +711,8 @@ media_player.kitchen_speaker:
   friendly_name: 'Kitchen Speaker'
 media_player.parents_home:
   friendly_name: 'Parents Home'
+media_player.parents_speaker:
+  friendly_name: 'Parents Speaker'
 camera.uvc_ada_medium:
   friendly_name: 'Ada'
 binary_sensor.uvc_ada_motion:
