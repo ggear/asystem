@@ -9,64 +9,64 @@ sensor.compensation_sensor_roof_temperature:
   friendly_name: 'Roof'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.netatmo_ada_temperature:
+sensor.ada_temperature:
   friendly_name: 'Ada'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_ada_temperature:
+sensor.compensation_sensor_ada_temperature:
   friendly_name: 'Ada'
   icon: 'mdi:thermometer'
-sensor.netatmo_edwin_temperature:
+sensor.edwin_temperature:
   friendly_name: 'Edwin'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_edwin_temperature:
+sensor.compensation_sensor_edwin_temperature:
   friendly_name: 'Edwin'
   icon: 'mdi:thermometer'
-sensor.netatmo_bertram_2_office_lounge_temperature:
+sensor.bertram_2_office_lounge_temperature:
   friendly_name: 'Lounge'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_bertram_2_office_lounge_temperature:
+sensor.compensation_sensor_bertram_2_office_lounge_temperature:
   friendly_name: 'Lounge'
   icon: 'mdi:thermometer'
-sensor.netatmo_parents_temperature:
+sensor.parents_temperature:
   friendly_name: 'Parents'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_parents_temperature:
+sensor.compensation_sensor_parents_temperature:
   friendly_name: 'Parents'
   icon: 'mdi:thermometer'
-sensor.netatmo_bertram_2_office_temperature:
+sensor.bertram_2_office_temperature:
   friendly_name: 'Office'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_bertram_2_office_temperature:
+sensor.compensation_sensor_bertram_2_office_temperature:
   friendly_name: 'Office'
   icon: 'mdi:thermometer'
-sensor.netatmo_bertram_2_kitchen_temperature:
+sensor.bertram_2_kitchen_temperature:
   friendly_name: 'Kitchen'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_bertram_2_kitchen_temperature:
+sensor.compensation_sensor_bertram_2_kitchen_temperature:
   friendly_name: 'Kitchen'
   icon: 'mdi:thermometer'
-sensor.netatmo_bertram_2_office_pantry_temperature:
+sensor.bertram_2_office_pantry_temperature:
   friendly_name: 'Pantry'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_bertram_2_office_pantry_temperature:
+sensor.compensation_sensor_bertram_2_office_pantry_temperature:
   friendly_name: 'Pantry'
   icon: 'mdi:thermometer'
-sensor.netatmo_bertram_2_office_dining_temperature:
+sensor.bertram_2_office_dining_temperature:
   friendly_name: 'Dining'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_bertram_2_office_dining_temperature:
+sensor.compensation_sensor_bertram_2_office_dining_temperature:
   friendly_name: 'Dining'
   icon: 'mdi:thermometer'
-sensor.netatmo_laundry_temperature:
+sensor.laundry_temperature:
   friendly_name: 'Laundry'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_laundry_temperature:
+sensor.compensation_sensor_laundry_temperature:
   friendly_name: 'Laundry'
   icon: 'mdi:thermometer'
-sensor.netatmo_bertram_2_office_basement_temperature:
+sensor.bertram_2_office_basement_temperature:
   friendly_name: 'Basement'
   icon: 'mdi:thermometer'
-sensor.compensation_sensor_netatmo_bertram_2_office_basement_temperature:
+sensor.compensation_sensor_bertram_2_office_basement_temperature:
   friendly_name: 'Basement'
   icon: 'mdi:thermometer'
 sensor.rack_temperature:
@@ -111,83 +111,83 @@ sensor.compensation_sensor_roof_humidity:
   friendly_name: 'Roof'
   icon: 'mdi:water-percent'
   unit_of_measurement: '%'
-sensor.compensation_sensor_netatmo_ada_humidity:
+sensor.compensation_sensor_ada_humidity:
   friendly_name: 'Ada'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_edwin_humidity:
+sensor.compensation_sensor_edwin_humidity:
   friendly_name: 'Edwin'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_bertram_2_office_lounge_humidity:
+sensor.compensation_sensor_bertram_2_office_lounge_humidity:
   friendly_name: 'Lounge'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_parents_humidity:
+sensor.compensation_sensor_parents_humidity:
   friendly_name: 'Parents'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_bertram_2_office_humidity:
+sensor.compensation_sensor_bertram_2_office_humidity:
   friendly_name: 'Office'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_bertram_2_kitchen_humidity:
+sensor.compensation_sensor_bertram_2_kitchen_humidity:
   friendly_name: 'Kitchen'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_bertram_2_office_pantry_humidity:
+sensor.compensation_sensor_bertram_2_office_pantry_humidity:
   friendly_name: 'Pantry'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_bertram_2_office_dining_humidity:
+sensor.compensation_sensor_bertram_2_office_dining_humidity:
   friendly_name: 'Dining'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_laundry_humidity:
+sensor.compensation_sensor_laundry_humidity:
   friendly_name: 'Laundry'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_netatmo_bertram_2_office_basement_humidity:
+sensor.compensation_sensor_bertram_2_office_basement_humidity:
   friendly_name: 'Basement'
   icon: 'mdi:water-percent'
 sensor.compensation_sensor_rack_humidity:
   friendly_name: 'Rack'
   icon: 'mdi:water-percent'
   unit_of_measurement: '%'
-sensor.compensation_sensor_netatmo_ada_co2:
+sensor.compensation_sensor_ada_co2:
   friendly_name: 'Ada'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_edwin_co2:
+sensor.compensation_sensor_edwin_co2:
   friendly_name: 'Edwin'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_parents_co2:
+sensor.compensation_sensor_parents_co2:
   friendly_name: 'Parents'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_office_co2:
+sensor.compensation_sensor_bertram_2_office_co2:
   friendly_name: 'Office'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_office_lounge_co2:
+sensor.compensation_sensor_bertram_2_office_lounge_co2:
   friendly_name: 'Lounge'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_kitchen_co2:
+sensor.compensation_sensor_bertram_2_kitchen_co2:
   friendly_name: 'Kitchen'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_office_pantry_co2:
+sensor.compensation_sensor_bertram_2_office_pantry_co2:
   friendly_name: 'Pantry'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_bertram_2_office_dining_co2:
+sensor.compensation_sensor_bertram_2_office_dining_co2:
   friendly_name: 'Dining'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_laundry_co2:
+sensor.compensation_sensor_laundry_co2:
   friendly_name: 'Laundry'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_netatmo_ada_noise:
+sensor.compensation_sensor_ada_noise:
   friendly_name: 'Ada'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_netatmo_edwin_noise:
+sensor.compensation_sensor_edwin_noise:
   friendly_name: 'Edwin'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_netatmo_parents_noise:
+sensor.compensation_sensor_parents_noise:
   friendly_name: 'Parents'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_netatmo_bertram_2_office_noise:
+sensor.compensation_sensor_bertram_2_office_noise:
   friendly_name: 'Office'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_netatmo_bertram_2_kitchen_noise:
+sensor.compensation_sensor_bertram_2_kitchen_noise:
   friendly_name: 'Kitchen'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_netatmo_laundry_noise:
+sensor.compensation_sensor_laundry_noise:
   friendly_name: 'Laundry'
   icon: 'mdi:volume-high'
 sensor.roof_cloud_base:
@@ -666,16 +666,16 @@ switch.roof_network_switch:
 switch.rack_modem:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
-sensor.netatmo_bertram_2_office_pantry_battery_percent:
+sensor.bertram_2_office_pantry_battery_percent:
   friendly_name: 'Netatmo Pantry'
   icon: 'mdi:battery-30'
-sensor.netatmo_bertram_2_office_lounge_battery_percent:
+sensor.bertram_2_office_lounge_battery_percent:
   friendly_name: 'Netatmo Lounge'
   icon: 'mdi:battery-30'
-sensor.netatmo_bertram_2_office_dining_battery_percent:
+sensor.bertram_2_office_dining_battery_percent:
   friendly_name: 'Netatmo Dining'
   icon: 'mdi:battery-30'
-sensor.netatmo_bertram_2_office_basement_battery_percent:
+sensor.bertram_2_office_basement_battery_percent:
   friendly_name: 'Netatmo Basement'
   icon: 'mdi:battery-30'
 sensor.home_cube_remote_battery:
@@ -719,15 +719,15 @@ camera.uvc_edwin_medium:
   friendly_name: 'Edwin'
 binary_sensor.uvc_edwin_motion:
   friendly_name: 'Edwin'
-binary_sensor.ada_fan_motion:
+binary_sensor.ada_fan_occupancy:
   friendly_name: 'Ada'
-binary_sensor.edwin_fan_motion:
+binary_sensor.edwin_fan_occupancy:
   friendly_name: 'Edwin'
-binary_sensor.parents_fan_motion:
+binary_sensor.parents_fan_occupancy:
   friendly_name: 'Parents'
-binary_sensor.lounge_fan_motion:
+binary_sensor.lounge_fan_occupancy:
   friendly_name: 'Lounge'
-binary_sensor.deck_east_fan_motion:
+binary_sensor.deck_east_fan_occupancy:
   friendly_name: 'Deck East'
-binary_sensor.deck_west_fan_motion:
+binary_sensor.deck_west_fan_occupancy:
   friendly_name: 'Deck West'
