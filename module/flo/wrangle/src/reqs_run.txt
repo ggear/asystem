@@ -8,7 +8,7 @@ tabulate==0.8.9
 dropbox==11.28.0
 influxdb==5.3.1
 yfinance==0.1.70
-pdftotext==2.2.2
+pdftotext==2.1.5
 pyicloud==1.0.0
 cryptography==36.0.2
 gspread-pandas==3.2.0

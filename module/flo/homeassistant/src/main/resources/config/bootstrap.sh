@@ -30,6 +30,7 @@ echo "--------------------------------------------------------------------------
 
 # Delete integrations manually:
 #   - Internet Radio
+#   - Meteorologisk institutt Weather
 
 # Todo:
 

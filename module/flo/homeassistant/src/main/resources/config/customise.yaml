@@ -691,6 +691,8 @@ sensor.weatherstation_console_battery_voltage:
   friendly_name: 'Davis Console Voltage'
   icon: 'mdi:battery-30'
   unit_of_measurement: 'V'
+button.synchronize_devices:
+  friendly_name: 'Google Device Sync'
 sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Davis Signal Quality'
   icon: 'mdi:signal'

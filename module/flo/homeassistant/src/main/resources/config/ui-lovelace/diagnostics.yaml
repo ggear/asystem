@@ -165,6 +165,12 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
+  title: Device Maintenance
+  entities:
+    - entity: button.synchronize_devices
+      name: Google Device Sync
+################################################################################
+- type: entities
   title: Telemetry
   entities:
     - entity: sensor.weatherstation_coms_signal_quality
