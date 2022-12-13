@@ -25,7 +25,7 @@ if [ $(influx bucket list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLU
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PUBLIC} -r 0 -t ${INFLUXDB_TOKEN}
 fi
 BUCKET_ID_HOME_PUBLIC=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PUBLIC} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
-influx bucket update --id ${BUCKET_ID_HOME_PUBLIC} --shard-group-duration 7d -t ${INFLUXDB_TOKEN}
+influx bucket update --id ${BUCKET_ID_HOME_PUBLIC} --retention 0 --shard-group-duration 7d -t ${INFLUXDB_TOKEN}
 if [ $(influx v1 dbrp list --org ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} --default | grep ${INFLUXDB_BUCKET_HOME_PUBLIC} | grep ${BUCKET_ID_HOME_PUBLIC} | wc -l) -ne 1 ]; then
   influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_HOME_PUBLIC} --rp default --default --bucket-id ${BUCKET_ID_HOME_PUBLIC} -t ${INFLUXDB_TOKEN}
 fi
@@ -34,7 +34,7 @@ if [ $(influx bucket list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLU
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PRIVATE} -r 0 -t ${INFLUXDB_TOKEN}
 fi
 BUCKET_ID_HOME_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOME_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id')
-influx bucket update --id ${BUCKET_ID_HOME_PRIVATE} --shard-group-duration 7d -t ${INFLUXDB_TOKEN}
+influx bucket update --id ${BUCKET_ID_HOME_PRIVATE} --retention 0 --shard-group-duration 7d -t ${INFLUXDB_TOKEN}
 if [ $(influx v1 dbrp list --org ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} --default | grep ${INFLUXDB_BUCKET_HOME_PRIVATE} | grep ${BUCKET_ID_HOME_PRIVATE} | wc -l) -ne 1 ]; then
   influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_HOME_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOME_PRIVATE} -t ${INFLUXDB_TOKEN}
 fi
@@ -43,7 +43,7 @@ if [ $(influx bucket list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLU
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_DATA_PUBLIC} -r 0 -t ${INFLUXDB_TOKEN}
 fi
 BUCKET_ID_DATA_PUBLIC=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_DATA_PUBLIC} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id' 2>/dev/null)
-influx bucket update --id ${BUCKET_ID_DATA_PUBLIC} --shard-group-duration 365d -t ${INFLUXDB_TOKEN}
+influx bucket update --id ${BUCKET_ID_DATA_PUBLIC} --retention 0 --shard-group-duration 365d -t ${INFLUXDB_TOKEN}
 if [ $(influx v1 dbrp list --org ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} --default | grep ${INFLUXDB_BUCKET_DATA_PUBLIC} | grep ${BUCKET_ID_DATA_PUBLIC} | wc -l) -ne 1 ]; then
   influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_DATA_PUBLIC} --rp default --default --bucket-id ${BUCKET_ID_DATA_PUBLIC} -t ${INFLUXDB_TOKEN}
 fi
@@ -52,7 +52,7 @@ if [ $(influx bucket list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLU
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_DATA_PRIVATE} -r 0 -t ${INFLUXDB_TOKEN}
 fi
 BUCKET_ID_DATA_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_DATA_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id')
-influx bucket update --id ${BUCKET_ID_DATA_PRIVATE} --shard-group-duration 365d -t ${INFLUXDB_TOKEN}
+influx bucket update --id ${BUCKET_ID_DATA_PRIVATE} --retention 0 --shard-group-duration 365d -t ${INFLUXDB_TOKEN}
 if [ $(influx v1 dbrp list --org ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} --default | grep ${INFLUXDB_BUCKET_DATA_PRIVATE} | grep ${BUCKET_ID_DATA_PRIVATE} | wc -l) -ne 1 ]; then
   influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_DATA_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_DATA_PRIVATE} -t ${INFLUXDB_TOKEN}
 fi
@@ -61,7 +61,7 @@ if [ $(influx bucket list -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} | grep ${INFLU
   influx bucket create -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -r 0 -t ${INFLUXDB_TOKEN}
 fi
 BUCKET_ID_HOST_PRIVATE=$(influx bucket list -o ${INFLUXDB_ORG} -n ${INFLUXDB_BUCKET_HOST_PRIVATE} -t ${INFLUXDB_TOKEN} --json | jq -r '.[0].id')
-influx bucket update --id ${BUCKET_ID_HOST_PRIVATE} --shard-group-duration 1d -t ${INFLUXDB_TOKEN}
+influx bucket update --id ${BUCKET_ID_HOST_PRIVATE} --retention 6m --shard-group-duration 1d -t ${INFLUXDB_TOKEN}
 if [ $(influx v1 dbrp list --org ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN} --default | grep ${INFLUXDB_BUCKET_HOST_PRIVATE} | grep ${BUCKET_ID_HOST_PRIVATE} | wc -l) -ne 1 ]; then
   influx v1 dbrp create -o ${INFLUXDB_ORG} --db ${INFLUXDB_BUCKET_HOST_PRIVATE} --rp default --default --bucket-id ${BUCKET_ID_HOST_PRIVATE} -t ${INFLUXDB_TOKEN}
 fi
