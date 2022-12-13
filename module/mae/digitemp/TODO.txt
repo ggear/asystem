@@ -1,0 +1,3 @@
+# telegraf python - work out how to use wrangle library
+# https://github.com/mcsakoff/pydigitemp
+# https://martybugs.net/electronics/tempsensor/usb.cgi
