@@ -3,7 +3,7 @@ version: '3.7'
 services:
   monitor:
     container_name: monitor
-    image: telegraf:1.25.0
+    image: telegraf:1.23.3
     init: true
     restart: ${SERVICE_RESTART}
     privileged: true

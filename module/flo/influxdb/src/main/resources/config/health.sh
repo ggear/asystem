@@ -32,7 +32,6 @@ curl --get http://localhost:8086/query \
   --data-urlencode "db=${INFLUXDB_BUCKET_HOST_PRIVATE}" \
   --data-urlencode "q=SELECT count(*) FROM a_non_existent_metric WHERE time >= now() - 15m" \
   && echo ""
-
 curl --get http://localhost:8086/query \
   --user "${INFLUXDB_USER_PUBLIC}:${INFLUXDB_TOKEN_PUBLIC_V1}" \
   --data-urlencode "db=${INFLUXDB_BUCKET_HOME_PUBLIC}" \
