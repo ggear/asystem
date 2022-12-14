@@ -11,7 +11,6 @@ while ! curl -sf ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
   echo "Waiting for service to come up ..." && sleep 1
 done
 
-set -x
 set -e
 set -o pipefail
 
@@ -196,8 +195,8 @@ if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/org/preferences | grep public-home-def
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "timezone":"awst"
-          "homeDashboardUID":"public-home-default",
+          "timezone":"awst",
+          "homeDashboardUID":"public-home-default"
         }' | jq
 fi
 
@@ -302,8 +301,8 @@ if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/org/preferences | grep private-home-d
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "timezone":"awst"
-          "homeDashboardUID":"private-home-default",
+          "timezone":"awst",
+          "homeDashboardUID":"private-home-default"
         }' | jq
 fi
 
