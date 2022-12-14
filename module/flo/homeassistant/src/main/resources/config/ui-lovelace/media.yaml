@@ -7,6 +7,12 @@
 - type: media-control
   entity: media_player.edwin_home
 ################################################################################
+- type: media-control
+  entity: media_player.office_home
+################################################################################
+- type: media-control
+  entity: media_player.ensuite_home
+################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: media-control
