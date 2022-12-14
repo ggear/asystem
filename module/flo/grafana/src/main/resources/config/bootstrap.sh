@@ -11,6 +11,7 @@ while ! curl -sf ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
   echo "Waiting for service to come up ..." && sleep 1
 done
 
+set -x
 set -e
 set -o pipefail
 
@@ -143,13 +144,13 @@ curl -sf ${GRAFANA_URL_PUBLIC}/api/datasources | jq
 #######################################################################################
 # Public Folders
 #######################################################################################
-if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Default | wc -l) -eq 0 ]; then
+if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Default | wc -l) -eq 0 ]; then
   curl -sf -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
-          "uid": "Default",
-          "title": "Default"
+          "uid": "Public_Default",
+          "title": "Public_Default"
         }' | jq
 fi
 if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Mobile | wc -l) -eq 0 ]; then
@@ -158,10 +159,10 @@ if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Mobile | wc -l) 
     -H "Content-Type: application/json" \
     -d '{
           "uid": "Public_Mobile",
-          "title": "Public _Mobile"
+          "title": "Public_Mobile"
         }' | jq
 fi
-if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Tablet| wc -l) -eq 0 ]; then
+if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | grep Public_Tablet | wc -l) -eq 0 ]; then
   curl -sf -XPOST ${GRAFANA_URL_PUBLIC}/api/folders \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
@@ -186,7 +187,19 @@ curl -sf ${GRAFANA_URL_PUBLIC}/api/folders | jq
 #######################################################################################
 export GRAFANA_URL=${GRAFANA_URL_PUBLIC}
 find ${DASHBOARDS_HOME}/public -name dashboard_* -exec ${LIBRARIES_HOME}/grizzly/grr -J ${LIBRARIES_HOME}/grafonnet-lib -J ${DASHBOARDS_HOME} apply {} \;
-find ${DASHBOARDS_HOME}/default -name dashboard_* -exec ${LIBRARIES_HOME}/grizzly/grr -J ${LIBRARIES_HOME}/grafonnet-lib -J ${DASHBOARDS_HOME} apply {} \;
+
+#######################################################################################
+# Default Dashboard
+#######################################################################################
+if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/org/preferences | grep public-home-default | wc -l) -eq 0 ]; then
+  curl -sf -XPATCH ${GRAFANA_URL_PUBLIC}/api/org/preferences \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "timezone":"awst"
+          "homeDashboardUID":"public-home-default",
+        }' | jq
+fi
 
 #######################################################################################
 # Private Datasources
@@ -237,6 +250,15 @@ curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources | jq
 #######################################################################################
 # Private Folders
 #######################################################################################
+if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Default | wc -l) -eq 0 ]; then
+  curl -sf -XPOST ${GRAFANA_URL_PRIVATE}/api/folders \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "uid": "Private_Default",
+          "title": "Private_Default"
+        }' | jq
+fi
 if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | grep Private_Mobile | wc -l) -eq 0 ]; then
   curl -sf -XPOST ${GRAFANA_URL_PRIVATE}/api/folders \
     -H "Accept: application/json" \
@@ -271,6 +293,20 @@ curl -sf ${GRAFANA_URL_PRIVATE}/api/folders | jq
 #######################################################################################
 export GRAFANA_URL=${GRAFANA_URL_PRIVATE}
 find ${DASHBOARDS_HOME}/private -name dashboard_* -exec ${LIBRARIES_HOME}/grizzly/grr -J ${LIBRARIES_HOME}/grafonnet-lib -J ${DASHBOARDS_HOME} apply {} \;
+
+#######################################################################################
+# Default Dashboard
+#######################################################################################
+if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/org/preferences | grep private-home-default | wc -l) -eq 0 ]; then
+  curl -sf -XPATCH ${GRAFANA_URL_PRIVATE}/api/org/preferences \
+    -H "Accept: application/json" \
+    -H "Content-Type: application/json" \
+    -d '{
+          "timezone":"awst"
+          "homeDashboardUID":"private-home-default",
+        }' | jq
+fi
+
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"

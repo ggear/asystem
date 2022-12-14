@@ -3,7 +3,7 @@ local dashboard = grafana.dashboard;
 
 {
 
-      grafanaDashboardFolder:: 'Default',
+      grafanaDashboardFolder:: 'Public_Default',
 
       grafanaDashboards:: {
 
@@ -11,7 +11,7 @@ local dashboard = grafana.dashboard;
                   dashboard.new(
                         schemaVersion=30,
                         title='Home',
-                        uid='home-default',
+                        uid='public-home-default',
                         editable=false,
                         hideControls=true,
                   )
