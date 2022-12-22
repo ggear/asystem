@@ -21,6 +21,30 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
+  title: Fans
+  entities:
+    - entity: fan.ada_fan
+      name: Ada
+      icon: mdi:fan
+    - entity: fan.edwin_fan
+      name: Edwin
+      icon: mdi:fan
+    - entity: fan.parents_fan
+      name: Parents
+      icon: mdi:fan
+    - entity: switch.kitchen_fan
+      name: Kitchen
+      icon: mdi:fan
+    - entity: fan.lounge_fan
+      name: Lounge
+      icon: mdi:fan
+    - entity: fan.deck_fan
+      name: Deck
+      icon: mdi:fan
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
   title: Lights
   entities:
     - entity: light.ada_fan_light
@@ -92,30 +116,6 @@
     - entity: light.tree_spotlights
       name: Tree Spotlights
       icon: mdi:lightbulb-group
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
-  title: Fans
-  entities:
-    - entity: fan.ada_fan
-      name: Ada
-      icon: mdi:fan
-    - entity: fan.edwin_fan
-      name: Edwin
-      icon: mdi:fan
-    - entity: fan.parents_fan
-      name: Parents
-      icon: mdi:fan
-    - entity: switch.kitchen_fan
-      name: Kitchen
-      icon: mdi:fan
-    - entity: fan.lounge_fan
-      name: Lounge
-      icon: mdi:fan
-    - entity: fan.deck_fan
-      name: Deck
-      icon: mdi:fan
 ################################################################################
 - type: custom:layout-break
 ################################################################################

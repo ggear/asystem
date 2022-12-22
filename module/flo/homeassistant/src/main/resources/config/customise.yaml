@@ -275,6 +275,30 @@ input_boolean.home_reset:
 switch.bathroom_rails:
   friendly_name: 'Towel Rails'
   icon: 'mdi:radiator'
+fan.ada_fan:
+  friendly_name: 'Ada'
+  icon: 'mdi:fan'
+fan.edwin_fan:
+  friendly_name: 'Edwin'
+  icon: 'mdi:fan'
+fan.parents_fan:
+  friendly_name: 'Parents'
+  icon: 'mdi:fan'
+switch.kitchen_fan:
+  friendly_name: 'Kitchen'
+  icon: 'mdi:fan'
+fan.lounge_fan:
+  friendly_name: 'Lounge'
+  icon: 'mdi:fan'
+fan.deck_fan:
+  friendly_name: 'Deck'
+  icon: 'mdi:fan'
+fan.deck_east_fan:
+  friendly_name: 'Deck East'
+  icon: 'mdi:fan'
+fan.deck_west_fan:
+  friendly_name: 'Deck West'
+  icon: 'mdi:fan'
 light.ada_fan_light:
   friendly_name: 'Ada Main'
   icon: 'mdi:lightbulb-group'
@@ -344,30 +368,6 @@ light.garden_pedestals:
 light.tree_spotlights:
   friendly_name: 'Tree Spotlights'
   icon: 'mdi:lightbulb-group'
-fan.ada_fan:
-  friendly_name: 'Ada'
-  icon: 'mdi:fan'
-fan.edwin_fan:
-  friendly_name: 'Edwin'
-  icon: 'mdi:fan'
-fan.parents_fan:
-  friendly_name: 'Parents'
-  icon: 'mdi:fan'
-switch.kitchen_fan:
-  friendly_name: 'Kitchen'
-  icon: 'mdi:fan'
-fan.lounge_fan:
-  friendly_name: 'Lounge'
-  icon: 'mdi:fan'
-fan.deck_fan:
-  friendly_name: 'Deck'
-  icon: 'mdi:fan'
-fan.deck_east_fan:
-  friendly_name: 'Deck East'
-  icon: 'mdi:fan'
-fan.deck_west_fan:
-  friendly_name: 'Deck West'
-  icon: 'mdi:fan'
 fan.lounge_air_purifier:
   friendly_name: 'Lounge'
   icon: 'mdi:air-purifier'
