@@ -701,10 +701,6 @@ media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:
   friendly_name: 'Edwin Home'
-media_player.office_home:
-  friendly_name: 'Office Home'
-media_player.ensuite_home:
-  friendly_name: 'Ensuite Home'
 media_player.lg_webos_smart_tv:
   friendly_name: 'Lounge TV'
 media_player.parents_tv:
