@@ -36,6 +36,7 @@
 *egg-info
 *.pipeout
 .pytest_cache
+nohup.out
 Cargo.lock
 pom.xml.tag
 pom.xml.releaseBackup
