@@ -1,7 +1,8 @@
 10.0.0.1 udm-net.janeandgraham.com udm-net
-10.0.0.2 usw-ceiling.janeandgraham.com usw-ceiling
-10.0.0.3 uap-deck.janeandgraham.com uap-deck
-10.0.0.4 uap-hallway.janeandgraham.com uap-hallway
+10.0.0.2 usw-rack.janeandgraham.com usw-rack
+10.0.0.3 usw-ceiling.janeandgraham.com usw-ceiling
+10.0.0.4 uap-deck.janeandgraham.com uap-deck
+10.0.0.5 uap-hallway.janeandgraham.com uap-hallway
 10.0.2.11 macbook-flo.janeandgraham.com macbook-flo
 10.0.2.12 macmini-liz.janeandgraham.com macmini-liz
 10.0.2.13 macmini-nel.janeandgraham.com macmini-nel
