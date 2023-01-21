@@ -119,6 +119,15 @@
     - entity: switch.laundry_vacuum_charger
       name: Vacuum Charger
       icon: mdi:battery-charging-30
+    - entity: switch.deck_fans_outlet
+      name: Deck Fans Outlet
+      icon: mdi:power-plug-outline
+    - entity: switch.kitchen_fan_outlet
+      name: Kitchen Fan Outlet
+      icon: mdi:power-plug-outline
+    - entity: switch.edwin_wardrobe_outlet
+      name: Edwin Wardobe Outlet
+      icon: mdi:power-plug-outline
     - entity: switch.rack_fans
       name: Rack Fans
       icon: mdi:server-remove

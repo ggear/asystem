@@ -331,7 +331,7 @@ sonos:
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         ((metadata_df["device_via_device"] == "Hue") | (metadata_df["device_via_device"] == "Phillips")) &
-        (metadata_df["entity_namespace"].str.len() > 0) &
+        ((metadata_df["entity_namespace"].str.len() > 0) & (metadata_df["entity_namespace"] == "light")) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["friendly_name"].str.len() > 0)
         ]

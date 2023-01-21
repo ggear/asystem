@@ -153,6 +153,18 @@
   friendly_name: 'Dining Air Purifier'
   homeassistant:
     expire_after: 3600
+'0x0017880109d4659c':
+  friendly_name: 'Deck Fans Outlet'
+  homeassistant:
+    expire_after: 3600
+'0x00178801086168ac':
+  friendly_name: 'Kitchen Fan Outlet'
+  homeassistant:
+    expire_after: 3600
+'0x0017880108fd8633':
+  friendly_name: 'Edwin Wardrobe Outlet'
+  homeassistant:
+    expire_after: 3600
 '0x00158d0005d9d088':
   friendly_name: 'Home Cube Remote'
   homeassistant:

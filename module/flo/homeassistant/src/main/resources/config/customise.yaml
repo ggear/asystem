@@ -654,6 +654,15 @@ switch.study_battery_charger:
 switch.laundry_vacuum_charger:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging-30'
+switch.deck_fans_outlet:
+  friendly_name: 'Deck Fans Outlet'
+  icon: 'mdi:power-plug-outline'
+switch.kitchen_fan_outlet:
+  friendly_name: 'Kitchen Fan Outlet'
+  icon: 'mdi:power-plug-outline'
+switch.edwin_wardrobe_outlet:
+  friendly_name: 'Edwin Wardobe Outlet'
+  icon: 'mdi:power-plug-outline'
 switch.rack_fans:
   friendly_name: 'Rack Fans'
   icon: 'mdi:server-remove'
