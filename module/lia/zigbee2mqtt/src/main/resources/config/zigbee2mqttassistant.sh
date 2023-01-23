@@ -1,0 +1,1 @@
+docker run -p 8880:80 -e Z2MA_SETTINGS__MQTTSERVER=10.0.6.11 -e Z2MA_SETTINGS__MQTTUSERNAME=test -e Z2MA_SETTINGS__MQTTPASSWORD=test -e Z2MA_SETTINGS__BASETOPIC=zigbee carldebilly/zigbee2mqttassistant

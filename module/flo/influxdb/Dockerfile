@@ -1,10 +1,10 @@
-# https://docs.influxdata.com/influxdb/v2.5/reference/release-notes/influxdb
-FROM influxdb:2.5.1-alpine as image_base
+# https://docs.influxdata.com/influxdb/latest/reference/release-notes/influxdb
+FROM influxdb:2.6.1-alpine as image_base
 
 FROM image_base as image_package
 USER root
 RUN apk add --no-cache jq==1.6-r1
-RUN apk add --no-cache curl==7.79.1-r3
+RUN apk add --no-cache curl==7.79.1-r4
 RUN apk add --no-cache netcat-openbsd==1.130-r2
 
 FROM image_package as image_install
