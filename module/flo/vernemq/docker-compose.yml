@@ -24,8 +24,8 @@ services:
     #      - ${SERVICE_DATA_DIR}:/var/lib/vernemq
 
     ports:
+      - ${VERNEMQ_ADMIN_PORT}:8888
       - ${VERNEMQ_PORT}:${VERNEMQ_PORT}
-      - ${VERNEMQ_ADMIN_PORT}:${VERNEMQ_ADMIN_PORT}
     deploy:
       resources:
         limits:
