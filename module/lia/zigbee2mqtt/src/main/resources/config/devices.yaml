@@ -137,32 +137,12 @@
   friendly_name: 'Garden Pedestals Bulb 4'
   homeassistant:
     expire_after: 3600
-'x':
-  friendly_name: 'Garden Pedestals Bulb 5'
-  homeassistant:
-    expire_after: 3600
-'x':
-  friendly_name: 'Garden Pedestals Bulb 6'
-  homeassistant:
-    expire_after: 3600
-'x':
-  friendly_name: 'Garden Pedestals Bulb 7'
-  homeassistant:
-    expire_after: 3600
-'x':
-  friendly_name: 'Garden Pedestals Bulb 8'
-  homeassistant:
-    expire_after: 3600
 '0x00178801097ed42c':
   friendly_name: 'Tree Spotlights Bulb 1'
   homeassistant:
     expire_after: 3600
 '0x0017880109c40c33':
   friendly_name: 'Tree Spotlights Bulb 2'
-  homeassistant:
-    expire_after: 3600
-'x':
-  friendly_name: 'Tree Spotlights Bulb 3'
   homeassistant:
     expire_after: 3600
 '0x9035eafffe404425':
