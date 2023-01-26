@@ -25,6 +25,7 @@ services:
 
     ports:
       - ${VERNEMQ_PORT}:${VERNEMQ_PORT}
+      - ${VERNEMQ_ADMIN_PORT}:${VERNEMQ_ADMIN_PORT}
     deploy:
       resources:
         limits:
