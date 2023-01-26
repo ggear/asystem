@@ -27,7 +27,7 @@ services:
       - ${SERVICE_DATA_DIR}:/app/data
       - /run/udev:/run/udev:ro
     ports:
-      - ${ZIGBEE2MQTT_PORT}:8087
+      - ${ZIGBEE2MQTT_PORT}:${ZIGBEE2MQTT_PORT}
     devices:
       - /dev/ttyACM0:/dev/ttyACM0
     deploy:
