@@ -41,3 +41,11 @@
     - entity: binary_sensor.deck_west_fan_occupancy
       name: Deck West
 ################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
+  title: Door Locks
+  entities:
+    - entity: lock.back_door_lock
+      name: Back Door Lock
+################################################################################
