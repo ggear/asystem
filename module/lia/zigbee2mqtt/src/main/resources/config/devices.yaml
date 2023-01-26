@@ -165,6 +165,10 @@
   friendly_name: 'Edwin Wardrobe Outlet'
   homeassistant:
     expire_after: 3600
+'0x000d6f0011274420':
+  friendly_name: 'Back Door Lock'
+  homeassistant:
+    expire_after: 3600
 '0x00158d0005d9d088':
   friendly_name: 'Home Cube Remote'
   homeassistant:
