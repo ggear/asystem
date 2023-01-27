@@ -46,8 +46,8 @@
 - type: entities
   title: Door Locks
   entities:
-    - entity: lock.back_door_lock
-      name: Back Door Lock
     - entity: lock.front_door_lock
       name: Front Door Lock
+    - entity: lock.back_door_lock
+      name: Back Door Lock
 ################################################################################
