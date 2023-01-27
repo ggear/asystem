@@ -2,20 +2,36 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
 - type: entities
-  title: Door Locks
+  title: Front Door
   entities:
     - entity: lock.front_door_lock
-      name: Front Door Lock
+      name: Action
+################################################################################
+- type: entities
+  title: Back Door
+  entities:
     - entity: lock.back_door_lock
-      name: Back Door Lock
+      name: Action
 ################################################################################
 - type: custom:layout-break
+################################################################################
+- type: entities
+  title: Ada's Room
+  entities:
+    - entity: binary_sensor.uvc_ada_motion
+      name: Motion
 ################################################################################
 - type: picture-entity
   entity: camera.uvc_ada_medium
   camera_view: live
 ################################################################################
 - type: custom:layout-break
+################################################################################
+- type: entities
+  title: Edwin's Room
+  entities:
+    - entity: binary_sensor.uvc_edwin_motion
+      name: Motion
 ################################################################################
 - type: picture-entity
   entity: camera.uvc_edwin_medium
