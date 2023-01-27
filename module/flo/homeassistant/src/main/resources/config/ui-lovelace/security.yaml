@@ -11,25 +11,15 @@
 ################################################################################
 - type: custom:layout-break
 ################################################################################
-- type: entities
-  title: Ada Camera
-  entities:
-    - entity: binary_sensor.uvc_ada_motion
-      name: Motion
-################################################################################
-- type: entities
+- type: picture-entity
   entity: camera.uvc_ada_medium
+  camera_view: live
 ################################################################################
 - type: custom:layout-break
 ################################################################################
-- type: entities
-  title: Edwin Camera
-  entities:
-    - entity: binary_sensor.uvc_edwin_motion
-      name: Motion
-################################################################################
-- type: entities
+- type: picture-entity
   entity: camera.uvc_edwin_medium
+  camera_view: live
 ################################################################################
 - type: custom:layout-break
 ################################################################################
