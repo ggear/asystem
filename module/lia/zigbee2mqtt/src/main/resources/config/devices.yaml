@@ -169,6 +169,10 @@
   friendly_name: 'Back Door Lock'
   homeassistant:
     expire_after: 3600
+'0x000d6f001127f08c':
+  friendly_name: 'Front Door Lock'
+  homeassistant:
+    expire_after: 3600
 '0x00158d0005d9d088':
   friendly_name: 'Home Cube Remote'
   homeassistant:
