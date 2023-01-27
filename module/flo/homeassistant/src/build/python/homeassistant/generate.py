@@ -718,6 +718,8 @@ automation:
                             ).strip() + "\n")
                             if metadata_lovelace_first_display_type == "picture-entity":
                                 metadata_lovelace_file.write("  " + """
+  show_name: false
+  show_state: false
   camera_view: live
                                 """.strip() + "\n")
                         else:
