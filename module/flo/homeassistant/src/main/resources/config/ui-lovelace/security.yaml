@@ -9,27 +9,27 @@
     - entity: lock.back_door_lock
       name: Back Door Lock
 ################################################################################
-- type: picture-entity
-  entity: camera.uvc_ada_medium
-  camera_view: live
+- type: custom:layout-break
 ################################################################################
 - type: entities
-  title: Ada Motion
+  title: Ada Camera
   entities:
     - entity: binary_sensor.uvc_ada_motion
-      name: Ada
+      name: Motion
+################################################################################
+- type: entities
+  entity: camera.uvc_ada_medium
 ################################################################################
 - type: custom:layout-break
 ################################################################################
-- type: picture-entity
-  entity: camera.uvc_edwin_medium
-  camera_view: live
-################################################################################
 - type: entities
-  title: Edwin Motion
+  title: Edwin Camera
   entities:
     - entity: binary_sensor.uvc_edwin_motion
-      name: Edwin
+      name: Motion
+################################################################################
+- type: entities
+  entity: camera.uvc_edwin_medium
 ################################################################################
 - type: custom:layout-break
 ################################################################################
