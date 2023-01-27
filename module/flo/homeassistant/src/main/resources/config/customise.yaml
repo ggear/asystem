@@ -730,6 +730,10 @@ media_player.parents_home:
   friendly_name: 'Parents Home'
 media_player.parents_speaker:
   friendly_name: 'Parents Speaker'
+lock.front_door_lock:
+  friendly_name: 'Front Door Lock'
+lock.back_door_lock:
+  friendly_name: 'Back Door Lock'
 camera.uvc_ada_medium:
   friendly_name: 'Ada'
 binary_sensor.uvc_ada_motion:
@@ -750,7 +754,3 @@ binary_sensor.deck_east_fan_occupancy:
   friendly_name: 'Deck East'
 binary_sensor.deck_west_fan_occupancy:
   friendly_name: 'Deck West'
-lock.front_door_lock:
-  friendly_name: 'Front Door Lock'
-lock.back_door_lock:
-  friendly_name: 'Back Door Lock'
