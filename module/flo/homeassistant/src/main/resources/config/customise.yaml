@@ -678,6 +678,9 @@ switch.rack_modem:
 sensor.back_door_lock_battery:
   friendly_name: 'Yale Back Door Lock'
   icon: 'mdi:battery-30'
+sensor.front_door_lock_battery:
+  friendly_name: 'Yale Front Door Lock'
+  icon: 'mdi:battery-30'
 sensor.bertram_2_office_pantry_battery_percent:
   friendly_name: 'Netatmo Pantry'
   icon: 'mdi:battery-30'
@@ -749,3 +752,5 @@ binary_sensor.deck_west_fan_occupancy:
   friendly_name: 'Deck West'
 lock.back_door_lock:
   friendly_name: 'Back Door Lock'
+lock.front_door_lock:
+  friendly_name: 'Front Door Lock'
