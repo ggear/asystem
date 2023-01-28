@@ -44,7 +44,7 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
-  title: House Motion
+  title: House Occupancy
   entities:
     - entity: binary_sensor.ada_fan_occupancy
       name: Ada
