@@ -18,7 +18,7 @@ for FILE in illuminance.yaml lovelace.yaml weather.yaml; do
     sed -i '' 's/gosford/gooseberry_hill/g' src/main/resources/config/www/custom_ui/bom-weather-card/${FILE}
 done
 
-pull_repo $(pwd) homeassistant bom-radar-card makin-things/bom-radar-card v1.5.0 ${1}
+pull_repo $(pwd) homeassistant bom-radar-card makin-things/bom-radar-card v2.1.1 ${1}
 rm -rf src/main/resources/config/www/custom_ui/bom-radar-card
 mkdir -p src/main/resources/config/www/custom_ui/bom-radar-card &&
   cp -rvf ../../../.deps/homeassistant/bom-radar-card/dist/* src/main/resources/config/www/custom_ui/bom-radar-card &&
@@ -45,7 +45,7 @@ rm -rf src/main/resources/config/custom_components/variable
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/variables-component/custom_components/variable src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant sun2-component pnbruckner/ha-sun2 2.0.2 ${1}
+pull_repo $(pwd) homeassistant sun2-component pnbruckner/ha-sun2 2.2.1 ${1}
 rm -rf src/main/resources/config/custom_components/sun2
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/sun2-component/custom_components/sun2 src/main/resources/config/custom_components
@@ -55,12 +55,12 @@ rm -rf src/main/resources/config/custom_components/average
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/average-component/custom_components/average src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant bureau_of_meteorology-component bremor/bureau_of_meteorology 0.10.3 ${1}
+pull_repo $(pwd) homeassistant bureau_of_meteorology-component bremor/bureau_of_meteorology 1.1.18 ${1}
 rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant powercalc-component bramstroker/homeassistant-powercalc v0.21.1 ${1}
+pull_repo $(pwd) homeassistant powercalc-component bramstroker/homeassistant-powercalc v0.26.1 ${1}
 rm -rf src/main/resources/config/custom_components/powercalc
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/powercalc-component/custom_components/powercalc src/main/resources/config/custom_components

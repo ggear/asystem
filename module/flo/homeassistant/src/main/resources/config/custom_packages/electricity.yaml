@@ -1,6 +1,6 @@
 ######################################################################################
 powercalc:
-  scan_interval: 00:05:00
+  force_update_frequency: 00:05:00
   create_utility_meters: false
   utility_meter_types:
     - daily
