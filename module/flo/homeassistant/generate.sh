@@ -65,7 +65,7 @@ rm -rf src/main/resources/config/custom_components/powercalc
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/powercalc-component/custom_components/powercalc src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting 1.0.15 ${1}
+pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting 1.4.1 ${1}
 rm -rf src/main/resources/config/custom_components/adaptive_lighting
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting src/main/resources/config/custom_components
