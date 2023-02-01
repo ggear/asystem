@@ -6,6 +6,7 @@ homeassistant:
   packages: !include_dir_named custom_packages
   internal_url: !env_var HOMEASSISTANT_INTERNAL_URL
   external_url: !env_var HOMEASSISTANT_EXTERNAL_URL
+  country: AU
 #######################################################################################
 http:
   use_x_forwarded_for: true
