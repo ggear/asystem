@@ -30,10 +30,10 @@ rm -rf src/main/resources/config/www/custom_ui/layout-card
 mkdir -p src/main/resources/config/www/custom_ui/layout-card &&
   cp -rvf ../../../.deps/homeassistant/lovelace-layout-card/layout-card.js src/main/resources/config/www/custom_ui/layout-card
 
-pull_repo $(pwd) homeassistant apexcharts-card romrider/apexcharts-card v1.10.0 ${1}
+pull_repo $(pwd) homeassistant apexcharts-card romrider/apexcharts-card v0.11.0 ${1}
 rm -rf src/main/resources/config/www/custom_ui/apexcharts-card
 mkdir -p src/main/resources/config/www/custom_ui/apexcharts-card &&
-  wget -q -O src/main/resources/config/www/custom_ui/apexcharts-card/apexcharts-card.js https://github.com/RomRider/apexcharts-card/releases/download/v1.10.0/apexcharts-card.js
+  wget -q -O src/main/resources/config/www/custom_ui/apexcharts-card/apexcharts-card.js https://github.com/RomRider/apexcharts-card/releases/download/v1.11.0/apexcharts-card.js
 
 pull_repo $(pwd) homeassistant mini-graph-card kalkih/mini-graph-card v0.10.0 ${1}
 rm -rf src/main/resources/config/www/custom_ui/mini-graph-card
