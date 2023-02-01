@@ -1,6 +1,4 @@
 #######################################################################################
 withings:
-  client_id: !env_var WITHINGS_CLIENTID
-  client_secret: !env_var WITHINGS_CONSUMERSECRET
   use_webhook: true
 #######################################################################################

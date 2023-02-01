@@ -74,30 +74,49 @@ sensor:
         linear:
           min_power: 0.5
           max_power: 16.3
-  - platform: powercalc
-    create_utility_meters: true
-    create_group: hue_all_lights
-    include:
-      template: >
-        {{
-          states | selectattr('entity_id', 'search', 'light.hue') | map(attribute='entity_id') | list
-        }}
+
+  # TODO: START - Update for new zigbee2mqtt Hue light names
+  #  - platform: powercalc
+  #    create_utility_meters: true
+  #    create_group: hue_all_lights
+  #    include:
+  #      template: >
+  #        {{
+  #          states | selectattr('entity_id', 'search', 'light.hue') | map(attribute='entity_id') | list
+  #        }}
+  #  - platform: template
+  #    sensors:
+  #      home_lights_power:
+  #        unique_id: home_lights_power
+  #        value_template: >
+  #          {{ (
+  #              states('sensor.senseme_all_lights_power') | float(0) +
+  #              states('sensor.hue_all_lights_power') | float(0)
+  #          ) | round(1) }}
+  #      home_lights_energy_daily:
+  #        unique_id: home_lights_energy_daily
+  #        value_template: >
+  #          {{ (
+  #              states('sensor.senseme_all_lights_energy_daily') | float(0) +
+  #              states('sensor.hue_all_lights_energy_daily') | float(0)
+  #
+  #          ) | round(1) }}
   - platform: template
     sensors:
       home_lights_power:
         unique_id: home_lights_power
         value_template: >
           {{ (
-              states('sensor.senseme_all_lights_power') | float(0) +
-              states('sensor.hue_all_lights_power') | float(0)
+              states('sensor.senseme_all_lights_power') | float(0)
           ) | round(1) }}
       home_lights_energy_daily:
         unique_id: home_lights_energy_daily
         value_template: >
           {{ (
-              states('sensor.senseme_all_lights_energy_daily') | float(0) +
-              states('sensor.hue_all_lights_energy_daily') | float(0)
+              states('sensor.senseme_all_lights_energy_daily') | float(0)
           ) | round(1) }}
+  # TODO: END
+
   ####################################################################################
   - platform: template
     sensors:
