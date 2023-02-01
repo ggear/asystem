@@ -115,7 +115,7 @@ lovelace:
       require_admin: true
 #######################################################################################
 logger:
-  default: warn # critical/fatal/error/warning/warn/info/debug/notset
+  default: error # critical/fatal/error/warning/warn/info/debug/notset
   logs:
     homeassistant.core: warn
     homeassistant.loader: error
