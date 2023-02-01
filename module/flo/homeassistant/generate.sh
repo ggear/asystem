@@ -50,7 +50,7 @@ rm -rf src/main/resources/config/custom_components/sun2
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/sun2-component/custom_components/sun2 src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant average-component limych/ha-average 2.2.3 ${1}
+pull_repo $(pwd) homeassistant average-component limych/ha-average 2.3.0 ${1}
 rm -rf src/main/resources/config/custom_components/average
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/average-component/custom_components/average src/main/resources/config/custom_components
