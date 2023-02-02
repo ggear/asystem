@@ -716,6 +716,8 @@ media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:
   friendly_name: 'Edwin Home'
+media_player.parents_home:
+  friendly_name: 'Parents Home'
 media_player.lg_webos_smart_tv:
   friendly_name: 'Lounge TV'
 media_player.parents_tv:
@@ -726,10 +728,10 @@ media_player.kitchen_home:
   friendly_name: 'Kitchen Home'
 media_player.kitchen_speaker:
   friendly_name: 'Kitchen Speaker'
-media_player.parents_home:
-  friendly_name: 'Parents Home'
 media_player.parents_speaker:
   friendly_name: 'Parents Speaker'
+media_player.parents_tv_speaker:
+  friendly_name: 'Parents TV Speaker'
 lock.front_door_lock:
   friendly_name: 'Action'
 lock.back_door_lock:
