@@ -246,7 +246,7 @@ automation:
             - fan.lounge_fan
             - fan.deck_fan
   #####################################################################################
-  
+
   # TODO: START - Disable water heater until smart plug installed
   #  - id: routine_water_heater_booster_on
   #    alias: "Water Heating: Turn on water heater booster"
