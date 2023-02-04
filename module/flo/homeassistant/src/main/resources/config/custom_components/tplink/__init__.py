@@ -167,7 +167,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_fix_dimmer_unique_id(hass, entry, device)
 
     hass.data[DOMAIN][entry.entry_id] = TPLinkDataUpdateCoordinator(hass, device)
-    hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+
+    # HACK: Update for haas-2023.2 deprecating async_setup_platforms
+    # hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     return True
 
