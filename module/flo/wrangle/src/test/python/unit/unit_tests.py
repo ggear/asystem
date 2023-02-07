@@ -26,7 +26,7 @@ class WrangleTest(unittest.TestCase):
                         enable_rerun=False,
                         enable_random_rows=True,
                         disable_write_stdout=True,
-                        disable_data_delta=True,
+                        disable_data_delta=False,
                         disable_file_upload=True,
                         disable_file_download=False,
                         )
