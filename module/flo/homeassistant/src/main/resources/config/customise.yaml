@@ -718,6 +718,8 @@ media_player.edwin_home:
   friendly_name: 'Edwin Home'
 media_player.parents_home:
   friendly_name: 'Parents Home'
+media_player.lounge_home:
+  friendly_name: 'Lounge Home'
 media_player.lg_webos_smart_tv:
   friendly_name: 'Lounge TV'
 media_player.parents_tv:
