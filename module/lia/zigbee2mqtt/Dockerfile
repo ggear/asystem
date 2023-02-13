@@ -1,5 +1,5 @@
 # https://github.com/Koenkk/zigbee2mqtt/releases
-FROM koenkk/zigbee2mqtt:1.30.0 as image_base
+FROM koenkk/zigbee2mqtt:1.30.1 as image_base
 
 FROM image_base as image_package
 USER root

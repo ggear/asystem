@@ -169,8 +169,16 @@
   friendly_name: 'Front Door Lock'
   homeassistant:
     expire_after: 3600
+'0x00124b0029113713':
+  friendly_name: 'Front Door Sensor'
+  homeassistant:
+    expire_after: 3600
 '0x000d6f0011274420':
   friendly_name: 'Back Door Lock'
+  homeassistant:
+    expire_after: 3600
+'0x00124b0029119f9a':
+  friendly_name: 'Back Door Sensor'
   homeassistant:
     expire_after: 3600
 '0x00158d0005d9d088':

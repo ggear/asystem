@@ -284,7 +284,7 @@ automation:
 # cast:
 #  known_hosts: {}
         """.format(
-            ','.join(map(str, [metadata_media_dict['connection_ip'] for metadata_media_dict in metadata_media_google_dicts]))
+            ','.join(sorted(map(str, [metadata_media_dict['connection_ip'] for metadata_media_dict in metadata_media_google_dicts])))
         ).strip() + "\n")
         metadata_media_file.write("""
 #######################################################################################

@@ -28,7 +28,7 @@ DIR_PHOTOS_DB = "/Users/graham/Pictures/Photos Library.photoslibrary"
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
 
-    export_root_path = os.path.join(DIR_ROOT, "../../../../../Backup/photos/photoslibrary")
+    export_root_path = os.path.join(DIR_ROOT, "../../../../../Backup/photos/photo_album_draft")
     shutil.rmtree(export_root_path, ignore_errors=True)
     os.mkdir(export_root_path)
     photos_db = osxphotos.PhotosDB(os.path.expanduser(DIR_PHOTOS_DB))
@@ -40,7 +40,8 @@ if __name__ == "__main__":
                 for photo in album.photos:
                     if not photo.ismissing:
                         album_name = sanitize_filepath(album.title, platform="auto") \
-                            .translate(str.maketrans('', '', string.punctuation)).replace(" ", "_")
+                            .translate(str.maketrans('', '', string.punctuation)).replace(" ", "_") \
+                            .encode('ascii', 'ignore').decode('UTF-8')
                         export_path = os.path.abspath(os.path.join(export_root_path, album_name))
                         if not os.path.isdir(export_path):
                             os.makedirs(export_path)
@@ -66,9 +67,9 @@ if __name__ == "__main__":
                         subprocess.run(
                             ["exiftool", "-q", "-wm", "w", "-m", "-overwrite_original", "-AllDates={} {:02d}:{:02d}:{:02d}".format(
                                 export_date.strftime("%Y:%m:%d"),
-                                12,
-                                int(index / 60),
-                                index % 60
+                                12 + int(index / 60),
+                                index % 60,
+                                0
                             ), export_info.exported[0]])
                         index += 1
                         print("Build generate script [photos] image [{}] from album [{}] exported to {}"
