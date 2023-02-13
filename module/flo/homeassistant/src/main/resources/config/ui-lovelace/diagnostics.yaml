@@ -147,10 +147,16 @@
   title: Battery Charge
   entities:
     - entity: sensor.front_door_lock_battery
-      name: Yale Front Door
+      name: Yale Front Door Lock
       icon: mdi:battery-30
     - entity: sensor.back_door_lock_battery
-      name: Yale Back Door
+      name: Yale Back Door Lock
+      icon: mdi:battery-30
+    - entity: sensor.front_door_sensor_battery
+      name: Sonoff Front Door Sensor
+      icon: mdi:battery-30
+    - entity: sensor.back_door_sensor_battery
+      name: Sonoff Back Door Sensor
       icon: mdi:battery-30
     - entity: sensor.bertram_2_office_pantry_battery_percent
       name: Netatmo Pantry

@@ -676,10 +676,16 @@ switch.rack_modem:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
 sensor.front_door_lock_battery:
-  friendly_name: 'Yale Front Door'
+  friendly_name: 'Yale Front Door Lock'
   icon: 'mdi:battery-30'
 sensor.back_door_lock_battery:
-  friendly_name: 'Yale Back Door'
+  friendly_name: 'Yale Back Door Lock'
+  icon: 'mdi:battery-30'
+sensor.front_door_sensor_battery:
+  friendly_name: 'Sonoff Front Door Sensor'
+  icon: 'mdi:battery-30'
+sensor.back_door_sensor_battery:
+  friendly_name: 'Sonoff Back Door Sensor'
   icon: 'mdi:battery-30'
 sensor.bertram_2_office_pantry_battery_percent:
   friendly_name: 'Netatmo Pantry'
@@ -736,8 +742,12 @@ media_player.parents_tv_speaker:
   friendly_name: 'Parents TV Speaker'
 lock.front_door_lock:
   friendly_name: 'Action'
+binary_sensor.front_door_sensor:
+  friendly_name: 'Status'
 lock.back_door_lock:
   friendly_name: 'Action'
+binary_sensor.back_door_sensor:
+  friendly_name: 'Status'
 binary_sensor.uvc_ada_motion:
   friendly_name: 'Motion'
 camera.uvc_ada_medium:

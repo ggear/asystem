@@ -6,12 +6,16 @@
   entities:
     - entity: lock.front_door_lock
       name: Action
+    - entity: binary_sensor.front_door_sensor
+      name: Status
 ################################################################################
 - type: entities
   title: Back Door
   entities:
     - entity: lock.back_door_lock
       name: Action
+    - entity: binary_sensor.back_door_sensor
+      name: Status
 ################################################################################
 - type: custom:layout-break
 ################################################################################
