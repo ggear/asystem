@@ -146,10 +146,10 @@
 - type: entities
   title: Battery Charge
   entities:
-    - entity: sensor.front_door_lock_battery
+    - entity: sensor.front_door_sensor_battery
       name: Yale Front Door Lock
       icon: mdi:battery-30
-    - entity: sensor.back_door_lock_battery
+    - entity: sensor.back_door_sensor_battery
       name: Yale Back Door Lock
       icon: mdi:battery-30
     - entity: sensor.front_door_sensor_battery
