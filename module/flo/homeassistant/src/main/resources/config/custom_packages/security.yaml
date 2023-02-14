@@ -1,18 +1,86 @@
 #######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
 stream:
 #######################################################################################
-
-# Does not work since at least Nov 2020
-#unifiprotect:
-#  host: 10.0.0.1
-#  username: protect
-#  password: test
-#
-#camera:
-#- platform: unifiprotect
-#
-#sensor:
-#- platform: unifiprotect
-#
-#binary_sensor:
-#- platform: unifiprotect
+input_boolean:
+  #####################################################################################
+  home_security:
+    name: Security
+    initial: off
+  #####################################################################################
+  front_door_lock_security:
+    name: Front Door Lock Security
+    initial: off
+  #####################################################################################
+  back_door_lock_security:
+    name: Back Door Lock Security
+    initial: off
+automation:
+  #####################################################################################
+  - id: routine_home_security_on
+    alias: "Routine: Put home into Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_security
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+  #####################################################################################
+  - id: routine_home_security_off
+    alias: "Routine: Take home out of Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_security
+        from: 'on'
+        to: 'off'
+    condition: [ ]
+    action:
+  #####################################################################################
+  - id: routine_front_door_lock_security_on
+    alias: "Routine: Put front door lock into Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.front_door_lock_security
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+  #####################################################################################
+  - id: routine_back_door_lock_security_on
+    alias: "Routine: Put back door lock into Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.back_door_lock_security
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+  #####################################################################################
+  - id: routine_front_door_lock_security_off
+    alias: "Routine: Take front door lock out of Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.front_door_lock_security
+        from: 'on'
+        to: 'off'
+    condition: [ ]
+    action:
+  #####################################################################################
+  - id: routine_back_door_lock_security_off
+    alias: "Routine: Take back door lock out of Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.back_door_lock_security
+        from: 'on'
+        to: 'off'
+    condition: [ ]
+    action:
+#######################################################################################

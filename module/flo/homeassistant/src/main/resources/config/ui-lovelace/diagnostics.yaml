@@ -148,40 +148,28 @@
   entities:
     - entity: sensor.front_door_sensor_battery
       name: Yale Front Door Lock
-      icon: mdi:battery-30
     - entity: sensor.back_door_sensor_battery
       name: Yale Back Door Lock
-      icon: mdi:battery-30
     - entity: sensor.front_door_sensor_battery
       name: Sonoff Front Door Sensor
-      icon: mdi:battery-30
     - entity: sensor.back_door_sensor_battery
       name: Sonoff Back Door Sensor
-      icon: mdi:battery-30
     - entity: sensor.bertram_2_office_pantry_battery_percent
       name: Netatmo Pantry
-      icon: mdi:battery-30
     - entity: sensor.bertram_2_office_lounge_battery_percent
       name: Netatmo Lounge
-      icon: mdi:battery-30
     - entity: sensor.bertram_2_office_dining_battery_percent
       name: Netatmo Dining
-      icon: mdi:battery-30
     - entity: sensor.bertram_2_office_basement_battery_percent
       name: Netatmo Basement
-      icon: mdi:battery-30
     - entity: sensor.home_cube_remote_battery
       name: Xiaomi Cube Remote
-      icon: mdi:battery-30
     - entity: sensor.parents_speaker_battery
       name: Sonos Parents
-      icon: mdi:battery-30
     - entity: sensor.kitchen_home_battery
       name: Sonos Kitchen
-      icon: mdi:battery-30
-    - entity: sensor.weatherstation_console_battery_voltage
-      name: Davis Console Voltage
-      icon: mdi:battery-30
+    - entity: sensor.weatherstation_console_battery_percent
+      name: Davis Console
 ################################################################################
 - type: custom:layout-break
 ################################################################################

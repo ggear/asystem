@@ -61,10 +61,6 @@ input_boolean.home_reset:
   name: Home Reset
   aliases: ['Home Reset Mode', 'Reset', 'Reset Mode']
   room: Home
-switch.bathroom_rails:
-  name: Bathroom Towel Rails
-  aliases: ['Towel Rails']
-  room: Bathroom
 fan.ada_fan:
   name: Adas Fan
   aliases: ['Fan']
@@ -181,6 +177,10 @@ light.tree_spotlights:
   name: Tree Lights
   aliases: ['Tree Spotlights', 'Lights', 'Spotlights']
   room: Tree
+switch.bathroom_rails:
+  name: Bathroom Towel Rails
+  aliases: ['Towel Rails']
+  room: Bathroom
 fan.lounge_air_purifier:
   name: Lounge Air Purifier
   aliases: ['Air Purifier']

@@ -3,8 +3,10 @@
 ################################################################################
 - type: entities
   title: Routines
-  show_header_toggle: false
   entities:
+    - entity: input_boolean.home_security
+      name: Secure
+      icon: mdi:home-lock
     - entity: input_boolean.home_movie
       name: Movie
       icon: mdi:youtube-tv
@@ -14,9 +16,6 @@
     - entity: input_boolean.home_reset
       name: Reset
       icon: mdi:refresh-circle
-    - entity: switch.bathroom_rails
-      name: Towel Rails
-      icon: mdi:radiator
 ################################################################################
 - type: custom:layout-break
 ################################################################################
@@ -118,6 +117,14 @@
       icon: mdi:lightbulb-group
 ################################################################################
 - type: custom:layout-break
+################################################################################
+- type: entities
+  title: Heating & Cooling
+  show_header_toggle: false
+  entities:
+    - entity: switch.bathroom_rails
+      name: Towel Rails
+      icon: mdi:radiator
 ################################################################################
 - type: entities
   title: Air Purifiers

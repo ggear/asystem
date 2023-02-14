@@ -1,0 +1,9 @@
+######################################################################################
+compensation:
+  weatherstation_console_battery_percent:
+    source: sensor.weatherstation_console_battery_voltage
+    unit_of_measurement: "%"
+    data_points:
+      - [4.5, 100]
+      - [2.8, 0]
+######################################################################################

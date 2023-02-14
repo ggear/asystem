@@ -326,6 +326,103 @@ sonos:
 #######################################################################################
             """.strip() + "\n")
 
+        # Build security YAML
+        metadata_security_df = metadata_df[
+            (metadata_df["index"] > 0) &
+            (metadata_df["entity_status"] == "Enabled") &
+            (metadata_df["entity_namespace"] == "lock") &
+            (metadata_df["unique_id"].str.len() > 0)
+            ]
+        metadata_security_dicts = [row.dropna().to_dict() for index, row in metadata_security_df.iterrows()]
+        metadata_security_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/security.yaml"))
+        with open(metadata_security_path, 'w') as metadata_security_file:
+            metadata_security_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+stream:
+#######################################################################################
+input_boolean:
+  #####################################################################################
+  home_security:
+    name: Security
+    initial: off
+            """.strip() + "\n")
+            for metadata_security_dict in metadata_security_dicts:
+                metadata_security_file.write("  " + """
+  #####################################################################################
+  {}_security:
+    name: {} Security
+    initial: off
+            """.format(
+                    metadata_security_dict["unique_id"],
+                    metadata_security_dict["unique_id"].replace("_", " ").title(),
+                ).strip() + "\n")
+            metadata_security_file.write("""
+automation:
+  #####################################################################################
+  - id: routine_home_security_on
+    alias: "Routine: Put home into Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_security
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+  #####################################################################################
+  - id: routine_home_security_off
+    alias: "Routine: Take home out of Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_security
+        from: 'on'
+        to: 'off'
+    condition: [ ]
+    action:
+            """.strip() + "\n")
+            for metadata_security_dict in metadata_security_dicts:
+                metadata_security_file.write("  " + """
+  #####################################################################################
+  - id: routine_{}_security_on
+    alias: "Routine: Put {} into Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.{}_security
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+            """.format(
+                    metadata_security_dict["unique_id"],
+                    metadata_security_dict["unique_id"].replace("_", " "),
+                    metadata_security_dict["unique_id"],
+                ).strip() + "\n")
+            for metadata_security_dict in metadata_security_dicts:
+                metadata_security_file.write("  " + """
+  #####################################################################################
+  - id: routine_{}_security_off
+    alias: "Routine: Take {} out of Security mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.{}_security
+        from: 'on'
+        to: 'off'
+    condition: [ ]
+    action:
+            """.format(
+                    metadata_security_dict["unique_id"],
+                    metadata_security_dict["unique_id"].replace("_", " "),
+                    metadata_security_dict["unique_id"],
+                ).strip() + "\n")
+            metadata_security_file.write("""      
+#######################################################################################
+                """.strip() + "\n")
+
     # Build lighting YAML
     metadata_lighting_df = metadata_df[
         (metadata_df["index"] > 0) &
