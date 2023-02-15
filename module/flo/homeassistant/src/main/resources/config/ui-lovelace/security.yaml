@@ -9,7 +9,7 @@
       icon: mdi:home-lock
     - entity: lock.front_door_lock
       name: Action
-    - entity: binary_sensor.template_front_door_sensor_contact_preserved
+    - entity: binary_sensor.template_front_door_sensor_contact_last
       name: Status
 ################################################################################
 - type: entities
@@ -20,7 +20,7 @@
       icon: mdi:home-lock
     - entity: lock.back_door_lock
       name: Action
-    - entity: binary_sensor.template_back_door_sensor_contact_preserved
+    - entity: binary_sensor.template_back_door_sensor_contact_last
       name: Status
 ################################################################################
 - type: custom:layout-break

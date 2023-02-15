@@ -86,21 +86,48 @@ automation:
 template:
   - binary_sensor:
       #################################################################################                
-      - unique_id: front_door_sensor_contact_preserved
+      - unique_id: front_door_sensor_contact_last
         device_class: door
         state: >-
-          {% if (states('binary_sensor.template_front_door_sensor_contact_preserved' | replace("template_", "") | replace("_preserved", "")) | lower) not in ['unavailable', 'unknown', 'none', 'n/a'] %}
-            {{ states('binary_sensor.template_front_door_sensor_contact_preserved' | replace("template_", "") | replace("_preserved", "")) }}
+          {% if (states('binary_sensor.template_front_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) | lower) not in ['unavailable', 'unknown', 
+          'none', 'n/a'] %}
+            {{ states('binary_sensor.template_front_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) }}
           {% else %}
-            {{ states('binary_sensor.template_front_door_sensor_contact_preserved') }}
+            {{ states('binary_sensor.template_front_door_sensor_contact_last') }}
           {% endif %}
       #################################################################################                
-      - unique_id: back_door_sensor_contact_preserved
+      - unique_id: back_door_sensor_contact_last
         device_class: door
         state: >-
-          {% if (states('binary_sensor.template_back_door_sensor_contact_preserved' | replace("template_", "") | replace("_preserved", "")) | lower) not in ['unavailable', 'unknown', 'none', 'n/a'] %}
-            {{ states('binary_sensor.template_back_door_sensor_contact_preserved' | replace("template_", "") | replace("_preserved", "")) }}
+          {% if (states('binary_sensor.template_back_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) | lower) not in ['unavailable', 'unknown', 
+          'none', 'n/a'] %}
+            {{ states('binary_sensor.template_back_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) }}
           {% else %}
-            {{ states('binary_sensor.template_back_door_sensor_contact_preserved') }}
+            {{ states('binary_sensor.template_back_door_sensor_contact_last') }}
+          {% endif %}
+  - sensor:
+      #################################################################################                
+      - unique_id: front_door_sensor_battery_last
+        device_class: battery
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >-
+          {% if (states('sensor.template_front_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) | lower) not in ['unavailable', 'unknown', 
+          'none', 'n/a'] %}
+            {{ states('sensor.template_front_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) }}
+          {% else %}
+            {{ states('sensor.template_front_door_sensor_battery_last') }}
+          {% endif %}
+      #################################################################################                
+      - unique_id: back_door_sensor_battery_last
+        device_class: battery
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >-
+          {% if (states('sensor.template_back_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) | lower) not in ['unavailable', 'unknown', 
+          'none', 'n/a'] %}
+            {{ states('sensor.template_back_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) }}
+          {% else %}
+            {{ states('sensor.template_back_door_sensor_battery_last') }}
           {% endif %}
 #######################################################################################

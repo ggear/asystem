@@ -146,13 +146,13 @@
 - type: entities
   title: Battery Charge
   entities:
-    - entity: sensor.front_door_sensor_battery
+    - entity: sensor.front_door_lock_battery
       name: Yale Front Door Lock
-    - entity: sensor.back_door_sensor_battery
+    - entity: sensor.back_door_lock_battery
       name: Yale Back Door Lock
-    - entity: sensor.front_door_sensor_battery
+    - entity: sensor.template_front_door_sensor_battery_last
       name: Sonoff Front Door Sensor
-    - entity: sensor.back_door_sensor_battery
+    - entity: sensor.template_back_door_sensor_battery_last
       name: Sonoff Back Door Sensor
     - entity: sensor.home_cube_remote_battery
       name: Xiaomi Cube Remote

@@ -436,8 +436,9 @@ template:
       - unique_id: {}
         device_class: door
         state: >-
-          {{% if (states('binary_sensor.{}' | replace("template_", "") | replace("_preserved", "")) | lower) not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
-            {{{{ states('binary_sensor.{}' | replace("template_", "") | replace("_preserved", "")) }}}}
+          {{% if (states('binary_sensor.{}' | replace("template_", "") | replace("_last", "")) | lower) not in ['unavailable', 'unknown', 
+          'none', 'n/a'] %}}
+            {{{{ states('binary_sensor.{}' | replace("template_", "") | replace("_last", "")) }}}}
           {{% else %}}
             {{{{ states('binary_sensor.{}') }}}}
           {{% endif %}}
@@ -446,6 +447,29 @@ template:
                     metadata_contact_dict["unique_id"],
                     metadata_contact_dict["unique_id"],
                     metadata_contact_dict["unique_id"],
+                ).strip() + "\n")
+            metadata_security_file.write("  " + """
+  - sensor:
+            """.strip() + "\n")
+            for metadata_contact_dict in metadata_contact_dicts:
+                metadata_security_file.write("      " + """
+      #################################################################################                
+      - unique_id: {}
+        device_class: battery
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >-
+          {{% if (states('sensor.{}' | replace("template_", "") | replace("_last", "")) | lower) not in ['unavailable', 'unknown', 
+          'none', 'n/a'] %}}
+            {{{{ states('sensor.{}' | replace("template_", "") | replace("_last", "")) }}}}
+          {{% else %}}
+            {{{{ states('sensor.{}') }}}}
+          {{% endif %}}
+            """.format(
+                    metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", ""),
+                    metadata_contact_dict["unique_id"].replace("contact", "battery"),
+                    metadata_contact_dict["unique_id"].replace("contact", "battery"),
+                    metadata_contact_dict["unique_id"].replace("contact", "battery"),
                 ).strip() + "\n")
             metadata_security_file.write("""      
 #######################################################################################

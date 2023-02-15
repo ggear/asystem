@@ -678,13 +678,13 @@ switch.roof_network_switch:
 switch.rack_modem:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
-sensor.front_door_sensor_battery:
+sensor.front_door_lock_battery:
   friendly_name: 'Yale Front Door Lock'
-sensor.back_door_sensor_battery:
+sensor.back_door_lock_battery:
   friendly_name: 'Yale Back Door Lock'
-sensor.front_door_sensor_battery:
+sensor.template_front_door_sensor_battery_last:
   friendly_name: 'Sonoff Front Door Sensor'
-sensor.back_door_sensor_battery:
+sensor.template_back_door_sensor_battery_last:
   friendly_name: 'Sonoff Back Door Sensor'
 sensor.home_cube_remote_battery:
   friendly_name: 'Xiaomi Cube Remote'
@@ -741,14 +741,14 @@ input_boolean.front_door_lock_security:
   icon: 'mdi:home-lock'
 lock.front_door_lock:
   friendly_name: 'Action'
-binary_sensor.template_front_door_sensor_contact_preserved:
+binary_sensor.template_front_door_sensor_contact_last:
   friendly_name: 'Status'
 input_boolean.back_door_lock_security:
   friendly_name: 'Secure'
   icon: 'mdi:home-lock'
 lock.back_door_lock:
   friendly_name: 'Action'
-binary_sensor.template_back_door_sensor_contact_preserved:
+binary_sensor.template_back_door_sensor_contact_last:
   friendly_name: 'Status'
 binary_sensor.uvc_ada_motion:
   friendly_name: 'Motion'
