@@ -83,4 +83,24 @@ automation:
         to: 'off'
     condition: [ ]
     action:
+template:
+  - binary_sensor:
+      #################################################################################                
+      - unique_id: front_door_sensor_contact_preserved
+        device_class: door
+        state: >-
+          {% if states('binary_sensor.template_front_door_sensor_contact_preserved' | replace("template_", "") | replace("_preserved", "") ) | lower not in ['unavailable', 'unknown', 'none', 'n/a'] %}
+            {{ states('binary_sensor.template_front_door_sensor_contact_preserved' | replace("template_", "") | replace("_preserved", "")) }}
+          {% else %}
+            {{ states('sensor.template_front_door_sensor_contact_preserved') }}
+          {% endif %}
+      #################################################################################                
+      - unique_id: back_door_sensor_contact_preserved
+        device_class: door
+        state: >-
+          {% if states('binary_sensor.template_back_door_sensor_contact_preserved' | replace("template_", "") | replace("_preserved", "") ) | lower not in ['unavailable', 'unknown', 'none', 'n/a'] %}
+            {{ states('binary_sensor.template_back_door_sensor_contact_preserved' | replace("template_", "") | replace("_preserved", "")) }}
+          {% else %}
+            {{ states('sensor.template_back_door_sensor_contact_preserved') }}
+          {% endif %}
 #######################################################################################

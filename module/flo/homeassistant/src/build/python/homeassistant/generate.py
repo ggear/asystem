@@ -327,13 +327,20 @@ sonos:
             """.strip() + "\n")
 
         # Build security YAML
-        metadata_security_df = metadata_df[
+        metadata_lock_df = metadata_df[
             (metadata_df["index"] > 0) &
             (metadata_df["entity_status"] == "Enabled") &
             (metadata_df["entity_namespace"] == "lock") &
             (metadata_df["unique_id"].str.len() > 0)
             ]
-        metadata_security_dicts = [row.dropna().to_dict() for index, row in metadata_security_df.iterrows()]
+        metadata_lock_dicts = [row.dropna().to_dict() for index, row in metadata_lock_df.iterrows()]
+        metadata_contact_df = metadata_df[
+            (metadata_df["index"] > 0) &
+            (metadata_df["entity_status"] == "Enabled") &
+            (metadata_df["device_model"] == "Contact Sensor") &
+            (metadata_df["unique_id"].str.len() > 0)
+            ]
+        metadata_contact_dicts = [row.dropna().to_dict() for index, row in metadata_contact_df.iterrows()]
         metadata_security_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/security.yaml"))
         with open(metadata_security_path, 'w') as metadata_security_file:
             metadata_security_file.write("""
@@ -348,15 +355,15 @@ input_boolean:
     name: Security
     initial: off
             """.strip() + "\n")
-            for metadata_security_dict in metadata_security_dicts:
+            for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("  " + """
   #####################################################################################
   {}_security:
     name: {} Security
     initial: off
             """.format(
-                    metadata_security_dict["unique_id"],
-                    metadata_security_dict["unique_id"].replace("_", " ").title(),
+                    metadata_lock_dict["unique_id"],
+                    metadata_lock_dict["unique_id"].replace("_", " ").title(),
                 ).strip() + "\n")
             metadata_security_file.write("""
 automation:
@@ -383,7 +390,7 @@ automation:
     condition: [ ]
     action:
             """.strip() + "\n")
-            for metadata_security_dict in metadata_security_dicts:
+            for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("  " + """
   #####################################################################################
   - id: routine_{}_security_on
@@ -397,11 +404,11 @@ automation:
     condition: [ ]
     action:
             """.format(
-                    metadata_security_dict["unique_id"],
-                    metadata_security_dict["unique_id"].replace("_", " "),
-                    metadata_security_dict["unique_id"],
+                    metadata_lock_dict["unique_id"],
+                    metadata_lock_dict["unique_id"].replace("_", " "),
+                    metadata_lock_dict["unique_id"],
                 ).strip() + "\n")
-            for metadata_security_dict in metadata_security_dicts:
+            for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("  " + """
   #####################################################################################
   - id: routine_{}_security_off
@@ -415,9 +422,30 @@ automation:
     condition: [ ]
     action:
             """.format(
-                    metadata_security_dict["unique_id"],
-                    metadata_security_dict["unique_id"].replace("_", " "),
-                    metadata_security_dict["unique_id"],
+                    metadata_lock_dict["unique_id"],
+                    metadata_lock_dict["unique_id"].replace("_", " "),
+                    metadata_lock_dict["unique_id"],
+                ).strip() + "\n")
+            metadata_security_file.write("""
+template:
+  - binary_sensor:
+            """.strip() + "\n")
+            for metadata_contact_dict in metadata_contact_dicts:
+                metadata_security_file.write("      " + """
+      #################################################################################                
+      - unique_id: {}
+        device_class: door
+        state: >-
+          {{% if states('binary_sensor.{}' | replace("template_", "") | replace("_preserved", "") ) | lower not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
+            {{{{ states('binary_sensor.{}' | replace("template_", "") | replace("_preserved", "")) }}}}
+          {{% else %}}
+            {{{{ states('sensor.{}') }}}}
+          {{% endif %}}
+            """.format(
+                    metadata_contact_dict["unique_id"].replace("template_", ""),
+                    metadata_contact_dict["unique_id"],
+                    metadata_contact_dict["unique_id"],
+                    metadata_contact_dict["unique_id"],
                 ).strip() + "\n")
             metadata_security_file.write("""      
 #######################################################################################

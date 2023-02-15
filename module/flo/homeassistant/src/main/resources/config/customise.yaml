@@ -686,6 +686,16 @@ sensor.front_door_sensor_battery:
   friendly_name: 'Sonoff Front Door Sensor'
 sensor.back_door_sensor_battery:
   friendly_name: 'Sonoff Back Door Sensor'
+sensor.home_cube_remote_battery:
+  friendly_name: 'Xiaomi Cube Remote'
+sensor.template_weatherstation_console_battery_percent_int:
+  friendly_name: 'Davis Console'
+  icon: 'mdi:battery-30'
+  unit_of_measurement: '%'
+sensor.weatherstation_console_battery_voltage:
+  friendly_name: 'Davis Console Voltage'
+  icon: 'mdi:battery-30'
+  unit_of_measurement: 'V'
 sensor.bertram_2_office_pantry_battery_percent:
   friendly_name: 'Netatmo Pantry'
 sensor.bertram_2_office_lounge_battery_percent:
@@ -694,19 +704,10 @@ sensor.bertram_2_office_dining_battery_percent:
   friendly_name: 'Netatmo Dining'
 sensor.bertram_2_office_basement_battery_percent:
   friendly_name: 'Netatmo Basement'
-sensor.home_cube_remote_battery:
-  friendly_name: 'Xiaomi Cube Remote'
 sensor.parents_speaker_battery:
   friendly_name: 'Sonos Parents'
 sensor.kitchen_home_battery:
   friendly_name: 'Sonos Kitchen'
-sensor.weatherstation_console_battery_percent:
-  friendly_name: 'Davis Console'
-  unit_of_measurement: '%'
-sensor.weatherstation_console_battery_voltage:
-  friendly_name: 'Davis Console Voltage'
-  icon: 'mdi:battery-30'
-  unit_of_measurement: 'V'
 button.synchronize_devices:
   friendly_name: 'Google Device Sync'
 sensor.weatherstation_coms_signal_quality:
@@ -740,14 +741,14 @@ input_boolean.front_door_lock_security:
   icon: 'mdi:home-lock'
 lock.front_door_lock:
   friendly_name: 'Action'
-binary_sensor.front_door_sensor_contact:
+binary_sensor.template_front_door_sensor_contact_preserved:
   friendly_name: 'Status'
 input_boolean.back_door_lock_security:
   friendly_name: 'Secure'
   icon: 'mdi:home-lock'
 lock.back_door_lock:
   friendly_name: 'Action'
-binary_sensor.back_door_sensor_contact:
+binary_sensor.template_back_door_sensor_contact_preserved:
   friendly_name: 'Status'
 binary_sensor.uvc_ada_motion:
   friendly_name: 'Motion'
