@@ -436,10 +436,10 @@ template:
       - unique_id: {}
         device_class: door
         state: >-
-          {{% if states('binary_sensor.{}' | replace("template_", "") | replace("_preserved", "") ) | lower not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
+          {{% if (states('binary_sensor.{}' | replace("template_", "") | replace("_preserved", "")) | lower) not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
             {{{{ states('binary_sensor.{}' | replace("template_", "") | replace("_preserved", "")) }}}}
           {{% else %}}
-            {{{{ states('sensor.{}') }}}}
+            {{{{ states('binary_sensor.{}') }}}}
           {{% endif %}}
             """.format(
                     metadata_contact_dict["unique_id"].replace("template_", ""),
