@@ -21,12 +21,51 @@ template:
   #####################################################################################
   - binary_sensor:
       #################################################################################
+      - unique_id: front_door_state
+        icon: >-
+          {% if states('binary_sensor.template_front_door_sensor_contact_last') == 'off' and states('lock.front_door_lock') == 'locked' %}
+            mdi:shield-lock
+          {% else %}
+            mdi:shield-lock-open
+          {% endif %}
+        availability: >-
+          {% if states('binary_sensor.template_front_door_sensor_contact_last') == 'off' %}
+            on
+          {% else %}
+            off
+          {% endif %}
+        state: >-
+          {% if states('binary_sensor.template_front_door_sensor_contact_last') == 'off' and states('lock.front_door_lock') == 'locked' %}
+            on
+          {% else %}
+            off
+          {% endif %}
+      #################################################################################
+      - unique_id: back_door_state
+        icon: >-
+          {% if states('binary_sensor.template_back_door_sensor_contact_last') == 'off' and states('lock.back_door_lock') == 'locked' %}
+            mdi:shield-lock
+          {% else %}
+            mdi:shield-lock-open
+          {% endif %}
+        availability: >-
+          {% if states('binary_sensor.template_back_door_sensor_contact_last') == 'off' %}
+            on
+          {% else %}
+            off
+          {% endif %}
+        state: >-
+          {% if states('binary_sensor.template_back_door_sensor_contact_last') == 'off' and states('lock.back_door_lock') == 'locked' %}
+            on
+          {% else %}
+            off
+          {% endif %}
+      #################################################################################
       - unique_id: front_door_sensor_contact_last
         device_class: door
         state: >-
-          {% if (states('binary_sensor.template_front_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 'none', 'n/a'] %}
-            {{ states('binary_sensor.template_front_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) }}
+          {% if states('binary_sensor.front_door_sensor_contact') not in ['unavailable', 'unknown', 'none', 'n/a'] %}
+            {{ states('binary_sensor.front_door_sensor_contact') }}
           {% else %}
             {{ states('binary_sensor.template_front_door_sensor_contact_last') }}
           {% endif %}
@@ -34,9 +73,8 @@ template:
       - unique_id: back_door_sensor_contact_last
         device_class: door
         state: >-
-          {% if (states('binary_sensor.template_back_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 'none', 'n/a'] %}
-            {{ states('binary_sensor.template_back_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) }}
+          {% if states('binary_sensor.back_door_sensor_contact') not in ['unavailable', 'unknown', 'none', 'n/a'] %}
+            {{ states('binary_sensor.back_door_sensor_contact') }}
           {% else %}
             {{ states('binary_sensor.template_back_door_sensor_contact_last') }}
           {% endif %}
@@ -48,9 +86,8 @@ template:
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {% if (states('sensor.template_front_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 'none', 'n/a'] %}
-            {{ states('sensor.template_front_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) }}
+          {% if states('sensor.front_door_sensor_battery') not in ['unavailable', 'unknown', 'none', 'n/a'] %}
+            {{ states('sensor.front_door_sensor_battery') }}
           {% else %}
             {{ states('sensor.template_front_door_sensor_battery_last') }}
           {% endif %}
@@ -60,9 +97,8 @@ template:
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {% if (states('sensor.template_back_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 'none', 'n/a'] %}
-            {{ states('sensor.template_back_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) }}
+          {% if states('sensor.back_door_sensor_battery') not in ['unavailable', 'unknown', 'none', 'n/a'] %}
+            {{ states('sensor.back_door_sensor_battery') }}
           {% else %}
             {{ states('sensor.template_back_door_sensor_battery_last') }}
           {% endif %}
@@ -70,7 +106,7 @@ template:
 automation:
   #####################################################################################
   - id: routine_home_security_on
-    alias: "Routine: Put home into Security mode"
+    alias: "Routine: Put Home into Secure mode"
     mode: single
     trigger:
       - platform: state
@@ -81,7 +117,7 @@ automation:
     action:
   #####################################################################################
   - id: routine_home_security_off
-    alias: "Routine: Take home out of Security mode"
+    alias: "Routine: Take Home out of Secure mode"
     mode: single
     trigger:
       - platform: state
@@ -92,7 +128,7 @@ automation:
     action:
   #####################################################################################
   - id: routine_front_door_lock_security_on
-    alias: "Routine: Put front door lock into Security mode"
+    alias: "Routine: Put Front Door Lock into Secure mode"
     mode: single
     trigger:
       - platform: state
@@ -101,9 +137,25 @@ automation:
         to: 'on'
     condition: [ ]
     action:
+      - if:
+          - condition: template
+            value_template: >-
+              {{ states('lock.front_door_lock') == 'unlocked' }}
+        then:
+          - delay: '00:00:01'
+          - service: input_boolean.turn_off
+            entity_id: input_boolean.front_door_lock_security
+      - if:
+          - condition: template
+            value_template: >-
+              {{ states('binary_sensor.template_front_door_sensor_contact_last') == 'off' and states('lock.front_door_lock') == 'unlocked' }}
+        then:
+          - service: lock.lock
+            target:
+              entity_id: lock.front_door_lock
   #####################################################################################
   - id: routine_back_door_lock_security_on
-    alias: "Routine: Put back door lock into Security mode"
+    alias: "Routine: Put Back Door Lock into Secure mode"
     mode: single
     trigger:
       - platform: state
@@ -112,26 +164,112 @@ automation:
         to: 'on'
     condition: [ ]
     action:
+      - if:
+          - condition: template
+            value_template: >-
+              {{ states('lock.back_door_lock') == 'unlocked' }}
+        then:
+          - delay: '00:00:01'
+          - service: input_boolean.turn_off
+            entity_id: input_boolean.back_door_lock_security
+      - if:
+          - condition: template
+            value_template: >-
+              {{ states('binary_sensor.template_back_door_sensor_contact_last') == 'off' and states('lock.back_door_lock') == 'unlocked' }}
+        then:
+          - service: lock.lock
+            target:
+              entity_id: lock.back_door_lock
   #####################################################################################
   - id: routine_front_door_lock_security_off
-    alias: "Routine: Take front door lock out of Security mode"
+    alias: "Routine: Take Front Door Lock out of Secure mode"
     mode: single
     trigger:
       - platform: state
         entity_id: input_boolean.front_door_lock_security
-        from: 'on'
-        to: 'off'
+        from: 'off'
+        to: 'on'
     condition: [ ]
     action:
+      - if:
+          - condition: template
+            value_template: >-
+              {{ states('lock.front_door_lock') == 'locked' }}
+        then:
+          - service: lock.unlock
+            target:
+              entity_id: lock.front_door_lock
   #####################################################################################
   - id: routine_back_door_lock_security_off
-    alias: "Routine: Take back door lock out of Security mode"
+    alias: "Routine: Take Back Door Lock out of Secure mode"
     mode: single
     trigger:
       - platform: state
         entity_id: input_boolean.back_door_lock_security
-        from: 'on'
-        to: 'off'
+        from: 'off'
+        to: 'on'
     condition: [ ]
     action:
+      - if:
+          - condition: template
+            value_template: >-
+              {{ states('lock.back_door_lock') == 'locked' }}
+        then:
+          - service: lock.unlock
+            target:
+              entity_id: lock.back_door_lock
+  #####################################################################################
+  - id: routine_front_door_state_on
+    alias: "Routine: Front Door State on"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.template_front_door_state
+        to: 'on'
+    condition: [ ]
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.front_door_lock_security
+  #####################################################################################
+  - id: routine_front_door_state_off
+    alias: "Routine: Front Door State off"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.template_front_door_state
+        to: 'off'
+      - platform: state
+        entity_id: binary_sensor.template_front_door_state
+        to: 'unavailable'
+    condition: [ ]
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.front_door_lock_security
+  #####################################################################################
+  - id: routine_back_door_state_on
+    alias: "Routine: Back Door State on"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.template_back_door_state
+        to: 'on'
+    condition: [ ]
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.back_door_lock_security
+  #####################################################################################
+  - id: routine_back_door_state_off
+    alias: "Routine: Back Door State off"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.template_back_door_state
+        to: 'off'
+      - platform: state
+        entity_id: binary_sensor.template_back_door_state
+        to: 'unavailable'
+    condition: [ ]
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.back_door_lock_security
 #######################################################################################

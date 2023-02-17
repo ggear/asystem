@@ -361,7 +361,7 @@ input_boolean:
   {}_security:
     name: {} Security
     initial: off
-            """.format(
+               """.format(
                     metadata_lock_dict["unique_id"],
                     metadata_lock_dict["unique_id"].replace("_", " ").title(),
                 ).strip() + "\n")
@@ -371,22 +371,53 @@ template:
   #####################################################################################
   - binary_sensor:
             """.strip() + "\n")
+            for metadata_lock_dict in metadata_lock_dicts:
+                metadata_lock = metadata_lock_dict["unique_id"]
+                metadata_contact = "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_sensor_contact_last")
+                metadata_security_file.write("      " + """
+      #################################################################################
+      - unique_id: {}
+        icon: >-
+          {{% if states('binary_sensor.{}') == 'off' and states('lock.{}') == 'locked' %}}
+            mdi:shield-lock
+          {{% else %}}
+            mdi:shield-lock-open
+          {{% endif %}}
+        availability: >-
+          {{% if states('binary_sensor.{}') == 'off' %}}
+            on
+          {{% else %}}
+            off
+          {{% endif %}}
+        state: >-
+          {{% if states('binary_sensor.{}') == 'off' and states('lock.{}') == 'locked' %}}
+            on
+          {{% else %}}
+            off
+          {{% endif %}}
+               """.format(
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_contact,
+                    metadata_lock,
+                    metadata_contact,
+                    metadata_contact,
+                    metadata_lock,
+                ).strip() + "\n")
             for metadata_contact_dict in metadata_contact_dicts:
                 metadata_security_file.write("      " + """
       #################################################################################
       - unique_id: {}
         device_class: door
         state: >-
-          {{% if (states('binary_sensor.{}' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
-            {{{{ states('binary_sensor.{}' | replace("template_", "") | replace("_last", "")) }}}}
+          {{% if states('binary_sensor.{}') not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
+            {{{{ states('binary_sensor.{}') }}}}
           {{% else %}}
             {{{{ states('binary_sensor.{}') }}}}
           {{% endif %}}
-            """.format(
+                """.format(
                     metadata_contact_dict["unique_id"].replace("template_", ""),
-                    metadata_contact_dict["unique_id"],
-                    metadata_contact_dict["unique_id"],
+                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_last", "").lower(),
+                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_last", "").lower(),
                     metadata_contact_dict["unique_id"],
                 ).strip() + "\n")
             metadata_security_file.write("  " + """
@@ -401,16 +432,15 @@ template:
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{% if (states('sensor.{}' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
-            {{{{ states('sensor.{}' | replace("template_", "") | replace("_last", "")) }}}}
+          {{% if states('sensor.{}') not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
+            {{{{ states('sensor.{}') }}}}
           {{% else %}}
             {{{{ states('sensor.{}') }}}}
           {{% endif %}}
-            """.format(
+                """.format(
                     metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", ""),
-                    metadata_contact_dict["unique_id"].replace("contact", "battery"),
-                    metadata_contact_dict["unique_id"].replace("contact", "battery"),
+                    metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace("_last", "").lower(),
+                    metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace("_last", "").lower(),
                     metadata_contact_dict["unique_id"].replace("contact", "battery"),
                 ).strip() + "\n")
             metadata_security_file.write("""
@@ -418,7 +448,7 @@ template:
 automation:
   #####################################################################################
   - id: routine_home_security_on
-    alias: "Routine: Put home into Security mode"
+    alias: "Routine: Put Home into Secure mode"
     mode: single
     trigger:
       - platform: state
@@ -429,7 +459,7 @@ automation:
     action:
   #####################################################################################
   - id: routine_home_security_off
-    alias: "Routine: Take home out of Security mode"
+    alias: "Routine: Take Home out of Secure mode"
     mode: single
     trigger:
       - platform: state
@@ -443,7 +473,7 @@ automation:
                 metadata_security_file.write("  " + """
   #####################################################################################
   - id: routine_{}_security_on
-    alias: "Routine: Put {} into Security mode"
+    alias: "Routine: Put {} into Secure mode"
     mode: single
     trigger:
       - platform: state
@@ -452,27 +482,101 @@ automation:
         to: 'on'
     condition: [ ]
     action:
-            """.format(
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ states('lock.{}') == 'unlocked' }}}}
+        then:
+          - delay: '00:00:01'
+          - service: input_boolean.turn_off
+            entity_id: input_boolean.{}_security
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ states('binary_sensor.{}') == 'off' and states('lock.{}') == 'unlocked' }}}}
+        then:
+          - service: lock.lock
+            target:
+              entity_id: lock.{}
+                """.format(
                     metadata_lock_dict["unique_id"],
-                    metadata_lock_dict["unique_id"].replace("_", " "),
+                    metadata_lock_dict["unique_id"].replace("_", " ").title(),
+                    metadata_lock_dict["unique_id"],
+                    metadata_lock_dict["unique_id"],
+                    metadata_lock_dict["unique_id"],
+                    "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_sensor_contact_last"),
+                    metadata_lock_dict["unique_id"],
                     metadata_lock_dict["unique_id"],
                 ).strip() + "\n")
             for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("  " + """
   #####################################################################################
   - id: routine_{}_security_off
-    alias: "Routine: Take {} out of Security mode"
+    alias: "Routine: Take {} out of Secure mode"
     mode: single
     trigger:
       - platform: state
         entity_id: input_boolean.{}_security
-        from: 'on'
-        to: 'off'
+        from: 'off'
+        to: 'on'
     condition: [ ]
     action:
-            """.format(
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ states('lock.{}') == 'locked' }}}}
+        then:
+          - service: lock.unlock
+            target:
+              entity_id: lock.{}
+                """.format(
                     metadata_lock_dict["unique_id"],
-                    metadata_lock_dict["unique_id"].replace("_", " "),
+                    metadata_lock_dict["unique_id"].replace("_", " ").title(),
+                    metadata_lock_dict["unique_id"],
+                    metadata_lock_dict["unique_id"],
+                    metadata_lock_dict["unique_id"],
+                ).strip() + "\n")
+            for metadata_lock_dict in metadata_lock_dicts:
+                metadata_security_file.write("  " + """
+  #####################################################################################
+  - id: routine_{}_on
+    alias: "Routine: {} on"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.template_{}
+        to: 'on'
+    condition: [ ]
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.{}_security
+                """.format(
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_lock_dict["unique_id"],
+                ).strip() + "\n")
+                metadata_security_file.write("  " + """
+  #####################################################################################
+  - id: routine_{}_off
+    alias: "Routine: {} off"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.template_{}
+        to: 'off'
+      - platform: state
+        entity_id: binary_sensor.template_{}
+        to: 'unavailable'
+    condition: [ ]
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.{}_security
+                """.format(
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
                     metadata_lock_dict["unique_id"],
                 ).strip() + "\n")
             metadata_security_file.write("""      
