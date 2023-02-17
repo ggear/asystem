@@ -7,8 +7,6 @@
     - entity: input_boolean.front_door_lock_security
       name: Secure
       icon: mdi:shield-home
-    - entity: binary_sensor.template_front_door_state
-      name: Status
     - entity: lock.front_door_lock
       name: Lock
     - entity: binary_sensor.template_front_door_sensor_contact_last
@@ -20,8 +18,6 @@
     - entity: input_boolean.back_door_lock_security
       name: Secure
       icon: mdi:shield-home
-    - entity: binary_sensor.template_back_door_state
-      name: Status
     - entity: lock.back_door_lock
       name: Lock
     - entity: binary_sensor.template_back_door_sensor_contact_last
