@@ -478,7 +478,6 @@ automation:
     trigger:
       - platform: state
         entity_id: input_boolean.{}_security
-        from: 'off'
         to: 'on'
     condition: [ ]
     action:
@@ -517,7 +516,6 @@ automation:
     trigger:
       - platform: state
         entity_id: input_boolean.{}_security
-        from: 'on'
         to: 'off'
     condition: [ ]
     action:
