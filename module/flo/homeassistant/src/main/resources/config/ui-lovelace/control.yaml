@@ -6,7 +6,7 @@
   entities:
     - entity: input_boolean.home_security
       name: Secure
-      icon: mdi:home-lock
+      icon: mdi:shield-home
     - entity: input_boolean.home_movie
       name: Movie
       icon: mdi:youtube-tv

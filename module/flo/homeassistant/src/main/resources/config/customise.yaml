@@ -265,7 +265,7 @@ sensor.roof_storm_rain:
   unit_of_measurement: 'cm'
 input_boolean.home_security:
   friendly_name: 'Secure'
-  icon: 'mdi:home-lock'
+  icon: 'mdi:shield-home'
 input_boolean.home_movie:
   friendly_name: 'Movie'
   icon: 'mdi:youtube-tv'
@@ -738,14 +738,14 @@ media_player.parents_tv_speaker:
   friendly_name: 'Parents TV Speaker'
 input_boolean.front_door_lock_security:
   friendly_name: 'Secure'
-  icon: 'mdi:home-lock'
+  icon: 'mdi:shield-home'
 lock.front_door_lock:
   friendly_name: 'Action'
 binary_sensor.template_front_door_sensor_contact_last:
   friendly_name: 'Status'
 input_boolean.back_door_lock_security:
   friendly_name: 'Secure'
-  icon: 'mdi:home-lock'
+  icon: 'mdi:shield-home'
 lock.back_door_lock:
   friendly_name: 'Action'
 binary_sensor.template_back_door_sensor_contact_last:
