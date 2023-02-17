@@ -25,8 +25,7 @@ template:
         device_class: door
         state: >-
           {% if (states('binary_sensor.template_front_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 
-          'none', 'n/a'] %}
+                not in ['unavailable', 'unknown', 'none', 'n/a'] %}
             {{ states('binary_sensor.template_front_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) }}
           {% else %}
             {{ states('binary_sensor.template_front_door_sensor_contact_last') }}
@@ -36,8 +35,7 @@ template:
         device_class: door
         state: >-
           {% if (states('binary_sensor.template_back_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 
-          'none', 'n/a'] %}
+                not in ['unavailable', 'unknown', 'none', 'n/a'] %}
             {{ states('binary_sensor.template_back_door_sensor_contact_last' | replace("template_", "") | replace("_last", "")) }}
           {% else %}
             {{ states('binary_sensor.template_back_door_sensor_contact_last') }}
@@ -51,8 +49,7 @@ template:
         unit_of_measurement: "%"
         state: >-
           {% if (states('sensor.template_front_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 
-          'none', 'n/a'] %}
+                not in ['unavailable', 'unknown', 'none', 'n/a'] %}
             {{ states('sensor.template_front_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) }}
           {% else %}
             {{ states('sensor.template_front_door_sensor_battery_last') }}
@@ -64,8 +61,7 @@ template:
         unit_of_measurement: "%"
         state: >-
           {% if (states('sensor.template_back_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 
-          'none', 'n/a'] %}
+                not in ['unavailable', 'unknown', 'none', 'n/a'] %}
             {{ states('sensor.template_back_door_sensor_battery_last' | replace("template_", "") | replace("_last", "")) }}
           {% else %}
             {{ states('sensor.template_back_door_sensor_battery_last') }}

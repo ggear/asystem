@@ -378,8 +378,7 @@ template:
         device_class: door
         state: >-
           {{% if (states('binary_sensor.{}' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 
-          'none', 'n/a'] %}}
+                not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
             {{{{ states('binary_sensor.{}' | replace("template_", "") | replace("_last", "")) }}}}
           {{% else %}}
             {{{{ states('binary_sensor.{}') }}}}
@@ -403,8 +402,7 @@ template:
         unit_of_measurement: "%"
         state: >-
           {{% if (states('sensor.{}' | replace("template_", "") | replace("_last", "")) | lower) 
-                not in ['unavailable', 'unknown', 
-          'none', 'n/a'] %}}
+                not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
             {{{{ states('sensor.{}' | replace("template_", "") | replace("_last", "")) }}}}
           {{% else %}}
             {{{{ states('sensor.{}') }}}}
