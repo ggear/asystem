@@ -13,4 +13,4 @@ certificates:
       - "*.janeandgraham.com"
       - janeandgraham.com
     profile: cloudflare_profile
-    deploy_hook: '[[ -f /etc/letsencrypt/live/janeandgraham.com/privkey.pem ]] && touch /etc/letsencrypt/live/janeandgraham.com/privkey.pem'
+    deploy_hook: '/bin/bash -c "[[ -f /etc/letsencrypt/live/janeandgraham.com/privkey.pem ]] && touch /etc/letsencrypt/live/janeandgraham.com/privkey.pem"'
