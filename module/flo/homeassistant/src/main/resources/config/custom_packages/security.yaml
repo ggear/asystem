@@ -187,8 +187,8 @@ automation:
     trigger:
       - platform: state
         entity_id: input_boolean.front_door_lock_security
-        from: 'off'
-        to: 'on'
+        from: 'on'
+        to: 'off'
     condition: [ ]
     action:
       - if:
@@ -206,8 +206,8 @@ automation:
     trigger:
       - platform: state
         entity_id: input_boolean.back_door_lock_security
-        from: 'off'
-        to: 'on'
+        from: 'on'
+        to: 'off'
     condition: [ ]
     action:
       - if:

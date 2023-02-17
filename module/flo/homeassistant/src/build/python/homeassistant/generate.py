@@ -517,8 +517,8 @@ automation:
     trigger:
       - platform: state
         entity_id: input_boolean.{}_security
-        from: 'off'
-        to: 'on'
+        from: 'on'
+        to: 'off'
     condition: [ ]
     action:
       - if:
