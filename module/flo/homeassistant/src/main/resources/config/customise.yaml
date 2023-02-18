@@ -742,7 +742,7 @@ input_boolean.back_door_lock_security:
 binary_sensor.template_back_door_state:
   friendly_name: 'Status'
 lock.back_door_lock:
-  friendly_name: 'Lock'
+  friendly_name: 'Action'
 binary_sensor.template_back_door_sensor_contact_last:
   friendly_name: 'Door'
 input_boolean.front_door_lock_security:
@@ -751,7 +751,7 @@ input_boolean.front_door_lock_security:
 binary_sensor.template_front_door_state:
   friendly_name: 'Status'
 lock.front_door_lock:
-  friendly_name: 'Lock'
+  friendly_name: 'Action'
 binary_sensor.template_front_door_sensor_contact_last:
   friendly_name: 'Door'
 binary_sensor.uvc_ada_motion:
