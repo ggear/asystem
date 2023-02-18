@@ -341,6 +341,18 @@ sonos:
             (metadata_df["unique_id"].str.len() > 0)
             ]
         metadata_contact_dicts = [row.dropna().to_dict() for index, row in metadata_contact_df.iterrows()]
+        metadata_locks_some_locked_template = " or ".join([
+            "states('lock.{}') == 'locked'".format(metadata_lock_dict["unique_id"])
+            for metadata_lock_dict in metadata_lock_dicts
+        ])
+        metadata_locks_some_unlocked_template = " or ".join([
+            "states('lock.{}') == 'unlocked'".format(metadata_lock_dict["unique_id"])
+            for metadata_lock_dict in metadata_lock_dicts
+        ])
+        metadata_state_all_on_template = " and ".join([
+            "states('binary_sensor.template_{}') == 'on'".format(metadata_lock_dict["unique_id"].replace("_lock", "_state"))
+            for metadata_lock_dict in metadata_lock_dicts
+        ])
         metadata_security_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/security.yaml"))
         with open(metadata_security_path, 'w') as metadata_security_file:
             metadata_security_file.write("""
@@ -456,6 +468,26 @@ automation:
         to: 'on'
     condition: [ ]
     action:
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ {} }}}}
+        then:
+          - delay: '00:00:01'
+          - service: input_boolean.turn_off
+            entity_id: input_boolean.home_security
+      - service: input_boolean.turn_on
+        entity_id:
+            """.format(
+                metadata_locks_some_unlocked_template
+            ).strip() + "\n")
+            for metadata_lock_dict in metadata_lock_dicts:
+                metadata_security_file.write("          " + """
+          - input_boolean.{}                
+                """.format(
+                    metadata_lock_dict["unique_id"] + "_security",
+                ).strip() + "\n")
+            metadata_security_file.write("  " + """
   #####################################################################################
   - id: routine_home_security_off
     alias: "Routine: Take Home out of Secure mode"
@@ -466,7 +498,69 @@ automation:
         to: 'off'
     condition: [ ]
     action:
-            """.strip() + "\n")
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ {} }}}}
+        then:
+          - service: input_boolean.turn_off
+            entity_id:
+            """.format(
+                metadata_locks_some_locked_template
+            ).strip() + "\n")
+            for metadata_lock_dict in metadata_lock_dicts:
+                metadata_security_file.write("              " + """
+              - input_boolean.{}                
+                """.format(
+                    metadata_lock_dict["unique_id"] + "_security",
+                ).strip() + "\n")
+            for metadata_lock_dict in metadata_lock_dicts:
+                metadata_security_file.write("  " + """
+  #####################################################################################
+  - id: routine_{}_all_on
+    alias: "Routine: {} all on"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.template_{}
+        to: 'on'
+    condition: [ ]
+    action:
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ {} }}}}
+        then:
+          - service: input_boolean.turn_on
+            entity_id: input_boolean.home_security
+                """.format(
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_state_all_on_template
+                ).strip() + "\n")
+                metadata_security_file.write("  " + """
+  #####################################################################################
+  - id: routine_{}_all_off
+    alias: "Routine: {} all off"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.template_{}
+        to: 'off'
+      - platform: state
+        entity_id: binary_sensor.template_{}
+        to: 'unavailable'
+    condition: [ ]
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.home_security
+                """.format(
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+                ).strip() + "\n")
             for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("  " + """
   #####################################################################################

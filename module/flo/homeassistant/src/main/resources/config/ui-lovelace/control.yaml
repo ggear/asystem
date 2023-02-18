@@ -3,6 +3,7 @@
 ################################################################################
 - type: entities
   title: Routines
+  show_header_toggle: false
   entities:
     - entity: input_boolean.home_security
       name: Secure

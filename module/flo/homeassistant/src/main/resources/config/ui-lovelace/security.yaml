@@ -2,17 +2,6 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
 - type: entities
-  title: Front Door
-  entities:
-    - entity: input_boolean.front_door_lock_security
-      name: Secure
-      icon: mdi:shield-home
-    - entity: lock.front_door_lock
-      name: Lock
-    - entity: binary_sensor.template_front_door_sensor_contact_last
-      name: Door
-################################################################################
-- type: entities
   title: Back Door
   entities:
     - entity: input_boolean.back_door_lock_security
@@ -21,6 +10,17 @@
     - entity: lock.back_door_lock
       name: Lock
     - entity: binary_sensor.template_back_door_sensor_contact_last
+      name: Door
+################################################################################
+- type: entities
+  title: Front Door
+  entities:
+    - entity: input_boolean.front_door_lock_security
+      name: Secure
+      icon: mdi:shield-home
+    - entity: lock.front_door_lock
+      name: Lock
+    - entity: binary_sensor.template_front_door_sensor_contact_last
       name: Door
 ################################################################################
 - type: custom:layout-break
