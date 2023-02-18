@@ -127,25 +127,6 @@ automation:
           - input_boolean.back_door_lock_security
           - input_boolean.front_door_lock_security
   #####################################################################################
-  - id: routine_home_security_off
-    alias: "Routine: Take Home out of Secure mode"
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: input_boolean.home_security
-        to: 'off'
-    condition: [ ]
-    action:
-      - if:
-          - condition: template
-            value_template: >-
-              {{ states('lock.back_door_lock') == 'locked' or states('lock.front_door_lock') == 'locked' }}
-        then:
-          - service: input_boolean.turn_off
-            entity_id:
-              - input_boolean.back_door_lock_security
-              - input_boolean.front_door_lock_security
-  #####################################################################################
   - id: routine_back_door_state_all_on
     alias: "Routine: Back Door State all on"
     mode: single
