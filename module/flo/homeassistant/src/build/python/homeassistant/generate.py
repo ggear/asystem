@@ -487,6 +487,33 @@ automation:
                 """.format(
                     metadata_lock_dict["unique_id"] + "_security",
                 ).strip() + "\n")
+            metadata_security_file.write("  " + """
+  #####################################################################################
+  - id: routine_home_security_off
+    alias: "Routine: Take Home out of Secure mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_security
+        to: 'off'
+    condition: [ ]
+    action:
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ {} }}}}
+        then:
+          - service: input_boolean.turn_off
+            entity_id:
+            """.format(
+                metadata_locks_some_locked_template
+            ).strip() + "\n")
+            for metadata_lock_dict in metadata_lock_dicts:
+                metadata_security_file.write("              " + """
+              - input_boolean.{}                
+                """.format(
+                    metadata_lock_dict["unique_id"] + "_security",
+                ).strip() + "\n")
             for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("  " + """
   #####################################################################################
