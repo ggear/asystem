@@ -365,6 +365,9 @@ input_boolean:
   #####################################################################################
   home_security:
     name: Security
+  home_security_triggered:
+    name: Security triggered flag
+    initial: false
             """.strip() + "\n")
             for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("  " + """
@@ -485,36 +488,35 @@ automation:
                 """.format(
                     metadata_lock_dict["unique_id"] + "_security",
                 ).strip() + "\n")
-
-            # TODO: Can't work out how to differentiate a manual off and triggered off - another variable set by trigger and unset by this
-            # metadata_security_file.write("  " + """
-            # #####################################################################################
-            # - id: routine_home_security_off
-            #   alias: "Routine: Take Home out of Secure mode"
-            #   mode: single
-            #   trigger:
-            #     - platform: state
-            #       entity_id: input_boolean.home_security
-            #       to: 'off'
-            #   condition: [ ]
-            #   action:
-            #     - if:
-            #         - condition: template
-            #           value_template: >-
-            #             {{{{ {} }}}}
-            #       then:
-            #         - service: input_boolean.turn_off
-            #           entity_id:
-            #           """.format(
-            #               metadata_locks_some_locked_template
-            #           ).strip() + "\n")
-            #           for metadata_lock_dict in metadata_lock_dicts:
-            #               metadata_security_file.write("              " + """
-            #             - input_boolean.{}
-            #               """.format(
-            #                   metadata_lock_dict["unique_id"] + "_security",
-            #               ).strip() + "\n")
-
+            metadata_security_file.write("  " + """
+  #####################################################################################
+  - id: routine_home_security_off
+    alias: "Routine: Take Home out of Secure mode"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.home_security
+        to: 'off'
+    condition: [ ]
+    action:
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ states('binary_sensor.home_security_triggered') == 'on' and ({}) }}}}
+        then:
+          - service: input_boolean.turn_off
+            entity_id: binary_sensor.home_security_triggered
+          - service: input_boolean.turn_off
+            entity_id:
+            """.format(
+                metadata_locks_some_locked_template
+            ).strip() + "\n")
+            for metadata_lock_dict in metadata_lock_dicts:
+                metadata_security_file.write("              " + """
+              - input_boolean.{}
+                """.format(
+                    metadata_lock_dict["unique_id"] + "_security",
+                ).strip() + "\n")
             for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("  " + """
   #####################################################################################
@@ -554,6 +556,8 @@ automation:
         to: 'unavailable'
     condition: [ ]
     action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.home_security_triggered
       - service: input_boolean.turn_off
         entity_id: input_boolean.home_security
                 """.format(
@@ -730,7 +734,7 @@ input_boolean:
   ####################################################################################
   lighting_reset_adaptive_lighting_{}:
     name: {}
-    initial: off
+    initial: false
               """.format(
                 metadata_lighting_dict["unique_id"],
                 metadata_lighting_dict["friendly_name"],
