@@ -139,7 +139,10 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{ states('binary_sensor.home_security_triggered') == 'on' and (states('lock.back_door_lock') == 'locked' or states('lock.front_door_lock') == 'locked') }}
+              {{
+                (states('binary_sensor.home_security_triggered') == 'on' and (states('lock.back_door_lock') == 'locked' or states('lock.front_door_lock') == 'locked'))
+                  or (states('lock.back_door_lock') == 'locked' and states('lock.front_door_lock') == 'locked')
+              }}
         then:
           - service: input_boolean.turn_off
             entity_id: binary_sensor.home_security_triggered

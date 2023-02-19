@@ -341,6 +341,10 @@ sonos:
             (metadata_df["unique_id"].str.len() > 0)
             ]
         metadata_contact_dicts = [row.dropna().to_dict() for index, row in metadata_contact_df.iterrows()]
+        metadata_locks_all_locked_template = " and ".join([
+            "states('lock.{}') == 'locked'".format(metadata_lock_dict["unique_id"])
+            for metadata_lock_dict in metadata_lock_dicts
+        ])
         metadata_locks_some_locked_template = " or ".join([
             "states('lock.{}') == 'locked'".format(metadata_lock_dict["unique_id"])
             for metadata_lock_dict in metadata_lock_dicts
@@ -502,14 +506,18 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{{{ states('binary_sensor.home_security_triggered') == 'on' and ({}) }}}}
+              {{{{
+                (states('binary_sensor.home_security_triggered') == 'on' and ({}))
+                  or ({})
+              }}}}
         then:
           - service: input_boolean.turn_off
             entity_id: binary_sensor.home_security_triggered
           - service: input_boolean.turn_off
             entity_id:
             """.format(
-                metadata_locks_some_locked_template
+                metadata_locks_some_locked_template,
+                metadata_locks_all_locked_template,
             ).strip() + "\n")
             for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("              " + """
