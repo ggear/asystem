@@ -457,9 +457,25 @@ template:
 #######################################################################################
 automation:
   #####################################################################################
+  - id: routine_home_security_check_on
+    alias: "Routine: Attempt to put Home into Secure mode at regular intervals"
+    mode: queued
+    trigger:
+      - platform: time_pattern
+        minutes: "/15"
+    condition: [ ]
+    action:
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ states('input_boolean.home_security') == 'off' }}}}
+        then:
+          - service: input_boolean.turn_on
+            entity_id: input_boolean.home_security
+  #####################################################################################
   - id: routine_home_security_on
     alias: "Routine: Put Home into Secure mode"
-    mode: single
+    mode: queued
     trigger:
       - platform: state
         entity_id: input_boolean.home_security
