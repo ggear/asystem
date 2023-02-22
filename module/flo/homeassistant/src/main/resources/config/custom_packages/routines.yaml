@@ -13,46 +13,6 @@ input_boolean:
     name: Reset
     initial: off
   #####################################################################################
-ios:
-  #####################################################################################
-  actions:
-    ###################################################################################
-    - name: home_secure_back_door_off
-      background_color: "#000000"
-      label:
-        text: "Unlock Back Door"
-#        color: "#ff0000"
-      icon:
-        icon: lock-open
-#        color: "#ffffff"
-    ###################################################################################
-    - name: home_secure_front_door_off
-      background_color: "#000000"
-      label:
-        text: "Unlock Front Door"
-#        color: "#ff0000"
-      icon:
-        icon: lock-open
-#        color: "#ffffff"
-    ###################################################################################
-    - name: home_sleep_on
-      background_color: "#000000"
-      label:
-        text: "Turn Sleep Mode on"
-#        color: "#ff0000"
-      icon:
-        icon: chat-sleep
-#        color: "#ffffff"
-    ###################################################################################
-    - name: home_sleep_off
-      background_color: "#000000"
-      label:
-        text: "Turn Sleep Mode off"
-#        color: "#ff0000"
-      icon:
-        icon: chat-sleep-outline
-#        color: "#ffffff"
-    ###################################################################################
 automation:
   #####################################################################################
   - id: routine_home_movie_on

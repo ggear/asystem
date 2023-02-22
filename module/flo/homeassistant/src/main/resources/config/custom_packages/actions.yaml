@@ -1,0 +1,72 @@
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+ios:
+  #####################################################################################
+  actions:
+    ###################################################################################
+    - name: home_secure_back_door_off
+      label:
+        text: "Unlock back door"
+      icon:
+        icon: mdi:lock-open
+    ###################################################################################
+    - name: home_secure_front_door_off
+      label:
+        text: "Unlock front door"
+      icon:
+        icon: mdi:lock-open
+    ###################################################################################
+    - name: home_sleep_on
+      label:
+        text: "Sleep mode on"
+      icon:
+        icon: mdi:chat-sleep
+    ###################################################################################
+    - name: home_sleep_off
+      label:
+        text: "Sleep mode off"
+      icon:
+        icon: mdi:chat-sleep-outline
+automation:
+  #####################################################################################
+  - alias: "Action: Unlock back door"
+    trigger:
+      - platform: event
+        event_type: ios.action_fired
+        event_data:
+          actionName: "home_secure_back_door_off"
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.back_door_lock_security
+  #####################################################################################
+  - alias: "Action: Unlock front door"
+    trigger:
+      - platform: event
+        event_type: ios.action_fired
+        event_data:
+          actionName: "home_secure_front_door_off"
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.front_door_lock_security
+  #####################################################################################
+  - alias: "Action: Sleep mode on"
+    trigger:
+      - platform: event
+        event_type: ios.action_fired
+        event_data:
+          actionName: "home_sleep_on"
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.home_sleep
+  #####################################################################################
+  - alias: "Action: Sleep mode off"
+    trigger:
+      - platform: event
+        event_type: ios.action_fired
+        event_data:
+          actionName: "home_sleep_off"
+    action:
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.home_sleep
+#######################################################################################

@@ -91,6 +91,7 @@ if __name__ == "__main__":
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_via_device"] != "_") &
+        (metadata_df["device_via_device"] != "Action") &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["friendly_name"].str.len() > 0) &
@@ -750,10 +751,10 @@ automation:
     metadata_lighting_dicts = [row.dropna().to_dict() for index, row in metadata_lighting_df.iterrows()]
     metadata_lighting_automations_dicts = {}
     for metadata_lighting_dict in metadata_lighting_dicts:
-        if "entity_automation" in metadata_lighting_dict:
-            if metadata_lighting_dict["entity_automation"] not in metadata_lighting_automations_dicts:
-                metadata_lighting_automations_dicts[metadata_lighting_dict["entity_automation"]] = []
-            metadata_lighting_automations_dicts[metadata_lighting_dict["entity_automation"]].append(metadata_lighting_dict)
+        if "linked_entity" in metadata_lighting_dict:
+            if metadata_lighting_dict["linked_entity"] not in metadata_lighting_automations_dicts:
+                metadata_lighting_automations_dicts[metadata_lighting_dict["linked_entity"]] = []
+            metadata_lighting_automations_dicts[metadata_lighting_dict["linked_entity"]].append(metadata_lighting_dict)
     metadata_lighting_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/lighting.yaml"))
     with open(metadata_lighting_path, 'w') as metadata_lighting_file:
         metadata_lighting_file.write("""
@@ -776,8 +777,8 @@ adaptive_lighting:
     detect_non_ha_changes: true
     lights:
         """.format(
-                automation_name,
-                "100" if automation_name == "default" else "1"
+                automation_name.replace("switch.adaptive_lighting_", ""),
+                "100" if automation_name == "switch.adaptive_lighting_default" else "1"
             ).strip() + "\n")
             for metadata_lighting_group_dict in metadata_lighting_automations_dicts[automation_name]:
                 metadata_lighting_file.write("      " + """
@@ -970,19 +971,19 @@ automation:
                 metadata_lighting_dict["unique_id"],
             ).strip() + "\n")
             reset_double_trigger_timeout = "'00:00:10'"
-            if "entity_automation" in metadata_lighting_dict:
+            if "linked_entity" in metadata_lighting_dict:
                 metadata_lighting_file.write("    " + """
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_{}
+          entity_id: {}
           lights: light.{}
           manual_control: false
       - delay: {}
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
                 """.format(
-                    metadata_lighting_dict["entity_automation"],
+                    metadata_lighting_dict["linked_entity"],
                     metadata_lighting_dict["unique_id"],
                     reset_double_trigger_timeout,
                     metadata_lighting_dict["unique_id"],
@@ -1010,6 +1011,108 @@ automation:
   ####################################################################################
         """.strip() + "\n")
     print("Build generate script [homeassistant] entity lighting persisted to [{}]".format(metadata_lighting_path))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    # Build action YAML
+    metadata_action_df = metadata_df[
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["device_via_device"] == "Action") &
+        (metadata_df["entity_namespace"].str.len() > 0) &
+        (metadata_df["unique_id"].str.len() > 0) &
+        (metadata_df["friendly_name"].str.len() > 0) &
+        (metadata_df["linked_entity"].str.len() > 0) &
+        (metadata_df["linked_service"].str.len() > 0) &
+        (metadata_df["icon"].str.len() > 0)
+        ]
+    metadata_action_dicts = [row.dropna().to_dict() for index, row in metadata_action_df.iterrows()]
+    metadata_action_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/actions.yaml"))
+    with open(metadata_action_path, 'w') as metadata_action_file:
+        metadata_action_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+ios:
+  #####################################################################################
+  actions:
+        """.strip() + "\n")
+        for metadata_action_dict in metadata_action_dicts:
+            metadata_action_file.write("    " + """
+    ###################################################################################
+    - name: {}
+      label:
+        text: "{}"
+      icon:
+        icon: {}
+              """.format(
+                metadata_action_dict["unique_id"],
+                metadata_action_dict["friendly_name"],
+                metadata_action_dict["icon"],
+            ).strip() + "\n")
+
+
+        metadata_action_file.write("""
+automation:
+        """.strip() + "\n")
+        for metadata_action_dict in metadata_action_dicts:
+            metadata_action_file.write("  " + """
+  #####################################################################################
+  - alias: "Action: {}"
+    trigger:
+      - platform: event
+        event_type: ios.action_fired
+        event_data:
+          actionName: "{}"
+    action:
+      - service: {}
+        entity_id: {}
+              """.format(
+                metadata_action_dict["friendly_name"],
+                metadata_action_dict["unique_id"],
+                metadata_action_dict["linked_service"],
+                metadata_action_dict["linked_entity"],
+            ).strip() + "\n")
+
+
+
+
+
+
+        metadata_action_file.write("""      
+#######################################################################################
+            """.strip() + "\n")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # Build lovelace YAML
     metadata_lovelace_df = metadata_df[
