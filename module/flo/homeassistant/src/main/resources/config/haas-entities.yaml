@@ -92,11 +92,11 @@ light.ada_fan_light:
 light.ada_lamp:
   name: Ada Lamp
   aliases: ['Lamp']
-  room: Ada
+  room: Zombie
 light.edwin_lamp:
   name: Edwin Lamp
   aliases: ['Lamp']
-  room: Edwin
+  room: Zombie
 light.edwin_fan_light:
   name: Edwins Main Light
   aliases: ['Edwins Main', 'Main Light', 'Main']
@@ -104,7 +104,7 @@ light.edwin_fan_light:
 light.edwin_night_light:
   name: Edwin Night Light
   aliases: ['Night Light']
-  room: Edwin
+  room: Zombie
 light.hallway_main:
   name: Hallway Main Light
   aliases: ['Hallway Main', 'Main Light', 'Main']
@@ -118,13 +118,13 @@ light.lounge_main:
   aliases: ['Lounge Main', 'Main Light', 'Main']
   room: Lounge
 light.lounge_fan_light:
-  name: Home Fan Light
-  aliases: ['Home Fan', 'Fan Light', 'Fan']
-  room: Home
+  name: Lounge Fan Light
+  aliases: ['Lounge Fan', 'Fan Light', 'Fan']
+  room: Zombie
 light.lounge_lamp:
   name: Lounge Lamp
   aliases: ['Lamp']
-  room: Lounge
+  room: Zombie
 light.parents_main:
   name: Parents Main Light
   aliases: ['Parents Main', 'Main Light', 'Main']
@@ -192,15 +192,15 @@ fan.dining_air_purifier:
 input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
   name: Ada Lamp Reset
   aliases: ['Lamp Reset']
-  room: Ada
+  room: Zombie
 input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
   name: Edwin Lamp Reset
   aliases: ['Lamp Reset']
-  room: Edwin
+  room: Zombie
 input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
   name: Edwin Night Light Reset
   aliases: ['Night Light Reset']
-  room: Edwin
+  room: Zombie
 input_boolean.lighting_reset_adaptive_lighting_hallway_main:
   name: Hallway Diagnostics
   aliases: ['Diagnostics']
@@ -216,7 +216,7 @@ input_boolean.lighting_reset_adaptive_lighting_lounge_main:
 input_boolean.lighting_reset_adaptive_lighting_lounge_lamp:
   name: Home Lamp Reset
   aliases: ['Lamp Reset']
-  room: Home
+  room: Zombie
 input_boolean.lighting_reset_adaptive_lighting_parents_main:
   name: Parents Main Reset
   aliases: ['Main Reset']

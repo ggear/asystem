@@ -245,6 +245,8 @@ automation:
                                          for alias in metadata_haas_dict["google_aliases"].split(',')]
                 metadata_haas_name = metadata_haas_aliases.pop(0)
                 metadata_haas_aliases.extend([alias.removeprefix("s ") for alias in metadata_haas_dict["google_aliases"].split(',')])
+                metadata_haas_room = metadata_haas_dict["device_suggested_area_override"] \
+                    if "device_suggested_area_override" in metadata_haas_dict else metadata_haas_dict["device_suggested_area"]
                 metadata_haas_file.write("""
 {}.{}:
   name: {}
@@ -255,7 +257,7 @@ automation:
                     metadata_haas_dict["unique_id"],
                     metadata_haas_name,
                     metadata_haas_aliases,
-                    metadata_haas_dict["device_suggested_area"],
+                    metadata_haas_room,
                 ).strip() + "\n")
             metadata_haas_file.write("""
 #######################################################################################
@@ -1012,20 +1014,6 @@ automation:
         """.strip() + "\n")
     print("Build generate script [homeassistant] entity lighting persisted to [{}]".format(metadata_lighting_path))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     # Build action YAML
     metadata_action_df = metadata_df[
         (metadata_df["index"] > 0) &
@@ -1062,8 +1050,6 @@ ios:
                 metadata_action_dict["friendly_name"],
                 metadata_action_dict["icon"],
             ).strip() + "\n")
-
-
         metadata_action_file.write("""
 automation:
         """.strip() + "\n")
@@ -1085,34 +1071,9 @@ automation:
                 metadata_action_dict["linked_service"],
                 metadata_action_dict["linked_entity"],
             ).strip() + "\n")
-
-
-
-
-
-
         metadata_action_file.write("""      
 #######################################################################################
             """.strip() + "\n")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     # Build lovelace YAML
     metadata_lovelace_df = metadata_df[

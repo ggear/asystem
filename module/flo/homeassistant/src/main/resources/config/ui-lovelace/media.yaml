@@ -11,6 +11,9 @@
   entity: media_player.parents_home
 ################################################################################
 - type: media-control
+  entity: media_player.office_home
+################################################################################
+- type: media-control
   entity: media_player.lounge_home
 ################################################################################
 - type: custom:layout-break
