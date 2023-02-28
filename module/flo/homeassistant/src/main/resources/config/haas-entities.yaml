@@ -49,6 +49,10 @@ sensor.rack_temperature:
   name: Rack Temperature
   aliases: ['Rack Room Temperature', 'Temperature', 'Room Temperature']
   room: Rack
+input_boolean.home_security:
+  name: Home Secure
+  aliases: ['Home Secure Mode', 'Secure', 'Secure Mode']
+  room: Home
 input_boolean.home_movie:
   name: Home Movie
   aliases: ['Home Movie Mode', 'Movie', 'Movie Mode']
