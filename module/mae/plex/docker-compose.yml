@@ -3,7 +3,7 @@ version: '3.7'
 services:
   plex:
     container_name: plex
-    image: plexinc/pms-docker:1.31.0.6654-02189b09f
+    image: plexinc/pms-docker:1.31.1.6733-bc0674160
     init: true
     restart: ${SERVICE_RESTART}
     environment:

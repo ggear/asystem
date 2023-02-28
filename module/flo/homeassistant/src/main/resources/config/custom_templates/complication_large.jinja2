@@ -1,0 +1,4 @@
+{# Rectangular Guage Complication #}
+Now{{ states('sensor.roof_temperature') | int(0) }}°C ({{ states('sensor.bom_today_min') | int(0) }}/{{ states('sensor.bom_today_max') | int(0) }}°C)
+Home is {{ iif(is_state('input_boolean.home_security', 'off'), 'NOT secure', 'secure') }}
+{{ (states('sensor.home_energy_daily') | float(0)) / 10 }}
