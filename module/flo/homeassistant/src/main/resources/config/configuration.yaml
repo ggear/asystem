@@ -82,7 +82,7 @@ discovery:
     - homekit
 #######################################################################################
 google_assistant:
-  project_id: home-assistant-19744
+  project_id: haas-81482
   service_account: !include .google_service_account.json
   report_state: true
   expose_by_default: false
