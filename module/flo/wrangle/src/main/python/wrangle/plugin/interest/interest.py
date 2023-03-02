@@ -10,6 +10,7 @@ PERIODS = OrderedDict([
     ('1 Year Mean', 12),
     ('5 Year Mean', 5 * 12),
     ('10 Year Mean', 10 * 12),
+    ('15 Year Mean', 15 * 12),
     ('20 Year Mean', 20 * 12),
 ])
 COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + list(PERIODS.keys()))]
