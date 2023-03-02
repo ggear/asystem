@@ -151,7 +151,7 @@ class Equity(library.Library):
                             statement_data[statement_file_name]["Errors"] = []
                             statement_data[statement_file_name]["Positions"] = {}
                             statement_data[statement_file_name]['Parse'] = ""
-                            statement_pages = pdftotext.PDF(statement_file)
+                            statement_pages = pdftotext.PDF(statement_file, physical=True)
                             page_index = 0
                             while page_index < len(statement_pages):
                                 line_index = 0
