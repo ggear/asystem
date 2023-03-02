@@ -1,7 +1,7 @@
 # https://github.com/weewx/weewx/releases
 FROM python:3.10.8-slim-buster as image_base
 
-ENV WEEWX_VERSION="4.10.1"
+ENV WEEWX_VERSION="4.10.2"
 ENV WEEWX_HOME="/home/weewx"
 ENV WEEWX_ARCHIVE="weewx-${WEEWX_VERSION}.tar.gz"
 
