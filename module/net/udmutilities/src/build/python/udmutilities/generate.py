@@ -24,7 +24,7 @@ if __name__ == "__main__":
     env = load_env(DIR_ROOT)
     metadata_df = load_entity_metadata()
 
-    metadata_udmutilities_df = metadata_df[
+    metadata_dhcphosts_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_name"].str.len() > 0) &
@@ -53,66 +53,85 @@ if __name__ == "__main__":
         else:
             for unifi_client in unifi_clients_response.json()['data']:
                 unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else ""
-    metadata_udmutilities_hosts = {}
-    metadata_udmutilities_dnsmasq = {}
-    metadata_udmutilities_df = metadata_udmutilities_df.fillna('')
-    for vlan in metadata_udmutilities_df["connection_vlan"].unique():
-        metadata_udmutilities_vlan_df = metadata_udmutilities_df[(metadata_udmutilities_df["connection_vlan"] == vlan)]
-        metadata_udmutilities_vlan_df = metadata_udmutilities_vlan_df.set_index(
-            metadata_udmutilities_vlan_df["connection_ip"].str.split(".").str[3].apply(lambda x: '{0:0>3}'.format(x))
+    metadata_dhcphosts_hosts = {}
+    metadata_dhcphosts_dnsmasq = {}
+    metadata_dhcphosts_df = metadata_dhcphosts_df.fillna('')
+    for vlan in metadata_dhcphosts_df["connection_vlan"].unique():
+        metadata_dhcphosts_vlan_df = metadata_dhcphosts_df[(metadata_dhcphosts_df["connection_vlan"] == vlan)]
+        metadata_dhcphosts_vlan_df = metadata_dhcphosts_vlan_df.set_index(
+            metadata_dhcphosts_vlan_df["connection_ip"].str.split(".").str[3].apply(lambda x: '{0:0>3}'.format(x))
         ).sort_index()
-        metadata_udmutilities_dicts = [row.dropna().to_dict() for index, row in metadata_udmutilities_vlan_df.iterrows()]
+        metadata_dhcphosts_dicts = [row.dropna().to_dict() for index, row in metadata_dhcphosts_vlan_df.iterrows()]
         dnsmasq_conf_path = os.path.join(dnsmasq_conf_root_path, "{}-{}-custom.conf".format(
             DNSMASQ_CONF_PREFIX,
             vlan.replace("net", "vlan" + vlan.split("_")[2].replace("br", "")) if len(vlan) > 0 else "vlanX"
         ))
-        metadata_udmutilities_dnsmasq[dnsmasq_conf_path] = []
-        for metadata_udmutilities_dict in metadata_udmutilities_dicts:
-            metadata_udmutilities_dnsmasq[dnsmasq_conf_path].append("dhcp-host={},{}{}\n".format(
-                metadata_udmutilities_dict["connection_mac"],
-                (metadata_udmutilities_dict["connection_ip"] + ",")
-                if "connection_ip" in metadata_udmutilities_dict and len(metadata_udmutilities_dict["connection_ip"]) > 0 else "",
-                metadata_udmutilities_dict["device_name"],
+        metadata_dhcphosts_dnsmasq[dnsmasq_conf_path] = []
+        for metadata_dhcphosts_dict in metadata_dhcphosts_dicts:
+            metadata_dhcphosts_dnsmasq[dnsmasq_conf_path].append("dhcp-host={},{}{}\n".format(
+                metadata_dhcphosts_dict["connection_mac"],
+                (metadata_dhcphosts_dict["connection_ip"] + ",")
+                if "connection_ip" in metadata_dhcphosts_dict and len(metadata_dhcphosts_dict["connection_ip"]) > 0 else "",
+                metadata_dhcphosts_dict["device_name"],
             ))
-            if "connection_ip" in metadata_udmutilities_dict and len(metadata_udmutilities_dict["connection_ip"]) > 0:
-                if metadata_udmutilities_dict["device_name"] not in metadata_udmutilities_hosts:
-                    metadata_udmutilities_hosts[metadata_udmutilities_dict["device_name"]] = \
-                        [metadata_udmutilities_dict["connection_ip"]]
+            if "connection_ip" in metadata_dhcphosts_dict and len(metadata_dhcphosts_dict["connection_ip"]) > 0:
+                if metadata_dhcphosts_dict["device_name"] not in metadata_dhcphosts_hosts:
+                    metadata_dhcphosts_hosts[metadata_dhcphosts_dict["device_name"]] = \
+                        [metadata_dhcphosts_dict["connection_ip"]]
                 else:
-                    metadata_udmutilities_hosts[metadata_udmutilities_dict["device_name"]] \
-                        .append(metadata_udmutilities_dict["connection_ip"])
-    for dnsmasq_conf_path in metadata_udmutilities_dnsmasq:
+                    metadata_dhcphosts_hosts[metadata_dhcphosts_dict["device_name"]] \
+                        .append(metadata_dhcphosts_dict["connection_ip"])
+    for dnsmasq_conf_path in metadata_dhcphosts_dnsmasq:
         with open(dnsmasq_conf_path, "w") as dnsmasq_conf_file:
-            for metadata_udmutilities_dnsmasq_line in metadata_udmutilities_dnsmasq[dnsmasq_conf_path]:
-                dnsmasq_conf_file.write(metadata_udmutilities_dnsmasq_line)
-                mac = metadata_udmutilities_dnsmasq_line.split("=")[1].split(",")[0].strip()
-                name = metadata_udmutilities_dnsmasq_line.split("=")[1].split(",")[-1].strip()
+            for metadata_dhcphosts_dnsmasq_line in metadata_dhcphosts_dnsmasq[dnsmasq_conf_path]:
+                dnsmasq_conf_file.write(metadata_dhcphosts_dnsmasq_line)
+                mac = metadata_dhcphosts_dnsmasq_line.split("=")[1].split(",")[0].strip()
+                name = metadata_dhcphosts_dnsmasq_line.split("=")[1].split(",")[-1].strip()
                 if mac in unifi_clients:
                     if unifi_clients[mac] != name:
-                        print("Build generate script [udmutilities] dnsmasq config host [{}] doesn't match UniFi controller alias [{}]".format(
-                            name,
-                            unifi_clients[mac],
-                        ), file=sys.stderr)
+                        print(
+                            "Build generate script [udmutilities] dnsmasq config host [{}] doesn't match UniFi alias [{}]".format(
+                                name,
+                                unifi_clients[mac],
+                            ), file=sys.stderr)
                     else:
-                        print("Build generate script [udmutilities] dnsmasq config host [{}] matches UniFi controller alias [{}]".format(
-                            name,
-                            unifi_clients[mac],
-                        ))
+                        print(
+                            "Build generate script [udmutilities] dnsmasq config host [{}] matches UniFi alias [{}]".format(
+                                name,
+                                unifi_clients[mac],
+                            ))
                 else:
-                    print("Build generate script [udmutilities] dnsmasq config host [{}] not found in UniFi controller".format(
-                        name,
-                    ), file=sys.stderr)
+                    print(
+                        "Build generate script [udmutilities] dnsmasq config host [{}] not found in UniFi".format(
+                            name,
+                        ), file=sys.stderr)
         print("Build generate script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
 
-    metadata_udmutilities_ips = {}
+    metadata_dhcphosts_ips = {}
     hosts_conf_path = os.path.join(DIR_ROOT, "src/main/resources/config/udm-utilities/run-pihole/custom.list")
-    for metadata_udmutilities_host in metadata_udmutilities_hosts:
-        metadata_udmutilities_hosts[metadata_udmutilities_host].sort()
-        metadata_udmutilities_ips[metadata_udmutilities_hosts[metadata_udmutilities_host][0]] = metadata_udmutilities_host
+    for metadata_dhcphosts_host in metadata_dhcphosts_hosts:
+        metadata_dhcphosts_hosts[metadata_dhcphosts_host].sort()
+        metadata_dhcphosts_ips[metadata_dhcphosts_hosts[metadata_dhcphosts_host][0]] = metadata_dhcphosts_host
     with open(hosts_conf_path, "w") as hosts_conf_file:
-        for metadata_udmutilities_ip in sorted(metadata_udmutilities_ips):
+        for metadata_dhcphosts_ip in sorted(metadata_dhcphosts_ips):
             hosts_conf_file.write("{} {}.janeandgraham.com {}\n".format(
-                metadata_udmutilities_ip,
-                metadata_udmutilities_ips[metadata_udmutilities_ip],
-                metadata_udmutilities_ips[metadata_udmutilities_ip]
+                metadata_dhcphosts_ip,
+                metadata_dhcphosts_ips[metadata_dhcphosts_ip],
+                metadata_dhcphosts_ips[metadata_dhcphosts_ip]
+            ))
+
+    metadata_dhcpaliases_df = metadata_df[
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["connection_alias"].str.len() > 0) &
+        (metadata_df["connection_alias_target"].str.len() > 0)
+        ]
+    metadata_dhcpaliases_dicts = [row.dropna().to_dict() for index, row in metadata_dhcpaliases_df.iterrows()]
+    metadata_dhcpaliases_path = os.path.abspath(os.path.join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))
+    with open(metadata_dhcpaliases_path, 'w') as metadata_haas_file:
+        for metadata_dhcpaliases_dict in metadata_dhcpaliases_dicts:
+            metadata_haas_file.write("cname={},{}.janeandgraham.com,{}\n".format(
+                metadata_dhcpaliases_dict["connection_alias"],
+                metadata_dhcpaliases_dict["connection_alias"],
+                metadata_dhcpaliases_dict["connection_alias_target"],
             ))
