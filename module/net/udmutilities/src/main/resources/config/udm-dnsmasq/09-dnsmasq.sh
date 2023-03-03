@@ -28,6 +28,9 @@ for CONF_SOURCE_FILE in $(ls ${CONF_SOURCE_DIR}-*vlanX*-custom.conf ${CONF_SOURC
     fi
   done <${CONF_SOURCE_FILE}
 done
+if [ -f "${CONF_SOURCE_DIR}-aliases.conf" ]; then
+  cat "${CONF_SOURCE_DIR}-aliases.conf" >>${CONF_BUILD_FILE}
+fi
 echo "wrote '${CONF_BUILD_FILE}':" && cat ${CONF_BUILD_FILE} && echo "---"
 
 if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] || ! diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE}; then
