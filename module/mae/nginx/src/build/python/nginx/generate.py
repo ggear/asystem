@@ -113,7 +113,7 @@ http {
                 for server_name in server_names:
                     conf_file.write("  " + """
   # {} server for [{}] and domain [{}.janeandgraham.com]
-  map $host ${}_url {{ default http://{}:{}; }}
+  map $host ${}_url {{ default http://${{{}}}:{}; }}
   server {{
     listen {};
     server_name {}.janeandgraham.com;
@@ -131,7 +131,7 @@ http {
                         name,
                         server_name,
                         name,
-                        modules[name][1][ip_key],
+                        ip_key,
                         modules[name][1][port_key],
                         modules["nginx"][1]["NGINX_PORT_EXTERNAL_HTTPS"],
                         server_name,
