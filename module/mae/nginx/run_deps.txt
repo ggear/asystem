@@ -1,4 +1,7 @@
+plex
 weewx
 grafana
+vernemq
 influxdb
+zigbee2mqtt
 homeassistant
