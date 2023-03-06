@@ -46,29 +46,29 @@ http {
     ''      close;
   }
 
-  server {
-    listen ${NGINX_PORT_EXTERNAL_HTTP} default_server;
-    server_name _;
-    return 301 https://$host$request_uri;
-  }
+  # server {
+  #   listen ${NGINX_PORT_EXTERNAL_HTTP} default_server;
+  #   server_name _;
+  #   return 301 https://$host$request_uri;
+  # }
 
-  server {
-    listen ${NGINX_PORT_EXTERNAL_HTTPS} ssl ipv6only=off;
-    server_name *.janeandgraham.com;
-    ssl_certificate /etc/nginx/certificate.pem;
-    ssl_certificate_key /etc/nginx/.key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    return 301 https://$host$request_uri;
-  }
+  # server {
+  #   listen ${NGINX_PORT_EXTERNAL_HTTPS} ssl ipv6only=off;
+  #   server_name *.janeandgraham.com;
+  #   ssl_certificate /etc/nginx/certificate.pem;
+  #   ssl_certificate_key /etc/nginx/.key.pem;
+  #   ssl_protocols TLSv1.2 TLSv1.3;
+  #   return 301 https://$host$request_uri;
+  # }
 
-  server {
-    listen ${NGINX_PORT_EXTERNAL_HTTPS};
-    server_name janeandgraham.com;
-    ssl_certificate /etc/nginx/certificate.pem;
-    ssl_certificate_key /etc/nginx/.key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    return 301 https://home.janeandgraham.com$request_uri;
-  }
+  # server {
+  #   listen ${NGINX_PORT_EXTERNAL_HTTPS};
+  #   server_name janeandgraham.com;
+  #   ssl_certificate /etc/nginx/certificate.pem;
+  #   ssl_certificate_key /etc/nginx/.key.pem;
+  #   ssl_protocols TLSv1.2 TLSv1.3;
+  #   return 301 https://home.janeandgraham.com$request_uri;
+  # }
 
   # server {
   #    listen ${NGINX_HOST}:80;
@@ -79,14 +79,14 @@ http {
   #    }
   # }
 
-  # server {
-  #   listen ${NGINX_PORT_INTERNAL_HTTP} default_server;
-  #   server_name _;
-  #   location / {
-  #     root /usr/share/nginx/html;
-  #     autoindex on;
-  #   }
-  # }
+  server {
+    listen ${NGINX_PORT_INTERNAL_HTTP} default_server;
+    server_name _;
+    location / {
+      root /usr/share/nginx/html;
+      autoindex on;
+    }
+  }
 
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
