@@ -9,10 +9,8 @@ services:
     environment:
       - TZ=Australia/Perth
     ports:
-      - ${NGINX_PORT_EXTERNAL_HTTP}:${NGINX_PORT_EXTERNAL_HTTP}
-      - ${NGINX_PORT_EXTERNAL_HTTPS}:${NGINX_PORT_EXTERNAL_HTTPS}
-      - ${NGINX_PORT_INTERNAL_HTTP}:${NGINX_PORT_INTERNAL_HTTP}
-      - ${NGINX_PORT_INTERNAL_HTTPS}:${NGINX_PORT_INTERNAL_HTTPS}
+      - ${NGINX_PORT_EXTERNAL_HTTP}:${NGINX_PORT_INTERNAL_HTTP}
+      - ${NGINX_PORT_EXTERNAL_HTTPS}:${NGINX_PORT_INTERNAL_HTTPS}
     volumes:
       - ${SERVICE_DATA_DIR}/nginx.conf:/etc/nginx/nginx.conf
       - ${SERVICE_DATA_DIR}/.key.pem:/etc/nginx/.key.pem
