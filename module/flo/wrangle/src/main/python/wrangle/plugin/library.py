@@ -706,7 +706,7 @@ class Library(object, metaclass=ABCMeta):
             try:
                 query_url = "http://{}:{}/api/v2/query?org={}".format(
                     os.environ["INFLUXDB_IP_PROD"],
-                    os.environ["INFLUXDB_PORT"],
+                    os.environ["INFLUXDB_HTTP_PORT"],
                     os.environ["INFLUXDB_ORG"],
                 )
                 response = requests.post(url=query_url, headers={
@@ -735,7 +735,7 @@ class Library(object, metaclass=ABCMeta):
             try:
                 trunc_url = "http://{}:{}/api/v2/delete?org={}&bucket={}".format(
                     os.environ["INFLUXDB_IP"],
-                    os.environ["INFLUXDB_PORT"],
+                    os.environ["INFLUXDB_HTTP_PORT"],
                     os.environ["INFLUXDB_ORG"],
                     bucket,
                 )

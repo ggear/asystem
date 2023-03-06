@@ -11,7 +11,7 @@ services:
       - TZ=Australia/Perth
       - HOST_IP
       - HOST_NAME
-      - INFLUXDB_PORT
+      - INFLUXDB_HTTP_PORT
       - INFLUXDB_HOST
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc

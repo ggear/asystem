@@ -8,7 +8,7 @@ x-common: &common
     - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
     - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
     - GRAFANA_HOST
-    - GRAFANA_PORT
+    - GRAFANA_HTTP_PORT
     - GRAFANA_URL
     - GRAFANA_URL_PUBLIC
     - GRAFANA_URL_PRIVATE
@@ -17,7 +17,7 @@ x-common: &common
     - GRAFANA_KEY_PUBLIC
     - GRAFANA_KEY_PRIVATE
     - INFLUXDB_HOST
-    - INFLUXDB_PORT
+    - INFLUXDB_HTTP_PORT
     - INFLUXDB_ORG
     - INFLUXDB_BUCKET_HOME_PUBLIC
     - INFLUXDB_BUCKET_HOME_PRIVATE
@@ -44,7 +44,7 @@ services:
       - ${SERVICE_DATA_DIR}/grafana.ini:/etc/grafana/grafana.ini
       - ${SERVICE_DATA_DIR}/dashboards/dashboard_home.json:/etc/grafana/dashboard_home.json
     ports:
-      - ${GRAFANA_PORT}:${GRAFANA_PORT}
+      - ${GRAFANA_HTTP_PORT}:${GRAFANA_HTTP_PORT}
     deploy:
       resources:
         limits:

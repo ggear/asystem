@@ -34,7 +34,7 @@ influxdb:
   api_version: 2
   ssl: false
   host: !env_var INFLUXDB_HOST
-  port: !env_var INFLUXDB_PORT
+  port: !env_var INFLUXDB_HTTP_PORT
   token: !env_var INFLUXDB_TOKEN
   organization: !env_var INFLUXDB_ORG
   bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE

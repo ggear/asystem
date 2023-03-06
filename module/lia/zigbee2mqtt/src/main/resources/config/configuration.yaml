@@ -1,7 +1,7 @@
 permit_join: false
 frontend:
-  port: $ZIGBEE2MQTT_PORT
-  url: 'http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_PORT'
+  port: $ZIGBEE2MQTT_HTTP_PORT
+  url: 'http://$ZIGBEE2MQTT_IP:$ZIGBEE2MQTT_HTTP_PORT'
 mqtt:
   base_topic: zigbee
   server: 'mqtt://$VERNEMQ_IP:$VERNEMQ_PORT'

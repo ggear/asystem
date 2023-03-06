@@ -3,7 +3,7 @@
 set -e
 set -o pipefail
 
-influx ping --host http://localhost:${INFLUXDB_PORT}
+influx ping --host http://localhost:${INFLUXDB_HTTP_PORT}
 
 "from(bucket: \"data_public\") |> range(start: -15m, stop: now()) |> filter(fn: (r) => r._measurement == \"a_non_existent_metric\")"
 

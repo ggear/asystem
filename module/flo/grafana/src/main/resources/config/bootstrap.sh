@@ -104,7 +104,7 @@ if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V2 | jq -r '
     -d '{
           "name": "InfluxDB_V2",
           "type": "influxdb",
-          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_HTTP_PORT}"'",
           "access": "proxy",
           "isDefault": true,
           "jsonData": {
@@ -128,7 +128,7 @@ if [ $(curl -sf ${GRAFANA_URL_PUBLIC}/api/datasources/name/InfluxDB_V1 | grep In
     -d '{
           "name": "InfluxDB_V1",
           "type": "influxdb",
-          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_HTTP_PORT}"'",
           "access": "proxy",
           "isDefault": false,
           "database": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
@@ -210,7 +210,7 @@ if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V2 | jq -r 
     -d '{
           "name": "InfluxDB_V2",
           "type": "influxdb",
-          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_HTTP_PORT}"'",
           "access": "proxy",
           "isDefault": true,
           "jsonData": {
@@ -234,7 +234,7 @@ if [ $(curl -sf ${GRAFANA_URL_PRIVATE}/api/datasources/name/InfluxDB_V1 | grep I
     -d '{
           "name": "InfluxDB_V1",
           "type": "influxdb",
-          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_PORT}"'",
+          "url": "http://'"${INFLUXDB_HOST}:${INFLUXDB_HTTP_PORT}"'",
           "access": "proxy",
           "isDefault": false,
           "database": "'"${INFLUXDB_BUCKET_DATA_PRIVATE}"'",

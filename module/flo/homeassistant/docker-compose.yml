@@ -12,7 +12,7 @@ x-common: &common
     - VERNEMQ_HOST
     - VERNEMQ_PORT
     - INFLUXDB_HOST
-    - INFLUXDB_PORT
+    - INFLUXDB_HTTP_PORT
     - INFLUXDB_ORG
     - INFLUXDB_TOKEN
     - INFLUXDB_BUCKET_HOME_PRIVATE
@@ -34,7 +34,7 @@ services:
 
     # TODO: Cant deploy with network_mode host, need to think how to run locally
     #    ports:
-    #      - ${HOMEASSISTANT_PORT}:${HOMEASSISTANT_PORT}
+    #      - ${HOMEASSISTANT_HTTP_PORT}:${HOMEASSISTANT_HTTP_PORT}
 
     network_mode: host
     deploy:

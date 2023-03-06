@@ -1,22 +1,24 @@
 import datetime
+import glob
 import json
-import os
 import sys
 import time
 from collections import OrderedDict
+from os.path import *
 
 import pandas as pd
+from pathlib2 import Path
 from requests import get
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
+DIR_ROOT = abspath("{}/../../../..".format(dirname(realpath(__file__))))
 
 
 def load_env(root_dir=None):
     env = {}
-    env_path = os.path.abspath(os.path.join(DIR_ROOT if root_dir is None else root_dir, ".env"))
-    if not os.path.isfile(env_path):
-        env_path = os.path.abspath(os.path.join(DIR_ROOT if root_dir is None else root_dir, "target/release/.env"))
-    if not os.path.isfile(env_path):
+    env_path = abspath(join(DIR_ROOT if root_dir is None else root_dir, ".env"))
+    if not isfile(env_path):
+        env_path = abspath(join(DIR_ROOT if root_dir is None else root_dir, "target/release/.env"))
+    if not isfile(env_path):
         raise Exception("Could not find dev or prod .env file!")
     with open(env_path, 'r') as env_file:
         for env_line in env_file:
@@ -27,17 +29,29 @@ def load_env(root_dir=None):
                 continue
             env_key, env_value = env_line.split("=", 1)
             env[env_key] = env_value
-    print("Build generate script [homeassistant] environment loaded from [{}]".format(env_path))
+    print("Build generate script environment loaded from [{}]".format(env_path))
     sys.stdout.flush()
     return env
 
 
+def load_modules():
+    modules = {}
+    host_labels_names = {line.split("=")[0]: line.split("=")[-1].split(",")
+                         for line in Path(join(dirname(abspath(join(DIR_ROOT, "../.."))), ".hosts")).read_text().strip().split("\n")}
+    for module in glob.glob(abspath(join(DIR_ROOT, "../../*/*"))):
+        env = load_env(module)
+        name = basename(module)
+        hosts = ["{}-{}".format(host_labels_names[host_label][0], host_label) for host_label in basename(dirname(module)).split("_")]
+        modules[name] = [hosts, env]
+    return modules
+
+
 def load_entity_metadata():
-    metadata_path = os.path.abspath(os.path.join(DIR_ROOT, "src/build/resources/entity_metadata.xlsx"))
+    metadata_path = abspath(join(DIR_ROOT, "src/build/resources/entity_metadata.xlsx"))
     metadata_df = pd.read_excel(metadata_path, header=2, dtype=str)
     metadata_df["index"] = metadata_df["index"].astype(int)
     metadata_df = metadata_df.set_index(metadata_df["index"]).sort_index()
-    print("Build generate script [homeassistant] entity metadata loaded from [{}]".format(metadata_path))
+    print("Build generate script entity metadata loaded from [{}]".format(metadata_path))
     sys.stdout.flush()
     return metadata_df
 
@@ -60,7 +74,7 @@ if __name__ == "__main__":
             state_response = get(
                 "http://{}:{}/api/states/{}.{}".format(
                     env["HOMEASSISTANT_IP_PROD"],
-                    env["HOMEASSISTANT_PORT"],
+                    env["HOMEASSISTANT_HTTP_PORT"],
                     metadata_verify_dict["entity_namespace"],
                     metadata_verify_dict["unique_id"]
                 ), headers={
@@ -98,7 +112,7 @@ if __name__ == "__main__":
         (metadata_df["entity_domain"].str.len() > 0)
         ]
     metadata_customise_dicts = [row.dropna().to_dict() for index, row in metadata_customise_df.iterrows()]
-    metadata_customise_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/customise.yaml"))
+    metadata_customise_path = abspath(join(DIR_ROOT, "src/main/resources/config/customise.yaml"))
     with open(metadata_customise_path, 'w') as metadata_customise_file:
         metadata_customise_file.write("""
 #######################################################################################
@@ -137,7 +151,7 @@ if __name__ == "__main__":
         (metadata_df["compensation_curve"].str.len() > 0)
         ]
     metadata_compensation_dicts = [row.dropna().to_dict() for index, row in metadata_compensation_df.iterrows()]
-    metadata_compensation_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/compensation.yaml"))
+    metadata_compensation_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/compensation.yaml"))
     with open(metadata_compensation_path, 'w') as metadata_compensation_file:
         metadata_compensation_file.write("""
 #######################################################################################
@@ -174,7 +188,7 @@ compensation:
         ]
     metadata_control_dicts = [row.dropna().to_dict() for index, row in metadata_control_df.iterrows()]
     metadata_control_dicts = sorted(metadata_control_dicts, key=lambda metadata_control_dict: metadata_control_dict['connection_ip'])
-    metadata_control_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/control.yaml"))
+    metadata_control_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/control.yaml"))
     with open(metadata_control_path, 'w') as metadata_control_file:
         metadata_control_file.write("""
 #######################################################################################
@@ -232,7 +246,7 @@ automation:
             (metadata_df["device_suggested_area"].str.len() > 0)
             ]
         metadata_haas_dicts = [row.dropna().to_dict() for index, row in metadata_haas_df.iterrows()]
-        metadata_haas_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/haas-entities.yaml"))
+        metadata_haas_path = abspath(join(DIR_ROOT, "src/main/resources/config/haas-entities.yaml"))
         with open(metadata_haas_path, 'w') as metadata_haas_file:
             metadata_haas_file.write("""
 #######################################################################################
@@ -275,7 +289,7 @@ automation:
                                    for index, row in metadata_media_df.query("device_via_device == 'Google'").iterrows()]
     metadata_media_sonos_dicts = [row.dropna().to_dict()
                                   for index, row in metadata_media_df.query("device_via_device == 'Sonos'").iterrows()]
-    metadata_media_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/media.yaml"))
+    metadata_media_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/media.yaml"))
     with open(metadata_media_path, 'w') as metadata_media_file:
         metadata_media_file.write("""
 #######################################################################################
@@ -360,7 +374,7 @@ sonos:
             "states('binary_sensor.template_{}') == 'on'".format(metadata_lock_dict["unique_id"].replace("_lock", "_state"))
             for metadata_lock_dict in metadata_lock_dicts
         ])
-        metadata_security_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/security.yaml"))
+        metadata_security_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/security.yaml"))
         with open(metadata_security_path, 'w') as metadata_security_file:
             metadata_security_file.write("""
 #######################################################################################
@@ -757,7 +771,7 @@ automation:
             if metadata_lighting_dict["linked_entity"] not in metadata_lighting_automations_dicts:
                 metadata_lighting_automations_dicts[metadata_lighting_dict["linked_entity"]] = []
             metadata_lighting_automations_dicts[metadata_lighting_dict["linked_entity"]].append(metadata_lighting_dict)
-    metadata_lighting_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/lighting.yaml"))
+    metadata_lighting_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/lighting.yaml"))
     with open(metadata_lighting_path, 'w') as metadata_lighting_file:
         metadata_lighting_file.write("""
 #######################################################################################
@@ -1027,7 +1041,7 @@ automation:
         (metadata_df["icon"].str.len() > 0)
         ]
     metadata_action_dicts = [row.dropna().to_dict() for index, row in metadata_action_df.iterrows()]
-    metadata_action_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/custom_packages/actions.yaml"))
+    metadata_action_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/actions.yaml"))
     with open(metadata_action_path, 'w') as metadata_action_file:
         metadata_action_file.write("""
 #######################################################################################
@@ -1097,7 +1111,7 @@ automation:
             metadata_lovelace_group_domain_dicts[group][domain] = []
         metadata_lovelace_group_domain_dicts[group][domain].append(metadata_lovelace_dict)
     for group in metadata_lovelace_group_domain_dicts:
-        metadata_lovelace_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/ui-lovelace", group.lower() + ".yaml"))
+        metadata_lovelace_path = abspath(join(DIR_ROOT, "src/main/resources/config/ui-lovelace", group.lower() + ".yaml"))
         with open(metadata_lovelace_path, 'w') as metadata_lovelace_file:
             metadata_lovelace_file.write("""
 #######################################################################################

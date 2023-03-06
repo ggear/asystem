@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! influx ping --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT} >>/dev/null 2>&1; do
+while ! influx ping --host http://${INFLUXDB_HOST}:${INFLUXDB_HTTP_PORT} >>/dev/null 2>&1; do
   echo "Waiting for service to come up ..." && sleep 1
 done
 
@@ -15,9 +15,9 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-influx setup -f -n default --host http://${INFLUXDB_HOST}:${INFLUXDB_PORT} -o ${INFLUXDB_ORG} -b ${INFLUXDB_BUCKET_HOME_PUBLIC} -u ${INFLUXDB_USER} -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN} 2>/dev/null || true
+influx setup -f -n default --host http://${INFLUXDB_HOST}:${INFLUXDB_HTTP_PORT} -o ${INFLUXDB_ORG} -b ${INFLUXDB_BUCKET_HOME_PUBLIC} -u ${INFLUXDB_USER} -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN} 2>/dev/null || true
 if [ $(influx config list | grep remote | wc -l) -ne 1 ]; then
-  influx config create -a -n remote -u http://${INFLUXDB_HOST}:${INFLUXDB_PORT} -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN}
+  influx config create -a -n remote -u http://${INFLUXDB_HOST}:${INFLUXDB_HTTP_PORT} -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN}
 fi
 influx config set --config-name remote
 

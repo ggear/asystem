@@ -83,7 +83,7 @@ def med(data):
 
 def query(flux):
     response = post(
-        url="http://{}:{}/api/v2/query?org={}".format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_PORT"], os.environ["INFLUXDB_ORG"]),
+        url="http://{}:{}/api/v2/query?org={}".format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_HTTP_PORT"], os.environ["INFLUXDB_ORG"]),
         headers={
             'Accept': 'application/csv',
             'Content-type': 'application/vnd.flux',

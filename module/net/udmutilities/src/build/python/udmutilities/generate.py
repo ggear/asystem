@@ -15,6 +15,7 @@ for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
         sys.path.insert(0, "{}/src/build/python".format(dir_module))
 
 from homeassistant.generate import load_env
+from homeassistant.generate import load_modules
 from homeassistant.generate import load_entity_metadata
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
@@ -22,6 +23,7 @@ UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
 
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
+    modules = load_modules()
     metadata_df = load_entity_metadata()
 
     metadata_dhcphosts_df = metadata_df[
@@ -120,18 +122,12 @@ if __name__ == "__main__":
                 metadata_dhcphosts_ips[metadata_dhcphosts_ip]
             ))
 
-    metadata_dhcpaliases_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["connection_alias"].str.len() > 0) &
-        (metadata_df["connection_alias_target"].str.len() > 0)
-        ]
-    metadata_dhcpaliases_dicts = [row.dropna().to_dict() for index, row in metadata_dhcpaliases_df.iterrows()]
     metadata_dhcpaliases_path = os.path.abspath(os.path.join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))
     with open(metadata_dhcpaliases_path, 'w') as metadata_haas_file:
-        for metadata_dhcpaliases_dict in metadata_dhcpaliases_dicts:
-            metadata_haas_file.write("cname={},{}.janeandgraham.com,{}\n".format(
-                metadata_dhcpaliases_dict["connection_alias"],
-                metadata_dhcpaliases_dict["connection_alias"],
-                metadata_dhcpaliases_dict["connection_alias_target"],
-            ))
+        for name in modules:
+            if "{}_HTTP_PORT".format(name.upper()) in modules[name][1]:
+                metadata_haas_file.write("cname={},{}.janeandgraham.com,{}\n".format(
+                    name,
+                    name,
+                    modules["nginx"][0][0],
+                ))

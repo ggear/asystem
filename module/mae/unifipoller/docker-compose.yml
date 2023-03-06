@@ -9,7 +9,7 @@ services:
     environment:
       - TZ=Australia/Perth
       - INFLUXDB_IP
-      - INFLUXDB_PORT
+      - INFLUXDB_HTTP_PORT
       - INFLUXDB_USER_PRIVATE
       - INFLUXDB_TOKEN
       - INFLUXDB_BUCKET_HOST_PRIVATE
