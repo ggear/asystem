@@ -79,14 +79,14 @@ http {
   #    }
   # }
 
-  server {
-    listen ${NGINX_PORT_INTERNAL_HTTP} default_server;
-    server_name _;
-    location / {
-      root /usr/share/nginx/html;
-      autoindex on;
-    }
-  }
+  # server {
+  #   listen ${NGINX_PORT_INTERNAL_HTTP} default_server;
+  #   server_name _;
+  #   location / {
+  #     root /usr/share/nginx/html;
+  #     autoindex on;
+  #   }
+  # }
 
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
