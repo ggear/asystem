@@ -101,9 +101,6 @@ http {
   server {{
     listen {};
     server_name {}.janeandgraham.com;
-    ssl_certificate /etc/nginx/certificate.pem;
-    ssl_certificate_key /etc/nginx/.key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
     proxy_buffering off;
     location / {{
       proxy_http_version 1.1;
