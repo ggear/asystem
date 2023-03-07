@@ -46,11 +46,11 @@ http {
     ''      close;
   }
 
-  # server {
-  #   listen ${NGINX_PORT_EXTERNAL_HTTP} default_server;
-  #   server_name _;
-  #   return 301 https://$host$request_uri;
-  # }
+  server {
+    listen ${NGINX_PORT_EXTERNAL_HTTP} default_server;
+    server_name _;
+    return 301 https://$host$request_uri;
+  }
 
   # server {
   #   listen ${NGINX_PORT_EXTERNAL_HTTPS} ssl ipv6only=off;
@@ -79,14 +79,14 @@ http {
   #    }
   # }
 
-  server {
-    listen ${NGINX_PORT_INTERNAL_HTTP} default_server;
-    server_name _;
-    location / {
-      root /usr/share/nginx/html;
-      autoindex on;
-    }
-  }
+  # server {
+  #   listen ${NGINX_PORT_INTERNAL_HTTP} default_server;
+  #   server_name _;
+  #   location / {
+  #     root /usr/share/nginx/html;
+  #     autoindex on;
+  #   }
+  # }
 
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
