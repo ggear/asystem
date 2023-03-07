@@ -47,7 +47,7 @@ http {
   }
 
   server {
-    listen ${NGINX_PORT_EXTERNAL_HTTP} default_server;
+    listen ${NGINX_PORT_INTERNAL_HTTPS} default_server;
     server_name _;
     return 301 https://$host$request_uri;
   }
@@ -69,24 +69,6 @@ http {
     ssl_protocols TLSv1.2 TLSv1.3;
     return 301 https://home.janeandgraham.com$request_uri;
   }
-
-  # server {
-  #    listen ${NGINX_HOST}:80;
-  #    server_name ${NGINX_HOST};
-  #    location / {
-  #      root /usr/share/nginx/html;
-  #      autoindex on;
-  #    }
-  # }
-
-  # server {
-  #   listen ${NGINX_PORT_INTERNAL_HTTP} default_server;
-  #   server_name _;
-  #   location / {
-  #     root /usr/share/nginx/html;
-  #     autoindex on;
-  #   }
-  # }
 
   # Private server for [nginx] and domain [nginx}.janeandgraham.com]
   server {
