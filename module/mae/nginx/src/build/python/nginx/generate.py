@@ -53,7 +53,7 @@ http {
   }
 
   server {
-    listen ${NGINX_PORT_EXTERNAL_HTTPS} ssl ipv6only=off;
+    listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
     server_name *.janeandgraham.com;
     ssl_certificate /etc/nginx/certificate.pem;
     ssl_certificate_key /etc/nginx/.key.pem;
@@ -62,7 +62,7 @@ http {
   }
 
   server {
-    listen ${NGINX_PORT_EXTERNAL_HTTPS};
+    listen ${NGINX_PORT_INTERNAL_HTTPS};
     server_name janeandgraham.com;
     ssl_certificate /etc/nginx/certificate.pem;
     ssl_certificate_key /etc/nginx/.key.pem;
@@ -88,17 +88,18 @@ http {
   #   }
   # }
 
-  # server {
-  #   listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
-  #   server_name ${NGINX_HOST}.janeandgraham.com;
-  #   ssl_certificate /etc/nginx/certificate.pem;
-  #   ssl_certificate_key /etc/nginx/.key.pem;
-  #   ssl_protocols TLSv1.2 TLSv1.3;
-  #   location / {
-  #     root /usr/share/nginx/html;
-  #     autoindex on;
-  #   }
-  # }
+  # Private server for [nginx] and domain [nginx}.janeandgraham.com]
+  server {
+    listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
+    server_name nginx.janeandgraham.com;
+    ssl_certificate /etc/nginx/certificate.pem;
+    ssl_certificate_key /etc/nginx/.key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    location / {
+      root /usr/share/nginx/html;
+      autoindex on;
+    }
+  }
         """.strip() + "\n\n")
         for name in modules:
             ip_key = "{}_IP".format(name.upper())
@@ -106,7 +107,7 @@ http {
             host_public_key = "{}_HOST_PUBLIC".format(name.upper())
             ws_context_key = "{}_HTTP_WS_CONTEXT".format(name.upper())
             console_context_key = "{}_HTTP_CONSOLE_CONTEXT".format(name.upper())
-            if port_key in modules[name][1]:
+            if port_key in modules[name][1] and name != "nginx":
                 server_names = [name]
                 if host_public_key in modules[name][1]:
                     server_names.append(modules[name][1][host_public_key])
@@ -133,7 +134,7 @@ http {
                         name,
                         ip_key,
                         modules[name][1][port_key],
-                        modules["nginx"][1]["NGINX_PORT_EXTERNAL_HTTPS"],
+                        modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
                         server_name,
                         name,
                         modules[name][1][console_context_key] if console_context_key in modules[name][1] else "",
