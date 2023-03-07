@@ -25,7 +25,7 @@ services:
 
     ports:
       - ${VERNEMQ_HTTP_PORT}:8888
-      - ${VERNEMQ_PORT}:${VERNEMQ_PORT}
+      - ${VERNEMQ_PORT}:1883
     deploy:
       resources:
         limits:
