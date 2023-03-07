@@ -41,17 +41,30 @@ http {
   access_log on;
   server_tokens off;
 
+  # HTTP WS upgrade
   map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
   }
 
+  # Redirect all HTTP traffic to HTTPS
   server {
     listen ${NGINX_PORT_INTERNAL_HTTP} default_server;
     server_name _;
     return 301 https://$host$request_uri;
   }
 
+  # Add a default domain
+  server {
+    listen ${NGINX_PORT_INTERNAL_HTTPS};
+    server_name janeandgraham.com;
+    ssl_certificate /etc/nginx/certificate.pem;
+    ssl_certificate_key /etc/nginx/.key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    return 301 https://home.janeandgraham.com$request_uri;
+  }
+  
+  # Serve HTTPS traffic
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
     server_name *.janeandgraham.com;
@@ -61,22 +74,10 @@ http {
     return 301 https://$host$request_uri;
   }
 
-  server {
-    listen ${NGINX_PORT_INTERNAL_HTTPS};
-    server_name janeandgraham.com;
-    ssl_certificate /etc/nginx/certificate.pem;
-    ssl_certificate_key /etc/nginx/.key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    return 301 https://home.janeandgraham.com$request_uri;
-  }
-
   # Private server for [nginx] and domain [nginx}.janeandgraham.com]
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS};
     server_name nginx.janeandgraham.com;
-    ssl_certificate /etc/nginx/certificate.pem;
-    ssl_certificate_key /etc/nginx/.key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
     location / {
       root /usr/share/nginx/html;
       autoindex on;
