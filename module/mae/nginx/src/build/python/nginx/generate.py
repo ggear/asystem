@@ -32,6 +32,12 @@ worker_processes 1;
 pid /var/run/nginx.pid;
 error_log /var/log/nginx/error.log warn;
 
+server_tokens off
+client_body_buffer_size 1k
+client_header_buffer_size 1k
+client_max_body_size 1k
+large_client_header_buffers 2 1k
+
 events {
   worker_connections  1024;
 }
