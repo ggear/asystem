@@ -4,7 +4,7 @@ e2e-testing: false
 engine-path: /var/lib/influxdb2/engine
 feature-flags: { }
 flux-log-enabled: false
-http-bind-address: :8086
+http-bind-address: :${INFLUXDB_HTTP_PORT}
 http-idle-timeout: 15m0s
 http-read-header-timeout: 0s
 http-read-timeout: 0s
