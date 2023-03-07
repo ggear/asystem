@@ -6,6 +6,7 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - SERVICE_VERSION_COMPACT
+    - HOMEASSISTANT_HTTP_PORT
     - HOMEASSISTANT_DB
     - HOMEASSISTANT_INTERNAL_URL
     - HOMEASSISTANT_EXTERNAL_URL
