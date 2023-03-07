@@ -7,7 +7,7 @@ import paho.mqtt.client as mqtt
 import pytest
 
 HOST = "127.0.0.1"
-PORT = 1883
+PORT = 32404
 COUNT = 10
 TIMEOUT = 2
 TIMEOUT_WARMUP = 30
