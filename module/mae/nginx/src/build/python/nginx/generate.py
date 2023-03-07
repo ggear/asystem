@@ -52,14 +52,14 @@ http {
     return 301 https://$host$request_uri;
   }
 
-  # server {
-  #   listen ${NGINX_PORT_EXTERNAL_HTTPS} ssl ipv6only=off;
-  #   server_name *.janeandgraham.com;
-  #   ssl_certificate /etc/nginx/certificate.pem;
-  #   ssl_certificate_key /etc/nginx/.key.pem;
-  #   ssl_protocols TLSv1.2 TLSv1.3;
-  #   return 301 https://$host$request_uri;
-  # }
+  server {
+    listen ${NGINX_PORT_EXTERNAL_HTTPS} ssl ipv6only=off;
+    server_name *.janeandgraham.com;
+    ssl_certificate /etc/nginx/certificate.pem;
+    ssl_certificate_key /etc/nginx/.key.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    return 301 https://$host$request_uri;
+  }
 
   server {
     listen ${NGINX_PORT_EXTERNAL_HTTPS};
