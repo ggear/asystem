@@ -77,7 +77,7 @@ http {
   # HTTP WS upgrade
   map $http_upgrade $connection_upgrade {
     default upgrade;
-    ''    close;
+    '' close;
   }
 
   # HTTP to HTTPS redirect
@@ -109,8 +109,8 @@ http {
     listen ${NGINX_PORT_INTERNAL_HTTPS};
     server_name nginx.janeandgraham.com;
     location / {
-    root /usr/share/nginx/html;
-    autoindex on;
+      root /usr/share/nginx/html;
+      autoindex on;
     }
   }
       """.strip() + "\n\n")
@@ -133,9 +133,9 @@ http {
     server_name {}.janeandgraham.com;
     proxy_buffering off;
     location / {{
-    proxy_http_version 1.1;
-    proxy_pass ${}_url{};
-    proxy_set_header Host $host;
+      proxy_http_version 1.1;
+      proxy_pass ${}_url{};
+      proxy_set_header Host $host;
     }}
               """.format(
                 "Remote" if name != server_name else "Local",
@@ -152,11 +152,11 @@ http {
               if ws_context_key in modules[name][1]:
                 conf_file.write("    " + """
     location {} {{
-    proxy_http_version 1.1;
-    proxy_pass ${}_url{};
-    proxy_set_header Host $host;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
+      proxy_http_version 1.1;
+      proxy_pass ${}_url{};
+      proxy_set_header Host $host;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
     }}
                 """.format(
                     modules[name][1][ws_context_key],
