@@ -19,7 +19,7 @@ from homeassistant.generate import load_modules
 from homeassistant.generate import load_entity_metadata
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
-UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
+UNIFI_CONTROLLER_URL = "https://unifi.local.janeandgraham.com:443"
 
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
@@ -38,12 +38,16 @@ if __name__ == "__main__":
         os.remove(dnsmasq_conf_path)
     unifi_clients = {}
     unifi_session = requests.Session()
-    unifi_session.post('{}/api/auth/login'.format(UNIFI_CONTROLLER_URL), json={
-        'username': env["UNIFI_ADMIN_USER"],
-        'password': env["UNIFI_ADMIN_KEY"]
-    }, verify=False).raise_for_status()
-    unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
-    if unifi_clients_response.status_code != 200:
+    unifi_server_up = True
+    try:
+        unifi_session.post('{}/api/auth/login'.format(UNIFI_CONTROLLER_URL), json={
+            'username': env["UNIFI_ADMIN_USER"],
+            'password': env["UNIFI_ADMIN_KEY"]
+        }, verify=False).raise_for_status()
+        unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
+    except:
+        unifi_server_up = False
+    if not unifi_server_up or unifi_clients_response.status_code != 200:
         print("Build generate script [udmutilities] could not connect to UniFi")
     else:
         for unifi_client in unifi_clients_response.json()['data']:
@@ -116,7 +120,7 @@ if __name__ == "__main__":
         metadata_dhcphosts_ips[metadata_dhcphosts_hosts[metadata_dhcphosts_host][0]] = metadata_dhcphosts_host
     with open(hosts_conf_path, "w") as hosts_conf_file:
         for metadata_dhcphosts_ip in sorted(metadata_dhcphosts_ips):
-            hosts_conf_file.write("{} {}.janeandgraham.com {}\n".format(
+            hosts_conf_file.write("{} {}.local.janeandgraham.com {}\n".format(
                 metadata_dhcphosts_ip,
                 metadata_dhcphosts_ips[metadata_dhcphosts_ip],
                 metadata_dhcphosts_ips[metadata_dhcphosts_ip]
@@ -126,7 +130,7 @@ if __name__ == "__main__":
     with open(metadata_dhcpaliases_path, 'w') as metadata_haas_file:
         for name in modules:
             if "{}_HTTP_PORT".format(name.upper()) in modules[name][1]:
-                metadata_haas_file.write("cname={},{}.janeandgraham.com,{}\n".format(
+                metadata_haas_file.write("cname={},{}.local.janeandgraham.com,{}\n".format(
                     name,
                     name,
                     modules["nginx"][0][0],

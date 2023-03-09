@@ -17,7 +17,7 @@ from homeassistant.generate import load_env
 from homeassistant.generate import load_entity_metadata
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
-UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
+UNIFI_CONTROLLER_URL = "https://unifi.local.janeandgraham.com:443"
 
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)

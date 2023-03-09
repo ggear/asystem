@@ -77,27 +77,17 @@ http {
   # HTTP WS upgrade
   map $http_upgrade $connection_upgrade {
     default upgrade;
-    ''    close;
+    '' close;
   }
 
-  # Redirect all HTTP traffic to HTTPS
+  # HTTP server
   server {
     listen ${NGINX_PORT_INTERNAL_HTTP} default_server;
     server_name _;
     return 301 https://$host$request_uri;
   }
-
-  # Add a default domain
-  server {
-    listen ${NGINX_PORT_INTERNAL_HTTPS};
-    server_name janeandgraham.com;
-    ssl_certificate /etc/nginx/certificate.pem;
-    ssl_certificate_key /etc/nginx/.key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    return 301 https://home.janeandgraham.com$request_uri;
-  }
   
-  # Serve HTTPS traffic
+  # HTTPS server
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
     server_name *.janeandgraham.com;
@@ -107,13 +97,27 @@ http {
     return 301 https://$host$request_uri;
   }
 
-  # Local server for [nginx] and domain [nginx}.janeandgraham.com]
+  # Remote domain redirect
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS};
-    server_name nginx.janeandgraham.com;
+    server_name janeandgraham.com;
+    return 301 https://home.janeandgraham.com$request_uri;
+  }
+
+  # Local domain redirect
+  server {
+    listen ${NGINX_PORT_INTERNAL_HTTPS};
+    server_name local.janeandgraham.com;
+    return 301 https://nginx.local.janeandgraham.com$request_uri;
+  }
+
+  # Local server for [nginx] and domain [nginx}.local.janeandgraham.com]
+  server {
+    listen ${NGINX_PORT_INTERNAL_HTTPS};
+    server_name nginx.local.janeandgraham.com;
     location / {
-    root /usr/share/nginx/html;
-    autoindex on;
+      root /usr/share/nginx/html;
+      autoindex on;
     }
   }
       """.strip() + "\n\n")
@@ -129,16 +133,16 @@ http {
               server_names.append(modules[name][1][host_public_key])
             for server_name in server_names:
               conf_file.write("  " + """
-  # {} server for [{}] and domain [{}.janeandgraham.com]
+  # {} server for [{}] and domain [{}.local.janeandgraham.com]
   map $host ${}_url {{ default http://${{{}}}:{}; }}
   server {{
     listen {};
-    server_name {}.janeandgraham.com;
+    server_name {}.local.janeandgraham.com;
     proxy_buffering off;
     location / {{
-    proxy_http_version 1.1;
-    proxy_pass ${}_url{};
-    proxy_set_header Host $host;
+      proxy_http_version 1.1;
+      proxy_pass ${}_url{};
+      proxy_set_header Host $host;
     }}
               """.format(
                 "Remote" if name != server_name else "Local",
@@ -155,11 +159,11 @@ http {
               if ws_context_key in modules[name][1]:
                 conf_file.write("    " + """
     location {} {{
-    proxy_http_version 1.1;
-    proxy_pass ${}_url{};
-    proxy_set_header Host $host;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
+      proxy_http_version 1.1;
+      proxy_pass ${}_url{};
+      proxy_set_header Host $host;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection "upgrade";
     }}
                 """.format(
                     modules[name][1][ws_context_key],

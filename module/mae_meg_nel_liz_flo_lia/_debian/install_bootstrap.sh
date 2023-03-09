@@ -14,7 +14,7 @@ diskutil eject /dev/disk4
 ################################################################################
 # Install (non-graphical)
 # Dont load proprietary media
-# Set host to ${HOST_TYPE}-${HOST_NAME}.janeandgraham.com (macmini-liz, macmini-nel, macbook-flo)
+# Set host to ${HOST_TYPE}-${HOST_NAME}.local.janeandgraham.com (macmini-liz, macmini-nel, macbook-flo)
 # Create user Graham Gear (graham)
 # Guided entire disk and setup LVM create partitions at 450GB, /tmp, /var, /home, max, force UEFI
 # Install SSH server, standard sys utils
