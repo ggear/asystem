@@ -107,7 +107,7 @@ http {
     return 301 https://$host$request_uri;
   }
 
-  # Private server for [nginx] and domain [nginx}.janeandgraham.com]
+  # Local server for [nginx] and domain [nginx}.janeandgraham.com]
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS};
     server_name nginx.janeandgraham.com;
@@ -141,7 +141,7 @@ http {
     proxy_set_header Host $host;
     }}
               """.format(
-                "Public" if name != server_name else "Private",
+                "Remote" if name != server_name else "Local",
                 name,
                 server_name,
                 name,
