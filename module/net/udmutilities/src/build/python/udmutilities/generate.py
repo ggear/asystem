@@ -19,7 +19,7 @@ from homeassistant.generate import load_modules
 from homeassistant.generate import load_entity_metadata
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
-UNIFI_CONTROLLER_URL = "https://unifi.local.janeandgraham.com:443"
+UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
 
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         metadata_dhcphosts_ips[metadata_dhcphosts_hosts[metadata_dhcphosts_host][0]] = metadata_dhcphosts_host
     with open(hosts_conf_path, "w") as hosts_conf_file:
         for metadata_dhcphosts_ip in sorted(metadata_dhcphosts_ips):
-            hosts_conf_file.write("{} {}.local.janeandgraham.com {}\n".format(
+            hosts_conf_file.write("{} {}.janeandgraham.com {}\n".format(
                 metadata_dhcphosts_ip,
                 metadata_dhcphosts_ips[metadata_dhcphosts_ip],
                 metadata_dhcphosts_ips[metadata_dhcphosts_ip]
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     with open(metadata_dhcpaliases_path, 'w') as metadata_haas_file:
         for name in modules:
             if "{}_HTTP_PORT".format(name.upper()) in modules[name][1]:
-                metadata_haas_file.write("cname={},{}.local.janeandgraham.com,{}\n".format(
+                metadata_haas_file.write("cname={},{}.janeandgraham.com,{}\n".format(
                     name,
                     name,
                     modules["nginx"][0][0],

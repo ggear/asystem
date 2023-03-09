@@ -92,7 +92,7 @@ automation:
       - service: media_player.play_media
         data:
           media_content_type: music
-          media_content_id: 'https://nginx.local.janeandgraham.com/relaxation-sounds/ocean.mp3'
+          media_content_id: 'https://nginx.janeandgraham.com/relaxation-sounds/ocean.mp3'
         target:
           entity_id: media_player.parents_speaker
       - service: media_player.repeat_set

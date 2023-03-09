@@ -232,7 +232,7 @@ fi
 ################################################################################
 cat <<EOF >/etc/avahi/avahi-daemon.conf
 [server]
-domain-name=local.janeandgraham.com
+domain-name=janeandgraham.com
 use-ipv4=yes
 use-ipv6=yes
 ratelimit-interval-usec=1000000

@@ -51,7 +51,7 @@ mkdir -p /mnt/data/pihole/etc-dnsmasq.d && chmod 777 /mnt/data/pihole/etc-dnsmas
 if [ ! -f /mnt/data/pihole/etc-dnsmasq.d/02-custom.conf ]; then
   cat <<EOF >>/mnt/data/pihole/etc-dnsmasq.d/02-custom.conf
 rev-server=10.0.0.0/8,10.0.0.1
-server=/local.janeandgraham.com/10.0.0.1
+server=/janeandgraham.com/10.0.0.1
 server=//10.0.0.1
 EOF
   chmod 644 /mnt/data/pihole/etc-dnsmasq.d/02-custom.conf

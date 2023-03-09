@@ -30,14 +30,14 @@
 #   Limited Admin, Ubiquiti Account, jane.m.thomson@gmail.com
 
 # Network -> Networks -> LAN -> Network Name -> Management
-# Network -> Networks -> LAN -> Advanced -> Domain Name -> local.janeandgraham.com
+# Network -> Networks -> LAN -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> LAN -> Advanced -> IGMP Snooping -> True
 # Network -> Networks -> LAN -> Advanced -> Gateway IP/Subnet -> 10.0.0.1/24
 # Network -> Networks -> LAN -> Advanced -> Auto Scale Network -> DHCP range -> 10.0.0.100 to 10.0.1.254
 
 # Network -> Networks -> Add New Network -> Network Name -> Unfettered
 # Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 2
-# Network -> Networks -> Add New Network -> Advanced -> Domain Name -> local.janeandgraham.com
+# Network -> Networks -> Add New Network -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> Add New Network -> Advanced -> IGMP Snooping -> True
 # Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 10.0.2.1/24
 # Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 10.0.2.100 to 10.0.2.254
@@ -45,7 +45,7 @@
 
 # Network -> Networks -> Add New Network -> Network Name -> Controlled
 # Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 4
-# Network -> Networks -> Add New Network -> Advanced -> Domain Name -> local.janeandgraham.com
+# Network -> Networks -> Add New Network -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> Add New Network -> Advanced -> IGMP Snooping -> True
 # Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 10.0.4.1/24
 # Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 10.0.4.100 to 10.0.4.254
@@ -54,7 +54,7 @@
 
 # Network -> Networks -> Add New Network -> Network Name -> Isolated
 # Network -> Networks -> Add New Network -> Advanced -> VLAN ID -> 6
-# Network -> Networks -> Add New Network -> Advanced -> Domain Name -> local.janeandgraham.com
+# Network -> Networks -> Add New Network -> Advanced -> Domain Name -> janeandgraham.com
 # Network -> Networks -> Add New Network -> Advanced -> IGMP Snooping -> True
 # Network -> Networks -> Add New Network -> Advanced -> Gateway IP/Subnet -> 10.0.6.1/24
 # Network -> Networks -> Add New Network -> Advanced -> Auto Scale Network -> DHCP range -> 10.0.6.100 to 10.0.6.254
