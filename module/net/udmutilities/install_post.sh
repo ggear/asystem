@@ -71,7 +71,7 @@ podman create --network dns --restart always \
   -e PROXY_LOCATION="udm-pihole" \
   -e ServerIP="${PIHOLE_IP}" \
   -e IPv6="False" \
-  pihole/pihole:2022.02.1
+  pihole/pihole:2023.02.2
 cp -rvf ./config/udm-utilities/dns-common/on_boot.d/10-dns.sh /mnt/data/on_boot.d
 chmod a+x /mnt/data/on_boot.d/10-dns.sh
 /mnt/data/on_boot.d/10-dns.sh
