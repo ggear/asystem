@@ -15,7 +15,7 @@ if __name__ == "__main__":
     metadata_sonoff_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "Sonoff") &
+        (metadata_df["device_via_device"] == "Tasmota") &
         (metadata_df["device_name"].str.len() > 0)
         ]
     metadata_sonoff_dicts = [row.dropna().to_dict() for index, row in metadata_sonoff_df.iterrows()]
