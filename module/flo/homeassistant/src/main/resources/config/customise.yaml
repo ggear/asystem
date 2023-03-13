@@ -690,7 +690,6 @@ sensor.home_cube_remote_battery:
   friendly_name: 'Xiaomi Cube Remote'
 sensor.template_weatherstation_console_battery_percent_int:
   friendly_name: 'Davis Console'
-  icon: 'mdi:battery-30'
   unit_of_measurement: '%'
 sensor.weatherstation_console_battery_voltage:
   friendly_name: 'Davis Console Voltage'

@@ -158,7 +158,6 @@
       name: Xiaomi Cube Remote
     - entity: sensor.template_weatherstation_console_battery_percent_int
       name: Davis Console
-      icon: mdi:battery-30
     - entity: sensor.bertram_2_office_pantry_battery_percent
       name: Netatmo Pantry
     - entity: sensor.bertram_2_office_lounge_battery_percent
