@@ -14,6 +14,7 @@ Atlas Scientific Flow Meter kit (2 x $549):
 # https://atlas-scientific.com/cables/ezo-sensor-extension-cable
 # Where to place house for easy power and no water damage
 # How to power mains sensors, <3.6m between
+# Low Power ESP32 ($80) https://www.tindie.com/products/kdcircuits/trigboard-ultra-low-power-esp32-iot-platform
 
 Pool:
 # Pump on/off
@@ -49,3 +50,4 @@ Open Sprinkler ($500 - OSPi/OS3.0DC/Expander2.1AC - 32 zones)
 # https://opensprinkler.com/product/opensprinkler
 # https://github.com/vinteo/hass-opensprinkler
 # https://openthings.freshdesk.com/support/solutions/articles/5000716363-os-api-documents
+

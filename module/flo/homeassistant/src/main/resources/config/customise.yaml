@@ -678,6 +678,8 @@ switch.roof_network_switch:
 switch.rack_modem:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
+sensor.garden_repeater:
+  friendly_name: 'Garden Repeater'
 sensor.back_door_lock_battery:
   friendly_name: 'Yale Back Door Lock'
 sensor.front_door_lock_battery:
