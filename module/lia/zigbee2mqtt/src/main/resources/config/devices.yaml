@@ -169,6 +169,14 @@
   friendly_name: 'Garden Repeater'
   homeassistant:
     expire_after: 3600
+'0x2c1165fffebaa93c':
+  friendly_name: 'Landing Repeater'
+  homeassistant:
+    expire_after: 3600
+'0x50325ffffe47b8fa':
+  friendly_name: 'Driveway Repeater'
+  homeassistant:
+    expire_after: 3600
 '0x000d6f0011274420':
   friendly_name: 'Back Door Lock'
   homeassistant:

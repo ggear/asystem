@@ -14,7 +14,8 @@ Atlas Scientific Flow Meter kit (2 x $549):
 # https://atlas-scientific.com/cables/ezo-sensor-extension-cable
 # Where to place house for easy power and no water damage
 # How to power mains sensors, <3.6m between
-# Low Power ESP32 ($80) https://www.tindie.com/products/kdcircuits/trigboard-ultra-low-power-esp32-iot-platform
+# Low Power ESP32 Wireless ($80) https://www.tindie.com/products/kdcircuits/trigboard-ultra-low-power-esp32-iot-platform
+# Zigbee for Ardrino ($20) https://core-electronics.com.au/xbee-shield-for-arduino.html?gclid=Cj0KCQjwtsCgBhDEARIsAE7RYh3Hw6J3_AeK5umPR1KiWk-D6O5YILOCM9ITK39v5jimAVU2zAl19a8aAjTxEALw_wcB
 
 Pool:
 # Pump on/off
