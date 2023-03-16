@@ -15,7 +15,7 @@ echo "--------------------------------------------------------------------------
 # Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'
 # Create API Long-Lived Access Tokens and store in '.env_all_key'
 # Install integrations manually (no option to do so programmatically):
-#   - MQTT (local push, no internet, yaml has details but is now unfortunately now deprecated, enable kink quality diagnostics on device page for: driveway_repeater_linkquality_percentage, landing_repeater_linkquality_percentage, garden_repeater_linkquality_percentage, deck_fans_outlet_linkquality_percentage, kitchen_fan_outlet_linkquality_percentage, edwin_wardrobe_outlet_linkquality_percentage)
+#   - MQTT (local push, no internet, yaml has details but is now unfortunately now deprecated)
 #   - Tasmota (local push, no internet, devices are configured via their inbuilt webserver (see sonoff module) then are automatically discovered after a tasmota/deploy.sh)
 #   - SenseME (local push, no internet after initial firmware upgrade, requires each fan IP and Areas to be configured)
 #   - UniFi Protect (local push, no internet, requires Protect IP, user, password and Areas config - has not been yaml configured since at least Nov 2020)
