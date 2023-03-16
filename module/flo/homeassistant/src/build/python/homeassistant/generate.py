@@ -161,7 +161,7 @@ compensation:
         """.strip() + "\n")
         for metadata_compensation_dict in metadata_compensation_dicts:
             metadata_compensation_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
   {}:
     unique_id: {}
     source: sensor.{}
@@ -174,7 +174,7 @@ compensation:
                 "\n      - " + metadata_compensation_dict["compensation_curve"].replace("],[", "]\n      - ["),
             ).strip() + "\n")
         metadata_compensation_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
         """.strip() + "\n")
         print("Build generate script [homeassistant] entity compensation persisted to [{}]".format(metadata_compensation_path))
 
@@ -781,7 +781,7 @@ adaptive_lighting:
         """.strip() + "\n")
         for automation_name in metadata_lighting_automations_dicts:
             metadata_lighting_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
   - name: {}
     interval: 30
     min_brightness: {}
@@ -803,12 +803,12 @@ adaptive_lighting:
                     metadata_lighting_group_dict["unique_id"],
                 ).strip() + "\n")
         metadata_lighting_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
 input_boolean:
         """.strip() + "\n")
         for metadata_lighting_dict in metadata_lighting_dicts:
             metadata_lighting_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_{}:
     name: {}
     initial: false
@@ -817,9 +817,9 @@ input_boolean:
                 metadata_lighting_dict["friendly_name"],
             ).strip() + "\n")
         metadata_lighting_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
 automation:
-  ####################################################################################
+  #####################################################################################
   - id: lighting_sleep_adaptive_lighting
     alias: "Lighting: Sleep Adaptive Lighting"
     mode: single
@@ -973,7 +973,7 @@ automation:
         """.strip() + "\n")
         for metadata_lighting_dict in metadata_lighting_dicts:
             metadata_lighting_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_{}
     alias: "Lighting: Reset Adaptive Lighting on request of {}"
     trigger:
@@ -1024,9 +1024,94 @@ automation:
                     metadata_lighting_dict["unique_id"],
                 ).strip() + "\n")
         metadata_lighting_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
         """.strip() + "\n")
     print("Build generate script [homeassistant] entity lighting persisted to [{}]".format(metadata_lighting_path))
+
+
+
+
+
+
+
+
+
+
+
+    # Diagnostics YAML
+    metadata_diagnostic_df = metadata_df[
+        (metadata_df["index"] > 0) &
+        (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["unique_id"].str.len() > 0) &
+        (metadata_df["unique_id"].str.contains("linkquality")) &
+        (metadata_df["entity_group"] == "Diagnostics")
+        ]
+    metadata_diagnostic_dicts = [row.dropna().to_dict() for index, row in metadata_diagnostic_df.iterrows()]
+    metadata_diagnostic_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/diagnostics.yaml"))
+    with open(metadata_diagnostic_path, 'w') as metadata_diagnostic_file:
+        metadata_diagnostic_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+compensation:
+  #####################################################################################
+  weatherstation_console_battery_percent:
+    unique_id: weatherstation_console_battery_percent
+    source: sensor.weatherstation_console_battery_voltage
+    precision: 1
+    unit_of_measurement: "%"
+    data_points:
+      - [ 4.5, 100 ]
+      - [ 3.0, 0 ]
+#######################################################################################
+template:
+  #####################################################################################
+  - sensor:
+      #################################################################################
+      - unique_id: weatherstation_console_battery_percent_int
+        device_class: battery
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >-
+          {{ states('sensor.compensation_sensor_weatherstation_console_battery_voltage') | float(0) | int }}
+      #################################################################################
+      - unique_id: weatherstation_coms_signal_quality_percentage
+        device_class: signal_strength
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >-
+          {{ states('sensor.weatherstation_coms_signal_quality') | int(0) }}
+        """.strip() + "\n")
+        for metadata_diagnostic_dict in metadata_diagnostic_dicts:
+            metadata_diagnostic_file.write("      " + """
+      #################################################################################
+      - unique_id: {}
+        device_class: signal_strength
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >-
+          {{{{ ((states('sensor.{}') | float(0)) / 255 * 100) | int(0) }}}}
+              """.format(
+                metadata_diagnostic_dict["unique_id"].replace("template_", ""),
+                metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("_percentage", ""),
+            ).strip() + "\n")
+        metadata_diagnostic_file.write("""          
+#######################################################################################
+        """.strip() + "\n")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     # Build action YAML
     metadata_action_df = metadata_df[
@@ -1085,7 +1170,7 @@ automation:
                 metadata_action_dict["linked_service"],
                 metadata_action_dict["linked_entity"],
             ).strip() + "\n")
-        metadata_action_file.write("""      
+        metadata_action_file.write("""
 #######################################################################################
             """.strip() + "\n")
 

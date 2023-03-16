@@ -2,7 +2,7 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
 adaptive_lighting:
-  ####################################################################################
+  #####################################################################################
   - name: night_light
     interval: 30
     min_brightness: 1
@@ -15,7 +15,7 @@ adaptive_lighting:
     lights:
       - light.ada_lamp
       - light.edwin_night_light
-  ####################################################################################
+  #####################################################################################
   - name: default
     interval: 30
     min_brightness: 100
@@ -33,7 +33,7 @@ adaptive_lighting:
       - light.kitchen_main
       - light.laundry_main
       - light.pantry_main
-  ####################################################################################
+  #####################################################################################
   - name: bedroom
     interval: 30
     min_brightness: 1
@@ -49,79 +49,79 @@ adaptive_lighting:
       - light.bathroom_main
       - light.ensuite_main
       - light.wardrobe_main
-  ####################################################################################
+  #####################################################################################
 input_boolean:
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_ada_lamp:
     name: Ada Lamp
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_edwin_lamp:
     name: Edwin Lamp
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_edwin_night_light:
     name: Edwin Night Light
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_hallway_main:
     name: Hallway Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_dining_main:
     name: Dining Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_lounge_main:
     name: Lounge Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_lounge_lamp:
     name: Lounge Lamp
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_parents_main:
     name: Parents Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_kitchen_main:
     name: Kitchen Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_laundry_main:
     name: Laundry Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_pantry_main:
     name: Pantry Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_office_main:
     name: Office Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_bathroom_main:
     name: Bathroom Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_ensuite_main:
     name: Ensuite Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_wardrobe_main:
     name: Wardrobe Main
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_garden_pedestals:
     name: Garden Pedestals
     initial: false
-  ####################################################################################
+  #####################################################################################
   lighting_reset_adaptive_lighting_tree_spotlights:
     name: Tree Spotlights
     initial: false
-  ####################################################################################
+  #####################################################################################
 automation:
-  ####################################################################################
+  #####################################################################################
   - id: lighting_sleep_adaptive_lighting
     alias: "Lighting: Sleep Adaptive Lighting"
     mode: single
@@ -270,7 +270,7 @@ automation:
               color_temp: 366
               brightness_pct: 100
               entity_id: '{{ light }}'
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_ada_lamp
     alias: "Lighting: Reset Adaptive Lighting on request of Ada Lamp"
     trigger:
@@ -287,7 +287,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_ada_lamp
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_edwin_lamp
     alias: "Lighting: Reset Adaptive Lighting on request of Edwin Lamp"
     trigger:
@@ -304,7 +304,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_edwin_night_light
     alias: "Lighting: Reset Adaptive Lighting on request of Edwin Night Light"
     trigger:
@@ -321,7 +321,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_edwin_night_light
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_hallway_main
     alias: "Lighting: Reset Adaptive Lighting on request of Hallway Main"
     trigger:
@@ -338,7 +338,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_hallway_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_dining_main
     alias: "Lighting: Reset Adaptive Lighting on request of Dining Main"
     trigger:
@@ -355,7 +355,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_dining_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_lounge_main
     alias: "Lighting: Reset Adaptive Lighting on request of Lounge Main"
     trigger:
@@ -372,7 +372,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_lounge_lamp
     alias: "Lighting: Reset Adaptive Lighting on request of Lounge Lamp"
     trigger:
@@ -389,7 +389,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_parents_main
     alias: "Lighting: Reset Adaptive Lighting on request of Parents Main"
     trigger:
@@ -406,7 +406,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_kitchen_main
     alias: "Lighting: Reset Adaptive Lighting on request of Kitchen Main"
     trigger:
@@ -423,7 +423,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_kitchen_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_laundry_main
     alias: "Lighting: Reset Adaptive Lighting on request of Laundry Main"
     trigger:
@@ -440,7 +440,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_laundry_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_pantry_main
     alias: "Lighting: Reset Adaptive Lighting on request of Pantry Main"
     trigger:
@@ -457,7 +457,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_pantry_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_office_main
     alias: "Lighting: Reset Adaptive Lighting on request of Office Main"
     trigger:
@@ -474,7 +474,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_office_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_bathroom_main
     alias: "Lighting: Reset Adaptive Lighting on request of Bathroom Main"
     trigger:
@@ -491,7 +491,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_bathroom_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_ensuite_main
     alias: "Lighting: Reset Adaptive Lighting on request of Ensuite Main"
     trigger:
@@ -508,7 +508,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_ensuite_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_wardrobe_main
     alias: "Lighting: Reset Adaptive Lighting on request of Wardrobe Main"
     trigger:
@@ -525,7 +525,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_garden_pedestals
     alias: "Lighting: Reset Adaptive Lighting on request of Garden Pedestals"
     trigger:
@@ -542,7 +542,7 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_garden_pedestals
-  ####################################################################################
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_tree_spotlights
     alias: "Lighting: Reset Adaptive Lighting on request of Tree Spotlights"
     trigger:
@@ -559,4 +559,4 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_tree_spotlights
-  ####################################################################################
+  #####################################################################################

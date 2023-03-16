@@ -182,19 +182,18 @@
 - type: entities
   title: Comms Link Quality
   entities:
-    - entity: sensor.weatherstation_coms_signal_quality
+    - entity: sensor.template_weatherstation_coms_signal_quality_percentage
       name: Davis Console
-      icon: mdi:signal
-    - entity: sensor.driveway_repeater_linkquality
-      name: Zigbee Driveway Repeater
-    - entity: sensor.landing_repeater_linkquality
-      name: Zigbee Landing Repeater
-    - entity: sensor.garden_repeater_linkquality
-      name: Zigbee Garden Repeater
-    - entity: sensor.deck_fans_outlet_linkquality
-      name: Zigbee Deck Fans Outlet
-    - entity: sensor.kitchen_fan_outlet_linkquality
-      name: Zigbee Kitchen Fan Outlet
-    - entity: sensor.edwin_wardrobe_outlet_linkquality
-      name: Zigbee Edwin Wardrobe Outlet
+    - entity: sensor.template_driveway_repeater_linkquality_percentage
+      name: Driveway Repeater
+    - entity: sensor.template_landing_repeater_linkquality_percentage
+      name: Landing Repeater
+    - entity: sensor.template_garden_repeater_linkquality_percentage
+      name: Garden Repeater
+    - entity: sensor.template_deck_fans_outlet_linkquality_percentage
+      name: Deck Fans Outlet
+    - entity: sensor.template_kitchen_fan_outlet_linkquality_percentage
+      name: Kitchen Fan Outlet
+    - entity: sensor.template_edwin_wardrobe_outlet_linkquality_percentage
+      name: Edwin Wardrobe Outlet
 ################################################################################

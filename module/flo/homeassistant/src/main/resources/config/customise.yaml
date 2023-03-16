@@ -715,22 +715,20 @@ sensor.kitchen_home_battery:
   friendly_name: 'Sonos Kitchen'
 button.synchronize_devices:
   friendly_name: 'Google Device Sync'
-sensor.weatherstation_coms_signal_quality:
+sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
-  icon: 'mdi:signal'
-  unit_of_measurement: '%'
-sensor.driveway_repeater_linkquality:
-  friendly_name: 'Zigbee Driveway Repeater'
-sensor.landing_repeater_linkquality:
-  friendly_name: 'Zigbee Landing Repeater'
-sensor.garden_repeater_linkquality:
-  friendly_name: 'Zigbee Garden Repeater'
-sensor.deck_fans_outlet_linkquality:
-  friendly_name: 'Zigbee Deck Fans Outlet'
-sensor.kitchen_fan_outlet_linkquality:
-  friendly_name: 'Zigbee Kitchen Fan Outlet'
-sensor.edwin_wardrobe_outlet_linkquality:
-  friendly_name: 'Zigbee Edwin Wardrobe Outlet'
+sensor.template_driveway_repeater_linkquality_percentage:
+  friendly_name: 'Driveway Repeater'
+sensor.template_landing_repeater_linkquality_percentage:
+  friendly_name: 'Landing Repeater'
+sensor.template_garden_repeater_linkquality_percentage:
+  friendly_name: 'Garden Repeater'
+sensor.template_deck_fans_outlet_linkquality_percentage:
+  friendly_name: 'Deck Fans Outlet'
+sensor.template_kitchen_fan_outlet_linkquality_percentage:
+  friendly_name: 'Kitchen Fan Outlet'
+sensor.template_edwin_wardrobe_outlet_linkquality_percentage:
+  friendly_name: 'Edwin Wardrobe Outlet'
 media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:
