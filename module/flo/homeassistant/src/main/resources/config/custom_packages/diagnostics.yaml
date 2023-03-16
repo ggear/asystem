@@ -94,52 +94,52 @@ automation:
           payload: '{"linkquality":0}'
       - service: mqtt.publish
         data:
-          topic: "zigbee/Driveway Repeater/1/set"
-          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
-      - delay: '00:00:01'
-      - service: mqtt.publish
-        data:
           topic: "zigbee/Landing Repeater"
           payload: '{"linkquality":0}'
-      - service: mqtt.publish
-        data:
-          topic: "zigbee/Landing Repeater/1/set"
-          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
-      - delay: '00:00:01'
       - service: mqtt.publish
         data:
           topic: "zigbee/Garden Repeater"
           payload: '{"linkquality":0}'
       - service: mqtt.publish
         data:
-          topic: "zigbee/Garden Repeater/1/set"
-          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
-      - delay: '00:00:01'
-      - service: mqtt.publish
-        data:
           topic: "zigbee/Kitchen Fan Outlet"
           payload: '{"linkquality":0}'
-      - service: mqtt.publish
-        data:
-          topic: "zigbee/Kitchen Fan Outlet/11/set"
-          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
-      - delay: '00:00:01'
       - service: mqtt.publish
         data:
           topic: "zigbee/Deck Fans Outlet"
           payload: '{"linkquality":0}'
       - service: mqtt.publish
         data:
-          topic: "zigbee/Deck Fans Outlet/11/set"
-          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
-      - delay: '00:00:01'
-      - service: mqtt.publish
-        data:
           topic: "zigbee/Edwin Wardrobe Outlet"
           payload: '{"linkquality":0}'
       - service: mqtt.publish
         data:
-          topic: "zigbee/Edwin Wardrobe Outlet/11/set"
+          topic: "zigbee/Driveway Repeater/Driveway Repeater/set"
+          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
+      - delay: '00:00:01'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Landing Repeater/Landing Repeater/set"
+          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
+      - delay: '00:00:01'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Garden Repeater/Garden Repeater/set"
+          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
+      - delay: '00:00:01'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Kitchen Fan Outlet/Kitchen Fan Outlet/set"
+          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
+      - delay: '00:00:01'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Deck Fans Outlet/Deck Fans Outlet/set"
+          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
+      - delay: '00:00:01'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Edwin Wardrobe Outlet/Edwin Wardrobe Outlet/set"
           payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
       - delay: '00:00:01'
       - service: input_boolean.turn_off

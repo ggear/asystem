@@ -1111,6 +1111,13 @@ automation:
         data:
           topic: "zigbee/{}"
           payload: '{{"linkquality":0}}'
+            """.format(
+                metadata_diagnostic_dict["friendly_name"],
+                metadata_diagnostic_dict["friendly_name"],
+                "11" if "outlet" in metadata_diagnostic_dict["unique_id"] else "1",
+            ).strip() + "\n")
+        for metadata_diagnostic_dict in metadata_diagnostic_dicts:
+            metadata_diagnostic_file.write("      " + """      
       - service: mqtt.publish
         data:
           topic: "zigbee/{}/{}/set"
