@@ -9,13 +9,13 @@ Water:
 # Automated fast leak detection
 # Slow Leak detection process for house/garden/all
 
-Atlas Scientific Flow Meter kit (2 x $549):
-# https://www.iot-store.com.au/collections/sensors/products/flow-meter-kit-3-4-atlas-scientific
-# https://atlas-scientific.com/cables/ezo-sensor-extension-cable
-# Where to place house for easy power and no water damage
-# How to power mains sensors, <3.6m between
-# Low Power ESP32 Wireless ($80) https://www.tindie.com/products/kdcircuits/trigboard-ultra-low-power-esp32-iot-platform
-# Zigbee for Ardrino ($20) https://core-electronics.com.au/xbee-shield-for-arduino.html?gclid=Cj0KCQjwtsCgBhDEARIsAE7RYh3Hw6J3_AeK5umPR1KiWk-D6O5YILOCM9ITK39v5jimAVU2zAl19a8aAjTxEALw_wcB
+Atlas Scientific Flow Meter kit (2 x $549) + Solar charged, Li-ion powered, Zigbee connected, Ardrino board (~$200):
+# Flow meter: https://www.iot-store.com.au/collections/sensors/products/flow-meter-kit-3-4-atlas-scientific
+# Arduino DFRobot Romeo ($42): https://www.aliexpress.com/item/32604785210.html
+# Arduino DFRduino ($22) + Xbee shield ($16): https://www.aliexpress.com/item/32603608954.html https://www.aliexpress.com/item/32456244531.html
+# Digi Xbee S2C ($40) https://www.aliexpress.com/item/1005001809013180.html
+# Solar charger DFRobot ($12): https://www.aliexpress.com/item/32868317593.html + PV Panel ($17) https://www.aliexpress.com/item/1005003257781063.html or Combo ($64): https://www.pakronics.com.au/products/solar-power-manager-with-panel-5v-1a-df-dfr0559-1
+# Battery pack and batteries
 
 Pool:
 # Pump on/off
