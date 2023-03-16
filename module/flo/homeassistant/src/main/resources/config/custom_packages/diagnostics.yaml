@@ -51,19 +51,19 @@ template:
         state: >-
           {{ ((states('sensor.garden_repeater_linkquality') | float(0)) / 255 * 100) | int(0) }}
       #################################################################################
-      - unique_id: deck_fans_outlet_linkquality_percentage
-        device_class: signal_strength
-        state_class: measurement
-        unit_of_measurement: "%"
-        state: >-
-          {{ ((states('sensor.deck_fans_outlet_linkquality') | float(0)) / 255 * 100) | int(0) }}
-      #################################################################################
       - unique_id: kitchen_fan_outlet_linkquality_percentage
         device_class: signal_strength
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
           {{ ((states('sensor.kitchen_fan_outlet_linkquality') | float(0)) / 255 * 100) | int(0) }}
+      #################################################################################
+      - unique_id: deck_fans_outlet_linkquality_percentage
+        device_class: signal_strength
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >-
+          {{ ((states('sensor.deck_fans_outlet_linkquality') | float(0)) / 255 * 100) | int(0) }}
       #################################################################################
       - unique_id: edwin_wardrobe_outlet_linkquality_percentage
         device_class: signal_strength
