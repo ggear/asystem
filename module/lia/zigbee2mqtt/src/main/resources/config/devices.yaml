@@ -157,22 +157,32 @@
   friendly_name: 'Deck Fans Outlet'
   homeassistant:
     expire_after: 3600
+    linkquality:
+      enabled_by_default: true
 '0x0017880109d4659c':
   friendly_name: 'Kitchen Fan Outlet'
   homeassistant:
     expire_after: 3600
+    linkquality:
+      enabled_by_default: true
 '0x0017880108fd8633':
   friendly_name: 'Edwin Wardrobe Outlet'
   homeassistant:
     expire_after: 3600
+    linkquality:
+      enabled_by_default: true
 '0x2c1165fffec5a3f6':
   friendly_name: 'Garden Repeater'
   homeassistant:
     expire_after: 3600
+    linkquality:
+      enabled_by_default: true
 '0x2c1165fffebaa93c':
   friendly_name: 'Landing Repeater'
   homeassistant:
     expire_after: 3600
+    linkquality:
+      enabled_by_default: true
 '0x50325ffffe47b8fa':
   friendly_name: 'Driveway Repeater'
   homeassistant:
