@@ -21,6 +21,8 @@ device_options:
   qos: 1
   debounce: 0.5
   optimistic: true
+  link_quality:
+    enabled_by_default: true
 devices: devices.yaml
 groups: groups.yaml
 serial:
