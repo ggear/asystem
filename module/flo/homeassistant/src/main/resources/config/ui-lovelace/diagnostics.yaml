@@ -180,9 +180,21 @@
       name: Google Device Sync
 ################################################################################
 - type: entities
-  title: Telemetry
+  title: Comms Link Quality
   entities:
     - entity: sensor.weatherstation_coms_signal_quality
-      name: Davis Signal Quality
+      name: Davis Console
       icon: mdi:signal
+    - entity: sensor.driveway_repeater_linkquality
+      name: Zigbee Driveway Repeater
+    - entity: sensor.landing_repeater_linkquality
+      name: Zigbee Landing Repeater
+    - entity: sensor.garden_repeater_linkquality
+      name: Zigbee Garden Repeater
+    - entity: sensor.deck_fans_outlet_linkquality
+      name: Zigbee Deck Fans Outlet
+    - entity: sensor.kitchen_fan_outlet_linkquality
+      name: Zigbee Kitchen Fan Outlet
+    - entity: sensor.edwin_wardrobe_outlet_linkquality
+      name: Zigbee Edwin Wardrobe Outlet
 ################################################################################

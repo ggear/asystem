@@ -716,9 +716,21 @@ sensor.kitchen_home_battery:
 button.synchronize_devices:
   friendly_name: 'Google Device Sync'
 sensor.weatherstation_coms_signal_quality:
-  friendly_name: 'Davis Signal Quality'
+  friendly_name: 'Davis Console'
   icon: 'mdi:signal'
   unit_of_measurement: '%'
+sensor.driveway_repeater_linkquality:
+  friendly_name: 'Zigbee Driveway Repeater'
+sensor.landing_repeater_linkquality:
+  friendly_name: 'Zigbee Landing Repeater'
+sensor.garden_repeater_linkquality:
+  friendly_name: 'Zigbee Garden Repeater'
+sensor.deck_fans_outlet_linkquality:
+  friendly_name: 'Zigbee Deck Fans Outlet'
+sensor.kitchen_fan_outlet_linkquality:
+  friendly_name: 'Zigbee Kitchen Fan Outlet'
+sensor.edwin_wardrobe_outlet_linkquality:
+  friendly_name: 'Zigbee Edwin Wardrobe Outlet'
 media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:
