@@ -21,8 +21,9 @@ device_options:
   qos: 1
   debounce: 0.5
   optimistic: true
-  linkquality:
-    enabled_by_default: true
+  homeassistant:
+    linkquality:
+      enabled_by_default: true
 devices: devices.yaml
 groups: groups.yaml
 serial:
