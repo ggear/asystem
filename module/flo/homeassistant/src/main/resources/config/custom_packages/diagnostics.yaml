@@ -90,6 +90,30 @@ automation:
     action:
       - service: mqtt.publish
         data:
+          topic: "zigbee/Driveway Repeater"
+          payload: '{"linkquality":0,"update":{"installed_version":X,"latest_version":X,"state":"idle"},"update_available":false}}'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Landing Repeater"
+          payload: '{"linkquality":0,"update":{"installed_version":X,"latest_version":X,"state":"idle"},"update_available":false}}'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Garden Repeater"
+          payload: '{"linkquality":0,"update":{"installed_version":X,"latest_version":X,"state":"idle"},"update_available":false}}'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Kitchen Fan Outlet"
+          payload: '{"linkquality":0,"update":{"installed_version":X,"latest_version":X,"state":"idle"},"update_available":false}}'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Deck Fans Outlet"
+          payload: '{"linkquality":0,"update":{"installed_version":X,"latest_version":X,"state":"idle"},"update_available":false}}'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/Edwin Wardrobe Outlet"
+          payload: '{"linkquality":0,"update":{"installed_version":X,"latest_version":X,"state":"idle"},"update_available":false}}'
+      - service: mqtt.publish
+        data:
           topic: "zigbee/Driveway Repeater/1/set"
           payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
       - delay: '00:00:01'

@@ -1109,6 +1109,15 @@ automation:
             metadata_diagnostic_file.write("      " + """
       - service: mqtt.publish
         data:
+          topic: "zigbee/{}"
+          payload: '{{"linkquality":0,"update":{{"installed_version":X,"latest_version":X,"state":"idle"}},"update_available":false}}}}'
+            """.format(
+                metadata_diagnostic_dict["friendly_name"],
+            ).strip() + "\n")
+        for metadata_diagnostic_dict in metadata_diagnostic_dicts:
+            metadata_diagnostic_file.write("      " + """
+      - service: mqtt.publish
+        data:
           topic: "zigbee/{}/{}/set"
           payload: '{{"read":{{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{{}}}}}}'
       - delay: '00:00:01'
