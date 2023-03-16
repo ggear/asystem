@@ -1106,18 +1106,16 @@ automation:
     action:
         """.strip() + "\n")
         for metadata_diagnostic_dict in metadata_diagnostic_dicts:
-            metadata_diagnostic_file.write("      " + """      
+            metadata_diagnostic_file.write("      " + """
       - service: mqtt.publish
         data:
           topic: "zigbee/{}"
-          payload: '{{"linkquality":0}}'
+          payload: '{{"linkquality":"Unknown","update":{{"installed_version":X,"latest_version":X,"state":"idle"}},"update_available":false}}}}'
             """.format(
                 metadata_diagnostic_dict["friendly_name"],
-                metadata_diagnostic_dict["friendly_name"],
-                "11" if "outlet" in metadata_diagnostic_dict["unique_id"] else "1",
             ).strip() + "\n")
         for metadata_diagnostic_dict in metadata_diagnostic_dicts:
-            metadata_diagnostic_file.write("      " + """      
+            metadata_diagnostic_file.write("      " + """
       - service: mqtt.publish
         data:
           topic: "zigbee/{}/{}/set"
@@ -1125,10 +1123,9 @@ automation:
       - delay: '00:00:01'
             """.format(
                 metadata_diagnostic_dict["friendly_name"],
-                metadata_diagnostic_dict["friendly_name"],
                 "11" if "outlet" in metadata_diagnostic_dict["unique_id"] else "1",
             ).strip() + "\n")
-        metadata_diagnostic_file.write("      " + """          
+        metadata_diagnostic_file.write("      " + """
       - service: input_boolean.turn_off
         entity_id: input_boolean.network_refresh_zigbee_router_lqi
 #######################################################################################
