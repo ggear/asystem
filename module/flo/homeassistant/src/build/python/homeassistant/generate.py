@@ -1028,16 +1028,6 @@ automation:
         """.strip() + "\n")
     print("Build generate script [homeassistant] entity lighting persisted to [{}]".format(metadata_lighting_path))
 
-
-
-
-
-
-
-
-
-
-
     # Diagnostics YAML
     metadata_diagnostic_df = metadata_df[
         (metadata_df["index"] > 0) &
@@ -1095,23 +1085,47 @@ template:
                 metadata_diagnostic_dict["unique_id"].replace("template_", ""),
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("_percentage", ""),
             ).strip() + "\n")
-        metadata_diagnostic_file.write("""          
+
+        metadata_diagnostic_file.write("""
+#######################################################################################
+input_boolean:
+  #####################################################################################
+  network_refresh_zigbee_router_lqi:
+    name: Refresh state
+    initial: false
+#######################################################################################
+automation:
+  #####################################################################################
+  - id: network_refresh_zigbee_router_lqi_action
+    alias: "Network: Refresh Zigbee router network link qualities"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.network_refresh_zigbee_router_lqi
+        from: 'off'
+        to: 'on'
+    action:
+        """.strip() + "\n")
+        for metadata_diagnostic_dict in metadata_diagnostic_dicts:
+            metadata_diagnostic_file.write("      " + """      
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/{}"
+          payload: '{{"linkquality":0}}'
+      - service: mqtt.publish
+        data:
+          topic: "zigbee/{}/{}/set"
+          payload: '{{"read":{{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{{}}}}}}'
+      - delay: '00:00:01'
+            """.format(
+                metadata_diagnostic_dict["friendly_name"],
+                metadata_diagnostic_dict["friendly_name"],
+                "11" if "outlet" in metadata_diagnostic_dict["unique_id"] else "1",
+            ).strip() + "\n")
+        metadata_diagnostic_file.write("      " + """          
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.network_refresh_zigbee_router_lqi
 #######################################################################################
         """.strip() + "\n")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     # Build action YAML
     metadata_action_df = metadata_df[

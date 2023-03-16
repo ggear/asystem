@@ -30,4 +30,4 @@ advanced:
 #  report: true
   last_seen: ISO_8601_local
   legacy_availability_payload: false
-  log_level: warn
+  log_level: info
