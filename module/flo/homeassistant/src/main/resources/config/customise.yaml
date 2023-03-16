@@ -717,7 +717,7 @@ sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
 input_boolean.network_refresh_zigbee_router_lqi:
   friendly_name: 'Refresh State'
-  icon: 'mdi:refresh'
+  icon: 'mdi:wifi-refresh'
 sensor.template_driveway_repeater_linkquality_percentage:
   friendly_name: 'Driveway Repeater'
 sensor.template_landing_repeater_linkquality_percentage:

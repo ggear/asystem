@@ -185,7 +185,7 @@
   entities:
     - entity: input_boolean.network_refresh_zigbee_router_lqi
       name: Refresh State
-      icon: mdi:refresh
+      icon: mdi:wifi-refresh
     - entity: sensor.template_driveway_repeater_linkquality_percentage
       name: Driveway Repeater
     - entity: sensor.template_landing_repeater_linkquality_percentage
