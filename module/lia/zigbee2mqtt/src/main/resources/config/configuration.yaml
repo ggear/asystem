@@ -21,16 +21,13 @@ device_options:
   qos: 1
   debounce: 0.5
   optimistic: true
-  homeassistant:
-    linkquality:
-      enabled_by_default: true
 devices: devices.yaml
 groups: groups.yaml
 serial:
   port: /dev/ttyACM0
 advanced:
   channel: 11
-  report: false
+#  report: true
   last_seen: ISO_8601_local
   legacy_availability_payload: false
-  log_level: info
+  log_level: warn
