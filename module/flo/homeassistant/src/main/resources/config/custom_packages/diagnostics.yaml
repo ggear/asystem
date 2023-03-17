@@ -80,6 +80,15 @@ input_boolean:
 #######################################################################################
 automation:
   #####################################################################################
+  - id: network_refresh_zigbee_router_lqi_action_scheduled
+    alias: "Network: Refresh Zigbee router network link qualities on schedule"
+    trigger:
+      - platform: time_pattern
+        hours: "/1"
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.network_refresh_zigbee_router_lqi
+  #####################################################################################
   - id: network_refresh_zigbee_router_lqi_action
     alias: "Network: Refresh Zigbee router network link qualities"
     trigger:
@@ -118,6 +127,66 @@ automation:
           topic: "zigbee/Edwin Wardrobe Outlet/11/set"
           payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
       - delay: '00:00:01'
+      - delay: '00:00:01'
+      - if:
+          - condition: template
+            value_template: >-
+              {{ (as_timestamp(now()) - as_timestamp(states('sensor.driveway_repeater_last_seen'))) > 11 }}
+        then:
+          - service: mqtt.publish
+            data:
+              topic: "zigbee/Driveway Repeater"
+              payload: '{"linkquality":0,"update":{"update_available":false}}'
+      - delay: '00:00:01'
+      - if:
+          - condition: template
+            value_template: >-
+              {{ (as_timestamp(now()) - as_timestamp(states('sensor.landing_repeater_last_seen'))) > 11 }}
+        then:
+          - service: mqtt.publish
+            data:
+              topic: "zigbee/Landing Repeater"
+              payload: '{"linkquality":0,"update":{"update_available":false}}'
+      - delay: '00:00:01'
+      - if:
+          - condition: template
+            value_template: >-
+              {{ (as_timestamp(now()) - as_timestamp(states('sensor.garden_repeater_last_seen'))) > 11 }}
+        then:
+          - service: mqtt.publish
+            data:
+              topic: "zigbee/Garden Repeater"
+              payload: '{"linkquality":0,"update":{"update_available":false}}'
+      - delay: '00:00:01'
+      - if:
+          - condition: template
+            value_template: >-
+              {{ (as_timestamp(now()) - as_timestamp(states('sensor.kitchen_fan_outlet_last_seen'))) > 11 }}
+        then:
+          - service: mqtt.publish
+            data:
+              topic: "zigbee/Kitchen Fan Outlet"
+              payload: '{"linkquality":0,"update":{"update_available":false}}'
+      - delay: '00:00:01'
+      - if:
+          - condition: template
+            value_template: >-
+              {{ (as_timestamp(now()) - as_timestamp(states('sensor.deck_fans_outlet_last_seen'))) > 11 }}
+        then:
+          - service: mqtt.publish
+            data:
+              topic: "zigbee/Deck Fans Outlet"
+              payload: '{"linkquality":0,"update":{"update_available":false}}'
+      - delay: '00:00:01'
+      - if:
+          - condition: template
+            value_template: >-
+              {{ (as_timestamp(now()) - as_timestamp(states('sensor.edwin_wardrobe_outlet_last_seen'))) > 11 }}
+        then:
+          - service: mqtt.publish
+            data:
+              topic: "zigbee/Edwin Wardrobe Outlet"
+              payload: '{"linkquality":0,"update":{"update_available":false}}'
       - service: input_boolean.turn_off
         entity_id: input_boolean.network_refresh_zigbee_router_lqi
 #######################################################################################

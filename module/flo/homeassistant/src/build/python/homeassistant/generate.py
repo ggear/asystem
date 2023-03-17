@@ -1096,6 +1096,15 @@ input_boolean:
 #######################################################################################
 automation:
   #####################################################################################
+  - id: network_refresh_zigbee_router_lqi_action_scheduled
+    alias: "Network: Refresh Zigbee router network link qualities on schedule"
+    trigger:
+      - platform: time_pattern
+        hours: "/1"
+    action:
+      - service: input_boolean.turn_on
+        entity_id: input_boolean.network_refresh_zigbee_router_lqi
+  #####################################################################################
   - id: network_refresh_zigbee_router_lqi_action
     alias: "Network: Refresh Zigbee router network link qualities"
     trigger:
@@ -1115,6 +1124,23 @@ automation:
             """.format(
                 metadata_diagnostic_dict["friendly_name"],
                 "11" if "outlet" in metadata_diagnostic_dict["unique_id"] else "1",
+            ).strip() + "\n")
+        for metadata_diagnostic_dict in metadata_diagnostic_dicts:
+            metadata_diagnostic_file.write("      " + """
+      - delay: '00:00:01'
+      - if:
+          - condition: template
+            value_template: >-
+              {{{{ (as_timestamp(now()) - as_timestamp(states('sensor.{}'))) > {} }}}}
+        then:
+          - service: mqtt.publish
+            data:
+              topic: "zigbee/{}"
+              payload: '{{"linkquality":0,"update":{{"update_available":false}}}}'
+            """.format(
+                metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
+                len(metadata_diagnostic_dicts) + 5,
+                metadata_diagnostic_dict["friendly_name"],
             ).strip() + "\n")
         metadata_diagnostic_file.write("      " + """
       - service: input_boolean.turn_off
