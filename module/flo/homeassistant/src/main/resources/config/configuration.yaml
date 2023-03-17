@@ -125,6 +125,8 @@ logger:
     homeassistant.components.websocket_api.http.connection: fatal
     homeassistant.components.recorder.migration: info
     homeassistant.components.sonos: error
+    homeassistant.config_entries: error
+    homeassistant.components.sensor: error
     custom_components.tplink: error
   #   custom_components.powercalc: info
   #   homeassistant.components.mqtt: info
