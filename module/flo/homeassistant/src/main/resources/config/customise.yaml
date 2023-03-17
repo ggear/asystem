@@ -713,6 +713,8 @@ sensor.parents_speaker_battery:
   friendly_name: 'Sonos Parents'
 sensor.kitchen_home_battery:
   friendly_name: 'Sonos Kitchen'
+sensor.weatherstation_coms_signal_quality:
+  friendly_name: 'Davis Console'
 sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
 input_boolean.network_refresh_zigbee_router_lqi:
