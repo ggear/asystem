@@ -33,26 +33,32 @@
   friendly_name: 'Dining Main Bulb 1'
   homeassistant:
     expire_after: 3600
+  report: true
 '0x00178801039f56c4':
   friendly_name: 'Dining Main Bulb 2'
   homeassistant:
     expire_after: 3600
+  report: true
 '0x00178801039f584a':
   friendly_name: 'Dining Main Bulb 3'
   homeassistant:
     expire_after: 3600
+  report: true
 '0x00178801039f69d4':
   friendly_name: 'Dining Main Bulb 4'
   homeassistant:
     expire_after: 3600
+  report: true
 '0x00178801039f574e':
   friendly_name: 'Dining Main Bulb 5'
   homeassistant:
     expire_after: 3600
+  report: true
 '0x00178801039f4eed':
   friendly_name: 'Dining Main Bulb 6'
   homeassistant:
     expire_after: 3600
+  report: true
 '0x00178801039f6b78':
   friendly_name: 'Lounge Main Bulb 1'
   homeassistant:
