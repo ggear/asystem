@@ -27,7 +27,7 @@ serial:
   port: /dev/ttyACM0
 advanced:
   channel: 11
-#  report: true
+  report: true
   last_seen: ISO_8601_local
   legacy_availability_payload: false
   log_level: info
