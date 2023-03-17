@@ -123,6 +123,7 @@
   friendly_name: 'Ensuite Main Bulb 1'
   homeassistant:
     expire_after: 3600
+  report: true
 '0x00178801040ede93':
   friendly_name: 'Wardrobe Main Bulb 1'
   homeassistant:
