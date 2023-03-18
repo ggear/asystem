@@ -1131,7 +1131,7 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{{{ (as_timestamp(now()) - as_timestamp(states('sensor.{}'))) > {} }}}}
+              {{{{ ((states('sensor.{}') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(states('sensor.{}'))) > {}) }}}}
         then:
           - service: mqtt.publish
             data:
@@ -1140,6 +1140,7 @@ automation:
             """.format(
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
                 len(metadata_diagnostic_dicts) + 5,
+                metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
                 metadata_diagnostic_dict["friendly_name"],
             ).strip() + "\n")
         metadata_diagnostic_file.write("      " + """

@@ -131,7 +131,7 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{ (as_timestamp(now()) - as_timestamp(states('sensor.driveway_repeater_last_seen'))) > 11 }}
+              {{ ((states('sensor.driveway_repeater_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(states('sensor.11'))) > driveway_repeater_last_seen) }}
         then:
           - service: mqtt.publish
             data:
@@ -141,7 +141,7 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{ (as_timestamp(now()) - as_timestamp(states('sensor.landing_repeater_last_seen'))) > 11 }}
+              {{ ((states('sensor.landing_repeater_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(states('sensor.11'))) > landing_repeater_last_seen) }}
         then:
           - service: mqtt.publish
             data:
@@ -151,7 +151,7 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{ (as_timestamp(now()) - as_timestamp(states('sensor.garden_repeater_last_seen'))) > 11 }}
+              {{ ((states('sensor.garden_repeater_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(states('sensor.11'))) > garden_repeater_last_seen) }}
         then:
           - service: mqtt.publish
             data:
@@ -161,7 +161,7 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{ (as_timestamp(now()) - as_timestamp(states('sensor.kitchen_fan_outlet_last_seen'))) > 11 }}
+              {{ ((states('sensor.kitchen_fan_outlet_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(states('sensor.11'))) > kitchen_fan_outlet_last_seen) }}
         then:
           - service: mqtt.publish
             data:
@@ -171,7 +171,7 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{ (as_timestamp(now()) - as_timestamp(states('sensor.deck_fans_outlet_last_seen'))) > 11 }}
+              {{ ((states('sensor.deck_fans_outlet_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(states('sensor.11'))) > deck_fans_outlet_last_seen) }}
         then:
           - service: mqtt.publish
             data:
@@ -181,7 +181,7 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{ (as_timestamp(now()) - as_timestamp(states('sensor.edwin_wardrobe_outlet_last_seen'))) > 11 }}
+              {{ ((states('sensor.edwin_wardrobe_outlet_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(states('sensor.11'))) > edwin_wardrobe_outlet_last_seen) }}
         then:
           - service: mqtt.publish
             data:
