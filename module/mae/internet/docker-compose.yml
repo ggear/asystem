@@ -13,7 +13,7 @@ services:
       - INFLUXDB_BUCKET_HOST_PRIVATE
       - INFLUXDB_TOKEN
     volumes:
-      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
     logging:
       driver: "json-file"
       options:
