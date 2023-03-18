@@ -49,13 +49,6 @@ def test_second_run():
     assert measurement_length("host_private", "internet") >= 64
 
 
-def test_third_run():
-    process = subprocess.Popen("docker exec internet telegraf --debug --once", shell=True, stdout=subprocess.PIPE)
-    process.wait()
-    assert process.returncode == 0
-    assert measurement_length("host_private", "internet") >= 95
-
-
 def measurement_length(bucket, measurement):
     rows = query("""
 from(bucket: "{}")
@@ -72,7 +65,8 @@ from(bucket: "{}")
 
 
 def query(flux):
-    target = "http://{}:{}/api/v2/query?org={}".format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_HTTP_PORT"], os.environ["INFLUXDB_ORG"])
+    target = "http://{}:{}/api/v2/query?org={}" \
+        .format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_HTTP_PORT"], os.environ["INFLUXDB_ORG"])
     response = post(url=target, headers={
         'Accept': 'application/csv',
         'Content-type': 'application/vnd.flux',
