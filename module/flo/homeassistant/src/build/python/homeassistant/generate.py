@@ -1139,8 +1139,8 @@ automation:
               payload: '{{"linkquality":0,"update":{{"update_available":false}}}}'
             """.format(
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
-                len(metadata_diagnostic_dicts) + 5,
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
+                len(metadata_diagnostic_dicts) + 5,
                 metadata_diagnostic_dict["friendly_name"],
             ).strip() + "\n")
         metadata_diagnostic_file.write("      " + """

@@ -717,9 +717,6 @@ sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Davis Console'
 sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
-input_boolean.network_refresh_zigbee_router_lqi:
-  friendly_name: 'Refresh State'
-  icon: 'mdi:wifi-refresh'
 sensor.template_driveway_repeater_linkquality_percentage:
   friendly_name: 'Driveway Repeater'
 sensor.template_landing_repeater_linkquality_percentage:
@@ -732,8 +729,6 @@ sensor.template_deck_fans_outlet_linkquality_percentage:
   friendly_name: 'Deck Fans Outlet'
 sensor.template_edwin_wardrobe_outlet_linkquality_percentage:
   friendly_name: 'Edwin Wardrobe Outlet'
-button.synchronize_devices:
-  friendly_name: 'Google Device Sync'
 media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:
