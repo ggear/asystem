@@ -2,36 +2,6 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
 - type: entities
-  title: Battery Charge
-  entities:
-    - entity: sensor.back_door_lock_battery
-      name: Yale Back Door Lock
-    - entity: sensor.front_door_lock_battery
-      name: Yale Front Door Lock
-    - entity: sensor.template_back_door_sensor_battery_last
-      name: Sonoff Back Door Sensor
-    - entity: sensor.template_front_door_sensor_battery_last
-      name: Sonoff Front Door Sensor
-    - entity: sensor.home_cube_remote_battery
-      name: Xiaomi Cube Remote
-    - entity: sensor.template_weatherstation_console_battery_percent_int
-      name: Davis Console
-    - entity: sensor.bertram_2_office_pantry_battery_percent
-      name: Netatmo Pantry
-    - entity: sensor.bertram_2_office_lounge_battery_percent
-      name: Netatmo Lounge
-    - entity: sensor.bertram_2_office_dining_battery_percent
-      name: Netatmo Dining
-    - entity: sensor.bertram_2_office_basement_battery_percent
-      name: Netatmo Basement
-    - entity: sensor.parents_speaker_battery
-      name: Sonos Parents
-    - entity: sensor.kitchen_home_battery
-      name: Sonos Kitchen
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
   title: Internet Telemetry
   entities:
     - entity: sensor.network_internet_ping
@@ -69,6 +39,36 @@
   entities:
     - entity: sensor.template_weatherstation_coms_signal_quality_percentage
       name: Davis Console
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
+  title: Battery Charge
+  entities:
+    - entity: sensor.back_door_lock_battery
+      name: Yale Back Door Lock
+    - entity: sensor.front_door_lock_battery
+      name: Yale Front Door Lock
+    - entity: sensor.template_back_door_sensor_battery_last
+      name: Sonoff Back Door Sensor
+    - entity: sensor.template_front_door_sensor_battery_last
+      name: Sonoff Front Door Sensor
+    - entity: sensor.home_cube_remote_battery
+      name: Xiaomi Cube Remote
+    - entity: sensor.template_weatherstation_console_battery_percent_int
+      name: Davis Console
+    - entity: sensor.bertram_2_office_pantry_battery_percent
+      name: Netatmo Pantry
+    - entity: sensor.bertram_2_office_lounge_battery_percent
+      name: Netatmo Lounge
+    - entity: sensor.bertram_2_office_dining_battery_percent
+      name: Netatmo Dining
+    - entity: sensor.bertram_2_office_basement_battery_percent
+      name: Netatmo Basement
+    - entity: sensor.parents_speaker_battery
+      name: Sonos Parents
+    - entity: sensor.kitchen_home_battery
+      name: Sonos Kitchen
 ################################################################################
 - type: custom:layout-break
 ################################################################################

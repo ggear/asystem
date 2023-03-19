@@ -555,35 +555,6 @@ sensor.kitchen_fan_today_s_consumption:
   friendly_name: 'Kitchen Fan'
 sensor.withings_weight_kg_graham:
   friendly_name: 'Weight'
-sensor.back_door_lock_battery:
-  friendly_name: 'Yale Back Door Lock'
-sensor.front_door_lock_battery:
-  friendly_name: 'Yale Front Door Lock'
-sensor.template_back_door_sensor_battery_last:
-  friendly_name: 'Sonoff Back Door Sensor'
-sensor.template_front_door_sensor_battery_last:
-  friendly_name: 'Sonoff Front Door Sensor'
-sensor.home_cube_remote_battery:
-  friendly_name: 'Xiaomi Cube Remote'
-sensor.template_weatherstation_console_battery_percent_int:
-  friendly_name: 'Davis Console'
-  unit_of_measurement: '%'
-sensor.weatherstation_console_battery_voltage:
-  friendly_name: 'Davis Console Voltage'
-  icon: 'mdi:battery-30'
-  unit_of_measurement: 'V'
-sensor.bertram_2_office_pantry_battery_percent:
-  friendly_name: 'Netatmo Pantry'
-sensor.bertram_2_office_lounge_battery_percent:
-  friendly_name: 'Netatmo Lounge'
-sensor.bertram_2_office_dining_battery_percent:
-  friendly_name: 'Netatmo Dining'
-sensor.bertram_2_office_basement_battery_percent:
-  friendly_name: 'Netatmo Basement'
-sensor.parents_speaker_battery:
-  friendly_name: 'Sonos Parents'
-sensor.kitchen_home_battery:
-  friendly_name: 'Sonos Kitchen'
 sensor.network_internet_ping:
   friendly_name: 'Ping'
   icon: 'mdi:cloud-refresh'
@@ -616,6 +587,35 @@ sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Davis Console'
 sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
+sensor.back_door_lock_battery:
+  friendly_name: 'Yale Back Door Lock'
+sensor.front_door_lock_battery:
+  friendly_name: 'Yale Front Door Lock'
+sensor.template_back_door_sensor_battery_last:
+  friendly_name: 'Sonoff Back Door Sensor'
+sensor.template_front_door_sensor_battery_last:
+  friendly_name: 'Sonoff Front Door Sensor'
+sensor.home_cube_remote_battery:
+  friendly_name: 'Xiaomi Cube Remote'
+sensor.template_weatherstation_console_battery_percent_int:
+  friendly_name: 'Davis Console'
+  unit_of_measurement: '%'
+sensor.weatherstation_console_battery_voltage:
+  friendly_name: 'Davis Console Voltage'
+  icon: 'mdi:battery-30'
+  unit_of_measurement: 'V'
+sensor.bertram_2_office_pantry_battery_percent:
+  friendly_name: 'Netatmo Pantry'
+sensor.bertram_2_office_lounge_battery_percent:
+  friendly_name: 'Netatmo Lounge'
+sensor.bertram_2_office_dining_battery_percent:
+  friendly_name: 'Netatmo Dining'
+sensor.bertram_2_office_basement_battery_percent:
+  friendly_name: 'Netatmo Basement'
+sensor.parents_speaker_battery:
+  friendly_name: 'Sonos Parents'
+sensor.kitchen_home_battery:
+  friendly_name: 'Sonos Kitchen'
 switch.lounge_tv_outlet:
   friendly_name: 'Lounge TV'
   icon: 'mdi:television'
