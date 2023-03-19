@@ -555,75 +555,67 @@ sensor.kitchen_fan_today_s_consumption:
   friendly_name: 'Kitchen Fan'
 sensor.withings_weight_kg_graham:
   friendly_name: 'Weight'
-switch.adaptive_lighting_default:
-  friendly_name: 'Status'
-switch.adaptive_lighting_sleep_mode_default:
-  friendly_name: 'Sleep'
-switch.adaptive_lighting_adapt_color_default:
-  friendly_name: 'Colour'
-switch.adaptive_lighting_adapt_brightness_default:
-  friendly_name: 'Brightness'
-switch.adaptive_lighting_bedroom:
-  friendly_name: 'Status'
-switch.adaptive_lighting_sleep_mode_bedroom:
-  friendly_name: 'Sleep'
-switch.adaptive_lighting_adapt_color_bedroom:
-  friendly_name: 'Colour'
-switch.adaptive_lighting_adapt_brightness_bedroom:
-  friendly_name: 'Brightness'
-switch.adaptive_lighting_night_light:
-  friendly_name: 'Status'
-switch.adaptive_lighting_sleep_mode_night_light:
-  friendly_name: 'Sleep'
-switch.adaptive_lighting_adapt_color_night_light:
-  friendly_name: 'Colour'
-switch.adaptive_lighting_adapt_brightness_night_light:
-  friendly_name: 'Brightness'
-input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
-  friendly_name: 'Ada Lamp'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
-  friendly_name: 'Edwin Lamp'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
-  friendly_name: 'Edwin Night Light'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_hallway_main:
-  friendly_name: 'Hallway Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_dining_main:
-  friendly_name: 'Dining Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_lounge_main:
-  friendly_name: 'Lounge Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_lounge_lamp:
-  friendly_name: 'Lounge Lamp'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_parents_main:
-  friendly_name: 'Parents Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
-  friendly_name: 'Kitchen Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_laundry_main:
-  friendly_name: 'Laundry Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_pantry_main:
-  friendly_name: 'Pantry Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_office_main:
-  friendly_name: 'Office Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
-  friendly_name: 'Bathroom Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
-  friendly_name: 'Ensuite Main'
-  icon: 'mdi:lightbulb-group'
-input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
-  friendly_name: 'Wardrobe Main'
-  icon: 'mdi:lightbulb-group'
+sensor.back_door_lock_battery:
+  friendly_name: 'Yale Back Door Lock'
+sensor.front_door_lock_battery:
+  friendly_name: 'Yale Front Door Lock'
+sensor.template_back_door_sensor_battery_last:
+  friendly_name: 'Sonoff Back Door Sensor'
+sensor.template_front_door_sensor_battery_last:
+  friendly_name: 'Sonoff Front Door Sensor'
+sensor.home_cube_remote_battery:
+  friendly_name: 'Xiaomi Cube Remote'
+sensor.template_weatherstation_console_battery_percent_int:
+  friendly_name: 'Davis Console'
+  unit_of_measurement: '%'
+sensor.weatherstation_console_battery_voltage:
+  friendly_name: 'Davis Console Voltage'
+  icon: 'mdi:battery-30'
+  unit_of_measurement: 'V'
+sensor.bertram_2_office_pantry_battery_percent:
+  friendly_name: 'Netatmo Pantry'
+sensor.bertram_2_office_lounge_battery_percent:
+  friendly_name: 'Netatmo Lounge'
+sensor.bertram_2_office_dining_battery_percent:
+  friendly_name: 'Netatmo Dining'
+sensor.bertram_2_office_basement_battery_percent:
+  friendly_name: 'Netatmo Basement'
+sensor.parents_speaker_battery:
+  friendly_name: 'Sonos Parents'
+sensor.kitchen_home_battery:
+  friendly_name: 'Sonos Kitchen'
+sensor.network_internet_ping:
+  friendly_name: 'Ping'
+  icon: 'mdi:cloud-refresh'
+  unit_of_measurement: 'ms'
+sensor.network_internet_upload:
+  friendly_name: 'Upload'
+  icon: 'mdi:cloud-upload'
+  unit_of_measurement: 'MB/s'
+sensor.network_internet_download:
+  friendly_name: 'Download'
+  icon: 'mdi:cloud-download'
+  unit_of_measurement: 'MB/s'
+sensor.network_certifcate_expiry:
+  friendly_name: 'Certifcate Expiry'
+  icon: 'mdi:cloud-lock'
+  unit_of_measurement: 'd'
+sensor.template_driveway_repeater_linkquality_percentage:
+  friendly_name: 'Driveway Repeater'
+sensor.template_landing_repeater_linkquality_percentage:
+  friendly_name: 'Landing Repeater'
+sensor.template_garden_repeater_linkquality_percentage:
+  friendly_name: 'Garden Repeater'
+sensor.template_kitchen_fan_outlet_linkquality_percentage:
+  friendly_name: 'Kitchen Fan Outlet'
+sensor.template_deck_fans_outlet_linkquality_percentage:
+  friendly_name: 'Deck Fans Outlet'
+sensor.template_edwin_wardrobe_outlet_linkquality_percentage:
+  friendly_name: 'Edwin Wardrobe Outlet'
+sensor.weatherstation_coms_signal_quality:
+  friendly_name: 'Davis Console'
+sensor.template_weatherstation_coms_signal_quality_percentage:
+  friendly_name: 'Davis Console'
 switch.lounge_tv_outlet:
   friendly_name: 'Lounge TV'
   icon: 'mdi:television'
@@ -684,51 +676,75 @@ sensor.landing_repeater:
   friendly_name: 'Landing Repeater'
 sensor.driveway_repeater:
   friendly_name: 'Driveway Repeater'
-sensor.back_door_lock_battery:
-  friendly_name: 'Yale Back Door Lock'
-sensor.front_door_lock_battery:
-  friendly_name: 'Yale Front Door Lock'
-sensor.template_back_door_sensor_battery_last:
-  friendly_name: 'Sonoff Back Door Sensor'
-sensor.template_front_door_sensor_battery_last:
-  friendly_name: 'Sonoff Front Door Sensor'
-sensor.home_cube_remote_battery:
-  friendly_name: 'Xiaomi Cube Remote'
-sensor.template_weatherstation_console_battery_percent_int:
-  friendly_name: 'Davis Console'
-  unit_of_measurement: '%'
-sensor.weatherstation_console_battery_voltage:
-  friendly_name: 'Davis Console Voltage'
-  icon: 'mdi:battery-30'
-  unit_of_measurement: 'V'
-sensor.bertram_2_office_pantry_battery_percent:
-  friendly_name: 'Netatmo Pantry'
-sensor.bertram_2_office_lounge_battery_percent:
-  friendly_name: 'Netatmo Lounge'
-sensor.bertram_2_office_dining_battery_percent:
-  friendly_name: 'Netatmo Dining'
-sensor.bertram_2_office_basement_battery_percent:
-  friendly_name: 'Netatmo Basement'
-sensor.parents_speaker_battery:
-  friendly_name: 'Sonos Parents'
-sensor.kitchen_home_battery:
-  friendly_name: 'Sonos Kitchen'
-sensor.weatherstation_coms_signal_quality:
-  friendly_name: 'Davis Console'
-sensor.template_weatherstation_coms_signal_quality_percentage:
-  friendly_name: 'Davis Console'
-sensor.template_driveway_repeater_linkquality_percentage:
-  friendly_name: 'Driveway Repeater'
-sensor.template_landing_repeater_linkquality_percentage:
-  friendly_name: 'Landing Repeater'
-sensor.template_garden_repeater_linkquality_percentage:
-  friendly_name: 'Garden Repeater'
-sensor.template_kitchen_fan_outlet_linkquality_percentage:
-  friendly_name: 'Kitchen Fan Outlet'
-sensor.template_deck_fans_outlet_linkquality_percentage:
-  friendly_name: 'Deck Fans Outlet'
-sensor.template_edwin_wardrobe_outlet_linkquality_percentage:
-  friendly_name: 'Edwin Wardrobe Outlet'
+input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
+  friendly_name: 'Ada Lamp'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
+  friendly_name: 'Edwin Lamp'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
+  friendly_name: 'Edwin Night Light'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_hallway_main:
+  friendly_name: 'Hallway Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_dining_main:
+  friendly_name: 'Dining Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_lounge_main:
+  friendly_name: 'Lounge Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_lounge_lamp:
+  friendly_name: 'Lounge Lamp'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_parents_main:
+  friendly_name: 'Parents Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
+  friendly_name: 'Kitchen Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_laundry_main:
+  friendly_name: 'Laundry Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_pantry_main:
+  friendly_name: 'Pantry Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_office_main:
+  friendly_name: 'Office Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
+  friendly_name: 'Bathroom Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
+  friendly_name: 'Ensuite Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
+  friendly_name: 'Wardrobe Main'
+  icon: 'mdi:lightbulb-group'
+switch.adaptive_lighting_default:
+  friendly_name: 'Status'
+switch.adaptive_lighting_sleep_mode_default:
+  friendly_name: 'Sleep'
+switch.adaptive_lighting_adapt_color_default:
+  friendly_name: 'Colour'
+switch.adaptive_lighting_adapt_brightness_default:
+  friendly_name: 'Brightness'
+switch.adaptive_lighting_bedroom:
+  friendly_name: 'Status'
+switch.adaptive_lighting_sleep_mode_bedroom:
+  friendly_name: 'Sleep'
+switch.adaptive_lighting_adapt_color_bedroom:
+  friendly_name: 'Colour'
+switch.adaptive_lighting_adapt_brightness_bedroom:
+  friendly_name: 'Brightness'
+switch.adaptive_lighting_night_light:
+  friendly_name: 'Status'
+switch.adaptive_lighting_sleep_mode_night_light:
+  friendly_name: 'Sleep'
+switch.adaptive_lighting_adapt_color_night_light:
+  friendly_name: 'Colour'
+switch.adaptive_lighting_adapt_brightness_night_light:
+  friendly_name: 'Brightness'
 media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:

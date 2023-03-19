@@ -2,83 +2,73 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
 - type: entities
-  title: Default Adaptive Lighting
-  show_header_toggle: false
+  title: Battery Charge
   entities:
-    - entity: switch.adaptive_lighting_default
-      name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_default
-      name: Sleep
-################################################################################
-- type: entities
-  title: Bedroom Adaptive Lighting
-  show_header_toggle: false
-  entities:
-    - entity: switch.adaptive_lighting_bedroom
-      name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_bedroom
-      name: Sleep
-################################################################################
-- type: entities
-  title: Night Light Adaptive Lighting
-  show_header_toggle: false
-  entities:
-    - entity: switch.adaptive_lighting_night_light
-      name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_night_light
-      name: Sleep
+    - entity: sensor.back_door_lock_battery
+      name: Yale Back Door Lock
+    - entity: sensor.front_door_lock_battery
+      name: Yale Front Door Lock
+    - entity: sensor.template_back_door_sensor_battery_last
+      name: Sonoff Back Door Sensor
+    - entity: sensor.template_front_door_sensor_battery_last
+      name: Sonoff Front Door Sensor
+    - entity: sensor.home_cube_remote_battery
+      name: Xiaomi Cube Remote
+    - entity: sensor.template_weatherstation_console_battery_percent_int
+      name: Davis Console
+    - entity: sensor.bertram_2_office_pantry_battery_percent
+      name: Netatmo Pantry
+    - entity: sensor.bertram_2_office_lounge_battery_percent
+      name: Netatmo Lounge
+    - entity: sensor.bertram_2_office_dining_battery_percent
+      name: Netatmo Dining
+    - entity: sensor.bertram_2_office_basement_battery_percent
+      name: Netatmo Basement
+    - entity: sensor.parents_speaker_battery
+      name: Sonos Parents
+    - entity: sensor.kitchen_home_battery
+      name: Sonos Kitchen
 ################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: entities
-  title: Reset Adaptive Lighting
+  title: Internet Telemetry
+  entities:
+    - entity: sensor.network_internet_ping
+      name: Ping
+      icon: mdi:cloud-refresh
+    - entity: sensor.network_internet_upload
+      name: Upload
+      icon: mdi:cloud-upload
+    - entity: sensor.network_internet_download
+      name: Download
+      icon: mdi:cloud-download
+    - entity: sensor.network_certifcate_expiry
+      name: Certifcate Expiry
+      icon: mdi:cloud-lock
+################################################################################
+- type: entities
+  title: Zigbee Link Quality
   show_header_toggle: false
   entities:
-    - entity: input_boolean.lighting_reset_adaptive_lighting_ada_lamp
-      name: Ada Lamp
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
-      name: Edwin Lamp
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_night_light
-      name: Edwin Night Light
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_hallway_main
-      name: Hallway Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_dining_main
-      name: Dining Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_main
-      name: Lounge Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
-      name: Lounge Lamp
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_parents_main
-      name: Parents Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_kitchen_main
-      name: Kitchen Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_laundry_main
-      name: Laundry Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_pantry_main
-      name: Pantry Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_office_main
-      name: Office Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_bathroom_main
-      name: Bathroom Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_ensuite_main
-      name: Ensuite Main
-      icon: mdi:lightbulb-group
-    - entity: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
-      name: Wardrobe Main
-      icon: mdi:lightbulb-group
+    - entity: sensor.template_driveway_repeater_linkquality_percentage
+      name: Driveway Repeater
+    - entity: sensor.template_landing_repeater_linkquality_percentage
+      name: Landing Repeater
+    - entity: sensor.template_garden_repeater_linkquality_percentage
+      name: Garden Repeater
+    - entity: sensor.template_kitchen_fan_outlet_linkquality_percentage
+      name: Kitchen Fan Outlet
+    - entity: sensor.template_deck_fans_outlet_linkquality_percentage
+      name: Deck Fans Outlet
+    - entity: sensor.template_edwin_wardrobe_outlet_linkquality_percentage
+      name: Edwin Wardrobe Outlet
+################################################################################
+- type: entities
+  title: Radio Link Quality
+  entities:
+    - entity: sensor.template_weatherstation_coms_signal_quality_percentage
+      name: Davis Console
 ################################################################################
 - type: custom:layout-break
 ################################################################################
@@ -144,55 +134,81 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
-  title: Battery Charge
+  title: Reset Adaptive Lighting
+  show_header_toggle: false
   entities:
-    - entity: sensor.back_door_lock_battery
-      name: Yale Back Door Lock
-    - entity: sensor.front_door_lock_battery
-      name: Yale Front Door Lock
-    - entity: sensor.template_back_door_sensor_battery_last
-      name: Sonoff Back Door Sensor
-    - entity: sensor.template_front_door_sensor_battery_last
-      name: Sonoff Front Door Sensor
-    - entity: sensor.home_cube_remote_battery
-      name: Xiaomi Cube Remote
-    - entity: sensor.template_weatherstation_console_battery_percent_int
-      name: Davis Console
-    - entity: sensor.bertram_2_office_pantry_battery_percent
-      name: Netatmo Pantry
-    - entity: sensor.bertram_2_office_lounge_battery_percent
-      name: Netatmo Lounge
-    - entity: sensor.bertram_2_office_dining_battery_percent
-      name: Netatmo Dining
-    - entity: sensor.bertram_2_office_basement_battery_percent
-      name: Netatmo Basement
-    - entity: sensor.parents_speaker_battery
-      name: Sonos Parents
-    - entity: sensor.kitchen_home_battery
-      name: Sonos Kitchen
+    - entity: input_boolean.lighting_reset_adaptive_lighting_ada_lamp
+      name: Ada Lamp
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
+      name: Edwin Lamp
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_edwin_night_light
+      name: Edwin Night Light
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_hallway_main
+      name: Hallway Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_dining_main
+      name: Dining Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_main
+      name: Lounge Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
+      name: Lounge Lamp
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_parents_main
+      name: Parents Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_kitchen_main
+      name: Kitchen Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_laundry_main
+      name: Laundry Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_pantry_main
+      name: Pantry Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_office_main
+      name: Office Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_bathroom_main
+      name: Bathroom Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_ensuite_main
+      name: Ensuite Main
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
+      name: Wardrobe Main
+      icon: mdi:lightbulb-group
 ################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: entities
-  title: Radio Link Quality
-  entities:
-    - entity: sensor.template_weatherstation_coms_signal_quality_percentage
-      name: Davis Console
-################################################################################
-- type: entities
-  title: Zigbee Link Quality
+  title: Default Adaptive Lighting
   show_header_toggle: false
   entities:
-    - entity: sensor.template_driveway_repeater_linkquality_percentage
-      name: Driveway Repeater
-    - entity: sensor.template_landing_repeater_linkquality_percentage
-      name: Landing Repeater
-    - entity: sensor.template_garden_repeater_linkquality_percentage
-      name: Garden Repeater
-    - entity: sensor.template_kitchen_fan_outlet_linkquality_percentage
-      name: Kitchen Fan Outlet
-    - entity: sensor.template_deck_fans_outlet_linkquality_percentage
-      name: Deck Fans Outlet
-    - entity: sensor.template_edwin_wardrobe_outlet_linkquality_percentage
-      name: Edwin Wardrobe Outlet
+    - entity: switch.adaptive_lighting_default
+      name: Status
+    - entity: switch.adaptive_lighting_sleep_mode_default
+      name: Sleep
+################################################################################
+- type: entities
+  title: Bedroom Adaptive Lighting
+  show_header_toggle: false
+  entities:
+    - entity: switch.adaptive_lighting_bedroom
+      name: Status
+    - entity: switch.adaptive_lighting_sleep_mode_bedroom
+      name: Sleep
+################################################################################
+- type: entities
+  title: Night Light Adaptive Lighting
+  show_header_toggle: false
+  entities:
+    - entity: switch.adaptive_lighting_night_light
+      name: Status
+    - entity: switch.adaptive_lighting_sleep_mode_night_light
+      name: Sleep
 ################################################################################

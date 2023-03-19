@@ -45,6 +45,7 @@ if __name__ == "__main__":
     metadata_publish_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
+        (metadata_df["device_via_device"] == "WeeWX") &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
@@ -56,6 +57,9 @@ if __name__ == "__main__":
     metadata_device_columns = [column for column in metadata_publish_df.columns
                                if (column.startswith("device_") and column != "device_class")]
     metadata_device_columns_rename = {column: column.replace("device_", "") for column in metadata_device_columns}
+    metadata_publish_dir_root = os.path.join(DIR_ROOT, "src/main/resources/config/mqtt")
+    if os.path.exists(metadata_publish_dir_root):
+        shutil.rmtree(metadata_publish_dir_root)
     for index, row in metadata_publish_df.iterrows():
         metadata_publish_dict = row[[
             "unique_id",
@@ -71,9 +75,7 @@ if __name__ == "__main__":
         ]].dropna().to_dict()
         metadata_publish_dict["device"] = \
             row[metadata_device_columns].rename(metadata_device_columns_rename).dropna().to_dict()
-        metadata_publish_dir = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/mqtt", row['discovery_topic']))
-        if os.path.exists(metadata_publish_dir):
-            shutil.rmtree(metadata_publish_dir)
+        metadata_publish_dir = os.path.abspath(os.path.join(metadata_publish_dir_root, row['discovery_topic']))
         os.makedirs(metadata_publish_dir)
         metadata_publish_str = json.dumps(metadata_publish_dict, ensure_ascii=False)
         metadata_publish_path = os.path.abspath(os.path.join(metadata_publish_dir, metadata_publish_dict["unique_id"] + ".json"))
