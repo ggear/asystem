@@ -6,7 +6,7 @@ A home data, analytics and automation system.
 
 To build, test and package this project the following is required:
 
-* go-1.16+
+* go-1.20+
 * rust-1.5+
 * cargo-1.5+
 * conda-4.5.12+

@@ -116,16 +116,14 @@ def _setup(context):
     _print_header("asystem", "setup")
     _print_line(
         "Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(_get_versions()[2], _get_versions()[1], _get_versions()[0]))
-    if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) == 0:
-        _run_local(context, "conda create -y -n $ENV python=$PYTHON_VERSION")
+    if len(_run_local(context, "conda env list | grep ${PYTHON_HOME} || true", hide='out').stdout) == 0:
+        _run_local(context, "conda create -y -n asystem-python python=$PYTHON_VERSION")
         _print_line("Installing requirements ...")
         for requirement in glob.glob("{}/*/*/*/reqs_*.txt".format(DIR_ROOT_MODULE)):
             _run_local(context, "pip install -r {}".format(requirement))
-    _run_local(context, "[ ! -d $HOME/.go/asystem ] && mkdir -vp $HOME/.go/$ENV/{bin,src,pkg} || true")
-
-    # TODO: Update requirements or manage
-    # sudo npm install -g karma jasmine karma-jasmine karma-chrome-launcher html-minifier uglify-js --unsafe-perm=true --allow-root
-
+    if len(_run_local(context, "ls ${GO_HOME} || true", hide='out').stdout) == 0:
+        _run_local(context, "echo 'Cannot find go install at [${GO_HOME}]' && false")
+    _run_local(context, "[ ! -d ${GOPATH} ] && mkdir -vp ${GOPATH}/{bin,src,pkg} || true")
     _print_footer("asystem", "setup")
 
 
@@ -135,8 +133,9 @@ def _purge(context):
     _run_local(context, "[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)", warn=True)
     _run_local(context, "docker system prune --volumes -f")
     if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) > 0:
-        _run_local(context, "conda remove -y -n $ENV --all")
-    _run_local(context, "rm -rvf $HOME/.go/$ENV || true")
+        _run_local(context, "conda remove -y -n asystem-python --all")
+        _run_local(context, "rm -rvf $PYTHON_HOME|| true")
+    _run_local(context, "sudo rm -rvf $GOPATH|| true")
     _print_footer("asystem", "purge")
 
 
@@ -213,11 +212,16 @@ def _build(context, filter_module=None, is_release=False):
         if isdir(join(DIR_ROOT_MODULE, module, "src/main/python")):
             _print_line("Linting sources ...")
 
-            # TODO: Re-enable once I have cleaned up anode codebase
+            # TODO: Re-enable once I have cleaned up python codebases
             # _run_local(context, "pylint --disable=all src/main/python/*", module)
 
         if isfile(join(DIR_ROOT_MODULE, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
+        if isdir(join(DIR_ROOT_MODULE, module, "src/main/go/pkg")):
+            _run_local(context, "go mod tidy", join(module, "src/main/go/pkg"))
+            _run_local(context, "go build", join(module, "src/main/go/pkg"))
+        if isdir(join(DIR_ROOT_MODULE, module, "src/main/go/cmd")):
+            _run_local(context, "go mod tidy", join(module, "src/main/go/cmd"))
         cargo_file = join(DIR_ROOT_MODULE, module, "Cargo.toml")
         if isfile(cargo_file):
             _run_local(context, "mkdir -p target/package && cp -rvfp Cargo.toml target/package", module, hide='err', warn=True)
@@ -237,6 +241,12 @@ def _unittest(context, filter_module=None):
         _print_line("Running unit tests ...")
         _run_local(context, "python unit_tests.py", join(module, "src/test/python/unit"))
         _print_footer(module, "unittest")
+    for module in _get_modules(context, "src/test/go/unit/unit_test.go", filter_module=filter_module):
+        _print_header(module, "unittest")
+        _print_line("Running unit tests ...")
+        _run_local(context, "go mod tidy", join(module, "src/test/go/unit"))
+        _run_local(context, "go test", join(module, "src/test/go/unit"))
+        _print_footer(module, "unittest")
     for module in _get_modules(context, "src/test/rust/unit/unit_tests.rs", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
@@ -249,19 +259,31 @@ def _package(context, filter_module=None, is_release=False):
         _print_header(module, "package")
         host_arch = HOSTS[_get_host(context, module)][1]
         if is_release and host_arch != "x86_64":
-            _run_local(context, "docker buildx build --build-arg PYTHON_VERSION --platform linux/{} --output type=docker --tag {}:{} ."
+            _run_local(context, "docker buildx build "
+                                "--build-arg PYTHON_VERSION "
+                                "--build-arg GO_VERSION "
+                                "--platform linux/{} --output type=docker --tag {}:{} ."
                        .format(host_arch, _name(module), _get_versions()[0]), module)
         else:
-            _run_local(context, "docker image build --build-arg PYTHON_VERSION --tag {}:{} ."
+            _run_local(context, "docker image build "
+                                "--build-arg PYTHON_VERSION "
+                                "--build-arg GO_VERSION "
+                                "--tag {}:{} ."
                        .format(_name(module), _get_versions()[0]), module)
         _print_footer(module, "package")
 
 
 def _systest(context, filter_module=None):
-    for module in _get_modules(context, "src/test/python/system/system_tests.py", filter_module=filter_module):
+    for module in _get_modules(context, "src/test/*/sys", filter_module=filter_module):
         _up_module(context, module)
         _print_header(module, "systest")
-        test_exit_code = _run_local(context, "python system_tests.py", join(module, "src/test/python/system"), warn=True).exited
+        test_exit_code = 1
+        if isfile(join(DIR_ROOT_MODULE, module, "src/test/python/sys/system_tests.py")):
+            test_exit_code = _run_local(context, "python system_tests.py", join(module, "src/test/python/system"), warn=True).exited
+        elif isdir(join(DIR_ROOT_MODULE, module, "src/test/go/sys")):
+            test_exit_code = _run_local(context, "go test", join(module, "src/test/go/sys"), warn=True).exited
+        else:
+            print("Could not find test to run")
         _down_module(context, module)
         if test_exit_code != 0:
             _print_line("Tests ... failed")
@@ -432,14 +454,16 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
                             .format([service for service, count in collections.Counter(module_services).items() if count > 1]))
         return sorted_modules
     else:
-        return [filter_module] if filter_path is None or os.path.exists(join(DIR_ROOT_MODULE, filter_module, filter_path)) else []
+        return [filter_module] if filter_path is None or glob.glob("{}/{}/{}*".format(DIR_ROOT_MODULE, filter_module, filter_path)) else []
 
 
 def _ssh_pass(context, host):
     ssh_prefix = "sshpass -f /Users/graham/.ssh/.password " \
-        if _run_local(context, "ssh -q -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes -o ConnectTimeout=1 root@{} exit"
+        if _run_local(context,
+                      "ssh -q -o StrictHostKeyChecking=no -o PasswordAuthentication=no -o BatchMode=yes -o ConnectTimeout=1 root@{} exit"
                       .format(host), hide="err", warn=True).exited > 0 else ""
-    if _run_local(context, "{}ssh -q -o ConnectTimeout=1 root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err", warn=True).exited > 0:
+    if _run_local(context, "{}ssh -q -o ConnectTimeout=1 root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err",
+                  warn=True).exited > 0:
         raise Exception("Error: Cannot connect via [{}ssh -q root@{}]".format(ssh_prefix, host))
     return ssh_prefix
 
@@ -473,6 +497,8 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
     service = _get_service(context, module)
     _run_local(context, "mkdir -p {}".format(working_path), module)
     _run_local(context, "echo 'PYTHON_VERSION=$PYTHON_VERSION\n' > {}/.env"
+               .format(working_path), module)
+    _run_local(context, "echo 'GO_VERSION=$GO_VERSION\n' > {}/.env"
                .format(working_path), module)
     _run_local(context, "echo 'SERVICE_NAME={}' >> {}/.env"
                .format(service, working_path), module)
