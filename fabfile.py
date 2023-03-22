@@ -219,7 +219,7 @@ def _build(context, filter_module=None, is_release=False):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
         if isdir(join(DIR_ROOT_MODULE, module, "src/main/go/pkg")):
             _run_local(context, "go mod tidy", join(module, "src/main/go/pkg"))
-            _run_local(context, "go build", join(module, "src/main/go/pkg"))
+            _run_local(context, "GOCACHE={} go build".format(join(DIR_ROOT_MODULE, module, "target/gocache")), join(module, "src/main/go/pkg"))
         if isdir(join(DIR_ROOT_MODULE, module, "src/main/go/cmd")):
             _run_local(context, "go mod tidy", join(module, "src/main/go/cmd"))
         cargo_file = join(DIR_ROOT_MODULE, module, "Cargo.toml")

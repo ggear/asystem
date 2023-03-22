@@ -14,7 +14,5 @@ RUN go install
 
 FROM image_install as image_runtime
 
-COPY src/main/resources/entrypoint.sh ./
-
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["cmd"]
 CMD ["--daemon"]
