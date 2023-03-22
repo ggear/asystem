@@ -9,6 +9,6 @@ import (
 func main() {
 	for true {
 		fmt.Println(pkg.GetStatus("Server is up ..."))
-		time.Sleep(time.Second)
+		time.Sleep(30 * time.Second)
 	}
 }
