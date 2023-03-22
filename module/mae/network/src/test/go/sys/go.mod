@@ -1,4 +1,4 @@
-module github.com/ggear/asystem/tree/master/module/mae/internet/src/main/go/sys
+module github.com/ggear/asystem/tree/master/module/mae/network/src/test/go/sys
 
 go 1.20
 
