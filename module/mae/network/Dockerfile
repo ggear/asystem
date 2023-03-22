@@ -15,4 +15,4 @@ RUN go install
 FROM image_install as image_runtime
 
 ENTRYPOINT ["cmd"]
-CMD ["--daemon"]
+CMD ["--once=false"]
