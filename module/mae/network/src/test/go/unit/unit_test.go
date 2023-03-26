@@ -11,3 +11,7 @@ func Test_GetStatus(t *testing.T) {
 		t.Errorf("Status incorrectly reported")
 	}
 }
+
+func Test_scratchpad(t *testing.T) {
+
+}

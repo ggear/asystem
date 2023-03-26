@@ -109,6 +109,7 @@
   slot_r5: fire_summary
 
 - type: 'custom:bom-radar-card'
+  data_source: 'RainViewer-UniversalBlue'
   map_style: 'light'
   frame_count: 10
   center_latitude: -31.92
@@ -123,4 +124,4 @@
   show_playback: true
   show_radar_coverage: false
   show_radar_location: true
-  zoom_level: 8
+  zoom_level: 6
