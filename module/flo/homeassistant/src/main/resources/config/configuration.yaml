@@ -17,6 +17,8 @@ http:
   cors_allowed_origins:
     - https://janeandgraham.com
     - https://home.janeandgraham.com
+  ip_ban_enabled: true
+  login_attempts_threshold: 3
 #######################################################################################
 tts:
   - platform: google_translate
