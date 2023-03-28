@@ -84,12 +84,12 @@ discovery:
   ignore:
     - homekit
 #######################################################################################
-google_assistant:
-  project_id: haas-81482
-  service_account: !include .google_service_account.json
-  report_state: true
-  expose_by_default: false
-  entity_config: !include haas-entities.yaml
+#google_assistant:
+#  project_id:
+#  service_account: !include .google_service_account.json
+#  report_state: true
+#  expose_by_default: false
+#  entity_config: !include haas-entities.yaml
 #######################################################################################
 automation: !include automations.yaml
 #######################################################################################
