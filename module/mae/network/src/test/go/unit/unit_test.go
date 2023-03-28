@@ -2,16 +2,20 @@ package main
 
 import (
 	"github.com/ggear/asystem/tree/master/module/mae/internet/src/main/go/pkg"
+	"github.com/joho/godotenv"
+	"github.com/sirupsen/logrus"
 	"testing"
 )
 
-func Test_GetStatus(t *testing.T) {
-	status := "Up"
-	if status != pkg.GetStatus(status) {
-		t.Errorf("Status incorrectly reported")
-	}
+func init() {
+	pkg.DISABLE_MQTT = true
+	pkg.DISABLE_INFLUXDB = true
+	pkg.ConfigLog(logrus.TraceLevel)
+	godotenv.Load("../../../../.env")
 }
 
-func Test_scratchpad(t *testing.T) {
-
+func TestConnectionNoOp(t *testing.T) {
+	telemetry := pkg.New()
+	telemetry.Open()
+	telemetry.Close()
 }

@@ -8,23 +8,27 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
 const periodDefault = 15 * 60
 
+var telemetry *pkg.Telemetry
+
 var RootCmd = &cobra.Command{
 	Use: "network",
 	Run: func(cmd *cobra.Command, args []string) {
 		period, _ := cmd.Flags().GetFloat64("period")
-		telemetry, _ := pkg.New()
 		if period == 0 {
-			logrus.SetLevel(logrus.DebugLevel)
-			telemetry.Connect()
+			pkg.ConfigLog(logrus.DebugLevel)
+			telemetry.Open()
 			logrus.Info("Server is running once ... ")
 		} else {
-			telemetry.Connect(func(client mqtt.Client) {
-				telemetry.SwitchListener(func(state string) {
+			pkg.ConfigLog(logrus.InfoLevel)
+			telemetry.Open(func(client mqtt.Client) {
+				pkg.SwitchListener(client, func(state string) {
 					if state == "ON" {
 						logrus.Info("Server is switched on to run ... ")
 					}
@@ -37,8 +41,8 @@ var RootCmd = &cobra.Command{
 					time.Sleep(period)
 				}
 			} else {
-				period := time.Duration(rand.Float64()*period/2+period/2) * time.Second
 				for {
+					period := time.Duration(rand.Float64()*period/2+period/2) * time.Second
 					logrus.Infof("Server is waking up to run and then sleep for [%v] ... ", period)
 					time.Sleep(period)
 				}
@@ -48,22 +52,33 @@ var RootCmd = &cobra.Command{
 }
 
 func init() {
-	customFormatter := new(logrus.TextFormatter)
-	customFormatter.TimestampFormat = "2006-01-02 15:04:05"
-	customFormatter.FullTimestamp = true
-	logrus.SetFormatter(customFormatter)
-	logrus.SetLevel(logrus.InfoLevel)
+	pkg.ConfigLog(logrus.InfoLevel)
 	RootCmd.Flags().Float64P("period", "p", periodDefault,
 		"network telemetry gather loop polling period:\n"+
 			"if 0: run once, with debug statements and then exit, without responding to commands\n"+
 			"if <0: wakeup and then return to sleep every abs(period) hours, responding to commands\n"+
 			"if >0: wakeup and run within range [period/2, period] seconds, responding to commands",
 	)
+	telemetry = pkg.New()
+}
+
+func destroy() {
+	telemetry.Close()
 }
 
 func main() {
-	if err := RootCmd.Execute(); err != nil {
-		logrus.Error(err)
+	channel := make(chan os.Signal)
+	signal.Notify(channel, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-channel
+		destroy()
 		os.Exit(1)
+	}()
+	code := 0
+	if err := RootCmd.Execute(); err != nil {
+		code = 2
+		logrus.Error(err)
 	}
+	defer destroy()
+	os.Exit(code)
 }

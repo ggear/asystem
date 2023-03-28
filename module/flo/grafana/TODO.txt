@@ -1,0 +1,5 @@
+TODO
+
+- Rebuild for InfluxDB IOx and SQL
+- Perhaps use grabana instead of grizzly/jsonnet https://github.com/K-Phoen/grabana
+- https://blog.kevingomez.fr/2023/03/07/three-years-of-grafana-dashboards-as-code/#tl-dr

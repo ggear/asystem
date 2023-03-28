@@ -1,7 +1,7 @@
 # https://github.com/home-assistant/core/releases
 version: '3.7'
 x-common: &common
-  image: homeassistant/home-assistant:2023.3.5
+  image: homeassistant/home-assistant:2023.3.6
   user: root
   environment:
     - TZ=Australia/Perth
