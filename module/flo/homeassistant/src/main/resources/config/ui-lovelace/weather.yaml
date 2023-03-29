@@ -111,7 +111,7 @@
 - type: 'custom:bom-radar-card'
   data_source: 'RainViewer-UniversalBlue'
   map_style: 'light'
-  frame_count: 30
+  frame_count: 40
   frame_delay: 100
   center_latitude: -31.92
   center_longitude: 116.08
