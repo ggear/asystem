@@ -3,254 +3,254 @@
 #######################################################################################
 sensor.roof_temperature:
   name: Roof Temperature
-  aliases: ['Roof Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: []
   room: Roof
 sensor.ada_temperature:
-  name: Adas Temperature
-  aliases: ['Adas Room Temperature', 'Temperature', 'Room Temperature']
+  name: Ada Temperature
+  aliases: ['Adas Temperature', 'Adas Room Temperature']
   room: Ada
 sensor.edwin_temperature:
-  name: Edwins Temperature
-  aliases: ['Edwins Room Temperature', 'Temperature', 'Room Temperature']
+  name: Edwin Temperature
+  aliases: ['Edwins Temperature', 'Edwins Room Temperature']
   room: Edwin
 sensor.bertram_2_office_lounge_temperature:
   name: Lounge Temperature
-  aliases: ['Lounge Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: ['Lounge Room Temperature']
   room: Lounge
 sensor.parents_temperature:
   name: Parents Temperature
-  aliases: ['Parents Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: ['Parents Room Temperature']
   room: Parents
 sensor.bertram_2_office_temperature:
   name: Office Temperature
-  aliases: ['Office Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: []
   room: Office
 sensor.bertram_2_kitchen_temperature:
   name: Kitchen Temperature
-  aliases: ['Kitchen Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: []
   room: Kitchen
 sensor.bertram_2_office_pantry_temperature:
   name: Pantry Temperature
-  aliases: ['Pantry Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: []
   room: Pantry
 sensor.bertram_2_office_dining_temperature:
   name: Dining Temperature
-  aliases: ['Dining Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: ['Dining Room Temperature']
   room: Dining
 sensor.laundry_temperature:
   name: Laundry Temperature
-  aliases: ['Laundry Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: []
   room: Laundry
 sensor.bertram_2_office_basement_temperature:
   name: Basement Temperature
-  aliases: ['Basement Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: []
   room: Basement
 sensor.rack_temperature:
   name: Rack Temperature
-  aliases: ['Rack Room Temperature', 'Temperature', 'Room Temperature']
+  aliases: []
   room: Rack
 input_boolean.home_security:
   name: Home Secure
-  aliases: ['Home Secure Mode', 'Secure', 'Secure Mode']
+  aliases: ['Home Secure Mode']
   room: Abode
 input_boolean.home_movie:
   name: Home Movie
-  aliases: ['Home Movie Mode', 'Movie', 'Movie Mode']
+  aliases: ['Home Movie Mode']
   room: Abode
 input_boolean.home_sleep:
   name: Home Sleep
-  aliases: ['Home Sleep Mode', 'Sleep', 'Sleep Mode']
+  aliases: ['Home Sleep Mode']
   room: Abode
 input_boolean.home_reset:
   name: Home Reset
-  aliases: ['Home Reset Mode', 'Reset', 'Reset Mode']
+  aliases: ['Home Reset Mode']
   room: Abode
 fan.ada_fan:
-  name: Adas Fan
-  aliases: ['Fan']
+  name: Ada Fan
+  aliases: ['Adas Fan']
   room: Ada
 fan.edwin_fan:
-  name: Edwins Fan
-  aliases: ['Fan']
+  name: Edwin Fan
+  aliases: ['Edwins Fan']
   room: Edwin
 fan.parents_fan:
   name: Parents Fan
-  aliases: ['Fan']
+  aliases: []
   room: Parents
 switch.kitchen_fan:
   name: Kitchen Fan
-  aliases: ['Fan']
+  aliases: []
   room: Kitchen
 fan.lounge_fan:
   name: Lounge Fan
-  aliases: ['Fan']
+  aliases: []
   room: Lounge
 fan.deck_fan:
   name: Deck Fans
-  aliases: ['Fans']
+  aliases: ['Deck Fan']
   room: Deck
 light.ada_fan_light:
-  name: Adas Main Light
-  aliases: ['Adas Main', 'Main Light', 'Main']
+  name: Ada Main Light
+  aliases: ['Adas Main Light']
   room: Ada
 light.ada_lamp:
   name: Ada Lamp
-  aliases: ['Lamp']
+  aliases: []
   room: Zombie
 light.edwin_lamp:
   name: Edwin Lamp
-  aliases: ['Lamp']
+  aliases: []
   room: Zombie
 light.edwin_fan_light:
-  name: Edwins Main Light
-  aliases: ['Edwins Main', 'Main Light', 'Main']
+  name: Edwin Main Light
+  aliases: ['Edwins Main Light']
   room: Edwin
 light.edwin_night_light:
   name: Edwin Night Light
-  aliases: ['Night Light']
+  aliases: []
   room: Zombie
 light.hallway_main:
-  name: Hallway Main Light
-  aliases: ['Hallway Main', 'Main Light', 'Main']
+  name: Hallway Main Lights
+  aliases: ['Hallway Main Light']
   room: Hallway
 light.dining_main:
-  name: Dining Main Light
-  aliases: ['Dining Main', 'Main Light', 'Main']
+  name: Dining Main Lights
+  aliases: ['Dining Main Light']
   room: Dining
 light.lounge_main:
-  name: Lounge Main Light
-  aliases: ['Lounge Main', 'Main Light', 'Main']
+  name: Lounge Main Lights
+  aliases: ['Lounge Main Light']
   room: Lounge
 light.lounge_fan_light:
   name: Lounge Fan Light
-  aliases: ['Lounge Fan', 'Fan Light', 'Fan']
+  aliases: []
   room: Zombie
 light.lounge_lamp:
   name: Lounge Lamp
-  aliases: ['Lamp']
+  aliases: []
   room: Zombie
 light.parents_main:
-  name: Parents Main Light
-  aliases: ['Parents Main', 'Main Light', 'Main']
+  name: Parents Main Lights
+  aliases: ['Parents Main Light']
   room: Parents
 light.kitchen_main:
-  name: Kitchen Main Light
-  aliases: ['Kitchen Main', 'Main Light', 'Main']
+  name: Kitchen Main Lights
+  aliases: ['Kitchen Main Light']
   room: Kitchen
 switch.kitchen_downlights:
   name: Kitchen Downlights
-  aliases: ['Downlights']
+  aliases: ['Kitchen Downlight']
   room: Kitchen
 light.laundry_main:
   name: Laundry Main Light
-  aliases: ['Laundry Main', 'Main Light', 'Main']
+  aliases: []
   room: Laundry
 light.pantry_main:
   name: Pantry Main Light
-  aliases: ['Pantry Main', 'Main Light', 'Main']
+  aliases: []
   room: Pantry
 light.office_main:
   name: Office Main Light
-  aliases: ['Office Main', 'Main Light', 'Main']
+  aliases: []
   room: Office
 light.bathroom_main:
   name: Bathroom Main Light
-  aliases: ['Bathroom Main', 'Main Light', 'Main']
+  aliases: []
   room: Bathroom
 light.ensuite_main:
   name: Ensuite Main Light
-  aliases: ['Ensuite Main', 'Main Light', 'Main']
+  aliases: []
   room: Ensuite
 light.wardrobe_main:
   name: Wardrobe Main Light
-  aliases: ['Wardrobe Main', 'Main Light', 'Main']
+  aliases: []
   room: Wardrobe
 switch.deck_festoons:
-  name: Deck Lights
-  aliases: ['Deck Festoons', 'Lights', 'Festoons']
+  name: Deck Festoons
+  aliases: []
   room: Deck
 switch.landing_festoons:
-  name: Landing Lights
-  aliases: ['Landing Festoons', 'Lights', 'Festoons']
+  name: Landing Festoons
+  aliases: []
   room: Landing
 light.garden_pedestals:
-  name: Garden Lights
-  aliases: ['Garden Pedestals', 'Lights', 'Pedestals']
+  name: Garden Pedestals
+  aliases: []
   room: Garden
 light.tree_spotlights:
-  name: Tree Lights
-  aliases: ['Tree Spotlights', 'Lights', 'Spotlights']
+  name: Tree Spotlights
+  aliases: []
   room: Tree
 switch.bathroom_rails:
   name: Bathroom Towel Rails
-  aliases: ['Towel Rails']
+  aliases: []
   room: Bathroom
 fan.lounge_air_purifier:
   name: Lounge Air Purifier
-  aliases: ['Air Purifier']
+  aliases: []
   room: Lounge
 fan.dining_air_purifier:
   name: Dining Air Purifier
-  aliases: ['Air Purifier']
+  aliases: []
   room: Dining
 input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
   name: Ada Lamp Reset
-  aliases: ['Lamp Reset']
+  aliases: []
   room: Zombie
 input_boolean.lighting_reset_adaptive_lighting_edwin_lamp:
   name: Edwin Lamp Reset
-  aliases: ['Lamp Reset']
+  aliases: []
   room: Zombie
 input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
   name: Edwin Night Light Reset
-  aliases: ['Night Light Reset']
+  aliases: []
   room: Zombie
 input_boolean.lighting_reset_adaptive_lighting_hallway_main:
   name: Hallway Diagnostics
-  aliases: ['Diagnostics']
+  aliases: []
   room: Hallway
 input_boolean.lighting_reset_adaptive_lighting_dining_main:
   name: Dining Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Dining
 input_boolean.lighting_reset_adaptive_lighting_lounge_main:
   name: Lounge Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Lounge
 input_boolean.lighting_reset_adaptive_lighting_lounge_lamp:
   name: Home Lamp Reset
-  aliases: ['Lamp Reset']
+  aliases: []
   room: Zombie
 input_boolean.lighting_reset_adaptive_lighting_parents_main:
   name: Parents Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Parents
 input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
   name: Kitchen Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Kitchen
 input_boolean.lighting_reset_adaptive_lighting_laundry_main:
   name: Laundry Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Laundry
 input_boolean.lighting_reset_adaptive_lighting_pantry_main:
   name: Pantry Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Pantry
 input_boolean.lighting_reset_adaptive_lighting_office_main:
   name: Office Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Office
 input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
   name: Bathroom Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Bathroom
 input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
   name: Ensuite Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Ensuite
 input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
   name: Wardrobe Main Reset
-  aliases: ['Main Reset']
+  aliases: []
   room: Wardrobe
 #######################################################################################

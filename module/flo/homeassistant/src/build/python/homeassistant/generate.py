@@ -258,7 +258,6 @@ automation:
                                                          "" if alias.startswith("s ") else " ", alias)
                                          for alias in metadata_haas_dict["google_aliases"].split(',')]
                 metadata_haas_name = metadata_haas_aliases.pop(0)
-                metadata_haas_aliases.extend([alias.removeprefix("s ") for alias in metadata_haas_dict["google_aliases"].split(',')])
                 metadata_haas_room = metadata_haas_dict["device_suggested_area_override"] \
                     if "device_suggested_area_override" in metadata_haas_dict else metadata_haas_dict["device_suggested_area"]
                 metadata_haas_file.write("""
@@ -1131,7 +1130,8 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{{{ ((states('sensor.{}') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(states('sensor.{}'))) > {}) }}}}
+              {{{{ ((states('sensor.{}') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(
+              states('sensor.{}'))) > {}) }}}}
         then:
           - service: mqtt.publish
             data:
