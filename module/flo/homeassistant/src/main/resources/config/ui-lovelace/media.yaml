@@ -11,6 +11,9 @@
   entity: media_player.parents_home
 ################################################################################
 - type: media-control
+  entity: media_player.kitchen_home
+################################################################################
+- type: media-control
   entity: media_player.office_home
 ################################################################################
 - type: media-control
@@ -27,16 +30,16 @@
 - type: custom:layout-break
 ################################################################################
 - type: media-control
-  entity: media_player.lounge_speaker
+  entity: media_player.lounge_arc
 ################################################################################
 - type: media-control
-  entity: media_player.kitchen_home
+  entity: media_player.kitchen_move
 ################################################################################
 - type: media-control
-  entity: media_player.kitchen_speaker
+  entity: media_player.kitchen_five
 ################################################################################
 - type: media-control
-  entity: media_player.parents_speaker
+  entity: media_player.parents_move
 ################################################################################
 - type: media-control
   entity: media_player.parents_tv_speaker

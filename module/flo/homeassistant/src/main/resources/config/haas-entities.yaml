@@ -7,19 +7,19 @@ sensor.roof_temperature:
   room: Roof
 sensor.ada_temperature:
   name: Ada Temperature
-  aliases: ['Adas Temperature', 'Adas Room Temperature']
+  aliases: ['Adas Temperature']
   room: Ada
 sensor.edwin_temperature:
   name: Edwin Temperature
-  aliases: ['Edwins Temperature', 'Edwins Room Temperature']
+  aliases: ['Edwins Temperature']
   room: Edwin
 sensor.bertram_2_office_lounge_temperature:
   name: Lounge Temperature
-  aliases: ['Lounge Room Temperature']
+  aliases: []
   room: Lounge
 sensor.parents_temperature:
   name: Parents Temperature
-  aliases: ['Parents Room Temperature']
+  aliases: []
   room: Parents
 sensor.bertram_2_office_temperature:
   name: Office Temperature
@@ -35,7 +35,7 @@ sensor.bertram_2_office_pantry_temperature:
   room: Pantry
 sensor.bertram_2_office_dining_temperature:
   name: Dining Temperature
-  aliases: ['Dining Room Temperature']
+  aliases: []
   room: Dining
 sensor.laundry_temperature:
   name: Laundry Temperature
@@ -206,7 +206,7 @@ input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
   aliases: []
   room: Zombie
 input_boolean.lighting_reset_adaptive_lighting_hallway_main:
-  name: Hallway Diagnostics
+  name: Hallway Main Reset
   aliases: []
   room: Hallway
 input_boolean.lighting_reset_adaptive_lighting_dining_main:

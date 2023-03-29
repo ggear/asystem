@@ -612,9 +612,9 @@ sensor.bertram_2_office_dining_battery_percent:
   friendly_name: 'Netatmo Dining'
 sensor.bertram_2_office_basement_battery_percent:
   friendly_name: 'Netatmo Basement'
-sensor.parents_speaker_battery:
+sensor.parents_move_battery:
   friendly_name: 'Sonos Parents'
-sensor.kitchen_home_battery:
+sensor.kitchen_move_battery:
   friendly_name: 'Sonos Kitchen'
 switch.lounge_tv_outlet:
   friendly_name: 'Lounge TV'
@@ -751,6 +751,8 @@ media_player.edwin_home:
   friendly_name: 'Edwin Home'
 media_player.parents_home:
   friendly_name: 'Parents Home'
+media_player.kitchen_home:
+  friendly_name: 'Kitchen Home'
 media_player.office_home:
   friendly_name: 'Office Home'
 media_player.lounge_home:
@@ -759,14 +761,14 @@ media_player.lg_webos_smart_tv:
   friendly_name: 'Lounge TV'
 media_player.parents_tv:
   friendly_name: 'Parents TV'
-media_player.lounge_speaker:
-  friendly_name: 'Lounge Speaker'
-media_player.kitchen_home:
-  friendly_name: 'Kitchen Home'
-media_player.kitchen_speaker:
-  friendly_name: 'Kitchen Speaker'
-media_player.parents_speaker:
-  friendly_name: 'Parents Speaker'
+media_player.lounge_arc:
+  friendly_name: 'Lounge Arc'
+media_player.kitchen_move:
+  friendly_name: 'Kitchen Move'
+media_player.kitchen_five:
+  friendly_name: 'Kitchen Five'
+media_player.parents_move:
+  friendly_name: 'Parents Move'
 media_player.parents_tv_speaker:
   friendly_name: 'Parents TV Speaker'
 input_boolean.back_door_lock_security:

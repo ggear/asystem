@@ -65,9 +65,9 @@
       name: Netatmo Dining
     - entity: sensor.bertram_2_office_basement_battery_percent
       name: Netatmo Basement
-    - entity: sensor.parents_speaker_battery
+    - entity: sensor.parents_move_battery
       name: Sonos Parents
-    - entity: sensor.kitchen_home_battery
+    - entity: sensor.kitchen_move_battery
       name: Sonos Kitchen
 ################################################################################
 - type: custom:layout-break
