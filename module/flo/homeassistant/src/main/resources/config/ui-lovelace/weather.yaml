@@ -112,7 +112,7 @@
   data_source: 'RainViewer-UniversalBlue'
   map_style: 'light'
   frame_count: 30
-  frame_delay: 100
+  frame_delay: 200
   restart_delay: 4000
   center_latitude: -31.92
   center_longitude: 116.08
