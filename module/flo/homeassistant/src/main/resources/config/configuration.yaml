@@ -2,15 +2,15 @@
 default_config:
 #######################################################################################
 homeassistant:
-  name: Home
+  name: 'Home'
   latitude: -31.92
   longitude: 116.08
   elevation: 430
-  unit_system: metric
-  currency: AUD
-  country: AU
-  internal_url: "!env_var HOMEASSISTANT_INTERNAL_URL"
-  external_url: "!env_var HOMEASSISTANT_EXTERNAL_URL"
+  unit_system: 'metric'
+  currency: 'AUD'
+  country: 'AU'
+  internal_url: !env_var HOMEASSISTANT_INTERNAL_URL
+  external_url: !env_var HOMEASSISTANT_EXTERNAL_URL
   customize: !include customise.yaml
   packages: !include_dir_named custom_packages
 #######################################################################################
@@ -18,19 +18,19 @@ http:
   server_port: !env_var HOMEASSISTANT_HTTP_PORT
   use_x_forwarded_for: true
   trusted_proxies:
-    - 127.0.0.1
-    - 10.0.0.0/16
+    - '127.0.0.1'
+    - '10.0.0.0/16'
   cors_allowed_origins:
-    - "https://janeandgraham.com"
-    - "https://home.janeandgraham.com"
+    - 'https://janeandgraham.com'
+    - 'https://home.janeandgraham.com'
   ip_ban_enabled: true
   login_attempts_threshold: 3
 #######################################################################################
 tts:
-  - platform: google_translate
+  - platform: 'google_translate'
 #######################################################################################
 recorder:
-  db_url: "!env_var HOMEASSISTANT_DB"
+  db_url: !env_var HOMEASSISTANT_DB
   commit_interval: 120
   purge_keep_days: 1
   auto_purge: true
@@ -88,10 +88,10 @@ mqtt:
 #######################################################################################
 discovery:
   ignore:
-    - homekit
+    - 'homekit'
 #######################################################################################
 google_assistant:
-  project_id: home-assistant-52621
+  project_id: 'home-assistant-52621'
   service_account: !include .google_service_account.json
   report_state: true
   expose_by_default: false
@@ -102,24 +102,24 @@ automation: !include automations.yaml
 panel_custom: !include ui-panel-custom.yaml
 #######################################################################################
 lovelace:
-  mode: yaml
+  mode: 'yaml'
   resources:
-    - url: /local/custom_ui/bom-weather-card.js?v=0.90a-HACKED
-      type: module
-    - url: /local/custom_ui/layout-card/layout-card.js?v=2.4.1
-      type: module
-    - url: /local/custom_ui/bom-radar-card/bom-radar-card.js?v=v1.5.0
-      type: module
-    - url: /local/custom_ui/apexcharts-card/apexcharts-card.js?v=v1.10.0
-      type: module
-    - url: /local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.10.0
-      type: module
+    - url: '/local/custom_ui/bom-weather-card.js?v=0.90a-HACKED'
+      type: 'module'
+    - url: '/local/custom_ui/layout-card/layout-card.js?v=2.4.1'
+      type: 'module'
+    - url: '/local/custom_ui/bom-radar-card/bom-radar-card.js?v=v1.5.0'
+      type: 'module'
+    - url: '/local/custom_ui/apexcharts-card/apexcharts-card.js?v=v1.10.0'
+      type: 'module'
+    - url: '/local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.10.0'
+      type: 'module'
   dashboards:
     lovelace-generated:
-      mode: yaml
-      filename: notexist.yaml
-      title: Generated
-      icon: mdi:tools
+      mode: 'yaml'
+      filename: 'notexist.yaml'
+      title: 'Generated'
+      icon: 'mdi:tools'
       show_in_sidebar: true
       require_admin: true
 #######################################################################################
