@@ -248,8 +248,8 @@ enable-reflector=yes
 reflect-ipv=no
 [rlimits]
 EOF
-systemctl disable avahi-daemon
-systemctl stop avahi-daemon
+systemctl enable avahi-daemon
+systemctl start avahi-daemon
 systemctl status avahi-daemon
 
 ################################################################################
