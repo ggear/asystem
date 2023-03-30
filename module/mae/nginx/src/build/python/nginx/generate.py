@@ -30,7 +30,7 @@ if __name__ == "__main__":
 user nginx;
 worker_processes 1;
 pid /var/run/nginx.pid;
-error_log /var/log/nginx/error.log warn;
+error_log /dev/stdout info;
 
 events {
   worker_connections  1024;
@@ -38,13 +38,13 @@ events {
 
 http {
 
-  access_log on;
+  access_log /dev/stdout;
   server_tokens off;
 
-  client_body_buffer_size 5k;
-  client_header_buffer_size 5k;
-  client_max_body_size 5k;
-  large_client_header_buffers 2 5k;
+  client_body_buffer_size 25k;
+  client_header_buffer_size 25k;
+  client_max_body_size 25k;
+  large_client_header_buffers 2 25k;
 
   gzip on;
   gzip_vary on;
