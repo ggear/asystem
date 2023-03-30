@@ -2,11 +2,17 @@
 default_config:
 #######################################################################################
 homeassistant:
-  customize: !include customise.yaml
-  packages: !include_dir_named custom_packages
+  name: Home
+  latitude: -31.92
+  longitude: 116.08
+  elevation: 430
+  unit_system: metric
+  currency: AUD
+  country: AU
   internal_url: !env_var HOMEASSISTANT_INTERNAL_URL
   external_url: !env_var HOMEASSISTANT_EXTERNAL_URL
-  country: AU
+  customize: !include customise.yaml
+  packages: !include_dir_named custom_packages
 #######################################################################################
 http:
   server_port: !env_var HOMEASSISTANT_HTTP_PORT
