@@ -75,14 +75,14 @@ automation:
             - light.parents_main
       - service: media_player.unjoin
         target:
-          entity_id: media_player.parents_speaker
+          entity_id: media_player.parents_move
       - service: media_player.volume_mute
         data:
-          entity_id: media_player.parents_speaker
+          entity_id: media_player.parents_move
           is_volume_muted: false
       - service: media_player.volume_set
         data:
-          entity_id: media_player.parents_speaker
+          entity_id: media_player.parents_move
           volume_level: '0.3'
       - service: media_player.turn_off
         target:
@@ -94,11 +94,11 @@ automation:
           media_content_type: music
           media_content_id: 'https://nginx.janeandgraham.com/relaxation-sounds/ocean.mp3'
         target:
-          entity_id: media_player.parents_speaker
+          entity_id: media_player.parents_move
       - service: media_player.repeat_set
         data:
           repeat: all
-        entity_id: media_player.parents_speaker
+        entity_id: media_player.parents_move
   #####################################################################################
   - id: routine_home_sleep_cube
     alias: "Routine: Put home to sleep via cube"
@@ -127,10 +127,10 @@ automation:
       - service: media_player.media_stop
         target:
           entity_id:
-            - media_player.parents_speaker
+            - media_player.parents_move
       - service: media_player.volume_set
         data:
-          entity_id: media_player.parents_speaker
+          entity_id: media_player.parents_move
           volume_level: '0.2'
       - service: automation.trigger
         data:
