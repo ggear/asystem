@@ -124,7 +124,7 @@ lovelace:
       require_admin: true
 #######################################################################################
 logger:
-  default: debug # critical/fatal/error/warning/warn/info/debug/notset
+  default: warn # critical/fatal/error/warning/warn/info/debug/notset
   logs:
     homeassistant.core: warn
     homeassistant.loader: error
@@ -136,6 +136,7 @@ logger:
     homeassistant.config_entries: error
     homeassistant.components.sensor: error
     custom_components.tplink: error
+    homeassistant.components.google_assistant.http: debug
   #   custom_components.powercalc: info
   #   homeassistant.components.mqtt: info
   #   custom_components.adaptive_lighting: info
