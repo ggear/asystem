@@ -136,7 +136,10 @@ logger:
     homeassistant.config_entries: error
     homeassistant.components.sensor: error
     custom_components.tplink: error
+    homeassistant.components.google_assistant: debug
     homeassistant.components.google_assistant.http: debug
+    google_assistant: debug
+
   #   custom_components.powercalc: info
   #   homeassistant.components.mqtt: info
   #   custom_components.adaptive_lighting: info
