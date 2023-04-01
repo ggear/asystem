@@ -29,6 +29,7 @@ apt-get install -y --allow-downgrades 'bsdmainutils=12.1.7+nmu3'
 apt-get install -y --allow-downgrades 'netselect-apt=0.3.ds1-29'
 apt-get install -y --allow-downgrades 'smartmontools=7.2-1'
 apt-get install -y --allow-downgrades 'avahi-daemon=0.8-5+deb11u1'
+apt-get install -y --allow-downgrades 'avahi-utils=0.8-5+deb11u1'
 apt-get install -y --allow-downgrades 'net-tools=1.60+git20181103.0eebece-1'
 apt-get install -y --allow-downgrades 'lm-sensors=1:3.6.0-7'
 apt-get install -y --allow-downgrades 'apt-transport-https=2.2.4'
@@ -36,9 +37,9 @@ apt-get install -y --allow-downgrades 'ca-certificates=20210119'
 apt-get install -y --allow-downgrades 'gnupg-agent=2.2.27-2+deb11u2'
 apt-get install -y --allow-downgrades 'software-properties-common=0.96.20.2-2.1'
 apt-get install -y --allow-downgrades 'mkvtoolnix=54.0.0+really52.0.0-3'
-apt-get install -y --allow-downgrades 'docker-ce=5:23.0.1-1~debian.11~bullseye'
-apt-get install -y --allow-downgrades 'docker-ce-cli=5:23.0.1-1~debian.11~bullseye'
-apt-get install -y --allow-downgrades 'containerd.io=1.6.18-1'
+apt-get install -y --allow-downgrades 'docker-ce=5:23.0.2-1~debian.11~bullseye'
+apt-get install -y --allow-downgrades 'docker-ce-cli=5:23.0.2-1~debian.11~bullseye'
+apt-get install -y --allow-downgrades 'containerd.io=1.6.20-1'
 apt-get install -y --allow-downgrades 'cifs-utils=2:6.11-3.1+deb11u1'
 apt-get install -y --allow-downgrades 'samba=2:4.13.13+dfsg-1~deb11u5'
 apt-get install -y --allow-downgrades 'cups=2.3.3op2-3+deb11u2'
@@ -59,7 +60,6 @@ apt-get install -y --allow-downgrades 'powertop=2.11-1'
 apt-get install -y --allow-downgrades 'locales=2.31-13+deb11u5'
 apt-get install -y --allow-downgrades 'python3=3.9.2-3'
 apt-get install -y --allow-downgrades 'python3-pip=20.3.4-4+deb11u1'
-
 
 ################################################################################
 # Packages purge
@@ -231,26 +231,16 @@ fi
 # Network
 ################################################################################
 cat <<EOF >/etc/avahi/avahi-daemon.conf
-[server]
-domain-name=janeandgraham.com
-use-ipv4=yes
-use-ipv6=yes
-ratelimit-interval-usec=1000000
-ratelimit-burst=1000
-cache-entries-max=0
-[wide-area]
-enable-wide-area=yes
-[publish]
-publish-hinfo=no
-publish-workstation=no
 [reflector]
-enable-reflector=yes
-reflect-ipv=no
-[rlimits]
+enable-reflector=no
+[server]
+use-ipv6=no
 EOF
-systemctl enable avahi-daemon
-systemctl start avahi-daemon
-systemctl status avahi-daemon
+systemctl enable avahi-daemon.socket
+systemctl enable avahi-daemon.service
+systemctl restart avahi-daemon.service
+systemctl status avahi-daemon.service
+avahi-browse -a -t
 
 ################################################################################
 # Time

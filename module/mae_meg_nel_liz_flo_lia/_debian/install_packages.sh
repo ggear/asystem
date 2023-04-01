@@ -24,6 +24,7 @@ PACKAGES=(
   netselect-apt
   smartmontools
   avahi-daemon
+  avahi-utils
   net-tools
   lm-sensors
   apt-transport-https
