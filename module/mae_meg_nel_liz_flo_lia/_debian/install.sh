@@ -233,7 +233,7 @@ fi
 cat <<EOF >/etc/avahi/avahi-daemon.conf
 [server]
 use-ipv6=no
-allow-interfaces=lan0
+allow-interfaces=lan0.4
 [publish]
 publish-hinfo=no
 publish-workstation=no
@@ -249,7 +249,7 @@ systemctl restart avahi-daemon.service
 systemctl status avahi-daemon.service
 avahi-browse -a -t
 avahi-browse _home-assistant._tcp -t -r
-#avahi-publish -v -s "Home" _home-assistant._tcp 32401
+#avahi-publish -v -s "Home1" _home-assistant._tcp 32401 "HACK"
 #dns-sd -L Home _home-assistant._tcp local
 
 ################################################################################

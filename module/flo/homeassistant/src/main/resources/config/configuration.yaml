@@ -2,7 +2,7 @@
 default_config:
 #######################################################################################
 homeassistant:
-  name: 'Home'
+  name: 'Home-1289'
   latitude: -31.92
   longitude: 116.08
   elevation: 430
