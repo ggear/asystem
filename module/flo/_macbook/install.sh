@@ -41,7 +41,7 @@ systemctl restart systemd-logind.service
 ################################################################################
 # Network
 ################################################################################
-for VLAN in 4 6; do
+for VLAN in 2 6; do
   if ifconfig lan0 >/dev/null && [ $(grep "lan0.${VLAN}" /etc/network/interfaces | wc -l) -eq 0 ]; then
     cat <<EOF >>/etc/network/interfaces
 
