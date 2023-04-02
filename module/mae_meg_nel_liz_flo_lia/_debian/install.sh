@@ -231,16 +231,25 @@ fi
 # Network
 ################################################################################
 cat <<EOF >/etc/avahi/avahi-daemon.conf
-[reflector]
-enable-reflector=no
 [server]
 use-ipv6=no
+allow-interfaces=lan0
+[publish]
+publish-hinfo=no
+publish-workstation=no
+[reflector]
+enable-reflector=no
 EOF
+#systemctl disable avahi-daemon.socket
+#systemctl disable avahi-daemon.service
+#systemctl stop avahi-daemon.service
 systemctl enable avahi-daemon.socket
 systemctl enable avahi-daemon.service
 systemctl restart avahi-daemon.service
 systemctl status avahi-daemon.service
 avahi-browse -a -t
+avahi-browse _home-assistant._tcp -t -r
+#dns-sd -L Home _home-assistant._tcp local
 
 ################################################################################
 # Time
