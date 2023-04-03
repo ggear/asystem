@@ -197,7 +197,7 @@ app
     // .onProxySelected((request) =>
     //   new RequestResponseHandler(Intents.PROXY_SELECTED, request, {
     //     supportedHAVersion: [2022, 3],
-    //   }).forwardRequest(request.inputs[0].payload.device.id!)
+    //   }).forwardRequest(request.inputs[0].payload.device.id)
     // )
     .onReachableDevices((request) => new RequestResponseHandler(Intents.REACHABLE_DEVICES, request).forwardRequest(request.inputs[0].payload.device.id))
     // Intents targeting a device in Home Assistant

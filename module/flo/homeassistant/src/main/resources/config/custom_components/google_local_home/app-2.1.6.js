@@ -139,7 +139,7 @@ const extractHAVersionFromMdnsRecords = (texts) => {
     return undefined;
 };
 const getHAVersionFromProxyDevice = (deviceManager) => {
-    const proxyDevice = deviceManager.getRegisteredDevices().find((dev) => { var _a, _b; 
+    const proxyDevice = deviceManager.getRegisteredDevices().find((dev) => { var _a, _b;
     // Only the proxy device has scanData
     return (_b = (_a = dev.scanData) === null || _a === void 0 ? void 0 : _a.mdnsScanData) === null || _b === void 0 ? void 0 : _b.texts; });
     if (!proxyDevice) {
