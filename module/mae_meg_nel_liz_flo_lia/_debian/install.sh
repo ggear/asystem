@@ -249,6 +249,7 @@ systemctl restart avahi-daemon.service
 systemctl status avahi-daemon.service
 avahi-browse -a -t
 avahi-browse _home-assistant._tcp -t -r
+#avahi-browse _home-assistant._tcp -r
 #avahi-publish -v -s "Home1" _home-assistant._tcp 32401 "HACK"
 #dns-sd -L Home _home-assistant._tcp local
 
