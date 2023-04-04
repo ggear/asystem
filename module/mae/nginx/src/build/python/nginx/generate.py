@@ -41,7 +41,7 @@ events {
 http {
 
   #access_log off;
-  log_format custom '$remote_addr - $remote_user [$time_local] '
+  log_format custom escape=none '$remote_addr - $remote_user [$time_local] '
     '"$request" $status $body_bytes_sent '
     '"$http_referer" "$http_user_agent" "$request_body"';
   access_log /dev/stdout custom;
