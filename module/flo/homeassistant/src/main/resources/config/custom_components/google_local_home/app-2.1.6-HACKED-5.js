@@ -7,7 +7,7 @@ var Execute = smarthome.Execute;
 var Intents = smarthome.Intents;
 var IntentFlow = smarthome.IntentFlow;
 var ErrorCode = IntentFlow.ErrorCode;
-const VERSION = "2.1.6-HACKED-4";
+const VERSION = "2.1.6-HACKED-5";
 class RequestResponseHandler {
     constructor(intent, request, options = {}) {
         this.intent = intent;
@@ -48,7 +48,7 @@ class RequestResponseHandler {
         throw this.createError(ErrorCode.DEVICE_VERIFICATION_FAILED, `Unable to find HASS connection info.`, deviceManager.getRegisteredDevices());
     }
     get logPrefix() {
-        return `[Intent:${this.intent} ${this.haVersion ? `HAAS Version:${this.haVersion}` : ''}]`;
+        return `[Intent:${this.intent}${this.haVersion ? `, HAAS Version:${this.haVersion}` : ''}]`;
     }
     logMessage(msg, ...extraLog) {
         if (extraLog.length > 0) {
@@ -120,7 +120,7 @@ class RequestResponseHandler {
             this.logError("Invalid JSON in response", rawResponse.httpResponse.body, err);
             throw this.createError(ErrorCode.GENERIC_ERROR, `Error parsing body: ${rawResponse.httpResponse.body}`, rawResponse.httpResponse.body);
         }
-        this.logMessage(`HAAS response received [HTTP:${rawResponse.httpResponse.statusCode}} Retry:${isRetry}]`, response);
+        this.logMessage(`HAAS response received [HTTP:${rawResponse.httpResponse.statusCode}, Retry:${isRetry}]`, response);
         return response;
     }
 }
