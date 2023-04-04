@@ -93,7 +93,7 @@ discovery:
 google_assistant:
   project_id: 'home-assistant-31854'
   service_account: !include .google_service_account.json
-  report_state: false
+  report_state: true
   expose_by_default: false
   entity_config: !include haas-entities.yaml
 #######################################################################################

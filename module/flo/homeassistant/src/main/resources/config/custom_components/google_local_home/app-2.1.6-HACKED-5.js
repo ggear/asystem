@@ -120,6 +120,7 @@ class RequestResponseHandler {
             this.logError("Invalid JSON in response", rawResponse.httpResponse.body, err);
             throw this.createError(ErrorCode.GENERIC_ERROR, `Error parsing body: ${rawResponse.httpResponse.body}`, rawResponse.httpResponse.body);
         }
+        response["intent"]=this.intent
         this.logMessage(`HAAS response received [HTTP:${rawResponse.httpResponse.statusCode}, Retry:${isRetry}]`, response);
         return response;
     }

@@ -1,0 +1,106 @@
+{
+  "agentUserId": "6dfe10e6df244d8ab015dc9f00e4d83e",
+  "devices": [
+    {
+      "id": "fan.deck_fan",
+      "name": {
+        "name": "Deck Fans",
+        "nicknames": [
+          "Deck Fans",
+          "Deck Fan"
+        ]
+      },
+      "attributes": {
+        "reversible": True,
+        "supportsFanSpeedPercent": True,
+        "availableFanSpeeds": {
+          "speeds": [
+            {
+              "speed_name": "1/5",
+              "speed_values": [
+                {
+                  "speed_synonym": [
+                    "Low",
+                    "Min",
+                    "Slow",
+                    "1"
+                  ],
+                  "lang": "en"
+                }
+              ]
+            },
+            {
+              "speed_name": "2/5",
+              "speed_values": [
+                {
+                  "speed_synonym": [
+                    "Medium Low",
+                    "2"
+                  ],
+                  "lang": "en"
+                }
+              ]
+            },
+            {
+              "speed_name": "3/5",
+              "speed_values": [
+                {
+                  "speed_synonym": [
+                    "Medium",
+                    "3"
+                  ],
+                  "lang": "en"
+                }
+              ]
+            },
+            {
+              "speed_name": "4/5",
+              "speed_values": [
+                {
+                  "speed_synonym": [
+                    "Medium High",
+                    "4"
+                  ],
+                  "lang": "en"
+                }
+              ]
+            },
+            {
+              "speed_name": "5/5",
+              "speed_values": [
+                {
+                  "speed_synonym": [
+                    "High",
+                    "Max",
+                    "Fast",
+                    "5"
+                  ],
+                  "lang": "en"
+                }
+              ]
+            }
+          ],
+          "ordered": True
+        }
+      },
+      "traits": [
+        "action.devices.traits.OnOff",
+        "action.devices.traits.FanSpeed"
+      ],
+      "willReportState": False,
+      "type": "action.devices.types.FAN",
+      "otherDeviceIds": [
+        {
+          "deviceId": "fan.deck_fan"
+        }
+      ],
+      "customData": {
+        "webhookId": "60310c6c052da2d1dcd61834eee9d628fc7e0d45a10808c87cf50f5e58b6853c",
+        "httpPort": 32401,
+        "uuid": "52b8dfb0d92d482a82878ecb7c7f3690"
+      },
+      "roomHint": "Deck"
+        "name": "Parents Fan"
+      }
+  ]
+}
