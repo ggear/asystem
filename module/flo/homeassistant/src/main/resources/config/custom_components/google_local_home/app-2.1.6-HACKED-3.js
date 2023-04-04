@@ -7,13 +7,13 @@ var Execute = smarthome.Execute;
 var Intents = smarthome.Intents;
 var IntentFlow = smarthome.IntentFlow;
 var ErrorCode = IntentFlow.ErrorCode;
-const VERSION = "2.1.6-HACKED-1";
+const VERSION = "2.1.6-HACKED-3";
 class RequestResponseHandler {
     constructor(intent, request, options = {}) {
         this.intent = intent;
         this.request = request;
         this.options = options;
-        this.logMessage("Processing", request);
+        this.logMessage(`GA request incoming ...`, this.request);
     }
     async getDeviceManager() {
         if (this._deviceManager) {
@@ -48,13 +48,7 @@ class RequestResponseHandler {
         throw this.createError(ErrorCode.DEVICE_VERIFICATION_FAILED, `Unable to find HASS connection info.`, deviceManager.getRegisteredDevices());
     }
     get logPrefix() {
-        let prefix = `${this.intent.startsWith("action.devices.")
-            ? this.intent.substring("action.devices.".length)
-            : this.intent}-${this.request.requestId.substring(0, 5)}`;
-        if (this.haVersion) {
-            prefix += ` @ HA/${this.haVersion}`;
-        }
-        return `[${prefix}]`;
+        return `[Intent:${this.intent} ${this.haVersion ? `HAAS Version:${this.haVersion}` : ''}]`;
     }
     logMessage(msg, ...extraLog) {
         if (extraLog.length > 0) {
@@ -70,8 +64,8 @@ class RequestResponseHandler {
     }
     async forwardRequest(targetDeviceId, isRetry = false) {
         const deviceManager = await this.getDeviceManager();
-        this.logMessage(`Sending to HA`, this.request);
         const haVersion = this.haVersion;
+        this.logMessage(`GA request forwarding ...`, this.request);
         if (this.options.supportedHAVersion &&
             (!haVersion ||
                 !atleastVersion(haVersion, ...this.options.supportedHAVersion))) {
@@ -90,7 +84,7 @@ class RequestResponseHandler {
         command.additionalHeaders = {
             "HA-Cloud-Version": VERSION,
         };
-        // this.logMessage("Sending", command);
+        this.logMessage("HAAS request posting ...", command);
         let rawResponse;
         try {
             rawResponse = (await deviceManager.send(command));
@@ -126,7 +120,7 @@ class RequestResponseHandler {
             this.logError("Invalid JSON in response", rawResponse.httpResponse.body, err);
             throw this.createError(ErrorCode.GENERIC_ERROR, `Error parsing body: ${rawResponse.httpResponse.body}`, rawResponse.httpResponse.body);
         }
-        this.logMessage("Response", response);
+        this.logMessage(`HAAS response received [HTTP:${rawResponse.httpResponse.statusCode}} Retry:${isRetry}]`, response);
         return response;
     }
 }
@@ -168,7 +162,6 @@ const atleastVersion = (haVersion, major, minor) => {
 const app = new App(VERSION);
 app
     .onIdentify(async (request) => {
-    console.log("Request received!");
     const handler = new RequestResponseHandler(Intents.IDENTIFY, request, {
         extractHAVersion: () => {
             var _a;
@@ -205,6 +198,6 @@ app
     .onExecute((request) => new RequestResponseHandler(Intents.EXECUTE, request).forwardRequest(request.inputs[0].payload.commands[0].devices[0].id))
     .listen()
     .then(() => {
-    console.log("Ready (Hacked)!");
+    console.log("Ready!");
 })
     .catch((e) => console.error(e));
