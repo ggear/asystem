@@ -7,7 +7,7 @@ var Execute = smarthome.Execute;
 var Intents = smarthome.Intents;
 var IntentFlow = smarthome.IntentFlow;
 var ErrorCode = IntentFlow.ErrorCode;
-const VERSION = "2.1.6-HACKED-3";
+const VERSION = "2.1.6-HACKED-4";
 class RequestResponseHandler {
     constructor(intent, request, options = {}) {
         this.intent = intent;
