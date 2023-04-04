@@ -42,7 +42,6 @@ http {
 
   #access_log off;
   log_format custom '$request_body';
-  access_log /dev/stdout custom;
 
   server_tokens off;
 
@@ -99,6 +98,7 @@ http {
     ssl_certificate /etc/nginx/certificate.pem;
     ssl_certificate_key /etc/nginx/.key.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
+    access_log /dev/stdout custom;
     return 301 https://$host$request_uri;
   }
 
