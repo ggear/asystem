@@ -139,6 +139,11 @@ logger:
     homeassistant.components.webhook: debug
     homeassistant.components.google_assistant: debug
     homeassistant.components.google_assistant.http: debug
+    homeassistant.components.google_assistant.trait: debug
+    homeassistant.components.google_assistant.helpers: debug
+    homeassistant.components.google_assistant.smart_home: debug
+    homeassistant.components.google_assistant.report_state: debug
+
     google_assistant: debug
 
     custom_components.tplink: error

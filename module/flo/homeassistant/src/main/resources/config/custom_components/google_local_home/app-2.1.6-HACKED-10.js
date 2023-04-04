@@ -7,7 +7,7 @@ var Execute = smarthome.Execute;
 var Intents = smarthome.Intents;
 var IntentFlow = smarthome.IntentFlow;
 var ErrorCode = IntentFlow.ErrorCode;
-const VERSION = "2.1.6-HACKED-5";
+const VERSION = "2.1.6-HACKED-10";
 class RequestResponseHandler {
     constructor(intent, request, options = {}) {
         this.intent = intent;
@@ -62,7 +62,7 @@ class RequestResponseHandler {
         }
         console.error(this.logPrefix, msg, ...extraLog);
     }
-    async forwardRequest(targetDeviceId, isRetry = false) {
+    async forwardRequest(targetDeviceId, isRetry = false, isProxyData = false) {
         const deviceManager = await this.getDeviceManager();
         const haVersion = this.haVersion;
         this.logMessage(`GA request forwarding ...`, this.request);
@@ -73,55 +73,58 @@ class RequestResponseHandler {
             return this.createResponse({});
         }
         const deviceData = this.getHassCustomData(deviceManager);
-        const command = new DataFlow.HttpRequestData();
-        command.method = Constants.HttpOperation.POST;
-        command.requestId = this.request.requestId;
-        command.deviceId = targetDeviceId;
-        command.port = deviceData.httpPort;
-        command.path = `/api/webhook/${deviceData.webhookId}`;
-        command.data = JSON.stringify(this.request);
-        command.dataType = "application/json";
-        command.additionalHeaders = {
-            "HA-Cloud-Version": VERSION,
-        };
-        this.logMessage("HAAS request posting ...", command);
-        let rawResponse;
-        try {
-            rawResponse = (await deviceManager.send(command));
-        }
-        catch (err) {
-            this.logError("Error making request", err);
-            // Errors coming out of `deviceManager.send` are already Google errors.
-            throw err;
-        }
-        // Detect the response if the webhook is not registered.
-        // This can happen if user logs out from cloud while Google still
-        // has devices synced or if Home Assistant is restarting and Google Assistant
-        // integration is not yet initialized.
-        if (rawResponse.httpResponse.statusCode === 200 &&
-            !rawResponse.httpResponse.body) {
-            // Retry in case it's because of initialization.
-            if (!isRetry &&
-                [
-                    Intents.IDENTIFY,
-                    Intents.PROXY_SELECTED,
-                    Intents.REACHABLE_DEVICES,
-                    Intents.QUERY,
-                ].includes(this.intent)) {
-                return await this.forwardRequest(targetDeviceId, true);
-            }
-            throw this.createError(ErrorCode.GENERIC_ERROR, "Webhook not registered");
-        }
         let response;
-        try {
-            response = JSON.parse(rawResponse.httpResponse.body);
+        if (!isProxyData) {
+            const command = new DataFlow.HttpRequestData();
+            command.method = Constants.HttpOperation.POST;
+            command.requestId = this.request.requestId;
+            command.deviceId = targetDeviceId;
+            command.port = deviceData.httpPort;
+            command.path = `/api/webhook/${deviceData.webhookId}`;
+            command.data = JSON.stringify(this.request);
+            command.dataType = "application/json";
+            command.additionalHeaders = {
+                "HA-Cloud-Version": VERSION,
+            };
+            this.logMessage("HAAS request posting ...", command);
+            let rawResponse;
+            try {
+                rawResponse = (await deviceManager.send(command));
+            } catch (err) {
+                this.logError("Error making request", err);
+                // Errors coming out of `deviceManager.send` are already Google errors.
+                throw err;
+            }
+            // Detect the response if the webhook is not registered.
+            // This can happen if user logs out from cloud while Google still
+            // has devices synced or if Home Assistant is restarting and Google Assistant
+            // integration is not yet initialized.
+            if (rawResponse.httpResponse.statusCode === 200 &&
+                !rawResponse.httpResponse.body) {
+                // Retry in case it's because of initialization.
+                if (!isRetry &&
+                    [
+                        Intents.IDENTIFY,
+                        Intents.PROXY_SELECTED,
+                        Intents.REACHABLE_DEVICES,
+                        Intents.QUERY,
+                    ].includes(this.intent)) {
+                    return await this.forwardRequest(targetDeviceId, true);
+                }
+                throw this.createError(ErrorCode.GENERIC_ERROR, "Webhook not registered");
+            }
+            try {
+                response = JSON.parse(rawResponse.httpResponse.body);
+            } catch (err) {
+                this.logError("Invalid JSON in response", rawResponse.httpResponse.body, err);
+                throw this.createError(ErrorCode.GENERIC_ERROR, `Error parsing body: ${rawResponse.httpResponse.body}`, rawResponse.httpResponse.body);
+            }
+            response["intent"] = this.intent
+            this.logMessage(`HAAS response received [HTTP:${rawResponse.httpResponse.statusCode}, Retry:${isRetry}]`, response);
+        } else {
+            response = {"proxyData": deviceData}
+            this.logMessage(`GA response`, response);
         }
-        catch (err) {
-            this.logError("Invalid JSON in response", rawResponse.httpResponse.body, err);
-            throw this.createError(ErrorCode.GENERIC_ERROR, `Error parsing body: ${rawResponse.httpResponse.body}`, rawResponse.httpResponse.body);
-        }
-        response["intent"]=this.intent
-        this.logMessage(`HAAS response received [HTTP:${rawResponse.httpResponse.statusCode}, Retry:${isRetry}]`, response);
         return response;
     }
 }
@@ -193,6 +196,7 @@ app
     //     supportedHAVersion: [2022, 3],
     //   }).forwardRequest(request.inputs[0].payload.device.id)
     // )
+    .onProxySelected((request) => new RequestResponseHandler(Intents.PROXY_SELECTED, request).forwardRequest(request.inputs[0].payload.device.id, false, true))
     .onReachableDevices((request) => new RequestResponseHandler(Intents.REACHABLE_DEVICES, request).forwardRequest(request.inputs[0].payload.device.id))
     // Intents targeting a device in Home Assistant
     .onQuery((request) => new RequestResponseHandler(Intents.QUERY, request).forwardRequest(request.inputs[0].payload.devices[0].id))
