@@ -43,7 +43,8 @@ RBA_YEARS = [
     "2010-2013",
     "2014-2017",
     "2014-2017",
-    "2018-current"
+    "2018-2022",
+    "2023-current"
 ]
 
 RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
