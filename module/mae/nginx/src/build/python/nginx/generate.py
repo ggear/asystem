@@ -31,8 +31,7 @@ user nginx;
 worker_processes 1;
 pid /var/run/nginx.pid;
 
-#error_log /dev/stdout warn;
-error_log /dev/stdout info;
+error_log /dev/stdout warn;
 
 events {
   worker_connections  1024;
@@ -99,7 +98,6 @@ http {
     ssl_certificate /etc/nginx/certificate.pem;
     ssl_certificate_key /etc/nginx/.key.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
-    # return 301 https://$host$request_uri;
   }
 
   # Remote domain redirect
