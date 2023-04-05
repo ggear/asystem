@@ -7,7 +7,7 @@ var Execute = smarthome.Execute;
 var Intents = smarthome.Intents;
 var IntentFlow = smarthome.IntentFlow;
 var ErrorCode = IntentFlow.ErrorCode;
-const VERSION = "2.1.6-HACKED-12";
+const VERSION = "2.1.6-HACKED-13";
 class RequestResponseHandler {
     constructor(intent, request, options = {}) {
         this.intent = intent;
@@ -186,11 +186,6 @@ app
 })
     // Intents targeting the proxy device
     // This used to fix things, in June 2022 it breaks things?
-    // .onProxySelected((request) =>
-    //   new RequestResponseHandler(Intents.PROXY_SELECTED, request, {
-    //     supportedHAVersion: [2022, 3],
-    //   }).forwardRequest(request.inputs[0].payload.device.id)
-    // )
     // .onProxySelected((request) => new RequestResponseHandler(Intents.PROXY_SELECTED, request).forwardRequest(request.inputs[0].payload.device.id))
     .onReachableDevices((request) => new RequestResponseHandler(Intents.REACHABLE_DEVICES, request).forwardRequest(request.inputs[0].payload.device.id))
     // Intents targeting a device in Home Assistant
