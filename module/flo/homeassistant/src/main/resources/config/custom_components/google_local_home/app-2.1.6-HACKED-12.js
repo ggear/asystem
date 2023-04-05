@@ -194,7 +194,7 @@ app
     // .onProxySelected((request) => new RequestResponseHandler(Intents.PROXY_SELECTED, request).forwardRequest(request.inputs[0].payload.device.id))
     .onReachableDevices((request) => new RequestResponseHandler(Intents.REACHABLE_DEVICES, request).forwardRequest(request.inputs[0].payload.device.id))
     // Intents targeting a device in Home Assistant
-    // .onQuery((request) => new RequestResponseHandler(Intents.QUERY, request).forwardRequest(request.inputs[0].payload.devices[0].id))
+    .onQuery((request) => new RequestResponseHandler(Intents.QUERY, request).forwardRequest(request.inputs[0].payload.devices[0].id))
     .onExecute((request) => new RequestResponseHandler(Intents.EXECUTE, request).forwardRequest(request.inputs[0].payload.commands[0].devices[0].id))
     .listen()
     .then(() => {

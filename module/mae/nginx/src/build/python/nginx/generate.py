@@ -99,7 +99,7 @@ http {
     ssl_certificate /etc/nginx/certificate.pem;
     ssl_certificate_key /etc/nginx/.key.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
-    return 301 https://$host$request_uri;
+    # return 301 https://$host$request_uri;
   }
 
   # Remote domain redirect
