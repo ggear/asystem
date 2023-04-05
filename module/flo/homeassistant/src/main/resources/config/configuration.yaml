@@ -135,21 +135,17 @@ logger:
     homeassistant.components.sonos: error
     homeassistant.config_entries: error
     homeassistant.components.sensor: error
-
-    homeassistant.components.webhook: debug
-    homeassistant.components.google_assistant: debug
-    homeassistant.components.google_assistant.http: debug
-    homeassistant.components.google_assistant.trait: debug
-    homeassistant.components.google_assistant.helpers: debug
-    homeassistant.components.google_assistant.smart_home: debug
-    homeassistant.components.google_assistant.report_state: debug
-
-    google_assistant: debug
-
     custom_components.tplink: error
-  #   custom_components.powercalc: info
-  #   homeassistant.components.mqtt: info
-  #   custom_components.adaptive_lighting: info
-  #   custom_components.bureau_of_meteorology: info
-  #   homeassistant.components.automation.electricity_smart_plug_polling: warn
+    #google_assistant: debug
+    #homeassistant.components.google_assistant: debug
+    #homeassistant.components.google_assistant.http: debug
+    #homeassistant.components.google_assistant.trait: debug
+    #homeassistant.components.google_assistant.helpers: debug
+    #homeassistant.components.google_assistant.smart_home: debug
+    #homeassistant.components.google_assistant.report_state: debug
+    #homeassistant.components.mqtt: info
+    #homeassistant.components.webhook: debug
+    #custom_components.powercalc: info
+    #custom_components.adaptive_lighting: info
+    #custom_components.bureau_of_meteorology: info
   #####################################################################################
