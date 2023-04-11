@@ -98,8 +98,8 @@
 
 # Advanced Features -> Advanced Gateway Settings -> Multicast DNS -> True
 # Advanced Features -> Advanced Gateway Settings -> Create New Port Forwarding Rule ->
-#    HTTP, Enabled, WAN, Any, 80, 10.0.2.11, 80, TCP, Logging enable
-#    HTTPS, Enabled, WAN, Any, 443, 10.0.2.11, 443, TCP, Logging enable
+#    HTTP, Enabled, WAN, Any, 80, 10.0.4.11, 80, TCP, Logging enable
+#    HTTPS, Enabled, WAN, Any, 443, 10.0.4.11, 443, TCP, Logging enable
 
 # Advanced Features -> Advanced Gateway Settings -> Dynamic DNS -> Create a Dummy entry
 
