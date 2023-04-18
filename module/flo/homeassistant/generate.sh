@@ -60,12 +60,12 @@ rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant powercalc-component bramstroker/homeassistant-powercalc v0.26.1 ${1}
+pull_repo $(pwd) homeassistant powercalc-component bramstroker/homeassistant-powercalc v1.5.1 ${1}
 rm -rf src/main/resources/config/custom_components/powercalc
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/powercalc-component/custom_components/powercalc src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting 1.10.1 ${1}
+pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting 1.11.0 ${1}
 rm -rf src/main/resources/config/custom_components/adaptive_lighting
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting src/main/resources/config/custom_components

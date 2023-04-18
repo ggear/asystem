@@ -4,9 +4,10 @@ import inspect
 import logging
 from typing import cast
 
+import homeassistant.helpers.entity_registry as er
 from awesomeversion.awesomeversion import AwesomeVersion
 from homeassistant.components.select import DOMAIN as SELECT_DOMAIN
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
 from homeassistant.components.utility_meter.const import (
     DATA_TARIFF_SENSORS,
     DATA_UTILITY,
@@ -25,19 +26,23 @@ from ..const import (
     CONF_UTILITY_METER_TARIFFS,
     CONF_UTILITY_METER_TYPES,
     DEFAULT_ENERGY_SENSOR_PRECISION,
+    DOMAIN,
 )
 from ..errors import SensorConfigurationError
 from .abstract import BaseEntity
+from .energy import EnergySensor, RealEnergySensor
 
 _LOGGER = logging.getLogger(__name__)
+
+GENERAL_TARIFF = "general"
 
 
 async def create_utility_meters(
     hass: HomeAssistant,
-    energy_sensor: SensorEntity,
+    energy_sensor: EnergySensor,
     sensor_config: dict,
     net_consumption: bool = False,
-) -> list[UtilityMeterSensor]:
+) -> list[VirtualUtilityMeter]:
     """Create the utility meters"""
 
     if not sensor_config.get(CONF_CREATE_UTILITY_METERS):
@@ -45,7 +50,7 @@ async def create_utility_meters(
 
     utility_meters = []
 
-    if DATA_UTILITY not in hass.data:
+    if DATA_UTILITY not in hass.data:  # pragma: no cover
         hass.data[DATA_UTILITY] = {}
 
     tariffs = sensor_config.get(CONF_UTILITY_METER_TARIFFS)
@@ -59,10 +64,39 @@ async def create_utility_meters(
         if energy_sensor.unique_id:
             unique_id = f"{energy_sensor.unique_id}_{meter_type}"
 
-        if tariffs:
-            tariff_select = await create_tariff_select(tariffs, hass, name, unique_id)
+        # Prevent duplicate creation of utility meter. See #1322
+        if isinstance(energy_sensor, RealEnergySensor):
+            entity_registry = er.async_get(hass)
+            existing_entity_id = entity_registry.async_get_entity_id(
+                domain=SENSOR_DOMAIN, platform=DOMAIN, unique_id=unique_id
+            )
+            if existing_entity_id and hass.states.get(existing_entity_id):
+                continue
 
-            for tariff in tariffs:
+        # Create generic utility meter (no specific tarrifs)
+        if not tariffs or GENERAL_TARIFF in tariffs:
+            utility_meter = await create_utility_meter(
+                energy_sensor.entity_id,
+                entity_id,
+                name,
+                sensor_config,
+                meter_type,
+                unique_id,
+                net_consumption=net_consumption,
+            )
+            tariff_sensors.append(utility_meter)
+            utility_meters.append(utility_meter)
+
+        # Create utility meter for each tariff, and the tariff select entity which allows you to select a tariff.
+        if tariffs:
+            filtered_tariffs = tariffs = [
+                t for t in list(tariffs) if t != GENERAL_TARIFF
+            ]
+            tariff_select = await create_tariff_select(
+                filtered_tariffs, hass, name, unique_id
+            )
+
+            for tariff in filtered_tariffs:
                 utility_meter = await create_utility_meter(
                     energy_sensor.entity_id,
                     entity_id,
@@ -76,19 +110,6 @@ async def create_utility_meters(
                 tariff_sensors.append(utility_meter)
                 utility_meters.append(utility_meter)
 
-        else:
-            utility_meter = await create_utility_meter(
-                energy_sensor.entity_id,
-                entity_id,
-                name,
-                sensor_config,
-                meter_type,
-                unique_id,
-                net_consumption=net_consumption,
-            )
-            tariff_sensors.append(utility_meter)
-            utility_meters.append(utility_meter)
-
         hass.data[DATA_UTILITY][entity_id] = {DATA_TARIFF_SENSORS: tariff_sensors}
 
     return utility_meters
@@ -98,7 +119,6 @@ async def create_tariff_select(
     tariffs: list, hass: HomeAssistant, name: str, unique_id: str | None
 ):
     """Create tariff selection entity"""
-
     _LOGGER.debug(f"Creating utility_meter tariff select: {name}")
 
     select_component = cast(EntityComponent, hass.data[SELECT_DOMAIN])
@@ -106,7 +126,7 @@ async def create_tariff_select(
     if unique_id:
         select_unique_id = f"{unique_id}_select"
 
-    if AwesomeVersion(HA_VERSION) < AwesomeVersion("2022.9.0"):
+    if AwesomeVersion(HA_VERSION) < AwesomeVersion("2022.9.0"):  # pragma: no cover
         utility_meter_component = cast(
             EntityComponent, hass.data["entity_components"].get(UTILITY_DOMAIN)
         )
@@ -120,14 +140,14 @@ async def create_tariff_select(
 
         tariff_select = TariffSelect(
             name,
-            list(tariffs),
+            tariffs,
             utility_meter_component.async_add_entities,
             select_unique_id,
         )
     else:
         tariff_select = TariffSelect(
             name,
-            list(tariffs),
+            tariffs,
             select_unique_id,
         )
 
@@ -177,6 +197,8 @@ async def create_utility_meter(
         params["unique_id"] = unique_id
     if "cron_pattern" in signature.parameters:
         params["cron_pattern"] = None
+    if "periodically_resetting" in signature.parameters:
+        params["periodically_resetting"] = True
 
     utility_meter = VirtualUtilityMeter(**params)
     setattr(
@@ -197,11 +219,6 @@ class VirtualUtilityMeter(UtilityMeterSensor, BaseEntity):
     def unique_id(self):
         """Return the unique id."""
         return self._attr_unique_id
-
-    @unique_id.setter
-    def unique_id(self, value):
-        """Set unique id."""
-        self._attr_unique_id = value
 
     @property
     def native_value(self):

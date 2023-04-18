@@ -6,7 +6,7 @@ from typing import NamedTuple
 import homeassistant.helpers.device_registry as dr
 import homeassistant.helpers.entity_registry as er
 import voluptuous as vol
-from homeassistant.components.light import ATTR_SUPPORTED_COLOR_MODES
+from homeassistant.components.light import ATTR_SUPPORTED_COLOR_MODES, ColorMode
 from homeassistant.const import CONF_ENTITY_ID, CONF_NAME, CONF_UNIQUE_ID
 from homeassistant.core import HomeAssistant, split_entity_id
 from homeassistant.helpers.template import is_number
@@ -28,7 +28,7 @@ class SourceEntity(NamedTuple):
     domain: str
     unique_id: str | None = None
     name: str | None = None
-    supported_color_modes: list[str] | None = None
+    supported_color_modes: list[ColorMode] | None = None
     entity_entry: er.RegistryEntry | None = None
     device_entry: dr.DeviceEntry | None = None
 
@@ -55,7 +55,9 @@ async def create_source_entity(entity_id: str, hass: HomeAssistant) -> SourceEnt
     unique_id = None
     supported_color_modes = []
     if entity_entry:
-        source_entity_name = entity_entry.name or entity_entry.original_name
+        source_entity_name = (
+            entity_entry.name or entity_entry.original_name or source_object_id
+        )
         source_entity_domain = entity_entry.domain
         unique_id = entity_entry.unique_id
         if entity_entry.capabilities:
@@ -109,7 +111,10 @@ def get_merged_sensor_configuration(*configs: dict, validate: bool = True) -> di
             CONF_CREATE_ENERGY_SENSORS
         )
 
-    if CONF_DAILY_FIXED_ENERGY in merged_config and CONF_ENTITY_ID not in merged_config:
+    if (
+        CONF_DAILY_FIXED_ENERGY in merged_config
+        or CONF_POWER_SENSOR_ID in merged_config
+    ) and CONF_ENTITY_ID not in merged_config:
         merged_config[CONF_ENTITY_ID] = DUMMY_ENTITY_ID
 
     if (
