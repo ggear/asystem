@@ -133,6 +133,10 @@ light.parents_main:
   name: Parents Main Lights
   aliases: ['Parents Main Light']
   room: Parents
+light.study_lamp:
+  name: Study Lamp
+  aliases: []
+  room: Zombie
 light.kitchen_main:
   name: Kitchen Main Lights
   aliases: ['Kitchen Main Light']

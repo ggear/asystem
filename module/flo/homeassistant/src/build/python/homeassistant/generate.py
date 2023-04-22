@@ -1130,8 +1130,8 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{{{ ((states('sensor.{}') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or ((as_timestamp(now()) - as_timestamp(
-              states('sensor.{}'))) > {}) }}}}
+              {{{{ ((states('sensor.{}') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
+                    ((as_timestamp(now()) - as_timestamp(states('sensor.{}'))) > {}) }}}}
         then:
           - service: mqtt.publish
             data:

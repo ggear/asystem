@@ -80,6 +80,9 @@
     - entity: light.parents_main
       name: Parents Main
       icon: mdi:lightbulb-group
+    - entity: light.study_lamp
+      name: Study Lamp
+      icon: mdi:lightbulb-group
     - entity: light.kitchen_main
       name: Kitchen Main
       icon: mdi:lightbulb-group

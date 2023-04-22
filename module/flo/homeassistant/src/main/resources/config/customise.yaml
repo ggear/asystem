@@ -332,6 +332,9 @@ light.lounge_lamp:
 light.parents_main:
   friendly_name: 'Parents Main'
   icon: 'mdi:lightbulb-group'
+light.study_lamp:
+  friendly_name: 'Study Lamp'
+  icon: 'mdi:lightbulb-group'
 light.kitchen_main:
   friendly_name: 'Kitchen Main'
   icon: 'mdi:lightbulb-group'
