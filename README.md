@@ -19,4 +19,4 @@ To build, test and package this project the following is required:
 Each module is specified by at least one `host-label`, multiple hosts demarcated by the `_`
 character and a globally unique `service-name` directory as per specification:
 
-`module/<host-label>[_<host-label>]*/<service-name>`
+`src/<host-label>[_<host-label>]*/<service-name>`

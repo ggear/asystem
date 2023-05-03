@@ -432,13 +432,13 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
             else False
         working_dirs = _run_local(context, "pwd", hide='out').stdout.strip().split('/')
         root_dir_index = working_dirs.index("asystem")
-        if "module" not in working_dirs or working_dirs.index("module") == (len(working_dirs) - 1):
+        if "src" not in working_dirs or working_dirs.index("src") == (len(working_dirs) - 1):
             for filtered_module in \
-                    [module_tmp for module_tmp in glob.glob("{}*/*".format("module/" if "module" not in working_dirs else ""))
+                    [module_tmp for module_tmp in glob.glob("{}*/*".format("src/" if "src" not in working_dirs else ""))
                      if isdir(module_tmp) and (not filter_changes or _run_local(context, "git status --porcelain {}"
                             .format(module_tmp), DIR_ROOT, hide='out').stdout
                     )]:
-                working_modules.append(filtered_module.replace("module/", ""))
+                working_modules.append(filtered_module.replace("src/", ""))
         else:
             if (root_dir_index + 3) < len(working_dirs):
                 working_modules.append(working_dirs[root_dir_index + 2] + "/" + working_dirs[root_dir_index + 3])
@@ -682,7 +682,7 @@ def _print_footer(module, stage):
 DIR_HOME = "/home/asystem"
 DIR_INSTALL = "/var/lib/asystem/install"
 DIR_ROOT = dirname(abspath(__file__))
-DIR_ROOT_MODULE = join(DIR_ROOT, "module")
+DIR_ROOT_MODULE = join(DIR_ROOT, "src")
 
 FILE_ENV = join(dirname(abspath(__file__)), ".env_fab")
 
