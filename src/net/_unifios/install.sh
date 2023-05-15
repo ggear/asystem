@@ -1,5 +1,5 @@
 #!/bin/sh
-# https://community.ui.com/releases?q=dream+machine+pro
+# https://community.ui.com/releases?q=dream+machines
 
 ################################################################################
 # Shell (unifi-os shell) baseline
