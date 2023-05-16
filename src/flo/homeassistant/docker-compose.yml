@@ -28,6 +28,7 @@ services:
   homeassistant:
     container_name: homeassistant
     <<: *common
+    # noinspection ComposeUnknownValues
     restart: ${SERVICE_RESTART}
     volumes:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
