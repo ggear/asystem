@@ -13,4 +13,4 @@ path = "src/main/rust/main.rs"
 
 [[test]]
 name = "solaredge_test"
-path = "src/test/rust/unit/unit_tests.rs"
+path = "src/test/rust/unit/unit_test.rs"

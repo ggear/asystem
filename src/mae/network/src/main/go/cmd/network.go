@@ -67,7 +67,7 @@ func destroy() {
 }
 
 func main() {
-	channel := make(chan os.Signal)
+	channel := make(chan os.Signal, 0)
 	signal.Notify(channel, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-channel

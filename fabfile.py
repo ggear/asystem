@@ -188,6 +188,7 @@ def _clean(context, filter_module=None):
         _print_header("asystem", "clean transients")
         _run_local(context, "find . -name *.pyc -prune -exec rm -rf {} \;")
         _run_local(context, "find . -name __pycache__ -prune -exec rm -rf {} \;")
+        _run_local(context, "find . -name .pytest_cache -prune -exec rm -rf {} \;")
         _run_local(context, "find . -name .coverage -prune -exec rm -rf {} \;")
         _run_local(context, "find . -name Cargo.lock -prune -exec rm -rf {} \;")
         _print_footer("asystem", "clean transients")
@@ -245,10 +246,10 @@ def _build(context, filter_module=None, is_release=False):
 
 
 def _unittest(context, filter_module=None):
-    for module in _get_modules(context, "src/test/python/unit/unit_tests.py", filter_module=filter_module):
+    for module in _get_modules(context, "src/test/python/unit/unit_test.py", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "python unit_tests.py", join(module, "src/test/python/unit"))
+        _run_local(context, "python unit_test.py", join(module, "src/test/python/unit"))
         _print_footer(module, "unittest")
     for module in _get_modules(context, "src/test/go/unit/unit_test.go", filter_module=filter_module):
         _print_header(module, "unittest")
@@ -257,7 +258,7 @@ def _unittest(context, filter_module=None):
         _run_local(context, "go mod download", join(module, "src/test/go/unit"))
         _run_local(context, "go test --race", join(module, "src/test/go/unit"))
         _print_footer(module, "unittest")
-    for module in _get_modules(context, "src/test/rust/unit/unit_tests.rs", filter_module=filter_module):
+    for module in _get_modules(context, "src/test/rust/unit/unit_test.rs", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
         _run_local(context, "cargo test", join(module, "target/package"))
@@ -288,8 +289,8 @@ def _systest(context, filter_module=None):
         _up_module(context, module)
         _print_header(module, "systest")
         test_exit_code = 1
-        if isfile(join(DIR_ROOT_MODULE, module, "src/test/python/sys/system_tests.py")):
-            test_exit_code = _run_local(context, "python system_tests.py", join(module, "src/test/python/system"), warn=True).exited
+        if isfile(join(DIR_ROOT_MODULE, module, "src/test/python/sys/system_test.py")):
+            test_exit_code = _run_local(context, "python system_test.py", join(module, "src/test/python/sys"), warn=True).exited
         elif isdir(join(DIR_ROOT_MODULE, module, "src/test/go/sys")):
             _run_local(context, "go mod tidy", join(module, "src/test/go/sys"))
             _run_local(context, "go mod download", join(module, "src/test/go/sys"))
