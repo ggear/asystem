@@ -12,7 +12,7 @@ function pull_repo() {
     cd "${1}/../../../.deps/${2}"
     git clone "git@github.com:${4}.git" "${3}"
     cd "${3}"
-    git -c advice.detachedHead=false checkout "${5}"
+    git -c advice.detachedHead=false checkout "${5}" 2> /dev/null
     if [ $(git branch | grep HEAD | wc -l) -eq 0 ]; then
       git branch --set-upstream-to="origin/${5}" "${5}"
     fi
@@ -22,7 +22,7 @@ function pull_repo() {
     if [ $(git branch | grep HEAD | wc -l) -eq 1 ]; then
       for BRANCH in dev main master; do
         if [ $(git branch | grep ${BRANCH} | wc -l) -eq 1 ]; then
-          git checkout ${BRANCH}
+          git checkout ${BRANCH} 2> /dev/null
         fi
       done
     fi
@@ -31,11 +31,11 @@ function pull_repo() {
       echo "Sleeping to avoid Github throttling ..."
       sleep 90
     done
-    git -c advice.detachedHead=false checkout "${5}"
+    git -c advice.detachedHead=false checkout "${5}" 2> /dev/null
     git status
     echo "" && echo "Repo: "$(cd ${1}/../../../.deps/${2}/${3}; pwd)
-    echo -n "Checked out tag: " && git describe --tags --abbrev=0
-    echo -n "Most recent tag: " && git describe --tags $(git rev-list --tags --max-count=1) && echo ""
+    echo -n "Repo ["$(cd ${1}/../../../.deps/${2}/${3}; pwd)"] checked out tag: " && git describe --tags --abbrev=0
+    echo -n "Repo ["$(cd ${1}/../../../.deps/${2}/${3}; pwd)"] most recent tag: " && git describe --tags $(git rev-list --tags --max-count=1) && echo ""
   fi
   cd "${1}"
 }
