@@ -55,12 +55,12 @@ rm -rf src/main/resources/config/custom_components/average
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/average-component/custom_components/average src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant bureau_of_meteorology-component bremor/bureau_of_meteorology 1.1.18 ${1}
+pull_repo $(pwd) homeassistant bureau_of_meteorology-component bremor/bureau_of_meteorology 1.1.19 ${1}
 rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant powercalc-component bramstroker/homeassistant-powercalc v1.5.1 ${1}
+pull_repo $(pwd) homeassistant powercalc-component bramstroker/homeassistant-powercalc v1.6.5 ${1}
 rm -rf src/main/resources/config/custom_components/powercalc
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/powercalc-component/custom_components/powercalc src/main/resources/config/custom_components
