@@ -26,7 +26,6 @@ sensor:
 
       bom_uv_alert:
         value_template: >
-
           {%- if states('sensor.darlington_forecast_uv_max_index_0') | lower not in ['unavailable', 'unknown', 'none', 'n/a'] and states('sensor.bom_today_uv') | lower not in ['unavailable', 'unknown', 'none', 'n/a'] and states('sensor.darlington_forecast_uv_end_time_0') | lower not in ['unavailable', 'unknown', 'none', 'n/a'] and states('sensor.darlington_forecast_uv_start_time_0') | lower not in ['unavailable', 'unknown', 'none', 'n/a']-%}
             {% set to = as_timestamp(states('sensor.darlington_forecast_uv_end_time_0')) | timestamp_custom(' %I:%M %p') %}
             {% set from = as_timestamp(states('sensor.darlington_forecast_uv_start_time_0')) | timestamp_custom(' %I:%M %p') %}
@@ -36,7 +35,6 @@ sensor:
               Sun Protection is required between {{ from }} to {{ to }} today with a UV Index of {{ states('sensor.darlington_forecast_uv_max_index_0') }} and rating {{ states('sensor.bom_today_uv') }}.
             {%- endif -%}
           {%- endif -%}
-
 
       bom_fire_danger:
         value_template: >
