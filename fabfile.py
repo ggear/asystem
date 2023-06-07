@@ -160,6 +160,7 @@ def _pull(context):
     _run_local(context, "git remote set-url origin https://github.com/$(git remote get-url origin | "
                         "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
     _run_local(context, "git pull --all")
+    _run_local(context, "echo 'Check versions with: fab pull 2> /dev/null| grep \"tag:\"'")
     _print_footer("asystem", "pull main")
     _generate(context, is_pull=True)
 

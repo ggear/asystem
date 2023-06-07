@@ -35,9 +35,10 @@ systemctl restart ssh
 # Install HDD (if required)
 ################################################################################
 fdisk -l
-blkid /dev/sdb
+blkid /dev/sdx
 fdisk /dev/sdx
 mkfs.ext4 -j /dev/sdx1
+tune2fs -m 0 /dev/sdx1
 blkid /dev/sdx1
 blkid | grep " UUID=" | grep -v mapper | grep -v PARTLABEL | grep BLOCK_SIZE
 echo "UUID=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX  /data           ext4    rw,user,exec,auto,async,nofail        0       2" >>/etc/fstab

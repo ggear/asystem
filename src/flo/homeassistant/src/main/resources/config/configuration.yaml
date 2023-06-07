@@ -106,13 +106,13 @@ lovelace:
   resources:
     - url: '/local/custom_ui/bom-weather-card.js?v=0.90a-HACKED'
       type: 'module'
-    - url: '/local/custom_ui/layout-card/layout-card.js?v=2.4.1'
+    - url: '/local/custom_ui/layout-card/layout-card.js?v=2.4.4'
       type: 'module'
-    - url: '/local/custom_ui/bom-radar-card/bom-radar-card.js?v=v1.5.0'
+    - url: '/local/custom_ui/bom-radar-card/bom-radar-card.js?v=v2.1.1'
       type: 'module'
-    - url: '/local/custom_ui/apexcharts-card/apexcharts-card.js?v=v1.10.0'
+    - url: '/local/custom_ui/apexcharts-card/apexcharts-card.js?v=v2.0.4'
       type: 'module'
-    - url: '/local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.10.0'
+    - url: '/local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.11.0'
       type: 'module'
   dashboards:
     lovelace-generated:

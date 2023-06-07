@@ -25,20 +25,20 @@ mkdir -p src/main/resources/config/www/custom_ui/bom-radar-card &&
   sed -i '' 's/\/local\/community/\/local\/custom_ui/g' src/main/resources/config/www/custom_ui/bom-radar-card/bom-radar-card.js &&
   wget -q -O src/main/resources/config/www/custom_ui/bom-radar-card/leaflet.js.map https://unpkg.com/leaflet@1.7.1/dist/leaflet.js.map
 
-pull_repo $(pwd) homeassistant lovelace-layout-card thomasloven/lovelace-layout-card 2.4.1 ${1}
+pull_repo $(pwd) homeassistant lovelace-layout-card thomasloven/lovelace-layout-card 2.4.4 ${1}
 rm -rf src/main/resources/config/www/custom_ui/layout-card
 mkdir -p src/main/resources/config/www/custom_ui/layout-card &&
   cp -rvf ../../../.deps/homeassistant/lovelace-layout-card/layout-card.js src/main/resources/config/www/custom_ui/layout-card
 
-pull_repo $(pwd) homeassistant apexcharts-card romrider/apexcharts-card v2.0.2 ${1}
+pull_repo $(pwd) homeassistant apexcharts-card romrider/apexcharts-card v2.0.4 ${1}
 rm -rf src/main/resources/config/www/custom_ui/apexcharts-card
 mkdir -p src/main/resources/config/www/custom_ui/apexcharts-card &&
-  wget -q -O src/main/resources/config/www/custom_ui/apexcharts-card/apexcharts-card.js https://github.com/RomRider/apexcharts-card/releases/download/v1.11.0/apexcharts-card.js
+  wget -q -O src/main/resources/config/www/custom_ui/apexcharts-card/apexcharts-card.js https://github.com/RomRider/apexcharts-card/releases/download/v2.0.4/apexcharts-card.js
 
 pull_repo $(pwd) homeassistant mini-graph-card kalkih/mini-graph-card v0.11.0 ${1}
 rm -rf src/main/resources/config/www/custom_ui/mini-graph-card
 mkdir -p src/main/resources/config/www/custom_ui/mini-graph-card &&
-  wget -q -O src/main/resources/config/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js https://github.com/kalkih/mini-graph-card/releases/download/v0.10.0/mini-graph-card-bundle.js
+  wget -q -O src/main/resources/config/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js https://github.com/kalkih/mini-graph-card/releases/download/v0.11.0/mini-graph-card-bundle.js
 
 pull_repo $(pwd) homeassistant variables-component Wibias/hass-variables 3.2.3 ${1}
 rm -rf src/main/resources/config/custom_components/variable
