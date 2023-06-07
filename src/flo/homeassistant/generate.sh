@@ -40,7 +40,7 @@ rm -rf src/main/resources/config/www/custom_ui/mini-graph-card
 mkdir -p src/main/resources/config/www/custom_ui/mini-graph-card &&
   wget -q -O src/main/resources/config/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js https://github.com/kalkih/mini-graph-card/releases/download/v0.10.0/mini-graph-card-bundle.js
 
-pull_repo $(pwd) homeassistant variables-component Wibias/hass-variables 2.3.0 ${1}
+pull_repo $(pwd) homeassistant variables-component Wibias/hass-variables 3.2.3 ${1}
 rm -rf src/main/resources/config/custom_components/variable
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/variables-component/custom_components/variable src/main/resources/config/custom_components
