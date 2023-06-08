@@ -179,23 +179,13 @@ automation:
             - light.ada_lamp
             - light.edwin_lamp
             - light.edwin_night_light
-
-
-
-
-
-
       - service: input_number.set_value
         target:
           entity_id:
             - number.ada_fan_light_return_to_auto_timeout
             - number.value_fan_light_return_to_auto_timeout
         data:
-          value: 30
-
-
-
-
+          value: 60
       - service: switch.turn_on
         target:
           entity_id:
