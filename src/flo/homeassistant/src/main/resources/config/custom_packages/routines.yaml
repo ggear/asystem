@@ -183,10 +183,18 @@ automation:
         target:
           entity_id:
             - number.ada_fan_light_return_to_auto_timeout
-            - number.value_fan_light_return_to_auto_timeout
+            - number.edwin_fan_light_return_to_auto_timeout
         data:
           value: 60
+      - service: number.set_value
+        target:
+          entity_id:
+            - number.ada_fan_light_motion_sense_timeout
+            - number.edwin_fan_light_motion_sense_timeout
+        data:
+          value: 1800
       - service: switch.turn_on
+        data: {}
         target:
           entity_id:
             - switch.ada_fan_light_return_to_auto
@@ -218,20 +226,24 @@ automation:
         target:
           entity_id:
             - light.edwin_night_light
+      - service: number.set_value
+        target:
+          entity_id:
+            - number.ada_fan_light_motion_sense_timeout
+            - number.edwin_fan_light_motion_sense_timeout
+        data:
+          value: 10800
       - service: switch.turn_off
+        data: {}
         target:
-          entity_id:
-            - switch.ada_fan_light_return_to_auto
-            - switch.edwin_fan_light_return_to_auto
-      - service: light.turn_on
-        target:
-          entity_id:
-            - light.ada_fan
-            - light.edwin_fan
+          entity_id: switch.ada_fan_light_return_to_auto
+          entity_id: switch.edwin_fan_light_return_to_auto
       - service: light.turn_off
         target:
           entity_id:
+            - light.ada_fan
             - light.ada_lamp
+            - light.edwin_fan
             - light.edwin_lamp
   #####################################################################################
   - id: routine_home_fans_off
