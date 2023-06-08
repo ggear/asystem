@@ -70,11 +70,6 @@ rm -rf src/main/resources/config/custom_components/adaptive_lighting
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting src/main/resources/config/custom_components
 
-pull_repo $(pwd) homeassistant senseme-component mikelawrence/senseme-hacs v2.2.5 ${1}
-rm -rf src/main/resources/config/custom_components/senseme
-mkdir -p src/main/resources/config/custom_components &&
-  cp -rvf ../../../.deps/homeassistant/senseme-component/custom_components/senseme src/main/resources/config/custom_components
-
 pull_repo $(pwd) homeassistant dyson-component shenxn/ha-dyson v0.16.4 ${1}
 rm -rf src/main/resources/config/custom_components/dyson
 mkdir -p src/main/resources/config/custom_components &&
