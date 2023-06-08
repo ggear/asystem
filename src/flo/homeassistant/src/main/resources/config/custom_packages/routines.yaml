@@ -192,7 +192,7 @@ automation:
             - number.ada_fan_light_motion_sense_timeout
             - number.edwin_fan_light_motion_sense_timeout
         data:
-          value: 1800
+          value: 3600
       - service: switch.turn_on
         data: {}
         target:
