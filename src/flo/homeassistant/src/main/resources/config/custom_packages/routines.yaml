@@ -182,19 +182,11 @@ automation:
       - service: number.set_value
         target:
           entity_id:
-            - number.ada_fan_light_return_to_auto_timeout
-            - number.edwin_fan_light_return_to_auto_timeout
-        data:
-          value: 60
-      - service: number.set_value
-        target:
-          entity_id:
             - number.ada_fan_light_motion_sense_timeout
             - number.edwin_fan_light_motion_sense_timeout
         data:
           value: 3600
       - service: switch.turn_on
-        data: {}
         target:
           entity_id:
             - switch.ada_fan_light_return_to_auto
@@ -234,10 +226,10 @@ automation:
         data:
           value: 10800
       - service: switch.turn_off
-        data: {}
         target:
-          entity_id: switch.ada_fan_light_return_to_auto
-          entity_id: switch.edwin_fan_light_return_to_auto
+          entity_id:
+            - switch.ada_fan_light_return_to_auto
+            - switch.edwin_fan_light_return_to_auto
       - service: light.turn_off
         target:
           entity_id:
