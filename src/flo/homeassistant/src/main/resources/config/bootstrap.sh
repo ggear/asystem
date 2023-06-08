@@ -17,7 +17,7 @@ echo "--------------------------------------------------------------------------
 # Install integrations manually (no option to do so programmatically):
 #   - MQTT (local push, no internet, yaml has details but is now unfortunately now deprecated)
 #   - Tasmota (local push, no internet, devices are configured via their inbuilt webserver (see sonoff module) then are automatically discovered after a tasmota/deploy.sh)
-#   - SenseME (local push, no internet after initial firmware upgrade, requires each fan IP and Areas to be configured)
+#   - Big Ass Fans (local push, no internet after initial firmware upgrade, each fan is automatically discovered)
 #   - UniFi Protect (local push, no internet, requires Protect IP, user, password and Areas config - has not been yaml configured since at least Nov 2020)
 #   - Apple (local push, no internet, add tv/home-pod through UI with paring code prompts)
 #   - TP-Link Smart Home (local polling, no internet, requires Areas to be manually configured)

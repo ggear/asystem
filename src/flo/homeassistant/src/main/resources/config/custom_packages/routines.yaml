@@ -179,24 +179,17 @@ automation:
             - light.ada_lamp
             - light.edwin_lamp
             - light.edwin_night_light
-
-
-
-
-# TODO: Adapt to new integration
-#      - service: switch.turn_on
-#        target:
-#          entity_id:
-#            - switch.ada_fan_motion
-#            - switch.edwin_fan_motion
-
-
-
-      - service: light.turn_on
+      - service: number.set_value
         target:
           entity_id:
-            - light.ada_fan
-            - light.edwin_fan
+            - number.ada_fan_light_return_to_auto_timeout
+            - number.value_fan_light_return_to_auto_timeout
+          value: 30
+      - service: switch.turn_on
+        target:
+          entity_id:
+            - switch.ada_fan_light_return_to_auto
+            - switch.edwin_fan_light_return_to_auto
       - service: fan.turn_off
         target:
           entity_id:
@@ -224,25 +217,21 @@ automation:
         target:
           entity_id:
             - light.edwin_night_light
-
-
-
-# TODO: Adapt to new integration
-#      - service: switch.turn_off
-#        target:
-#          entity_id:
-#            - switch.ada_fan_motion
-#            - switch.edwin_fan_motion
-
-
-
-      - service: light.turn_off
+      - service: switch.turn_off
+        target:
+          entity_id:
+            - switch.ada_fan_light_return_to_auto
+            - switch.edwin_fan_light_return_to_auto
+      - service: light.turn_on
         target:
           entity_id:
             - light.ada_fan
+            - light.edwin_fan
+      - service: light.turn_off
+        target:
+          entity_id:
             - light.ada_lamp
             - light.edwin_lamp
-            - light.edwin_fan
   #####################################################################################
   - id: routine_home_fans_off
     alias: "Routine: Turn fans off"
