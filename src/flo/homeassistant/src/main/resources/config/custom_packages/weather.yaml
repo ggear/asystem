@@ -49,7 +49,9 @@ sensor:
       # https://en.wikipedia.org/wiki/Beaufort_scale
       beaufort:
         value_template: >
-          {%- if states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 118 -%}
+          {%- if states('sensor.gooseberry_hill_wind_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
+          0
+          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 118 -%}
           12
           {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 103 -%}
           11
@@ -83,7 +85,7 @@ sensor:
         unit_of_measurement: °C
         device_class: temperature
         value_template: >
-          {%- if states('sensor.gooseberry_hill_temp') | float > 27 and states('sensor.gooseberry_hill_humidity') | float > 40 -%}
+          {%- if states('sensor.gooseberry_hill_temp') not in ['unavailable', 'unknown', 'none', 'n/a'] and (states('sensor.gooseberry_hill_temp') | float > 27) and states('sensor.gooseberry_hill_humidity') not in ['unavailable', 'unknown', 'none', 'n/a'] and (states('sensor.gooseberry_hill_humidity') | float > 40) -%}
           {% set T = states('sensor.gooseberry_hill_temp') | float %}
           {% set R = states('sensor.gooseberry_hill_humidity') | float %}
           {% set c1 = -8.78469475556 %}
@@ -102,7 +104,7 @@ sensor:
           {%- endif -%}
       heatindexrating:
         value_template: >
-          {%- if states('sensor.heatindex') == 'n/a' -%}
+          {%- if states('sensor.heatindex') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
           Out of range
           {%- elif states('sensor.heatindex') | float  >= 54 -%}
           Extreme danger: heat stroke imminent
