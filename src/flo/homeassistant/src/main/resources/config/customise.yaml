@@ -299,7 +299,7 @@ fan.deck_east_fan:
 fan.deck_west_fan:
   friendly_name: 'Deck West'
   icon: 'mdi:fan'
-light.ada_fan_light:
+light.ada_fan:
   friendly_name: 'Ada Main'
   icon: 'mdi:lightbulb-group'
 light.ada_lamp:
@@ -308,7 +308,7 @@ light.ada_lamp:
 light.edwin_lamp:
   friendly_name: 'Edwin Lamp'
   icon: 'mdi:lightbulb-group'
-light.edwin_fan_light:
+light.edwin_fan:
   friendly_name: 'Edwin Main'
   icon: 'mdi:lightbulb-group'
 light.edwin_night_light:
@@ -323,7 +323,7 @@ light.dining_main:
 light.lounge_main:
   friendly_name: 'Lounge Main'
   icon: 'mdi:lightbulb-group'
-light.lounge_fan_light:
+light.lounge_fan:
   friendly_name: 'Lounge Fan'
   icon: 'mdi:lightbulb-group'
 light.lounge_lamp:

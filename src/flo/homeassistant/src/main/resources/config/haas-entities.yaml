@@ -89,7 +89,7 @@ fan.deck_fan:
   name: Deck Fans
   aliases: ['Deck Fan']
   room: Deck
-light.ada_fan_light:
+light.ada_fan:
   name: Ada Main Light
   aliases: ['Adas Main Light']
   room: Ada
@@ -101,7 +101,7 @@ light.edwin_lamp:
   name: Edwin Lamp
   aliases: []
   room: Zombie
-light.edwin_fan_light:
+light.edwin_fan:
   name: Edwin Main Light
   aliases: ['Edwins Main Light']
   room: Edwin
@@ -121,7 +121,7 @@ light.lounge_main:
   name: Lounge Main Lights
   aliases: ['Lounge Main Light']
   room: Lounge
-light.lounge_fan_light:
+light.lounge_fan:
   name: Lounge Fan Light
   aliases: []
   room: Zombie

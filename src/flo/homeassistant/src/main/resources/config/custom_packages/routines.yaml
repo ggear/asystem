@@ -179,11 +179,19 @@ automation:
             - light.ada_lamp
             - light.edwin_lamp
             - light.edwin_night_light
-      - service: switch.turn_on
-        target:
-          entity_id:
-            - switch.ada_fan_light_motion
-            - switch.edwin_fan_light_motion
+
+
+
+
+# TODO: Adapt to new integration
+#      - service: switch.turn_on
+#        target:
+#          entity_id:
+#            - switch.ada_fan_motion
+#            - switch.edwin_fan_motion
+
+
+
       - service: light.turn_on
         target:
           entity_id:
@@ -216,11 +224,18 @@ automation:
         target:
           entity_id:
             - light.edwin_night_light
-      - service: switch.turn_off
-        target:
-          entity_id:
-            - switch.ada_fan_light_motion
-            - switch.edwin_fan_light_motion
+
+
+
+# TODO: Adapt to new integration
+#      - service: switch.turn_off
+#        target:
+#          entity_id:
+#            - switch.ada_fan_motion
+#            - switch.edwin_fan_motion
+
+
+
       - service: light.turn_off
         target:
           entity_id:
