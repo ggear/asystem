@@ -7,6 +7,22 @@ powercalc:
 ######################################################################################
 sensor:
   ####################################################################################
+
+
+
+
+  # TODO: Provide implementation
+  - platform: powercalc
+    entities:
+      - entity_id: media_player.ada_home
+      - entity_id: media_player.lounge_arc
+      - entity_id: light.ada_lamp_bulb_1
+
+
+
+
+
+
   - platform: powercalc
     create_utility_meters: true
     create_group: senseme_all_fans

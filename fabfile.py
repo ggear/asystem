@@ -122,7 +122,7 @@ def _setup(context):
         for requirement in glob.glob("{}/*/*/*/reqs_*.txt".format(DIR_ROOT_MODULE)):
             _run_local(context, "pip install -r {}".format(requirement))
     if len(_run_local(context, "ls ${GO_HOME} || true", hide='out').stdout) == 0:
-        _run_local(context, "echo 'Cannot find go install at [${GO_HOME}]' && false")
+        _run_local(context, "echo Cannot find go install at [${GO_HOME}] && false")
     _run_local(context, "[ ! -d ${GOPATH} ] && mkdir -vp ${GOPATH}/{bin,src,pkg} || true")
     _print_footer("asystem", "setup")
 
