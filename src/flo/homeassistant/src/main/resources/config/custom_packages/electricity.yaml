@@ -1,4 +1,6 @@
-######################################################################################
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
 powercalc:
   force_update_frequency: 00:05:00
   create_utility_meters: false
@@ -7,233 +9,96 @@ powercalc:
 ######################################################################################
 sensor:
   ####################################################################################
-
-
-
-
-  # TODO: Provide implementation
   - platform: powercalc
+    create_group: home
     entities:
-      - entity_id: media_player.ada_home
-      - entity_id: media_player.lounge_arc
-      - entity_id: light.ada_lamp_bulb_1
-
-
-
-
-
-
-  - platform: powercalc
-    create_utility_meters: true
-    create_group: senseme_all_fans
-    entities:
-      - entity_id: fan.ada_fan
-        standby_power: 1.3
-        linear:
-          min_power: 2.5
-          max_power: 31.1
-      - entity_id: fan.edwin_fan
-        standby_power: 1.3
-        linear:
-          min_power: 2.5
-          max_power: 31.1
-      - entity_id: fan.parents_fan
-        standby_power: 1.3
-        linear:
-          min_power: 2.5
-          max_power: 31.1
-      - entity_id: fan.lounge_fan
-        standby_power: 1.3
-        linear:
-          min_power: 2.5
-          max_power: 31.1
-      - entity_id: fan.deck_east_fan
-        standby_power: 1.3
-        linear:
-          min_power: 2.5
-          max_power: 31.1
-      - entity_id: fan.deck_west_fan
-        standby_power: 1.3
-        linear:
-          min_power: 2.5
-          max_power: 31.1
-  - platform: template
-    sensors:
-      home_fans_power:
-        unique_id: home_fans_power
-        value_template: >
-          {{ (
-              states('sensor.senseme_all_fans_power') | float(0) +
-              states('sensor.kitchen_fan_current_consumption') | float(0)
-          ) | round(1) }}
-      home_fans_energy_daily:
-        unique_id: home_fans_energy_daily
-        value_template: >
-          {{ (
-              states('sensor.senseme_all_fans_energy_daily') | float(0) +
-              states('sensor.kitchen_fan_today_s_consumption') | float(0)
-          ) | round(1) }}
-  ####################################################################################
-  - platform: powercalc
-    create_utility_meters: true
-    create_group: senseme_all_lights
-    entities:
-      - entity_id: light.ada_fan
-        linear:
-          min_power: 0.5
-          max_power: 16.3
-      - entity_id: light.edwin_fan
-        linear:
-          min_power: 0.5
-          max_power: 16.3
-      - entity_id: light.lounge_light
-        linear:
-          min_power: 0.5
-          max_power: 16.3
-
-  # TODO: START - Update for new zigbee2mqtt Hue light names
-  #  - platform: powercalc
-  #    create_utility_meters: true
-  #    create_group: hue_all_lights
-  #    include:
-  #      template: >
-  #        {{
-  #          states | selectattr('entity_id', 'search', 'light.hue') | map(attribute='entity_id') | list
-  #        }}
-  #  - platform: template
-  #    sensors:
-  #      home_lights_power:
-  #        unique_id: home_lights_power
-  #        value_template: >
-  #          {{ (
-  #              states('sensor.senseme_all_lights_power') | float(0) +
-  #              states('sensor.hue_all_lights_power') | float(0)
-  #          ) | round(1) }}
-  #      home_lights_energy_daily:
-  #        unique_id: home_lights_energy_daily
-  #        value_template: >
-  #          {{ (
-  #              states('sensor.senseme_all_lights_energy_daily') | float(0) +
-  #              states('sensor.hue_all_lights_energy_daily') | float(0)
-  #
-  #          ) | round(1) }}
-  - platform: template
-    sensors:
-      home_lights_power:
-        unique_id: home_lights_power
-        value_template: >
-          {{ (
-              states('sensor.senseme_all_lights_power') | float(0)
-          ) | round(1) }}
-      home_lights_energy_daily:
-        unique_id: home_lights_energy_daily
-        value_template: >
-          {{ (
-              states('sensor.senseme_all_lights_energy_daily') | float(0)
-          ) | round(1) }}
-  # TODO: END
-
-  ####################################################################################
-  - platform: template
-    sensors:
-      server_network_power:
-        unique_id: server_network_power
-        value_template: >
-          {{ (
-              states('sensor.rack_outlet_current_consumption') | float(0) +
-              states('sensor.roof_network_switch_current_consumption') | float(0)
-          ) | round(1) }}
-      server_network_energy_daily:
-        unique_id: server_network_energy_daily
-        value_template: >
-          {{ (
-              states('sensor.rack_outlet_today_s_consumption') | float(0) +
-              states('sensor.roof_network_switch_today_s_consumption') | float(0)
-          ) | round(1) }}
-  ####################################################################################
-  - platform: template
-    sensors:
-      ################################################################################
-      home_peak_power:
-        unique_id: home_peak_power
-        value_template: >
-          {{ (
-              states('sensor.pool_filter_power') | float(0) +
-              states('sensor.roof_water_heater_booster_power') | float(0) +
-              states('sensor.kitchen_dish_washer_current_consumption') | float(0) +
-              states('sensor.laundry_clothes_dryer_current_consumption') | float(0) +
-              states('sensor.laundry_washing_machine_current_consumption') | float(0) +
-              states('sensor.roof_water_heater_booster_energy_power') | float(0) +
-              states('sensor.bathroom_rails_current_consumption') | float(0)
-          ) | round(1) }}
-      ################################################################################
-      home_base_power:
-        unique_id: home_base_power
-        value_template: >
-          {{ (
-              states('sensor.home_lights_power') | float(0) +
-              states('sensor.home_fans_power') | float(0) +
-              states('sensor.kitchen_coffee_machine_current_consumption') | float(0) +
-              states('sensor.kitchen_fridge_current_consumption') | float(0) +
-              states('sensor.deck_freezer_current_consumption') | float(0) +
-              states('sensor.deck_lights_current_consumption') | float(0) +
-              states('sensor.lounge_tv_outlet_current_consumption') | float(0) +
-              states('sensor.study_outlet_current_consumption') | float(0) +
-              states('sensor.office_outlet_current_consumption') | float(0) +
-              states('sensor.server_network_power') | float(0) +
-              states('sensor.study_battery_charger_current_consumption') | float(0) +
-              states('sensor.laundry_vacuum_charger_current_consumption') | float(0) +
-              states('sensor.various_adhoc_outlet_current_consumption') | float(0)
-          ) | round(1) }}
-      ################################################################################
-      home_power:
-        unique_id: home_power
-        value_template: >
-          {{ (
-              states('sensor.home_peak_power') | float(0) +
-              states('sensor.home_base_power') | float(0)
-          ) | round(1) }}
-  ####################################################################################
-  - platform: template
-    sensors:
-      ################################################################################
-      home_peak_energy_daily:
-        unique_id: home_peak_energy_daily
-        value_template: >
-          {{ (
-              states('sensor.pool_filter_energy_daily') | float(0) +
-              states('sensor.roof_water_heater_booster_energy_daily') | float(0) +
-              states('sensor.kitchen_dish_washer_today_s_consumption') | float(0) +
-              states('sensor.laundry_clothes_dryer_today_s_consumption') | float(0) +
-              states('sensor.laundry_washing_machine_today_s_consumption') | float(0) +
-              states('sensor.roof_water_heater_booster_energy_today') | float(0) +
-              states('sensor.bathroom_rails_today_s_consumption') | float(0)
-          ) | round(3) }}
-      ################################################################################
-      home_base_energy_daily:
-        unique_id: home_base_energy_daily
-        value_template: >
-          {{ (
-              states('sensor.home_lights_energy_daily') | float(0) +
-              states('sensor.home_fans_energy_daily') | float(0) +
-              states('sensor.kitchen_coffee_machine_today_s_consumption') | float(0) +
-              states('sensor.kitchen_fridge_today_s_consumption') | float(0) +
-              states('sensor.deck_freezer_today_s_consumption') | float(0) +
-              states('sensor.deck_lights_today_s_consumption') | float(0) +
-              states('sensor.lounge_tv_outlet_today_s_consumption') | float(0) +
-              states('sensor.study_outlet_today_s_consumption') | float(0) +
-              states('sensor.office_outlet_today_s_consumption') | float(0) +
-              states('sensor.server_network_energy_daily') | float(0) +
-              states('sensor.study_battery_charger_today_s_consumption') | float(0) +
-              states('sensor.laundry_vacuum_charger_today_s_consumption') | float(0) +
-              states('sensor.various_adhoc_outlet_today_s_consumption') | float(0)
-          ) | round(3) }}
-      ################################################################################
-      home_energy_daily:
-        unique_id: home_energy_daily
-        value_template: >
-          {{ (
-              states('sensor.home_peak_energy_daily') | float(0) +
-              states('sensor.home_base_energy_daily') | float(0)
-          ) | round(3) }}
-      ################################################################################
+      - create_group: home_base
+        entities:
+          - create_group: fans
+            entities:
+              - create_group: ada
+                entities:
+                  - entity_id: fan.ada_fan
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      

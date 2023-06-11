@@ -1149,6 +1149,46 @@ automation:
 #######################################################################################
         """.strip() + "\n")
 
+        # Diagnostics YAML
+        metadata_electricity_df = metadata_df[
+            (metadata_df["index"] > 0) &
+            (metadata_df["entity_status"] == "Enabled") &
+            (metadata_df["unique_id"].str.len() > 0) &
+            (metadata_df["powercalc_group_1"].str.len() > 0)
+            ]
+        metadata_electricity_dicts = [row.dropna().to_dict() for index, row in metadata_electricity_df.iterrows()]
+        metadata_electricity_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/electricity.yaml"))
+        with open(metadata_electricity_path, 'w') as metadata_electricity_file:
+            metadata_electricity_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+powercalc:
+  force_update_frequency: 00:05:00
+  create_utility_meters: false
+  utility_meter_types:
+    - daily
+######################################################################################
+sensor:
+  ####################################################################################
+  - platform: powercalc
+    create_group: home
+    entities:
+      - create_group: home_base
+        entities:
+          - create_group: fans
+            entities:
+              - create_group: ada
+                entities:
+                  - entity_id: fan.ada_fan
+            """.strip() + "\n")
+            for metadata_electricity_dict in metadata_electricity_dicts:
+                metadata_electricity_file.write("      " + """
+                  """.format(
+                ).strip() + "\n")
+            metadata_electricity_file.write("      " + """
+            """.strip() + "\n")
+
     # Build action YAML
     metadata_action_df = metadata_df[
         (metadata_df["index"] > 0) &
