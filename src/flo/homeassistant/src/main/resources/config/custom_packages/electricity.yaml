@@ -14,11 +14,12 @@ sensor:
     entities:
       - create_group: home_base
         entities:
-          - create_group: fans
+          - create_group: lights
             entities:
               - create_group: ada
                 entities:
-                  - entity_id: fan.ada_fan
+                  - entity_id: light.ada_fan
+                  - entity_id: light.ada-lamp-bulb-1
       
       
       
