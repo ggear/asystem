@@ -1149,14 +1149,32 @@ automation:
 #######################################################################################
         """.strip() + "\n")
 
-        # Diagnostics YAML
+        # Electricity YAML
         metadata_electricity_df = metadata_df[
             (metadata_df["index"] > 0) &
             (metadata_df["entity_status"] == "Enabled") &
+            (metadata_df["entity_namespace"].str.len() > 0) &
             (metadata_df["unique_id"].str.len() > 0) &
-            (metadata_df["powercalc_group_1"].str.len() > 0)
+            (metadata_df["powercalc_group_1"].str.len() > 0) &
+            (metadata_df["powercalc_group_2"].str.len() > 0) &
+            (metadata_df["powercalc_group_3"].str.len() > 0) &
+            (metadata_df["powercalc_group_4"].str.len() > 0)
             ]
-        metadata_electricity_dicts = [row.dropna().to_dict() for index, row in metadata_electricity_df.iterrows()]
+        metadata_electricity_dicts = {}
+        for dict in [row.dropna().to_dict() for index, row in metadata_electricity_df.iterrows()]:
+            dict_group1 = dict["powercalc_group_1"]
+            dict_group2 = dict["powercalc_group_2"]
+            dict_group3 = dict["powercalc_group_3"]
+            dict_group4 = dict["powercalc_group_4"]
+            if dict_group1 not in metadata_electricity_dicts:
+                metadata_electricity_dicts[dict_group1] = {}
+            if dict_group2 not in metadata_electricity_dicts[dict_group1]:
+                metadata_electricity_dicts[dict_group1][dict_group2] = {}
+            if dict_group3 not in metadata_electricity_dicts[dict_group1][dict_group2]:
+                metadata_electricity_dicts[dict_group1][dict_group2][dict_group3] = {}
+            if dict_group4 not in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3]:
+                metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4] = []
+            metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4].append(dict)
         metadata_electricity_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/electricity.yaml"))
         with open(metadata_electricity_path, 'w') as metadata_electricity_file:
             metadata_electricity_file.write("""
@@ -1170,28 +1188,53 @@ powercalc:
     - daily
 ######################################################################################
 sensor:
+            """.strip() + "\n")
+            for dict_group1 in metadata_electricity_dicts:
+                metadata_electricity_file.write("  " + """
   ####################################################################################
   - platform: powercalc
-    create_group: home
+    create_group: {}
     entities:
-      - create_group: home_base
-        entities:
-          - create_group: lights
-            entities:
-              - create_group: ada
-                entities:
-                  - entity_id: light.ada_fan
-                  - entity_id: light.ada-lamp-bulb-1
-              - create_group: edwin
-                entities:
-                  - entity_id: light.edwin-lamp-bulb-1
-                  - entity_id: light.
-            """.strip() + "\n")
-            for metadata_electricity_dict in metadata_electricity_dicts:
-                metadata_electricity_file.write("      " + """
-                  """.format(
+                """.format(
+                    dict_group1
                 ).strip() + "\n")
-            metadata_electricity_file.write("      " + """
+                for dict_group2 in metadata_electricity_dicts[dict_group1]:
+                    metadata_electricity_file.write("      " + """
+      ################################################################################
+      - create_group: {}
+        entities:
+                    """.format(
+                        dict_group2
+                    ).strip() + "\n")
+                    for dict_group3 in metadata_electricity_dicts[dict_group1][dict_group2]:
+                        metadata_electricity_file.write("          " + """
+          ############################################################################
+          - create_group: {}
+            entities:
+                        """.format(
+                            dict_group3
+                        ).strip() + "\n")
+                        for dict_group4 in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3]:
+                            metadata_electricity_file.write("              " + """
+              ########################################################################
+              - create_group: {}
+                entities:
+                            """.format(
+                                dict_group4,
+                            ).strip() + "\n")
+                            for dict in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4]:
+                                dict_config = \
+                                    ("\n                    " + dict["powercalc_config"].replace("\n", "\n                    ")) \
+                                        if "powercalc_config" in dict else ""
+                                metadata_electricity_file.write("                  " + """
+                  - entity_id: {}.{}{}
+                              """.format(
+                                    dict["entity_namespace"],
+                                    dict["unique_id"],
+                                    dict_config,
+                                ).strip() + "\n")
+            metadata_electricity_file.write("  " + """
+  ####################################################################################
             """.strip() + "\n")
 
     # Build action YAML

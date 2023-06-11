@@ -70,11 +70,11 @@ mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/{}/set' -m '{}' && echo
             metadata_devices_file.write("""
 '{}':
   friendly_name: '{}'
-{}
+  {}
                 """.format(
                 metadata_devices_dict["connection_mac"],
                 metadata_devices_dict["device_name"].replace("-", " ").title(),
-                metadata_devices_dict["zigbee_config"],
+                metadata_devices_dict["zigbee_config"].replace("\n", "\n  "),
             ).strip() + "\n")
         print("Build generate script [zigbee2mqtt] entity device metadata persisted to [{}]".format(metadata_devices_path))
 
@@ -110,12 +110,12 @@ mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/{}/set' -m '{}' && echo
 '{}':
   friendly_name: '{}'
   retain: true
-{}
+  {}
   devices:
                 """.format(
                     metadata_groups_id,
                     metadata_groups_dict[metadata_groups_id]["device_name"].replace("-", " ").title(),
-                    metadata_groups_dict[metadata_groups_id]["zigbee_config"],
+                    metadata_groups_dict[metadata_groups_id]["zigbee_config"].replace("\n", "\n  "),
                 ).strip() + "\n")
                 for metadata_device_dict in metadata_grouped_devices_dict[metadata_groups_id]:
                     if "connection_mac" in metadata_device_dict:
