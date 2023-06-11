@@ -1181,7 +1181,11 @@ sensor:
               - create_group: ada
                 entities:
                   - entity_id: light.ada_fan
-                  - entity_id: light.ada-lamp-bulb-1                  
+                  - entity_id: light.ada-lamp-bulb-1
+              - create_group: edwin
+                entities:
+                  - entity_id: light.edwin-lamp-bulb-1
+                  - entity_id: light.
             """.strip() + "\n")
             for metadata_electricity_dict in metadata_electricity_dicts:
                 metadata_electricity_file.write("      " + """
