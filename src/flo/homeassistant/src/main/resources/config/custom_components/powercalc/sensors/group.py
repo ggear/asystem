@@ -525,7 +525,7 @@ class GroupedSensor(BaseEntity, RestoreSensor, SensorEntity):
 
 
 
-    # HACK: Reduce throttle threshold to 1s
+    # HACK: Reduce group update throttle threshold to 1s
     # @Throttle(timedelta(seconds=30))
     @Throttle(timedelta(seconds=1))
 
