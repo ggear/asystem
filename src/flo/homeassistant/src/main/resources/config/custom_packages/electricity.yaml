@@ -43,10 +43,6 @@ sensor:
                       min_power: 2.5
                       max_power: 31.1
               ########################################################################
-              - create_group: kitchen_fans
-                entities:
-                  - entity_id: switch.kitchen_fan
-              ########################################################################
               - create_group: lounge_fans
                 entities:
                   - entity_id: fan.lounge_fan
@@ -58,26 +54,26 @@ sensor:
               - create_group: deck_fans
                 entities:
                   - entity_id: fan.deck_east_fan
+                    standby_power: 1.3
+                    linear:
+                      min_power: 2.5
+                      max_power: 31.1
                   - entity_id: fan.deck_west_fan
+                    standby_power: 1.3
+                    linear:
+                      min_power: 2.5
+                      max_power: 31.1
           ############################################################################
           - create_group: lights
             entities:
               ########################################################################
               - create_group: ada_lights
                 entities:
-                  - entity_id: light.ada_fan
-                    linear:
-                      min_power: 0.5
-                      max_power: 16.3
                   - entity_id: light.ada_lamp_bulb_1
               ########################################################################
               - create_group: edwin_lights
                 entities:
                   - entity_id: light.edwin_lamp_bulb_1
-                  - entity_id: light.edwin_fan
-                    linear:
-                      min_power: 0.5
-                      max_power: 16.3
                   - entity_id: light.edwin_night_light_bulb_1
               ########################################################################
               - create_group: hallway_lights
@@ -120,7 +116,6 @@ sensor:
                   - entity_id: light.kitchen_main_bulb_2
                   - entity_id: light.kitchen_main_bulb_3
                   - entity_id: light.kitchen_main_bulb_4
-                  - entity_id: switch.kitchen_downlights
               ########################################################################
               - create_group: laundry_lights
                 entities:
@@ -154,68 +149,13 @@ sensor:
                 entities:
                   - entity_id: switch.landing_festoons
               ########################################################################
-              - create_group: garden_lights
-                entities:
-                  - entity_id: light.garden_pedestals_bulb_1
-                  - entity_id: light.garden_pedestals_bulb_2
-                  - entity_id: light.garden_pedestals_bulb_3
-                  - entity_id: light.garden_pedestals_bulb_4
-              ########################################################################
               - create_group: tree_lights
                 entities:
                   - entity_id: light.tree_spotlights_bulb_1
                   - entity_id: light.tree_spotlights_bulb_2
           ############################################################################
-          - create_group: air_purifiers
-            entities:
-              ########################################################################
-              - create_group: lounge_air_purifiers
-                entities:
-                  - entity_id: fan.lounge_air_purifier
-              ########################################################################
-              - create_group: dining_air_purifiers
-                entities:
-                  - entity_id: fan.dining_air_purifier
-          ############################################################################
-          - create_group: audio_visual_devices
-            entities:
-              ########################################################################
-              - create_group: lounge_audio_visual_devices
-                entities:
-                  - entity_id: switch.lounge_tv_outlet
-                  - entity_id: media_player.lounge_home
-                  - entity_id: media_player.lg_webos_smart_tv
-                  - entity_id: media_player.lounge_arc
-              ########################################################################
-              - create_group: ada_audio_visual_devices
-                entities:
-                  - entity_id: media_player.ada_home
-              ########################################################################
-              - create_group: edwin_audio_visual_devices
-                entities:
-                  - entity_id: media_player.edwin_home
-              ########################################################################
-              - create_group: parents_audio_visual_devices
-                entities:
-                  - entity_id: media_player.parents_home
-                  - entity_id: media_player.parents_move
-              ########################################################################
-              - create_group: kitchen_audio_visual_devices
-                entities:
-                  - entity_id: media_player.kitchen_home
-                  - entity_id: media_player.kitchen_move
-                  - entity_id: media_player.kitchen_five
-              ########################################################################
-              - create_group: office_audio_visual_devices
-                entities:
-                  - entity_id: media_player.office_home
-          ############################################################################
           - create_group: power plugs
             entities:
-              ########################################################################
-              - create_group: mobile_power plugs
-                entities:
-                  - entity_id: switch.various_adhoc_outlet
               ########################################################################
               - create_group: study_power plugs
                 entities:
@@ -229,51 +169,29 @@ sensor:
               - create_group: laundry_power plugs
                 entities:
                   - entity_id: switch.laundry_vacuum_charger
-              ########################################################################
-              - create_group: deck_power plugs
-                entities:
-                  - entity_id: switch.deck_fans_outlet
-              ########################################################################
-              - create_group: kitchen_power plugs
-                entities:
-                  - entity_id: switch.kitchen_fan_outlet
-              ########################################################################
-              - create_group: edwin_power plugs
-                entities:
-                  - entity_id: switch.edwin_wardrobe_outlet
           ############################################################################
-          - create_group: whitegoods
+          - create_group: audio_visual_devices
             entities:
               ########################################################################
-              - create_group: kitchen_whitegoods
+              - create_group: ada_audio_visual_devices
                 entities:
-                  - entity_id: switch.kitchen_fridge
+                  - entity_id: media_player.ada_home
               ########################################################################
-              - create_group: deck_whitegoods
+              - create_group: edwin_audio_visual_devices
                 entities:
-                  - entity_id: switch.deck_freezer
-          ############################################################################
-          - create_group: server_network
-            entities:
+                  - entity_id: media_player.edwin_home
               ########################################################################
-              - create_group: rack_server_network
+              - create_group: office_audio_visual_devices
                 entities:
-                  - entity_id: switch.rack_fans
-                  - entity_id: switch.rack_outlet
+                  - entity_id: media_player.office_home
               ########################################################################
-              - create_group: roof_server_network
+              - create_group: lounge_audio_visual_devices
                 entities:
-                  - entity_id: switch.roof_network_switch
+                  - entity_id: media_player.lounge_home
+                  - entity_id: media_player.lounge_arc
       ################################################################################
       - create_group: home_peak
         entities:
-          ############################################################################
-          - create_group: heating_cooling
-            entities:
-              ########################################################################
-              - create_group: bathroom_heating_cooling
-                entities:
-                  - entity_id: switch.bathroom_rails
           ############################################################################
           - create_group: whitegoods
             entities:
