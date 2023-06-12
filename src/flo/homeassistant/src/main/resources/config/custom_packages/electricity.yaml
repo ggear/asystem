@@ -2,24 +2,28 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
 powercalc:
-  force_update_frequency: 00:05:00
+  force_update_frequency: 00:00:05
+  power_sensor_precision: 1
+  energy_sensor_precision: 1
   create_utility_meters: false
+  power_sensor_naming: '{} Power'
+  energy_sensor_naming: '{} Energy'
   utility_meter_types:
     - daily
 ######################################################################################
 sensor:
   ####################################################################################
   - platform: powercalc
-    create_group: home
+    create_group: Home
     entities:
       ################################################################################
-      - create_group: home_base
+      - create_group: Home Base
         entities:
           ############################################################################
-          - create_group: fans
+          - create_group: Fans
             entities:
               ########################################################################
-              - create_group: ada_fans
+              - create_group: Ada Fans
                 entities:
                   - entity_id: fan.ada_fan
                     standby_power: 1.3
@@ -27,7 +31,7 @@ sensor:
                       min_power: 2.5
                       max_power: 31.1
               ########################################################################
-              - create_group: edwin_fans
+              - create_group: Edwin Fans
                 entities:
                   - entity_id: fan.edwin_fan
                     standby_power: 1.3
@@ -35,7 +39,7 @@ sensor:
                       min_power: 2.5
                       max_power: 31.1
               ########################################################################
-              - create_group: parents_fans
+              - create_group: Parents Fans
                 entities:
                   - entity_id: fan.parents_fan
                     standby_power: 1.3
@@ -43,7 +47,7 @@ sensor:
                       min_power: 2.5
                       max_power: 31.1
               ########################################################################
-              - create_group: lounge_fans
+              - create_group: Lounge Fans
                 entities:
                   - entity_id: fan.lounge_fan
                     standby_power: 1.3
@@ -51,7 +55,7 @@ sensor:
                       min_power: 2.5
                       max_power: 31.1
               ########################################################################
-              - create_group: deck_fans
+              - create_group: Deck Fans
                 entities:
                   - entity_id: fan.deck_east_fan
                     standby_power: 1.3
@@ -64,26 +68,26 @@ sensor:
                       min_power: 2.5
                       max_power: 31.1
           ############################################################################
-          - create_group: lights
+          - create_group: Lights
             entities:
               ########################################################################
-              - create_group: ada_lights
+              - create_group: Ada Lights
                 entities:
                   - entity_id: light.ada_lamp_bulb_1
               ########################################################################
-              - create_group: edwin_lights
+              - create_group: Edwin Lights
                 entities:
                   - entity_id: light.edwin_lamp_bulb_1
                   - entity_id: light.edwin_night_light_bulb_1
               ########################################################################
-              - create_group: hallway_lights
+              - create_group: Hallway Lights
                 entities:
                   - entity_id: light.hallway_main_bulb_1
                   - entity_id: light.hallway_main_bulb_2
                   - entity_id: light.hallway_main_bulb_3
                   - entity_id: light.hallway_main_bulb_4
               ########################################################################
-              - create_group: dining_lights
+              - create_group: Dining Lights
                 entities:
                   - entity_id: light.dining_main_bulb_1
                   - entity_id: light.dining_main_bulb_2
@@ -92,7 +96,7 @@ sensor:
                   - entity_id: light.dining_main_bulb_5
                   - entity_id: light.dining_main_bulb_6
               ########################################################################
-              - create_group: lounge_lights
+              - create_group: Lounge Lights
                 entities:
                   - entity_id: light.lounge_main_bulb_1
                   - entity_id: light.lounge_main_bulb_2
@@ -100,122 +104,127 @@ sensor:
                   - entity_id: light.lounge_fan
                   - entity_id: light.lounge_lamp_bulb_1
               ########################################################################
-              - create_group: parents_lights
+              - create_group: Parents Lights
                 entities:
                   - entity_id: light.parents_main_bulb_1
                   - entity_id: light.parents_main_bulb_2
                   - entity_id: light.parents_main_bulb_3
               ########################################################################
-              - create_group: study_lights
+              - create_group: Study Lights
                 entities:
                   - entity_id: light.study_lamp_bulb_1
               ########################################################################
-              - create_group: kitchen_lights
+              - create_group: Kitchen Lights
                 entities:
                   - entity_id: light.kitchen_main_bulb_1
                   - entity_id: light.kitchen_main_bulb_2
                   - entity_id: light.kitchen_main_bulb_3
                   - entity_id: light.kitchen_main_bulb_4
               ########################################################################
-              - create_group: laundry_lights
+              - create_group: Laundry Lights
                 entities:
                   - entity_id: light.laundry_main_bulb_1
               ########################################################################
-              - create_group: pantry_lights
+              - create_group: Pantry Lights
                 entities:
                   - entity_id: light.pantry_main_bulb_1
               ########################################################################
-              - create_group: office_lights
+              - create_group: Office Lights
                 entities:
                   - entity_id: light.office_main_bulb_1
               ########################################################################
-              - create_group: bathroom_lights
+              - create_group: Bathroom Lights
                 entities:
                   - entity_id: light.bathroom_main_bulb_1
               ########################################################################
-              - create_group: ensuite_lights
+              - create_group: Ensuite Lights
                 entities:
                   - entity_id: light.ensuite_main_bulb_1
               ########################################################################
-              - create_group: wardrobe_lights
+              - create_group: Wardrobe Lights
                 entities:
                   - entity_id: light.wardrobe_main_bulb_1
               ########################################################################
-              - create_group: deck_lights
+              - create_group: Deck Lights
                 entities:
                   - entity_id: switch.deck_festoons
               ########################################################################
-              - create_group: landing_lights
+              - create_group: Landing Lights
                 entities:
                   - entity_id: switch.landing_festoons
               ########################################################################
-              - create_group: tree_lights
+              - create_group: Tree Lights
                 entities:
                   - entity_id: light.tree_spotlights_bulb_1
                   - entity_id: light.tree_spotlights_bulb_2
           ############################################################################
-          - create_group: power plugs
+          - create_group: Power Plugs
             entities:
               ########################################################################
-              - create_group: study_power plugs
+              - create_group: Study Power Plugs
                 entities:
                   - entity_id: switch.study_outlet
                   - entity_id: switch.study_battery_charger
               ########################################################################
-              - create_group: office_power plugs
+              - create_group: Office Power Plugs
                 entities:
                   - entity_id: switch.office_outlet
               ########################################################################
-              - create_group: laundry_power plugs
+              - create_group: Laundry Power Plugs
                 entities:
                   - entity_id: switch.laundry_vacuum_charger
           ############################################################################
-          - create_group: audio_visual_devices
+          - create_group: Audio Visual Devices
             entities:
               ########################################################################
-              - create_group: ada_audio_visual_devices
+              - create_group: Ada Audio Visual Devices
                 entities:
                   - entity_id: media_player.ada_home
+                    name: Ada Home
               ########################################################################
-              - create_group: edwin_audio_visual_devices
+              - create_group: Edwin Audio Visual Devices
                 entities:
                   - entity_id: media_player.edwin_home
+                    name: Edwin Home
               ########################################################################
-              - create_group: office_audio_visual_devices
+              - create_group: Office Audio Visual Devices
                 entities:
                   - entity_id: media_player.office_home
+                    name: Office Home
               ########################################################################
-              - create_group: lounge_audio_visual_devices
+              - create_group: Lounge Audio Visual Devices
                 entities:
                   - entity_id: media_player.lounge_home
+                    name: Lounge Home
                   - entity_id: media_player.lounge_arc
+                    name: Lounge Arc
       ################################################################################
-      - create_group: home_peak
+      - create_group: Home Peak
         entities:
           ############################################################################
-          - create_group: whitegoods
+          - create_group: Whitegoods
             entities:
               ########################################################################
-              - create_group: kitchen_whitegoods
+              - create_group: Kitchen Whitegoods
                 entities:
                   - entity_id: switch.kitchen_dish_washer
               ########################################################################
-              - create_group: laundry_whitegoods
+              - create_group: Laundry Whitegoods
                 entities:
                   - entity_id: switch.laundry_clothes_dryer
                   - entity_id: switch.laundry_washing_machine
   ####################################################################################
   - platform: powercalc
-    create_group: zombie
+    create_group: Zombie
     entities:
       ################################################################################
-      - create_group: zombie_base
+      - create_group: Zombie Base
         entities:
           ############################################################################
-          - create_group: zombie_server_network
+          - create_group: Zombie Servers & Network
             entities:
               ########################################################################
-              - create_group: zombie_rack_server_network
+              - create_group: Zombie Rack Servers & Network
                 entities:
                   - entity_id: switch.rack_modem
   ####################################################################################

@@ -43,10 +43,10 @@
     - entity: sensor.laundry_vacuum_charger_current_consumption
       name: Vacuum Charger
       icon: mdi:home-lightning-bolt
-    - entity: sensor.home_lights_power
+    - entity: sensor.lights_power
       name: Home Lights
       icon: mdi:home-lightning-bolt
-    - entity: sensor.home_fans_power
+    - entity: sensor.fans_power
       name: Home Fans
       icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_dish_washer_current_consumption

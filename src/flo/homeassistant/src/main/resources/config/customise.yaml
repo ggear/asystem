@@ -400,11 +400,11 @@ sensor.laundry_vacuum_charger_current_consumption:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.home_lights_power:
+sensor.lights_power:
   friendly_name: 'Home Lights'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.home_fans_power:
+sensor.fans_power:
   friendly_name: 'Home Fans'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
