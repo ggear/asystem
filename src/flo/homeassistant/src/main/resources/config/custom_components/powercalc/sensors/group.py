@@ -522,7 +522,15 @@ class GroupedSensor(BaseEntity, RestoreSensor, SensorEntity):
             registry.async_update_entity(entity_id, hidden_by=hidden_by)
 
     @callback
-    @Throttle(timedelta(seconds=30))
+
+
+
+    # HACK: Reduce throttle threshold to 1s
+    # @Throttle(timedelta(seconds=30))
+    @Throttle(timedelta(seconds=1))
+
+
+
     def on_state_change(self, event: Event) -> None:
         """Triggered when one of the group entities changes state."""
         if self.hass.state != CoreState.running:  # pragma: no cover

@@ -69,7 +69,7 @@ rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
 
-VERSION=master
+VERSION=ggear-powercalc
 pull_repo $(pwd) homeassistant powercalc-component ggear/powercalc ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/powercalc
 mkdir -p src/main/resources/config/custom_components &&
