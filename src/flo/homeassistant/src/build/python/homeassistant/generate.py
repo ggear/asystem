@@ -1182,7 +1182,7 @@ automation:
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
 powercalc:
-  force_update_frequency: 00:00:05
+  force_update_frequency: 00:00:30
   power_sensor_precision: 1
   energy_sensor_precision: 1
   create_utility_meters: false
