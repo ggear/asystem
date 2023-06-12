@@ -130,10 +130,10 @@
     - entity: sensor.laundry_vacuum_charger_today_s_consumption
       name: Vacuum Charger
       icon: mdi:battery-charging
-    - entity: sensor.home_lights_energy_daily
+    - entity: sensor.lights_energy_daily
       name: Home Lights
       icon: mdi:battery-charging
-    - entity: sensor.home_fans_energy_daily
+    - entity: sensor.fans_energy_daily
       name: Home Fans
       icon: mdi:battery-charging
     - entity: sensor.kitchen_dish_washer_today_s_consumption

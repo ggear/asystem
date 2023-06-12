@@ -484,11 +484,11 @@ sensor.laundry_vacuum_charger_today_s_consumption:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.home_lights_energy_daily:
+sensor.lights_energy_daily:
   friendly_name: 'Home Lights'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.home_fans_energy_daily:
+sensor.fans_energy_daily:
   friendly_name: 'Home Fans'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
