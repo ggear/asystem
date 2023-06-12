@@ -69,8 +69,8 @@ rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
 
-VERSION=v1.6.6
-pull_repo $(pwd) homeassistant powercalc-component bramstroker/homeassistant-powercalc ${VERSION} ${1}
+VERSION=master
+pull_repo $(pwd) homeassistant powercalc-component ggear/powercalc ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/powercalc
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/powercalc-component/custom_components/powercalc src/main/resources/config/custom_components
