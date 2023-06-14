@@ -3,8 +3,9 @@
 #######################################################################################
 powercalc:
   force_update_frequency: 00:00:05
+  enable_autodiscovery: false
   power_sensor_precision: 1
-  energy_sensor_precision: 1
+  energy_sensor_precision: 3
   power_sensor_naming: '{} Power'
   energy_sensor_naming: '{} Energy'
   create_utility_meters: true
@@ -76,11 +77,23 @@ sensor:
               ########################################################################
               - create_group: Ada Lights
                 entities:
+                  - entity_id: light.ada_fan
+                    name: Ada Main Fan Light
+                    unique_id: ada_main_light_fan
+                    linear:
+                      min_power: 0.5
+                      max_power: 16.3
                   - entity_id: light.ada_lamp_bulb_1
               ########################################################################
               - create_group: Edwin Lights
                 entities:
                   - entity_id: light.edwin_lamp_bulb_1
+                  - entity_id: light.edwin_fan
+                    name: Edwin Main Fan Light
+                    unique_id: edwin_main_light_fan
+                    linear:
+                      min_power: 0.5
+                      max_power: 16.3
                   - entity_id: light.edwin_night_light_bulb_1
               ########################################################################
               - create_group: Hallway Lights
@@ -105,6 +118,11 @@ sensor:
                   - entity_id: light.lounge_main_bulb_2
                   - entity_id: light.lounge_main_bulb_3
                   - entity_id: light.lounge_fan
+                    name: Lounge Fan Light
+                    unique_id: lounge_light_fan
+                    linear:
+                      min_power: 0.5
+                      max_power: 16.3
                   - entity_id: light.lounge_lamp_bulb_1
               ########################################################################
               - create_group: Parents Lights
@@ -123,6 +141,10 @@ sensor:
                   - entity_id: light.kitchen_main_bulb_2
                   - entity_id: light.kitchen_main_bulb_3
                   - entity_id: light.kitchen_main_bulb_4
+                  - entity_id: switch.kitchen_downlights
+                    standby_power: 1.22
+                    power_sensor_id: sensor.kitchen_downlights_current_consumption
+                    energy_sensor_id: sensor.kitchen_downlights_total_consumption
               ########################################################################
               - create_group: Laundry Lights
                 entities:
@@ -155,11 +177,43 @@ sensor:
               - create_group: Landing Lights
                 entities:
                   - entity_id: switch.landing_festoons
+          ############################################################################
+          - create_group: Audio Visual Devices
+            entities:
               ########################################################################
-              - create_group: Tree Lights
+              - create_group: Lounge Audio Visual Devices
                 entities:
-                  - entity_id: light.tree_spotlights_bulb_1
-                  - entity_id: light.tree_spotlights_bulb_2
+                  - entity_id: switch.lounge_tv_outlet
+                    standby_power: 1.22
+                    power_sensor_id: sensor.lounge_tv_outlet_current_consumption
+                    energy_sensor_id: sensor.lounge_tv_outlet_total_consumption
+                  - entity_id: media_player.lounge_home
+                    name: Lounge Home
+              ########################################################################
+              - create_group: Ada Audio Visual Devices
+                entities:
+                  - entity_id: media_player.ada_home
+                    name: Ada Home
+              ########################################################################
+              - create_group: Edwin Audio Visual Devices
+                entities:
+                  - entity_id: media_player.edwin_home
+                    name: Edwin Home
+              ########################################################################
+              - create_group: Parents Audio Visual Devices
+                entities:
+                  - entity_id: media_player.parents_home
+                    model: Nest Hub 2gen
+              ########################################################################
+              - create_group: Kitchen Audio Visual Devices
+                entities:
+                  - entity_id: media_player.kitchen_home
+                    model: Nest Hub 2gen
+              ########################################################################
+              - create_group: Office Audio Visual Devices
+                entities:
+                  - entity_id: media_player.office_home
+                    name: Office Home
           ############################################################################
           - create_group: Power Plugs
             entities:
@@ -177,42 +231,61 @@ sensor:
                 entities:
                   - entity_id: switch.laundry_vacuum_charger
           ############################################################################
-          - create_group: Audio Visual Devices
+          - create_group: Whitegoods Continuous
             entities:
               ########################################################################
-              - create_group: Ada Audio Visual Devices
+              - create_group: Kitchen Whitegoods Continuous
                 entities:
-                  - entity_id: media_player.ada_home
-                    name: Ada Home
+                  - entity_id: switch.kitchen_fridge
+                    standby_power: 1.22
+                    power_sensor_id: sensor.kitchen_fridge_current_consumption
+                    energy_sensor_id: sensor.kitchen_fridge_total_consumption
               ########################################################################
-              - create_group: Edwin Audio Visual Devices
+              - create_group: Deck Whitegoods Continuous
                 entities:
-                  - entity_id: media_player.edwin_home
-                    name: Edwin Home
+                  - entity_id: switch.deck_freezer
+                    standby_power: 1.22
+                    power_sensor_id: sensor.deck_freezer_current_consumption
+                    energy_sensor_id: sensor.deck_freezer_total_consumption
+          ############################################################################
+          - create_group: Servers & Network
+            entities:
               ########################################################################
-              - create_group: Office Audio Visual Devices
+              - create_group: Rack Servers & Network
                 entities:
-                  - entity_id: media_player.office_home
-                    name: Office Home
+                  - entity_id: switch.rack_outlet
+                    standby_power: 1.22
+                    power_sensor_id: sensor.rack_outlet_current_consumption
+                    energy_sensor_id: sensor.rack_outlet_total_consumption
               ########################################################################
-              - create_group: Lounge Audio Visual Devices
+              - create_group: Roof Servers & Network
                 entities:
-                  - entity_id: media_player.lounge_home
-                    name: Lounge Home
-                  - entity_id: media_player.lounge_arc
-                    name: Lounge Arc
+                  - entity_id: switch.roof_network_switch
+                    standby_power: 1.22
+                    power_sensor_id: sensor.roof_network_switch_current_consumption
+                    energy_sensor_id: sensor.roof_network_switch_total_consumption
       ################################################################################
       - create_group: Home Peak
         entities:
           ############################################################################
-          - create_group: Whitegoods
+          - create_group: Heating & Cooling
             entities:
               ########################################################################
-              - create_group: Kitchen Whitegoods
+              - create_group: Bathroom Heating & Cooling
+                entities:
+                  - entity_id: switch.bathroom_rails
+                    standby_power: 1.22
+                    power_sensor_id: sensor.bathroom_rails_current_consumption
+                    energy_sensor_id: sensor.bathroom_rails_total_consumption
+          ############################################################################
+          - create_group: Whitegoods Discretionary
+            entities:
+              ########################################################################
+              - create_group: Kitchen Whitegoods Discretionary
                 entities:
                   - entity_id: switch.kitchen_dish_washer
               ########################################################################
-              - create_group: Laundry Whitegoods
+              - create_group: Laundry Whitegoods Discretionary
                 entities:
                   - entity_id: switch.laundry_clothes_dryer
                   - entity_id: switch.laundry_washing_machine

@@ -177,14 +177,6 @@ switch.landing_festoons:
   name: Landing Festoons
   aliases: []
   room: Landing
-light.garden_pedestals:
-  name: Garden Pedestals
-  aliases: []
-  room: Garden
-light.tree_spotlights:
-  name: Tree Spotlights
-  aliases: []
-  room: Tree
 switch.bathroom_rails:
   name: Bathroom Towel Rails
   aliases: []

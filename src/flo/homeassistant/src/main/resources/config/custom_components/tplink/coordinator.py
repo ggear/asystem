@@ -26,7 +26,15 @@ class TPLinkDataUpdateCoordinator(DataUpdateCoordinator):
         """Initialize DataUpdateCoordinator to gather data for specific SmartPlug."""
         self.device = device
         self.update_children = True
+
+
+
+        # HACK: Reduce update interval to 5s
+        # update_interval = timedelta(seconds=10)
         update_interval = timedelta(seconds=5)
+
+
+
         super().__init__(
             hass,
             _LOGGER,

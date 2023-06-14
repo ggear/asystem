@@ -117,14 +117,6 @@ input_boolean:
     name: Wardrobe Main
     initial: false
   #####################################################################################
-  lighting_reset_adaptive_lighting_garden_pedestals:
-    name: Garden Pedestals
-    initial: false
-  #####################################################################################
-  lighting_reset_adaptive_lighting_tree_spotlights:
-    name: Tree Spotlights
-    initial: false
-  #####################################################################################
 automation:
   #####################################################################################
   - id: lighting_sleep_adaptive_lighting
@@ -547,38 +539,4 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
-  #####################################################################################
-  - id: lighting_reset_adaptive_lighting_garden_pedestals
-    alias: "Lighting: Reset Adaptive Lighting on request of Garden Pedestals"
-    trigger:
-      - platform: state
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_garden_pedestals
-        from: 'off'
-        to: 'on'
-    action:
-      - service: light.turn_on
-        data_template:
-          color_temp: 366
-          brightness_pct: 100
-          entity_id: light.garden_pedestals
-      - delay: '00:00:10'
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_garden_pedestals
-  #####################################################################################
-  - id: lighting_reset_adaptive_lighting_tree_spotlights
-    alias: "Lighting: Reset Adaptive Lighting on request of Tree Spotlights"
-    trigger:
-      - platform: state
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_tree_spotlights
-        from: 'off'
-        to: 'on'
-    action:
-      - service: light.turn_on
-        data_template:
-          color_temp: 366
-          brightness_pct: 100
-          entity_id: light.tree_spotlights
-      - delay: '00:00:10'
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_tree_spotlights
   #####################################################################################

@@ -1183,8 +1183,9 @@ automation:
 #######################################################################################
 powercalc:
   force_update_frequency: 00:00:05
+  enable_autodiscovery: false
   power_sensor_precision: 1
-  energy_sensor_precision: 1
+  energy_sensor_precision: 3
   power_sensor_naming: '{} Power'
   energy_sensor_naming: '{} Energy'
   create_utility_meters: true
