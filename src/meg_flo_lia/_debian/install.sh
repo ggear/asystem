@@ -211,24 +211,6 @@ mkdir -p /root/.config/htop && rm -rf /root/.config/htop/htoprc
 ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
 
 ################################################################################
-# Python
-################################################################################
-update-alternatives --install /usr/bin/python python /usr/bin/python3 1
-update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
-
-################################################################################
-# Go
-################################################################################
-if [ ! -d /usr/local/go ]; then
-  mkdir /tmp/go && cd /tmp/go
-  wget -q https://dl.google.com/go/go1.14.linux-amd64.tar.gz
-  tar xvfz go1.14.linux-amd64.tar.gz
-  mv go /usr/local/go
-  ln -s /usr/local/go/bin/go /usr/local/bin/go
-  cd && rm -rf /tmp/go
-fi
-
-################################################################################
 # Network
 ################################################################################
 cat <<EOF >/etc/avahi/avahi-daemon.conf
