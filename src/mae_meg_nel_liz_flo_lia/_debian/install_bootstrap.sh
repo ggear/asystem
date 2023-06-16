@@ -80,6 +80,7 @@ if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "$
 rename ${INTERFACE}=lan0
 allow-hotplug lan0
 iface lan0 inet dhcp
+    pre-up ethtool -s lan0 speed 1000 duplex full autoneg on
 EOF
 fi
 cat <<EOF >/etc/udev/rules.d/10-usb-network-realtek.rules
