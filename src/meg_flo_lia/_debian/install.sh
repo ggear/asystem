@@ -67,7 +67,7 @@ apt-get install -y --allow-downgrades 'python3-pip=23.0.1+dfsg-1'
 ################################################################################
 systemctl stop unattended-upgrades
 systemctl disable unattended-upgrades
-apt remove --assume-yes --purge unattended-upgrades
+apt-get remove --assume-yes --purge unattended-upgrades
 apt-get -y --purge autoremove
 
 ################################################################################
