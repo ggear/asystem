@@ -4,7 +4,7 @@
 # Packages
 ################################################################################
 apt-get update
-apt-get install -y --allow-downgrades 'mbpfan=2.2.1-1'
+apt-get install -y --allow-downgrades 'mbpfan=2.3.0-1+b1'
 
 ################################################################################
 # Network
