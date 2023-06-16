@@ -70,7 +70,21 @@ cat <<EOF >>/etc/fstab
 EOF
 
 ################################################################################
-# Network
+# Network (Onboard)
+################################################################################
+INTERFACE=$(lshw -C network -short 2>/dev/null | grep enp | tr -s ' ' | cut -d' ' -f2)
+if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "${INTERFACE}" /etc/network/interfaces | wc -l) -eq 0 ]; then
+  cat <<EOF >>/etc/network/interfaces
+
+rename ${INTERFACE}=lan0
+allow-hotplug lan0
+iface lan0 inet dhcp
+    pre-up ethtool -s lan0 speed 1000 duplex full autoneg on
+EOF
+fi
+
+################################################################################
+# Network (USB)
 ################################################################################
 apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
 INTERFACE=$(lshw -C network -short 2>/dev/null | grep enx | tr -s ' ' | cut -d' ' -f2)
@@ -88,4 +102,3 @@ ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153"
 EOF
 chmod +x /etc/udev/rules.d/10-usb-network-realtek.rules
 echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/autosuspend -exec echo -n {}": " \; -exec cat {} \; | grep ": \-1")
-ifconfig lan0
