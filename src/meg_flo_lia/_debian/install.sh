@@ -213,7 +213,7 @@ ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
 ################################################################################
 # Python
 ################################################################################
-update-alternatives --install /usr/bin/python python /usr/bin/python3.9 1
+update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 update-alternatives --install /usr/bin/pip pip /usr/bin/pip3 1
 
 ################################################################################
