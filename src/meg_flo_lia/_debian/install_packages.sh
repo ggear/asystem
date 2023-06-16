@@ -26,6 +26,7 @@ PACKAGES=(
   avahi-daemon
   avahi-utils
   net-tools
+  ethtool
   lm-sensors
   apt-transport-https
   ca-certificates

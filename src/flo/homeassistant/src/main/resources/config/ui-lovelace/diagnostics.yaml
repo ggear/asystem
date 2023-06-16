@@ -79,6 +79,9 @@
     - entity: switch.lounge_tv_outlet
       name: Lounge TV
       icon: mdi:television
+    - entity: switch.mobile_adhoc_outlet
+      name: Adhoc Outlet
+      icon: mdi:power-plug-outline
     - entity: switch.study_outlet
       name: Study Outlet
       icon: mdi:power-plug-outline
