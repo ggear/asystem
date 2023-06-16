@@ -206,7 +206,7 @@ right_meters=RightCPUs Tasks LoadAverage Uptime
 right_meter_modes=1 2 2 2
 hide_function_bar=0
 EOF
-chown -R graham.graham /home/graham/.config
+chown -R graham:graham /home/graham/.config
 mkdir -p /root/.config/htop && rm -rf /root/.config/htop/htoprc
 ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
 
@@ -285,8 +285,8 @@ fi
 # Docker
 ################################################################################
 rm -rf /usr/local/bin/docker-compose
-pip uninstall -y docker-compose
-pip install --no-input docker-compose==1.29.2
+pip uninstall --break-system-packages -y docker-compose
+pip install --break-system-packages --no-input docker-compose==1.29.2
 docker-compose -v
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
