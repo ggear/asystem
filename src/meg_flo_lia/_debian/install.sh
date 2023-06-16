@@ -245,6 +245,8 @@ sed -i 's/0.debian.pool.ntp.org/216.239.35.0/g' /etc/ntp.conf
 sed -i 's/1.debian.pool.ntp.org/216.239.35.4/g' /etc/ntp.conf
 sed -i 's/2.debian.pool.ntp.org/216.239.35.8/g' /etc/ntp.conf
 sed -i 's/3.debian.pool.ntp.org/216.239.35.12/g' /etc/ntp.conf
+mkdir -p /var/log/ntpsec
+chmod ntp:ntp /var/log/ntpsec
 systemctl daemon-reload
 systemctl restart ntp.service
 systemctl status ntp.service
