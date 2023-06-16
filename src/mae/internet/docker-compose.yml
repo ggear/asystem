@@ -1,0 +1,25 @@
+version: '3.7'
+services:
+  internet:
+    container_name: internet
+    image: internet:${SERVICE_VERSION_ABSOLUTE}
+    init: true
+    restart: ${SERVICE_RESTART}
+    environment:
+      - TZ=Australia/Perth
+      - INFLUXDB_IP
+      - INFLUXDB_HTTP_PORT
+      - INFLUXDB_ORG
+      - INFLUXDB_BUCKET_HOST_PRIVATE
+      - INFLUXDB_TOKEN
+    volumes:
+      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
+    deploy:
+      resources:
+        limits:
+          memory: 5G

@@ -1,0 +1,26 @@
+# https://github.com/unpoller/unpoller/releases
+version: '3.7'
+services:
+  unifipoller:
+    container_name: unifipoller
+    image: golift/unifi-poller:2.1.3
+    init: true
+    restart: ${SERVICE_RESTART}
+    environment:
+      - TZ=Australia/Perth
+      - INFLUXDB_IP
+      - INFLUXDB_HTTP_PORT
+      - INFLUXDB_USER_PRIVATE
+      - INFLUXDB_TOKEN
+      - INFLUXDB_BUCKET_HOST_PRIVATE
+    volumes:
+      - ${SERVICE_DATA_DIR}:/config
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
+    deploy:
+      resources:
+        limits:
+          memory: 5G
