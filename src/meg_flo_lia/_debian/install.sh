@@ -246,7 +246,7 @@ sed -i 's/1.debian.pool.ntp.org/216.239.35.4/g' /etc/ntp.conf
 sed -i 's/2.debian.pool.ntp.org/216.239.35.8/g' /etc/ntp.conf
 sed -i 's/3.debian.pool.ntp.org/216.239.35.12/g' /etc/ntp.conf
 mkdir -p /var/log/ntpsec
-chmod ntp:ntp /var/log/ntpsec
+chown ntpsec:ntpsec /var/log/ntpsec
 systemctl daemon-reload
 systemctl restart ntp.service
 systemctl status ntp.service
@@ -284,6 +284,9 @@ fi
 ################################################################################
 BOOT_ERRORS=$(
   journalctl -b | grep -i error |
+    grep -v "ACPI Error: Needed type" |
+    grep -v "ACPI Error: AE_AML_OPERAND_TYPE" |
+    grep -v "ACPI Error: Aborting method" |
     grep -v "20200925" |
     grep -v "remount-ro" | grep -v "smartd" |
     grep -v "Clock Unsynchronized" |
