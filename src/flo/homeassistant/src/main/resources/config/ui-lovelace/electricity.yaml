@@ -37,9 +37,6 @@
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.mobile_adhoc_outlet_current_consumption
-      name: Adhoc Outlet
-      icon: mdi:home-lightning-bolt
     - entity: sensor.study_battery_charger_current_consumption
       name: Battery Charger
       icon: mdi:home-lightning-bolt
@@ -127,9 +124,6 @@
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.mobile_adhoc_outlet_today_s_consumption
-      name: Adhoc Outlet
-      icon: mdi:battery-charging
     - entity: sensor.study_battery_charger_today_s_consumption
       name: Battery Charger
       icon: mdi:battery-charging
