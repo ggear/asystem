@@ -50,5 +50,4 @@ iface lan0.${VLAN} inet dhcp
     hwaddress ether ${VLAN}a:e0:4c:68:06:a1
 EOF
   fi
-  ifconfig "lan0.${VLAN}"
 done
