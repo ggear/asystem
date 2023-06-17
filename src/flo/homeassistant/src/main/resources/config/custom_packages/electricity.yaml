@@ -218,10 +218,6 @@ sensor:
           - create_group: Power Plugs
             entities:
               ########################################################################
-              - create_group: Mobile Power Plugs
-                entities:
-                  - entity_id: switch.mobile_adhoc_outlet
-              ########################################################################
               - create_group: Study Power Plugs
                 entities:
                   - entity_id: switch.study_outlet
