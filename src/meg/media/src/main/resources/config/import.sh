@@ -1,10 +1,13 @@
 #!/bin/bash
 
 echo -n "Normalising /data ... "
-setfacl -bR /data
-chmod -R 644 /data
-chmod -R a+rwX /data
-chown -R nobody:nogroup /data
+
+# TODO: Disable until meg is no longer using temp for high iops storage
+#setfacl -bR /data
+#chmod -R 644 /data
+#chmod -R a+rwX /data
+#chown -R nobody:nogroup /data
+
 find /data -type f -name nohup -exec rm -f {} \;
 find /data -type f -name .DS_Store -exec rm -f {} \;
 echo "done"
