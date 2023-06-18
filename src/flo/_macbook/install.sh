@@ -1,6 +1,14 @@
 #!/bin/sh
 
 ################################################################################
+# Realtec network card
+################################################################################
+if [ -f /etc/default/grub ] && [ $(grep "quirks" /etc/default/grub | wc -l) -eq 0 ]; then
+  sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet/GRUB_CMDLINE_LINUX_DEFAULT="quiet usbcore.quirks=0bda:8153:k,05e3:0626:gk/' /etc/default/grub
+  update-grub
+fi
+
+################################################################################
 # Display (enable)
 ################################################################################
 #rm -rf /etc/modprobe.d/blacklist-video.conf

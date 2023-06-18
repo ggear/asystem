@@ -100,5 +100,5 @@ fi
 cat <<EOF >/etc/udev/rules.d/10-usb-network-realtek.rules
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153", TEST=="power/autosuspend", ATTR{power/autosuspend}="-1"
 EOF
-chmod +x /etc/udev/rules.d/10-usb-network-realtek.rules
+chmod -x /etc/udev/rules.d/10-usb-network-realtek.rules
 echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/autosuspend -exec echo -n {}": " \; -exec cat {} \; | grep ": \-1")
