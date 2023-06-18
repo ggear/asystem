@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/ggear/asystem/tree/master/module/mae/internet/src/main/go/pkg"
+	"github.com/ggear/asystem/tree/master/module/meg/internet/src/main/go/pkg"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"testing"

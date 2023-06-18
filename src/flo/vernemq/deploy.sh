@@ -14,5 +14,5 @@ echo "Entity Metadata publish script dropping topics complete"
 echo "Entity Metadata publish script sleeping before publishing ... " && sleep 2
 
 ${ROOT_DIR}/../../lia/weewx/deploy.sh
-${ROOT_DIR}/../../mae/internet/deploy.sh
+${ROOT_DIR}/../../meg/internet/deploy.sh
 ${ROOT_DIR}/../../lia/zigbee2mqtt/deploy.sh

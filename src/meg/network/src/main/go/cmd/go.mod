@@ -1,10 +1,10 @@
-module github.com/ggear/asystem/tree/master/module/mae/network/src/main/go/cmd
+module github.com/ggear/asystem/tree/master/module/meg/network/src/main/go/cmd
 
 go 1.20
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.2
-	github.com/ggear/asystem/tree/master/module/mae/network/src/main/go/pkg v0.0.0-00010101000000-000000000000
+	github.com/ggear/asystem/tree/master/module/meg/network/src/main/go/pkg v0.0.0-00010101000000-000000000000
 	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.6.1
 )
@@ -18,4 +18,4 @@ require (
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 )
 
-replace github.com/ggear/asystem/tree/master/module/mae/network/src/main/go/pkg => ../pkg
+replace github.com/ggear/asystem/tree/master/module/meg/network/src/main/go/pkg => ../pkg
