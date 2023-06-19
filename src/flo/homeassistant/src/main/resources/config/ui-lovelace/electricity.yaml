@@ -55,7 +55,7 @@
     - entity: sensor.laundry_clothes_dryer_current_consumption
       name: Clothes Dryer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.laundry_washing_machine_current_consumption
+    - entity: sensor.laundry_washing_machine_power
       name: Washing Machine
       icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_fridge_current_consumption
@@ -142,7 +142,7 @@
     - entity: sensor.laundry_clothes_dryer_today_s_consumption
       name: Clothes Dryer
       icon: mdi:battery-charging
-    - entity: sensor.laundry_washing_machine_today_s_consumption
+    - entity: sensor.laundry_washing_machine_energy_daily
       name: Washing Machine
       icon: mdi:battery-charging
     - entity: sensor.kitchen_fridge_today_s_consumption

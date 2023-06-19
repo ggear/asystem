@@ -319,10 +319,15 @@ sensor:
                     model: KP115
                     power_sensor_id: sensor.laundry_clothes_dryer_current_consumption
                     energy_sensor_id: sensor.laundry_clothes_dryer_total_consumption
+              ########################################################################
+              - create_group: Laundry Washing Machine
+                entities:
                   - entity_id: switch.laundry_washing_machine
                     model: KP115
                     power_sensor_id: sensor.laundry_washing_machine_current_consumption
                     energy_sensor_id: sensor.laundry_washing_machine_total_consumption
+                  - entity_id: switch.laundry_washing_machine
+                    model: KP115
   ####################################################################################
   - platform: powercalc
     create_group: Zombie

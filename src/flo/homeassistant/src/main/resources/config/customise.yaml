@@ -410,7 +410,7 @@ sensor.laundry_clothes_dryer_current_consumption:
   friendly_name: 'Clothes Dryer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.laundry_washing_machine_current_consumption:
+sensor.laundry_washing_machine_power:
   friendly_name: 'Washing Machine'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
@@ -494,7 +494,7 @@ sensor.laundry_clothes_dryer_today_s_consumption:
   friendly_name: 'Clothes Dryer'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.laundry_washing_machine_today_s_consumption:
+sensor.laundry_washing_machine_energy_daily:
   friendly_name: 'Washing Machine'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
@@ -620,6 +620,9 @@ switch.kitchen_dish_washer:
 switch.laundry_clothes_dryer:
   friendly_name: 'Clothes Dryer'
   icon: 'mdi:tumble-dryer'
+switch.laundry_washing_machine:
+  friendly_name: 'Washing Machine'
+  icon: 'mdi:washing-machine'
 switch.laundry_washing_machine:
   friendly_name: 'Washing Machine'
   icon: 'mdi:washing-machine'
