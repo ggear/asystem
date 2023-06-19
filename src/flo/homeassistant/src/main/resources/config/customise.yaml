@@ -386,11 +386,11 @@ sensor.home_peak_power:
   friendly_name: 'Peak Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.study_battery_charger_current_consumption:
+sensor.study_battery_charger_power:
   friendly_name: 'Battery Charger'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.laundry_vacuum_charger_current_consumption:
+sensor.laundry_vacuum_charger_power:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
@@ -402,11 +402,11 @@ sensor.fans_power:
   friendly_name: 'Home Fans'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.kitchen_dish_washer_current_consumption:
+sensor.kitchen_dish_washer_power:
   friendly_name: 'Dish Washer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.laundry_clothes_dryer_current_consumption:
+sensor.laundry_clothes_dryer_power:
   friendly_name: 'Clothes Dryer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
@@ -414,35 +414,35 @@ sensor.laundry_washing_machine_power:
   friendly_name: 'Washing Machine'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.kitchen_fridge_current_consumption:
+sensor.kitchen_fridge_power:
   friendly_name: 'Kitchen Fridge'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.deck_freezer_current_consumption:
+sensor.deck_freezer_power:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.deck_festoons_current_consumption:
+sensor.deck_festoons_power:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.landing_festoons_current_consumption:
+sensor.landing_festoons_power:
   friendly_name: 'Landing Festoons'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.lounge_tv_outlet_current_consumption:
+sensor.lounge_tv_outlet_power:
   friendly_name: 'Lounge TV'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.bathroom_rails_current_consumption:
+sensor.bathroom_rails_power:
   friendly_name: 'Towel Rails'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.study_outlet_current_consumption:
+sensor.study_outlet_power:
   friendly_name: 'Study Outlet'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.office_outlet_current_consumption:
+sensor.office_outlet_power:
   friendly_name: 'Office Outlet'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
@@ -450,13 +450,13 @@ sensor.servers_network_power:
   friendly_name: 'Server & Network'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.rack_modem_current_consumption:
+sensor.rack_modem_power:
   friendly_name: 'Internet Modem'
-sensor.rack_outlet_current_consumption:
+sensor.rack_outlet_power:
   friendly_name: 'Rack Outlet'
-sensor.kitchen_fan_current_consumption:
+sensor.kitchen_fan_power:
   friendly_name: 'Kitchen Fan'
-sensor.roof_network_switch_current_consumption:
+sensor.roof_network_switch_power:
   friendly_name: 'Network Switch'
 sensor.home_energy_daily:
   friendly_name: 'Home Load'
@@ -470,11 +470,11 @@ sensor.home_peak_energy_daily:
   friendly_name: 'Peak Load'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.study_battery_charger_today_s_consumption:
+sensor.study_battery_charger_energy_daily:
   friendly_name: 'Battery Charger'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.laundry_vacuum_charger_today_s_consumption:
+sensor.laundry_vacuum_charger_energy_daily:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
@@ -486,11 +486,11 @@ sensor.fans_energy_daily:
   friendly_name: 'Home Fans'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.kitchen_dish_washer_today_s_consumption:
+sensor.kitchen_dish_washer_energy_daily:
   friendly_name: 'Dish Washer'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.laundry_clothes_dryer_today_s_consumption:
+sensor.laundry_clothes_dryer_energy_daily:
   friendly_name: 'Clothes Dryer'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
@@ -498,49 +498,49 @@ sensor.laundry_washing_machine_energy_daily:
   friendly_name: 'Washing Machine'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.kitchen_fridge_today_s_consumption:
+sensor.kitchen_fridge_energy_daily:
   friendly_name: 'Kitchen Fridge'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.deck_freezer_today_s_consumption:
+sensor.deck_freezer_energy_daily:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.deck_festoons_today_s_consumption:
+sensor.deck_festoons_energy_daily:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.landing_festoons_today_s_consumption:
+sensor.landing_festoons_energy_daily:
   friendly_name: 'Landing Festoons'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.lounge_tv_outlet_today_s_consumption:
+sensor.lounge_tv_outlet_energy_daily:
   friendly_name: 'Lounge TV'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.bathroom_rails_today_s_consumption:
+sensor.bathroom_rails_energy_daily:
   friendly_name: 'Towel Rails'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.study_outlet_today_s_consumption:
+sensor.study_outlet_energy_daily:
   friendly_name: 'Study Outlet'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.office_outlet_today_s_consumption:
+sensor.office_outlet_energy_daily:
   friendly_name: 'Office Outlet'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.roof_network_switch_today_s_consumption:
+sensor.roof_network_switch_energy_daily:
   friendly_name: 'Network Switch'
-sensor.rack_modem_today_s_consumption:
+sensor.rack_modem_energy_daily:
   friendly_name: 'Internet Modem'
 sensor.servers_network_energy_daily:
   friendly_name: 'Server & Network'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.rack_outlet_today_s_consumption:
+sensor.rack_outlet_energy_daily:
   friendly_name: 'Rack Outlet'
-sensor.kitchen_fan_today_s_consumption:
+sensor.kitchen_fan_energy_daily:
   friendly_name: 'Kitchen Fan'
 sensor.withings_weight_kg_graham:
   friendly_name: 'Weight'
@@ -620,9 +620,6 @@ switch.kitchen_dish_washer:
 switch.laundry_clothes_dryer:
   friendly_name: 'Clothes Dryer'
   icon: 'mdi:tumble-dryer'
-switch.laundry_washing_machine:
-  friendly_name: 'Washing Machine'
-  icon: 'mdi:washing-machine'
 switch.laundry_washing_machine:
   friendly_name: 'Washing Machine'
   icon: 'mdi:washing-machine'

@@ -55,6 +55,8 @@ sensor:
                 entities:
                   - entity_id: switch.kitchen_fan
                     model: HS110
+                  - entity_id: switch.kitchen_fan
+                    model: HS110
                     power_sensor_id: sensor.kitchen_fan_current_consumption
                     energy_sensor_id: sensor.kitchen_fan_total_consumption
               ########################################################################
@@ -150,6 +152,8 @@ sensor:
                   - entity_id: light.kitchen_main_bulb_4
                   - entity_id: switch.kitchen_downlights
                     model: HS110
+                  - entity_id: switch.kitchen_downlights
+                    model: HS110
                     power_sensor_id: sensor.kitchen_downlights_current_consumption
                     energy_sensor_id: sensor.kitchen_downlights_total_consumption
               ########################################################################
@@ -181,11 +185,15 @@ sensor:
                 entities:
                   - entity_id: switch.deck_festoons
                     model: KP115
+                  - entity_id: switch.deck_festoons
+                    model: KP115
                     power_sensor_id: sensor.deck_festoons_current_consumption
                     energy_sensor_id: sensor.deck_festoons_total_consumption
               ########################################################################
               - create_group: Landing Lights
                 entities:
+                  - entity_id: switch.landing_festoons
+                    model: KP115
                   - entity_id: switch.landing_festoons
                     model: KP115
                     power_sensor_id: sensor.landing_festoons_current_consumption
@@ -194,14 +202,14 @@ sensor:
           - create_group: Audio Visual Devices
             entities:
               ########################################################################
-              - create_group: Lounge Audio Visual Devices
+              - create_group: Lounge TV
                 entities:
+                  - entity_id: switch.lounge_tv_outlet
+                    model: HS110
                   - entity_id: switch.lounge_tv_outlet
                     model: HS110
                     power_sensor_id: sensor.lounge_tv_outlet_current_consumption
                     energy_sensor_id: sensor.lounge_tv_outlet_total_consumption
-                  - entity_id: media_player.lounge_home
-                    name: Lounge Home
               ########################################################################
               - create_group: Ada Audio Visual Devices
                 entities:
@@ -227,30 +235,46 @@ sensor:
                 entities:
                   - entity_id: media_player.office_home
                     name: Office Home
+              ########################################################################
+              - create_group: Lounge Audio Visual Devices
+                entities:
+                  - entity_id: media_player.lounge_home
+                    name: Lounge Home
           ############################################################################
           - create_group: Power Plugs
             entities:
               ########################################################################
-              - create_group: Study Power Plugs
+              - create_group: Study Outlet
                 entities:
+                  - entity_id: switch.study_outlet
+                    model: KP115
                   - entity_id: switch.study_outlet
                     model: KP115
                     power_sensor_id: sensor.study_outlet_current_consumption
                     energy_sensor_id: sensor.study_outlet_total_consumption
-                  - entity_id: switch.study_battery_charger
-                    model: KP115
-                    power_sensor_id: sensor.study_battery_charger_current_consumption
-                    energy_sensor_id: sensor.study_battery_charger_total_consumption
               ########################################################################
-              - create_group: Office Power Plugs
+              - create_group: Office Outlet
                 entities:
+                  - entity_id: switch.office_outlet
+                    model: KP115
                   - entity_id: switch.office_outlet
                     model: KP115
                     power_sensor_id: sensor.office_outlet_current_consumption
                     energy_sensor_id: sensor.office_outlet_total_consumption
               ########################################################################
-              - create_group: Laundry Power Plugs
+              - create_group: Study Battery Charger
                 entities:
+                  - entity_id: switch.study_battery_charger
+                    model: KP115
+                  - entity_id: switch.study_battery_charger
+                    model: KP115
+                    power_sensor_id: sensor.study_battery_charger_current_consumption
+                    energy_sensor_id: sensor.study_battery_charger_total_consumption
+              ########################################################################
+              - create_group: Laundry Vacuum Charger
+                entities:
+                  - entity_id: switch.laundry_vacuum_charger
+                    model: KP115
                   - entity_id: switch.laundry_vacuum_charger
                     model: KP115
                     power_sensor_id: sensor.laundry_vacuum_charger_current_consumption
@@ -259,15 +283,19 @@ sensor:
           - create_group: Whitegoods Continuous
             entities:
               ########################################################################
-              - create_group: Kitchen Whitegoods Continuous
+              - create_group: Kitchen Fridge
                 entities:
+                  - entity_id: switch.kitchen_fridge
+                    model: HS110
                   - entity_id: switch.kitchen_fridge
                     model: HS110
                     power_sensor_id: sensor.kitchen_fridge_current_consumption
                     energy_sensor_id: sensor.kitchen_fridge_total_consumption
               ########################################################################
-              - create_group: Deck Whitegoods Continuous
+              - create_group: Deck Freezer
                 entities:
+                  - entity_id: switch.deck_freezer
+                    model: HS110
                   - entity_id: switch.deck_freezer
                     model: HS110
                     power_sensor_id: sensor.deck_freezer_current_consumption
@@ -276,15 +304,19 @@ sensor:
           - create_group: Servers & Network
             entities:
               ########################################################################
-              - create_group: Rack Servers & Network
+              - create_group: Server Rack
                 entities:
+                  - entity_id: switch.rack_outlet
+                    model: HS110
                   - entity_id: switch.rack_outlet
                     model: HS110
                     power_sensor_id: sensor.rack_outlet_current_consumption
                     energy_sensor_id: sensor.rack_outlet_total_consumption
               ########################################################################
-              - create_group: Roof Servers & Network
+              - create_group: Network Switch
                 entities:
+                  - entity_id: switch.roof_network_switch
+                    model: HS110
                   - entity_id: switch.roof_network_switch
                     model: HS110
                     power_sensor_id: sensor.roof_network_switch_current_consumption
@@ -296,8 +328,10 @@ sensor:
           - create_group: Heating & Cooling
             entities:
               ########################################################################
-              - create_group: Bathroom Heating & Cooling
+              - create_group: Bathroom Towel Rails
                 entities:
+                  - entity_id: switch.bathroom_rails
+                    model: HS110
                   - entity_id: switch.bathroom_rails
                     model: HS110
                     power_sensor_id: sensor.bathroom_rails_current_consumption
@@ -306,15 +340,19 @@ sensor:
           - create_group: Whitegoods Discretionary
             entities:
               ########################################################################
-              - create_group: Kitchen Whitegoods Discretionary
+              - create_group: Kitchen Dish Washer
                 entities:
+                  - entity_id: switch.kitchen_dish_washer
+                    model: KP115
                   - entity_id: switch.kitchen_dish_washer
                     model: KP115
                     power_sensor_id: sensor.kitchen_dish_washer_current_consumption
                     energy_sensor_id: sensor.kitchen_dish_washer_total_consumption
               ########################################################################
-              - create_group: Laundry Whitegoods Discretionary
+              - create_group: Laundry Clothes Dryer
                 entities:
+                  - entity_id: switch.laundry_clothes_dryer
+                    model: KP115
                   - entity_id: switch.laundry_clothes_dryer
                     model: KP115
                     power_sensor_id: sensor.laundry_clothes_dryer_current_consumption
@@ -324,25 +362,8 @@ sensor:
                 entities:
                   - entity_id: switch.laundry_washing_machine
                     model: KP115
-                    power_sensor_id: sensor.laundry_washing_machine_current_consumption
-                    energy_sensor_id: sensor.laundry_washing_machine_total_consumption
                   - entity_id: switch.laundry_washing_machine
                     model: KP115
-  ####################################################################################
-  - platform: powercalc
-    create_group: Zombie
-    entities:
-      ################################################################################
-      - create_group: Zombie Base
-        entities:
-          ############################################################################
-          - create_group: Zombie Servers & Network
-            entities:
-              ########################################################################
-              - create_group: Zombie Rack Servers & Network
-                entities:
-                  - entity_id: switch.rack_modem
-                    model: KP115
-                    power_sensor_id: sensor.rack_modem_current_consumption
-                    energy_sensor_id: sensor.rack_modem_total_consumption
+                    power_sensor_id: sensor.laundry_washing_machine_current_consumption
+                    energy_sensor_id: sensor.laundry_washing_machine_total_consumption
   ####################################################################################

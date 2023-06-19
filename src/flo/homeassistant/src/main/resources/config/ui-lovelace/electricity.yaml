@@ -37,10 +37,10 @@
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.study_battery_charger_current_consumption
+    - entity: sensor.study_battery_charger_power
       name: Battery Charger
       icon: mdi:home-lightning-bolt
-    - entity: sensor.laundry_vacuum_charger_current_consumption
+    - entity: sensor.laundry_vacuum_charger_power
       name: Vacuum Charger
       icon: mdi:home-lightning-bolt
     - entity: sensor.lights_power
@@ -49,37 +49,37 @@
     - entity: sensor.fans_power
       name: Home Fans
       icon: mdi:home-lightning-bolt
-    - entity: sensor.kitchen_dish_washer_current_consumption
+    - entity: sensor.kitchen_dish_washer_power
       name: Dish Washer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.laundry_clothes_dryer_current_consumption
+    - entity: sensor.laundry_clothes_dryer_power
       name: Clothes Dryer
       icon: mdi:home-lightning-bolt
     - entity: sensor.laundry_washing_machine_power
       name: Washing Machine
       icon: mdi:home-lightning-bolt
-    - entity: sensor.kitchen_fridge_current_consumption
+    - entity: sensor.kitchen_fridge_power
       name: Kitchen Fridge
       icon: mdi:home-lightning-bolt
-    - entity: sensor.deck_freezer_current_consumption
+    - entity: sensor.deck_freezer_power
       name: Deck Freezer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.deck_festoons_current_consumption
+    - entity: sensor.deck_festoons_power
       name: Deck Festoons
       icon: mdi:home-lightning-bolt
-    - entity: sensor.landing_festoons_current_consumption
+    - entity: sensor.landing_festoons_power
       name: Landing Festoons
       icon: mdi:home-lightning-bolt
-    - entity: sensor.lounge_tv_outlet_current_consumption
+    - entity: sensor.lounge_tv_outlet_power
       name: Lounge TV
       icon: mdi:home-lightning-bolt
-    - entity: sensor.bathroom_rails_current_consumption
+    - entity: sensor.bathroom_rails_power
       name: Towel Rails
       icon: mdi:home-lightning-bolt
-    - entity: sensor.study_outlet_current_consumption
+    - entity: sensor.study_outlet_power
       name: Study Outlet
       icon: mdi:home-lightning-bolt
-    - entity: sensor.office_outlet_current_consumption
+    - entity: sensor.office_outlet_power
       name: Office Outlet
       icon: mdi:home-lightning-bolt
     - entity: sensor.servers_network_power
@@ -124,10 +124,10 @@
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.study_battery_charger_today_s_consumption
+    - entity: sensor.study_battery_charger_energy_daily
       name: Battery Charger
       icon: mdi:battery-charging
-    - entity: sensor.laundry_vacuum_charger_today_s_consumption
+    - entity: sensor.laundry_vacuum_charger_energy_daily
       name: Vacuum Charger
       icon: mdi:battery-charging
     - entity: sensor.lights_energy_daily
@@ -136,37 +136,37 @@
     - entity: sensor.fans_energy_daily
       name: Home Fans
       icon: mdi:battery-charging
-    - entity: sensor.kitchen_dish_washer_today_s_consumption
+    - entity: sensor.kitchen_dish_washer_energy_daily
       name: Dish Washer
       icon: mdi:battery-charging
-    - entity: sensor.laundry_clothes_dryer_today_s_consumption
+    - entity: sensor.laundry_clothes_dryer_energy_daily
       name: Clothes Dryer
       icon: mdi:battery-charging
     - entity: sensor.laundry_washing_machine_energy_daily
       name: Washing Machine
       icon: mdi:battery-charging
-    - entity: sensor.kitchen_fridge_today_s_consumption
+    - entity: sensor.kitchen_fridge_energy_daily
       name: Kitchen Fridge
       icon: mdi:battery-charging
-    - entity: sensor.deck_freezer_today_s_consumption
+    - entity: sensor.deck_freezer_energy_daily
       name: Deck Freezer
       icon: mdi:battery-charging
-    - entity: sensor.deck_festoons_today_s_consumption
+    - entity: sensor.deck_festoons_energy_daily
       name: Deck Festoons
       icon: mdi:battery-charging
-    - entity: sensor.landing_festoons_today_s_consumption
+    - entity: sensor.landing_festoons_energy_daily
       name: Landing Festoons
       icon: mdi:battery-charging
-    - entity: sensor.lounge_tv_outlet_today_s_consumption
+    - entity: sensor.lounge_tv_outlet_energy_daily
       name: Lounge TV
       icon: mdi:battery-charging
-    - entity: sensor.bathroom_rails_today_s_consumption
+    - entity: sensor.bathroom_rails_energy_daily
       name: Towel Rails
       icon: mdi:battery-charging
-    - entity: sensor.study_outlet_today_s_consumption
+    - entity: sensor.study_outlet_energy_daily
       name: Study Outlet
       icon: mdi:battery-charging
-    - entity: sensor.office_outlet_today_s_consumption
+    - entity: sensor.office_outlet_energy_daily
       name: Office Outlet
       icon: mdi:battery-charging
     - entity: sensor.servers_network_energy_daily
