@@ -64,16 +64,10 @@
     - entity: sensor.deck_freezer_power
       name: Deck Freezer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.deck_festoons_power
-      name: Deck Festoons
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.landing_festoons_power
-      name: Landing Festoons
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.lounge_tv_outlet_power
+    - entity: sensor.lounge_tv_power
       name: Lounge TV
       icon: mdi:home-lightning-bolt
-    - entity: sensor.bathroom_rails_power
+    - entity: sensor.bathroom_towel_rails_power
       name: Towel Rails
       icon: mdi:home-lightning-bolt
     - entity: sensor.study_outlet_power
@@ -151,16 +145,10 @@
     - entity: sensor.deck_freezer_energy_daily
       name: Deck Freezer
       icon: mdi:battery-charging
-    - entity: sensor.deck_festoons_energy_daily
-      name: Deck Festoons
-      icon: mdi:battery-charging
-    - entity: sensor.landing_festoons_energy_daily
-      name: Landing Festoons
-      icon: mdi:battery-charging
-    - entity: sensor.lounge_tv_outlet_energy_daily
+    - entity: sensor.lounge_tv_energy_daily
       name: Lounge TV
       icon: mdi:battery-charging
-    - entity: sensor.bathroom_rails_energy_daily
+    - entity: sensor.bathroom_towel_rails_energy_daily
       name: Towel Rails
       icon: mdi:battery-charging
     - entity: sensor.study_outlet_energy_daily

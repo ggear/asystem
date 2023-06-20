@@ -1157,37 +1157,41 @@ automation:
             (metadata_df["device_via_device"] == "Shadow") &
             (metadata_df["entity_namespace"].str.len() > 0) &
             (metadata_df["unique_id"].str.len() > 0) &
-            (metadata_df["powercalc_group_1"].str.len() > 0) &
-            (metadata_df["powercalc_group_2"].str.len() > 0) &
-            (metadata_df["powercalc_group_3"].str.len() > 0) &
-            (metadata_df["powercalc_group_4"].str.len() > 0)
+            (metadata_df["powercalc_enable"] == "True")
             ]
-        metadata_electricity_shadow_dicts = [row.dropna().to_dict() for index, row in metadata_electricity_df.iterrows()]
+        metadata_electricity_shadow_dicts = [row.to_dict() for index, row in metadata_electricity_df.iterrows()]
         metadata_electricity_df = metadata_df[
             (metadata_df["index"] > 0) &
             (metadata_df["entity_status"] == "Enabled") &
             (metadata_df["entity_namespace"].str.len() > 0) &
             (metadata_df["unique_id"].str.len() > 0) &
-            (metadata_df["powercalc_group_1"].str.len() > 0) &
-            (metadata_df["powercalc_group_2"].str.len() > 0) &
-            (metadata_df["powercalc_group_3"].str.len() > 0) &
-            (metadata_df["powercalc_group_4"].str.len() > 0)
+            (metadata_df["powercalc_enable"] == "True")
             ]
         metadata_electricity_dicts = {}
+        metadata_electricity_ungrouped_dicts = []
+        metadata_electricity_single_group_dicts = {}
         for dict in [row.dropna().to_dict() for index, row in metadata_electricity_df.iterrows()]:
-            dict_group1 = dict["powercalc_group_1"]
-            dict_group2 = dict["powercalc_group_2"]
-            dict_group3 = dict["powercalc_group_3"]
-            dict_group4 = dict["powercalc_group_4"]
-            if dict_group1 not in metadata_electricity_dicts:
-                metadata_electricity_dicts[dict_group1] = {}
-            if dict_group2 not in metadata_electricity_dicts[dict_group1]:
-                metadata_electricity_dicts[dict_group1][dict_group2] = {}
-            if dict_group3 not in metadata_electricity_dicts[dict_group1][dict_group2]:
-                metadata_electricity_dicts[dict_group1][dict_group2][dict_group3] = {}
-            if dict_group4 not in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3]:
-                metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4] = []
-            metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4].append(dict)
+            if "powercalc_group_4" in dict:
+                dict_group4 = dict["powercalc_group_4"]
+                if "powercalc_group_1" in dict and "powercalc_group_2" in dict and "powercalc_group_3" in dict:
+                    dict_group1 = dict["powercalc_group_1"]
+                    dict_group2 = dict["powercalc_group_2"]
+                    dict_group3 = dict["powercalc_group_3"]
+                    if dict_group1 not in metadata_electricity_dicts:
+                        metadata_electricity_dicts[dict_group1] = {}
+                    if dict_group2 not in metadata_electricity_dicts[dict_group1]:
+                        metadata_electricity_dicts[dict_group1][dict_group2] = {}
+                    if dict_group3 not in metadata_electricity_dicts[dict_group1][dict_group2]:
+                        metadata_electricity_dicts[dict_group1][dict_group2][dict_group3] = {}
+                    if dict_group4 not in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3]:
+                        metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4] = []
+                    metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4].append(dict)
+                else:
+                    if dict_group4 not in metadata_electricity_single_group_dicts:
+                        metadata_electricity_single_group_dicts[dict_group4] = []
+                    metadata_electricity_single_group_dicts[dict_group4].append(dict)
+            else:
+                metadata_electricity_ungrouped_dicts.append(dict)
         metadata_electricity_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/electricity.yaml"))
         with open(metadata_electricity_path, 'w') as metadata_electricity_file:
             metadata_electricity_file.write("""
@@ -1226,6 +1230,16 @@ template:
       #################################################################################
 sensor:
             """.strip() + "\n")
+
+
+
+
+            # TODO: Implement metadata_electricity_ungrouped_dicts
+            # TODO: Implement metadata_electricity_single_group_dicts
+
+
+
+
             for dict_group1 in metadata_electricity_dicts:
                 metadata_electricity_file.write("  " + """
   #####################################################################################
