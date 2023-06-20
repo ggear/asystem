@@ -1154,6 +1154,18 @@ automation:
         metadata_electricity_df = metadata_df[
             (metadata_df["index"] > 0) &
             (metadata_df["entity_status"] == "Enabled") &
+            (metadata_df["device_via_device"] == "Shadow") &
+            (metadata_df["entity_namespace"].str.len() > 0) &
+            (metadata_df["unique_id"].str.len() > 0) &
+            (metadata_df["powercalc_group_1"].str.len() > 0) &
+            (metadata_df["powercalc_group_2"].str.len() > 0) &
+            (metadata_df["powercalc_group_3"].str.len() > 0) &
+            (metadata_df["powercalc_group_4"].str.len() > 0)
+            ]
+        metadata_electricity_shadow_dicts = [row.dropna().to_dict() for index, row in metadata_electricity_df.iterrows()]
+        metadata_electricity_df = metadata_df[
+            (metadata_df["index"] > 0) &
+            (metadata_df["entity_status"] == "Enabled") &
             (metadata_df["entity_namespace"].str.len() > 0) &
             (metadata_df["unique_id"].str.len() > 0) &
             (metadata_df["powercalc_group_1"].str.len() > 0) &
@@ -1195,12 +1207,28 @@ powercalc:
     - weekly
     - monthly
     - yearly
-######################################################################################
+#######################################################################################
+template:
+  #####################################################################################
+  - binary_sensor:
+            """.strip() + "\n")
+            for metadata_electricity_shadow_dict in metadata_electricity_shadow_dicts:
+                metadata_electricity_file.write("      " + """
+      #################################################################################
+      - unique_id: {}
+        state: >-
+          {{{{ states('switch.{}') }}}}
+                """.format(
+                    metadata_electricity_shadow_dict["unique_id"].replace("template_", ""),
+                    metadata_electricity_shadow_dict["unique_id"].replace("template_", "").replace("_plug", ""),
+                ).strip() + "\n")
+            metadata_electricity_file.write("      " + """
+      #################################################################################
 sensor:
             """.strip() + "\n")
             for dict_group1 in metadata_electricity_dicts:
                 metadata_electricity_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
   - platform: powercalc
     create_group: {}
     entities:
@@ -1209,7 +1237,7 @@ sensor:
                 ).strip() + "\n")
                 for dict_group2 in metadata_electricity_dicts[dict_group1]:
                     metadata_electricity_file.write("      " + """
-      ################################################################################
+      #################################################################################
       - create_group: {}
         entities:
                     """.format(
@@ -1217,7 +1245,7 @@ sensor:
                     ).strip() + "\n")
                     for dict_group3 in metadata_electricity_dicts[dict_group1][dict_group2]:
                         metadata_electricity_file.write("          " + """
-          ############################################################################
+          #############################################################################
           - create_group: {}
             entities:
                         """.format(
@@ -1225,7 +1253,7 @@ sensor:
                         ).strip() + "\n")
                         for dict_group4 in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3]:
                             metadata_electricity_file.write("              " + """
-              ########################################################################
+              #########################################################################
               - create_group: {}
                 entities:
                             """.format(
@@ -1243,7 +1271,7 @@ sensor:
                                     dict_config,
                                 ).strip() + "\n")
             metadata_electricity_file.write("  " + """
-  ####################################################################################
+  #####################################################################################
             """.strip() + "\n")
 
     # Build action YAML

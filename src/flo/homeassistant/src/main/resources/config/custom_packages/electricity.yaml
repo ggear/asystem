@@ -14,19 +14,91 @@ powercalc:
     - weekly
     - monthly
     - yearly
-######################################################################################
+#######################################################################################
+template:
+  #####################################################################################
+  - binary_sensor:
+      #################################################################################
+      - unique_id: kitchen_fan_plug
+        state: >-
+          {{ states('switch.kitchen_fan') }}
+      #################################################################################
+      - unique_id: kitchen_downlights_plug
+        state: >-
+          {{ states('switch.kitchen_downlights') }}
+      #################################################################################
+      - unique_id: deck_festoons_plug
+        state: >-
+          {{ states('switch.deck_festoons') }}
+      #################################################################################
+      - unique_id: landing_festoons_plug
+        state: >-
+          {{ states('switch.landing_festoons') }}
+      #################################################################################
+      - unique_id: bathroom_rails_plug
+        state: >-
+          {{ states('switch.bathroom_rails') }}
+      #################################################################################
+      - unique_id: lounge_tv_outlet_plug
+        state: >-
+          {{ states('switch.lounge_tv_outlet') }}
+      #################################################################################
+      - unique_id: study_outlet_plug
+        state: >-
+          {{ states('switch.study_outlet') }}
+      #################################################################################
+      - unique_id: office_outlet_plug
+        state: >-
+          {{ states('switch.office_outlet') }}
+      #################################################################################
+      - unique_id: kitchen_dish_washer_plug
+        state: >-
+          {{ states('switch.kitchen_dish_washer') }}
+      #################################################################################
+      - unique_id: laundry_clothes_dryer_plug
+        state: >-
+          {{ states('switch.laundry_clothes_dryer') }}
+      #################################################################################
+      - unique_id: laundry_washing_machine_plug
+        state: >-
+          {{ states('switch.laundry_washing_machine') }}
+      #################################################################################
+      - unique_id: kitchen_fridge_plug
+        state: >-
+          {{ states('switch.kitchen_fridge') }}
+      #################################################################################
+      - unique_id: deck_freezer_plug
+        state: >-
+          {{ states('switch.deck_freezer') }}
+      #################################################################################
+      - unique_id: study_battery_charger_plug_plug
+        state: >-
+          {{ states('switch.study_battery_charger') }}
+      #################################################################################
+      - unique_id: laundry_vacuum_charger_plug
+        state: >-
+          {{ states('switch.laundry_vacuum_charger') }}
+      #################################################################################
+      - unique_id: rack_outlet_plug
+        state: >-
+          {{ states('switch.rack_outlet') }}
+      #################################################################################
+      - unique_id: roof_network_switch_plug
+        state: >-
+          {{ states('switch.roof_network_switch') }}
+      #################################################################################
 sensor:
-  ####################################################################################
+  #####################################################################################
   - platform: powercalc
     create_group: Home
     entities:
-      ################################################################################
+      #################################################################################
       - create_group: Home Base
         entities:
-          ############################################################################
+          #############################################################################
           - create_group: Fans
             entities:
-              ########################################################################
+              #########################################################################
               - create_group: Ada Fans
                 entities:
                   - entity_id: fan.ada_fan
@@ -34,7 +106,7 @@ sensor:
                     linear:
                       min_power: 2.5
                       max_power: 31.1
-              ########################################################################
+              #########################################################################
               - create_group: Edwin Fans
                 entities:
                   - entity_id: fan.edwin_fan
@@ -42,7 +114,7 @@ sensor:
                     linear:
                       min_power: 2.5
                       max_power: 31.1
-              ########################################################################
+              #########################################################################
               - create_group: Parents Fans
                 entities:
                   - entity_id: fan.parents_fan
@@ -50,16 +122,18 @@ sensor:
                     linear:
                       min_power: 2.5
                       max_power: 31.1
-              ########################################################################
+              #########################################################################
               - create_group: Kitchen Fans
                 entities:
+                  - entity_id: binary_sensor.template_kitchen_fan_plug
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
                   - entity_id: switch.kitchen_fan
-                    model: HS110
-                  - entity_id: switch.kitchen_fan
-                    model: HS110
                     power_sensor_id: sensor.kitchen_fan_current_consumption
                     energy_sensor_id: sensor.kitchen_fan_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Lounge Fans
                 entities:
                   - entity_id: fan.lounge_fan
@@ -67,7 +141,7 @@ sensor:
                     linear:
                       min_power: 2.5
                       max_power: 31.1
-              ########################################################################
+              #########################################################################
               - create_group: Deck Fans
                 entities:
                   - entity_id: fan.deck_east_fan
@@ -80,10 +154,10 @@ sensor:
                     linear:
                       min_power: 2.5
                       max_power: 31.1
-          ############################################################################
+          #############################################################################
           - create_group: Lights
             entities:
-              ########################################################################
+              #########################################################################
               - create_group: Ada Lights
                 entities:
                   - entity_id: light.ada_fan
@@ -93,7 +167,7 @@ sensor:
                       min_power: 0.5
                       max_power: 16.3
                   - entity_id: light.ada_lamp_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Edwin Lights
                 entities:
                   - entity_id: light.edwin_lamp_bulb_1
@@ -104,14 +178,14 @@ sensor:
                       min_power: 0.5
                       max_power: 16.3
                   - entity_id: light.edwin_night_light_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Hallway Lights
                 entities:
                   - entity_id: light.hallway_main_bulb_1
                   - entity_id: light.hallway_main_bulb_2
                   - entity_id: light.hallway_main_bulb_3
                   - entity_id: light.hallway_main_bulb_4
-              ########################################################################
+              #########################################################################
               - create_group: Dining Lights
                 entities:
                   - entity_id: light.dining_main_bulb_1
@@ -120,7 +194,7 @@ sensor:
                   - entity_id: light.dining_main_bulb_4
                   - entity_id: light.dining_main_bulb_5
                   - entity_id: light.dining_main_bulb_6
-              ########################################################################
+              #########################################################################
               - create_group: Lounge Lights
                 entities:
                   - entity_id: light.lounge_main_bulb_1
@@ -133,237 +207,269 @@ sensor:
                       min_power: 0.5
                       max_power: 16.3
                   - entity_id: light.lounge_lamp_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Parents Lights
                 entities:
                   - entity_id: light.parents_main_bulb_1
                   - entity_id: light.parents_main_bulb_2
                   - entity_id: light.parents_main_bulb_3
-              ########################################################################
+              #########################################################################
               - create_group: Study Lights
                 entities:
                   - entity_id: light.study_lamp_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Kitchen Lights
                 entities:
                   - entity_id: light.kitchen_main_bulb_1
                   - entity_id: light.kitchen_main_bulb_2
                   - entity_id: light.kitchen_main_bulb_3
                   - entity_id: light.kitchen_main_bulb_4
+                  - entity_id: binary_sensor.template_kitchen_downlights_plug
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
                   - entity_id: switch.kitchen_downlights
-                    model: HS110
-                  - entity_id: switch.kitchen_downlights
-                    model: HS110
                     power_sensor_id: sensor.kitchen_downlights_current_consumption
                     energy_sensor_id: sensor.kitchen_downlights_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Laundry Lights
                 entities:
                   - entity_id: light.laundry_main_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Pantry Lights
                 entities:
                   - entity_id: light.pantry_main_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Office Lights
                 entities:
                   - entity_id: light.office_main_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Bathroom Lights
                 entities:
                   - entity_id: light.bathroom_main_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Ensuite Lights
                 entities:
                   - entity_id: light.ensuite_main_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Wardrobe Lights
                 entities:
                   - entity_id: light.wardrobe_main_bulb_1
-              ########################################################################
+              #########################################################################
               - create_group: Deck Lights
                 entities:
+                  - entity_id: binary_sensor.template_deck_festoons_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.deck_festoons
-                    model: KP115
-                  - entity_id: switch.deck_festoons
-                    model: KP115
                     power_sensor_id: sensor.deck_festoons_current_consumption
                     energy_sensor_id: sensor.deck_festoons_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Landing Lights
                 entities:
+                  - entity_id: binary_sensor.template_landing_festoons_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.landing_festoons
-                    model: KP115
-                  - entity_id: switch.landing_festoons
-                    model: KP115
                     power_sensor_id: sensor.landing_festoons_current_consumption
                     energy_sensor_id: sensor.landing_festoons_total_consumption
-          ############################################################################
+          #############################################################################
           - create_group: Audio Visual Devices
             entities:
-              ########################################################################
+              #########################################################################
               - create_group: Lounge TV
                 entities:
+                  - entity_id: binary_sensor.template_lounge_tv_outlet_plug
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
                   - entity_id: switch.lounge_tv_outlet
-                    model: HS110
-                  - entity_id: switch.lounge_tv_outlet
-                    model: HS110
                     power_sensor_id: sensor.lounge_tv_outlet_current_consumption
                     energy_sensor_id: sensor.lounge_tv_outlet_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Ada Audio Visual Devices
                 entities:
                   - entity_id: media_player.ada_home
                     name: Ada Home
-              ########################################################################
+              #########################################################################
               - create_group: Edwin Audio Visual Devices
                 entities:
                   - entity_id: media_player.edwin_home
                     name: Edwin Home
-              ########################################################################
+              #########################################################################
               - create_group: Parents Audio Visual Devices
                 entities:
                   - entity_id: media_player.parents_home
                     model: Nest Hub 2gen
-              ########################################################################
+              #########################################################################
               - create_group: Kitchen Audio Visual Devices
                 entities:
                   - entity_id: media_player.kitchen_home
                     model: Nest Hub 2gen
-              ########################################################################
+              #########################################################################
               - create_group: Office Audio Visual Devices
                 entities:
                   - entity_id: media_player.office_home
                     name: Office Home
-              ########################################################################
+              #########################################################################
               - create_group: Lounge Audio Visual Devices
                 entities:
                   - entity_id: media_player.lounge_home
                     name: Lounge Home
-          ############################################################################
+          #############################################################################
           - create_group: Power Plugs
             entities:
-              ########################################################################
+              #########################################################################
               - create_group: Study Outlet
                 entities:
+                  - entity_id: binary_sensor.template_study_outlet_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.study_outlet
-                    model: KP115
-                  - entity_id: switch.study_outlet
-                    model: KP115
                     power_sensor_id: sensor.study_outlet_current_consumption
                     energy_sensor_id: sensor.study_outlet_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Office Outlet
                 entities:
+                  - entity_id: binary_sensor.template_office_outlet_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.office_outlet
-                    model: KP115
-                  - entity_id: switch.office_outlet
-                    model: KP115
                     power_sensor_id: sensor.office_outlet_current_consumption
                     energy_sensor_id: sensor.office_outlet_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Study Battery Charger
                 entities:
+                  - entity_id: binary_sensor.template_study_battery_charger_plug_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.study_battery_charger
-                    model: KP115
-                  - entity_id: switch.study_battery_charger
-                    model: KP115
                     power_sensor_id: sensor.study_battery_charger_current_consumption
                     energy_sensor_id: sensor.study_battery_charger_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Laundry Vacuum Charger
                 entities:
+                  - entity_id: binary_sensor.template_laundry_vacuum_charger_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.laundry_vacuum_charger
-                    model: KP115
-                  - entity_id: switch.laundry_vacuum_charger
-                    model: KP115
                     power_sensor_id: sensor.laundry_vacuum_charger_current_consumption
                     energy_sensor_id: sensor.laundry_vacuum_charger_total_consumption
-          ############################################################################
+          #############################################################################
           - create_group: Whitegoods Continuous
             entities:
-              ########################################################################
+              #########################################################################
               - create_group: Kitchen Fridge
                 entities:
+                  - entity_id: binary_sensor.template_kitchen_fridge_plug
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
                   - entity_id: switch.kitchen_fridge
-                    model: HS110
-                  - entity_id: switch.kitchen_fridge
-                    model: HS110
                     power_sensor_id: sensor.kitchen_fridge_current_consumption
                     energy_sensor_id: sensor.kitchen_fridge_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Deck Freezer
                 entities:
+                  - entity_id: binary_sensor.template_deck_freezer_plug
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
                   - entity_id: switch.deck_freezer
-                    model: HS110
-                  - entity_id: switch.deck_freezer
-                    model: HS110
                     power_sensor_id: sensor.deck_freezer_current_consumption
                     energy_sensor_id: sensor.deck_freezer_total_consumption
-          ############################################################################
+          #############################################################################
           - create_group: Servers & Network
             entities:
-              ########################################################################
+              #########################################################################
               - create_group: Server Rack
                 entities:
+                  - entity_id: binary_sensor.template_rack_outlet_plug
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
                   - entity_id: switch.rack_outlet
-                    model: HS110
-                  - entity_id: switch.rack_outlet
-                    model: HS110
                     power_sensor_id: sensor.rack_outlet_current_consumption
                     energy_sensor_id: sensor.rack_outlet_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Network Switch
                 entities:
+                  - entity_id: binary_sensor.template_roof_network_switch_plug
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
                   - entity_id: switch.roof_network_switch
-                    model: HS110
-                  - entity_id: switch.roof_network_switch
-                    model: HS110
                     power_sensor_id: sensor.roof_network_switch_current_consumption
                     energy_sensor_id: sensor.roof_network_switch_total_consumption
-      ################################################################################
+      #################################################################################
       - create_group: Home Peak
         entities:
-          ############################################################################
+          #############################################################################
           - create_group: Heating & Cooling
             entities:
-              ########################################################################
+              #########################################################################
               - create_group: Bathroom Towel Rails
                 entities:
+                  - entity_id: binary_sensor.template_bathroom_rails_plug
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
                   - entity_id: switch.bathroom_rails
-                    model: HS110
-                  - entity_id: switch.bathroom_rails
-                    model: HS110
                     power_sensor_id: sensor.bathroom_rails_current_consumption
                     energy_sensor_id: sensor.bathroom_rails_total_consumption
-          ############################################################################
+          #############################################################################
           - create_group: Whitegoods Discretionary
             entities:
-              ########################################################################
+              #########################################################################
               - create_group: Kitchen Dish Washer
                 entities:
+                  - entity_id: binary_sensor.template_kitchen_dish_washer_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.kitchen_dish_washer
-                    model: KP115
-                  - entity_id: switch.kitchen_dish_washer
-                    model: KP115
                     power_sensor_id: sensor.kitchen_dish_washer_current_consumption
                     energy_sensor_id: sensor.kitchen_dish_washer_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Laundry Clothes Dryer
                 entities:
+                  - entity_id: binary_sensor.template_laundry_clothes_dryer_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.laundry_clothes_dryer
-                    model: KP115
-                  - entity_id: switch.laundry_clothes_dryer
-                    model: KP115
                     power_sensor_id: sensor.laundry_clothes_dryer_current_consumption
                     energy_sensor_id: sensor.laundry_clothes_dryer_total_consumption
-              ########################################################################
+              #########################################################################
               - create_group: Laundry Washing Machine
                 entities:
+                  - entity_id: binary_sensor.template_laundry_washing_machine_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.laundry_washing_machine
-                    model: KP115
-                  - entity_id: switch.laundry_washing_machine
-                    model: KP115
                     power_sensor_id: sensor.laundry_washing_machine_current_consumption
                     energy_sensor_id: sensor.laundry_washing_machine_total_consumption
-  ####################################################################################
+  #####################################################################################
