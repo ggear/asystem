@@ -94,6 +94,18 @@ template:
 sensor:
   #####################################################################################
   - platform: powercalc
+    create_group: Internet Modem
+    entities:
+      - entity_id: binary_sensor.template_rack_modem_plug
+        standby_power: 0.5
+        unavailable_power: 0
+        fixed:
+          power: 0.9
+      - entity_id: switch.rack_modem
+        power_sensor_id: sensor.rack_modem_current_consumption
+        energy_sensor_id: sensor.rack_modem_total_consumption
+  #####################################################################################
+  - platform: powercalc
     create_group: Home
     entities:
       #################################################################################

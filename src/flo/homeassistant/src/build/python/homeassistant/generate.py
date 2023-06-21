@@ -1230,16 +1230,43 @@ template:
       #################################################################################
 sensor:
             """.strip() + "\n")
-
-
-
-
-            # TODO: Implement metadata_electricity_ungrouped_dicts
-            # TODO: Implement metadata_electricity_single_group_dicts
-
-
-
-
+            for dict in metadata_electricity_ungrouped_dicts:
+                dict_config = \
+                    ("\n        " + dict["powercalc_config"].replace("\n", "\n        ")) \
+                        if "powercalc_config" in dict else ""
+                metadata_electricity_file.write("  " + """
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: {}.{}{}
+                """.format(
+                    dict["entity_namespace"],
+                    dict["unique_id"],
+                    dict_config,
+                ).strip() + "\n")
+            for dict_group1 in metadata_electricity_single_group_dicts:
+                dict_config = \
+                    ("\n        " + dict["powercalc_config"].replace("\n", "\n        ")) \
+                        if "powercalc_config" in dict else ""
+                metadata_electricity_file.write("  " + """
+  #####################################################################################
+  - platform: powercalc
+    create_group: {}
+    entities:
+                """.format(
+                    dict_group1,
+                ).strip() + "\n")
+                for dict in metadata_electricity_single_group_dicts[dict_group1]:
+                    dict_config = \
+                        ("\n        " + dict["powercalc_config"].replace("\n", "\n        ")) \
+                            if "powercalc_config" in dict else ""
+                    metadata_electricity_file.write("      " + """
+      - entity_id: {}.{}{}
+                    """.format(
+                        dict["entity_namespace"],
+                        dict["unique_id"],
+                        dict_config,
+                    ).strip() + "\n")
             for dict_group1 in metadata_electricity_dicts:
                 metadata_electricity_file.write("  " + """
   #####################################################################################
