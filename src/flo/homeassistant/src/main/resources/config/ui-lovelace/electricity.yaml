@@ -37,11 +37,11 @@
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.fans_power
-      name: All Fans
-      icon: mdi:home-lightning-bolt
     - entity: sensor.lights_power
       name: All Lights
+      icon: mdi:home-lightning-bolt
+    - entity: sensor.fans_power
+      name: All Fans
       icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_coffee_machine_power
       name: Coffee Machine
@@ -121,11 +121,11 @@
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.fans_energy_daily
-      name: All Fans
-      icon: mdi:battery-charging
     - entity: sensor.lights_energy_daily
       name: All Lights
+      icon: mdi:battery-charging
+    - entity: sensor.fans_energy_daily
+      name: All Fans
       icon: mdi:battery-charging
     - entity: sensor.kitchen_coffee_machine_energy_daily
       name: Coffee Machine
