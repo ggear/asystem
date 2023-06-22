@@ -422,6 +422,10 @@ sensor.deck_freezer_power:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
+sensor.kitchen_coffee_machine_power:
+  friendly_name: 'Coffee Machine'
+  icon: 'mdi:home-lightning-bolt'
+  unit_of_measurement: 'W'
 sensor.lounge_tv_power:
   friendly_name: 'Lounge TV'
   icon: 'mdi:home-lightning-bolt'
@@ -496,6 +500,10 @@ sensor.kitchen_fridge_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.deck_freezer_energy_daily:
   friendly_name: 'Deck Freezer'
+  icon: 'mdi:battery-charging'
+  unit_of_measurement: 'kWh'
+sensor.kitchen_coffee_machine_energy_daily:
+  friendly_name: 'Coffee Machine'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.lounge_tv_energy_daily:

@@ -63,6 +63,10 @@ template:
         state: >-
           {{ states('switch.laundry_washing_machine') }}
       #################################################################################
+      - unique_id: kitchen_coffee_machine_plug
+        state: >-
+          {{ states('switch.kitchen_coffee_machine') }}
+      #################################################################################
       - unique_id: kitchen_fridge_plug
         state: >-
           {{ states('switch.kitchen_fridge') }}
@@ -491,6 +495,11 @@ sensor:
               #########################################################################
               - create_group: Kitchen Coffee Machine
                 entities:
+                  - entity_id: binary_sensor.template_kitchen_coffee_machine_plug
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
                   - entity_id: switch.kitchen_coffee_machine
                     power_sensor_id: sensor.kitchen_coffee_machine_current_consumption
                     energy_sensor_id: sensor.kitchen_coffee_machine_total_consumption

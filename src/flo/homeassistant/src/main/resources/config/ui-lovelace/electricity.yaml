@@ -64,6 +64,9 @@
     - entity: sensor.deck_freezer_power
       name: Deck Freezer
       icon: mdi:home-lightning-bolt
+    - entity: sensor.kitchen_coffee_machine_power
+      name: Coffee Machine
+      icon: mdi:home-lightning-bolt
     - entity: sensor.lounge_tv_power
       name: Lounge TV
       icon: mdi:home-lightning-bolt
@@ -144,6 +147,9 @@
       icon: mdi:battery-charging
     - entity: sensor.deck_freezer_energy_daily
       name: Deck Freezer
+      icon: mdi:battery-charging
+    - entity: sensor.kitchen_coffee_machine_energy_daily
+      name: Coffee Machine
       icon: mdi:battery-charging
     - entity: sensor.lounge_tv_energy_daily
       name: Lounge TV
