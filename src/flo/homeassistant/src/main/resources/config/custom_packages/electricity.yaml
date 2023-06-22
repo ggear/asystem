@@ -488,4 +488,10 @@ sensor:
                   - entity_id: switch.laundry_washing_machine
                     power_sensor_id: sensor.laundry_washing_machine_current_consumption
                     energy_sensor_id: sensor.laundry_washing_machine_total_consumption
+              #########################################################################
+              - create_group: Kitchen Coffee Machine
+                entities:
+                  - entity_id: switch.kitchen_coffee_machine
+                    power_sensor_id: sensor.kitchen_coffee_machine_current_consumption
+                    energy_sensor_id: sensor.kitchen_coffee_machine_total_consumption
   #####################################################################################

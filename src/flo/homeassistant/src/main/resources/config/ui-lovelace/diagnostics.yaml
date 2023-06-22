@@ -94,6 +94,9 @@
     - entity: switch.laundry_washing_machine
       name: Washing Machine
       icon: mdi:washing-machine
+    - entity: switch.kitchen_coffee_machine
+      name: Coffee Machine
+      icon: mdi:coffee-maker
     - entity: switch.kitchen_fridge
       name: Kitchen Fridge
       icon: mdi:fridge-outline
