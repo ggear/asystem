@@ -67,9 +67,6 @@
     - entity: sensor.deck_freezer_power
       name: Deck Freezer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.lounge_tv_power
-      name: Lounge TV
-      icon: mdi:home-lightning-bolt
     - entity: sensor.bathroom_towel_rails_power
       name: Towel Rails
       icon: mdi:home-lightning-bolt
@@ -78,6 +75,9 @@
       icon: mdi:home-lightning-bolt
     - entity: sensor.office_outlet_power
       name: Office Outlet
+      icon: mdi:home-lightning-bolt
+    - entity: sensor.audio_visual_devices_power
+      name: Audio/Visual Devices
       icon: mdi:home-lightning-bolt
     - entity: sensor.servers_network_power
       name: Servers & Network
@@ -151,9 +151,6 @@
     - entity: sensor.deck_freezer_energy_daily
       name: Deck Freezer
       icon: mdi:battery-charging
-    - entity: sensor.lounge_tv_energy_daily
-      name: Lounge TV
-      icon: mdi:battery-charging
     - entity: sensor.bathroom_towel_rails_energy_daily
       name: Towel Rails
       icon: mdi:battery-charging
@@ -162,6 +159,9 @@
       icon: mdi:battery-charging
     - entity: sensor.office_outlet_energy_daily
       name: Office Outlet
+      icon: mdi:battery-charging
+    - entity: sensor.audio_visual_devices_energy_daily
+      name: Audio/Visual Devices
       icon: mdi:battery-charging
     - entity: sensor.servers_network_energy_daily
       name: Servers & Network

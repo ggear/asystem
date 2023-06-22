@@ -43,6 +43,10 @@ template:
         state: >-
           {{ states('switch.lounge_tv_outlet') }}
       #################################################################################
+      - unique_id: lounge_sub_plug
+        state: >-
+          {{ states('switch.lounge_sub') }}
+      #################################################################################
       - unique_id: study_outlet_plug
         state: >-
           {{ states('switch.study_outlet') }}
@@ -312,6 +316,17 @@ sensor:
                   - entity_id: switch.lounge_tv_outlet
                     power_sensor_id: sensor.lounge_tv_outlet_current_consumption
                     energy_sensor_id: sensor.lounge_tv_outlet_total_consumption
+              #########################################################################
+              - create_group: Lounge Sub
+                entities:
+                  - entity_id: binary_sensor.template_lounge_sub_plug
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
+                  - entity_id: switch.lounge_sub
+                    power_sensor_id: sensor.lounge_sub_current_consumption
+                    energy_sensor_id: sensor.lounge_sub_total_consumption
               #########################################################################
               - create_group: Ada Audio Visual Devices
                 entities:
