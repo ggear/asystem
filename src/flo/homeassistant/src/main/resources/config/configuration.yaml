@@ -34,7 +34,7 @@ recorder:
   commit_interval: 120
   purge_keep_days: 1
   auto_purge: true
-# TODO: Disabled all sensors in favour of redirecting to Grafana?
+# TODO: Disabled all sensors in favour of redirecting to Grafana for graphing?
 #  exclude:
 #    entity_globs:
 #      - sensor.*
