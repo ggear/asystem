@@ -327,6 +327,8 @@ def _deploy(context):
     for module in _get_modules(context, "deploy.sh"):
         _print_header(module, "deploy")
         _run_local(context, "deploy.sh", module)
+        _run_local(context, "echo 'Tail logs command: while true; do docker logs -f {} 2>&1|grep -v 'homeassistant.loader'; done'"
+                   .format(_get_service(context, module)), module)
         _print_footer(module, "deploy")
 
 
