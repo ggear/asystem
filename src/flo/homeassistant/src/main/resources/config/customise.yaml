@@ -443,7 +443,7 @@ sensor.office_outlet_power:
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.servers_network_power:
-  friendly_name: 'Server & Network'
+  friendly_name: 'Servers & Network'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.rack_modem_power:
@@ -527,7 +527,7 @@ sensor.roof_network_switch_energy_daily:
 sensor.rack_modem_energy_daily:
   friendly_name: 'Internet Modem'
 sensor.servers_network_energy_daily:
-  friendly_name: 'Server & Network'
+  friendly_name: 'Servers & Network'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.rack_outlet_energy_daily:

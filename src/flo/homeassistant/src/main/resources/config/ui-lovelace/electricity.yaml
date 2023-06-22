@@ -80,7 +80,7 @@
       name: Office Outlet
       icon: mdi:home-lightning-bolt
     - entity: sensor.servers_network_power
-      name: Server & Network
+      name: Servers & Network
       icon: mdi:home-lightning-bolt
 ################################################################################
 - type: custom:layout-break
@@ -164,7 +164,7 @@
       name: Office Outlet
       icon: mdi:battery-charging
     - entity: sensor.servers_network_energy_daily
-      name: Server & Network
+      name: Servers & Network
       icon: mdi:battery-charging
 ################################################################################
 - type: custom:layout-break
