@@ -102,6 +102,11 @@ template:
 sensor:
   #####################################################################################
   - platform: powercalc
+    entities:
+      - entity_id: media_player.lounge_arc
+        name: Lounge Arc
+  #####################################################################################
+  - platform: powercalc
     create_group: Internet Modem
     entities:
       - entity_id: binary_sensor.template_rack_modem_plug
