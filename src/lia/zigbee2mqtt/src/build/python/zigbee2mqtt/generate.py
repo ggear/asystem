@@ -34,6 +34,7 @@ if __name__ == "__main__":
     metadata_config_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/mqtt_config.sh"))
     with open(metadata_config_path, 'w') as metadata_config_file:
         metadata_config_file.write("""
+#!/bin/sh
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################

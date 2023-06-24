@@ -215,25 +215,6 @@ tplink:
             ).strip() + "\n")
         metadata_control_file.write("""
 #######################################################################################
-automation:
-  - alias: "Electricity: Turn off Smart Plug LED"
-    mode: single
-    trigger:
-      - platform: time
-        at: "02:00:00"
-    condition: [ ]
-    action:
-      - service: homeassistant.turn_off
-        entity_id:
-        """.strip() + "\n")
-        for metadata_control_dict in metadata_control_dicts:
-            metadata_control_file.write("          " + """
-          - switch.{}_led
-                """.format(
-                metadata_control_dict["unique_id"]
-            ).strip() + "\n")
-        metadata_control_file.write("""
-#######################################################################################
             """.strip() + "\n")
 
         # Build HAAS integration YAML
