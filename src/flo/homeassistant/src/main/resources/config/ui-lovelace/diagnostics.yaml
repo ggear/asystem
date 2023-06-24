@@ -112,6 +112,15 @@
     - entity: switch.laundry_vacuum_charger
       name: Vacuum Charger
       icon: mdi:battery-charging-30
+    - entity: switch.rack_outlet
+      name: Server Rack
+      icon: mdi:server
+    - entity: switch.roof_network_switch
+      name: Network Switch
+      icon: mdi:server-network
+    - entity: switch.rack_modem
+      name: Internet Modem
+      icon: mdi:router-wireless
     - entity: switch.deck_fans_outlet
       name: Deck Fans Outlet
       icon: mdi:power-plug-outline
@@ -124,15 +133,9 @@
     - entity: switch.rack_fans
       name: Rack Fans
       icon: mdi:server-remove
-    - entity: switch.rack_outlet
-      name: Server Rack
-      icon: mdi:server
-    - entity: switch.roof_network_switch
-      name: Network Switch
-      icon: mdi:server-network
-    - entity: switch.rack_modem
-      name: Internet Modem
-      icon: mdi:router-wireless
+    - entity: switch.power_meter
+      name: Power Meter
+      icon: mdi:power-plug-battery-outline
 ################################################################################
 - type: custom:layout-break
 ################################################################################

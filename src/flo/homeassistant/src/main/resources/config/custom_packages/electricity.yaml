@@ -119,6 +119,13 @@ sensor:
         energy_sensor_id: sensor.rack_modem_total_consumption
   #####################################################################################
   - platform: powercalc
+    create_group: Power Meter
+    entities:
+      - entity_id: switch.power_meter
+        power_sensor_id: sensor.power_meter_current_consumption
+        energy_sensor_id: sensor.power_meter_total_consumption
+  #####################################################################################
+  - platform: powercalc
     create_group: Home
     entities:
       #################################################################################

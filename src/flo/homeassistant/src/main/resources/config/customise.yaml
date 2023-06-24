@@ -633,6 +633,15 @@ switch.study_battery_charger:
 switch.laundry_vacuum_charger:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging-30'
+switch.rack_outlet:
+  friendly_name: 'Server Rack'
+  icon: 'mdi:server'
+switch.roof_network_switch:
+  friendly_name: 'Network Switch'
+  icon: 'mdi:server-network'
+switch.rack_modem:
+  friendly_name: 'Internet Modem'
+  icon: 'mdi:router-wireless'
 switch.deck_fans_outlet:
   friendly_name: 'Deck Fans Outlet'
   icon: 'mdi:power-plug-outline'
@@ -645,15 +654,9 @@ switch.edwin_wardrobe_outlet:
 switch.rack_fans:
   friendly_name: 'Rack Fans'
   icon: 'mdi:server-remove'
-switch.rack_outlet:
-  friendly_name: 'Server Rack'
-  icon: 'mdi:server'
-switch.roof_network_switch:
-  friendly_name: 'Network Switch'
-  icon: 'mdi:server-network'
-switch.rack_modem:
-  friendly_name: 'Internet Modem'
-  icon: 'mdi:router-wireless'
+switch.power_meter:
+  friendly_name: 'Power Meter'
+  icon: 'mdi:power-plug-battery-outline'
 sensor.garden_repeater:
   friendly_name: 'Garden Repeater'
 sensor.landing_repeater:
