@@ -106,7 +106,7 @@ if __name__ == "__main__":
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_via_device"] != "_") &
         (metadata_df["device_via_device"] != "Action") &
-        (metadata_df["device_via_device"] != "Shadow") &
+        (metadata_df["device_via_device"] != "Template") &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["friendly_name"].str.len() > 0) &
@@ -1135,7 +1135,7 @@ automation:
         metadata_electricity_df = metadata_df[
             (metadata_df["index"] > 0) &
             (metadata_df["entity_status"] == "Enabled") &
-            (metadata_df["device_via_device"] == "Shadow") &
+            (metadata_df["device_via_device"] == "Template") &
             (metadata_df["entity_namespace"].str.len() > 0) &
             (metadata_df["unique_id"].str.len() > 0) &
             (metadata_df["powercalc_enable"] == "True")
