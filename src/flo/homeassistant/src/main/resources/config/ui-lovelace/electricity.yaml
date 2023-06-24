@@ -37,6 +37,9 @@
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.power_meter_power
+      name: Power Meter
+      icon: mdi:home-lightning-bolt
     - entity: sensor.lights_power
       name: All Lights
       icon: mdi:home-lightning-bolt
@@ -121,6 +124,9 @@
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.power_meter_energy_daily
+      name: Power Meter
+      icon: mdi:battery-charging
     - entity: sensor.lights_energy_daily
       name: All Lights
       icon: mdi:battery-charging

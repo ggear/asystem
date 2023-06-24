@@ -76,6 +76,9 @@
   title: Power Plugs
   show_header_toggle: false
   entities:
+    - entity: switch.power_meter
+      name: Power Meter
+      icon: mdi:power-plug-battery-outline
     - entity: switch.lounge_tv_outlet
       name: Lounge TV
       icon: mdi:television
@@ -112,6 +115,12 @@
     - entity: switch.laundry_vacuum_charger
       name: Vacuum Charger
       icon: mdi:battery-charging-30
+    - entity: switch.macbookflo_outlet
+      name: MacBook Flo
+      icon: mdi:server
+    - entity: switch.macminimeg_outlet
+      name: Mac Mini Meg
+      icon: mdi:server
     - entity: switch.rack_outlet
       name: Server Rack
       icon: mdi:server
@@ -133,9 +142,6 @@
     - entity: switch.rack_fans
       name: Rack Fans
       icon: mdi:server-remove
-    - entity: switch.power_meter
-      name: Power Meter
-      icon: mdi:power-plug-battery-outline
 ################################################################################
 - type: custom:layout-break
 ################################################################################
