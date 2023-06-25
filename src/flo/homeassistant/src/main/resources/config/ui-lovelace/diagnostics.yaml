@@ -115,11 +115,11 @@
     - entity: switch.laundry_vacuum_charger
       name: Vacuum Charger
       icon: mdi:battery-charging-30
-    - entity: switch.macbookflo_outlet
-      name: MacBook Flo
+    - entity: switch.server_flo_outlet
+      name: Server Flo
       icon: mdi:server
-    - entity: switch.macminimeg_outlet
-      name: Mac Mini Meg
+    - entity: switch.server_meg_outlet
+      name: Server Meg
       icon: mdi:server
     - entity: switch.rack_outlet
       name: Server Rack

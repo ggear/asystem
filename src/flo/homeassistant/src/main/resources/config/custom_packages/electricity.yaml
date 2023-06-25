@@ -87,13 +87,13 @@ template:
         state: >-
           {{ states('switch.laundry_vacuum_charger') }}
       #################################################################################
-      - unique_id: macbookflo_outlet_plug
+      - unique_id: server_flo_outlet_plug
         state: >-
-          {{ states('switch.macbookflo_outlet') }}
+          {{ states('switch.server_flo_outlet') }}
       #################################################################################
-      - unique_id: macminimeg_outlet_plug
+      - unique_id: server_meg_outlet_plug
         state: >-
-          {{ states('switch.macminimeg_outlet') }}
+          {{ states('switch.server_meg_outlet') }}
       #################################################################################
       - unique_id: rack_outlet_plug
         state: >-
@@ -122,28 +122,28 @@ sensor:
         energy_sensor_id: sensor.power_meter_total_consumption
   #####################################################################################
   - platform: powercalc
-    create_group: MacBook Flo
+    create_group: Server Flo
     entities:
-      - entity_id: binary_sensor.template_macbookflo_outlet_plug
+      - entity_id: binary_sensor.template_server_flo_outlet_plug
         standby_power: 0.5
         unavailable_power: 0
         fixed:
           power: 0.9
-      - entity_id: switch.macbookflo_outlet
-        power_sensor_id: sensor.macbookflo_outlet_current_consumption
-        energy_sensor_id: sensor.macbookflo_outlet_total_consumption
+      - entity_id: switch.server_flo_outlet
+        power_sensor_id: sensor.server_flo_outlet_current_consumption
+        energy_sensor_id: sensor.server_flo_outlet_total_consumption
   #####################################################################################
   - platform: powercalc
-    create_group: Mac Mini Meg
+    create_group: Server Meg
     entities:
-      - entity_id: binary_sensor.template_macminimeg_outlet_plug
+      - entity_id: binary_sensor.template_server_meg_outlet_plug
         standby_power: 0.5
         unavailable_power: 0
         fixed:
           power: 0.9
-      - entity_id: switch.macminimeg_outlet
-        power_sensor_id: sensor.macminimeg_outlet_current_consumption
-        energy_sensor_id: sensor.macminimeg_outlet_total_consumption
+      - entity_id: switch.server_meg_outlet
+        power_sensor_id: sensor.server_meg_outlet_current_consumption
+        energy_sensor_id: sensor.server_meg_outlet_total_consumption
   #####################################################################################
   - platform: powercalc
     create_group: Internet Modem

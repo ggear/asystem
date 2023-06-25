@@ -644,11 +644,11 @@ switch.study_battery_charger:
 switch.laundry_vacuum_charger:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging-30'
-switch.macbookflo_outlet:
-  friendly_name: 'MacBook Flo'
+switch.server_flo_outlet:
+  friendly_name: 'Server Flo'
   icon: 'mdi:server'
-switch.macminimeg_outlet:
-  friendly_name: 'Mac Mini Meg'
+switch.server_meg_outlet:
+  friendly_name: 'Server Meg'
   icon: 'mdi:server'
 switch.rack_outlet:
   friendly_name: 'Server Rack'
