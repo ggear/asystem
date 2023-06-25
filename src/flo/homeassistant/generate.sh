@@ -69,12 +69,6 @@ rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
 
-VERSION=ggear-powercalc
-pull_repo $(pwd) homeassistant powercalc-component ggear/powercalc ${VERSION} ${1}
-rm -rf src/main/resources/config/custom_components/powercalc
-mkdir -p src/main/resources/config/custom_components &&
-  cp -rvf ../../../.deps/homeassistant/powercalc-component/custom_components/powercalc src/main/resources/config/custom_components
-
 VERSION=1.14.0
 pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/adaptive_lighting
@@ -86,6 +80,12 @@ pull_repo $(pwd) homeassistant dyson-component shenxn/ha-dyson ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/dyson
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/dyson-component/custom_components/dyson_local src/main/resources/config/custom_components/dyson-component
+
+VERSION=ggear-powercalc
+pull_repo $(pwd) homeassistant powercalc-component ggear/powercalc ${VERSION} ${1}
+rm -rf src/main/resources/config/custom_components/powercalc
+mkdir -p src/main/resources/config/custom_components &&
+  cp -rvf ../../../.deps/homeassistant/powercalc-component/custom_components/powercalc src/main/resources/config/custom_components
 
 VERSION=ggear-influxdb
 pull_repo $(pwd) homeassistant influxdb-component ggear/homeassistant-core ${VERSION} ${1}
