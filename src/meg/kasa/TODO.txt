@@ -1,2 +1,1 @@
-# Generate script using this (https://github.com/python-kasa/python-kasa) to query all plugs, show examples of changing alias
 # Remove relay to reduce power usage (https://www.briandorey.com/post/kasa-smart-plug-by-tp-link-power-consumption-mod)

@@ -160,7 +160,12 @@ def _pull(context):
     _run_local(context, "git remote set-url origin https://github.com/$(git remote get-url origin | "
                         "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
     _run_local(context, "git pull --all")
-    _run_local(context, "echo 'Check versions with: fab pull 2> /dev/null| grep \"tag:\"'")
+
+
+    # TODO: Update to easily show where upgrades are necessary
+    # TODO: wget -q -O - "https://hub.docker.com/v2/namespaces/homeassistant/repositories/home-assistant/tags?page_size=2"
+    _run_local(context, "echo 'fab pull 2> /dev/null| grep \"update from\"'")
+
     _print_footer("asystem", "pull main")
     _generate(context, is_pull=True)
 
