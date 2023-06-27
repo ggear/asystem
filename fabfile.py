@@ -161,7 +161,6 @@ def _pull(context):
                         "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
     _run_local(context, "git pull --all")
 
-
     # TODO: Update to easily show where upgrades are necessary
     # TODO: wget -q -O - "https://hub.docker.com/v2/namespaces/homeassistant/repositories/home-assistant/tags?page_size=2"
     _run_local(context, "echo 'fab pull 2> /dev/null| grep \"update from\"'")

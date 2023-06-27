@@ -19,91 +19,105 @@ template:
   #####################################################################################
   - binary_sensor:
       #################################################################################
-      - unique_id: kitchen_fan_plug
+      - unique_id: kitchen_fan_proxy
         state: >-
           {{ states('switch.kitchen_fan') }}
       #################################################################################
-      - unique_id: kitchen_downlights_plug
+      - unique_id: kitchen_downlights_proxy
         state: >-
           {{ states('switch.kitchen_downlights') }}
       #################################################################################
-      - unique_id: deck_festoons_plug
+      - unique_id: deck_festoons_proxy
         state: >-
           {{ states('switch.deck_festoons') }}
       #################################################################################
-      - unique_id: landing_festoons_plug
+      - unique_id: landing_festoons_proxy
         state: >-
           {{ states('switch.landing_festoons') }}
       #################################################################################
-      - unique_id: bathroom_rails_plug
+      - unique_id: bathroom_rails_proxy
         state: >-
           {{ states('switch.bathroom_rails') }}
       #################################################################################
-      - unique_id: lounge_tv_outlet_plug
+      - unique_id: lounge_air_purifier_proxy
+        state: >-
+          {{ states('fan.lounge_air_purifier') }}
+        attributes:
+          fan_speed: >-
+            {{ states('sensor.lounge_air_purifier_fan_speed') | int(0) }}
+      #################################################################################
+      - unique_id: dining_air_purifier_proxy
+        state: >-
+          {{ states('fan.dining_air_purifier') }}
+        attributes:
+          fan_speed: >-
+            {{ states('sensor.dining_air_purifier_fan_speed') | int(0) }}
+      #################################################################################
+      - unique_id: lounge_tv_outlet_proxy
         state: >-
           {{ states('switch.lounge_tv_outlet') }}
       #################################################################################
-      - unique_id: lounge_sub_plug
+      - unique_id: lounge_sub_proxy
         state: >-
           {{ states('switch.lounge_sub') }}
       #################################################################################
-      - unique_id: study_outlet_plug
+      - unique_id: study_outlet_proxy
         state: >-
           {{ states('switch.study_outlet') }}
       #################################################################################
-      - unique_id: office_outlet_plug
+      - unique_id: office_outlet_proxy
         state: >-
           {{ states('switch.office_outlet') }}
       #################################################################################
-      - unique_id: kitchen_dish_washer_plug
+      - unique_id: kitchen_dish_washer_proxy
         state: >-
           {{ states('switch.kitchen_dish_washer') }}
       #################################################################################
-      - unique_id: laundry_clothes_dryer_plug
+      - unique_id: laundry_clothes_dryer_proxy
         state: >-
           {{ states('switch.laundry_clothes_dryer') }}
       #################################################################################
-      - unique_id: laundry_washing_machine_plug
+      - unique_id: laundry_washing_machine_proxy
         state: >-
           {{ states('switch.laundry_washing_machine') }}
       #################################################################################
-      - unique_id: kitchen_coffee_machine_plug
+      - unique_id: kitchen_coffee_machine_proxy
         state: >-
           {{ states('switch.kitchen_coffee_machine') }}
       #################################################################################
-      - unique_id: kitchen_fridge_plug
+      - unique_id: kitchen_fridge_proxy
         state: >-
           {{ states('switch.kitchen_fridge') }}
       #################################################################################
-      - unique_id: deck_freezer_plug
+      - unique_id: deck_freezer_proxy
         state: >-
           {{ states('switch.deck_freezer') }}
       #################################################################################
-      - unique_id: study_battery_charger_plug_plug
+      - unique_id: study_battery_charger_proxy_proxy
         state: >-
           {{ states('switch.study_battery_charger') }}
       #################################################################################
-      - unique_id: laundry_vacuum_charger_plug
+      - unique_id: laundry_vacuum_charger_proxy
         state: >-
           {{ states('switch.laundry_vacuum_charger') }}
       #################################################################################
-      - unique_id: server_flo_outlet_plug
+      - unique_id: server_flo_outlet_proxy
         state: >-
           {{ states('switch.server_flo_outlet') }}
       #################################################################################
-      - unique_id: server_meg_outlet_plug
+      - unique_id: server_meg_outlet_proxy
         state: >-
           {{ states('switch.server_meg_outlet') }}
       #################################################################################
-      - unique_id: rack_outlet_plug
+      - unique_id: rack_outlet_proxy
         state: >-
           {{ states('switch.rack_outlet') }}
       #################################################################################
-      - unique_id: roof_network_switch_plug
+      - unique_id: roof_network_switch_proxy
         state: >-
           {{ states('switch.roof_network_switch') }}
       #################################################################################
-      - unique_id: rack_modem_plug
+      - unique_id: rack_modem_proxy
         state: >-
           {{ states('switch.rack_modem') }}
       #################################################################################
@@ -124,7 +138,7 @@ sensor:
   - platform: powercalc
     create_group: Server Flo
     entities:
-      - entity_id: binary_sensor.template_server_flo_outlet_plug
+      - entity_id: binary_sensor.template_server_flo_outlet_proxy
         standby_power: 0.5
         unavailable_power: 0
         fixed:
@@ -136,7 +150,7 @@ sensor:
   - platform: powercalc
     create_group: Server Meg
     entities:
-      - entity_id: binary_sensor.template_server_meg_outlet_plug
+      - entity_id: binary_sensor.template_server_meg_outlet_proxy
         standby_power: 0.5
         unavailable_power: 0
         fixed:
@@ -148,7 +162,7 @@ sensor:
   - platform: powercalc
     create_group: Internet Modem
     entities:
-      - entity_id: binary_sensor.template_rack_modem_plug
+      - entity_id: binary_sensor.template_rack_modem_proxy
         standby_power: 0.5
         unavailable_power: 0
         fixed:
@@ -193,7 +207,7 @@ sensor:
               #########################################################################
               - create_group: Kitchen Fans
                 entities:
-                  - entity_id: binary_sensor.template_kitchen_fan_plug
+                  - entity_id: binary_sensor.template_kitchen_fan_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
@@ -209,6 +223,17 @@ sensor:
                     linear:
                       min_power: 2.5
                       max_power: 31.1
+                  - entity_id: binary_sensor.template_lounge_air_purifier_proxy
+                    standby_power: 0.5
+                    linear:
+                      attribute: fan_speed
+                      calibrate:
+                        - 0 -> 0
+                        - 1 -> 1.7
+                        - 2 -> 3.6
+                        - 3 -> 8.1
+                        - 4 -> 16.6
+                        - 5 -> 21.9
               #########################################################################
               - create_group: Deck Fans
                 entities:
@@ -222,6 +247,20 @@ sensor:
                     linear:
                       min_power: 2.5
                       max_power: 31.1
+              #########################################################################
+              - create_group: Dining Fans
+                entities:
+                  - entity_id: binary_sensor.template_dining_air_purifier_proxy
+                    standby_power: 0.5
+                    linear:
+                      attribute: fan_speed
+                      calibrate:
+                        - 0 -> 0
+                        - 1 -> 1.7
+                        - 2 -> 3.6
+                        - 3 -> 8.1
+                        - 4 -> 16.6
+                        - 5 -> 21.9
           #############################################################################
           - create_group: Lights
             entities:
@@ -292,7 +331,7 @@ sensor:
                   - entity_id: light.kitchen_main_bulb_2
                   - entity_id: light.kitchen_main_bulb_3
                   - entity_id: light.kitchen_main_bulb_4
-                  - entity_id: binary_sensor.template_kitchen_downlights_plug
+                  - entity_id: binary_sensor.template_kitchen_downlights_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
@@ -327,7 +366,7 @@ sensor:
               #########################################################################
               - create_group: Deck Lights
                 entities:
-                  - entity_id: binary_sensor.template_deck_festoons_plug
+                  - entity_id: binary_sensor.template_deck_festoons_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
@@ -338,7 +377,7 @@ sensor:
               #########################################################################
               - create_group: Landing Lights
                 entities:
-                  - entity_id: binary_sensor.template_landing_festoons_plug
+                  - entity_id: binary_sensor.template_landing_festoons_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
@@ -352,7 +391,7 @@ sensor:
               #########################################################################
               - create_group: Lounge TV
                 entities:
-                  - entity_id: binary_sensor.template_lounge_tv_outlet_plug
+                  - entity_id: binary_sensor.template_lounge_tv_outlet_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
@@ -363,7 +402,7 @@ sensor:
               #########################################################################
               - create_group: Lounge Sub
                 entities:
-                  - entity_id: binary_sensor.template_lounge_sub_plug
+                  - entity_id: binary_sensor.template_lounge_sub_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
@@ -386,11 +425,17 @@ sensor:
                 entities:
                   - entity_id: media_player.parents_home
                     model: Nest Hub 2gen
+                  - entity_id: media_player.parents_move
+                    name: Parents Move
               #########################################################################
               - create_group: Kitchen Audio Visual Devices
                 entities:
                   - entity_id: media_player.kitchen_home
                     model: Nest Hub 2gen
+                  - entity_id: media_player.kitchen_move
+                    name: Kitchen Move
+                  - entity_id: media_player.kitchen_five
+                    name: Kitchen Five
               #########################################################################
               - create_group: Office Audio Visual Devices
                 entities:
@@ -407,7 +452,7 @@ sensor:
               #########################################################################
               - create_group: Study Outlet
                 entities:
-                  - entity_id: binary_sensor.template_study_outlet_plug
+                  - entity_id: binary_sensor.template_study_outlet_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
@@ -418,7 +463,7 @@ sensor:
               #########################################################################
               - create_group: Office Outlet
                 entities:
-                  - entity_id: binary_sensor.template_office_outlet_plug
+                  - entity_id: binary_sensor.template_office_outlet_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
@@ -429,7 +474,7 @@ sensor:
               #########################################################################
               - create_group: Study Battery Charger
                 entities:
-                  - entity_id: binary_sensor.template_study_battery_charger_plug_plug
+                  - entity_id: binary_sensor.template_study_battery_charger_proxy_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
@@ -440,7 +485,7 @@ sensor:
               #########################################################################
               - create_group: Laundry Vacuum Charger
                 entities:
-                  - entity_id: binary_sensor.template_laundry_vacuum_charger_plug
+                  - entity_id: binary_sensor.template_laundry_vacuum_charger_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
@@ -454,7 +499,7 @@ sensor:
               #########################################################################
               - create_group: Kitchen Fridge
                 entities:
-                  - entity_id: binary_sensor.template_kitchen_fridge_plug
+                  - entity_id: binary_sensor.template_kitchen_fridge_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
@@ -465,7 +510,7 @@ sensor:
               #########################################################################
               - create_group: Deck Freezer
                 entities:
-                  - entity_id: binary_sensor.template_deck_freezer_plug
+                  - entity_id: binary_sensor.template_deck_freezer_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
@@ -479,7 +524,7 @@ sensor:
               #########################################################################
               - create_group: Server Rack
                 entities:
-                  - entity_id: binary_sensor.template_rack_outlet_plug
+                  - entity_id: binary_sensor.template_rack_outlet_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
@@ -490,7 +535,7 @@ sensor:
               #########################################################################
               - create_group: Network Switch
                 entities:
-                  - entity_id: binary_sensor.template_roof_network_switch_plug
+                  - entity_id: binary_sensor.template_roof_network_switch_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
@@ -507,7 +552,7 @@ sensor:
               #########################################################################
               - create_group: Bathroom Towel Rails
                 entities:
-                  - entity_id: binary_sensor.template_bathroom_rails_plug
+                  - entity_id: binary_sensor.template_bathroom_rails_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
@@ -521,7 +566,7 @@ sensor:
               #########################################################################
               - create_group: Kitchen Dish Washer
                 entities:
-                  - entity_id: binary_sensor.template_kitchen_dish_washer_plug
+                  - entity_id: binary_sensor.template_kitchen_dish_washer_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
@@ -532,7 +577,7 @@ sensor:
               #########################################################################
               - create_group: Laundry Clothes Dryer
                 entities:
-                  - entity_id: binary_sensor.template_laundry_clothes_dryer_plug
+                  - entity_id: binary_sensor.template_laundry_clothes_dryer_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
@@ -543,7 +588,7 @@ sensor:
               #########################################################################
               - create_group: Laundry Washing Machine
                 entities:
-                  - entity_id: binary_sensor.template_laundry_washing_machine_plug
+                  - entity_id: binary_sensor.template_laundry_washing_machine_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
@@ -554,7 +599,7 @@ sensor:
               #########################################################################
               - create_group: Kitchen Coffee Machine
                 entities:
-                  - entity_id: binary_sensor.template_kitchen_coffee_machine_plug
+                  - entity_id: binary_sensor.template_kitchen_coffee_machine_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:

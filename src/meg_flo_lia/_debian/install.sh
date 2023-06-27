@@ -12,7 +12,7 @@ apt-get upgrade -y --without-new-pkgs
 apt-get install -y --allow-downgrades 'jq=1.6-2.1'
 apt-get install -y --allow-downgrades 'ntp=1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1'
 apt-get install -y --allow-downgrades 'usbutils=1:014-1'
-apt-get install -y --allow-downgrades 'dnsutils=1:9.18.12-1'
+apt-get install -y --allow-downgrades 'dnsutils=1:9.18.16-1~deb12u1'
 apt-get install -y --allow-downgrades 'ntpdate=1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1'
 apt-get install -y --allow-downgrades 'ntfs-3g=1:2022.10.3-1+b1'
 apt-get install -y --allow-downgrades 'acl=2.3.1-3'

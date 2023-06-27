@@ -106,7 +106,7 @@ if __name__ == "__main__":
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_via_device"] != "_") &
         (metadata_df["device_via_device"] != "Action") &
-        (metadata_df["device_via_device"] != "Template") &
+        (metadata_df["device_via_device"] != "Powercalc Proxy") &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["friendly_name"].str.len() > 0) &
@@ -202,6 +202,8 @@ fan:
     entities:
       - fan.deck_east_fan
       - fan.deck_west_fan
+        """.strip() + "\n")
+        metadata_control_file.write("""
 #######################################################################################
 tplink:
   discovery: false
@@ -1135,12 +1137,12 @@ automation:
         metadata_electricity_df = metadata_df[
             (metadata_df["index"] > 0) &
             (metadata_df["entity_status"] == "Enabled") &
-            (metadata_df["device_via_device"] == "Template") &
+            (metadata_df["device_via_device"] == "Powercalc Proxy") &
             (metadata_df["entity_namespace"].str.len() > 0) &
             (metadata_df["unique_id"].str.len() > 0) &
             (metadata_df["powercalc_enable"] == "True")
             ]
-        metadata_electricity_shadow_dicts = [row.to_dict() for index, row in metadata_electricity_df.iterrows()]
+        metadata_electricity_proxy_dicts = [row.to_dict() for index, row in metadata_electricity_df.iterrows()]
         metadata_electricity_df = metadata_df[
             (metadata_df["index"] > 0) &
             (metadata_df["entity_status"] == "Enabled") &
@@ -1197,18 +1199,58 @@ template:
   #####################################################################################
   - binary_sensor:
             """.strip() + "\n")
-            for metadata_electricity_shadow_dict in metadata_electricity_shadow_dicts:
+            for metadata_electricity_proxy_dict in metadata_electricity_proxy_dicts:
+                metadata_electricity_proxy_type = metadata_electricity_proxy_dict["device_identifiers"] \
+                    if (
+                        "device_identifiers" in metadata_electricity_proxy_dict and
+                        str(metadata_electricity_proxy_dict["device_identifiers"]) != "" and
+                        str(metadata_electricity_proxy_dict["device_identifiers"]) != "nan" and
+                        str(metadata_electricity_proxy_dict["device_identifiers"]) != "none"
+                ) else "switch"
+                metadata_electricity_proxy_state = "states('media_player.{}') != \"unavailable\"".format(
+                    metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
+                ) if metadata_electricity_proxy_type == "media_player" else (
+                    "states('{}.{}')".format(
+                        metadata_electricity_proxy_type,
+                        metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
+                    ))
                 metadata_electricity_file.write("      " + """
       #################################################################################
       - unique_id: {}
         state: >-
-          {{{{ states('switch.{}') }}}}
+          {{{{ {} }}}}
                 """.format(
-                    metadata_electricity_shadow_dict["unique_id"].replace("template_", ""),
-                    metadata_electricity_shadow_dict["unique_id"].replace("template_", "").replace("_plug", ""),
+                    metadata_electricity_proxy_dict["unique_id"].replace("template_", ""),
+                    metadata_electricity_proxy_state,
                 ).strip() + "\n")
+                if "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict["device_model"] == "STARKVIND":
+                    metadata_electricity_file.write("        " + """
+        attributes:
+          fan_speed: >-
+            {{{{ states('sensor.{}_fan_speed') | int(0) }}}}
+                    """.format(
+                        metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
+                        metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
+                        metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
+                    ).strip() + "\n")
+                if "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict["device_model"] == "Move":
+                    metadata_electricity_file.write("        " + """
+        attributes:
+          charging_state: >-
+            {{%- if states('binary_sensor.{}_power') == "on" and states('sensor.{}_battery') | int(0) < 100 -%}}
+              {{{{ 100 - (states('sensor.{}_battery') | int(0)) }}}}
+            {{% else %}}
+              {{{{ 0 }}}}
+            {{% endif %}}
+                    """.format(
+                        metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
+                        metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
+                        metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
+                    ).strip() + "\n")
             metadata_electricity_file.write("      " + """
       #################################################################################
+            """.strip() + "\n")
+            metadata_electricity_file.write("""
 sensor:
             """.strip() + "\n")
             for dict in metadata_electricity_ungrouped_dicts:
