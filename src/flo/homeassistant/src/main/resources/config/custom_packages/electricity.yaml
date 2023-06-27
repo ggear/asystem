@@ -410,7 +410,7 @@ sensor:
               #########################################################################
               - create_group: Ada Tablet
                 entities:
-                  - entity_id: switch.template_ada_tablet_outlet_proxy
+                  - entity_id: binary_sensor.template_ada_tablet_outlet_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
