@@ -76,9 +76,6 @@
   title: Power Plugs
   show_header_toggle: false
   entities:
-    - entity: switch.power_meter
-      name: Power Meter
-      icon: mdi:power-plug-battery-outline
     - entity: switch.lounge_tv_outlet
       name: Lounge TV
       icon: mdi:television
@@ -115,6 +112,9 @@
     - entity: switch.laundry_vacuum_charger
       name: Vacuum Charger
       icon: mdi:battery-charging-30
+    - entity: switch.ada_tablet
+      name: Ada Tablet
+      icon: mdi:tablet
     - entity: switch.server_flo_outlet
       name: Server Flo
       icon: mdi:server

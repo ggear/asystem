@@ -386,10 +386,6 @@ sensor.home_peak_power:
   friendly_name: 'Peak Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.power_meter_power:
-  friendly_name: 'Power Meter'
-  icon: 'mdi:home-lightning-bolt'
-  unit_of_measurement: 'W'
 sensor.lights_power:
   friendly_name: 'All Lights'
   icon: 'mdi:home-lightning-bolt'
@@ -468,10 +464,6 @@ sensor.home_base_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.home_peak_energy_daily:
   friendly_name: 'Peak Load'
-  icon: 'mdi:battery-charging'
-  unit_of_measurement: 'kWh'
-sensor.power_meter_energy_daily:
-  friendly_name: 'Power Meter'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.lights_energy_daily:
@@ -605,9 +597,6 @@ sensor.parents_move_battery:
   friendly_name: 'Sonos Parents'
 sensor.kitchen_move_battery:
   friendly_name: 'Sonos Kitchen'
-switch.power_meter:
-  friendly_name: 'Power Meter'
-  icon: 'mdi:power-plug-battery-outline'
 switch.lounge_tv_outlet:
   friendly_name: 'Lounge TV'
   icon: 'mdi:television'
@@ -644,6 +633,9 @@ switch.study_battery_charger:
 switch.laundry_vacuum_charger:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging-30'
+switch.ada_tablet:
+  friendly_name: 'Ada Tablet'
+  icon: 'mdi:tablet'
 switch.server_flo_outlet:
   friendly_name: 'Server Flo'
   icon: 'mdi:server'

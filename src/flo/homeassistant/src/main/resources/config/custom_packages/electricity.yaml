@@ -101,6 +101,10 @@ template:
         state: >-
           {{ states('switch.laundry_vacuum_charger') }}
       #################################################################################
+      - unique_id: ada_tablet_proxy
+        state: >-
+          {{ states('switch.ada_tablet') }}
+      #################################################################################
       - unique_id: server_flo_outlet_proxy
         state: >-
           {{ states('switch.server_flo_outlet') }}
@@ -127,13 +131,6 @@ sensor:
     entities:
       - entity_id: media_player.lounge_arc
         name: Lounge Arc
-  #####################################################################################
-  - platform: powercalc
-    create_group: Power Meter
-    entities:
-      - entity_id: switch.power_meter
-        power_sensor_id: sensor.power_meter_current_consumption
-        energy_sensor_id: sensor.power_meter_total_consumption
   #####################################################################################
   - platform: powercalc
     create_group: Server Flo
@@ -410,6 +407,17 @@ sensor:
                   - entity_id: switch.lounge_sub
                     power_sensor_id: sensor.lounge_sub_current_consumption
                     energy_sensor_id: sensor.lounge_sub_total_consumption
+              #########################################################################
+              - create_group: Ada Tablet
+                entities:
+                  - entity_id: switch.template_ada_tablet_proxy
+                    standby_power: 0.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 0.9
+                  - entity_id: switch.ada_tablet
+                    power_sensor_id: sensor.ada_tablet_current_consumption
+                    energy_sensor_id: sensor.ada_tablet_total_consumption
               #########################################################################
               - create_group: Ada Audio Visual Devices
                 entities:
