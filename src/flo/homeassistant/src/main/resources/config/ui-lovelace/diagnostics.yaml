@@ -112,7 +112,7 @@
     - entity: switch.laundry_vacuum_charger
       name: Vacuum Charger
       icon: mdi:battery-charging-30
-    - entity: switch.ada_tablet
+    - entity: switch.ada_tablet_outlet
       name: Ada Tablet
       icon: mdi:tablet
     - entity: switch.server_flo_outlet

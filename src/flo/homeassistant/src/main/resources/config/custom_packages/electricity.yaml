@@ -101,9 +101,9 @@ template:
         state: >-
           {{ states('switch.laundry_vacuum_charger') }}
       #################################################################################
-      - unique_id: ada_tablet_proxy
+      - unique_id: ada_tablet_outlet_proxy
         state: >-
-          {{ states('switch.ada_tablet') }}
+          {{ states('switch.ada_tablet_outlet') }}
       #################################################################################
       - unique_id: server_flo_outlet_proxy
         state: >-
@@ -410,14 +410,14 @@ sensor:
               #########################################################################
               - create_group: Ada Tablet
                 entities:
-                  - entity_id: switch.template_ada_tablet_proxy
+                  - entity_id: switch.template_ada_tablet_outlet_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
                       power: 0.9
-                  - entity_id: switch.ada_tablet
-                    power_sensor_id: sensor.ada_tablet_current_consumption
-                    energy_sensor_id: sensor.ada_tablet_total_consumption
+                  - entity_id: switch.ada_tablet_outlet
+                    power_sensor_id: sensor.ada_tablet_outlet_current_consumption
+                    energy_sensor_id: sensor.ada_tablet_outlet_total_consumption
               #########################################################################
               - create_group: Ada Audio Visual Devices
                 entities:

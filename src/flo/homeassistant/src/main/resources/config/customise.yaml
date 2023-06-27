@@ -633,7 +633,7 @@ switch.study_battery_charger:
 switch.laundry_vacuum_charger:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging-30'
-switch.ada_tablet:
+switch.ada_tablet_outlet:
   friendly_name: 'Ada Tablet'
   icon: 'mdi:tablet'
 switch.server_flo_outlet:
