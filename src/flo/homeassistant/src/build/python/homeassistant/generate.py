@@ -1209,7 +1209,9 @@ template:
                 ) else "switch"
                 metadata_electricity_proxy_state = "states('media_player.{}') != \"unavailable\"".format(
                     metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
-                ) if metadata_electricity_proxy_type == "media_player" else (
+                ) if (metadata_electricity_proxy_type == "media_player" and
+                      "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict["device_model"] == "Move"
+                      ) else (
                     "states('{}.{}')".format(
                         metadata_electricity_proxy_type,
                         metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
