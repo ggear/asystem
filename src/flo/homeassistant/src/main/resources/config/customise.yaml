@@ -671,11 +671,11 @@ switch.edwin_wardrobe_outlet:
 switch.rack_fans:
   friendly_name: 'Rack Fans'
   icon: 'mdi:server-remove'
-sensor.garden_repeater:
+sensor.garden_repeater_linkquality:
   friendly_name: 'Garden Repeater'
-sensor.landing_repeater:
+sensor.landing_repeater_linkquality:
   friendly_name: 'Landing Repeater'
-sensor.driveway_repeater:
+sensor.driveway_repeater_linkquality:
   friendly_name: 'Driveway Repeater'
 input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
   friendly_name: 'Ada Lamp'

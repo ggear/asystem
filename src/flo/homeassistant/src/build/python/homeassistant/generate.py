@@ -1016,7 +1016,7 @@ automation:
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["unique_id"].str.contains("linkquality")) &
+        (metadata_df["entity_domain"] == "Zigbee Link Quality") &
         (metadata_df["entity_group"] == "Diagnostics")
         ]
     metadata_diagnostic_dicts = [row.dropna().to_dict() for index, row in metadata_diagnostic_df.iterrows()]
@@ -1068,7 +1068,6 @@ template:
                 metadata_diagnostic_dict["unique_id"].replace("template_", ""),
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("_percentage", ""),
             ).strip() + "\n")
-
         metadata_diagnostic_file.write("""
 #######################################################################################
 input_boolean:

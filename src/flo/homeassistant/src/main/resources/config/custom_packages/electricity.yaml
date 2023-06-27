@@ -543,6 +543,33 @@ sensor:
                   - entity_id: switch.roof_network_switch
                     power_sensor_id: sensor.roof_network_switch_current_consumption
                     energy_sensor_id: sensor.roof_network_switch_total_consumption
+              #########################################################################
+              - create_group: Zigbee Repeaters
+                entities:
+                  - entity_id: switch.deck_fans_outlet
+                    standby_power: 0.2
+                    fixed:
+                      power: 0.5
+                  - entity_id: switch.kitchen_fan_outlet
+                    standby_power: 0.2
+                    fixed:
+                      power: 0.5
+                  - entity_id: switch.edwin_wardrobe_outlet
+                    standby_power: 0.2
+                    fixed:
+                      power: 0.5
+                  - entity_id: sensor.garden_repeater_linkquality
+                    standby_power: 0
+                    fixed:
+                      power: 0.4
+                  - entity_id: sensor.landing_repeater_linkquality
+                    standby_power: 0
+                    fixed:
+                      power: 0.4
+                  - entity_id: sensor.driveway_repeater_linkquality
+                    standby_power: 0
+                    fixed:
+                      power: 0.4
       #################################################################################
       - create_group: Home Peak
         entities:
