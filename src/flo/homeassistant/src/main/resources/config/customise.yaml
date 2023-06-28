@@ -750,6 +750,8 @@ media_player.office_home:
   friendly_name: 'Office Home'
 media_player.lounge_home:
   friendly_name: 'Lounge Home'
+media_player.ada_tablet:
+  friendly_name: 'Ada Tablet'
 media_player.lg_webos_smart_tv:
   friendly_name: 'Lounge TV'
 media_player.lounge_arc:
