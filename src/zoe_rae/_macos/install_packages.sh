@@ -7,6 +7,7 @@ brew update
 brew install \
   pv \
   jq \
+  grep \
   htop \
   wget \
   watch \

@@ -1,0 +1,13 @@
+machine,limits,benchmark,base_result,lower_is_better,result
+macbook-flo,180s,sysbench_cpu_maxprime-20000,6.0781,True,6.0701
+macbook-flo,180s,sysbench_memory_read-5G,3088735.29,False,3711190.92
+macbook-flo,180s,sysbench_memory_write-5G,3001138.73,False,3742732.56
+macbook-flo,180s,sysbench_fileio_rndrw-6400000K_events_per_min,4250.5020,False,103544.6760
+macbook-flo,180s,sysbench_fileio_rndrw-6400000K_req_per_min,1700.40,False,41418.00
+macbook-flo,180s,sysbench_fileio_rndrw-6400000K_bw_mib_per_sec,28.34,False,690.30
+macbook-flo,180s,sysbench_fileio_rndrw-validate-6400000K_events_per_min,4083.2040,False,86645.1000
+macbook-flo,180s,sysbench_fileio_rndrw-validate-6400000K_req_per_min,1633.20,False,34657.80
+macbook-flo,180s,sysbench_fileio_rndrw-validate-6400000K_bw_mib_per_sec,27.22,False,577.63
+macbook-flo,180s,sysbench_fileio_seqrewr-6400000K_events_per_min,9439.9380,False,104553.2940
+macbook-flo,180s,sysbench_fileio_seqrewr-6400000K_req_per_min,9439.80,False,104553.00
+macbook-flo,180s,sysbench_fileio_seqrewr-6400000K_bw_mib_per_sec,157.33,False,1742.55
