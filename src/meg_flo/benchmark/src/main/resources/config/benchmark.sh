@@ -4,7 +4,7 @@
 # Bootstrap tests
 ################################################################################
 
-RESULTS_DIR=/home/asystem/performance/latest/results
+RESULTS_DIR=/home/asystem/benchmark/latest/results
 NUM_THREADS=1
 NUM_THREADS_MAX=4
 MAX_RUNTIME_SEC=180
