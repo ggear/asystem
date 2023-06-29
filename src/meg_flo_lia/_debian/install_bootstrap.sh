@@ -21,8 +21,8 @@ dd if=/Users/graham/Desktop/debian-12.0.0-amd64-netinst.iso bs=1m | /usr/local/b
 ################################################################################
 # Install packages
 ################################################################################
-# Run install.sh apt-get install commands, ignore errors (eg docker/containerio)
 # Run install_upgrade.sh script
+# Run install.sh apt-get install commands
 
 ################################################################################
 # Bootstrap system
