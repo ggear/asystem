@@ -1,5 +1,5 @@
 ################################################################################
-# Hardware specs
+# Current hosts
 ################################################################################
 # raspbpi-lia: Raspberry Pi 3   Early 2016  (Model B)  ARMv8 Cortex A53       1xQuadx1.2GHz  1GB  RAM  120GB SSD              https://www.raspberrypi.com/products/raspberry-pi-3-model-b
 # macmini-nel: Mac Mini         Mid   2011  (5,2)      Intel i5 Sandy Bridge  1xDualx2.5GHz  8GB  RAM  500GB SSD & 1.8TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-mid-2011-specs.html
@@ -9,3 +9,54 @@
 # macmini-meg: Mac Mini         Late  2014  (7,1)      Intel i5 Haswell       1xDualx2.8GHz  8GB  RAM  121GB SSD & 3.6TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.8-late-2014-specs.html
 # macmini-zoe: Mac Mini         Late  2018  (8,1)      Intel i7 Coffee Lake   1xHexax3.2GHz  32GB RAM  932GB SSD              https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i7-3.2-late-2018-specs.html
 # macbook-rae: MacBook Pro      Late  2021  (18,1)     Apple M1 Pro           1xDecax3.2GHz  32GB RAM  926GB SSD              https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-m1-pro-10-core-cpu-16-core-gpu-16-2021-specs.html
+
+################################################################################
+# Replacement requirements
+################################################################################
+
+# Low power <50w at steady state
+# Cool running <50°C at steady state
+# Isolated workloads >3 physical servers
+# Fast ~Intel i5-2520M equivalent
+# High memory per node >8GB
+# High/slow storage nodes >2TB per node, >6TB total, >2 nodes
+# High/slow storage nodes >2TB per node, >2 nodes
+
+################################################################################
+# Option 1
+################################################################################
+
+# Rack mount existing Mac Mini 2018 - high power, but uses existing hardware
+# Stop macbook-flo, use macmini-meg as secondary server
+# Possible use broken Mac Mini chasis and SSD's for storage via https://www.datoptic.com/ec/usb3-and-esataiii-6gb-to-2-sataiii-drive-hardware-raid-jbod-controller-es6u3-ds3r.html
+
+################################################################################
+# Option 2
+################################################################################
+
+# Rack mount new Mac Mini 2020 16GB RAM 512GB SSD ($1200) - low power, but expensive
+# Stop macbook-flo, use macmini-meg as secondary server
+# Possible use broken Mac Mini chasis and SSD's for storage via https://www.datoptic.com/ec/usb3-and-esataiii-6gb-to-2-sataiii-drive-hardware-raid-jbod-controller-es6u3-ds3r.html
+
+################################################################################
+# Option 3
+################################################################################
+
+# Replace all with a new cluster
+
+1 x Rack ($159):
+# https://www.iot-store.com.au/products/raspberry-pi-rackmount-poe-ssd
+
+5 x (8GB RAM, Quad Core 1.5Ghz, 32GB boot storage) (5x$135 + 5x$40 + 5x$30 + 5x$12)
+# https://raspberry.piaustralia.com.au/products/raspberry-pi-4 (https://rpilocator.com/?country=AU)
+# https://raspberry.piaustralia.com.au/products/raspberry-pi-poe-hat
+# https://www.amazon.com.au/Lexar-JumpDrive-Flash-3-Pack-LJDV040032G-B3BNU/dp/B087BJ6Q2P/ref=sr_1_4
+# https://www.amazon.com.au/Onvian-Driver-Adapter-Power-Cable/dp/B0793LXX5M/ref=sr_1_5
+
+3 x 4TB slow storage ($0 repurpose existing 1.8TB HDDs & 500GB SSD or 3x$269)
+# https://www.scorptec.com.au/product/hard-drives-&-ssds/hdd-2.5-drives/66202-st4000lm024
+
+2 x 4TB fast storage ($0 repurpose existing 4TB SSDs drives):
+# https://www.scorptec.com.au/product/hard-drives-&-ssds/ssd-2.5-&-pci-express/94488-ct4000mx500ssd1
+
+Total ($1244):
