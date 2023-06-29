@@ -56,15 +56,32 @@ df -h /var
 ################################################################################
 # Volumes /data (if required)
 ################################################################################
-vgdisplay
+# /data/tmp
+lvcreate -L 200G -n data-tmp macmini-meg-vg
+mkfs.ext4 -j /dev/macmini-meg-vg/data-tmp
+tune2fs -m 0 /dev/macmini-meg-vg/data-tmp
+lvdisplay /dev/macmini-meg-vg/data-tmp
+# /data/backup
+lvcreate -L 100G -n data-backup macmini-meg-vg
+mkfs.ext4 -j /dev/macmini-meg-vg/data-backup
+tune2fs -m 0 /dev/macmini-meg-vg/data-backup
+lvdisplay /dev/macmini-meg-vg/data-backup
+# /data/media/audio
+lvcreate -L 110G -n data-media-audio macmini-meg-vg
+mkfs.ext4 -j /dev/macmini-meg-vg/data-media-audio
+tune2fs -m 0 /dev/macmini-meg-vg/data-media-audio
+lvdisplay /dev/macmini-meg-vg/data-media-audio
+# /data/media/movies
+lvcreate -L 750G -n data-media-movies macmini-meg-vg
+mkfs.ext4 -j /dev/macmini-meg-vg/data-media-movies
+tune2fs -m 0 /dev/macmini-meg-vg/data-media-movies
+lvdisplay /dev/macmini-meg-vg/data-media-movies
 
 ################################################################################
-# Mount points
+# Mount points (if required)
 ################################################################################
 mkdir -p /data/tmp
-mkdir -p /data/backup/media
-mkdir -p /data/backup/archive
-mkdir -p /data/backup/timemachine
+mkdir -p /data/backup
 mkdir -p /data/media/audio
 mkdir -p /data/media/movies
 mkdir -p /data/media/series
