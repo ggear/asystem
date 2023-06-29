@@ -56,11 +56,14 @@ df -h /var
 ################################################################################
 # Mount points
 ################################################################################
-mkdir -p /data/media/series
-mkdir -p /data/
+mkdir -p /data/tmp
+mkdir -p /data/backup/media
+mkdir -p /data/backup/archive
+mkdir -p /data/backup/timemachine
 mkdir -p /data/media/audio
 mkdir -p /data/media/movies
 mkdir -p /data/media/series
+
 
 ################################################################################
 # Mount options
