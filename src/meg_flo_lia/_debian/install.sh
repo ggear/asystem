@@ -291,7 +291,8 @@ BOOT_ERRORS=$(
     grep -v "remount-ro" | grep -v "smartd" |
     grep -v "Clock Unsynchronized" |
     grep -v "dockerd" | grep -v "containerd" |
-    grep -v "/usr/lib/gnupg/scdaemon"
+    grep -v "/usr/lib/gnupg/scdaemon" |
+    grep -v "Temporary failure in name resolution"
 )
 echo "################################################################################"
 if [ "${BOOT_ERRORS}" == "" ]; then
