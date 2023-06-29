@@ -44,7 +44,7 @@ echo "UUID=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX  /data           ext4    rw,user
 mount -a
 
 ################################################################################
-# Volumes
+# Volumes /var
 ################################################################################
 vgdisplay
 lvdisplay /dev/$(hostname)-vg/var
@@ -52,6 +52,11 @@ lvextend -L30G /dev/$(hostname)-vg/var
 resize2fs /dev/$(hostname)-vg/var
 lvdisplay /dev/$(hostname)-vg/var
 df -h /var
+
+################################################################################
+# Volumes /data (if required)
+################################################################################
+vgdisplay
 
 ################################################################################
 # Mount points

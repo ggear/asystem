@@ -16,9 +16,9 @@ RUN apt-get -y --no-install-recommends install tar=1.30+dfsg-6
 RUN apt-get -y --no-install-recommends install wget=1.20.1-1.1
 RUN apt-get -y --no-install-recommends install rsyslog=8.1901.0-1+deb10u2
 RUN apt-get -y --no-install-recommends install gnupg2=2.2.12-1+deb10u2
-RUN apt-get -y --no-install-recommends install apache2=2.4.38-3+deb10u8
 RUN apt-get -y --no-install-recommends install default-mysql-client=1.0.5
-RUN apt-get -y --no-install-recommends install apache2-utils=2.4.38-3+deb10u8
+RUN apt-get -y --no-install-recommends install apache2=2.4.38-3+deb10u10
+RUN apt-get -y --no-install-recommends install apache2-utils=2.4.38-3+deb10u10
 RUN apt-get -y --no-install-recommends install mosquitto-clients=1.5.7-1+deb10u1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
