@@ -64,21 +64,20 @@ mkdir -p /data/media/audio
 mkdir -p /data/media/movies
 mkdir -p /data/media/series
 
-
 ################################################################################
 # Mount options
 ################################################################################
 cat <<EOF >>/etc/fstab
+# <file system>                            <mount point>             <type>  <options>                             <dump>  <pass>
+/dev/mapper/macmini--meg--vg-root          /                         ext4    noatime,commit=600,errors=remount-ro  0       1
+UUID=e296cb8a-0a02-413e-8e53-8bada21a610c  /boot                     ext2    noatime,defaults                      0       2
+UUID=9B6D-5F3E                             /boot/efi                 vfat    umask=0077                            0       1
+/dev/mapper/macmini--meg--vg-home          /home                     ext4    noatime,commit=600,errors=remount-ro  0       2
+/dev/mapper/macmini--meg--vg-tmp           /tmp                      ext4    noatime,commit=600,errors=remount-ro  0       2
+/dev/mapper/macmini--meg--vg-var           /var                      ext4    noatime,commit=600,errors=remount-ro  0       2
+/dev/mapper/macmini--meg--vg-swap_1        none                      swap    sw                                    0       0
 
-# <file system>                            <mount point>   <type>  <options>                             <dump>  <pass>
-/dev/mapper/macmini--meg--vg-root          /               ext4    noatime,commit=600,errors=remount-ro  0       1
-UUID=e296cb8a-0a02-413e-8e53-8bada21a610c  /boot           ext2    noatime,defaults                      0       2
-UUID=9B6D-5F3E                             /boot/efi       vfat    umask=0077                            0       1
-/dev/mapper/macmini--meg--vg-home          /home           ext4    noatime,commit=600,errors=remount-ro  0       2
-/dev/mapper/macmini--meg--vg-tmp           /tmp            ext4    noatime,commit=600,errors=remount-ro  0       2
-/dev/mapper/macmini--meg--vg-var           /var            ext4    noatime,commit=600,errors=remount-ro  0       2
-/dev/mapper/macmini--meg--vg-swap_1        none            swap    sw                                    0       0
-UUID=100f5ef4-e75d-41f4-bcb9-aaa84c03209a  /data           ext4    noatime,commit=600,errors=remount-ro  0       2
+UUID=100f5ef4-e75d-41f4-bcb9-aaa84c03209a  /data/media/series        ext4    noatime,commit=600,errors=remount-ro  0       2
 EOF
 
 ################################################################################
