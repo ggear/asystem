@@ -1,13 +1,9 @@
 #!/bin/bash
 
 echo -n "Normalising /data ... "
-
-# TODO: Disable until meg is no longer using temp for high iops storage
-#setfacl -bR /data
-#chmod -R 644 /data
-#chmod -R a+rwX /data
-#chown -R nobody:nogroup /data
-
+setfacl -bR /data/media
+find /data/media -type f -exec chmod 644 {} \;
+find /data/media -type d -exec chmod 755 {} \;
 find /data -type f -name nohup -exec rm -f {} \;
 find /data -type f -name .DS_Store -exec rm -f {} \;
 echo "done"
@@ -22,6 +18,7 @@ import_files() {
       rsync -avP /media/usbdrive/${1} /data/tmp
       echo "Copy /media/usbdrive/${1} to /data/tmp/${1} complete"
       echo "Metadata commands:"
+      echo "umount -fq /media/usbdrive"
       echo "mount /dev/sdc1 /media/usbdrive"
       echo "rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv"
       echo "ffmpeg -f concat -i files.txt -c copy -aspect 16/9 output.mkv"
@@ -29,7 +26,6 @@ import_files() {
       echo "find . -name \"*.mkv\" -exec echo mediainfo \"'--Output=Audio;[%Language/String%, ][%BitRate/String%, ][%SamplingRate/String%, ][%BitDepth/String%, ][%Channel(s)/String%, ]%Format%\n'\" \\\"{}\\\" \;"
       echo 'find . -name "*.mkv" -exec echo ffmpeg -i \"{}\" -c:v copy -ac 6 -ar 48000 -ab 400k -c:a aac \"/data/media/movies/{}\" \;'
     fi
-    umount -fq /media/usbdrive
   fi
 }
 
