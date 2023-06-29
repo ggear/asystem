@@ -16,10 +16,11 @@ DIR_ROOT = abspath("{}/../../../..".format(dirname(realpath(__file__))))
 def load_env(root_dir=None):
     env = {}
     env_path = abspath(join(DIR_ROOT if root_dir is None else root_dir, ".env"))
+    env_path_dev = env_path
     if not isfile(env_path):
         env_path = abspath(join(DIR_ROOT if root_dir is None else root_dir, "target/release/.env"))
     if not isfile(env_path):
-        raise Exception("Could not find dev or prod .env file!")
+        raise Exception("Could not find dev [{}] or prod [{}] env file".format(env_path_dev, env_path))
     with open(env_path, 'r') as env_file:
         for env_line in env_file:
             env_line = env_line.replace("export ", "").rstrip()
