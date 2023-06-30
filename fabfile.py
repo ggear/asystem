@@ -166,14 +166,11 @@ def _pull(context):
     _run_local(context, "echo 'fab pull 2> /dev/null| grep \"update from\"'")
 
     _print_footer("asystem", "pull main")
-    _generate(context, is_pull=True)
+    _generate(context, filter_changes=False, is_pull=True)
 
 
-def _generate(context, filter_module=None, filter_host=None, is_release=False, is_pull=False):
-    _print_header("asystem", "generate dependencies")
-    _run_local(context, "generate.sh {}".format(is_pull), DIR_ROOT)
-    _print_footer("asystem", "generate dependencies")
-    for module in _get_modules(context, filter_module=filter_module):
+def _generate(context, filter_module=None, filter_changes=True, filter_host=None, is_release=False, is_pull=False):
+    for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
         _print_header(module, "generate env")
         _write_env(context, module, join(DIR_ROOT_MODULE, module, "target/release") if is_release else join(DIR_ROOT_MODULE, module),
                    filter_host=filter_host, is_release=is_release)
