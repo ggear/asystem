@@ -37,9 +37,10 @@ function pull_repo() {
     if [ $(git describe --tags --abbrev=0 2>/dev/null) ]; then
       TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
       TAG_MOST_RECENT=$(git describe --tags $(git rev-list --tags --max-count=1))
-      [ ${TAG_CHECKED_OUT} != ${TAG_MOST_RECENT} ] && echo "Repo [${REPO}] requires update from [${TAG_CHECKED_OUT}] to [${TAG_MOST_RECENT}]"
+      [ ${TAG_CHECKED_OUT} == ${TAG_MOST_RECENT} ] && echo "Module [${REPO}] [INFO] is up to date with version [${TAG_CHECKED_OUT}]"
+      [ ${TAG_CHECKED_OUT} != ${TAG_MOST_RECENT} ] && echo "Module [${REPO}] [WARN] requires update from version [${TAG_CHECKED_OUT}] to [${TAG_MOST_RECENT}]"
     else
-      echo "Repo [${REPO}] has no tags, sync them!"
+      echo "Module [${REPO}] [ERROR] No tags, sync them!"
     fi
   fi
   cd "${1}"

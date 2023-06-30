@@ -4,12 +4,12 @@
 #
 ###############################################################################
 
-# TODO: Rewrite as BundleWrap/pyinfra/K8s?
-
 import collections
 import glob
 import math
 import os
+# TODO: Rewrite as BundleWrap/pyinfra/K8s?
+import re
 import signal
 import sys
 from os.path import *
@@ -160,16 +160,12 @@ def _pull(context):
     _run_local(context, "git remote set-url origin https://github.com/$(git remote get-url origin | "
                         "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
     _run_local(context, "git pull --all")
-
-    # TODO: Update to easily show where upgrades are necessary
-    # TODO: wget -q -O - "https://hub.docker.com/v2/namespaces/homeassistant/repositories/home-assistant/tags?page_size=2"
-    _run_local(context, "echo 'fab pull 2> /dev/null| grep \"update from\"'")
-
     _print_footer("asystem", "pull main")
     _generate(context, filter_changes=False, is_pull=True)
 
 
 def _generate(context, filter_module=None, filter_changes=True, filter_host=None, is_release=False, is_pull=False):
+    module_generate_stdout = {}
     for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
         _print_header(module, "generate env")
         _write_env(context, module, join(DIR_ROOT_MODULE, module, "target/release") if is_release else join(DIR_ROOT_MODULE, module),
@@ -177,12 +173,78 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         _print_footer(module, "generate env")
     for module in _get_modules(context, "generate.sh", filter_changes=False):
         _print_header(module, "generate shell script")
-        _run_local(context, "{}/{}/generate.sh {}".format(DIR_ROOT_MODULE, module, is_pull), join(DIR_ROOT_MODULE, module))
+        module_generate_stdout[module] = \
+            _run_local(context, "{}/{}/generate.sh {}".format(DIR_ROOT_MODULE, module, is_pull), join(DIR_ROOT_MODULE, module)).stdout
         _print_footer(module, "generate shell script")
     for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
         _print_header(module, "generate python script")
         _run_local(context, "python {}/{}/src/build/python/{}/generate.py".format(DIR_ROOT_MODULE, module, _name(module)), DIR_ROOT)
         _print_footer(module, "generate python script")
+    if is_pull:
+
+
+        version_messages = [[],[],[]]
+        version_regexs = [
+            r'Module \[(?P<module_path>.*)\] \[INFO\].*\[(?P<version_checkedout>.*)\].*',
+            r'Module \[(?P<module_path>.*)\] \[WARN\].*\[(?P<version_checkedout>.*)\].*\[(?P<version_upstream>.*)\]',
+            r'Module \[(?P<module_path>.*)\] \[ERROR\] (?P<version_error>.*)',
+        ]
+
+
+        module_errors = {}
+        module_uptodate = {}
+        module_toupdate = {}
+        for module in module_generate_stdout:
+            for line in module_generate_stdout[module].splitlines():
+                
+
+
+                match = re.match(
+                    r'Module \[(?P<module_path>.*)\] \[INFO\].*\[(?P<version_checkedout>.*)\].*', line)
+                if match is not None:
+                    module_uptodate[match.groupdict()["module_path"]] = match.groupdict()
+                match = re.match(
+                    r'Module \[(?P<module_path>.*)\] \[WARN\].*\[(?P<version_checkedout>.*)\].*\[(?P<version_upstream>.*)\]', line)
+                if match is not None:
+                    module_toupdate[match.groupdict()["module_path"]] = match.groupdict()
+                match = re.match(
+                    r'Module \[(?P<module_path>.*)\] \[ERROR\] (?P<version_error>.*)', line)
+                if match is not None:
+                    module_errors[match.groupdict()["module_path"]] = match.groupdict()
+
+
+
+
+
+        # TODO: Update to easily show where upgrades are necessary
+        # TODO: wget -q -O - "https://hub.docker.com/v2/namespaces/homeassistant/repositories/home-assistant/tags?page_size=2"
+        # _run_local(context, "echo 'fab pull 2> /dev/null| grep \"update from\"'")
+
+
+
+
+        _print_header("asystem", "pull versions up to date")
+        for module in module_uptodate:
+            print("Module [{}] is up to date with version [{}]".format(
+                module_uptodate[module]["module_path"],
+                module_uptodate[module]["version_checkedout"],
+            ))
+        _print_footer("asystem", "pull versions up to date")
+        _print_header("asystem", "pull versions to update")
+        for module in module_toupdate:
+            print("Module [{}] requires update from version [{}] to [{}]".format(
+                module_toupdate[module]["module_path"],
+                module_toupdate[module]["version_checkedout"],
+                module_toupdate[module]["version_upstream"],
+            ))
+        _print_footer("asystem", "pull versions to update")
+        _print_header("asystem", "pull versions errors")
+        for module in module_errors:
+            print("Module [{}] threw errors determining versions [{}]".format(
+                module_errors[module]["module_path"],
+                module_errors[module]["version_error"],
+            ))
+        _print_footer("asystem", "pull versions errors")
 
 
 def _clean(context, filter_module=None):
