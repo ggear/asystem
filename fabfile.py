@@ -183,37 +183,28 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
     if is_pull:
 
 
-        version_messages = [[],[],[]]
+        version_types = [
+            "up to date",
+            "to update",
+            "errors",
+        ]
         version_regexs = [
             r'Module \[(?P<module_path>.*)\] \[INFO\].*\[(?P<version_checkedout>.*)\].*',
             r'Module \[(?P<module_path>.*)\] \[WARN\].*\[(?P<version_checkedout>.*)\].*\[(?P<version_upstream>.*)\]',
             r'Module \[(?P<module_path>.*)\] \[ERROR\] (?P<version_error>.*)',
         ]
-
-
-        module_errors = {}
-        module_uptodate = {}
-        module_toupdate = {}
+        version_formats = [
+            "Module [{}] is up to date with version [{}]",
+            "Module [{}] requires update from version [{}] to [{}]",
+            "Module [{}] threw errors determining versions [{}]",
+        ]
+        version_messages = {type: [] for type in version_types}
         for module in module_generate_stdout:
             for line in module_generate_stdout[module].splitlines():
-                
-
-
-                match = re.match(
-                    r'Module \[(?P<module_path>.*)\] \[INFO\].*\[(?P<version_checkedout>.*)\].*', line)
-                if match is not None:
-                    module_uptodate[match.groupdict()["module_path"]] = match.groupdict()
-                match = re.match(
-                    r'Module \[(?P<module_path>.*)\] \[WARN\].*\[(?P<version_checkedout>.*)\].*\[(?P<version_upstream>.*)\]', line)
-                if match is not None:
-                    module_toupdate[match.groupdict()["module_path"]] = match.groupdict()
-                match = re.match(
-                    r'Module \[(?P<module_path>.*)\] \[ERROR\] (?P<version_error>.*)', line)
-                if match is not None:
-                    module_errors[match.groupdict()["module_path"]] = match.groupdict()
-
-
-
+                for i in range(3):
+                    match = re.match(version_regexs[i], line)
+                    if match is not None:
+                        version_messages[version_types[i]].append(version_formats[i].format(*match.groupdict().values()))
 
 
         # TODO: Update to easily show where upgrades are necessary
@@ -221,30 +212,12 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         # _run_local(context, "echo 'fab pull 2> /dev/null| grep \"update from\"'")
 
 
+        for type in version_types:
+            _print_header("asystem", "pull versions {}".format(type))
+            for message in version_messages[type]:
+                print(message)
+            _print_footer("asystem", "pull versions {}".format(type))
 
-
-        _print_header("asystem", "pull versions up to date")
-        for module in module_uptodate:
-            print("Module [{}] is up to date with version [{}]".format(
-                module_uptodate[module]["module_path"],
-                module_uptodate[module]["version_checkedout"],
-            ))
-        _print_footer("asystem", "pull versions up to date")
-        _print_header("asystem", "pull versions to update")
-        for module in module_toupdate:
-            print("Module [{}] requires update from version [{}] to [{}]".format(
-                module_toupdate[module]["module_path"],
-                module_toupdate[module]["version_checkedout"],
-                module_toupdate[module]["version_upstream"],
-            ))
-        _print_footer("asystem", "pull versions to update")
-        _print_header("asystem", "pull versions errors")
-        for module in module_errors:
-            print("Module [{}] threw errors determining versions [{}]".format(
-                module_errors[module]["module_path"],
-                module_errors[module]["version_error"],
-            ))
-        _print_footer("asystem", "pull versions errors")
 
 
 def _clean(context, filter_module=None):
