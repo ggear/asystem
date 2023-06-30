@@ -181,8 +181,6 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         _run_local(context, "python {}/{}/src/build/python/{}/generate.py".format(DIR_ROOT_MODULE, module, _name(module)), DIR_ROOT)
         _print_footer(module, "generate python script")
     if is_pull:
-
-
         version_types = [
             "up to date",
             "to update",
@@ -206,18 +204,14 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                     if match is not None:
                         version_messages[version_types[i]].append(version_formats[i].format(*match.groupdict().values()))
 
-
-        # TODO: Update to easily show where upgrades are necessary
+        # TODO: Update to easily show where docker image upgrades are available
         # TODO: wget -q -O - "https://hub.docker.com/v2/namespaces/homeassistant/repositories/home-assistant/tags?page_size=2"
-        # _run_local(context, "echo 'fab pull 2> /dev/null| grep \"update from\"'")
-
 
         for type in version_types:
             _print_header("asystem", "pull versions {}".format(type))
             for message in version_messages[type]:
                 print(message)
             _print_footer("asystem", "pull versions {}".format(type))
-
 
 
 def _clean(context, filter_module=None):
