@@ -34,14 +34,12 @@ function pull_repo() {
     git -c advice.detachedHead=false checkout "${5}" 2>/dev/null
     git status
     REPO=$(cd ${1}/../../../.deps/${2}/${3} && pwd)
-    if [ $(git describe --tags --abbrev=0 2>/dev/null) ]; then
-      TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
-      TAG_MOST_RECENT=$(git describe --tags $(git rev-list --tags --max-count=1))
-      [ ${TAG_CHECKED_OUT} == ${TAG_MOST_RECENT} ] && echo "Module [${REPO}] [INFO] is up to date with version [${TAG_CHECKED_OUT}]"
-      [ ${TAG_CHECKED_OUT} != ${TAG_MOST_RECENT} ] && echo "Module [${REPO}] [WARN] requires update from version [${TAG_CHECKED_OUT}] to [${TAG_MOST_RECENT}]"
-    else
-      echo "Module [${REPO}] [ERROR] No tags, sync them!"
-    fi
+    TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
+    TAG_MOST_RECENT=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=10) | grep -iv dev | grep -iv beta | head -n 1)
+    [ $(git tag | wc -l) -eq 0 ] && TAG_CHECKED_OUT=$(git branch --show-current) && TAG_MOST_RECENT=$(git branch --show-current)
+    [ $(git branch | grep "ggear-" | wc -l) -gt 0 ] && TAG_MOST_RECENT=${TAG_CHECKED_OUT}
+    [ ${TAG_CHECKED_OUT} == ${TAG_MOST_RECENT} ] && echo "Module [${REPO}] [INFO] is up to date with version [${TAG_CHECKED_OUT}]"
+    [ ${TAG_CHECKED_OUT} != ${TAG_MOST_RECENT} ] && echo "Module [${REPO}] [WARN] requires update from version [${TAG_CHECKED_OUT}] to [${TAG_MOST_RECENT}]"
   fi
   cd "${1}"
 }
