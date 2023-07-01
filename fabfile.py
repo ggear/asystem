@@ -14,7 +14,7 @@ import signal
 import sys
 from os.path import *
 import requests
-
+from packaging import version
 from fabric import task
 from pathlib2 import Path
 
@@ -159,40 +159,30 @@ def _backup(context):
 
 
 def _pull(context):
-
-    # TODO
-    # _print_header("asystem", "pull main")
-    # _run_local(context, "git remote set-url origin https://github.com/$(git remote get-url origin | "
-    #                     "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
-    # _run_local(context, "git pull --all")
-    # _print_footer("asystem", "pull main")
-
-
+    _print_header("asystem", "pull main")
+    _run_local(context, "git remote set-url origin https://github.com/$(git remote get-url origin | "
+                        "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
+    _run_local(context, "git pull --all")
+    _print_footer("asystem", "pull main")
     _generate(context, filter_changes=False, is_pull=True)
 
 
 def _generate(context, filter_module=None, filter_changes=True, filter_host=None, is_release=False, is_pull=False):
-
-
-    # TODO
-    # module_generate_stdout = {}
-    # for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
-    #     _print_header(module, "generate env")
-    #     _write_env(context, module, join(DIR_ROOT_MODULE, module, "target/release") if is_release else join(DIR_ROOT_MODULE, module),
-    #                filter_host=filter_host, is_release=is_release)
-    #     _print_footer(module, "generate env")
-    # for module in _get_modules(context, "generate.sh", filter_changes=False):
-    #     _print_header(module, "generate shell script")
-    #     module_generate_stdout[module] = \
-    #         _run_local(context, "{}/{}/generate.sh {}".format(DIR_ROOT_MODULE, module, is_pull), join(DIR_ROOT_MODULE, module)).stdout
-    #     _print_footer(module, "generate shell script")
-    # for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
-    #     _print_header(module, "generate python script")
-    #     _run_local(context, "python {}/{}/src/build/python/{}/generate.py".format(DIR_ROOT_MODULE, module, _name(module)), DIR_ROOT)
-    #     _print_footer(module, "generate python script")
-
-
-
+    module_generate_stdout = {}
+    for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
+        _print_header(module, "generate env")
+        _write_env(context, module, join(DIR_ROOT_MODULE, module, "target/release") if is_release else join(DIR_ROOT_MODULE, module),
+                   filter_host=filter_host, is_release=is_release)
+        _print_footer(module, "generate env")
+    for module in _get_modules(context, "generate.sh", filter_changes=False):
+        _print_header(module, "generate shell script")
+        module_generate_stdout[module] = \
+            _run_local(context, "{}/{}/generate.sh {}".format(DIR_ROOT_MODULE, module, is_pull), join(DIR_ROOT_MODULE, module)).stdout
+        _print_footer(module, "generate shell script")
+    for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
+        _print_header(module, "generate python script")
+        _run_local(context, "python {}/{}/src/build/python/{}/generate.py".format(DIR_ROOT_MODULE, module, _name(module)), DIR_ROOT)
+        _print_footer(module, "generate python script")
     if is_pull:
         version_types = [
             "up to date",
@@ -210,13 +200,12 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
             "Module [{}] threw errors determining versions: {}",
         ]
         version_messages = {type: [] for type in version_types}
-        # for module in module_generate_stdout:
-        #     for line in module_generate_stdout[module].splitlines():
-        #         for i in range(3):
-        #             match = re.match(version_regexs[i], line)
-        #             if match is not None:
-        #                 version_messages[version_types[i]].append(version_formats[i].format(*match.groupdict().values()))
-
+        for module in module_generate_stdout:
+            for line in module_generate_stdout[module].splitlines():
+                for i in range(3):
+                    match = re.match(version_regexs[i], line)
+                    if match is not None:
+                        version_messages[version_types[i]].append(version_formats[i].format(*match.groupdict().values()))
 
         def get_docker_image_metadata(config_path, config_regexs):
             with open(config_path, 'r') as config_file:
@@ -229,35 +218,35 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                 docker_image_metadata_dict["skipped"] = True
                             docker_image_metadata_version_tokens = docker_image_metadata_dict["version_current"].split('-', 1)
                             docker_image_metadata_version_suffix = "$" if len(docker_image_metadata_version_tokens) == 1 else \
-                            (".*-" + docker_image_metadata_version_tokens[-1] + "$")
+                                (".*-" + docker_image_metadata_version_tokens[-1] + "$")
                             for config_version_regex in [
-                                r"^v[0-9]*\.[0-9]*\.[0-9]*" + docker_image_metadata_version_suffix,
-                                r"^[0-9]*\.[0-9]*\.[0-9]*" + docker_image_metadata_version_suffix,
-                                r"^[0-9]*\.[0-9]*" + docker_image_metadata_version_suffix,
+                                r"^v([0-9]*\.[0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
+                                r"^([0-9]*\.[0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
+                                r"^([0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
                             ]:
                                 if re.match(config_version_regex, docker_image_metadata_dict["version_current"]):
                                     docker_image_metadata_dict["version_regex"] = config_version_regex
                                     break
                             return docker_image_metadata_dict
+
         for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
             docker_image_metadata = None
             docker_file_path = join(DIR_ROOT_MODULE, module, "Dockerfile")
             docker_compose_path = join(DIR_ROOT_MODULE, module, "docker-compose.yml")
             if exists(docker_file_path):
-                docker_image_metadata = get_docker_image_metadata(docker_file_path,[
+                docker_image_metadata = get_docker_image_metadata(docker_file_path, [
                     r"FROM (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*) as image_base",
                     r"FROM (?P<repository>.*):(?P<version_current>.*) as image_base",
                 ])
             elif exists(docker_compose_path):
-                docker_image_metadata = get_docker_image_metadata(docker_compose_path,[
+                docker_image_metadata = get_docker_image_metadata(docker_compose_path, [
                     r"image: (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*)",
                     r"image: (?P<repository>.*):(?P<version_current>.*)",
                 ])
-
-
             if docker_image_metadata is not None and \
-                all(key in docker_image_metadata for key in ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
-                and not docker_image_metadata["skipped"]:
+                    all(key in docker_image_metadata for key in
+                        ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
+                    and not docker_image_metadata["skipped"]:
                 if not docker_image_metadata["version_current"].startswith("$GO_VERSION"):
                     docker_image_tags_url = "https://hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size=100" \
                         .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
@@ -265,33 +254,41 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                     docker_image_tags = []
                     if "results" in docker_image_tags_json:
                         for docker_image_metatdata_hub in \
-                        sorted(docker_image_tags_json["results"], key=lambda x: x['last_updated'], reverse=True):
-                            docker_image_name = docker_image_metatdata_hub["name"]
-                            if not any(substring.lower() in docker_image_name.lower() for substring in [".0b", "-rc", "beta", "windows"]):
-                                docker_image_tags.append(docker_image_name)
-                                if re.match(docker_image_metadata["version_regex"], docker_image_name):
-                                    docker_image_metadata["version_upstream"] = docker_image_name
+                                sorted(docker_image_tags_json["results"], key=lambda x: x['last_updated'], reverse=True):
+                            docker_image_version = docker_image_metatdata_hub["name"]
+                            if not any(substring.lower() in docker_image_version.lower()
+                                       for substring in [".0b", "-rc", "beta", "windows"]) and any(
+                                i.isdigit() for i in docker_image_version):
+                                docker_image_tags.append(docker_image_version)
+                                docker_image_version_match = re.match(docker_image_metadata["version_regex"], docker_image_version)
+                                if docker_image_version_match is not None and \
+                                        version.parse(docker_image_version_match.groups()[0]) >= \
+                                        version.parse(re.match(docker_image_metadata["version_regex"],
+                                                               docker_image_metadata["version_current"]).groups()[0]):
+                                    docker_image_metadata["version_upstream"] = docker_image_version
                                     break;
                     else:
-                        version_messages[version_types[2]].append(version_formats[2].format(module,
-                                  "Could not determine versions from Docker Hub API request [{}]".format(docker_image_tags_url)))
+                        version_messages[version_types[2]] \
+                            .append(version_formats[2].format(module, "Could not determine versions from Docker Hub API request [{}]"
+                                                              .format(docker_image_tags_url)))
                     if "version_upstream" in docker_image_metadata:
-
-                        # TODO: Upgrade only if upstream > current, dealing with 1.9 < 1.10, re-image weewx, uncomment all code, format
-                        print("{} -> {}".format(docker_image_metadata["version_current"], docker_image_metadata["version_upstream"]))
-
+                        version_type = 0 if docker_image_metadata["version_current"] == docker_image_metadata["version_upstream"] else 1
+                        version_messages[version_types[version_type]].append(version_formats[version_type].format(
+                            module,
+                            docker_image_metadata["version_current"],
+                            docker_image_metadata["version_upstream"]
+                        ))
                     else:
-                        version_messages[version_types[2]].append(version_formats[2].format(module,
-                            "Could not determine upstream version with current version [{}], version regex [{}] and upstream versions:\n{}"
-                            .format(docker_image_metadata["version_current"], docker_image_metadata["version_regex"], "\n".join(docker_image_tags))))
-
-
-
+                        version_messages[version_types[2]].append(version_formats[2].format(
+                            module, "Could not get upstream version with current [{}], regex [{}] and upstream versions:\n{}"
+                            .format(
+                                docker_image_metadata["version_current"],
+                                docker_image_metadata["version_regex"],
+                                "\n".join(docker_image_tags))))
             elif exists(docker_file_path) or exists(docker_compose_path):
                 if docker_image_metadata is None or "skipped" not in docker_image_metadata or not docker_image_metadata["skipped"]:
-                    version_messages[version_types[2]].append(version_formats[2].format(module,
-                                    "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
-
+                    version_messages[version_types[2]].append(version_formats[2].format(
+                        module, "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
         for type in version_types:
             _print_header("asystem", "pull versions {}".format(type))
             for message in version_messages[type]:
