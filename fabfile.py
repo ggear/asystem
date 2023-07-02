@@ -168,6 +168,22 @@ def _pull(context):
 
 
 def _generate(context, filter_module=None, filter_changes=True, filter_host=None, is_release=False, is_pull=False):
+    version_types = [
+        "up to date",
+        "to update",
+        "errors",
+    ]
+    version_regexs = [
+        r"Module \[(?P<module_path>.*)\] \[INFO\].*\[(?P<version_checkedout>.*)\].*",
+        r"Module \[(?P<module_path>.*)\] \[WARN\].*\[(?P<version_checkedout>.*)\].*\[(?P<version_upstream>.*)\]",
+        r"Module \[(?P<module_path>.*)\] \[ERROR\] (?P<version_error>.*)",
+    ]
+    version_formats = [
+        "Module [{}] is up to date with version [{}]",
+        "Module [{}] requires update from version [{}] to [{}]",
+        "Module [{}] threw errors determining versions: {}",
+    ]
+    version_messages = {type: [] for type in version_types}
     module_generate_stdout = {}
     for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
         _print_header(module, "generate env")
@@ -184,22 +200,6 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         _run_local(context, "python {}/{}/src/build/python/{}/generate.py".format(DIR_ROOT_MODULE, module, _name(module)), DIR_ROOT)
         _print_footer(module, "generate python script")
     if is_pull:
-        version_types = [
-            "up to date",
-            "to update",
-            "errors",
-        ]
-        version_regexs = [
-            r"Module \[(?P<module_path>.*)\] \[INFO\].*\[(?P<version_checkedout>.*)\].*",
-            r"Module \[(?P<module_path>.*)\] \[WARN\].*\[(?P<version_checkedout>.*)\].*\[(?P<version_upstream>.*)\]",
-            r"Module \[(?P<module_path>.*)\] \[ERROR\] (?P<version_error>.*)",
-        ]
-        version_formats = [
-            "Module [{}] is up to date with version [{}]",
-            "Module [{}] requires update from version [{}] to [{}]",
-            "Module [{}] threw errors determining versions: {}",
-        ]
-        version_messages = {type: [] for type in version_types}
         for module in module_generate_stdout:
             for line in module_generate_stdout[module].splitlines():
                 for i in range(3):
