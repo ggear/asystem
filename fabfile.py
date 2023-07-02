@@ -291,7 +291,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                         module, "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
         for type in version_types:
             _print_header("asystem", "pull versions {}".format(type))
-            for message in version_messages[type]:
+            for message in sorted(version_messages[type]):
                 print(message)
             _print_footer("asystem", "pull versions {}".format(type))
 
