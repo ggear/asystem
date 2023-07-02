@@ -1,5 +1,5 @@
 # https://www.postgresql.org/docs/release
-FROM postgres:14.5-bullseye as image_base
+FROM postgres:15.3-alpine as image_base
 
 FROM image_base as image_package
 RUN localedef -i en_AU -c -f UTF-8 -A /usr/share/locale/locale.alias en_AU.UTF-8
