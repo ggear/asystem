@@ -1,4 +1,4 @@
-module github.com/ggear/asystem/tree/master/module/meg/network/src/main/go/pkg
+module github.com/ggear/asystem/tree/master/src/meg/network/src/main/go/pkg
 
 go 1.20
 

@@ -1,12 +1,12 @@
-module github.com/ggear/asystem/tree/master/module/meg/network/src/test/go/sys
+module github.com/ggear/asystem/tree/master/src/meg/network/src/test/go/sys
 
 go 1.20
 
-replace github.com/ggear/asystem/tree/master/module/meg/internet/src/main/go/pkg => ../../../main/go/pkg
+replace github.com/ggear/asystem/tree/master/src/meg/network/src/main/go/pkg => ../../../main/go/pkg
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.4.2
-	github.com/ggear/asystem/tree/master/module/meg/internet/src/main/go/pkg v0.0.0-00010101000000-000000000000
+	github.com/ggear/asystem/tree/master/src/meg/network/src/main/go/pkg v0.0.0-00010101000000-000000000000
 	github.com/joho/godotenv v1.5.1
 	github.com/sirupsen/logrus v1.9.0
 )

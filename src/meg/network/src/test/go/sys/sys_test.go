@@ -2,7 +2,7 @@ package main
 
 import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/ggear/asystem/tree/master/module/mae/internet/src/main/go/pkg"
+	"github.com/ggear/asystem/tree/master/src/meg/network/src/main/go/pkg"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"testing"
