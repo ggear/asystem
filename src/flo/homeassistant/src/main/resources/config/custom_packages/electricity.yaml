@@ -147,8 +147,9 @@ sensor:
         fixed:
           power: 0.9
       - entity_id: switch.server_flo_outlet
+        name: Server Flo Plug
         power_sensor_id: sensor.server_flo_outlet_current_consumption
-        energy_sensor_id: sensor.server_flo_outlet_total_consumption
+        force_energy_sensor_creation: true
   #####################################################################################
   - platform: powercalc
     create_group: Server Meg
@@ -159,8 +160,9 @@ sensor:
         fixed:
           power: 0.9
       - entity_id: switch.server_meg_outlet
+        name: Server Meg Plug
         power_sensor_id: sensor.server_meg_outlet_current_consumption
-        energy_sensor_id: sensor.server_meg_outlet_total_consumption
+        force_energy_sensor_creation: true
   #####################################################################################
   - platform: powercalc
     create_group: Internet Modem
@@ -171,8 +173,9 @@ sensor:
         fixed:
           power: 0.9
       - entity_id: switch.rack_modem
+        name: Internet Modem Plug
         power_sensor_id: sensor.rack_modem_current_consumption
-        energy_sensor_id: sensor.rack_modem_total_consumption
+        force_energy_sensor_creation: true
   #####################################################################################
   - platform: powercalc
     create_group: Home
@@ -216,8 +219,9 @@ sensor:
                     fixed:
                       power: 2.19
                   - entity_id: switch.kitchen_fan
+                    name: Kitchen Fans Plug
                     power_sensor_id: sensor.kitchen_fan_current_consumption
-                    energy_sensor_id: sensor.kitchen_fan_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Lounge Fans
                 entities:
@@ -340,8 +344,9 @@ sensor:
                     fixed:
                       power: 2.19
                   - entity_id: switch.kitchen_downlights
+                    name: Kitchen Lights Plug
                     power_sensor_id: sensor.kitchen_downlights_current_consumption
-                    energy_sensor_id: sensor.kitchen_downlights_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Laundry Lights
                 entities:
@@ -375,8 +380,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.deck_festoons
+                    name: Deck Lights Plug
                     power_sensor_id: sensor.deck_festoons_current_consumption
-                    energy_sensor_id: sensor.deck_festoons_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Landing Lights
                 entities:
@@ -386,8 +392,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.landing_festoons
+                    name: Landing Lights Plug
                     power_sensor_id: sensor.landing_festoons_current_consumption
-                    energy_sensor_id: sensor.landing_festoons_total_consumption
+                    force_energy_sensor_creation: true
           #############################################################################
           - create_group: Audio Visual Devices
             entities:
@@ -400,8 +407,9 @@ sensor:
                     fixed:
                       power: 2.19
                   - entity_id: switch.lounge_tv_outlet
+                    name: Lounge TV Plug
                     power_sensor_id: sensor.lounge_tv_outlet_current_consumption
-                    energy_sensor_id: sensor.lounge_tv_outlet_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Lounge Sub
                 entities:
@@ -411,8 +419,9 @@ sensor:
                     fixed:
                       power: 2.19
                   - entity_id: switch.lounge_sub
+                    name: Lounge Sub Plug
                     power_sensor_id: sensor.lounge_sub_current_consumption
-                    energy_sensor_id: sensor.lounge_sub_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Ada Tablet
                 entities:
@@ -422,8 +431,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.ada_tablet_outlet
+                    name: Ada Tablet Plug
                     power_sensor_id: sensor.ada_tablet_outlet_current_consumption
-                    energy_sensor_id: sensor.ada_tablet_outlet_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Ada Audio Visual Devices
                 entities:
@@ -472,8 +482,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.study_outlet
+                    name: Study Outlet Plug
                     power_sensor_id: sensor.study_outlet_current_consumption
-                    energy_sensor_id: sensor.study_outlet_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Office Outlet
                 entities:
@@ -483,8 +494,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.office_outlet
+                    name: Office Outlet Plug
                     power_sensor_id: sensor.office_outlet_current_consumption
-                    energy_sensor_id: sensor.office_outlet_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Study Battery Charger
                 entities:
@@ -494,8 +506,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.study_battery_charger
+                    name: Study Battery Charger Plug
                     power_sensor_id: sensor.study_battery_charger_current_consumption
-                    energy_sensor_id: sensor.study_battery_charger_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Laundry Vacuum Charger
                 entities:
@@ -505,8 +518,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.laundry_vacuum_charger
+                    name: Laundry Vacuum Charger Plug
                     power_sensor_id: sensor.laundry_vacuum_charger_current_consumption
-                    energy_sensor_id: sensor.laundry_vacuum_charger_total_consumption
+                    force_energy_sensor_creation: true
           #############################################################################
           - create_group: Whitegoods Continuous
             entities:
@@ -519,8 +533,9 @@ sensor:
                     fixed:
                       power: 2.19
                   - entity_id: switch.kitchen_fridge
+                    name: Kitchen Fridge Plug
                     power_sensor_id: sensor.kitchen_fridge_current_consumption
-                    energy_sensor_id: sensor.kitchen_fridge_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Deck Freezer
                 entities:
@@ -530,8 +545,9 @@ sensor:
                     fixed:
                       power: 2.19
                   - entity_id: switch.deck_freezer
+                    name: Deck Freezer Plug
                     power_sensor_id: sensor.deck_freezer_current_consumption
-                    energy_sensor_id: sensor.deck_freezer_total_consumption
+                    force_energy_sensor_creation: true
           #############################################################################
           - create_group: Servers & Network
             entities:
@@ -544,8 +560,9 @@ sensor:
                     fixed:
                       power: 2.19
                   - entity_id: switch.rack_outlet
+                    name: Server Rack Plug
                     power_sensor_id: sensor.rack_outlet_current_consumption
-                    energy_sensor_id: sensor.rack_outlet_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Network Switch
                 entities:
@@ -555,8 +572,9 @@ sensor:
                     fixed:
                       power: 2.19
                   - entity_id: switch.roof_network_switch
+                    name: Network Switch Plug
                     power_sensor_id: sensor.roof_network_switch_current_consumption
-                    energy_sensor_id: sensor.roof_network_switch_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Zigbee Repeaters
                 entities:
@@ -599,8 +617,9 @@ sensor:
                     fixed:
                       power: 2.19
                   - entity_id: switch.bathroom_rails
+                    name: Bathroom Towel Rails Plug
                     power_sensor_id: sensor.bathroom_rails_current_consumption
-                    energy_sensor_id: sensor.bathroom_rails_total_consumption
+                    force_energy_sensor_creation: true
           #############################################################################
           - create_group: Whitegoods Discretionary
             entities:
@@ -613,8 +632,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.kitchen_dish_washer
+                    name: Kitchen Dish Washer Plug
                     power_sensor_id: sensor.kitchen_dish_washer_current_consumption
-                    energy_sensor_id: sensor.kitchen_dish_washer_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Laundry Clothes Dryer
                 entities:
@@ -624,8 +644,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.laundry_clothes_dryer
+                    name: Laundry Clothes Dryer Plug
                     power_sensor_id: sensor.laundry_clothes_dryer_current_consumption
-                    energy_sensor_id: sensor.laundry_clothes_dryer_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Laundry Washing Machine
                 entities:
@@ -635,8 +656,9 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.laundry_washing_machine
+                    name: Laundry Washing Machine Plug
                     power_sensor_id: sensor.laundry_washing_machine_current_consumption
-                    energy_sensor_id: sensor.laundry_washing_machine_total_consumption
+                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Kitchen Coffee Machine
                 entities:
@@ -646,6 +668,7 @@ sensor:
                     fixed:
                       power: 0.9
                   - entity_id: switch.kitchen_coffee_machine
+                    name: Kitchen Coffee Machine Plug
                     power_sensor_id: sensor.kitchen_coffee_machine_current_consumption
-                    energy_sensor_id: sensor.kitchen_coffee_machine_total_consumption
+                    force_energy_sensor_creation: true
   #####################################################################################
