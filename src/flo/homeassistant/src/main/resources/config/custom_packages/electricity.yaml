@@ -129,6 +129,12 @@ sensor:
   #####################################################################################
   - platform: powercalc
     entities:
+      - entity_id: sensor.all_standby
+        power_sensor_id: sensor.all_standby_power
+        energy_sensor_id: sensor.all_standby_energy
+  #####################################################################################
+  - platform: powercalc
+    entities:
       - entity_id: media_player.lounge_arc
         name: Lounge Arc
   #####################################################################################
