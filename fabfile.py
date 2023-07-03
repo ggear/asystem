@@ -13,9 +13,10 @@ import re
 import signal
 import sys
 from os.path import *
+
 import requests
-from packaging import version
 from fabric import task
+from packaging import version
 from pathlib2 import Path
 
 FAB_SKIP_GIT = 'FAB_SKIP_GIT'
@@ -384,12 +385,14 @@ def _package(context, filter_module=None, is_release=False):
         host_arch = HOSTS[_get_host(context, module)][1]
         if is_release and host_arch != "x86_64":
             _run_local(context, "docker buildx build "
+                                "--progress=plain "
                                 "--build-arg PYTHON_VERSION "
                                 "--build-arg GO_VERSION "
                                 "--platform linux/{} --output type=docker --tag {}:{} ."
                        .format(host_arch, _name(module), _get_versions()[0]), module)
         else:
             _run_local(context, "docker image build "
+                                "--progress=plain "
                                 "--build-arg PYTHON_VERSION "
                                 "--build-arg GO_VERSION "
                                 "--tag {}:{} ."

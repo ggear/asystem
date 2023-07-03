@@ -1,25 +1,23 @@
 # https://github.com/weewx/weewx/releases
-FROM python:3.10.8-slim-buster as image_base
+FROM python:3.10.12-slim-bullseye as image_base
 
-ENV WEEWX_VERSION="4.10.2"
 ENV WEEWX_HOME="/home/weewx"
-ENV WEEWX_ARCHIVE="weewx-${WEEWX_VERSION}.tar.gz"
 
 FROM image_base as image_package
+# TODO: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1| grep "Unpacking "
 RUN apt-get update
-RUN apt-get -y --no-install-recommends install build-essential=12.6
-RUN apt-get -y --no-install-recommends install lbzip2=2.5-2
-RUN apt-get -y --no-install-recommends install libjpeg-dev=1:1.5.2-2+deb10u1
-RUN apt-get -y --no-install-recommends install zlib1g=1:1.2.11.dfsg-1+deb10u2
-RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.11.dfsg-1+deb10u2
-RUN apt-get -y --no-install-recommends install tar=1.30+dfsg-6
-RUN apt-get -y --no-install-recommends install wget=1.20.1-1.1
-RUN apt-get -y --no-install-recommends install rsyslog=8.1901.0-1+deb10u2
-RUN apt-get -y --no-install-recommends install gnupg2=2.2.12-1+deb10u2
-RUN apt-get -y --no-install-recommends install default-mysql-client=1.0.5
-RUN apt-get -y --no-install-recommends install apache2=2.4.38-3+deb10u10
-RUN apt-get -y --no-install-recommends install apache2-utils=2.4.38-3+deb10u10
-RUN apt-get -y --no-install-recommends install mosquitto-clients=1.5.7-1+deb10u1
+RUN apt-get -y --no-install-recommends install build-essential=12.9
+RUN apt-get -y --no-install-recommends install lbzip2=2.5-2.1
+RUN apt-get -y --no-install-recommends install libjpeg-dev=1:2.0.6-4
+RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.11.dfsg-2+deb11u2
+RUN apt-get -y --no-install-recommends install tar=1.34+dfsg-1
+RUN apt-get -y --no-install-recommends install wget=1.21-1+deb11u1
+RUN apt-get -y --no-install-recommends install rsyslog=8.2102.0-2+deb11u1
+RUN apt-get -y --no-install-recommends install gnupg2=2.2.27-2+deb11u2
+RUN apt-get -y --no-install-recommends install default-mysql-client=1.0.7
+RUN apt-get -y --no-install-recommends install apache2=2.4.56-1~deb11u2
+RUN apt-get -y --no-install-recommends install apache2-utils=2.4.56-1~deb11u2
+RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV PIP_PACKAGES="configobj==5.0.6 \
@@ -50,8 +48,8 @@ RUN mkdir -p /data/html && touch /data/html/index.html
 RUN rm -rf /var/www/html && ln -s /data/html /var/www/html
 COPY src/main/resources/apache2.conf /etc/apache2
 RUN mkdir -p ${WEEWX_HOME}
-RUN wget -q -O "${WEEWX_ARCHIVE}" "http://www.weewx.com/downloads/released_versions/${WEEWX_ARCHIVE}"
-RUN tar --extract --gunzip --directory ${WEEWX_HOME} --strip-components=1 --file "${WEEWX_ARCHIVE}"
+COPY src/build/resources/weewx-*.tar.gz /tmp
+RUN tar --extract --gunzip --directory ${WEEWX_HOME} --strip-components=1 --file weewx-*.tar.gz
 RUN wget -O weewx-mqtt.zip https://github.com/matthewwall/weewx-mqtt/archive/master.zip
 RUN /home/weewx/bin/wee_extension --install weewx-mqtt.zip
 
