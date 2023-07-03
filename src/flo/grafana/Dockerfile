@@ -3,6 +3,7 @@ FROM grafana/grafana:10.0.1 as image_base
 
 FROM image_base as image_package
 USER root
+# TODO: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apk add --no-cache jq==1.6-r2
 RUN apk add --no-cache git==2.38.5-r0
 RUN apk add --no-cache curl==8.1.2-r0

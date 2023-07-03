@@ -33,4 +33,4 @@ services:
     deploy:
       resources:
         limits:
-          memory: 5G
+          memory: 512M

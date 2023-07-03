@@ -32,7 +32,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 5G
+          memory: 1G
   postgres_bootstrap:
     container_name: postgres_bootstrap
     <<: *common
