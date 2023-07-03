@@ -5,9 +5,8 @@
 VERSION=v4.10.2
 pull_repo $(pwd) weewx weewx-core weewx/weewx ${VERSION} ${1}
 (cd ../../../.deps/weewx/weewx-core && make src-package)
-rm -rf src/build/resources/weewx-*.tar.gz
 mkdir -p src/build/resources &&
-  cp -rvf ../../../.deps/weewx/weewx-core/dist/weewx-*.tar.gz src/build/resources
+  cp -nv ../../../.deps/weewx/weewx-core/dist/weewx-*.tar.gz src/build/resources
 
 VERSION=ggear-skins_seasons
 pull_repo $(pwd) weewx weewx-core-skins ggear/weewx ${VERSION} ${1}
