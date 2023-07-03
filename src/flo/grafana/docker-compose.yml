@@ -48,7 +48,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 1024M
   grafana_bootstrap:
     container_name: grafana_bootstrap
     <<: *common

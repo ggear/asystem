@@ -42,7 +42,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 2048M
   homeassistant_bootstrap:
     container_name: homeassistant_bootstrap
     <<: *common

@@ -38,7 +38,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 5G
+          memory: 5120M
   influxdb_bootstrap:
     container_name: influxdb_bootstrap
     <<: *common
