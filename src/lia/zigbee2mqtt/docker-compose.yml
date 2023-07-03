@@ -33,7 +33,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 5G
+          memory: 512M
   zigbee2mqtt_bootstrap:
     container_name: zigbee2mqtt_bootstrap
     <<: *common
