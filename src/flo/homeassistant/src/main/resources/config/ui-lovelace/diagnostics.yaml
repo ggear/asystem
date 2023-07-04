@@ -76,58 +76,58 @@
   title: Power Plugs
   show_header_toggle: false
   entities:
-    - entity: switch.lounge_tv_outlet
+    - entity: switch.lounge_tv_outlet_plug
       name: Lounge TV
       icon: mdi:television
-    - entity: switch.lounge_sub
+    - entity: switch.lounge_sub_plug
       name: Lounge Sub
       icon: mdi:speaker
-    - entity: switch.study_outlet
+    - entity: switch.study_outlet_plug
       name: Study Outlet
       icon: mdi:power-plug-outline
-    - entity: switch.office_outlet
+    - entity: switch.office_outlet_plug
       name: Office Outlet
       icon: mdi:power-plug-outline
-    - entity: switch.kitchen_dish_washer
+    - entity: switch.kitchen_dish_washer_plug
       name: Dish Washer
       icon: mdi:dishwasher
-    - entity: switch.laundry_clothes_dryer
+    - entity: switch.laundry_clothes_dryer_plug
       name: Clothes Dryer
       icon: mdi:tumble-dryer
-    - entity: switch.laundry_washing_machine
+    - entity: switch.laundry_washing_machine_plug
       name: Washing Machine
       icon: mdi:washing-machine
-    - entity: switch.kitchen_coffee_machine
+    - entity: switch.kitchen_coffee_machine_plug
       name: Coffee Machine
       icon: mdi:coffee-maker
-    - entity: switch.kitchen_fridge
+    - entity: switch.kitchen_fridge_plug
       name: Kitchen Fridge
       icon: mdi:fridge-outline
-    - entity: switch.deck_freezer
+    - entity: switch.deck_freezer_plug
       name: Deck Freezer
       icon: mdi:fridge-top
-    - entity: switch.study_battery_charger
+    - entity: switch.study_battery_charger_plug
       name: Battery Charger
       icon: mdi:battery-charging-30
-    - entity: switch.laundry_vacuum_charger
+    - entity: switch.laundry_vacuum_charger_plug
       name: Vacuum Charger
       icon: mdi:battery-charging-30
-    - entity: switch.ada_tablet_outlet
+    - entity: switch.ada_tablet_outlet_plug
       name: Ada Tablet
       icon: mdi:tablet
-    - entity: switch.server_flo_outlet
+    - entity: switch.server_flo_outlet_plug
       name: Server Flo
       icon: mdi:server
-    - entity: switch.server_meg_outlet
+    - entity: switch.server_meg_outlet_plug
       name: Server Meg
       icon: mdi:server
-    - entity: switch.rack_outlet
+    - entity: switch.rack_outlet_plug
       name: Server Rack
       icon: mdi:server
-    - entity: switch.roof_network_switch
+    - entity: switch.roof_network_switch_plug
       name: Network Switch
       icon: mdi:server-network
-    - entity: switch.rack_modem
+    - entity: switch.rack_internet_modem_plug
       name: Internet Modem
       icon: mdi:router-wireless
     - entity: switch.deck_fans_outlet

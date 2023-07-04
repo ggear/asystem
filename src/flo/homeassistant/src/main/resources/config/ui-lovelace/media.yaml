@@ -27,6 +27,9 @@
 - type: media-control
   entity: media_player.lg_webos_smart_tv
 ################################################################################
+- type: media-control
+  entity: media_player.edwin_tablet
+################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: media-control

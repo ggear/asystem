@@ -284,7 +284,7 @@ fan.edwin_fan:
 fan.parents_fan:
   friendly_name: 'Parents'
   icon: 'mdi:fan'
-switch.kitchen_fan:
+switch.kitchen_fan_plug:
   friendly_name: 'Kitchen'
   icon: 'mdi:fan'
 fan.lounge_fan:
@@ -338,7 +338,7 @@ light.study_lamp:
 light.kitchen_main:
   friendly_name: 'Kitchen Main'
   icon: 'mdi:lightbulb-group'
-switch.kitchen_downlights:
+switch.kitchen_downlights_plug:
   friendly_name: 'Kitchen Downlights'
   icon: 'mdi:lightbulb-group'
 light.laundry_main:
@@ -359,13 +359,13 @@ light.ensuite_main:
 light.wardrobe_main:
   friendly_name: 'Wardrobe Main'
   icon: 'mdi:lightbulb-group'
-switch.deck_festoons:
+switch.deck_festoons_plug:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:lightbulb-group'
-switch.landing_festoons:
+switch.landing_festoons_plug:
   friendly_name: 'Landing Festoons'
   icon: 'mdi:lightbulb-group'
-switch.bathroom_rails:
+switch.bathroom_rails_plug:
   friendly_name: 'Towel Rails'
   icon: 'mdi:radiator'
 fan.lounge_air_purifier:
@@ -375,19 +375,15 @@ fan.dining_air_purifier:
   friendly_name: 'Dining'
   icon: 'mdi:air-purifier'
 sensor.home_power:
-  friendly_name: 'Home'
+  friendly_name: 'Home Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.home_peak_power:
-  friendly_name: 'Peak'
+  friendly_name: 'Peak Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.home_base_power:
-  friendly_name: 'Base'
-  icon: 'mdi:home-lightning-bolt'
-  unit_of_measurement: 'W'
-sensor.all_standby_power:
-  friendly_name: 'Standby'
+  friendly_name: 'Base Load'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.lights_power:
@@ -396,6 +392,10 @@ sensor.lights_power:
   unit_of_measurement: 'W'
 sensor.fans_power:
   friendly_name: 'All Fans'
+  icon: 'mdi:home-lightning-bolt'
+  unit_of_measurement: 'W'
+sensor.all_standby_power:
+  friendly_name: 'All Standby'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.kitchen_coffee_machine_power:
@@ -459,19 +459,15 @@ sensor.kitchen_fan_power:
 sensor.roof_network_switch_power:
   friendly_name: 'Network Switch'
 sensor.home_energy_daily:
-  friendly_name: 'Home'
+  friendly_name: 'Home Load'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.home_peak_energy_daily:
-  friendly_name: 'Peak'
+  friendly_name: 'Peak Load'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.home_base_energy_daily:
-  friendly_name: 'Base'
-  icon: 'mdi:battery-charging'
-  unit_of_measurement: 'kWh'
-sensor.all_standby_energy_daily:
-  friendly_name: 'Standby'
+  friendly_name: 'Base Load'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.lights_energy_daily:
@@ -480,6 +476,10 @@ sensor.lights_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.fans_energy_daily:
   friendly_name: 'All Fans'
+  icon: 'mdi:battery-charging'
+  unit_of_measurement: 'kWh'
+sensor.all_standby_energy_daily:
+  friendly_name: 'All Standby'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.kitchen_coffee_machine_energy_daily:
@@ -607,59 +607,58 @@ sensor.kitchen_move_battery:
   friendly_name: 'Sonos Kitchen'
 sensor.all_standby:
   friendly_name: 'Standby Power'
-  icon: 'mdi:television'
-switch.lounge_tv_outlet:
+switch.lounge_tv_outlet_plug:
   friendly_name: 'Lounge TV'
   icon: 'mdi:television'
-switch.lounge_sub:
+switch.lounge_sub_plug:
   friendly_name: 'Lounge Sub'
   icon: 'mdi:speaker'
-switch.study_outlet:
+switch.study_outlet_plug:
   friendly_name: 'Study Outlet'
   icon: 'mdi:power-plug-outline'
-switch.office_outlet:
+switch.office_outlet_plug:
   friendly_name: 'Office Outlet'
   icon: 'mdi:power-plug-outline'
-switch.kitchen_dish_washer:
+switch.kitchen_dish_washer_plug:
   friendly_name: 'Dish Washer'
   icon: 'mdi:dishwasher'
-switch.laundry_clothes_dryer:
+switch.laundry_clothes_dryer_plug:
   friendly_name: 'Clothes Dryer'
   icon: 'mdi:tumble-dryer'
-switch.laundry_washing_machine:
+switch.laundry_washing_machine_plug:
   friendly_name: 'Washing Machine'
   icon: 'mdi:washing-machine'
-switch.kitchen_coffee_machine:
+switch.kitchen_coffee_machine_plug:
   friendly_name: 'Coffee Machine'
   icon: 'mdi:coffee-maker'
-switch.kitchen_fridge:
+switch.kitchen_fridge_plug:
   friendly_name: 'Kitchen Fridge'
   icon: 'mdi:fridge-outline'
-switch.deck_freezer:
+switch.deck_freezer_plug:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:fridge-top'
-switch.study_battery_charger:
+switch.study_battery_charger_plug:
   friendly_name: 'Battery Charger'
   icon: 'mdi:battery-charging-30'
-switch.laundry_vacuum_charger:
+switch.laundry_vacuum_charger_plug:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging-30'
-switch.ada_tablet_outlet:
+switch.ada_tablet_outlet_plug:
   friendly_name: 'Ada Tablet'
   icon: 'mdi:tablet'
-switch.server_flo_outlet:
+switch.server_flo_outlet_plug:
   friendly_name: 'Server Flo'
   icon: 'mdi:server'
-switch.server_meg_outlet:
+switch.server_meg_outlet_plug:
   friendly_name: 'Server Meg'
   icon: 'mdi:server'
-switch.rack_outlet:
+switch.rack_outlet_plug:
   friendly_name: 'Server Rack'
   icon: 'mdi:server'
-switch.roof_network_switch:
+switch.roof_network_switch_plug:
   friendly_name: 'Network Switch'
   icon: 'mdi:server-network'
-switch.rack_modem:
+switch.rack_internet_modem_plug:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
 switch.deck_fans_outlet:
@@ -765,6 +764,8 @@ media_player.ada_tablet:
   friendly_name: 'Ada Tablet'
 media_player.lg_webos_smart_tv:
   friendly_name: 'Lounge TV'
+media_player.edwin_tablet:
+  friendly_name: 'Edwin Tablet'
 media_player.lounge_arc:
   friendly_name: 'Lounge Arc'
 media_player.kitchen_move:

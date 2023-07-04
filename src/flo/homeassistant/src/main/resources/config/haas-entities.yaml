@@ -77,7 +77,7 @@ fan.parents_fan:
   name: Parents Fan
   aliases: []
   room: Parents
-switch.kitchen_fan:
+switch.kitchen_fan_plug:
   name: Kitchen Fan
   aliases: []
   room: Kitchen
@@ -141,7 +141,7 @@ light.kitchen_main:
   name: Kitchen Main Lights
   aliases: ['Kitchen Main Light']
   room: Kitchen
-switch.kitchen_downlights:
+switch.kitchen_downlights_plug:
   name: Kitchen Downlights
   aliases: ['Kitchen Downlight']
   room: Kitchen
@@ -169,15 +169,15 @@ light.wardrobe_main:
   name: Wardrobe Main Light
   aliases: []
   room: Wardrobe
-switch.deck_festoons:
+switch.deck_festoons_plug:
   name: Deck Festoons
   aliases: []
   room: Deck
-switch.landing_festoons:
+switch.landing_festoons_plug:
   name: Landing Festoons
   aliases: []
   room: Landing
-switch.bathroom_rails:
+switch.bathroom_rails_plug:
   name: Bathroom Towel Rails
   aliases: []
   room: Bathroom

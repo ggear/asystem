@@ -17,27 +17,22 @@
     fill: false
   entities:
     - entity: sensor.home_power
-      name: Home
+      name: Home Load
     - entity: sensor.home_peak_power
-      name: Peak
+      name: Peak Load
     - entity: sensor.home_base_power
-      name: Base
-    - entity: sensor.all_standby_power
-      name: Standby
+      name: Base Load
 ################################################################################
 - type: entities
   entities:
     - entity: sensor.home_power
-      name: Home
+      name: Home Load
       icon: mdi:home-lightning-bolt
     - entity: sensor.home_peak_power
-      name: Peak
+      name: Peak Load
       icon: mdi:home-lightning-bolt
     - entity: sensor.home_base_power
-      name: Base
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.all_standby_power
-      name: Standby
+      name: Base Load
       icon: mdi:home-lightning-bolt
 ################################################################################
 - type: entities
@@ -47,6 +42,9 @@
       icon: mdi:home-lightning-bolt
     - entity: sensor.fans_power
       name: All Fans
+      icon: mdi:home-lightning-bolt
+    - entity: sensor.all_standby_power
+      name: All Standby
       icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_coffee_machine_power
       name: Coffee Machine
@@ -106,27 +104,22 @@
     fill: false
   entities:
     - entity: sensor.home_energy_daily
-      name: Home
+      name: Home Load
     - entity: sensor.home_peak_energy_daily
-      name: Peak
+      name: Peak Load
     - entity: sensor.home_base_energy_daily
-      name: Base
-    - entity: sensor.all_standby_energy_daily
-      name: Standby
+      name: Base Load
 ################################################################################
 - type: entities
   entities:
     - entity: sensor.home_energy_daily
-      name: Home
+      name: Home Load
       icon: mdi:battery-charging
     - entity: sensor.home_peak_energy_daily
-      name: Peak
+      name: Peak Load
       icon: mdi:battery-charging
     - entity: sensor.home_base_energy_daily
-      name: Base
-      icon: mdi:battery-charging
-    - entity: sensor.all_standby_energy_daily
-      name: Standby
+      name: Base Load
       icon: mdi:battery-charging
 ################################################################################
 - type: entities
@@ -136,6 +129,9 @@
       icon: mdi:battery-charging
     - entity: sensor.fans_energy_daily
       name: All Fans
+      icon: mdi:battery-charging
+    - entity: sensor.all_standby_energy_daily
+      name: All Standby
       icon: mdi:battery-charging
     - entity: sensor.kitchen_coffee_machine_energy_daily
       name: Coffee Machine
