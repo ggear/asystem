@@ -36,6 +36,15 @@
     - '0x0017880104329975'
     - '0x001788010432996f'
     - '0x001788010444db4e'
+'21':
+  friendly_name: 'Hallway Sconces'
+  retain: true
+  transition: 1
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x2c1165fffe12d5c4'
+    - '0x2c1165fffe109407'
 '5':
   friendly_name: 'Dining Main'
   retain: true
