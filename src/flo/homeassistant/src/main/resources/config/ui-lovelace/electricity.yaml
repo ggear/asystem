@@ -18,21 +18,21 @@
   entities:
     - entity: sensor.home_power
       name: Home Load
-    - entity: sensor.home_peak_power
-      name: Peak Load
     - entity: sensor.home_base_power
       name: Base Load
+    - entity: sensor.home_peak_power
+      name: Peak Load
 ################################################################################
 - type: entities
   entities:
     - entity: sensor.home_power
       name: Home Load
       icon: mdi:home-lightning-bolt
-    - entity: sensor.home_peak_power
-      name: Peak Load
-      icon: mdi:home-lightning-bolt
     - entity: sensor.home_base_power
       name: Base Load
+      icon: mdi:home-lightning-bolt
+    - entity: sensor.home_peak_power
+      name: Peak Load
       icon: mdi:home-lightning-bolt
 ################################################################################
 - type: entities
@@ -105,21 +105,21 @@
   entities:
     - entity: sensor.home_energy_daily
       name: Home Load
-    - entity: sensor.home_peak_energy_daily
-      name: Peak Load
     - entity: sensor.home_base_energy_daily
       name: Base Load
+    - entity: sensor.home_peak_energy_daily
+      name: Peak Load
 ################################################################################
 - type: entities
   entities:
     - entity: sensor.home_energy_daily
       name: Home Load
       icon: mdi:battery-charging
-    - entity: sensor.home_peak_energy_daily
-      name: Peak Load
-      icon: mdi:battery-charging
     - entity: sensor.home_base_energy_daily
       name: Base Load
+      icon: mdi:battery-charging
+    - entity: sensor.home_peak_energy_daily
+      name: Peak Load
       icon: mdi:battery-charging
 ################################################################################
 - type: entities

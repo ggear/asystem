@@ -95,6 +95,7 @@
 
 # Traffic & Security -> Global Threat Management -> Detect & Block -> Detect & Block
 # Traffic & Security -> System Sensitivity -> Maximum Protection
+# Traffic & Security -> Create New Rule -> Enable Rule -> True, Description -> Isolated from Internet, Action -> Block, Matching -> Internet, On -> Isolated
 
 # Advanced Features -> Advanced Gateway Settings -> Multicast DNS -> True
 # Advanced Features -> Advanced Gateway Settings -> Create New Port Forwarding Rule ->
