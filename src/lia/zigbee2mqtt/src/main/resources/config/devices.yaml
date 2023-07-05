@@ -29,14 +29,6 @@
   friendly_name: 'Hallway Main Bulb 4'
   homeassistant:
     expire_after: 3600
-'0x2c1165fffe12d5c4':
-  friendly_name: 'Hallway Sconces Bulb 1'
-  homeassistant:
-    expire_after: 3600
-'0x2c1165fffe109407':
-  friendly_name: 'Hallway Sconces Bulb 1'
-  homeassistant:
-    expire_after: 3600
 '0x00178801039f69d5':
   friendly_name: 'Dining Main Bulb 1'
   homeassistant:
