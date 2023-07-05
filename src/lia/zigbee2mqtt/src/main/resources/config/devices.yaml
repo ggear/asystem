@@ -153,6 +153,30 @@
   friendly_name: 'Wardrobe Main Bulb 1'
   homeassistant:
     expire_after: 3600
+'0x001788010c692175':
+  friendly_name: 'Garden Pedestals Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x001788010c69214a':
+  friendly_name: 'Garden Pedestals Bulb 2'
+  homeassistant:
+    expire_after: 3600
+'0x001788010c5c4266':
+  friendly_name: 'Garden Pedestals Bulb 3'
+  homeassistant:
+    expire_after: 3600
+'0x001788010c692144':
+  friendly_name: 'Garden Pedestals Bulb 4'
+  homeassistant:
+    expire_after: 3600
+'0x00178801097ed42c':
+  friendly_name: 'Tree Spotlights Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x0017880109c40c33':
+  friendly_name: 'Tree Spotlights Bulb 2'
+  homeassistant:
+    expire_after: 3600
 '0x9035eafffe404425':
   friendly_name: 'Lounge Air Purifier'
   homeassistant:
