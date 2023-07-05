@@ -12,7 +12,9 @@ HOME=$(ssh root@${HOST} "find /home/asystem/$(basename ${ROOT_DIR}) -maxdepth 1 
 INSTALL=$(ssh root@${HOST} "find /var/lib/asystem/install/$(basename ${ROOT_DIR}) -maxdepth 1 -mindepth 1 ! -name latest ! -name latest 2>/dev/null | sort | tail -n 1")
 export VERNEMQ_IP=${VERNEMQ_IP_PROD}
 
+# TODO
 #${ROOT_DIR}/src/main/resources/config/mqtt.sh
 scp -r ${ROOT_DIR}/src/main/resources/config/* root@${HOST}:${HOME}
 ssh root@${HOST} "cd ${INSTALL} && docker-compose --compatibility restart"
+# TODO
 #[ $? -eq 0 ] && ${ROOT_DIR}/src/main/resources/config/mqtt_config.sh

@@ -34,7 +34,7 @@
   homeassistant:
     expire_after: 3600
 '0x2c1165fffe109407':
-  friendly_name: 'Hallway Sconces Bulb 1'
+  friendly_name: 'Hallway Sconces Bulb 2'
   homeassistant:
     expire_after: 3600
 '0x00178801039f69d5':
