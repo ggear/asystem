@@ -29,6 +29,14 @@
   friendly_name: 'Hallway Main Bulb 4'
   homeassistant:
     expire_after: 3600
+'0x2c1165fffe12d5c4':
+  friendly_name: 'Hallway Sconces Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x2c1165fffe109407':
+  friendly_name: 'Hallway Sconces Bulb 1'
+  homeassistant:
+    expire_after: 3600
 '0x00178801039f69d5':
   friendly_name: 'Dining Main Bulb 1'
   homeassistant:
@@ -81,6 +89,14 @@
   friendly_name: 'Parents Main Bulb 3'
   homeassistant:
     expire_after: 3600
+'0x2c1165fffeb07271':
+  friendly_name: 'Parents Sconces Jane Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x2c1165fffea8c4d8':
+  friendly_name: 'Parents Sconces Graham Bulb 1'
+  homeassistant:
+    expire_after: 3600
 '0x00178801040e2034':
   friendly_name: 'Study Lamp Bulb 1'
   homeassistant:
@@ -121,8 +137,44 @@
   friendly_name: 'Ensuite Main Bulb 1'
   homeassistant:
     expire_after: 3600
+'0x2c1165fffe168c7e':
+  friendly_name: 'Ensuite Sconces Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x2c1165fffea5cd4b':
+  friendly_name: 'Ensuite Sconces Bulb 2'
+  homeassistant:
+    expire_after: 3600
+'0x2c1165fffea89f5f':
+  friendly_name: 'Ensuite Sconces Bulb 3'
+  homeassistant:
+    expire_after: 3600
 '0x00178801040ede93':
   friendly_name: 'Wardrobe Main Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x001788010c692175':
+  friendly_name: 'Garden Pedestals Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x001788010c69214a':
+  friendly_name: 'Garden Pedestals Bulb 2'
+  homeassistant:
+    expire_after: 3600
+'0x001788010c5c4266':
+  friendly_name: 'Garden Pedestals Bulb 3'
+  homeassistant:
+    expire_after: 3600
+'0x001788010c692144':
+  friendly_name: 'Garden Pedestals Bulb 4'
+  homeassistant:
+    expire_after: 3600
+'0x00178801097ed42c':
+  friendly_name: 'Tree Spotlights Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x0017880109c40c33':
+  friendly_name: 'Tree Spotlights Bulb 2'
   homeassistant:
     expire_after: 3600
 '0x9035eafffe404425':
