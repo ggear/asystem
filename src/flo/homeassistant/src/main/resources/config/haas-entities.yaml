@@ -113,6 +113,10 @@ light.hallway_main:
   name: Hallway Main Lights
   aliases: ['Hallway Main Light']
   room: Hallway
+light.hallway_sconces:
+  name: Hallway Sconces
+  aliases: []
+  room: Hallway
 light.dining_main:
   name: Dining Main Lights
   aliases: ['Dining Main Light']
@@ -132,6 +136,10 @@ light.lounge_lamp:
 light.parents_main:
   name: Parents Main Lights
   aliases: ['Parents Main Light']
+  room: Parents
+light.parents_sconces:
+  name: Parents Sconces
+  aliases: []
   room: Parents
 light.study_lamp:
   name: Study Lamp
@@ -161,8 +169,16 @@ light.bathroom_main:
   name: Bathroom Main Light
   aliases: []
   room: Bathroom
+light.bathroom_sconces:
+  name: Bathroom Sconces
+  aliases: []
+  room: Bathroom
 light.ensuite_main:
   name: Ensuite Main Light
+  aliases: []
+  room: Ensuite
+light.ensuite_sconces:
+  name: Ensuite Sconces
   aliases: []
   room: Ensuite
 light.wardrobe_main:
@@ -177,6 +193,14 @@ switch.landing_festoons_plug:
   name: Landing Festoons
   aliases: []
   room: Landing
+light.garden_pedestals:
+  name: Garden Pedestals
+  aliases: []
+  room: Garden
+light.tree_spotlights:
+  name: Tree Spotlights
+  aliases: []
+  room: Tree
 switch.bathroom_rails_plug:
   name: Bathroom Towel Rails
   aliases: []

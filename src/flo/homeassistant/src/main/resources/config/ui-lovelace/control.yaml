@@ -65,6 +65,9 @@
     - entity: light.hallway_main
       name: Hallway Main
       icon: mdi:lightbulb-group
+    - entity: light.hallway_sconces
+      name: Hallway Sconces
+      icon: mdi:lightbulb-group
     - entity: light.dining_main
       name: Dining Main
       icon: mdi:lightbulb-group
@@ -79,6 +82,9 @@
       icon: mdi:lightbulb-group
     - entity: light.parents_main
       name: Parents Main
+      icon: mdi:lightbulb-group
+    - entity: light.parents_sconces
+      name: Parents Sconces
       icon: mdi:lightbulb-group
     - entity: light.study_lamp
       name: Study Lamp
@@ -101,8 +107,14 @@
     - entity: light.bathroom_main
       name: Bathroom Main
       icon: mdi:lightbulb-group
+    - entity: light.bathroom_sconces
+      name: Bathroom Sconces
+      icon: mdi:lightbulb-group
     - entity: light.ensuite_main
       name: Ensuite Main
+      icon: mdi:lightbulb-group
+    - entity: light.ensuite_sconces
+      name: Ensuite Sconces
       icon: mdi:lightbulb-group
     - entity: light.wardrobe_main
       name: Wardrobe Main
@@ -112,6 +124,12 @@
       icon: mdi:lightbulb-group
     - entity: switch.landing_festoons_plug
       name: Landing Festoons
+      icon: mdi:lightbulb-group
+    - entity: light.garden_pedestals
+      name: Garden Pedestals
+      icon: mdi:lightbulb-group
+    - entity: light.tree_spotlights
+      name: Tree Spotlights
       icon: mdi:lightbulb-group
 ################################################################################
 - type: custom:layout-break

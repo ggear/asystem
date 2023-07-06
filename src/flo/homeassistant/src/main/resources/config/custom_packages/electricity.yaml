@@ -295,6 +295,8 @@ sensor:
                   - entity_id: light.hallway_main_bulb_2
                   - entity_id: light.hallway_main_bulb_3
                   - entity_id: light.hallway_main_bulb_4
+                  - entity_id: light.hallway_sconces_bulb_1
+                  - entity_id: light.hallway_sconces_bulb_1
               #########################################################################
               - create_group: Dining Lights
                 entities:
@@ -323,6 +325,8 @@ sensor:
                   - entity_id: light.parents_main_bulb_1
                   - entity_id: light.parents_main_bulb_2
                   - entity_id: light.parents_main_bulb_3
+                  - entity_id: light.parents_sconces_jane_bulb_1
+                  - entity_id: light.parents_sconces_graham_bulb_1
               #########################################################################
               - create_group: Study Lights
                 entities:
@@ -358,10 +362,15 @@ sensor:
               - create_group: Bathroom Lights
                 entities:
                   - entity_id: light.bathroom_main_bulb_1
+                  - entity_id: light.bathroom_sconces_bulb_1
+                  - entity_id: light.bathroom_sconces_bulb_2
               #########################################################################
               - create_group: Ensuite Lights
                 entities:
                   - entity_id: light.ensuite_main_bulb_1
+                  - entity_id: light.ensuite_sconces_bulb_1
+                  - entity_id: light.ensuite_sconces_bulb_2
+                  - entity_id: light.ensuite_sconces_bulb_3
               #########################################################################
               - create_group: Wardrobe Lights
                 entities:
@@ -388,6 +397,18 @@ sensor:
                   - entity_id: switch.landing_festoons_plug
                     power_sensor_id: sensor.landing_festoons_plug_current_consumption
                     force_energy_sensor_creation: true
+              #########################################################################
+              - create_group: Garden Lights
+                entities:
+                  - entity_id: light.garden_pedestals_bulb_1
+                  - entity_id: light.garden_pedestals_bulb_2
+                  - entity_id: light.garden_pedestals_bulb_3
+                  - entity_id: light.garden_pedestals_bulb_4
+              #########################################################################
+              - create_group: Tree Lights
+                entities:
+                  - entity_id: light.tree_spotlights_bulb_1
+                  - entity_id: light.tree_spotlights_bulb_2
           #############################################################################
           - create_group: Audio Visual Devices
             entities:

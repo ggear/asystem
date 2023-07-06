@@ -34,6 +34,7 @@ adaptive_lighting:
       - light.kitchen_main
       - light.laundry_main
       - light.pantry_main
+      - light.wardrobe_main
   #####################################################################################
   - name: bedroom
     interval: 30
@@ -49,7 +50,6 @@ adaptive_lighting:
       - light.parents_main
       - light.bathroom_main
       - light.ensuite_main
-      - light.wardrobe_main
   #####################################################################################
 input_boolean:
   #####################################################################################
@@ -115,6 +115,14 @@ input_boolean:
   #####################################################################################
   lighting_reset_adaptive_lighting_wardrobe_main:
     name: Wardrobe Main
+    initial: false
+  #####################################################################################
+  lighting_reset_adaptive_lighting_garden_pedestals:
+    name: Garden Pedestals
+    initial: false
+  #####################################################################################
+  lighting_reset_adaptive_lighting_tree_spotlights:
+    name: Tree Spotlights
     initial: false
   #####################################################################################
 automation:
@@ -533,10 +541,44 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_default
           lights: light.wardrobe_main
           manual_control: false
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_garden_pedestals
+    alias: "Lighting: Reset Adaptive Lighting on request of Garden Pedestals"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_garden_pedestals
+        from: 'off'
+        to: 'on'
+    action:
+      - service: light.turn_on
+        data_template:
+          color_temp: 366
+          brightness_pct: 100
+          entity_id: light.garden_pedestals
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_garden_pedestals
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_tree_spotlights
+    alias: "Lighting: Reset Adaptive Lighting on request of Tree Spotlights"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_tree_spotlights
+        from: 'off'
+        to: 'on'
+    action:
+      - service: light.turn_on
+        data_template:
+          color_temp: 366
+          brightness_pct: 100
+          entity_id: light.tree_spotlights
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_tree_spotlights
   #####################################################################################

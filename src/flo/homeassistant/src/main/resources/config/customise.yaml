@@ -317,6 +317,9 @@ light.edwin_night_light:
 light.hallway_main:
   friendly_name: 'Hallway Main'
   icon: 'mdi:lightbulb-group'
+light.hallway_sconces:
+  friendly_name: 'Hallway Sconces'
+  icon: 'mdi:lightbulb-group'
 light.dining_main:
   friendly_name: 'Dining Main'
   icon: 'mdi:lightbulb-group'
@@ -331,6 +334,9 @@ light.lounge_lamp:
   icon: 'mdi:lightbulb-group'
 light.parents_main:
   friendly_name: 'Parents Main'
+  icon: 'mdi:lightbulb-group'
+light.parents_sconces:
+  friendly_name: 'Parents Sconces'
   icon: 'mdi:lightbulb-group'
 light.study_lamp:
   friendly_name: 'Study Lamp'
@@ -353,8 +359,14 @@ light.office_main:
 light.bathroom_main:
   friendly_name: 'Bathroom Main'
   icon: 'mdi:lightbulb-group'
+light.bathroom_sconces:
+  friendly_name: 'Bathroom Sconces'
+  icon: 'mdi:lightbulb-group'
 light.ensuite_main:
   friendly_name: 'Ensuite Main'
+  icon: 'mdi:lightbulb-group'
+light.ensuite_sconces:
+  friendly_name: 'Ensuite Sconces'
   icon: 'mdi:lightbulb-group'
 light.wardrobe_main:
   friendly_name: 'Wardrobe Main'
@@ -364,6 +376,12 @@ switch.deck_festoons_plug:
   icon: 'mdi:lightbulb-group'
 switch.landing_festoons_plug:
   friendly_name: 'Landing Festoons'
+  icon: 'mdi:lightbulb-group'
+light.garden_pedestals:
+  friendly_name: 'Garden Pedestals'
+  icon: 'mdi:lightbulb-group'
+light.tree_spotlights:
+  friendly_name: 'Tree Spotlights'
   icon: 'mdi:lightbulb-group'
 switch.bathroom_rails_plug:
   friendly_name: 'Towel Rails'
