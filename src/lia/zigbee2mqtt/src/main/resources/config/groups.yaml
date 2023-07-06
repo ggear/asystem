@@ -7,129 +7,204 @@
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x0017880103433075'
 '101':
   friendly_name: 'Edwin Lamp'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x0017880102b8fd87'
 '102':
   friendly_name: 'Edwin Night Light'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x001788010343c36f'
 '103':
   friendly_name: 'Hallway Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801043283b0'
+    - '0x0017880104329975'
+    - '0x001788010432996f'
+    - '0x001788010444db4e'
 '120':
   friendly_name: 'Hallway Sconces'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x2c1165fffe12d5c4'
+    - '0x2c1165fffe109407'
 '104':
   friendly_name: 'Dining Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801039f69d5'
+    - '0x00178801039f56c4'
+    - '0x00178801039f584a'
+    - '0x00178801039f69d4'
+    - '0x00178801039f574e'
+    - '0x00178801039f4eed'
 '105':
   friendly_name: 'Lounge Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801039f6b78'
+    - '0x001788010444ef85'
+    - '0x00178801039f6b4a'
 '114':
   friendly_name: 'Lounge Lamp'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x0017880106bc4f2d'
 '106':
   friendly_name: 'Parents Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801039f585a'
+    - '0x00178801039f69d1'
+    - '0x001788010432a064'
 '119':
-  friendly_name: 'Parents Sconces'
+  friendly_name: 'Parents Jane Bedside'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x2c1165fffeb07271'
+'122':
+  friendly_name: 'Parents Graham Bedside'
+  retain: true
+  transition: 1
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x2c1165fffea8c4d8'
 '117':
   friendly_name: 'Study Lamp'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801040e2034'
 '107':
   friendly_name: 'Kitchen Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801040f8db2'
+    - '0x001788010343c34f'
+    - '0x001788010343c147'
+    - '0x001788010343b9d8'
 '108':
   friendly_name: 'Laundry Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x0017880104eaa288'
 '109':
   friendly_name: 'Pantry Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x0017880104eaa272'
 '110':
   friendly_name: 'Office Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801040edfae'
 '111':
   friendly_name: 'Bathroom Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801040edcad'
 '121':
   friendly_name: 'Bathroom Sconces'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x2c1165fffe2787f0'
+    - '0x2c1165fffe18e424'
 '112':
   friendly_name: 'Ensuite Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801040eddb2'
 '118':
   friendly_name: 'Ensuite Sconces'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x2c1165fffe168c7e'
+    - '0x2c1165fffea5cd4b'
+    - '0x2c1165fffea89f5f'
 '113':
   friendly_name: 'Wardrobe Main'
   retain: true
   transition: 1
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801040ede93'
 '115':
   friendly_name: 'Garden Pedestals'
   retain: true
   transition: 4
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x001788010c692175'
+    - '0x001788010c69214a'
+    - '0x001788010c5c4266'
+    - '0x001788010c692144'
 '116':
   friendly_name: 'Tree Spotlights'
   retain: true
   transition: 4
   optimistic: true
   off_state: 'all_members_off'
+  devices:
+    - '0x00178801097ed42c'
+    - '0x0017880109c40c33'

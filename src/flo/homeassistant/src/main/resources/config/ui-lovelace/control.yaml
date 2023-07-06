@@ -125,12 +125,6 @@
     - entity: switch.landing_festoons_plug
       name: Landing Festoons
       icon: mdi:lightbulb-group
-    - entity: light.garden_pedestals
-      name: Garden Pedestals
-      icon: mdi:lightbulb-group
-    - entity: light.tree_spotlights
-      name: Tree Spotlights
-      icon: mdi:lightbulb-group
 ################################################################################
 - type: custom:layout-break
 ################################################################################

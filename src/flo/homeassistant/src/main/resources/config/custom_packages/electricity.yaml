@@ -398,13 +398,6 @@ sensor:
                     power_sensor_id: sensor.landing_festoons_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
-              - create_group: Garden Lights
-                entities:
-                  - entity_id: light.garden_pedestals_bulb_1
-                  - entity_id: light.garden_pedestals_bulb_2
-                  - entity_id: light.garden_pedestals_bulb_3
-                  - entity_id: light.garden_pedestals_bulb_4
-              #########################################################################
               - create_group: Tree Lights
                 entities:
                   - entity_id: light.tree_spotlights_bulb_1

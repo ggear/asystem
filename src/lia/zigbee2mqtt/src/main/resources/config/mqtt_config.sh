@@ -90,11 +90,11 @@ mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Parents Main Bulb 3/set
 mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Main Bulb 3" }' && echo 'Device [Parents Main Bulb 3] removed from all groups' && sleep 1
 mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Main", "device": "Parents Main Bulb 3" }' && echo 'Device [Parents Main Bulb 3] added to group' && sleep 1
 
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Sconces Jane Bulb 1" }' && echo 'Device [Parents Sconces Jane Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Sconces", "device": "Parents Sconces Jane Bulb 1" }' && echo 'Device [Parents Sconces Jane Bulb 1] added to group' && sleep 1
+mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Jane Bedside Bulb 1" }' && echo 'Device [Parents Jane Bedside Bulb 1] removed from all groups' && sleep 1
+mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Jane Bedside", "device": "Parents Jane Bedside Bulb 1" }' && echo 'Device [Parents Jane Bedside Bulb 1] added to group' && sleep 1
 
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Sconces Graham Bulb 1" }' && echo 'Device [Parents Sconces Graham Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Sconces", "device": "Parents Sconces Graham Bulb 1" }' && echo 'Device [Parents Sconces Graham Bulb 1] added to group' && sleep 1
+mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Graham Bedside Bulb 1" }' && echo 'Device [Parents Graham Bedside Bulb 1] removed from all groups' && sleep 1
+mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Graham Bedside", "device": "Parents Graham Bedside Bulb 1" }' && echo 'Device [Parents Graham Bedside Bulb 1] added to group' && sleep 1
 
 mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Study Lamp Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 500, "color_temp_startup": 500 }' && echo 'Device [Study Lamp Bulb 1] config persisted' && sleep 1
 mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Study Lamp Bulb 1" }' && echo 'Device [Study Lamp Bulb 1] removed from all groups' && sleep 1

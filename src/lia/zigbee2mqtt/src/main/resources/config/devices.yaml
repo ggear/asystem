@@ -90,11 +90,11 @@
   homeassistant:
     expire_after: 3600
 '0x2c1165fffeb07271':
-  friendly_name: 'Parents Sconces Jane Bulb 1'
+  friendly_name: 'Parents Jane Bedside Bulb 1'
   homeassistant:
     expire_after: 3600
 '0x2c1165fffea8c4d8':
-  friendly_name: 'Parents Sconces Graham Bulb 1'
+  friendly_name: 'Parents Graham Bedside Bulb 1'
   homeassistant:
     expire_after: 3600
 '0x00178801040e2034':
