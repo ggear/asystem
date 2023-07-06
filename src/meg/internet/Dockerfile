@@ -4,7 +4,7 @@ FROM telegraf:1.25.3 as image_base
 FROM image_base as image_package
 ARG PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
-# TODO: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
+# NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
 RUN apt-get -y --no-install-recommends install python3=$PYTHON_VERSION-3
 RUN apt-get -y --no-install-recommends install python3-dev=$PYTHON_VERSION-3

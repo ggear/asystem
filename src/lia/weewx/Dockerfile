@@ -4,7 +4,7 @@ FROM python:3.10.12-slim-bullseye as image_base
 ENV WEEWX_HOME="/home/weewx"
 
 FROM image_base as image_package
-# TODO: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
+# NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
 RUN apt-get -y --no-install-recommends install build-essential=12.9
 RUN apt-get -y --no-install-recommends install lbzip2=2.5-2.1

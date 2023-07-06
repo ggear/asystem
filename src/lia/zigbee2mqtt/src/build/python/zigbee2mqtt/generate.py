@@ -76,7 +76,8 @@ if __name__ == "__main__":
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_name"].str.len() > 0) &
         (metadata_df["zigbee_type"] == "Device") &
-        (metadata_df["zigbee_group"].str.len() > 0)
+        (metadata_df["zigbee_group"].str.len() > 0) &
+        (metadata_df["connection_mac"].str.len() > 0)
         ]
     metadata_config_dicts = [row.dropna().to_dict() for index, row in metadata_config_df.iterrows()]
     metadata_config_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/mqtt_config.sh"))
@@ -86,26 +87,18 @@ if __name__ == "__main__":
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
+ROOT_DIR=$(dirname $(readlink -f "$0"))
 while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
-            """.strip() + "\n\n")
+            """.strip() + "\n")
         for metadata_config_dict in metadata_config_dicts:
-            metadata_name = metadata_config_dict["device_name"].replace("-", " ").title()
-            metadata_group = metadata_groups_dict[metadata_config_dict["zigbee_group"]]["device_name"].replace("-", " ").title()
-            if "zigbee_device_config" in metadata_config_dict:
-                metadata_config_file.write("""
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/{}/set' -m '{}' && echo 'Device [{}] config persisted' && sleep 1
-                """.format(
-                    metadata_name,
-                    metadata_config_dict["zigbee_device_config"].replace("'", "\""),
-                    metadata_name,
-                ).strip() + "\n")
             metadata_config_file.write("""
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{}' && echo 'Device [{}] added to group' && sleep 1
+${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
             """.format(
-                '{{ "group": "{}", "device": "{}" }}'.format(metadata_group, metadata_name),
-                metadata_name,
+                metadata_config_dict["connection_mac"],
+                metadata_config_dict["device_name"].replace("-", " ").title(),
+                metadata_groups_dict[metadata_config_dict["zigbee_group"]]["device_name"].replace("-", " ").title(),
+                metadata_config_dict["zigbee_device_config"].replace("'", "\"") if "zigbee_device_config" in metadata_config_dict else "",
             ).strip() + "\n")
-            metadata_config_file.write("\n")
         print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
 
     metadata_devices_df = metadata_df[

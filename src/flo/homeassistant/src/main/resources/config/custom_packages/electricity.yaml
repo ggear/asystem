@@ -325,8 +325,8 @@ sensor:
                   - entity_id: light.parents_main_bulb_1
                   - entity_id: light.parents_main_bulb_2
                   - entity_id: light.parents_main_bulb_3
-                  - entity_id: light.parents_sconces_jane_bulb_1
-                  - entity_id: light.parents_sconces_graham_bulb_1
+                  - entity_id: light.parents_jane_bedside_bulb_1
+                  - entity_id: light.parents_graham_bedside_bulb_1
               #########################################################################
               - create_group: Study Lights
                 entities:

@@ -137,7 +137,11 @@ light.parents_main:
   name: Parents Main Lights
   aliases: ['Parents Main Light']
   room: Parents
-light.parents_sconces:
+light.parents_jane_bedside:
+  name: Parents Sconces
+  aliases: []
+  room: Parents
+light.parents_graham_bedside:
   name: Parents Sconces
   aliases: []
   room: Parents

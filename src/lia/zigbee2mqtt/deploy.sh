@@ -15,3 +15,4 @@ export VERNEMQ_IP=${VERNEMQ_IP_PROD}
 ${ROOT_DIR}/src/main/resources/config/mqtt.sh
 scp -r ${ROOT_DIR}/src/main/resources/config/* root@${HOST}:${HOME}
 ssh root@${HOST} "cd ${INSTALL} && docker-compose --compatibility restart"
+[ $? -eq 0 ] && ${ROOT_DIR}/src/main/resources/config/mqtt_config.sh

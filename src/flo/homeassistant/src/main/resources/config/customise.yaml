@@ -335,8 +335,11 @@ light.lounge_lamp:
 light.parents_main:
   friendly_name: 'Parents Main'
   icon: 'mdi:lightbulb-group'
-light.parents_sconces:
-  friendly_name: 'Parents Sconces'
+light.parents_jane_bedside:
+  friendly_name: 'Jane Bedside'
+  icon: 'mdi:lightbulb-group'
+light.parents_graham_bedside:
+  friendly_name: 'Graham Bedside'
   icon: 'mdi:lightbulb-group'
 light.study_lamp:
   friendly_name: 'Study Lamp'

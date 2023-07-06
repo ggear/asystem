@@ -2,180 +2,51 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
+ROOT_DIR=$(dirname $(readlink -f "$0"))
 while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Ada Lamp Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 500, "color_temp_startup": 500 }' && echo 'Device [Ada Lamp Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Ada Lamp Bulb 1" }' && echo 'Device [Ada Lamp Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Ada Lamp", "device": "Ada Lamp Bulb 1" }' && echo 'Device [Ada Lamp Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Edwin Lamp Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Edwin Lamp Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Edwin Lamp Bulb 1" }' && echo 'Device [Edwin Lamp Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Edwin Lamp", "device": "Edwin Lamp Bulb 1" }' && echo 'Device [Edwin Lamp Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Edwin Night Light Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 500, "color_temp_startup": 500 }' && echo 'Device [Edwin Night Light Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Edwin Night Light Bulb 1" }' && echo 'Device [Edwin Night Light Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Edwin Night Light", "device": "Edwin Night Light Bulb 1" }' && echo 'Device [Edwin Night Light Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Hallway Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Hallway Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Hallway Main Bulb 1" }' && echo 'Device [Hallway Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Hallway Main", "device": "Hallway Main Bulb 1" }' && echo 'Device [Hallway Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Hallway Main Bulb 2/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Hallway Main Bulb 2] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Hallway Main Bulb 2" }' && echo 'Device [Hallway Main Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Hallway Main", "device": "Hallway Main Bulb 2" }' && echo 'Device [Hallway Main Bulb 2] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Hallway Main Bulb 3/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Hallway Main Bulb 3] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Hallway Main Bulb 3" }' && echo 'Device [Hallway Main Bulb 3] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Hallway Main", "device": "Hallway Main Bulb 3" }' && echo 'Device [Hallway Main Bulb 3] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Hallway Main Bulb 4/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Hallway Main Bulb 4] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Hallway Main Bulb 4" }' && echo 'Device [Hallway Main Bulb 4] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Hallway Main", "device": "Hallway Main Bulb 4" }' && echo 'Device [Hallway Main Bulb 4] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Hallway Sconces Bulb 1" }' && echo 'Device [Hallway Sconces Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Hallway Sconces", "device": "Hallway Sconces Bulb 1" }' && echo 'Device [Hallway Sconces Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Hallway Sconces Bulb 2" }' && echo 'Device [Hallway Sconces Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Hallway Sconces", "device": "Hallway Sconces Bulb 2" }' && echo 'Device [Hallway Sconces Bulb 2] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Dining Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Dining Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Dining Main Bulb 1" }' && echo 'Device [Dining Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Dining Main", "device": "Dining Main Bulb 1" }' && echo 'Device [Dining Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Dining Main Bulb 2/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Dining Main Bulb 2] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Dining Main Bulb 2" }' && echo 'Device [Dining Main Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Dining Main", "device": "Dining Main Bulb 2" }' && echo 'Device [Dining Main Bulb 2] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Dining Main Bulb 3/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Dining Main Bulb 3] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Dining Main Bulb 3" }' && echo 'Device [Dining Main Bulb 3] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Dining Main", "device": "Dining Main Bulb 3" }' && echo 'Device [Dining Main Bulb 3] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Dining Main Bulb 4/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Dining Main Bulb 4] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Dining Main Bulb 4" }' && echo 'Device [Dining Main Bulb 4] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Dining Main", "device": "Dining Main Bulb 4" }' && echo 'Device [Dining Main Bulb 4] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Dining Main Bulb 5/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Dining Main Bulb 5] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Dining Main Bulb 5" }' && echo 'Device [Dining Main Bulb 5] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Dining Main", "device": "Dining Main Bulb 5" }' && echo 'Device [Dining Main Bulb 5] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Dining Main Bulb 6/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Dining Main Bulb 6] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Dining Main Bulb 6" }' && echo 'Device [Dining Main Bulb 6] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Dining Main", "device": "Dining Main Bulb 6" }' && echo 'Device [Dining Main Bulb 6] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Lounge Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Lounge Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Lounge Main Bulb 1" }' && echo 'Device [Lounge Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Lounge Main", "device": "Lounge Main Bulb 1" }' && echo 'Device [Lounge Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Lounge Main Bulb 2/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Lounge Main Bulb 2] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Lounge Main Bulb 2" }' && echo 'Device [Lounge Main Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Lounge Main", "device": "Lounge Main Bulb 2" }' && echo 'Device [Lounge Main Bulb 2] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Lounge Main Bulb 3/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Lounge Main Bulb 3] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Lounge Main Bulb 3" }' && echo 'Device [Lounge Main Bulb 3] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Lounge Main", "device": "Lounge Main Bulb 3" }' && echo 'Device [Lounge Main Bulb 3] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Lounge Lamp Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 500, "color_temp_startup": 500 }' && echo 'Device [Lounge Lamp Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Lounge Lamp Bulb 1" }' && echo 'Device [Lounge Lamp Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Lounge Lamp", "device": "Lounge Lamp Bulb 1" }' && echo 'Device [Lounge Lamp Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Parents Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Parents Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Main Bulb 1" }' && echo 'Device [Parents Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Main", "device": "Parents Main Bulb 1" }' && echo 'Device [Parents Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Parents Main Bulb 2/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Parents Main Bulb 2] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Main Bulb 2" }' && echo 'Device [Parents Main Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Main", "device": "Parents Main Bulb 2" }' && echo 'Device [Parents Main Bulb 2] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Parents Main Bulb 3/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Parents Main Bulb 3] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Main Bulb 3" }' && echo 'Device [Parents Main Bulb 3] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Main", "device": "Parents Main Bulb 3" }' && echo 'Device [Parents Main Bulb 3] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Jane Bedside Bulb 1" }' && echo 'Device [Parents Jane Bedside Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Jane Bedside", "device": "Parents Jane Bedside Bulb 1" }' && echo 'Device [Parents Jane Bedside Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Parents Graham Bedside Bulb 1" }' && echo 'Device [Parents Graham Bedside Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Parents Graham Bedside", "device": "Parents Graham Bedside Bulb 1" }' && echo 'Device [Parents Graham Bedside Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Study Lamp Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 500, "color_temp_startup": 500 }' && echo 'Device [Study Lamp Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Study Lamp Bulb 1" }' && echo 'Device [Study Lamp Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Study Lamp", "device": "Study Lamp Bulb 1" }' && echo 'Device [Study Lamp Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Kitchen Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Kitchen Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Kitchen Main Bulb 1" }' && echo 'Device [Kitchen Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Kitchen Main", "device": "Kitchen Main Bulb 1" }' && echo 'Device [Kitchen Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Kitchen Main Bulb 2/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Kitchen Main Bulb 2] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Kitchen Main Bulb 2" }' && echo 'Device [Kitchen Main Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Kitchen Main", "device": "Kitchen Main Bulb 2" }' && echo 'Device [Kitchen Main Bulb 2] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Kitchen Main Bulb 3/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Kitchen Main Bulb 3] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Kitchen Main Bulb 3" }' && echo 'Device [Kitchen Main Bulb 3] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Kitchen Main", "device": "Kitchen Main Bulb 3" }' && echo 'Device [Kitchen Main Bulb 3] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Kitchen Main Bulb 4/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Kitchen Main Bulb 4] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Kitchen Main Bulb 4" }' && echo 'Device [Kitchen Main Bulb 4] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Kitchen Main", "device": "Kitchen Main Bulb 4" }' && echo 'Device [Kitchen Main Bulb 4] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Laundry Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Laundry Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Laundry Main Bulb 1" }' && echo 'Device [Laundry Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Laundry Main", "device": "Laundry Main Bulb 1" }' && echo 'Device [Laundry Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Pantry Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Pantry Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Pantry Main Bulb 1" }' && echo 'Device [Pantry Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Pantry Main", "device": "Pantry Main Bulb 1" }' && echo 'Device [Pantry Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Office Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 250, "color_temp_startup": 250 }' && echo 'Device [Office Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Office Main Bulb 1" }' && echo 'Device [Office Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Office Main", "device": "Office Main Bulb 1" }' && echo 'Device [Office Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Bathroom Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Bathroom Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Bathroom Main Bulb 1" }' && echo 'Device [Bathroom Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Bathroom Main", "device": "Bathroom Main Bulb 1" }' && echo 'Device [Bathroom Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Bathroom Sconces Bulb 1" }' && echo 'Device [Bathroom Sconces Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Bathroom Sconces", "device": "Bathroom Sconces Bulb 1" }' && echo 'Device [Bathroom Sconces Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Bathroom Sconces Bulb 2" }' && echo 'Device [Bathroom Sconces Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Bathroom Sconces", "device": "Bathroom Sconces Bulb 2" }' && echo 'Device [Bathroom Sconces Bulb 2] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Ensuite Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Ensuite Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Ensuite Main Bulb 1" }' && echo 'Device [Ensuite Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Ensuite Main", "device": "Ensuite Main Bulb 1" }' && echo 'Device [Ensuite Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Ensuite Sconces Bulb 1" }' && echo 'Device [Ensuite Sconces Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Ensuite Sconces", "device": "Ensuite Sconces Bulb 1" }' && echo 'Device [Ensuite Sconces Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Ensuite Sconces Bulb 2" }' && echo 'Device [Ensuite Sconces Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Ensuite Sconces", "device": "Ensuite Sconces Bulb 2" }' && echo 'Device [Ensuite Sconces Bulb 2] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Ensuite Sconces Bulb 3" }' && echo 'Device [Ensuite Sconces Bulb 3] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Ensuite Sconces", "device": "Ensuite Sconces Bulb 3" }' && echo 'Device [Ensuite Sconces Bulb 3] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Wardrobe Main Bulb 1/set' -m '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }' && echo 'Device [Wardrobe Main Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Wardrobe Main Bulb 1" }' && echo 'Device [Wardrobe Main Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Wardrobe Main", "device": "Wardrobe Main Bulb 1" }' && echo 'Device [Wardrobe Main Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Garden Pedestals Bulb 1/set' -m '{ "hue_power_on_behavior": "off" }' && echo 'Device [Garden Pedestals Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Garden Pedestals Bulb 1" }' && echo 'Device [Garden Pedestals Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Garden Pedestals", "device": "Garden Pedestals Bulb 1" }' && echo 'Device [Garden Pedestals Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Garden Pedestals Bulb 2/set' -m '{ "hue_power_on_behavior": "off" }' && echo 'Device [Garden Pedestals Bulb 2] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Garden Pedestals Bulb 2" }' && echo 'Device [Garden Pedestals Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Garden Pedestals", "device": "Garden Pedestals Bulb 2" }' && echo 'Device [Garden Pedestals Bulb 2] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Garden Pedestals Bulb 3/set' -m '{ "hue_power_on_behavior": "off" }' && echo 'Device [Garden Pedestals Bulb 3] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Garden Pedestals Bulb 3" }' && echo 'Device [Garden Pedestals Bulb 3] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Garden Pedestals", "device": "Garden Pedestals Bulb 3" }' && echo 'Device [Garden Pedestals Bulb 3] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Garden Pedestals Bulb 4/set' -m '{ "hue_power_on_behavior": "off" }' && echo 'Device [Garden Pedestals Bulb 4] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Garden Pedestals Bulb 4" }' && echo 'Device [Garden Pedestals Bulb 4] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Garden Pedestals", "device": "Garden Pedestals Bulb 4" }' && echo 'Device [Garden Pedestals Bulb 4] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Tree Spotlights Bulb 1/set' -m '{ "hue_power_on_behavior": "off" }' && echo 'Device [Tree Spotlights Bulb 1] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Tree Spotlights Bulb 1" }' && echo 'Device [Tree Spotlights Bulb 1] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Tree Spotlights", "device": "Tree Spotlights Bulb 1" }' && echo 'Device [Tree Spotlights Bulb 1] added to group' && sleep 1
-
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/Tree Spotlights Bulb 2/set' -m '{ "hue_power_on_behavior": "off" }' && echo 'Device [Tree Spotlights Bulb 2] config persisted' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Tree Spotlights Bulb 2" }' && echo 'Device [Tree Spotlights Bulb 2] removed from all groups' && sleep 1
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{ "group": "Tree Spotlights", "device": "Tree Spotlights Bulb 2" }' && echo 'Device [Tree Spotlights Bulb 2] added to group' && sleep 1
-
+${ROOT_DIR}/mqtt_config.py '0x0017880103433075' 'Ada Lamp Bulb 1' 'Ada Lamp' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 500, "color_temp_startup": 500 }'
+${ROOT_DIR}/mqtt_config.py '0x0017880102b8fd87' 'Edwin Lamp Bulb 1' 'Edwin Lamp' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010343c36f' 'Edwin Night Light Bulb 1' 'Edwin Night Light' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 500, "color_temp_startup": 500 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801043283b0' 'Hallway Main Bulb 1' 'Hallway Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x0017880104329975' 'Hallway Main Bulb 2' 'Hallway Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010432996f' 'Hallway Main Bulb 3' 'Hallway Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010444db4e' 'Hallway Main Bulb 4' 'Hallway Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x2c1165fffe12d5c4' 'Hallway Sconces Bulb 1' 'Hallway Sconces' ''
+${ROOT_DIR}/mqtt_config.py '0x2c1165fffe109407' 'Hallway Sconces Bulb 2' 'Hallway Sconces' ''
+${ROOT_DIR}/mqtt_config.py '0x00178801039f69d5' 'Dining Main Bulb 1' 'Dining Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801039f56c4' 'Dining Main Bulb 2' 'Dining Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801039f584a' 'Dining Main Bulb 3' 'Dining Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801039f69d4' 'Dining Main Bulb 4' 'Dining Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801039f574e' 'Dining Main Bulb 5' 'Dining Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801039f4eed' 'Dining Main Bulb 6' 'Dining Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801039f6b78' 'Lounge Main Bulb 1' 'Lounge Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010444ef85' 'Lounge Main Bulb 2' 'Lounge Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801039f6b4a' 'Lounge Main Bulb 3' 'Lounge Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x0017880106bc4f2d' 'Lounge Lamp Bulb 1' 'Lounge Lamp' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 500, "color_temp_startup": 500 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801039f585a' 'Parents Main Bulb 1' 'Parents Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801039f69d1' 'Parents Main Bulb 2' 'Parents Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010432a064' 'Parents Main Bulb 3' 'Parents Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x2c1165fffeb07271' 'Parents Jane Bedside Bulb 1' 'Parents Jane Bedside' ''
+${ROOT_DIR}/mqtt_config.py '0x2c1165fffea8c4d8' 'Parents Graham Bedside Bulb 1' 'Parents Graham Bedside' ''
+${ROOT_DIR}/mqtt_config.py '0x00178801040e2034' 'Study Lamp Bulb 1' 'Study Lamp' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 500, "color_temp_startup": 500 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801040f8db2' 'Kitchen Main Bulb 1' 'Kitchen Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010343c34f' 'Kitchen Main Bulb 2' 'Kitchen Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010343c147' 'Kitchen Main Bulb 3' 'Kitchen Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010343b9d8' 'Kitchen Main Bulb 4' 'Kitchen Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x0017880104eaa288' 'Laundry Main Bulb 1' 'Laundry Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x0017880104eaa272' 'Pantry Main Bulb 1' 'Pantry Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801040edfae' 'Office Main Bulb 1' 'Office Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 254, "hue_power_on_color_temperature": 250, "color_temp_startup": 250 }'
+${ROOT_DIR}/mqtt_config.py '0x00178801040edcad' 'Bathroom Main Bulb 1' 'Bathroom Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x2c1165fffe2787f0' 'Bathroom Sconces Bulb 1' 'Bathroom Sconces' ''
+${ROOT_DIR}/mqtt_config.py '0x2c1165fffe18e424' 'Bathroom Sconces Bulb 2' 'Bathroom Sconces' ''
+${ROOT_DIR}/mqtt_config.py '0x00178801040eddb2' 'Ensuite Main Bulb 1' 'Ensuite Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x2c1165fffe168c7e' 'Ensuite Sconces Bulb 1' 'Ensuite Sconces' ''
+${ROOT_DIR}/mqtt_config.py '0x2c1165fffea5cd4b' 'Ensuite Sconces Bulb 2' 'Ensuite Sconces' ''
+${ROOT_DIR}/mqtt_config.py '0x2c1165fffea89f5f' 'Ensuite Sconces Bulb 3' 'Ensuite Sconces' ''
+${ROOT_DIR}/mqtt_config.py '0x00178801040ede93' 'Wardrobe Main Bulb 1' 'Wardrobe Main' '{ "hue_power_on_behavior": "on", "hue_power_on_brightness": 3, "hue_power_on_color_temperature": 65535, "color_temp_startup": 65535 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010c692175' 'Garden Pedestals Bulb 1' 'Garden Pedestals' '{ "hue_power_on_behavior": "off" }'
+${ROOT_DIR}/mqtt_config.py '0x001788010c69214a' 'Garden Pedestals Bulb 2' 'Garden Pedestals' '{ "hue_power_on_behavior": "off" }'
+${ROOT_DIR}/mqtt_config.py '0x001788010c5c4266' 'Garden Pedestals Bulb 3' 'Garden Pedestals' '{ "hue_power_on_behavior": "off" }'
+${ROOT_DIR}/mqtt_config.py '0x001788010c692144' 'Garden Pedestals Bulb 4' 'Garden Pedestals' '{ "hue_power_on_behavior": "off" }'
+${ROOT_DIR}/mqtt_config.py '0x00178801097ed42c' 'Tree Spotlights Bulb 1' 'Tree Spotlights' '{ "hue_power_on_behavior": "off" }'
+${ROOT_DIR}/mqtt_config.py '0x0017880109c40c33' 'Tree Spotlights Bulb 2' 'Tree Spotlights' '{ "hue_power_on_behavior": "off" }'
