@@ -100,12 +100,6 @@ mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/{}/set' -m '{}' && echo
                     metadata_name,
                 ).strip() + "\n")
             metadata_config_file.write("""
-mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{}' && echo 'Device [{}] removed from all groups' && sleep 1
-            """.format(
-                '{{ "device": "{}" }}'.format(metadata_name),
-                metadata_name,
-            ).strip() + "\n")
-            metadata_config_file.write("""
 mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/add' -m '{}' && echo 'Device [{}] added to group' && sleep 1
             """.format(
                 '{{ "group": "{}", "device": "{}" }}'.format(metadata_group, metadata_name),
