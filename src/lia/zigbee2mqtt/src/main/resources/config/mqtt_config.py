@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import time
 import json
 import os
 import sys
@@ -85,29 +86,36 @@ if __name__ == "__main__":
 
     device_availability_dict = _get("zigbee/{}/availability".format(device_name))
     if device_availability_dict is not None and device_availability_dict["state"] == "online":
-        grouped = False
-        group_dict = None
-        groups_dict = _get("zigbee/bridge/groups")
-        for group_dict in groups_dict:
-            if "friendly_name" in group_dict and group_dict["friendly_name"] == device_group:
-                break
-        if group_dict is not None and "members" in group_dict:
-            for group_member_dict in group_dict["members"]:
-                if "ieee_address" in group_member_dict and group_member_dict["ieee_address"] == device_address:
-                    grouped = True
+
+        def _config():
+            grouped = False
+            group_dict = None
+            for group_dict in _get("zigbee/bridge/groups"):
+                if "friendly_name" in group_dict and group_dict["friendly_name"] == device_group:
                     break
-        if grouped:
-            print("Device [{}] already configured, no action required [SUCCESS]".format(device_name))
-        else:
-            if device_config != "":
-                print("Device [{}] config pushed [{}]"
-                      .format(device_name,
-                              "SUCCESS" if _set("zigbee/{}/set".format(device_name), device_config) == 0 else "FAILED"))
-            print("Device [{}] added to group [{}] [{}]"
-                  .format(device_name, device_group,
-                          "SUCCESS" if _set("zigbee/bridge/request/group/members/add"
-                                            .format(device_name), device_config_group) == 0 else "FAILED"))
-        for group_dict in groups_dict:
+            if group_dict is not None and "members" in group_dict:
+                for group_member_dict in group_dict["members"]:
+                    if "ieee_address" in group_member_dict and group_member_dict["ieee_address"] == device_address:
+                        grouped = True
+                        break
+            if grouped:
+                print("Device [{}] configured, no action required [SUCCESS]".format(device_name))
+                return
+            else:
+                if device_config != "":
+                    print("Device [{}] config pushed [{}]"
+                          .format(device_name,
+                                  "SUCCESS" if _set("zigbee/{}/set".format(device_name), device_config) == 0 else "FAILED"))
+                print("Device [{}] added to group [{}] [{}]"
+                      .format(device_name, device_group,
+                              "SUCCESS" if _set("zigbee/bridge/request/group/members/add"
+                                                .format(device_name), device_config_group) == 0 else "FAILED"))
+                time.sleep(2)
+                return _config()
+
+
+        _config()
+        for group_dict in _get("zigbee/bridge/groups"):
             if "friendly_name" in group_dict and group_dict["friendly_name"] != device_group:
                 if "members" in group_dict:
                     for group_member_dict in group_dict["members"]:
