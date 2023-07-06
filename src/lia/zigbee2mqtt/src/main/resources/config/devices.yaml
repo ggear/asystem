@@ -133,6 +133,14 @@
   friendly_name: 'Bathroom Main Bulb 1'
   homeassistant:
     expire_after: 3600
+'0x2c1165fffe2787f0':
+  friendly_name: 'Bathroom Sconces Bulb 1'
+  homeassistant:
+    expire_after: 3600
+'0x2c1165fffe18e424':
+  friendly_name: 'Bathroom Sconces Bulb 2'
+  homeassistant:
+    expire_after: 3600
 '0x00178801040eddb2':
   friendly_name: 'Ensuite Main Bulb 1'
   homeassistant:
