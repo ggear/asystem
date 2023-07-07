@@ -139,11 +139,11 @@ light.parents_main:
   room: Parents
 light.parents_jane_bedside:
   name: Parents Sconces
-  aliases: []
+  aliases: ['Parents Bedside', 'Parents Jane', 'Parents Jane Bedside']
   room: Parents
 light.parents_graham_bedside:
   name: Parents Sconces
-  aliases: []
+  aliases: ['Parents Bedside', 'Parents Graham', 'Parents Graham Bedside']
   room: Parents
 light.study_lamp:
   name: Study Lamp

@@ -107,12 +107,12 @@ if __name__ == "__main__":
             if device_config != "":
                 print("[{}] Device [{}] config command pushed".format(
                     "INFO" if _mqtt_pub("zigbee/{}/set".format(device_name), device_config) == 0 \
-                        else "FAIL",
+                        else "WARN",
                     device_name,
                 ))
             print("[{}] Device [{}] group [{}] add command pushed".format(
                 "INFO" if _mqtt_pub("zigbee/bridge/request/group/members/add", device_config_group) == 0 \
-                    else "FAIL",
+                    else "WARN",
                 device_name,
                 device_group,
             ))
@@ -128,7 +128,7 @@ if __name__ == "__main__":
                         if "ieee_address" in group_member_dict and group_member_dict["ieee_address"] == device_address:
                             print("[{}] Device [{}] group [{}] remove command pushed".format(
                                 "INFO" if _mqtt_pub("zigbee2mqtt/bridge/request/group/members/remove", device_config_group) == 0 \
-                                    else "FAIL",
+                                    else "WARN",
                                 device_name,
                                 device_group,
                             ))
@@ -139,7 +139,7 @@ if __name__ == "__main__":
         for group_dict in _mqtt_sub("zigbee/bridge/groups"):
             if "friendly_name" in group_dict and group_dict["friendly_name"] == device_group:
                 if "members" in group_dict and len(group_dict["members"]) == 0:
-                    print("[FAIL] Device [{}] group [{}] does not have any member devices".format(
+                    print("------\n[FAIL] Device [{}] group [{}] does not have any member devices\n------".format(
                         device_name,
                         group_dict["friendly_name"]
                     ))
