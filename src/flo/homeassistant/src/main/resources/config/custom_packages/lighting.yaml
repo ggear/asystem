@@ -16,18 +16,13 @@ adaptive_lighting:
     lights:
       - light.ada_lamp
       - light.edwin_lamp
-      - light.hallway_main
       - light.dining_main
       - light.lounge_main
       - light.lounge_lamp
-      - light.parents_jane_bedside
-      - light.parents_graham_bedside
       - light.study_lamp
       - light.kitchen_main
       - light.laundry_main
       - light.pantry_main
-      - light.bathroom_sconces
-      - light.ensuite_sconces
       - light.wardrobe_main
   #####################################################################################
   - name: night_light
@@ -43,6 +38,24 @@ adaptive_lighting:
     lights:
       - light.edwin_night_light
   #####################################################################################
+  - name: ambient
+    interval: 30
+    transition: 20
+    min_brightness: 1
+    max_brightness: 100
+    min_color_temp: 2200
+    max_color_temp: 4000
+    only_once: false
+    take_over_control: true
+    detect_non_ha_changes: true
+    lights:
+      - light.hallway_main
+      - light.hallway_sconces
+      - light.parents_jane_bedside
+      - light.parents_graham_bedside
+      - light.bathroom_sconces
+      - light.ensuite_sconces
+  #####################################################################################
   - name: bedroom
     interval: 30
     transition: 20
@@ -54,7 +67,6 @@ adaptive_lighting:
     take_over_control: true
     detect_non_ha_changes: true
     lights:
-      - light.hallway_sconces
       - light.parents_main
       - light.bathroom_main
       - light.ensuite_main
@@ -365,7 +377,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.hallway_main
           manual_control: false
       - delay: '00:00:10'
@@ -382,7 +394,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.hallway_sconces
           manual_control: false
       - delay: '00:00:10'
@@ -467,7 +479,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.parents_jane_bedside
           manual_control: false
       - delay: '00:00:10'
@@ -484,7 +496,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.parents_graham_bedside
           manual_control: false
       - delay: '00:00:10'
@@ -603,7 +615,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.bathroom_sconces
           manual_control: false
       - delay: '00:00:10'
@@ -637,7 +649,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.ensuite_sconces
           manual_control: false
       - delay: '00:00:10'

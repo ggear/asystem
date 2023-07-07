@@ -771,15 +771,17 @@ adaptive_lighting:
     transition: 20
     min_brightness: {}
     max_brightness: 100
-    min_color_temp: 2500
-    max_color_temp: 5500
+    min_color_temp: {}
+    max_color_temp: {}
     only_once: false
     take_over_control: true
     detect_non_ha_changes: true
     lights:
         """.format(
                 automation_name.replace("switch.adaptive_lighting_", ""),
-                "100" if automation_name == "switch.adaptive_lighting_default" else "1"
+                "100" if automation_name == "switch.adaptive_lighting_default" else "1",
+                "2200" if automation_name == "switch.adaptive_lighting_ambient" else "2500",
+                "4000" if automation_name == "switch.adaptive_lighting_ambient" else "5500",
             ).strip() + "\n")
             for metadata_lighting_group_dict in metadata_lighting_automations_dicts[automation_name]:
                 metadata_lighting_file.write("      " + """
