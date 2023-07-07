@@ -5,6 +5,7 @@ adaptive_lighting:
   #####################################################################################
   - name: default
     interval: 30
+    transition: 20
     min_brightness: 100
     max_brightness: 100
     min_color_temp: 2500
@@ -26,6 +27,7 @@ adaptive_lighting:
   #####################################################################################
   - name: night_light
     interval: 30
+    transition: 20
     min_brightness: 1
     max_brightness: 100
     min_color_temp: 2500
@@ -38,6 +40,7 @@ adaptive_lighting:
   #####################################################################################
   - name: bedroom
     interval: 30
+    transition: 20
     min_brightness: 1
     max_brightness: 100
     min_color_temp: 2500

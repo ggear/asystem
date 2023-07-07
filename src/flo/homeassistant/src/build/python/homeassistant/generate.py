@@ -768,6 +768,7 @@ adaptive_lighting:
   #####################################################################################
   - name: {}
     interval: 30
+    transition: 20
     min_brightness: {}
     max_brightness: 100
     min_color_temp: 2500
