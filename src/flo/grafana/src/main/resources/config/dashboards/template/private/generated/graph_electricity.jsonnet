@@ -50,7 +50,7 @@
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
 |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-|> filter(fn: (r) => r["entity_id"] == "home_power" or r["entity_id"] == "home_peak_power" or r["entity_id"] == "home_base_power")
+|> filter(fn: (r) => r["entity_id"] == "home_power" or r["entity_id"] == "home_base_power" or r["entity_id"] == "home_peak_power")
 |> filter(fn: (r) => r["_field"] == "value")
 |> keep(columns: ["_time", "_value", "friendly_name"])
 |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: true)
@@ -104,7 +104,7 @@ from(bucket: "home_private")
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
 |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-|> filter(fn: (r) => r["entity_id"] == "home_energy_daily" or r["entity_id"] == "home_peak_energy_daily" or r["entity_id"] == "home_base_energy_daily")
+|> filter(fn: (r) => r["entity_id"] == "home_energy_daily" or r["entity_id"] == "home_base_energy_daily" or r["entity_id"] == "home_peak_energy_daily")
 |> filter(fn: (r) => r["_field"] == "value")
 |> keep(columns: ["_time", "_value", "friendly_name"])
 |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
