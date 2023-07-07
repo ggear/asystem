@@ -712,6 +712,9 @@ input_boolean.lighting_reset_adaptive_lighting_edwin_night_light:
 input_boolean.lighting_reset_adaptive_lighting_hallway_main:
   friendly_name: 'Hallway Main'
   icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_hallway_sconces:
+  friendly_name: 'Hallway Sconces'
+  icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_dining_main:
   friendly_name: 'Dining Main'
   icon: 'mdi:lightbulb-group'
@@ -723,6 +726,15 @@ input_boolean.lighting_reset_adaptive_lighting_lounge_lamp:
   icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_parents_main:
   friendly_name: 'Parents Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_parents_jane_bedside:
+  friendly_name: 'Jane Bedside'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_parents_graham_bedside:
+  friendly_name: 'Graham Bedside'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_study_lamp:
+  friendly_name: 'Study Lamp'
   icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
   friendly_name: 'Kitchen Main'
@@ -739,8 +751,14 @@ input_boolean.lighting_reset_adaptive_lighting_office_main:
 input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
   friendly_name: 'Bathroom Main'
   icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_bathroom_sconces:
+  friendly_name: 'Bathroom Sconces'
+  icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
   friendly_name: 'Ensuite Main'
+  icon: 'mdi:lightbulb-group'
+input_boolean.lighting_reset_adaptive_lighting_ensuite_sconces:
+  friendly_name: 'Ensuite Sconces'
   icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
   friendly_name: 'Wardrobe Main'

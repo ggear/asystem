@@ -16,13 +16,18 @@ adaptive_lighting:
     lights:
       - light.ada_lamp
       - light.edwin_lamp
+      - light.hallway_main
       - light.dining_main
       - light.lounge_main
       - light.lounge_lamp
+      - light.parents_jane_bedside
+      - light.parents_graham_bedside
       - light.study_lamp
       - light.kitchen_main
       - light.laundry_main
       - light.pantry_main
+      - light.bathroom_sconces
+      - light.ensuite_sconces
       - light.wardrobe_main
   #####################################################################################
   - name: night_light
@@ -49,7 +54,7 @@ adaptive_lighting:
     take_over_control: true
     detect_non_ha_changes: true
     lights:
-      - light.hallway_main
+      - light.hallway_sconces
       - light.parents_main
       - light.bathroom_main
       - light.ensuite_main
@@ -72,6 +77,10 @@ input_boolean:
     name: Hallway Main
     initial: false
   #####################################################################################
+  lighting_reset_adaptive_lighting_hallway_sconces:
+    name: Hallway Sconces
+    initial: false
+  #####################################################################################
   lighting_reset_adaptive_lighting_dining_main:
     name: Dining Main
     initial: false
@@ -86,6 +95,14 @@ input_boolean:
   #####################################################################################
   lighting_reset_adaptive_lighting_parents_main:
     name: Parents Main
+    initial: false
+  #####################################################################################
+  lighting_reset_adaptive_lighting_parents_jane_bedside:
+    name: Jane Bedside
+    initial: false
+  #####################################################################################
+  lighting_reset_adaptive_lighting_parents_graham_bedside:
+    name: Graham Bedside
     initial: false
   #####################################################################################
   lighting_reset_adaptive_lighting_study_lamp:
@@ -112,8 +129,16 @@ input_boolean:
     name: Bathroom Main
     initial: false
   #####################################################################################
+  lighting_reset_adaptive_lighting_bathroom_sconces:
+    name: Bathroom Sconces
+    initial: false
+  #####################################################################################
   lighting_reset_adaptive_lighting_ensuite_main:
     name: Ensuite Main
+    initial: false
+  #####################################################################################
+  lighting_reset_adaptive_lighting_ensuite_sconces:
+    name: Ensuite Sconces
     initial: false
   #####################################################################################
   lighting_reset_adaptive_lighting_wardrobe_main:
@@ -340,12 +365,29 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_default
           lights: light.hallway_main
           manual_control: false
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_hallway_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_hallway_sconces
+    alias: "Lighting: Reset Adaptive Lighting on request of Hallway Sconces"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_hallway_sconces
+        from: 'off'
+        to: 'on'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_bedroom
+          lights: light.hallway_sconces
+          manual_control: false
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_hallway_sconces
   #####################################################################################
   - id: lighting_reset_adaptive_lighting_dining_main
     alias: "Lighting: Reset Adaptive Lighting on request of Dining Main"
@@ -414,6 +456,40 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_parents_jane_bedside
+    alias: "Lighting: Reset Adaptive Lighting on request of Jane Bedside"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_jane_bedside
+        from: 'off'
+        to: 'on'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.parents_jane_bedside
+          manual_control: false
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_jane_bedside
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_parents_graham_bedside
+    alias: "Lighting: Reset Adaptive Lighting on request of Graham Bedside"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_graham_bedside
+        from: 'off'
+        to: 'on'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.parents_graham_bedside
+          manual_control: false
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_graham_bedside
   #####################################################################################
   - id: lighting_reset_adaptive_lighting_study_lamp
     alias: "Lighting: Reset Adaptive Lighting on request of Study Lamp"
@@ -517,6 +593,23 @@ automation:
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_bathroom_main
   #####################################################################################
+  - id: lighting_reset_adaptive_lighting_bathroom_sconces
+    alias: "Lighting: Reset Adaptive Lighting on request of Bathroom Sconces"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_bathroom_sconces
+        from: 'off'
+        to: 'on'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.bathroom_sconces
+          manual_control: false
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_bathroom_sconces
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_ensuite_main
     alias: "Lighting: Reset Adaptive Lighting on request of Ensuite Main"
     trigger:
@@ -533,6 +626,23 @@ automation:
       - delay: '00:00:10'
       - service: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_ensuite_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_ensuite_sconces
+    alias: "Lighting: Reset Adaptive Lighting on request of Ensuite Sconces"
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_ensuite_sconces
+        from: 'off'
+        to: 'on'
+    action:
+      - service: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_default
+          lights: light.ensuite_sconces
+          manual_control: false
+      - delay: '00:00:10'
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_ensuite_sconces
   #####################################################################################
   - id: lighting_reset_adaptive_lighting_wardrobe_main
     alias: "Lighting: Reset Adaptive Lighting on request of Wardrobe Main"

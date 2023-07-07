@@ -48,7 +48,7 @@ if __name__ == "__main__":
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-            """.strip() + "\n")
+        """.strip() + "\n")
         for metadata_groups_id in metadata_groups_dict:
             if sum(1 for k in metadata_grouped_devices_dict[metadata_groups_id] if k.get('connection_mac')) > 0:
                 metadata_groups_file.write("""
@@ -89,7 +89,7 @@ if __name__ == "__main__":
 #######################################################################################
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
-            """.strip() + "\n")
+        """.strip() + "\n")
         for metadata_config_dict in metadata_config_dicts:
             metadata_config_file.write("""
 ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
@@ -100,6 +100,25 @@ ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
                 metadata_config_dict["zigbee_device_config"].replace("'", "\"") if "zigbee_device_config" in metadata_config_dict else "",
             ).strip() + "\n")
         print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
+
+    metadata_config_clean_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/mqtt_config_clean.sh"))
+    with open(metadata_config_clean_path, 'w') as metadata_config_clean_file:
+        metadata_config_clean_file.write("""
+#!/bin/sh
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+ROOT_DIR=$(dirname $(readlink -f "$0"))
+while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
+        """.strip() + "\n")
+        for metadata_config_clean_dict in metadata_config_dicts:
+            metadata_name = metadata_config_clean_dict["device_name"].replace("-", " ").title()
+            metadata_config_clean_file.write("""
+        mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{}' && echo '[INFO] Device [{}] removed from all groups' && sleep 1
+                    """.format(
+                '{{ "device": "{}" }}'.format(metadata_name),
+                metadata_name,
+            ).strip() + "\n")
 
     metadata_devices_df = metadata_df[
         (metadata_df["index"] > 0) &

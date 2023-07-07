@@ -743,7 +743,7 @@ automation:
     metadata_lighting_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
-        ((metadata_df["device_via_device"] == "Hue") | (metadata_df["device_via_device"] == "Phillips")) &
+        ((metadata_df["device_via_device"] == "Phillips") | (metadata_df["device_via_device"] == "IKEA")) &
         ((metadata_df["entity_namespace"].str.len() > 0) & (metadata_df["entity_namespace"] == "light")) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["friendly_name"].str.len() > 0)
@@ -990,7 +990,8 @@ automation:
                     metadata_lighting_dict["unique_id"],
                 ).strip() + "\n")
             else:
-                device_config = json.loads(metadata_lighting_dict["zigbee_device_config"])
+                device_config = json.loads(metadata_lighting_dict["zigbee_device_config"]) \
+                    if "zigbee_device_config" in metadata_lighting_dict else {}
                 metadata_lighting_file.write("    " + """
     action:
       - service: light.turn_on

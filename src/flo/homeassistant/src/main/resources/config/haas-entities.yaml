@@ -233,6 +233,10 @@ input_boolean.lighting_reset_adaptive_lighting_hallway_main:
   name: Hallway Main Reset
   aliases: []
   room: Hallway
+input_boolean.lighting_reset_adaptive_lighting_hallway_sconces:
+  name: Hallway Sconces Reset
+  aliases: []
+  room: Hallway
 input_boolean.lighting_reset_adaptive_lighting_dining_main:
   name: Dining Main Reset
   aliases: []
@@ -249,6 +253,18 @@ input_boolean.lighting_reset_adaptive_lighting_parents_main:
   name: Parents Main Reset
   aliases: []
   room: Parents
+input_boolean.lighting_reset_adaptive_lighting_parents_jane_bedside:
+  name: Parents Jane Bedside Reset
+  aliases: []
+  room: Parents
+input_boolean.lighting_reset_adaptive_lighting_parents_graham_bedside:
+  name: Parents Graham Bedside Reset
+  aliases: []
+  room: Parents
+input_boolean.lighting_reset_adaptive_lighting_study_lamp:
+  name: Study Lamp Reset
+  aliases: []
+  room: Study
 input_boolean.lighting_reset_adaptive_lighting_kitchen_main:
   name: Kitchen Main Reset
   aliases: []
@@ -269,8 +285,16 @@ input_boolean.lighting_reset_adaptive_lighting_bathroom_main:
   name: Bathroom Main Reset
   aliases: []
   room: Bathroom
+input_boolean.lighting_reset_adaptive_lighting_bathroom_sconces:
+  name: Bathroom Sconces Reset
+  aliases: []
+  room: Bathroom
 input_boolean.lighting_reset_adaptive_lighting_ensuite_main:
   name: Ensuite Main Reset
+  aliases: []
+  room: Ensuite
+input_boolean.lighting_reset_adaptive_lighting_ensuite_sconces:
+  name: Ensuite Sconces Reset
   aliases: []
   room: Ensuite
 input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
