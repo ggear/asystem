@@ -12,8 +12,8 @@ from paho.mqtt.client import Client
 
 if __name__ == "__main__":
     if len(sys.argv) != 5:
-        print("Usage: ./{} <device-address> <device-friendly-name> <group-friendly-name> <device-config-json>".format(
-            os.path.basename(sys.argv[0])))
+        print("Usage: ./{} <device-ieee-address> <device-friendly-name> <group-friendly-name> <device-config-json>"
+              .format(os.path.basename(sys.argv[0])))
         exit(1)
 
     device_address = sys.argv[1]
@@ -105,12 +105,14 @@ if __name__ == "__main__":
             return
         else:
             if device_config != "":
-                print("[{}] Device [{}] config pushed".format(
-                    "INFO" if _mqtt_pub("zigbee/{}/set".format(device_name), device_config) == 0 else "FAIL",
+                print("[{}] Device [{}] config command pushed".format(
+                    "INFO" if _mqtt_pub("zigbee/{}/set".format(device_name), device_config) == 0 \
+                        else "FAIL",
                     device_name,
                 ))
-            print("[{}] Device [{}] added to group [{}]".format(
-                "INFO" if _mqtt_pub("zigbee/bridge/request/group/members/add".format(device_name), device_config_group) == 0 else "FAIL",
+            print("[{}] Device [{}] group [{}] add command pushed".format(
+                "INFO" if _mqtt_pub("zigbee/bridge/request/group/members/add", device_config_group) == 0 \
+                    else "FAIL",
                 device_name,
                 device_group,
             ))
@@ -124,24 +126,27 @@ if __name__ == "__main__":
                 if "members" in group_dict:
                     for group_member_dict in group_dict["members"]:
                         if "ieee_address" in group_member_dict and group_member_dict["ieee_address"] == device_address:
-                            print("[{}] Device [{}] removed from group [{}]".format(
-                                "INFO" if _mqtt_pub("zigbee2mqtt/bridge/request/group/members/remove"
-                                                    .format(device_name), device_config_group) == 0 else "FAIL",
+                            print("[{}] Device [{}] group [{}] remove command pushed".format(
+                                "INFO" if _mqtt_pub("zigbee2mqtt/bridge/request/group/members/remove", device_config_group) == 0 \
+                                    else "FAIL",
                                 device_name,
                                 device_group,
                             ))
                             _device_clean()
 
 
-    def _device_skip():
-        print("[INFO] Device [{}] not available currently, skipping config".format(device_name))
-
-
     def _device_verify():
         for group_dict in _mqtt_sub("zigbee/bridge/groups"):
             if "friendly_name" in group_dict and group_dict["friendly_name"] == device_group:
                 if "members" in group_dict and len(group_dict["members"]) == 0:
-                    print("[FAIL] Device [{}] group [{}] does not have any member devices".format(device_name, group_dict["friendly_name"]))
+                    print("[FAIL] Device [{}] group [{}] does not have any member devices".format(
+                        device_name,
+                        group_dict["friendly_name"]
+                    ))
+
+
+    def _device_skip():
+        print("[INFO] Device [{}] not available currently, skipping config".format(device_name))
 
 
     if _device_available():
