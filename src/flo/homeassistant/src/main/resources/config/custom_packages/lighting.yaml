@@ -3,19 +3,6 @@
 #######################################################################################
 adaptive_lighting:
   #####################################################################################
-  - name: night_light
-    interval: 30
-    min_brightness: 1
-    max_brightness: 100
-    min_color_temp: 2500
-    max_color_temp: 5500
-    only_once: false
-    take_over_control: true
-    detect_non_ha_changes: true
-    lights:
-      - light.ada_lamp
-      - light.edwin_night_light
-  #####################################################################################
   - name: default
     interval: 30
     min_brightness: 100
@@ -26,6 +13,7 @@ adaptive_lighting:
     take_over_control: true
     detect_non_ha_changes: true
     lights:
+      - light.ada_lamp
       - light.edwin_lamp
       - light.dining_main
       - light.lounge_main
@@ -35,6 +23,18 @@ adaptive_lighting:
       - light.laundry_main
       - light.pantry_main
       - light.wardrobe_main
+  #####################################################################################
+  - name: night_light
+    interval: 30
+    min_brightness: 1
+    max_brightness: 100
+    min_color_temp: 2500
+    max_color_temp: 5500
+    only_once: false
+    take_over_control: true
+    detect_non_ha_changes: true
+    lights:
+      - light.edwin_night_light
   #####################################################################################
   - name: bedroom
     interval: 30
@@ -286,7 +286,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_default
           lights: light.ada_lamp
           manual_control: false
       - delay: '00:00:10'
