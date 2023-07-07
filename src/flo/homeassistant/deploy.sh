@@ -1,9 +1,6 @@
 #!/bin/sh
 
-ROOT_DIR="$(
-  cd -- "$(dirname "$0")" >/dev/null 2>&1
-  pwd -P
-)"
+ROOT_DIR=$(dirname $(readlink -f "$0"))
 
 HOST="$(grep $(basename $(dirname ${ROOT_DIR})) ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-$(basename $(dirname ${ROOT_DIR}))"
 HOME=$(ssh root@${HOST} "find /home/asystem/$(basename ${ROOT_DIR}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | tail -n 1")
