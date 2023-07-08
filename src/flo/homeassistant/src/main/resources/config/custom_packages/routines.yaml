@@ -179,6 +179,7 @@ automation:
             - light.ada_lamp
             - light.edwin_lamp
             - light.edwin_night_light
+            - light.hallway_sconces
       - service: number.set_value
         target:
           entity_id:
@@ -206,6 +207,19 @@ automation:
             - media_player.edwin_home
             - media_player.lounge_home
   #####################################################################################
+  - id: routine_home_lights_off_early
+    alias: "Routine: Turn early night lights off"
+    mode: single
+    trigger:
+      - platform: time
+        at: "19:30:00"
+    condition: [ ]
+    action:
+      - service: light.turn_off
+        target:
+          entity_id:
+            - light.hallway_sconces
+  #####################################################################################
   - id: routine_home_lights_on
     alias: "Routine: Turn night lights on"
     mode: single
@@ -218,6 +232,7 @@ automation:
         target:
           entity_id:
             - light.edwin_night_light
+            - light.hallway_sconces
       - service: number.set_value
         target:
           entity_id:
