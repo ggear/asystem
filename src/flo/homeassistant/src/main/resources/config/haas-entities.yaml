@@ -140,11 +140,11 @@ light.parents_main:
 light.parents_jane_bedside:
   name: Parents Sconces
   aliases: ['Parents Bedside', 'Parents Jane', 'Parents Jane Bedside']
-  room: Parents
+  room: Zombie
 light.parents_graham_bedside:
   name: Parents Sconces
   aliases: ['Parents Bedside', 'Parents Graham', 'Parents Graham Bedside']
-  room: Parents
+  room: Zombie
 light.study_lamp:
   name: Study Lamp
   aliases: []
