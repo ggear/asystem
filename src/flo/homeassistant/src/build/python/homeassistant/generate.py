@@ -779,9 +779,9 @@ adaptive_lighting:
     lights:
         """.format(
                 automation_name.replace("switch.adaptive_lighting_", ""),
-                "100" if automation_name == "switch.adaptive_lighting_default" else "1",
-                "2200" if automation_name == "switch.adaptive_lighting_ambient" else "2500",
-                "4000" if automation_name == "switch.adaptive_lighting_ambient" else "5500",
+                "1" if "dimming" in automation_name else "100",
+                "2700" if "narrowband" in automation_name else "2500",
+                "4000" if "narrowband" in automation_name else "5500",
             ).strip() + "\n")
             for metadata_lighting_group_dict in metadata_lighting_automations_dicts[automation_name]:
                 metadata_lighting_file.write("      " + """
@@ -792,6 +792,9 @@ adaptive_lighting:
         metadata_lighting_file.write("  " + """
   #####################################################################################
 input_boolean:
+  lighting_reset_adaptive_lighting_all:
+    name: All
+    initial: false
         """.strip() + "\n")
         for metadata_lighting_dict in metadata_lighting_dicts:
             metadata_lighting_file.write("  " + """
@@ -852,19 +855,19 @@ automation:
       ################################################################################
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_sleep_mode_night_light
+          entity_id: switch.adaptive_lighting_sleep_mode_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_color_night_light
+          entity_id: switch.adaptive_lighting_adapt_color_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_night_light
+          entity_id: switch.adaptive_lighting_adapt_brightness_night
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_night
           manual_control: false
       ################################################################################
   - id: lighting_reset_adaptive_lighting
@@ -912,19 +915,19 @@ automation:
       ################################################################################
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_sleep_mode_night_light
+          entity_id: switch.adaptive_lighting_sleep_mode_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_color_night_light
+          entity_id: switch.adaptive_lighting_adapt_color_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_night_light
+          entity_id: switch.adaptive_lighting_adapt_brightness_night
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_night
           manual_control: false
       ################################################################################
         """.strip() + "\n")
@@ -957,6 +960,34 @@ automation:
               color_temp: 366
               brightness_pct: 100
               entity_id: '{{ light }}'
+        """.strip() + "\n")
+        metadata_lighting_file.write("  " + """
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_all_lights
+    alias: 'Lighting: Reset Adaptive Lighting for All Lights'
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_all
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+        """.strip() + "\n")
+        for automation_name in metadata_lighting_automations_dicts:
+            metadata_lighting_file.write("      " + """
+      - service: switch.turn_off
+        entity_id: {}
+      - delay: '00:00:01'
+      - service: switch.turn_on
+        entity_id: {}
+            """.format(
+                automation_name,
+                automation_name,
+            ).strip() + "\n")
+        metadata_lighting_file.write("      " + """
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_all
         """.strip() + "\n")
         for metadata_lighting_dict in metadata_lighting_dicts:
             metadata_lighting_file.write("  " + """

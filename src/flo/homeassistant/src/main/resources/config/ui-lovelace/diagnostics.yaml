@@ -53,8 +53,6 @@
       name: Sonoff Back Door Sensor
     - entity: sensor.template_front_door_sensor_battery_last
       name: Sonoff Front Door Sensor
-    - entity: sensor.home_cube_remote_battery
-      name: Xiaomi Cube Remote
     - entity: sensor.template_weatherstation_console_battery_percent_int
       name: Davis Console
     - entity: sensor.bertram_2_office_pantry_battery_percent
@@ -149,6 +147,9 @@
   title: Reset Adaptive Lighting
   show_header_toggle: false
   entities:
+    - entity: input_boolean.lighting_reset_adaptive_lighting_all
+      name: All Lights
+      icon: mdi:lightbulb-group
     - entity: input_boolean.lighting_reset_adaptive_lighting_ada_lamp
       name: Ada Lamp
       icon: mdi:lightbulb-group
@@ -216,29 +217,9 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
-  title: Default Adaptive Lighting
+  title: Device Maintenance
   show_header_toggle: false
   entities:
-    - entity: switch.adaptive_lighting_default
-      name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_default
-      name: Sleep
-################################################################################
-- type: entities
-  title: Bedroom Adaptive Lighting
-  show_header_toggle: false
-  entities:
-    - entity: switch.adaptive_lighting_bedroom
-      name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_bedroom
-      name: Sleep
-################################################################################
-- type: entities
-  title: Night Light Adaptive Lighting
-  show_header_toggle: false
-  entities:
-    - entity: switch.adaptive_lighting_night_light
-      name: Status
-    - entity: switch.adaptive_lighting_sleep_mode_night_light
-      name: Sleep
+    - entity: button.synchronize_devices
+      name: Google Device Sync
 ################################################################################

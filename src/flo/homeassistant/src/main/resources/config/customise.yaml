@@ -605,8 +605,6 @@ sensor.template_back_door_sensor_battery_last:
   friendly_name: 'Sonoff Back Door Sensor'
 sensor.template_front_door_sensor_battery_last:
   friendly_name: 'Sonoff Front Door Sensor'
-sensor.home_cube_remote_battery:
-  friendly_name: 'Xiaomi Cube Remote'
 sensor.template_weatherstation_console_battery_percent_int:
   friendly_name: 'Davis Console'
   unit_of_measurement: '%'
@@ -700,6 +698,9 @@ sensor.landing_repeater_linkquality:
   friendly_name: 'Landing Repeater'
 sensor.driveway_repeater_linkquality:
   friendly_name: 'Driveway Repeater'
+input_boolean.lighting_reset_adaptive_lighting_all:
+  friendly_name: 'All Lights'
+  icon: 'mdi:lightbulb-group'
 input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
   friendly_name: 'Ada Lamp'
   icon: 'mdi:lightbulb-group'
@@ -763,30 +764,8 @@ input_boolean.lighting_reset_adaptive_lighting_ensuite_sconces:
 input_boolean.lighting_reset_adaptive_lighting_wardrobe_main:
   friendly_name: 'Wardrobe Main'
   icon: 'mdi:lightbulb-group'
-switch.adaptive_lighting_default:
-  friendly_name: 'Status'
-switch.adaptive_lighting_sleep_mode_default:
-  friendly_name: 'Sleep'
-switch.adaptive_lighting_adapt_color_default:
-  friendly_name: 'Colour'
-switch.adaptive_lighting_adapt_brightness_default:
-  friendly_name: 'Brightness'
-switch.adaptive_lighting_bedroom:
-  friendly_name: 'Status'
-switch.adaptive_lighting_sleep_mode_bedroom:
-  friendly_name: 'Sleep'
-switch.adaptive_lighting_adapt_color_bedroom:
-  friendly_name: 'Colour'
-switch.adaptive_lighting_adapt_brightness_bedroom:
-  friendly_name: 'Brightness'
-switch.adaptive_lighting_night_light:
-  friendly_name: 'Status'
-switch.adaptive_lighting_sleep_mode_night_light:
-  friendly_name: 'Sleep'
-switch.adaptive_lighting_adapt_color_night_light:
-  friendly_name: 'Colour'
-switch.adaptive_lighting_adapt_brightness_night_light:
-  friendly_name: 'Brightness'
+button.synchronize_devices:
+  friendly_name: 'Google Device Sync'
 media_player.ada_home:
   friendly_name: 'Ada Home'
 media_player.edwin_home:

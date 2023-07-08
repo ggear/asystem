@@ -3,7 +3,7 @@
 #######################################################################################
 adaptive_lighting:
   #####################################################################################
-  - name: default
+  - name: task
     interval: 30
     transition: 20
     min_brightness: 100
@@ -16,19 +16,13 @@ adaptive_lighting:
     lights:
       - light.ada_lamp
       - light.edwin_lamp
-      - light.dining_main
-      - light.lounge_main
       - light.lounge_lamp
       - light.study_lamp
-      - light.kitchen_main
-      - light.laundry_main
-      - light.pantry_main
-      - light.wardrobe_main
   #####################################################################################
-  - name: night_light
+  - name: night
     interval: 30
     transition: 20
-    min_brightness: 1
+    min_brightness: 100
     max_brightness: 100
     min_color_temp: 2500
     max_color_temp: 5500
@@ -38,12 +32,12 @@ adaptive_lighting:
     lights:
       - light.edwin_night_light
   #####################################################################################
-  - name: ambient
+  - name: ambient_narrowband
     interval: 30
     transition: 20
-    min_brightness: 1
+    min_brightness: 100
     max_brightness: 100
-    min_color_temp: 2200
+    min_color_temp: 2700
     max_color_temp: 4000
     only_once: false
     take_over_control: true
@@ -51,12 +45,26 @@ adaptive_lighting:
     lights:
       - light.hallway_main
       - light.hallway_sconces
-      - light.parents_jane_bedside
-      - light.parents_graham_bedside
-      - light.bathroom_sconces
-      - light.ensuite_sconces
   #####################################################################################
-  - name: bedroom
+  - name: ambient
+    interval: 30
+    transition: 20
+    min_brightness: 100
+    max_brightness: 100
+    min_color_temp: 2500
+    max_color_temp: 5500
+    only_once: false
+    take_over_control: true
+    detect_non_ha_changes: true
+    lights:
+      - light.dining_main
+      - light.lounge_main
+      - light.kitchen_main
+      - light.laundry_main
+      - light.pantry_main
+      - light.wardrobe_main
+  #####################################################################################
+  - name: ambient_dimming
     interval: 30
     transition: 20
     min_brightness: 1
@@ -71,7 +79,26 @@ adaptive_lighting:
       - light.bathroom_main
       - light.ensuite_main
   #####################################################################################
+  - name: task_narrowband
+    interval: 30
+    transition: 20
+    min_brightness: 100
+    max_brightness: 100
+    min_color_temp: 2700
+    max_color_temp: 4000
+    only_once: false
+    take_over_control: true
+    detect_non_ha_changes: true
+    lights:
+      - light.parents_jane_bedside
+      - light.parents_graham_bedside
+      - light.bathroom_sconces
+      - light.ensuite_sconces
+  #####################################################################################
 input_boolean:
+  lighting_reset_adaptive_lighting_all:
+    name: All
+    initial: false
   #####################################################################################
   lighting_reset_adaptive_lighting_ada_lamp:
     name: Ada Lamp
@@ -212,19 +239,19 @@ automation:
       ################################################################################
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_sleep_mode_night_light
+          entity_id: switch.adaptive_lighting_sleep_mode_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_color_night_light
+          entity_id: switch.adaptive_lighting_adapt_color_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_night_light
+          entity_id: switch.adaptive_lighting_adapt_brightness_night
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_night
           manual_control: false
       ################################################################################
   - id: lighting_reset_adaptive_lighting
@@ -272,19 +299,19 @@ automation:
       ################################################################################
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_sleep_mode_night_light
+          entity_id: switch.adaptive_lighting_sleep_mode_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_color_night_light
+          entity_id: switch.adaptive_lighting_adapt_color_night
       - service: switch.turn_on
         target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_night_light
+          entity_id: switch.adaptive_lighting_adapt_brightness_night
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_night
           manual_control: false
       ################################################################################
   - id: lighting_reset_adaptive_lighting_announce
@@ -316,6 +343,49 @@ automation:
               brightness_pct: 100
               entity_id: '{{ light }}'
   #####################################################################################
+  - id: lighting_reset_adaptive_lighting_all_lights
+    alias: 'Lighting: Reset Adaptive Lighting for All Lights'
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_all
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+      - service: switch.turn_off
+        entity_id: switch.adaptive_lighting_task
+      - delay: '00:00:01'
+      - service: switch.turn_on
+        entity_id: switch.adaptive_lighting_task
+      - service: switch.turn_off
+        entity_id: switch.adaptive_lighting_night
+      - delay: '00:00:01'
+      - service: switch.turn_on
+        entity_id: switch.adaptive_lighting_night
+      - service: switch.turn_off
+        entity_id: switch.adaptive_lighting_ambient_narrowband
+      - delay: '00:00:01'
+      - service: switch.turn_on
+        entity_id: switch.adaptive_lighting_ambient_narrowband
+      - service: switch.turn_off
+        entity_id: switch.adaptive_lighting_ambient
+      - delay: '00:00:01'
+      - service: switch.turn_on
+        entity_id: switch.adaptive_lighting_ambient
+      - service: switch.turn_off
+        entity_id: switch.adaptive_lighting_ambient_dimming
+      - delay: '00:00:01'
+      - service: switch.turn_on
+        entity_id: switch.adaptive_lighting_ambient_dimming
+      - service: switch.turn_off
+        entity_id: switch.adaptive_lighting_task_narrowband
+      - delay: '00:00:01'
+      - service: switch.turn_on
+        entity_id: switch.adaptive_lighting_task_narrowband
+      - service: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_all
+  #####################################################################################
   - id: lighting_reset_adaptive_lighting_ada_lamp
     alias: "Lighting: Reset Adaptive Lighting on request of Ada Lamp"
     trigger:
@@ -326,7 +396,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_task
           lights: light.ada_lamp
           manual_control: false
       - delay: '00:00:10'
@@ -343,7 +413,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_task
           lights: light.edwin_lamp
           manual_control: false
       - delay: '00:00:10'
@@ -360,7 +430,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_night_light
+          entity_id: switch.adaptive_lighting_night
           lights: light.edwin_night_light
           manual_control: false
       - delay: '00:00:10'
@@ -377,7 +447,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_ambient
+          entity_id: switch.adaptive_lighting_ambient_narrowband
           lights: light.hallway_main
           manual_control: false
       - delay: '00:00:10'
@@ -394,7 +464,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_ambient
+          entity_id: switch.adaptive_lighting_ambient_narrowband
           lights: light.hallway_sconces
           manual_control: false
       - delay: '00:00:10'
@@ -411,7 +481,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.dining_main
           manual_control: false
       - delay: '00:00:10'
@@ -428,7 +498,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.lounge_main
           manual_control: false
       - delay: '00:00:10'
@@ -445,7 +515,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_task
           lights: light.lounge_lamp
           manual_control: false
       - delay: '00:00:10'
@@ -462,7 +532,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_ambient_dimming
           lights: light.parents_main
           manual_control: false
       - delay: '00:00:10'
@@ -479,7 +549,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_ambient
+          entity_id: switch.adaptive_lighting_task_narrowband
           lights: light.parents_jane_bedside
           manual_control: false
       - delay: '00:00:10'
@@ -496,7 +566,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_ambient
+          entity_id: switch.adaptive_lighting_task_narrowband
           lights: light.parents_graham_bedside
           manual_control: false
       - delay: '00:00:10'
@@ -513,7 +583,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_task
           lights: light.study_lamp
           manual_control: false
       - delay: '00:00:10'
@@ -530,7 +600,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.kitchen_main
           manual_control: false
       - delay: '00:00:10'
@@ -547,7 +617,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.laundry_main
           manual_control: false
       - delay: '00:00:10'
@@ -564,7 +634,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.pantry_main
           manual_control: false
       - delay: '00:00:10'
@@ -598,7 +668,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_ambient_dimming
           lights: light.bathroom_main
           manual_control: false
       - delay: '00:00:10'
@@ -615,7 +685,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_ambient
+          entity_id: switch.adaptive_lighting_task_narrowband
           lights: light.bathroom_sconces
           manual_control: false
       - delay: '00:00:10'
@@ -632,7 +702,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_bedroom
+          entity_id: switch.adaptive_lighting_ambient_dimming
           lights: light.ensuite_main
           manual_control: false
       - delay: '00:00:10'
@@ -649,7 +719,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_ambient
+          entity_id: switch.adaptive_lighting_task_narrowband
           lights: light.ensuite_sconces
           manual_control: false
       - delay: '00:00:10'
@@ -666,7 +736,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_default
+          entity_id: switch.adaptive_lighting_ambient
           lights: light.wardrobe_main
           manual_control: false
       - delay: '00:00:10'
