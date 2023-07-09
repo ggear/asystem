@@ -1,1 +1,1 @@
-decode-config==12.2.0.0
+decode-config==13.0.0

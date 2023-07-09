@@ -41,8 +41,9 @@ if __name__ == "__main__":
                     tasmota_device_path,
                 ))
             tasmota_config_file.write(
-                "echo 'Porcessing config for device [{}]' && decode-config.py -s {} -i {}\n".format(
+                "echo 'Processing config for device [{}] at [http://{}/cn] ... ' && decode-config.py -s {} -i {}\n".format(
                     metadata_tasmota_dict["unique_id"],
+                    metadata_tasmota_dict["connection_ip"],
                     metadata_tasmota_dict["connection_ip"],
                     tasmota_device_path,
                 ))

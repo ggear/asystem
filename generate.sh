@@ -20,7 +20,7 @@ function pull_repo() {
     cd "${1}/../../../.deps/${2}/${3}"
     echo "Pulling latest ${2}/${3} version ${5} ..."
     if [ $(git branch | grep HEAD | wc -l) -eq 1 ]; then
-      for BRANCH in dev main master; do
+      for BRANCH in development dev main master; do
         if [ $(git branch | grep ${BRANCH} | wc -l) -eq 1 ]; then
           git checkout ${BRANCH} 2>/dev/null
         fi
