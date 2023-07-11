@@ -13,6 +13,8 @@ if netcat -z 10.0.6.93 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerOnState] already set to [0]'
 	fi
+else
+	echo 'Skipping config for device [rack_fans_plug] at [http://10.0.6.93/?] given it is unresponsive'
 fi
 echo ''
 if netcat -z 10.0.6.94 80 2>/dev/null; then
@@ -25,5 +27,7 @@ if netcat -z 10.0.6.94 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerOnState] already set to [0]'
 	fi
+else
+	echo 'Skipping config for device [roof_water_heater_booster_plug] at [http://10.0.6.94/?] given it is unresponsive'
 fi
 echo ''

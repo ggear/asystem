@@ -122,5 +122,10 @@ echo ''
                             metadata_tasmota_config,
                             metadata_tasmota_config_dict[metadata_tasmota_config],
                         ))
+            tasmota_config_file.write(
+                "else\n\techo 'Skipping config for device [{}] at [http://{}/?] given it is unresponsive'\n".format(
+                    metadata_tasmota_dict["unique_id"],
+                    metadata_tasmota_dict["connection_ip"],
+                ))
             tasmota_config_file.write("fi\necho ''\n")
     print("Build generate script [tasmota] entity metadata persisted to [{}]".format(tasmota_config_path))
