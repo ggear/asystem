@@ -10,7 +10,8 @@ if netcat -z 10.0.6.93 80 2>/dev/null; then
 	while ! netcat -z 10.0.6.93 80 2>/dev/null; do sleep 1; done
 	if [ "$(curl -s http://10.0.6.93/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		echo 'Config set [PowerOnState] to [0] with response: ' && curl -s http://10.0.6.93/cm? --data-urlencode 'cmnd=PowerOnState 0'
-	else echo 'Config set skipped, [PowerOnState] already set to [0]'
+	else
+		echo 'Config set skipped, [PowerOnState] already set to [0]'
 	fi
 fi
 echo ''
@@ -21,7 +22,8 @@ if netcat -z 10.0.6.94 80 2>/dev/null; then
 	while ! netcat -z 10.0.6.94 80 2>/dev/null; do sleep 1; done
 	if [ "$(curl -s http://10.0.6.94/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		echo 'Config set [PowerOnState] to [0] with response: ' && curl -s http://10.0.6.94/cm? --data-urlencode 'cmnd=PowerOnState 0'
-	else echo 'Config set skipped, [PowerOnState] already set to [0]'
+	else
+		echo 'Config set skipped, [PowerOnState] already set to [0]'
 	fi
 fi
 echo ''

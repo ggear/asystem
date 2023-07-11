@@ -118,7 +118,7 @@ echo ''
                             metadata_tasmota_config_dict[metadata_tasmota_config],
                         ))
                     tasmota_config_file.write(
-                        "\telse echo 'Config set skipped, [{}] already set to [{}]'\n\tfi\n".format(
+                        "\telse\n\t\techo 'Config set skipped, [{}] already set to [{}]'\n\tfi\n".format(
                             metadata_tasmota_config,
                             metadata_tasmota_config_dict[metadata_tasmota_config],
                         ))
