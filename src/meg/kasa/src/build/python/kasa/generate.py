@@ -33,8 +33,13 @@ if __name__ == "__main__":
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-        """.strip() + "\n\n")
+        """.strip() + "\n")
         for metadata_kasa_dict in metadata_kasa_dicts:
+            kasa_config_file.write(
+                "echo '' && echo 'Processing config for device [{}] at [{}] ... '\n".format(
+                    metadata_kasa_dict["unique_id"],
+                    metadata_kasa_dict["connection_ip"],
+                ))
             kasa_config_file.write(
                 "kasa --host {} --type plug alias '{}'\n".format(
                     metadata_kasa_dict["connection_ip"],
@@ -48,4 +53,5 @@ if __name__ == "__main__":
                             metadata_kasa_dict["connection_ip"],
                             metadata_kasa_config_dict["led"],
                         ))
-    print("Build generate script [kasa] entity metadata persisted to [{}]".format(kasa_config_path))
+        kasa_config_file.write("echo ''")
+        print("Build generate script [kasa] entity metadata persisted to [{}]".format(kasa_config_path))

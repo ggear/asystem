@@ -37,7 +37,7 @@ if __name__ == "__main__":
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
-        """.strip() + "\n\n")
+        """.strip() + "\n")
         for metadata_tasmota_dict in metadata_tasmota_dicts:
             tasmota_device_path = os.path.join(DIR_ROOT, "src/build/resources/devices/", metadata_tasmota_dict["unique_id"])
             with open(tasmota_device_path + ".json", "wt") as tasmota_device_file:
@@ -71,18 +71,19 @@ if __name__ == "__main__":
                     metadata_tasmota_dict["unique_id"],
                 ).strip() + "\n\n")
             tasmota_config_file.write(
-                "echo 'Processing config for device [{}] at [http://{}/cn] ... '\n".format(
+                "echo '' && echo 'Processing config for device [{}] at [http://{}/cn] ... '\n".format(
                     metadata_tasmota_dict["unique_id"],
                     metadata_tasmota_dict["connection_ip"],
                 ))
-            tasmota_config_file.write(
-                "decode-config.py -s {} -o {}-backup.json --json-indent 2\n".format(
+            if not os.path.exists(tasmota_device_path + "-backup.json"):
+                os.system("decode-config.py -s {} -o {}-backup.json --json-indent 2".format(
                     metadata_tasmota_dict["connection_ip"],
                     tasmota_device_path,
                 ))
             tasmota_config_file.write(
-                "decode-config.py -s {} -i {}.json\n".format(
+                "decode-config.py -s {} -i {}.json || true\n".format(
                     metadata_tasmota_dict["connection_ip"],
                     tasmota_device_path,
                 ))
+        tasmota_config_file.write("echo ''")
     print("Build generate script [tasmota] entity metadata persisted to [{}]".format(tasmota_config_path))
