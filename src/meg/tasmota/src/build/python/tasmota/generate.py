@@ -75,6 +75,11 @@ if __name__ == "__main__":
                     metadata_tasmota_dict["unique_id"],
                     metadata_tasmota_dict["connection_ip"],
                 ))
+            tasmota_config_file.write(
+                "echo 'Current firmware ['$(curl -s --connect-timeout 1 http://{}/cm?cmnd=Status%202 | jq -r .StatusFWR.Version | cut -f1 -d\()'] versus required [{}]'\n".format(
+                    metadata_tasmota_dict["connection_ip"],
+                    env["TASMOTA_FIRMWARE_VERSION"],
+                ))
             if not os.path.exists(tasmota_device_path + "-backup.json"):
                 os.system("decode-config.py -s {} -o {}-backup.json --json-indent 2".format(
                     metadata_tasmota_dict["connection_ip"],
