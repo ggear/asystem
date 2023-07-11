@@ -70,8 +70,16 @@ if __name__ == "__main__":
                     env["VERNEMQ_PORT"],
                     metadata_tasmota_dict["unique_id"],
                 ).strip() + "\n\n")
+
+
+
+
+            # check device available
+
+
+
             tasmota_config_file.write(
-                "echo '' && echo 'Processing config for device [{}] at [http://{}/cn] ... '\n".format(
+                "echo '' && echo 'Processing config for device [{}] at [http://{}/?] ... '\n".format(
                     metadata_tasmota_dict["unique_id"],
                     metadata_tasmota_dict["connection_ip"],
                 ))
@@ -90,5 +98,15 @@ if __name__ == "__main__":
                     metadata_tasmota_dict["connection_ip"],
                     tasmota_device_path,
                 ))
+
+
+
+
+            # wait until device becomes available again
+            # curl "http://tasmota-device/cm?user=admin&password=xxxx" --data-urlencode 'cmnd=Status 1'
+
+
+
+
         tasmota_config_file.write("echo ''")
     print("Build generate script [tasmota] entity metadata persisted to [{}]".format(tasmota_config_path))

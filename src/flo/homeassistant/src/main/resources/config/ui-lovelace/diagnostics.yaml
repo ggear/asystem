@@ -137,7 +137,7 @@
     - entity: switch.edwin_wardrobe_outlet
       name: Edwin Wardobe Outlet
       icon: mdi:power-plug-outline
-    - entity: switch.rack_fans
+    - entity: switch.rack_fans_plug
       name: Rack Fans
       icon: mdi:server-remove
 ################################################################################

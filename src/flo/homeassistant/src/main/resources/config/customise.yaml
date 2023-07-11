@@ -389,6 +389,9 @@ light.tree_spotlights:
 switch.bathroom_rails_plug:
   friendly_name: 'Towel Rails'
   icon: 'mdi:radiator'
+switch.roof_water_heater_booster_plug:
+  friendly_name: 'Water Booster'
+  icon: 'mdi:thermometer-water'
 fan.lounge_air_purifier:
   friendly_name: 'Lounge'
   icon: 'mdi:air-purifier'
@@ -689,7 +692,7 @@ switch.kitchen_fan_outlet:
 switch.edwin_wardrobe_outlet:
   friendly_name: 'Edwin Wardobe Outlet'
   icon: 'mdi:power-plug-outline'
-switch.rack_fans:
+switch.rack_fans_plug:
   friendly_name: 'Rack Fans'
   icon: 'mdi:server-remove'
 sensor.garden_repeater_linkquality:

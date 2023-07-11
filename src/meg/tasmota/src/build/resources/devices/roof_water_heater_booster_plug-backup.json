@@ -2,7 +2,7 @@
   "adc_param1": 4294967295, 
   "adc_param2": 4294967295, 
   "adc_param3": -1, 
-  "adc_param4": 1073741824, 
+  "adc_param4": 0, 
   "adc_param_type": 0, 
   "altitude": 0, 
   "artnet_universe": 0, 
@@ -24,11 +24,11 @@
     0, 
     0
   ], 
-  "baudrate": 460800, 
+  "baudrate": 19200, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 9, 
-  "bootcount_reset_time": 1670056591, 
+  "bootcount": 35, 
+  "bootcount_reset_time": 1656400328, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
   "bri_preset_low": 0, 
@@ -52,11 +52,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0x28cb", 
-  "cfg_crc32": "0x2bbb2310", 
+  "cfg_crc": "0xb9ed", 
+  "cfg_crc32": "0x32be3163", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 21, 
+  "cfg_timestamp": 1657255497, 
   "config_version": 0, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -74,7 +74,7 @@
     "", 
     ""
   ], 
-  "devicename": "rack_fans", 
+  "devicename": "roof_water_heater_booster", 
   "dimmer_hw_max": 100, 
   "dimmer_hw_min": 0, 
   "dimmer_step": 10, 
@@ -147,8 +147,8 @@
     0, 
     0
   ], 
-  "energy_current_calibration": 3500, 
-  "energy_current_calibration2": 3500, 
+  "energy_current_calibration": 16840, 
+  "energy_current_calibration2": 16840, 
   "energy_frequency_calibration": 0, 
   "energy_kWhdoy": 0, 
   "energy_kWhexport_ph": [
@@ -162,11 +162,11 @@
     0
   ], 
   "energy_kWhtotal_ph": [
-    0, 
+    212, 
     0, 
     0
   ], 
-  "energy_kWhtotal_time": 1670056591, 
+  "energy_kWhtotal_time": 1656400328, 
   "energy_kWhyesterday_ph": [
     0, 
     0, 
@@ -186,8 +186,8 @@
   "energy_min_current": 0, 
   "energy_min_power": 0, 
   "energy_min_voltage": 0, 
-  "energy_power_calibration": 12530, 
-  "energy_power_calibration2": 12530, 
+  "energy_power_calibration": 5501, 
+  "energy_power_calibration2": 5501, 
   "energy_power_delta": [
     0, 
     0, 
@@ -201,8 +201,8 @@
     "usage1_kWhtoday": 0, 
     "usage1_kWhtotal": 0
   }, 
-  "energy_voltage_calibration": 1950, 
-  "energy_voltage_calibration2": 1950, 
+  "energy_voltage_calibration": 1976, 
+  "energy_voltage_calibration2": 1976, 
   "fallback_module": 0, 
   "flag": {
     "button_restrict": 0, 
@@ -372,7 +372,7 @@
     0
   ], 
   "friendlyname": [
-    "Rack Fans", 
+    "Water Booster", 
     "", 
     "", 
     "", 
@@ -390,8 +390,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0xf586", 
-      "crc32": "0x2bbb2310", 
+      "crc": "0x2b0c", 
+      "crc32": "0x32be3163", 
       "hardware": "ESP82", 
       "size": 4096, 
       "version": {
@@ -406,17 +406,17 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0x28cb", 
-      "crc32": "0x2bbb2310", 
+      "crc": "0xb9ed", 
+      "crc32": "0x32be3163", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "1970-01-01 00:00:21"
+    "timestamp": "2022-07-08 04:44:57"
   }, 
-  "hostname": "sonoff-rack-fans", 
+  "hostname": "sonoff-ceiling-water-heater-booster", 
   "hotplug_scan": 0, 
   "hum_comp": 0, 
   "i2c_drivers": [
@@ -542,7 +542,7 @@
   "mbflag2": {
     "sunrise_dawn_angle": 0, 
     "tariff_forced": 0, 
-    "temperature_set_res": 1
+    "temperature_set_res": 0
   }, 
   "mcp230xx_config": [
     {
@@ -793,7 +793,7 @@
   "mqtt_pwd": "DVES_PASS", 
   "mqtt_retry": 10, 
   "mqtt_socket_timeout": 4, 
-  "mqtt_topic": "rack_fans", 
+  "mqtt_topic": "roof_water_heater_booster", 
   "mqtt_user": "DVES_USER", 
   "mqtt_wifi_timeout": 200, 
   "mqttlog_level": 0, 
@@ -835,7 +835,7 @@
     1, 
     0, 
     6, 
-    0, 
+    128, 
     0, 
     60, 
     90, 
@@ -861,7 +861,7 @@
   "pn532_pack": 0, 
   "pn532_password": 0, 
   "power": {
-    "power1": 0, 
+    "power1": 1, 
     "power2": 0, 
     "power3": 0, 
     "power4": 0, 
@@ -870,7 +870,7 @@
     "power7": 0, 
     "power8": 0
   }, 
-  "poweronstate": 0, 
+  "poweronstate": 3, 
   "pulse_counter": [
     0, 
     0, 
@@ -1153,7 +1153,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 30, 
+  "save_flag": 209, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 0, 
@@ -1250,9 +1250,9 @@
       "0xffffffff"
     ]
   ], 
-  "serial_config": 3, 
+  "serial_config": 11, 
   "serial_delimiter": 255, 
-  "seriallog_level": 2, 
+  "seriallog_level": 0, 
   "shd_leading_edge": 0, 
   "shd_warmup_brightness": 0, 
   "shd_warmup_time": 0, 
@@ -1505,7 +1505,7 @@
   ], 
   "tcp_baudrate": 0, 
   "tcp_config": 0, 
-  "tele_period": 300, 
+  "tele_period": 10, 
   "telegram_chatid": "", 
   "telegram_token": "", 
   "teleinfo": {
@@ -1517,7 +1517,7 @@
     "show_stats": 0
   }, 
   "temp_comp": 0, 
-  "templatename": "Sonoff BASICR2", 
+  "templatename": "Sonoff POWR3", 
   "tflag": [
     {
       "dow": 1, 
@@ -1770,25 +1770,25 @@
   ], 
   "tuyamcu_topic": 0, 
   "user_template": {
-    "base": 1, 
+    "base": 43, 
     "flag": 0, 
     "gpio": [
       32, 
-      65504, 
-      65504, 
-      65504, 
+      3072, 
+      0, 
+      3104, 
       0, 
       0, 
       0, 
       0, 
-      224, 
+      256, 
       320, 
       0, 
       0, 
       0, 
       0
     ], 
-    "name": "Sonoff BASICR2"
+    "name": "Sonoff POWR3"
   }, 
   "version": "0xd000000", 
   "web_color": [
@@ -1830,14 +1830,14 @@
   "weight_reference": 0, 
   "weight_user_tare": 0, 
   "wifi_bssid": [
-    130, 
-    138, 
-    32, 
-    113, 
-    211, 
-    121
+    250, 
+    159, 
+    194, 
+    253, 
+    176, 
+    247
   ], 
-  "wifi_channel": 11, 
+  "wifi_channel": 6, 
   "wifi_output_power": 170, 
   "windmeter_pulse_debounce": 0, 
   "windmeter_pulses_x_rot": 0, 
