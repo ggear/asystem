@@ -138,6 +138,7 @@ logger:
     homeassistant.config_entries: error
     homeassistant.components.sensor: error
     custom_components.tplink: error
+    custom_components.average.sensor: error
     custom_components.powercalc.sensors.group: error
     ###################################################################################
     homeassistant.components.websocket_api.http.connection: fatal
