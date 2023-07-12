@@ -13,6 +13,7 @@ brew install \
   watch \
   rename \
   ffmpeg \
+  netcat \
   rustup \
   exiftool \
   poppler \
