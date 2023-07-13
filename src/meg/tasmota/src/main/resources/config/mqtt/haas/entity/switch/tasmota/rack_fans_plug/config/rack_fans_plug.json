@@ -3,9 +3,10 @@
   "name": "rack_fans_plug",
   "icon": "mdi:server-remove",
   "force_update": "false",
+  "optimistic": "true",
   "state_topic": "tasmota/device/rack_fans_plug/tele/STATE",
   "value_template": "{{ value_json.POWER }}",
-  "command_topic": "tasmota/device/rack_fans_plug/tele/CMND",
+  "command_topic": "tasmota/device/rack_fans_plug/cmnd/POWER",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
@@ -16,6 +17,15 @@
     "model": "BASICR2",
     "manufacturer": "Sonoff",
     "suggested_area": "Rack",
-    "connections": "[[\"mac\", \"4c:eb:d6:b5:a5:28\"], [\"ip\", \"10.0.6.101\"]]"
+    "connections": [
+      [
+        "mac",
+        "4c:eb:d6:b5:a5:28"
+      ],
+      [
+        "ip",
+        "10.0.6.101"
+      ]
+    ]
   }
 }

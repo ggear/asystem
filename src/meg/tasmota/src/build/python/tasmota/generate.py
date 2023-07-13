@@ -1,7 +1,7 @@
 import glob
+import json
 import os
 import sys
-import json
 
 import pandas as pd
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     tasmota_config_path = os.path.join(DIR_ROOT, "src/build/resources/tasmota_config.sh")
     with open(tasmota_config_path, "wt") as tasmota_config_file:
         tasmota_config_file.write("""
-#!/bin/sh
+#!/bin/bash
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
@@ -76,7 +76,7 @@ echo ''
                     env["VERNEMQ_PORT"],
                     metadata_tasmota_dict["unique_id"],
                 ).strip() + "\n\n")
-            tasmota_config_file.write("if netcat -z {} 80 2>/dev/null; then\n".format(
+            tasmota_config_file.write("if netcat -zw 1 {} 80 2>/dev/null; then\n".format(
                 metadata_tasmota_dict["connection_ip"]),
             )
             tasmota_config_file.write(
@@ -100,9 +100,11 @@ echo ''
                     tasmota_device_path,
                 ))
             if "tasmota_device_config" in metadata_tasmota_dict:
-                tasmota_config_file.write("\tsleep 1 && while ! netcat -z {} 80 2>/dev/null; do sleep 1; done\n".format(
-                    metadata_tasmota_dict["connection_ip"]),
-                )
+                tasmota_config_file.write(
+                    "\tsleep 1 && while ! netcat -zw 1 {} 80 2>/dev/null; do echo 'Waiting for device [{}] to come up'; done\n".format(
+                        metadata_tasmota_dict["connection_ip"],
+                        metadata_tasmota_dict["connection_ip"],
+                    ))
                 metadata_tasmota_config_dict = json.loads(metadata_tasmota_dict["tasmota_device_config"])
                 for metadata_tasmota_config in metadata_tasmota_config_dict:
                     tasmota_config_file.write(

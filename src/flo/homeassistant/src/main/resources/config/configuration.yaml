@@ -11,6 +11,13 @@ homeassistant:
   country: 'AU'
   internal_url: !env_var HOMEASSISTANT_INTERNAL_URL
   external_url: !env_var HOMEASSISTANT_EXTERNAL_URL
+  customize_domain:
+    fan:
+      assumed_state: false
+    light:
+      assumed_state: false
+    switch:
+      assumed_state: false
   customize: !include customise.yaml
   packages: !include_dir_named custom_packages
 #######################################################################################

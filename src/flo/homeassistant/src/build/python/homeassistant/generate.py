@@ -16,25 +16,25 @@ DIR_ROOT = abspath("{}/../../../..".format(dirname(realpath(__file__))))
 
 
 def load_env(root_dir=None):
-    env = {}
-    env_path = abspath(join(DIR_ROOT if root_dir is None else root_dir, ".env"))
-    env_path_dev = env_path
-    if not isfile(env_path):
-        env_path = abspath(join(DIR_ROOT if root_dir is None else root_dir, "target/release/.env"))
-    if not isfile(env_path):
-        raise Exception("Could not find dev [{}] or prod [{}] env file".format(env_path_dev, env_path))
-    with open(env_path, 'r') as env_file:
-        for env_line in env_file:
-            env_line = env_line.replace("export ", "").rstrip()
-            if "=" not in env_line:
+    env_load = {}
+    env_load_path = abspath(join(DIR_ROOT if root_dir is None else root_dir, ".env"))
+    env_load_path_dev = env_load_path
+    if not isfile(env_load_path):
+        env_load_path = abspath(join(DIR_ROOT if root_dir is None else root_dir, "target/release/.env"))
+    if not isfile(env_load_path):
+        raise Exception("Could not find dev [{}] or prod [{}] env file".format(env_load_path_dev, env_load_path))
+    with open(env_load_path, 'r') as env_file:
+        for env_load_line in env_file:
+            env_load_line = env_load_line.replace("export ", "").rstrip()
+            if "=" not in env_load_line:
                 continue
-            if env_line.startswith("#"):
+            if env_load_line.startswith("#"):
                 continue
-            env_key, env_value = env_line.split("=", 1)
-            env[env_key] = env_value
-    print("Build generate script environment loaded from [{}]".format(env_path))
+            env_load_key, env_load_value = env_load_line.split("=", 1)
+            env_load[env_load_key] = env_load_value
+    print("Build generate script environment loaded from [{}]".format(env_load_path))
     sys.stdout.flush()
-    return env
+    return env_load
 
 
 def load_modules():
@@ -59,14 +59,14 @@ def load_entity_metadata():
     return metadata_df
 
 
-def write_entity_metadata(module, module_root, metadata_df):
+def write_entity_metadata(module_name, module_root_dir, metadata_df):
     metadata_df = metadata_df.copy()
     for metadata_col in metadata_df.columns:
         if all((metadata_col_val is None) or isinstance(metadata_col_val, str) for metadata_col_val in metadata_df[metadata_col]):
             metadata_df[metadata_col] = metadata_df[metadata_col].str.replace("compensation_sensor_", "")
     metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
     metadata_columns_rename = {column: column.replace("device_", "") for column in metadata_columns}
-    metadata_publish_dir_root = os.path.join(module_root, "src/main/resources/config/mqtt")
+    metadata_publish_dir_root = os.path.join(module_root_dir, "src/main/resources/config/mqtt")
     if os.path.exists(metadata_publish_dir_root):
         shutil.rmtree(metadata_publish_dir_root)
     for index, row in metadata_df.iterrows():
@@ -78,13 +78,15 @@ def write_entity_metadata(module, module_root, metadata_df):
             "device_class",
             "icon",
             "force_update",
+            "optimistic",
             "state_topic",
             "value_template",
             "command_topic",
             "qos",
         ]].dropna().to_dict()
-        metadata_dict["device"] = \
-            row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
+        metadata_dict["device"] = row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
+        if "connections" in metadata_dict["device"]:
+            metadata_dict["device"]["connections"] = json.loads(metadata_dict["device"]["connections"])
         metadata_publish_dir = os.path.abspath(os.path.join(metadata_publish_dir_root, row['discovery_topic']))
         os.makedirs(metadata_publish_dir)
         metadata_publish_str = json.dumps(metadata_dict, ensure_ascii=False, indent=2) + "\n"
@@ -92,20 +94,20 @@ def write_entity_metadata(module, module_root, metadata_df):
         with open(metadata_publish_path, 'a') as metadata_publish_file:
             metadata_publish_file.write(metadata_publish_str)
             print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
-                  .format(module, metadata_dict["unique_id"], metadata_publish_path))
+                  .format(module_name, metadata_dict["unique_id"], metadata_publish_path))
 
 
 if __name__ == "__main__":
     env = load_env()
-    metadata_df = load_entity_metadata()
+    metadata_haas_df = load_entity_metadata()
 
     # Verify entity IDs
-    metadata_verify_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] != "_") &
-        (metadata_df["entity_namespace"].str.len() > 0) &
-        (metadata_df["unique_id"].str.len() > 0)
+    metadata_verify_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["device_via_device"] != "_") &
+        (metadata_haas_df["entity_namespace"].str.len() > 0) &
+        (metadata_haas_df["unique_id"].str.len() > 0)
         ]
     metadata_verify_dicts = [row.dropna().to_dict() for index, row in metadata_verify_df.iterrows()]
     for metadata_verify_dict in metadata_verify_dicts:
@@ -140,16 +142,16 @@ if __name__ == "__main__":
             print("Build generate script [homeassistant] could not connect to HAAS with error [{}]".format(exception))
 
     # Build customise YAML
-    metadata_customise_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] != "_") &
-        (metadata_df["device_via_device"] != "Action") &
-        (metadata_df["device_via_device"] != "Powercalc Proxy") &
-        (metadata_df["entity_namespace"].str.len() > 0) &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["friendly_name"].str.len() > 0) &
-        (metadata_df["entity_domain"].str.len() > 0)
+    metadata_customise_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["device_via_device"] != "_") &
+        (metadata_haas_df["device_via_device"] != "Action") &
+        (metadata_haas_df["device_via_device"] != "Powercalc Proxy") &
+        (metadata_haas_df["entity_namespace"].str.len() > 0) &
+        (metadata_haas_df["unique_id"].str.len() > 0) &
+        (metadata_haas_df["friendly_name"].str.len() > 0) &
+        (metadata_haas_df["entity_domain"].str.len() > 0)
         ]
     metadata_customise_dicts = [row.dropna().to_dict() for index, row in metadata_customise_df.iterrows()]
     metadata_customise_path = abspath(join(DIR_ROOT, "src/main/resources/config/customise.yaml"))
@@ -183,12 +185,12 @@ if __name__ == "__main__":
         print("Build generate script [homeassistant] entity metadata persisted to [{}]".format(metadata_customise_path))
 
     # Build compensation YAML
-    metadata_compensation_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["entity_namespace"].str.len() > 0) &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["compensation_curve"].str.len() > 0)
+    metadata_compensation_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["entity_namespace"].str.len() > 0) &
+        (metadata_haas_df["unique_id"].str.len() > 0) &
+        (metadata_haas_df["compensation_curve"].str.len() > 0)
         ]
     metadata_compensation_dicts = [row.dropna().to_dict() for index, row in metadata_compensation_df.iterrows()]
     metadata_compensation_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/compensation.yaml"))
@@ -219,12 +221,12 @@ compensation:
         print("Build generate script [homeassistant] entity compensation persisted to [{}]".format(metadata_compensation_path))
 
     # Build control YAML
-    metadata_control_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "TPLink") &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["connection_ip"].str.len() > 0)
+    metadata_control_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["device_via_device"] == "TPLink") &
+        (metadata_haas_df["unique_id"].str.len() > 0) &
+        (metadata_haas_df["connection_ip"].str.len() > 0)
         ]
     metadata_control_dicts = [row.dropna().to_dict() for index, row in metadata_control_df.iterrows()]
     metadata_control_dicts = sorted(metadata_control_dicts, key=lambda metadata_control_dict: metadata_control_dict['connection_ip'])
@@ -259,53 +261,53 @@ tplink:
             """.strip() + "\n")
 
         # Build HAAS integration YAML
-        metadata_haas_df = metadata_df[
-            (metadata_df["index"] > 0) &
-            (metadata_df["entity_status"] == "Enabled") &
-            (metadata_df["entity_namespace"].str.len() > 0) &
-            (metadata_df["unique_id"].str.len() > 0) &
-            (metadata_df["entity_namespace"].str.len() > 0) &
-            (metadata_df["google_aliases"].str.len() > 0) &
-            (metadata_df["device_suggested_area"].str.len() > 0)
+        metadata_alias_df = metadata_haas_df[
+            (metadata_haas_df["index"] > 0) &
+            (metadata_haas_df["entity_status"] == "Enabled") &
+            (metadata_haas_df["entity_namespace"].str.len() > 0) &
+            (metadata_haas_df["unique_id"].str.len() > 0) &
+            (metadata_haas_df["entity_namespace"].str.len() > 0) &
+            (metadata_haas_df["google_aliases"].str.len() > 0) &
+            (metadata_haas_df["device_suggested_area"].str.len() > 0)
             ]
-        metadata_haas_dicts = [row.dropna().to_dict() for index, row in metadata_haas_df.iterrows()]
-        metadata_haas_path = abspath(join(DIR_ROOT, "src/main/resources/config/haas-entities.yaml"))
-        with open(metadata_haas_path, 'w') as metadata_haas_file:
-            metadata_haas_file.write("""
+        metadata_alias_dicts = [row.dropna().to_dict() for index, row in metadata_alias_df.iterrows()]
+        metadata_alias_path = abspath(join(DIR_ROOT, "src/main/resources/config/haas-entities.yaml"))
+        with open(metadata_alias_path, 'w') as metadata_alias_file:
+            metadata_alias_file.write("""
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
             """.strip() + "\n")
-            for metadata_haas_dict in metadata_haas_dicts:
-                metadata_haas_aliases = ["{}{}{}".format(metadata_haas_dict["device_suggested_area"],
-                                                         "" if alias.startswith("s ") else " ", alias)
-                                         for alias in metadata_haas_dict["google_aliases"].split(',')]
-                metadata_haas_name = metadata_haas_aliases.pop(0)
-                metadata_haas_room = metadata_haas_dict["device_suggested_area_override"] \
-                    if "device_suggested_area_override" in metadata_haas_dict else metadata_haas_dict["device_suggested_area"]
-                metadata_haas_file.write("""
+            for metadata_alias_dict in metadata_alias_dicts:
+                metadata_alias_aliases = ["{}{}{}".format(metadata_alias_dict["device_suggested_area"],
+                                                          "" if alias.startswith("s ") else " ", alias)
+                                          for alias in metadata_alias_dict["google_aliases"].split(',')]
+                metadata_alias_name = metadata_alias_aliases.pop(0)
+                metadata_alias_room = metadata_alias_dict["device_suggested_area_override"] \
+                    if "device_suggested_area_override" in metadata_alias_dict else metadata_alias_dict["device_suggested_area"]
+                metadata_alias_file.write("""
 {}.{}:
   name: {}
   aliases: {}
   room: {}
                     """.format(
-                    metadata_haas_dict["entity_namespace"],
-                    metadata_haas_dict["unique_id"],
-                    metadata_haas_name,
-                    metadata_haas_aliases,
-                    metadata_haas_room,
+                    metadata_alias_dict["entity_namespace"],
+                    metadata_alias_dict["unique_id"],
+                    metadata_alias_name,
+                    metadata_alias_aliases,
+                    metadata_alias_room,
                 ).strip() + "\n")
-            metadata_haas_file.write("""
+            metadata_alias_file.write("""
 #######################################################################################
                 """.strip() + "\n")
 
     # Build media YAML
-    metadata_media_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        ((metadata_df["device_via_device"] == "Google") | (metadata_df["device_via_device"] == "Sonos")) &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["connection_ip"].str.len() > 0)
+    metadata_media_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        ((metadata_haas_df["device_via_device"] == "Google") | (metadata_haas_df["device_via_device"] == "Sonos")) &
+        (metadata_haas_df["unique_id"].str.len() > 0) &
+        (metadata_haas_df["connection_ip"].str.len() > 0)
         ]
     metadata_media_google_dicts = [row.dropna().to_dict()
                                    for index, row in metadata_media_df.query("device_via_device == 'Google'").iterrows()]
@@ -366,18 +368,18 @@ sonos:
             """.strip() + "\n")
 
         # Build security YAML
-        metadata_lock_df = metadata_df[
-            (metadata_df["index"] > 0) &
-            (metadata_df["entity_status"] == "Enabled") &
-            (metadata_df["entity_namespace"] == "lock") &
-            (metadata_df["unique_id"].str.len() > 0)
+        metadata_lock_df = metadata_haas_df[
+            (metadata_haas_df["index"] > 0) &
+            (metadata_haas_df["entity_status"] == "Enabled") &
+            (metadata_haas_df["entity_namespace"] == "lock") &
+            (metadata_haas_df["unique_id"].str.len() > 0)
             ]
         metadata_lock_dicts = [row.dropna().to_dict() for index, row in metadata_lock_df.iterrows()]
-        metadata_contact_df = metadata_df[
-            (metadata_df["index"] > 0) &
-            (metadata_df["entity_status"] == "Enabled") &
-            (metadata_df["device_model"] == "Contact Sensor") &
-            (metadata_df["unique_id"].str.len() > 0)
+        metadata_contact_df = metadata_haas_df[
+            (metadata_haas_df["index"] > 0) &
+            (metadata_haas_df["entity_status"] == "Enabled") &
+            (metadata_haas_df["device_model"] == "Contact Sensor") &
+            (metadata_haas_df["unique_id"].str.len() > 0)
             ]
         metadata_contact_dicts = [row.dropna().to_dict() for index, row in metadata_contact_df.iterrows()]
         metadata_locks_all_locked_template = " and ".join([
@@ -778,13 +780,13 @@ automation:
                 """.strip() + "\n")
 
     # Build lighting YAML
-    metadata_lighting_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        ((metadata_df["device_via_device"] == "Phillips") | (metadata_df["device_via_device"] == "IKEA")) &
-        ((metadata_df["entity_namespace"].str.len() > 0) & (metadata_df["entity_namespace"] == "light")) &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["friendly_name"].str.len() > 0)
+    metadata_lighting_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        ((metadata_haas_df["device_via_device"] == "Phillips") | (metadata_haas_df["device_via_device"] == "IKEA")) &
+        ((metadata_haas_df["entity_namespace"].str.len() > 0) & (metadata_haas_df["entity_namespace"] == "light")) &
+        (metadata_haas_df["unique_id"].str.len() > 0) &
+        (metadata_haas_df["friendly_name"].str.len() > 0)
         ]
     metadata_lighting_dicts = [row.dropna().to_dict() for index, row in metadata_lighting_df.iterrows()]
     metadata_lighting_automations_dicts = {}
@@ -1086,12 +1088,12 @@ automation:
     print("Build generate script [homeassistant] entity lighting persisted to [{}]".format(metadata_lighting_path))
 
     # Diagnostics YAML
-    metadata_diagnostic_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["entity_domain"] == "Zigbee Link Quality") &
-        (metadata_df["entity_group"] == "Diagnostics")
+    metadata_diagnostic_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["unique_id"].str.len() > 0) &
+        (metadata_haas_df["entity_domain"] == "Zigbee Link Quality") &
+        (metadata_haas_df["entity_group"] == "Diagnostics")
         ]
     metadata_diagnostic_dicts = [row.dropna().to_dict() for index, row in metadata_diagnostic_df.iterrows()]
     metadata_diagnostic_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/diagnostics.yaml"))
@@ -1207,21 +1209,21 @@ automation:
         """.strip() + "\n")
 
         # Electricity YAML
-        metadata_electricity_df = metadata_df[
-            (metadata_df["index"] > 0) &
-            (metadata_df["entity_status"] == "Enabled") &
-            (metadata_df["device_via_device"] == "Powercalc Proxy") &
-            (metadata_df["entity_namespace"].str.len() > 0) &
-            (metadata_df["unique_id"].str.len() > 0) &
-            (metadata_df["powercalc_enable"] == "True")
+        metadata_electricity_df = metadata_haas_df[
+            (metadata_haas_df["index"] > 0) &
+            (metadata_haas_df["entity_status"] == "Enabled") &
+            (metadata_haas_df["device_via_device"] == "Powercalc Proxy") &
+            (metadata_haas_df["entity_namespace"].str.len() > 0) &
+            (metadata_haas_df["unique_id"].str.len() > 0) &
+            (metadata_haas_df["powercalc_enable"] == "True")
             ]
         metadata_electricity_proxy_dicts = [row.to_dict() for index, row in metadata_electricity_df.iterrows()]
-        metadata_electricity_df = metadata_df[
-            (metadata_df["index"] > 0) &
-            (metadata_df["entity_status"] == "Enabled") &
-            (metadata_df["entity_namespace"].str.len() > 0) &
-            (metadata_df["unique_id"].str.len() > 0) &
-            (metadata_df["powercalc_enable"] == "True")
+        metadata_electricity_df = metadata_haas_df[
+            (metadata_haas_df["index"] > 0) &
+            (metadata_haas_df["entity_status"] == "Enabled") &
+            (metadata_haas_df["entity_namespace"].str.len() > 0) &
+            (metadata_haas_df["unique_id"].str.len() > 0) &
+            (metadata_haas_df["powercalc_enable"] == "True")
             ]
         metadata_electricity_dicts = {}
         metadata_electricity_ungrouped_dicts = []
@@ -1414,16 +1416,16 @@ sensor:
             """.strip() + "\n")
 
     # Build action YAML
-    metadata_action_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "Action") &
-        (metadata_df["entity_namespace"].str.len() > 0) &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["friendly_name"].str.len() > 0) &
-        (metadata_df["linked_entity"].str.len() > 0) &
-        (metadata_df["linked_service"].str.len() > 0) &
-        (metadata_df["icon"].str.len() > 0)
+    metadata_action_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["device_via_device"] == "Action") &
+        (metadata_haas_df["entity_namespace"].str.len() > 0) &
+        (metadata_haas_df["unique_id"].str.len() > 0) &
+        (metadata_haas_df["friendly_name"].str.len() > 0) &
+        (metadata_haas_df["linked_entity"].str.len() > 0) &
+        (metadata_haas_df["linked_service"].str.len() > 0) &
+        (metadata_haas_df["icon"].str.len() > 0)
         ]
     metadata_action_dicts = [row.dropna().to_dict() for index, row in metadata_action_df.iterrows()]
     metadata_action_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/actions.yaml"))
@@ -1475,15 +1477,15 @@ automation:
             """.strip() + "\n")
 
     # Build lovelace YAML
-    metadata_lovelace_df = metadata_df[
-        (metadata_df["index"] > 0) &
-        (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["entity_namespace"].str.len() > 0) &
-        (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["friendly_name"].str.len() > 0) &
-        (metadata_df["entity_domain"].str.len() > 0) &
-        (metadata_df["entity_group"].str.len() > 0) &
-        (metadata_df["haas_display_mode"].str.len() > 0)
+    metadata_lovelace_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["entity_namespace"].str.len() > 0) &
+        (metadata_haas_df["unique_id"].str.len() > 0) &
+        (metadata_haas_df["friendly_name"].str.len() > 0) &
+        (metadata_haas_df["entity_domain"].str.len() > 0) &
+        (metadata_haas_df["entity_group"].str.len() > 0) &
+        (metadata_haas_df["haas_display_mode"].str.len() > 0)
         ]
     metadata_lovelace_dicts = [row.dropna().to_dict() for index, row in metadata_lovelace_df.iterrows()]
     metadata_lovelace_group_domain_dicts = OrderedDict()

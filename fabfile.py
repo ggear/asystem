@@ -648,9 +648,11 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
     for dependency in _get_dependencies(context, module):
         host_ips_prod = []
         host_names_prod = _get_hosts(context, dependency) if _name(module) != _name(dependency) or filter_host is None else [filter_host]
+        _run_local(context, "dscacheutil -flushcache")
         for host in host_names_prod:
             host_ip = _run_local(context, "dig +short {}".format(host), hide='out').stdout.strip()
-            host_ips_prod.append("10.0.0.1" if host_ip == "127.0.1.1" else host_ip)
+            host_ip = "10.0.0.1" if host_ip == "127.0.1.1" else "10.0.2." + host_ip.split('.')[3]
+            host_ips_prod.append(host_ip)
         host_ip_prod = ",".join(host_ips_prod)
         host_name_prod = ",".join(host_names_prod)
         host_name_dev = "host.docker.internal"

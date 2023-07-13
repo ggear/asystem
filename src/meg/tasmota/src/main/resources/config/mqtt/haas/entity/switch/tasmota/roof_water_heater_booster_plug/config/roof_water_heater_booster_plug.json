@@ -3,9 +3,10 @@
   "name": "roof_water_heater_booster_plug",
   "icon": "mdi:thermometer-water",
   "force_update": "false",
+  "optimistic": "true",
   "state_topic": "tasmota/device/roof_water_heater_booster_plug/tele/STATE",
   "value_template": "{{ value_json.POWER }}",
-  "command_topic": "tasmota/device/roof_water_heater_booster_plug/tele/CMND",
+  "command_topic": "tasmota/device/roof_water_heater_booster_plug/cmnd/POWER",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
@@ -16,6 +17,15 @@
     "model": "POWR3",
     "manufacturer": "Sonoff",
     "suggested_area": "Roof",
-    "connections": "[[\"mac\", \"ec:fa:bc:50:3e:02\"], [\"ip\", \"10.0.6.100\"]]"
+    "connections": [
+      [
+        "mac",
+        "ec:fa:bc:50:3e:02"
+      ],
+      [
+        "ip",
+        "10.0.6.100"
+      ]
+    ]
   }
 }
