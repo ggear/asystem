@@ -24,14 +24,13 @@ if __name__ == "__main__":
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["device_via_device"] == "Tasmota") &
-        (metadata_df["entity_namespace"] == "switch") &
+        (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["device_model"].str.len() > 0) &
         (metadata_df["device_manufacturer"].str.len() > 0) &
         (metadata_df["custom_config"].str.len() > 0) &
-        (metadata_df["discovery_topic"].str.len() > 0) &
-        (metadata_df["connection_ip"].str.len() > 0)
+        (metadata_df["discovery_topic"].str.len() > 0)
         ].sort_values("connection_ip")
     write_entity_metadata("tasmota", DIR_ROOT, metadata_tasmota_df)
     metadata_tasmota_dicts = [row.dropna().to_dict() for index, row in metadata_tasmota_df.iterrows()]
@@ -76,62 +75,63 @@ echo ''
                     env["VERNEMQ_PORT"],
                     metadata_tasmota_dict["unique_id"],
                 ).strip() + "\n\n")
-            tasmota_config_file.write("if netcat -zw 1 {} 80 2>/dev/null; then\n".format(
-                metadata_tasmota_dict["connection_ip"]),
-            )
-            tasmota_config_file.write(
-                "\techo 'Processing config for device [{}] at [http://{}/?] ... '\n".format(
-                    metadata_tasmota_dict["unique_id"],
-                    metadata_tasmota_dict["connection_ip"],
-                ))
-            tasmota_config_file.write(
-                "\techo 'Current firmware ['\"$(curl -s http://{}/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()\"'] versus required [{}]'\n".format(
-                    metadata_tasmota_dict["connection_ip"],
-                    env["TASMOTA_FIRMWARE_VERSION"],
-                ))
-            if not os.path.exists(tasmota_device_path + "-backup.json"):
-                os.system("decode-config.py -s {} -o {}-backup.json --json-indent 2".format(
-                    metadata_tasmota_dict["connection_ip"],
-                    tasmota_device_path,
-                ))
-            tasmota_config_file.write(
-                "\tdecode-config.py -s {} -i {}.json || true\n".format(
-                    metadata_tasmota_dict["connection_ip"],
-                    tasmota_device_path,
-                ))
-            if "tasmota_device_config" in metadata_tasmota_dict:
+            if metadata_tasmota_dict["entity_namespace"] != "sensor":
+                tasmota_config_file.write("if netcat -zw 1 {} 80 2>/dev/null; then\n".format(
+                    metadata_tasmota_dict["connection_ip"]),
+                )
                 tasmota_config_file.write(
-                    "\tsleep 1 && while ! netcat -zw 1 {} 80 2>/dev/null; do echo 'Waiting for device [{}] to come up'; done\n".format(
-                        metadata_tasmota_dict["connection_ip"],
+                    "\techo 'Processing config for device [{}] at [http://{}/?] ... '\n".format(
+                        metadata_tasmota_dict["unique_id"],
                         metadata_tasmota_dict["connection_ip"],
                     ))
-                metadata_tasmota_config_dict = json.loads(metadata_tasmota_dict["tasmota_device_config"])
-                for metadata_tasmota_config in metadata_tasmota_config_dict:
+                tasmota_config_file.write(
+                    "\techo 'Current firmware ['\"$(curl -s http://{}/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()\"'] versus required [{}]'\n".format(
+                        metadata_tasmota_dict["connection_ip"],
+                        env["TASMOTA_FIRMWARE_VERSION"],
+                    ))
+                if not os.path.exists(tasmota_device_path + "-backup.json"):
+                    os.system("decode-config.py -s {} -o {}-backup.json --json-indent 2".format(
+                        metadata_tasmota_dict["connection_ip"],
+                        tasmota_device_path,
+                    ))
+                tasmota_config_file.write(
+                    "\tdecode-config.py -s {} -i {}.json || true\n".format(
+                        metadata_tasmota_dict["connection_ip"],
+                        tasmota_device_path,
+                    ))
+                if "tasmota_device_config" in metadata_tasmota_dict:
                     tasmota_config_file.write(
-                        "\tif [ \"$(curl -s http://{}/cm? --data-urlencode 'cmnd={}' | grep '{}' | wc -l)\" -ne 1 ]; then\n".format(
+                        "\tsleep 1 && while ! netcat -zw 1 {} 80 2>/dev/null; do echo 'Waiting for device [{}] to come up'; done\n".format(
                             metadata_tasmota_dict["connection_ip"],
-                            metadata_tasmota_config,
-                            json.dumps({
-                                metadata_tasmota_config: metadata_tasmota_config_dict[metadata_tasmota_config]
-                            }, separators=(',', ':')),
-                        ))
-                    tasmota_config_file.write(
-                        "\t\techo 'Config set [{}] to [{}] with response: ' && curl -s http://{}/cm? --data-urlencode 'cmnd={} {}'\n".format(
-                            metadata_tasmota_config,
-                            metadata_tasmota_config_dict[metadata_tasmota_config],
                             metadata_tasmota_dict["connection_ip"],
-                            metadata_tasmota_config,
-                            metadata_tasmota_config_dict[metadata_tasmota_config],
                         ))
-                    tasmota_config_file.write(
-                        "\telse\n\t\techo 'Config set skipped, [{}] already set to [{}]'\n\tfi\n".format(
-                            metadata_tasmota_config,
-                            metadata_tasmota_config_dict[metadata_tasmota_config],
-                        ))
-            tasmota_config_file.write(
-                "else\n\techo 'Skipping config for device [{}] at [http://{}/?] given it is unresponsive'\n".format(
-                    metadata_tasmota_dict["unique_id"],
-                    metadata_tasmota_dict["connection_ip"],
-                ))
-            tasmota_config_file.write("fi\necho ''\n")
+                    metadata_tasmota_config_dict = json.loads(metadata_tasmota_dict["tasmota_device_config"])
+                    for metadata_tasmota_config in metadata_tasmota_config_dict:
+                        tasmota_config_file.write(
+                            "\tif [ \"$(curl -s http://{}/cm? --data-urlencode 'cmnd={}' | grep '{}' | wc -l)\" -ne 1 ]; then\n".format(
+                                metadata_tasmota_dict["connection_ip"],
+                                metadata_tasmota_config,
+                                json.dumps({
+                                    metadata_tasmota_config: metadata_tasmota_config_dict[metadata_tasmota_config]
+                                }, separators=(',', ':')),
+                            ))
+                        tasmota_config_file.write(
+                            "\t\techo 'Config set [{}] to [{}] with response: ' && curl -s http://{}/cm? --data-urlencode 'cmnd={} {}'\n".format(
+                                metadata_tasmota_config,
+                                metadata_tasmota_config_dict[metadata_tasmota_config],
+                                metadata_tasmota_dict["connection_ip"],
+                                metadata_tasmota_config,
+                                metadata_tasmota_config_dict[metadata_tasmota_config],
+                            ))
+                        tasmota_config_file.write(
+                            "\telse\n\t\techo 'Config set skipped, [{}] already set to [{}]'\n\tfi\n".format(
+                                metadata_tasmota_config,
+                                metadata_tasmota_config_dict[metadata_tasmota_config],
+                            ))
+                tasmota_config_file.write(
+                    "else\n\techo 'Skipping config for device [{}] at [http://{}/?] given it is unresponsive'\n".format(
+                        metadata_tasmota_dict["unique_id"],
+                        metadata_tasmota_dict["connection_ip"],
+                    ))
+                tasmota_config_file.write("fi\necho ''\n")
     print("Build generate script [tasmota] entity metadata persisted to [{}]".format(tasmota_config_path))

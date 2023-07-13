@@ -55,6 +55,9 @@
     - entity: sensor.laundry_vacuum_charger_power
       name: Vacuum Charger
       icon: mdi:home-lightning-bolt
+    - entity: sensor.water_booster_power
+      name: Water Booster
+      icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_dish_washer_power
       name: Dish Washer
       icon: mdi:home-lightning-bolt
@@ -141,6 +144,9 @@
       icon: mdi:battery-charging
     - entity: sensor.laundry_vacuum_charger_energy_daily
       name: Vacuum Charger
+      icon: mdi:battery-charging
+    - entity: sensor.water_booster_energy_daily
+      name: Water Booster
       icon: mdi:battery-charging
     - entity: sensor.kitchen_dish_washer_energy_daily
       name: Dish Washer

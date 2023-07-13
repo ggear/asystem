@@ -1,0 +1,22 @@
+{
+  "unique_id": "roof_water_heater_booster_plug_energy_power",
+  "name": "roof_water_heater_booster_plug_energy_power",
+  "state_class": "measurement",
+  "unit_of_measurement": "W",
+  "device_class": "power",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/roof_water_heater_booster_plug/tele/SENSOR",
+  "value_template": "{{ value_json[\"ENERGY\"][\"Power\"] }}",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.100/?",
+    "name": "sonoff-roof-water-heater-booster",
+    "sw_version": "13.0.0",
+    "identifiers": "water-heater-booster",
+    "model": "POWR3",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Roof"
+  }
+}
