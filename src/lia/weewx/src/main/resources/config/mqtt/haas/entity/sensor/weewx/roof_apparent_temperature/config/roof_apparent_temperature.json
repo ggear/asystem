@@ -1,1 +1,21 @@
-{"unique_id": "roof_apparent_temperature", "name": "roof_apparent_temperature", "state_class": "measurement", "unit_of_measurement": "°C", "device_class": "temperature", "icon": "mdi:thermometer", "force_update": "false", "state_topic": "weewx/roof_apparent_temperature", "value_template": "{{ value | float(0) | round(1) }}", "qos": "1", "device": {"via_device": "WeeWX", "name": "weather-station", "sw_version": "3.15", "identifiers": "outdoor", "model": "Vantage Pro2", "manufacturer": "Davis", "suggested_area": "Roof"}}
+{
+  "unique_id": "roof_apparent_temperature",
+  "name": "roof_apparent_temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": "false",
+  "state_topic": "weewx/roof_apparent_temperature",
+  "value_template": "{{ value | float(0) | round(1) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "WeeWX",
+    "name": "weather-station",
+    "sw_version": "3.15",
+    "identifiers": "outdoor",
+    "model": "Vantage Pro2",
+    "manufacturer": "Davis",
+    "suggested_area": "Roof"
+  }
+}

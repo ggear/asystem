@@ -1,1 +1,20 @@
-{"unique_id": "network_certifcate_expiry", "name": "network_certifcate_expiry", "state_class": "measurement", "unit_of_measurement": "d", "icon": "mdi:cloud-lock", "force_update": "false", "state_topic": "telegraf/macmini-mae/internet", "value_template": "{% if value_json is defined and value_json.fields is defined and value_json.fields.expiry_s is defined %}\n  {{ ((value_json.fields.expiry_s | int(0)) / 60 / 60 / 24) | round(2) }}\n{% else %}\n  {{ \"\" }}\n{% endif %}", "qos": "1", "device": {"via_device": "Internet", "name": "internet-python-script", "sw_version": "1.25.3", "identifiers": "telegraf", "model": "Python Script", "manufacturer": "JaneAndGraham", "suggested_area": "Home"}}
+{
+  "unique_id": "network_certifcate_expiry",
+  "name": "network_certifcate_expiry",
+  "state_class": "measurement",
+  "unit_of_measurement": "d",
+  "icon": "mdi:cloud-lock",
+  "force_update": "false",
+  "state_topic": "telegraf/macmini-mae/internet",
+  "value_template": "{% if value_json is defined and value_json.fields is defined and value_json.fields.expiry_s is defined %}\n  {{ ((value_json.fields.expiry_s | int(0)) / 60 / 60 / 24) | round(2) }}\n{% else %}\n  {{ \"\" }}\n{% endif %}",
+  "qos": "1",
+  "device": {
+    "via_device": "Internet",
+    "name": "internet-python-script",
+    "sw_version": "1.25.3",
+    "identifiers": "telegraf",
+    "model": "Python Script",
+    "manufacturer": "JaneAndGraham",
+    "suggested_area": "Home"
+  }
+}

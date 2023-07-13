@@ -1,1 +1,17 @@
-{"unique_id": "weatherstation_coms_signal_quality", "name": "weatherstation_coms_signal_quality", "force_update": "false", "state_topic": "weewx/weatherstation_coms_signal_quality", "value_template": "{{ value | float(0) | round(0) }}", "qos": "1", "device": {"via_device": "WeeWX", "name": "weather-station", "sw_version": "3.15", "identifiers": "console", "model": "Vantage Pro2", "manufacturer": "Davis", "suggested_area": "Rack"}}
+{
+  "unique_id": "weatherstation_coms_signal_quality",
+  "name": "weatherstation_coms_signal_quality",
+  "force_update": "false",
+  "state_topic": "weewx/weatherstation_coms_signal_quality",
+  "value_template": "{{ value | float(0) | round(0) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "WeeWX",
+    "name": "weather-station",
+    "sw_version": "3.15",
+    "identifiers": "console",
+    "model": "Vantage Pro2",
+    "manufacturer": "Davis",
+    "suggested_area": "Rack"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "unique_id": "rack_fans_plug",
+  "name": "rack_fans_plug",
+  "icon": "mdi:server-remove",
+  "force_update": "false",
+  "state_topic": "tasmota/device/rack_fans_plug/tele/STATE",
+  "value_template": "{{ value_json.POWER }}",
+  "command_topic": "tasmota/device/rack_fans_plug/tele/CMND",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.101/?",
+    "name": "sonoff-rack-fans",
+    "sw_version": "13.0.0",
+    "identifiers": "fans",
+    "model": "BASICR2",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Rack",
+    "connections": "[[\"mac\", \"4c:eb:d6:b5:a5:28\"], [\"ip\", \"10.0.6.101\"]]"
+  }
+}

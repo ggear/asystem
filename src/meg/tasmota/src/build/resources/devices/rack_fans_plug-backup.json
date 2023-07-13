@@ -27,7 +27,7 @@
   "baudrate": 460800, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 12, 
+  "bootcount": 16, 
   "bootcount_reset_time": 1670056591, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -52,11 +52,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0xee57", 
-  "cfg_crc32": "0xd8d0bc31", 
+  "cfg_crc": "0xec6f", 
+  "cfg_crc32": "0x8970ed42", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 38, 
+  "cfg_timestamp": 52, 
   "config_version": 0, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -390,8 +390,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0x88f1", 
-      "crc32": "0xd8d0bc31", 
+      "crc": "0x9672", 
+      "crc32": "0x8970ed42", 
       "hardware": "ESP82", 
       "size": 4096, 
       "version": {
@@ -406,15 +406,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0xee57", 
-      "crc32": "0xd8d0bc31", 
+      "crc": "0xec6f", 
+      "crc32": "0x8970ed42", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "1970-01-01 00:00:38"
+    "timestamp": "1970-01-01 00:00:52"
   }, 
   "hostname": "sonoff-rack-fans", 
   "hotplug_scan": 0, 
@@ -782,7 +782,7 @@
     "", 
     ""
   ], 
-  "mqtt_host": "10.0.4.11", 
+  "mqtt_host": "10.0.6.11", 
   "mqtt_keepalive": 30, 
   "mqtt_port": 32404, 
   "mqtt_prefix": [
@@ -870,7 +870,7 @@
     "power7": 0, 
     "power8": 0
   }, 
-  "poweronstate": 1, 
+  "poweronstate": 0, 
   "pulse_counter": [
     0, 
     0, 
@@ -1153,7 +1153,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 50, 
+  "save_flag": 67, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 0, 

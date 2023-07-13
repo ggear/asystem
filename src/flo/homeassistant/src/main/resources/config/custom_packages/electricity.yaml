@@ -407,17 +407,6 @@ sensor:
                   - entity_id: light.tree_spotlights_bulb_1
                   - entity_id: light.tree_spotlights_bulb_2
           #############################################################################
-          - create_group: Heating & Cooling
-            entities:
-              #########################################################################
-              - create_group: Water Booster
-                entities:
-                  - entity_id: binary_sensor.template_roof_water_heater_booster_plug_proxy
-                    standby_power: 1.1
-                    unavailable_power: 0
-                    fixed:
-                      power: 1.5
-          #############################################################################
           - create_group: Audio Visual Devices
             entities:
               #########################################################################
@@ -633,6 +622,11 @@ sensor:
               #########################################################################
               - create_group: Water Booster
                 entities:
+                  - entity_id: binary_sensor.template_roof_water_heater_booster_plug_proxy
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
                   - entity_id: switch.roof_water_heater_booster_plug
                     power_sensor_id: sensor.roof_water_heater_booster_plug_energy_power
                     force_energy_sensor_creation: true

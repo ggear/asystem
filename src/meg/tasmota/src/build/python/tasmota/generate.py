@@ -12,6 +12,7 @@ for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
 
 from homeassistant.generate import load_env
 from homeassistant.generate import load_entity_metadata
+from homeassistant.generate import write_entity_metadata
 
 pd.options.mode.chained_assignment = None
 
@@ -25,11 +26,14 @@ if __name__ == "__main__":
         (metadata_df["device_via_device"] == "Tasmota") &
         (metadata_df["entity_namespace"] == "switch") &
         (metadata_df["unique_id"].str.len() > 0) &
+        (metadata_df["name"].str.len() > 0) &
         (metadata_df["device_model"].str.len() > 0) &
         (metadata_df["device_manufacturer"].str.len() > 0) &
         (metadata_df["custom_config"].str.len() > 0) &
+        (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["connection_ip"].str.len() > 0)
         ].sort_values("connection_ip")
+    write_entity_metadata("tasmota", DIR_ROOT, metadata_tasmota_df)
     metadata_tasmota_dicts = [row.dropna().to_dict() for index, row in metadata_tasmota_df.iterrows()]
     tasmota_config_path = os.path.join(DIR_ROOT, "src/build/resources/tasmota_config.sh")
     with open(tasmota_config_path, "wt") as tasmota_config_file:
@@ -96,7 +100,7 @@ echo ''
                     tasmota_device_path,
                 ))
             if "tasmota_device_config" in metadata_tasmota_dict:
-                tasmota_config_file.write("\twhile ! netcat -z {} 80 2>/dev/null; do sleep 1; done\n".format(
+                tasmota_config_file.write("\tsleep 1 && while ! netcat -z {} 80 2>/dev/null; do sleep 1; done\n".format(
                     metadata_tasmota_dict["connection_ip"]),
                 )
                 metadata_tasmota_config_dict = json.loads(metadata_tasmota_dict["tasmota_device_config"])

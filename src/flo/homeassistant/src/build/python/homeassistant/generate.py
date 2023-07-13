@@ -1,6 +1,8 @@
 import datetime
 import glob
 import json
+import os
+import shutil
 import sys
 import time
 from collections import OrderedDict
@@ -55,6 +57,42 @@ def load_entity_metadata():
     print("Build generate script entity metadata loaded from [{}]".format(metadata_path))
     sys.stdout.flush()
     return metadata_df
+
+
+def write_entity_metadata(module, module_root, metadata_df):
+    metadata_df = metadata_df.copy()
+    for metadata_col in metadata_df.columns:
+        if all((metadata_col_val is None) or isinstance(metadata_col_val, str) for metadata_col_val in metadata_df[metadata_col]):
+            metadata_df[metadata_col] = metadata_df[metadata_col].str.replace("compensation_sensor_", "")
+    metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
+    metadata_columns_rename = {column: column.replace("device_", "") for column in metadata_columns}
+    metadata_publish_dir_root = os.path.join(module_root, "src/main/resources/config/mqtt")
+    if os.path.exists(metadata_publish_dir_root):
+        shutil.rmtree(metadata_publish_dir_root)
+    for index, row in metadata_df.iterrows():
+        metadata_dict = row[[
+            "unique_id",
+            "name",
+            "state_class",
+            "unit_of_measurement",
+            "device_class",
+            "icon",
+            "force_update",
+            "state_topic",
+            "value_template",
+            "command_topic",
+            "qos",
+        ]].dropna().to_dict()
+        metadata_dict["device"] = \
+            row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
+        metadata_publish_dir = os.path.abspath(os.path.join(metadata_publish_dir_root, row['discovery_topic']))
+        os.makedirs(metadata_publish_dir)
+        metadata_publish_str = json.dumps(metadata_dict, ensure_ascii=False, indent=2) + "\n"
+        metadata_publish_path = os.path.abspath(os.path.join(metadata_publish_dir, metadata_dict["unique_id"] + ".json"))
+        with open(metadata_publish_path, 'a') as metadata_publish_file:
+            metadata_publish_file.write(metadata_publish_str)
+            print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
+                  .format(module, metadata_dict["unique_id"], metadata_publish_path))
 
 
 if __name__ == "__main__":
