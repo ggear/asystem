@@ -101,9 +101,9 @@ echo ''
                     ))
                 if "tasmota_device_config" in metadata_tasmota_dict:
                     tasmota_config_file.write(
-                        "\tsleep 1 && while ! netcat -zw 1 {} 80 2>/dev/null; do echo 'Waiting for device [{}] to come up'; done\n".format(
+                        "\tsleep 1 && while ! netcat -zw 1 {} 80 2>/dev/null; do echo 'Waiting for device [{}] to come up ...' && sleep 1; done\n".format(
                             metadata_tasmota_dict["connection_ip"],
-                            metadata_tasmota_dict["connection_ip"],
+                            metadata_tasmota_dict["unique_id"],
                         ))
                     metadata_tasmota_config_dict = json.loads(metadata_tasmota_dict["tasmota_device_config"])
                     for metadata_tasmota_config in metadata_tasmota_config_dict:
@@ -116,18 +116,31 @@ echo ''
                                 }, separators=(',', ':')),
                             ))
                         tasmota_config_file.write(
-                            "\t\techo 'Config set [{}] to [{}] with response: ' && curl -s http://{}/cm? --data-urlencode 'cmnd={} {}'\n".format(
+                            "\t\tprintf 'Config set [{}] to [{}] with response: ' && curl -s http://{}/cm? --data-urlencode 'cmnd={} {}'\n".format(
                                 metadata_tasmota_config,
                                 metadata_tasmota_config_dict[metadata_tasmota_config],
                                 metadata_tasmota_dict["connection_ip"],
                                 metadata_tasmota_config,
                                 metadata_tasmota_config_dict[metadata_tasmota_config],
                             ))
+                        tasmota_config_file.write("\t\techo ''\n")
                         tasmota_config_file.write(
                             "\telse\n\t\techo 'Config set skipped, [{}] already set to [{}]'\n\tfi\n".format(
                                 metadata_tasmota_config,
                                 metadata_tasmota_config_dict[metadata_tasmota_config],
                             ))
+                    tasmota_config_file.write(
+                        "\tprintf 'Restarting [{}] with response: ' && curl -s http://{}/cm? --data-urlencode 'cmnd=Restart 1'\n".format(
+                            metadata_tasmota_dict["unique_id"],
+                            metadata_tasmota_dict["connection_ip"],
+                        ))
+                    tasmota_config_file.write("\tprintf '\n'\n")
+                    tasmota_config_file.write(
+                        "\tprintf 'Watiing for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 {} 80 2>/dev/null; do printf '.' && sleep 1; done\n".format(
+                            metadata_tasmota_dict["connection_ip"],
+                            metadata_tasmota_dict["unique_id"],
+                        ))
+                    tasmota_config_file.write("\tprintf ' done\n'\n")
                 tasmota_config_file.write(
                     "else\n\techo 'Skipping config for device [{}] at [http://{}/?] given it is unresponsive'\n".format(
                         metadata_tasmota_dict["unique_id"],

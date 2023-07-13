@@ -82,6 +82,11 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df):
             "state_topic",
             "value_template",
             "command_topic",
+            "availability_topic",
+            "payload_on",
+            "payload_off",
+            "payload_available",
+            "payload_not_available",
             "qos",
         ]].dropna().to_dict()
         metadata_dict["device"] = row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
