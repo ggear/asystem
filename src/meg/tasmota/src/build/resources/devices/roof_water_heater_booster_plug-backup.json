@@ -27,7 +27,7 @@
   "baudrate": 19200, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 48, 
+  "bootcount": 49, 
   "bootcount_reset_time": 1656400328, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -52,11 +52,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0x13c0", 
-  "cfg_crc32": "0x98a05326", 
+  "cfg_crc": "0xca76", 
+  "cfg_crc32": "0xc2ac7687", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1657255565, 
+  "cfg_timestamp": 1657255571, 
   "config_version": 0, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -74,7 +74,7 @@
     "", 
     ""
   ], 
-  "devicename": "roof_water_heater_booster_plug_power", 
+  "devicename": "roof_water_heater_booster_plug", 
   "dimmer_hw_max": 100, 
   "dimmer_hw_min": 0, 
   "dimmer_step": 10, 
@@ -390,8 +390,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0x84d6", 
-      "crc32": "0x98a05326", 
+      "crc": "0x39ed", 
+      "crc32": "0xc2ac7687", 
       "hardware": "ESP82", 
       "size": 4096, 
       "version": {
@@ -406,15 +406,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0x13c0", 
-      "crc32": "0x98a05326", 
+      "crc": "0xca76", 
+      "crc32": "0xc2ac7687", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2022-07-08 04:46:05"
+    "timestamp": "2022-07-08 04:46:11"
   }, 
   "hostname": "sonoff-ceiling-water-heater-booster", 
   "hotplug_scan": 0, 
@@ -793,7 +793,7 @@
   "mqtt_pwd": "DVES_PASS", 
   "mqtt_retry": 10, 
   "mqtt_socket_timeout": 4, 
-  "mqtt_topic": "roof_water_heater_booster_plug_power", 
+  "mqtt_topic": "roof_water_heater_booster_plug", 
   "mqtt_user": "DVES_USER", 
   "mqtt_wifi_timeout": 200, 
   "mqttlog_level": 0, 
@@ -1153,7 +1153,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 284, 
+  "save_flag": 291, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 0, 

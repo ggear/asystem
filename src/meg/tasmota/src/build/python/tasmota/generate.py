@@ -45,8 +45,9 @@ echo ''
         """.strip() + "\n")
         for metadata_tasmota_dict in metadata_tasmota_dicts:
             tasmota_device_path = os.path.join(DIR_ROOT, "src/build/resources/devices/", metadata_tasmota_dict["unique_id"])
-            with open(tasmota_device_path + ".json", "wt") as tasmota_device_file:
-                tasmota_device_file.write("""
+            if metadata_tasmota_dict["entity_namespace"] != "sensor":
+                with open(tasmota_device_path + ".json", "wt") as tasmota_device_file:
+                    tasmota_device_file.write("""
 {{
   "templatename": "{} {}",
   "user_template": {},
@@ -65,17 +66,16 @@ echo ''
   "mqtt_user": "DVES_USER",
   "mqtt_pwd": "DVES_PASS"
 }}
-                """.format(
-                    metadata_tasmota_dict["device_manufacturer"],
-                    metadata_tasmota_dict["device_model"],
-                    metadata_tasmota_dict["custom_config"],
-                    metadata_tasmota_dict["unique_id"],
-                    metadata_tasmota_dict["friendly_name"],
-                    env["VERNEMQ_IP_PROD"],
-                    env["VERNEMQ_PORT"],
-                    metadata_tasmota_dict["unique_id"],
-                ).strip() + "\n\n")
-            if metadata_tasmota_dict["entity_namespace"] != "sensor":
+                    """.format(
+                        metadata_tasmota_dict["device_manufacturer"],
+                        metadata_tasmota_dict["device_model"],
+                        metadata_tasmota_dict["custom_config"],
+                        metadata_tasmota_dict["unique_id"],
+                        metadata_tasmota_dict["friendly_name"],
+                        env["VERNEMQ_IP_PROD"],
+                        env["VERNEMQ_PORT"],
+                        metadata_tasmota_dict["unique_id"],
+                    ).strip() + "\n\n")
                 tasmota_config_file.write("if netcat -zw 1 {} 80 2>/dev/null; then\n".format(
                     metadata_tasmota_dict["connection_ip"]),
                 )
