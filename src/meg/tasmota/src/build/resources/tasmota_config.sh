@@ -20,6 +20,30 @@ if netcat -zw 1 10.0.6.100 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
 	fi
+	if [ "$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=TelePeriod 10'
+		echo ''
+	else
+		echo 'Config set skipped, [TelePeriod] already set to [10]'
+	fi
+	if [ "$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerDelta1' | grep '{"PowerDelta1":1}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerDelta1] to [1] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerDelta1 1'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerDelta1] already set to [1]'
+	fi
+	if [ "$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerDelta2' | grep '{"PowerDelta2":1}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerDelta2] to [1] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerDelta2 1'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerDelta2] already set to [1]'
+	fi
+	if [ "$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerDelta3' | grep '{"PowerDelta3":1}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerDelta3] to [1] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerDelta3 1'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerDelta3] already set to [1]'
+	fi
 	printf 'Restarting [roof_water_heater_booster_plug] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
