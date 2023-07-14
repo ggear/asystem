@@ -136,7 +136,7 @@ echo ''
                         ))
                     tasmota_config_file.write("\tprintf '\n'\n")
                     tasmota_config_file.write(
-                        "\tprintf 'Watiing for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 {} 80 2>/dev/null; do printf '.' && sleep 1; done\n".format(
+                        "\tprintf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 {} 80 2>/dev/null; do printf '.' && sleep 1; done\n".format(
                             metadata_tasmota_dict["connection_ip"],
                             metadata_tasmota_dict["unique_id"],
                         ))

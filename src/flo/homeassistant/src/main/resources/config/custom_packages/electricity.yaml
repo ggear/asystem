@@ -629,7 +629,7 @@ sensor:
                       power: 2.19
                   - entity_id: switch.roof_water_heater_booster_plug
                     power_sensor_id: sensor.roof_water_heater_booster_plug_energy_power
-                    force_energy_sensor_creation: true
+                    energy_sensor_id: sensor.roof_water_heater_booster_plug_energy_total
           #############################################################################
           - create_group: Whitegoods Discretionary
             entities:

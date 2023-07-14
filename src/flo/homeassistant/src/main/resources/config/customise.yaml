@@ -398,15 +398,13 @@ sensor.roof_water_heater_booster_plug_energy_power:
 sensor.roof_water_heater_booster_plug_energy_total:
   friendly_name: 'Total Energy'
   unit_of_measurement: 'kWh'
-sensor.roof_water_heater_booster_plug_energy:
-  friendly_name: 'Total Energy (Integrated)'
-sensor.roof_water_heater_booster_plug_energy_daily:
+sensor.roof_water_heater_booster_plug_energy_total_daily:
   friendly_name: 'Total Energy Daily'
-sensor.roof_water_heater_booster_plug_energy_weekly:
-  friendly_name: 'Total Energy Heptaly'
-sensor.roof_water_heater_booster_plug_energy_monthly:
+sensor.roof_water_heater_booster_plug_energy_total_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+sensor.roof_water_heater_booster_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
-sensor.roof_water_heater_booster_plug_energy_yearly:
+sensor.roof_water_heater_booster_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
 fan.lounge_air_purifier:
   friendly_name: 'Lounge'

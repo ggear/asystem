@@ -23,7 +23,7 @@ if netcat -zw 1 10.0.6.100 80 2>/dev/null; then
 	printf 'Restarting [roof_water_heater_booster_plug] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
-	printf 'Watiing for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.100 80 2>/dev/null; do printf '.' && sleep 1; done
+	printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.100 80 2>/dev/null; do printf '.' && sleep 1; done
 	printf ' done
 '
 else
@@ -50,7 +50,7 @@ if netcat -zw 1 10.0.6.101 80 2>/dev/null; then
 	printf 'Restarting [rack_fans_plug] with response: ' && curl -s http://10.0.6.101/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
-	printf 'Watiing for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.101 80 2>/dev/null; do printf '.' && sleep 1; done
+	printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.101 80 2>/dev/null; do printf '.' && sleep 1; done
 	printf ' done
 '
 else
