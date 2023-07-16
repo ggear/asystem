@@ -29,7 +29,6 @@ if __name__ == "__main__":
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["device_model"].str.len() > 0) &
         (metadata_df["device_manufacturer"].str.len() > 0) &
-        (metadata_df["custom_config"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ].sort_values("connection_ip")
     write_entity_metadata("tasmota", DIR_ROOT, metadata_tasmota_df)
@@ -47,35 +46,33 @@ echo ''
             tasmota_device_path = os.path.join(DIR_ROOT, "src/build/resources/devices/", metadata_tasmota_dict["unique_id"])
             if metadata_tasmota_dict["entity_namespace"] != "sensor":
                 with open(tasmota_device_path + ".json", "wt") as tasmota_device_file:
-                    tasmota_device_file.write("""
-{{
-  "templatename": "{} {}",
-  "user_template": {},
-  "devicename": "{}",
-  "friendlyname": [ "{}" ],
-  "mqtt_host": "{}",
-  "mqtt_port": {},
-  "mqtt_client": "DVES_%06X",
-  "mqtt_grptopic": "tasmotas",
-  "mqtt_topic": "{}",
-  "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/",
-  "mqtt_prefix": [ "cmnd", "stat", "tele" ],
-  "mqtt_retry": 10,
-  "mqtt_keepalive": 30,
-  "mqtt_socket_timeout": 4,
-  "mqtt_user": "DVES_USER",
-  "mqtt_pwd": "DVES_PASS"
-}}
-                    """.format(
-                        metadata_tasmota_dict["device_manufacturer"],
-                        metadata_tasmota_dict["device_model"],
-                        metadata_tasmota_dict["custom_config"],
-                        metadata_tasmota_dict["unique_id"],
-                        metadata_tasmota_dict["friendly_name"],
-                        env["VERNEMQ_IP_PROD"],
-                        env["VERNEMQ_PORT"],
-                        metadata_tasmota_dict["unique_id"],
-                    ).strip() + "\n\n")
+                    metadata_tasmota_config_version = 1 if \
+                        any(metadata_tasmota_dict["device_model"] == metadata_tasmota_model
+                            for metadata_tasmota_model in ["POWR316D"]) else 0
+                    metadata_tasmota_config_dict = {
+                        "config_version": metadata_tasmota_config_version,
+                        "templatename": "{} {}".format(
+                            metadata_tasmota_dict["device_manufacturer"],
+                            metadata_tasmota_dict["device_model"]
+                        ),
+                        "devicename": "{}".format(metadata_tasmota_dict["unique_id"]),
+                        "friendlyname": [metadata_tasmota_dict["friendly_name"]],
+                        "mqtt_host": "{}".format(env["VERNEMQ_IP_PROD"]),
+                        "mqtt_port": env["VERNEMQ_PORT"],
+                        "mqtt_client": "DVES_%06X",
+                        "mqtt_grptopic": "tasmotas",
+                        "mqtt_topic": "{}".format(metadata_tasmota_dict["unique_id"]),
+                        "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/",
+                        "mqtt_prefix": ["cmnd", "stat", "tele"],
+                        "mqtt_retry": 10,
+                        "mqtt_keepalive": 30,
+                        "mqtt_socket_timeout": 4,
+                        "mqtt_user": "DVES_USER",
+                        "mqtt_pwd": "DVES_PASS"
+                    }
+                    if metadata_tasmota_config_version == 0 and "custom_config" in metadata_tasmota_dict:
+                        metadata_tasmota_config_dict["user_template"] = metadata_tasmota_dict["custom_config"]
+                    tasmota_device_file.write(json.dumps(metadata_tasmota_config_dict, indent=4))
                 tasmota_config_file.write("if netcat -zw 1 {} 80 2>/dev/null; then\n".format(
                     metadata_tasmota_dict["connection_ip"]),
                 )

@@ -8,6 +8,7 @@
   "value_template": "{{ value_json.POWER }}",
   "command_topic": "tasmota/device/rack_fans_plug/cmnd/POWER",
   "availability_topic": "tasmota/device/rack_fans_plug/tele/LWT",
+  "payload_on": "tasmota/device/rack_fans_plug/tele/LWT",
   "payload_available": "Online",
   "payload_not_available": "Offline",
   "qos": "1",

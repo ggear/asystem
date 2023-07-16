@@ -1,19 +1,25 @@
 {
-  "templatename": "Sonoff BASICR2",
-  "user_template": { "base": 1, "name": "Sonoff BASICR2" },
-  "devicename": "rack_fans_plug",
-  "friendlyname": [ "Rack Fans" ],
-  "mqtt_host": "10.0.2.11",
-  "mqtt_port": 32404,
-  "mqtt_client": "DVES_%06X",
-  "mqtt_grptopic": "tasmotas",
-  "mqtt_topic": "rack_fans_plug",
-  "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/",
-  "mqtt_prefix": [ "cmnd", "stat", "tele" ],
-  "mqtt_retry": 10,
-  "mqtt_keepalive": 30,
-  "mqtt_socket_timeout": 4,
-  "mqtt_user": "DVES_USER",
-  "mqtt_pwd": "DVES_PASS"
+    "config_version": 0,
+    "templatename": "Sonoff BASICR2",
+    "devicename": "rack_fans_plug",
+    "friendlyname": [
+        "Rack Fans"
+    ],
+    "mqtt_host": "10.0.2.11",
+    "mqtt_port": "32404",
+    "mqtt_client": "DVES_%06X",
+    "mqtt_grptopic": "tasmotas",
+    "mqtt_topic": "rack_fans_plug",
+    "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/",
+    "mqtt_prefix": [
+        "cmnd",
+        "stat",
+        "tele"
+    ],
+    "mqtt_retry": 10,
+    "mqtt_keepalive": 30,
+    "mqtt_socket_timeout": 4,
+    "mqtt_user": "DVES_USER",
+    "mqtt_pwd": "DVES_PASS",
+    "user_template": "{ \"base\": 1, \"name\": \"Sonoff BASICR2\" }"
 }
-

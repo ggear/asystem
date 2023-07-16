@@ -32,10 +32,10 @@ adaptive_lighting:
     lights:
       - light.edwin_night_light
   #####################################################################################
-  - name: ambient_narrowband
+  - name: ambient_narrowband_dimming
     interval: 30
     transition: 20
-    min_brightness: 100
+    min_brightness: 1
     max_brightness: 100
     min_color_temp: 2700
     max_color_temp: 4000
@@ -364,10 +364,10 @@ automation:
       - service: switch.turn_on
         entity_id: switch.adaptive_lighting_night
       - service: switch.turn_off
-        entity_id: switch.adaptive_lighting_ambient_narrowband
+        entity_id: switch.adaptive_lighting_ambient_narrowband_dimming
       - delay: '00:00:01'
       - service: switch.turn_on
-        entity_id: switch.adaptive_lighting_ambient_narrowband
+        entity_id: switch.adaptive_lighting_ambient_narrowband_dimming
       - service: switch.turn_off
         entity_id: switch.adaptive_lighting_ambient
       - delay: '00:00:01'
@@ -447,7 +447,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_ambient_narrowband
+          entity_id: switch.adaptive_lighting_ambient_narrowband_dimming
           lights: light.hallway_main
           manual_control: false
       - delay: '00:00:10'
@@ -464,7 +464,7 @@ automation:
     action:
       - service: adaptive_lighting.set_manual_control
         data:
-          entity_id: switch.adaptive_lighting_ambient_narrowband
+          entity_id: switch.adaptive_lighting_ambient_narrowband_dimming
           lights: light.hallway_sconces
           manual_control: false
       - delay: '00:00:10'

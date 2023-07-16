@@ -1,0 +1,36 @@
+{
+  "unique_id": "kitchen_downlights_plug",
+  "name": "kitchen_downlights_plug",
+  "icon": "mdi:lightbulb-group",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/kitchen_downlights_plug/tele/STATE",
+  "value_template": "{{ value_json.POWER }}",
+  "command_topic": "tasmota/device/kitchen_downlights_plug/cmnd/POWER",
+  "availability_topic": "tasmota/device/kitchen_downlights_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.102/?",
+    "name": "sonoff-kitchen-downlights",
+    "sw_version": "13.0.0",
+    "identifiers": "downlights",
+    "model": "POWR316D",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Kitchen",
+    "connections": [
+      [
+        "mac",
+        "c0:49:ef:cc:55:84"
+      ],
+      [
+        "ip",
+        "10.0.6.102"
+      ]
+    ]
+  }
+}
