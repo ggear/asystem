@@ -347,7 +347,10 @@ light.study_lamp:
 light.kitchen_main:
   friendly_name: 'Kitchen Main'
   icon: 'mdi:lightbulb-group'
-switch.kitchen_downlights_plug:
+switch.old_kitchen_downlights_plug:
+  friendly_name: 'Kitchen Downlights'
+  icon: 'mdi:lightbulb-group'
+light.kitchen_downlights_plug:
   friendly_name: 'Kitchen Downlights'
   icon: 'mdi:lightbulb-group'
 light.laundry_main:
@@ -891,25 +894,25 @@ sensor.kitchen_fan_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
 sensor.kitchen_fan_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
-sensor.kitchen_downlights_plug_current:
+sensor.old_kitchen_downlights_plug_current:
   friendly_name: 'Current Amperage'
-sensor.kitchen_downlights_plug_voltage:
+sensor.old_kitchen_downlights_plug_voltage:
   friendly_name: 'Current Voltage'
-sensor.kitchen_downlights_plug_current_consumption:
+sensor.old_kitchen_downlights_plug_current_consumption:
   friendly_name: 'Current Power'
-sensor.kitchen_downlights_plug_energy:
+sensor.old_kitchen_downlights_plug_energy:
   friendly_name: 'Total Energy'
-sensor.kitchen_downlights_plug_total_consumption:
+sensor.old_kitchen_downlights_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
-sensor.kitchen_downlights_plug_today_s_consumption:
+sensor.old_kitchen_downlights_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
-sensor.kitchen_downlights_plug_energy_daily:
+sensor.old_kitchen_downlights_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
-sensor.kitchen_downlights_plug_energy_weekly:
+sensor.old_kitchen_downlights_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
-sensor.kitchen_downlights_plug_energy_monthly:
+sensor.old_kitchen_downlights_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
-sensor.kitchen_downlights_plug_energy_yearly:
+sensor.old_kitchen_downlights_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
 sensor.deck_festoons_plug_current:
   friendly_name: 'Current Amperage'

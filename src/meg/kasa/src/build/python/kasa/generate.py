@@ -35,13 +35,16 @@ if __name__ == "__main__":
 #######################################################################################
         """.strip() + "\n")
         for metadata_kasa_dict in metadata_kasa_dicts:
+            kasa_config_file.write("if netcat -zw 1 {} 9999 2>/dev/null; then\n".format(
+                metadata_kasa_dict["connection_ip"]),
+            )
             kasa_config_file.write(
-                "echo '' && echo 'Processing config for device [{}] at [{}] ... '\n".format(
+                "\techo '' && echo 'Processing config for device [{}] at [{}] ... '\n".format(
                     metadata_kasa_dict["unique_id"],
                     metadata_kasa_dict["connection_ip"],
                 ))
             kasa_config_file.write(
-                "kasa --host {} --type plug alias '{}'\n".format(
+                "\tkasa --host {} --type plug alias '{}'\n".format(
                     metadata_kasa_dict["connection_ip"],
                     metadata_kasa_dict["unique_id"].replace("_", " ").title(),
                 ))
@@ -49,9 +52,15 @@ if __name__ == "__main__":
                 metadata_kasa_config_dict = json.loads(metadata_kasa_dict["custom_config"])
                 if "led" in metadata_kasa_config_dict:
                     kasa_config_file.write(
-                        "kasa --host {} --type plug led '{}'\n".format(
+                        "\tkasa --host {} --type plug led '{}'\n".format(
                             metadata_kasa_dict["connection_ip"],
                             metadata_kasa_config_dict["led"],
                         ))
+            kasa_config_file.write(
+                "else\n\techo '' && echo 'Skipping config for device [{}] at [http://{}/?] given it is unresponsive'\n".format(
+                    metadata_kasa_dict["unique_id"],
+                    metadata_kasa_dict["connection_ip"],
+                ))
+            kasa_config_file.write("fi\n")
         kasa_config_file.write("echo ''")
         print("Build generate script [kasa] entity metadata persisted to [{}]".format(kasa_config_path))

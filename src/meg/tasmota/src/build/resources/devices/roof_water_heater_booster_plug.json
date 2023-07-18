@@ -20,6 +20,5 @@
     "mqtt_keepalive": 30,
     "mqtt_socket_timeout": 4,
     "mqtt_user": "DVES_USER",
-    "mqtt_pwd": "DVES_PASS",
-    "user_template": "{ \"base\": 43, \"name\": \"Sonoff POWR3\" }"
+    "mqtt_pwd": "DVES_PASS"
 }

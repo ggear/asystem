@@ -153,7 +153,7 @@ light.kitchen_main:
   name: Kitchen Main Lights
   aliases: ['Kitchen Main Light']
   room: Kitchen
-switch.kitchen_downlights_plug:
+switch.old_kitchen_downlights_plug:
   name: Kitchen Downlights
   aliases: ['Kitchen Downlight']
   room: Kitchen

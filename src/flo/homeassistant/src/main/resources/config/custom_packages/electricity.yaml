@@ -23,9 +23,9 @@ template:
         state: >-
           {{ states('switch.kitchen_fan_plug') }}
       #################################################################################
-      - unique_id: kitchen_downlights_plug_proxy
+      - unique_id: old_kitchen_downlights_plug_proxy
         state: >-
-          {{ states('switch.kitchen_downlights_plug') }}
+          {{ states('switch.old_kitchen_downlights_plug') }}
       #################################################################################
       - unique_id: deck_festoons_plug_proxy
         state: >-
@@ -134,6 +134,10 @@ template:
           {{ states('switch.rack_internet_modem_plug') }}
       #################################################################################
 sensor:
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: light.kitchen_downlights_plug
   #####################################################################################
   - platform: powercalc
     entities:
@@ -360,13 +364,13 @@ sensor:
                   - entity_id: light.kitchen_main_bulb_2
                   - entity_id: light.kitchen_main_bulb_3
                   - entity_id: light.kitchen_main_bulb_4
-                  - entity_id: binary_sensor.template_kitchen_downlights_plug_proxy
+                  - entity_id: binary_sensor.template_old_kitchen_downlights_plug_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
                       power: 2.19
-                  - entity_id: switch.kitchen_downlights_plug
-                    power_sensor_id: sensor.kitchen_downlights_plug_current_consumption
+                  - entity_id: switch.old_kitchen_downlights_plug
+                    power_sensor_id: sensor.old_kitchen_downlights_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
               - create_group: Laundry Lights
