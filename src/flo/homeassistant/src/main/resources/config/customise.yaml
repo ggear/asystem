@@ -688,18 +688,26 @@ switch.server_flo_outlet_plug:
 switch.server_meg_outlet_plug:
   friendly_name: 'Server Meg'
   icon: 'mdi:server'
+switch.old_rack_outlet_plug:
+  friendly_name: 'Server Rack'
 switch.rack_outlet_plug:
   friendly_name: 'Server Rack'
   icon: 'mdi:server'
+sensor.rack_outlet_plug_energy_power:
+  friendly_name: 'Server Rack'
+  unit_of_measurement: 'W'
+sensor.rack_outlet_plug_energy_total:
+  friendly_name: 'Server Rack'
+  unit_of_measurement: 'kWh'
 switch.roof_network_switch_plug:
   friendly_name: 'Network Switch'
   icon: 'mdi:server-network'
-switch.rack_fans_plug:
-  friendly_name: 'Rack Fans'
-  icon: 'mdi:server-remove'
 switch.rack_internet_modem_plug:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
+switch.rack_fans_plug:
+  friendly_name: 'Rack Fans'
+  icon: 'mdi:server-remove'
 switch.deck_fans_outlet:
   friendly_name: 'Deck Fans Outlet'
   icon: 'mdi:power-plug-outline'
@@ -854,6 +862,14 @@ sensor.roof_water_heater_booster_plug_energy_total_weekly:
 sensor.roof_water_heater_booster_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
 sensor.roof_water_heater_booster_plug_energy_total_yearly:
+  friendly_name: 'Total Energy Yearly'
+sensor.rack_outlet_plug_energy_total_daily:
+  friendly_name: 'Total Energy Daily'
+sensor.rack_outlet_plug_energy_total_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+sensor.rack_outlet_plug_energy_total_monthly:
+  friendly_name: 'Total Energy Monthly'
+sensor.rack_outlet_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
 sensor.kitchen_fan_plug_current:
   friendly_name: 'Current Amperage'
@@ -1255,25 +1271,25 @@ sensor.server_meg_outlet_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
 sensor.server_meg_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
-sensor.rack_outlet_plug_current:
+sensor.old_rack_outlet_plug_current:
   friendly_name: 'Current Amperage'
-sensor.rack_outlet_plug_voltage:
+sensor.old_rack_outlet_plug_voltage:
   friendly_name: 'Current Voltage'
-sensor.rack_outlet_plug_current_consumption:
+sensor.old_rack_outlet_plug_current_consumption:
   friendly_name: 'Current Power'
-sensor.rack_outlet_plug_energy:
+sensor.old_rack_outlet_plug_energy:
   friendly_name: 'Total Energy'
-sensor.rack_outlet_plug_total_consumption:
+sensor.old_rack_outlet_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
-sensor.rack_outlet_plug_today_s_consumption:
+sensor.old_rack_outlet_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
-sensor.rack_outlet_plug_energy_daily:
+sensor.old_rack_outlet_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
-sensor.rack_outlet_plug_energy_weekly:
+sensor.old_rack_outlet_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
-sensor.rack_outlet_plug_energy_monthly:
+sensor.old_rack_outlet_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
-sensor.rack_outlet_plug_energy_yearly:
+sensor.old_rack_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
 sensor.roof_network_switch_plug_current:
   friendly_name: 'Current Amperage'

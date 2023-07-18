@@ -182,6 +182,7 @@ if __name__ == "__main__":
     # TODO: Add powercalc groups utility meter friendly names
     # TODO: add calendar icons to all utilities
     # TODO: catch other devices, eg fans, all with powercalc profiles, not just switches?
+    # TODO: define friendly names for all template meters and other
 
     def _add_energy_plug(energy_plug_dict):
         energy_plug_already_customised = False

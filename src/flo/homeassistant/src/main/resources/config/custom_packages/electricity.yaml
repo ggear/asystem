@@ -117,9 +117,13 @@ template:
         state: >-
           {{ states('switch.server_meg_outlet_plug') }}
       #################################################################################
+      - unique_id: old_rack_outlet_plug_proxy
+        state: >-
+          {{ states('switch.old_rack_outlet_plug') }}
+      #################################################################################
       - unique_id: rack_outlet_plug_proxy
         state: >-
-          {{ states('switch.rack_outlet_plug') }}
+          {{ states('outlet.rack_outlet_plug') }}
       #################################################################################
       - unique_id: roof_network_switch_plug_proxy
         state: >-
@@ -136,6 +140,20 @@ sensor:
       - entity_id: sensor.all_standby
         power_sensor_id: sensor.all_standby_power
         energy_sensor_id: sensor.all_standby_energy
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: binary_sensor.template_old_rack_outlet_plug_proxy
+        standby_power: 1.54
+        unavailable_power: 0
+        fixed:
+          power: 2.19
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: switch.old_rack_outlet_plug
+        power_sensor_id: sensor.old_rack_outlet_plug_current_consumption
+        force_energy_sensor_creation: true
   #####################################################################################
   - platform: powercalc
     entities:
@@ -557,13 +575,13 @@ sensor:
               - create_group: Server Rack
                 entities:
                   - entity_id: binary_sensor.template_rack_outlet_plug_proxy
-                    standby_power: 1.54
+                    standby_power: 1.5
                     unavailable_power: 0
                     fixed:
-                      power: 2.19
+                      power: 2
                   - entity_id: switch.rack_outlet_plug
-                    power_sensor_id: sensor.rack_outlet_plug_current_consumption
-                    force_energy_sensor_creation: true
+                    power_sensor_id: sensor.rack_outlet_plug_energy_power
+                    energy_sensor_id: sensor.rack_outlet_plug_energy_total
               #########################################################################
               - create_group: Network Switch
                 entities:

@@ -22,7 +22,8 @@
 10.0.4.58 google-edwin-tablet.janeandgraham.com google-edwin-tablet
 10.0.6.100 sonoff-roof-water-heater-booster.janeandgraham.com sonoff-roof-water-heater-booster
 10.0.6.101 sonoff-rack-fans.janeandgraham.com sonoff-rack-fans
-10.0.6.102 sonoff-kitchen-rack-outlet.janeandgraham.com sonoff-kitchen-rack-outlet
+10.0.6.102 sonoff-rack-outlet.janeandgraham.com sonoff-rack-outlet
+10.0.6.103 sonoff-kitchen-downlights.janeandgraham.com sonoff-kitchen-downlights
 10.0.6.20 uvc-ada.janeandgraham.com uvc-ada
 10.0.6.21 uvc-edwin.janeandgraham.com uvc-edwin
 10.0.6.22 brother-printer.janeandgraham.com brother-printer
@@ -48,6 +49,7 @@
 10.0.6.83 tplink-office-outlet.janeandgraham.com tplink-office-outlet
 10.0.6.84 tplink-roof-network-switch.janeandgraham.com tplink-roof-network-switch
 10.0.6.85 tplink-rack-modem.janeandgraham.com tplink-rack-modem
+10.0.6.86 tplink-rack-outlet.janeandgraham.com tplink-rack-outlet
 10.0.6.87 tplink-kitchen-fan.janeandgraham.com tplink-kitchen-fan
 10.0.6.88 tplink-deck-festoons.janeandgraham.com tplink-deck-festoons
 10.0.6.89 tplink-landing-festoons.janeandgraham.com tplink-landing-festoons
