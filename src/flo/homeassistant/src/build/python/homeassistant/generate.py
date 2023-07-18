@@ -158,7 +158,77 @@ if __name__ == "__main__":
         (metadata_haas_df["friendly_name"].str.len() > 0) &
         (metadata_haas_df["entity_domain"].str.len() > 0)
         ]
+    energy_plugs = {}
+    energy_sensor_labels = {
+        "current": "Current Amperage",
+        "voltage": "Current Voltage",
+        "current_consumption": "Current Power",
+        "energy": "Total Energy",
+        "total_consumption": "Total Energy (Plug)",
+        "today_s_consumption": "Total Energy Daily (Plug)",
+    }
+    energy_meter_labels = {
+        "daily": "Total Energy Daily",
+        "weekly": "Total Energy Hept-Daily",
+        "monthly": "Total Energy Monthly",
+        "yearly": "Total Energy Yearly",
+    }
     metadata_customise_dicts = [row.dropna().to_dict() for index, row in metadata_customise_df.iterrows()]
+
+
+
+
+
+    # TODO: Add powercalc groups utility meter friendly names
+    # TODO: add calendar icons to all utilities
+    # TODO: catch other devices, eg fans, all with powercalc profiles, not just switches?
+
+    def _add_energy_plug(energy_plug_dict):
+        energy_plug_already_customised = False
+        for energy_plug_to_customise in metadata_customise_dicts:
+            if energy_plug_dict["unique_id"] == energy_plug_to_customise["unique_id"]:
+                energy_plug_already_customised = True
+                break
+        if not energy_plug_already_customised:
+            metadata_customise_dicts.extend([energy_plug_dict])
+
+
+    for _, metadata_haas_row in metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["device_via_device"] == "Tasmota") &
+        (metadata_haas_df["unique_id"].str.endswith("_energy_total"))
+    ].iterrows():
+        for energy_meter_label in energy_meter_labels:
+            _add_energy_plug({
+                "entity_namespace": "sensor",
+                "unique_id": "{}_{}".format(metadata_haas_row["unique_id"], energy_meter_label),
+                "friendly_name": energy_meter_labels[energy_meter_label]
+            })
+    for _, metadata_haas_row in metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["device_via_device"] == "TPLink") &
+        (metadata_haas_df["entity_namespace"] == "switch")
+    ].iterrows():
+        for energy_sensor_label in energy_sensor_labels:
+            _add_energy_plug({
+                "entity_namespace": "sensor",
+                "unique_id": "{}_{}".format(metadata_haas_row["unique_id"], energy_sensor_label),
+                "friendly_name": energy_sensor_labels[energy_sensor_label]
+            })
+        for energy_meter_label in energy_meter_labels:
+            _add_energy_plug({
+                "entity_namespace": "sensor",
+                "unique_id": "{}_energy_{}".format(metadata_haas_row["unique_id"], energy_meter_label),
+                "friendly_name": energy_meter_labels[energy_meter_label]
+            })
+
+
+
+
+
+
     metadata_customise_path = abspath(join(DIR_ROOT, "src/main/resources/config/customise.yaml"))
     with open(metadata_customise_path, 'w') as metadata_customise_file:
         metadata_customise_file.write("""

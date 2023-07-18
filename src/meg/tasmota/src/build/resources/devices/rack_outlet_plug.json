@@ -1,15 +1,15 @@
 {
     "config_version": 1,
     "templatename": "Sonoff POWR316D",
-    "devicename": "kitchen_downlights_plug",
+    "devicename": "rack_outlet_plug",
     "friendlyname": [
-        "Kitchen Downlights"
+        "Server Rack"
     ],
     "mqtt_host": "10.0.2.11",
     "mqtt_port": "32404",
     "mqtt_client": "DVES_%06X",
     "mqtt_grptopic": "tasmotas",
-    "mqtt_topic": "kitchen_downlights_plug",
+    "mqtt_topic": "rack_outlet_plug",
     "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/",
     "mqtt_prefix": [
         "cmnd",

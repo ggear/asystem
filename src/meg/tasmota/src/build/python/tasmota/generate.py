@@ -87,7 +87,8 @@ echo ''
                         env["TASMOTA_FIRMWARE_VERSION"],
                     ))
                 if not os.path.exists(tasmota_device_path + "-backup.json"):
-                    os.system("decode-config.py -s {} -o {}-backup.json --json-indent 2".format(
+                    os.system("netcat -zw 1 {} 80 2>/dev/null && decode-config.py -s {} -o {}-backup.json --json-indent 2".format(
+                        metadata_tasmota_dict["connection_ip"],
                         metadata_tasmota_dict["connection_ip"],
                         tasmota_device_path,
                     ))

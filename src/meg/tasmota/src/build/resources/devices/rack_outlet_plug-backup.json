@@ -13,7 +13,8 @@
   "adc_param2": 4294967295, 
   "adc_param3": -1, 
   "adc_param4": 1073741824, 
-  "altitude": 0,
+  "adc_param_type": 1, 
+  "altitude": 0, 
   "artnet_universe": 0, 
   "as3935_functions": {
     "dist_autotune": 0, 
@@ -36,7 +37,7 @@
   "baudrate": 460800, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 5, 
+  "bootcount": 20, 
   "bootcount_reset_time": 1689331883, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -61,11 +62,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0xb280", 
-  "cfg_crc32": "0x0c8ebf01", 
+  "cfg_crc": "0xa0dc", 
+  "cfg_crc32": "0x9afb7f21", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1689328805, 
+  "cfg_timestamp": 1689328987, 
   "config_version": 1, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -83,7 +84,7 @@
     "", 
     ""
   ], 
-  "devicename": "Tasmota", 
+  "devicename": "kitchen_downlights_plug", 
   "dimmer_hw_max": 100, 
   "dimmer_hw_min": 0, 
   "dimmer_step": 10, 
@@ -355,7 +356,7 @@
     "mqtt_info_retain": 0, 
     "mqtt_persistent": 0, 
     "mqtt_state_retain": 0, 
-    "mqtt_status_retain": 0, 
+    "mqtt_status_retain": 1, 
     "mqtt_switches": 0, 
     "pwm_force_same_phase": 0, 
     "shift595_invert_outputs": 0, 
@@ -392,7 +393,7 @@
     0
   ], 
   "friendlyname": [
-    "Tasmota", 
+    "Kitchen Downlights", 
     "Tasmota2", 
     "Tasmota3", 
     "Tasmota4", 
@@ -409,8 +410,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0x3b39", 
-      "crc32": "0xc8ebf01", 
+      "crc": "0x75af", 
+      "crc32": "0x9afb7f21", 
       "hardware": "ESP32 (excl S3/S2/C3)", 
       "size": 4096, 
       "version": {
@@ -425,15 +426,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0xb280", 
-      "crc32": "0xc8ebf01", 
+      "crc": "0xa0dc", 
+      "crc32": "0x9afb7f21", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2023-07-14 10:00:05"
+    "timestamp": "2023-07-14 10:03:07"
   }, 
   "hostname": "%s-%04d", 
   "hotplug_scan": 0, 
@@ -456,8 +457,8 @@
     0, 
     0
   ], 
-  "influxdb_bucket32": "db", 
-  "influxdb_host32": "influxdb", 
+  "influxdb_bucket32": "", 
+  "influxdb_host32": "", 
   "influxdb_org32": "", 
   "influxdb_period": 0, 
   "influxdb_port": 8086, 
@@ -805,16 +806,16 @@
     "0x07", 
     "0x09"
   ], 
-  "mqtt_fulltopic": "%prefix%/%topic%/", 
+  "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/", 
   "mqtt_grptopic": "tasmotas", 
   "mqtt_grptopic2": [
     "", 
     "", 
     ""
   ], 
-  "mqtt_host": "", 
+  "mqtt_host": "10.0.2.11", 
   "mqtt_keepalive": 30, 
-  "mqtt_port": 1883, 
+  "mqtt_port": 32404, 
   "mqtt_prefix": [
     "cmnd", 
     "stat", 
@@ -823,7 +824,7 @@
   "mqtt_pwd": "DVES_PASS", 
   "mqtt_retry": 10, 
   "mqtt_socket_timeout": 4, 
-  "mqtt_topic": "tasmota_%06X", 
+  "mqtt_topic": "kitchen_downlights_plug", 
   "mqtt_user": "DVES_USER", 
   "mqtt_wifi_timeout": 200, 
   "mqttlog_level": 0, 
@@ -913,7 +914,7 @@
   "pn532_pack": 0, 
   "pn532_password": 0, 
   "power": {
-    "power1": 0, 
+    "power1": 1, 
     "power2": 0, 
     "power3": 0, 
     "power4": 0, 
@@ -922,8 +923,8 @@
     "power7": 0, 
     "power8": 0
   }, 
-  "power_esp32": "0x00000000", 
-  "poweronstate": 3, 
+  "power_esp32": "0x00000001", 
+  "poweronstate": 1, 
   "pulse_counter": [
     0, 
     0, 
@@ -1219,7 +1220,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 12, 
+  "save_flag": 64, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 1, 
@@ -1613,7 +1614,7 @@
   ], 
   "tcp_baudrate": 0, 
   "tcp_config": 0, 
-  "tele_period": 300, 
+  "tele_period": 10, 
   "telegram_chatid": "", 
   "telegram_token": "", 
   "teleinfo": {

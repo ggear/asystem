@@ -125,6 +125,9 @@
     - entity: switch.roof_network_switch_plug
       name: Network Switch
       icon: mdi:server-network
+    - entity: switch.rack_fans_plug
+      name: Rack Fans
+      icon: mdi:server-remove
     - entity: switch.rack_internet_modem_plug
       name: Internet Modem
       icon: mdi:router-wireless
@@ -137,9 +140,6 @@
     - entity: switch.edwin_wardrobe_outlet
       name: Edwin Wardobe Outlet
       icon: mdi:power-plug-outline
-    - entity: switch.rack_fans_plug
-      name: Rack Fans
-      icon: mdi:server-remove
 ################################################################################
 - type: custom:layout-break
 ################################################################################

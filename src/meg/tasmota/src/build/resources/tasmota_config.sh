@@ -82,10 +82,10 @@ else
 fi
 echo ''
 if netcat -zw 1 10.0.6.102 80 2>/dev/null; then
-	echo 'Processing config for device [kitchen_downlights_plug] at [http://10.0.6.102/?] ... '
+	echo 'Processing config for device [rack_outlet_plug] at [http://10.0.6.102/?] ... '
 	echo 'Current firmware ['"$(curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.6.102 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/kitchen_downlights_plug.json || true
-	sleep 1 && while ! netcat -zw 1 10.0.6.102 80 2>/dev/null; do echo 'Waiting for device [kitchen_downlights_plug] to come up ...' && sleep 1; done
+	decode-config.py -s 10.0.6.102 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/rack_outlet_plug.json || true
+	sleep 1 && while ! netcat -zw 1 10.0.6.102 80 2>/dev/null; do echo 'Waiting for device [rack_outlet_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":1}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [1] with response: ' && curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=PowerOnState 1'
 		echo ''
@@ -122,13 +122,13 @@ if netcat -zw 1 10.0.6.102 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerDelta3] already set to [1]'
 	fi
-	printf 'Restarting [kitchen_downlights_plug] with response: ' && curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=Restart 1'
+	printf 'Restarting [rack_outlet_plug] with response: ' && curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
 	printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.102 80 2>/dev/null; do printf '.' && sleep 1; done
 	printf ' done
 '
 else
-	echo 'Skipping config for device [kitchen_downlights_plug] at [http://10.0.6.102/?] given it is unresponsive'
+	echo 'Skipping config for device [rack_outlet_plug] at [http://10.0.6.102/?] given it is unresponsive'
 fi
 echo ''
