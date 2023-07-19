@@ -75,8 +75,8 @@ influxdb:
       - '*_sim_*'
       - '*_microphone_level'
       - 'adaptive_lighting_bedroom_*'
-      - 'roof_water_heater_booster_mqtt_connect_count'
-      - 'roof_water_heater_booster_wifi_connect_count'
+      - 'roof_water_booster_mqtt_connect_count'
+      - 'roof_water_booster_wifi_connect_count'
   ignore_attributes: !include influxdb-ignores.yaml
   #####################################################################################
 mqtt:

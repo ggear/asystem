@@ -27,7 +27,7 @@
   "baudrate": 19200, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 49, 
+  "bootcount": 72, 
   "bootcount_reset_time": 1656400328, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -52,11 +52,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0xca76", 
-  "cfg_crc32": "0xc2ac7687", 
+  "cfg_crc": "0x0287", 
+  "cfg_crc32": "0x9968ebb9", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1657255571, 
+  "cfg_timestamp": 1689741207, 
   "config_version": 0, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -74,7 +74,7 @@
     "", 
     ""
   ], 
-  "devicename": "roof_water_heater_booster_plug", 
+  "devicename": "roof_water_booster_plug", 
   "dimmer_hw_max": 100, 
   "dimmer_hw_min": 0, 
   "dimmer_step": 10, 
@@ -150,14 +150,14 @@
   "energy_current_calibration": 16840, 
   "energy_current_calibration2": 16840, 
   "energy_frequency_calibration": 0, 
-  "energy_kWhdoy": 0, 
+  "energy_kWhdoy": 199, 
   "energy_kWhexport_ph": [
     0, 
     256, 
     4194304
   ], 
   "energy_kWhtoday_ph": [
-    2044, 
+    401, 
     0, 
     0
   ], 
@@ -168,7 +168,7 @@
   ], 
   "energy_kWhtotal_time": 1656400328, 
   "energy_kWhyesterday_ph": [
-    0, 
+    2247, 
     0, 
     0
   ], 
@@ -189,16 +189,16 @@
   "energy_power_calibration": 5501, 
   "energy_power_calibration2": 5501, 
   "energy_power_delta": [
-    0, 
-    0, 
-    0
+    1, 
+    1, 
+    1
   ], 
   "energy_usage": {
-    "last_return_kWhtotal": 0, 
+    "last_return_kWhtotal": 4, 
     "last_usage_kWhtotal": 0, 
     "return1_kWhtotal": 0, 
     "return2_kWhtotal": 0, 
-    "usage1_kWhtoday": 0, 
+    "usage1_kWhtoday": 4, 
     "usage1_kWhtotal": 0
   }, 
   "energy_voltage_calibration": 1976, 
@@ -335,7 +335,7 @@
     "mqtt_info_retain": 0, 
     "mqtt_persistent": 0, 
     "mqtt_state_retain": 0, 
-    "mqtt_status_retain": 0, 
+    "mqtt_status_retain": 1, 
     "mqtt_switches": 0, 
     "pwm_force_same_phase": 0, 
     "shift595_invert_outputs": 0, 
@@ -390,8 +390,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0x39ed", 
-      "crc32": "0xc2ac7687", 
+      "crc": "0x8c9d", 
+      "crc32": "0x9968ebb9", 
       "hardware": "ESP82", 
       "size": 4096, 
       "version": {
@@ -406,15 +406,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0xca76", 
-      "crc32": "0xc2ac7687", 
+      "crc": "0x287", 
+      "crc32": "0x9968ebb9", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2022-07-08 04:46:11"
+    "timestamp": "2023-07-19 04:33:27"
   }, 
   "hostname": "sonoff-ceiling-water-heater-booster", 
   "hotplug_scan": 0, 
@@ -793,7 +793,7 @@
   "mqtt_pwd": "DVES_PASS", 
   "mqtt_retry": 10, 
   "mqtt_socket_timeout": 4, 
-  "mqtt_topic": "roof_water_heater_booster_plug", 
+  "mqtt_topic": "roof_water_booster_plug", 
   "mqtt_user": "DVES_USER", 
   "mqtt_wifi_timeout": 200, 
   "mqttlog_level": 0, 
@@ -1153,7 +1153,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 291, 
+  "save_flag": 356, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 0, 

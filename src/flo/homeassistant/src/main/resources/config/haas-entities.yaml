@@ -209,7 +209,7 @@ switch.bathroom_rails_plug:
   name: Bathroom Towel Rails
   aliases: []
   room: Bathroom
-switch.roof_water_heater_booster_plug:
+switch.roof_water_booster_plug:
   name: Roof Water Booster
   aliases: []
   room: Roof

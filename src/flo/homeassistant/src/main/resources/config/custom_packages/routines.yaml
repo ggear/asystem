@@ -270,7 +270,7 @@ automation:
             - fan.lounge_fan
             - fan.deck_fan
   #####################################################################################
-  - id: routine_water_heater_booster_on
+  - id: routine_water_booster_on
     alias: "Water Heating: Turn on water heater booster"
     mode: single
     trigger:
@@ -292,14 +292,14 @@ automation:
           value_template: '{{ now().month == 8 }}'
     action:
       - service: switch.turn_on
-        entity_id: switch.roof_water_heater_booster_plug
+        entity_id: switch.roof_water_booster_plug
   #####################################################################################
-  - id: routine_water_heater_booster_off
+  - id: routine_water_booster_off
     mode: single
     alias: "Water Heating: Turn off water heater booster"
     trigger:
       - platform: state
-        entity_id: switch.roof_water_heater_booster_plug
+        entity_id: switch.roof_water_booster_plug
         from: 'off'
         to: 'on'
     condition: [ ]
@@ -307,9 +307,9 @@ automation:
       - delay: '00:45:00'
       - service: switch.turn_off
         target:
-          entity_id: switch.roof_water_heater_booster_plug
+          entity_id: switch.roof_water_booster_plug
   #####################################################################################
-  - id: routine_water_heater_booster_off_failsafe
+  - id: routine_water_booster_off_failsafe
     alias: "Water Heating: Turn off water heater booster fail-safe"
     mode: single
     trigger:
@@ -321,11 +321,11 @@ automation:
           after: '22:00:00'
           before: '04:00:00'
         - condition: state
-          entity_id: switch.roof_water_heater_booster_plug
+          entity_id: switch.roof_water_booster_plug
           state: 'on'
     action:
       - service: switch.turn_off
-        entity_id: switch.roof_water_heater_booster_plug
+        entity_id: switch.roof_water_booster_plug
   #####################################################################################
   - id: routine_bathroom_rails_on
     alias: "Water Heating: Turn on towel rails"

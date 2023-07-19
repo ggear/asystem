@@ -138,7 +138,7 @@
     - entity: switch.bathroom_rails_plug
       name: Towel Rails
       icon: mdi:radiator
-    - entity: switch.roof_water_heater_booster_plug
+    - entity: switch.roof_water_booster_plug
       name: Water Booster
       icon: mdi:thermometer-water
 ################################################################################

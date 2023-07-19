@@ -37,8 +37,8 @@
   "baudrate": 460800, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 4, 
-  "bootcount_reset_time": 0, 
+  "bootcount": 20, 
+  "bootcount_reset_time": 1689738836, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
   "bri_preset_low": 0, 
@@ -62,11 +62,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0xe7c4", 
-  "cfg_crc32": "0x4d6efbc1", 
+  "cfg_crc": "0x93ff", 
+  "cfg_crc32": "0x0ea34d38", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 9, 
+  "cfg_timestamp": 1689741251, 
   "config_version": 1, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -84,7 +84,7 @@
     "", 
     ""
   ], 
-  "devicename": "Tasmota", 
+  "devicename": "kitchen_fan_plug", 
   "dimmer_hw_max": 100, 
   "dimmer_hw_min": 0, 
   "dimmer_step": 10, 
@@ -356,7 +356,7 @@
     "mqtt_info_retain": 0, 
     "mqtt_persistent": 0, 
     "mqtt_state_retain": 0, 
-    "mqtt_status_retain": 0, 
+    "mqtt_status_retain": 1, 
     "mqtt_switches": 0, 
     "pwm_force_same_phase": 0, 
     "shift595_invert_outputs": 0, 
@@ -393,7 +393,7 @@
     0
   ], 
   "friendlyname": [
-    "Tasmota", 
+    "Kitchen", 
     "Tasmota2", 
     "Tasmota3", 
     "Tasmota4", 
@@ -410,8 +410,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0x4718", 
-      "crc32": "0x4d6efbc1", 
+      "crc": "0x4962", 
+      "crc32": "0xea34d38", 
       "hardware": "ESP32 (excl S3/S2/C3)", 
       "size": 4096, 
       "version": {
@@ -426,15 +426,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0xe7c4", 
-      "crc32": "0x4d6efbc1", 
+      "crc": "0x93ff", 
+      "crc32": "0xea34d38", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "1970-01-01 00:00:09"
+    "timestamp": "2023-07-19 04:34:11"
   }, 
   "hostname": "%s-%04d", 
   "hotplug_scan": 0, 
@@ -457,8 +457,8 @@
     0, 
     0
   ], 
-  "influxdb_bucket32": "db", 
-  "influxdb_host32": "influxdb", 
+  "influxdb_bucket32": "", 
+  "influxdb_host32": "", 
   "influxdb_org32": "", 
   "influxdb_period": 0, 
   "influxdb_port": 8086, 
@@ -545,7 +545,7 @@
   ], 
   "knx_GA_registered": 0, 
   "knx_physsical_addr": 0, 
-  "last_module": 0, 
+  "last_module": 255, 
   "latitude": 48.85836, 
   "ledmask": "0xffff", 
   "ledpwm_mask": 0, 
@@ -759,7 +759,7 @@
   ], 
   "modbus_sbaudrate": 0, 
   "modbus_sconfig": 0, 
-  "module": 0, 
+  "module": 255, 
   "monitors": "0xffffffff", 
   "mqtt_client": "DVES_%06X", 
   "mqtt_fingerprint1": [
@@ -806,16 +806,16 @@
     "0x07", 
     "0x09"
   ], 
-  "mqtt_fulltopic": "%prefix%/%topic%/", 
+  "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/", 
   "mqtt_grptopic": "tasmotas", 
   "mqtt_grptopic2": [
     "", 
     "", 
     ""
   ], 
-  "mqtt_host": "", 
+  "mqtt_host": "10.0.2.11", 
   "mqtt_keepalive": 30, 
-  "mqtt_port": 1883, 
+  "mqtt_port": 32404, 
   "mqtt_prefix": [
     "cmnd", 
     "stat", 
@@ -824,7 +824,7 @@
   "mqtt_pwd": "DVES_PASS", 
   "mqtt_retry": 10, 
   "mqtt_socket_timeout": 4, 
-  "mqtt_topic": "tasmota_%06X", 
+  "mqtt_topic": "kitchen_fan_plug", 
   "mqtt_user": "DVES_USER", 
   "mqtt_wifi_timeout": 200, 
   "mqttlog_level": 0, 
@@ -888,7 +888,7 @@
     1, 
     0, 
     6, 
-    0, 
+    128, 
     0, 
     60, 
     90, 
@@ -924,7 +924,7 @@
     "power8": 0
   }, 
   "power_esp32": "0x00000000", 
-  "poweronstate": 3, 
+  "poweronstate": 0, 
   "pulse_counter": [
     0, 
     0, 
@@ -1220,7 +1220,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 9, 
+  "save_flag": 64, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 1, 
@@ -1614,7 +1614,7 @@
   ], 
   "tcp_baudrate": 0, 
   "tcp_config": 0, 
-  "tele_period": 300, 
+  "tele_period": 10, 
   "telegram_chatid": "", 
   "telegram_token": "", 
   "teleinfo": {
@@ -1626,7 +1626,7 @@
     "show_stats": 0
   }, 
   "temp_comp": 0, 
-  "templatename": "ESP32-DevKit", 
+  "templatename": "Sonoff POWR316D", 
   "tflag": [
     {
       "dow": 1, 
@@ -1883,44 +1883,44 @@
     "base": 1, 
     "flag": 0, 
     "gpio": [
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
-      0, 
-      1, 
-      1, 
-      1, 
-      0, 
-      1, 
-      1, 
-      1, 
+      32, 
       0, 
       0, 
       0, 
       0, 
-      1, 
-      1, 
-      1, 
-      1, 
-      1, 
+      576, 
       0, 
       0, 
-      1
+      0, 
+      224, 
+      9280, 
+      0, 
+      3104, 
+      0, 
+      320, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      9184, 
+      9248, 
+      9216, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0
     ], 
-    "name": "ESP32-DevKit"
+    "name": "Sonoff POWR316"
   }, 
   "version": "0xd000000", 
   "web_color": [

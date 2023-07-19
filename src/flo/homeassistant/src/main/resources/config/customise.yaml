@@ -401,13 +401,13 @@ light.tree_spotlights:
 switch.bathroom_rails_plug:
   friendly_name: 'Towel Rails'
   icon: 'mdi:radiator'
-switch.roof_water_heater_booster_plug:
+switch.roof_water_booster_plug:
   friendly_name: 'Water Booster'
   icon: 'mdi:thermometer-water'
-sensor.roof_water_heater_booster_plug_energy_power:
+sensor.roof_water_booster_plug_energy_power:
   friendly_name: 'Current Power'
   unit_of_measurement: 'W'
-sensor.roof_water_heater_booster_plug_energy_total:
+sensor.roof_water_booster_plug_energy_total:
   friendly_name: 'Total Energy'
   unit_of_measurement: 'kWh'
 fan.lounge_air_purifier:
@@ -452,7 +452,7 @@ sensor.laundry_vacuum_charger_power:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.water_booster_power:
+sensor.roof_water_booster_power:
   friendly_name: 'Water Booster'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
@@ -532,7 +532,7 @@ sensor.laundry_vacuum_charger_energy_daily:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.water_booster_energy_daily:
+sensor.roof_water_booster_energy_daily:
   friendly_name: 'Water Booster'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
@@ -859,13 +859,13 @@ sensor.kitchen_fan_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
 sensor.kitchen_fan_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
-sensor.roof_water_heater_booster_plug_energy_total_daily:
+sensor.roof_water_booster_plug_energy_total_daily:
   friendly_name: 'Total Energy Daily'
-sensor.roof_water_heater_booster_plug_energy_total_weekly:
+sensor.roof_water_booster_plug_energy_total_weekly:
   friendly_name: 'Total Energy Hept-Daily'
-sensor.roof_water_heater_booster_plug_energy_total_monthly:
+sensor.roof_water_booster_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
-sensor.roof_water_heater_booster_plug_energy_total_yearly:
+sensor.roof_water_booster_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
 sensor.rack_outlet_plug_energy_total_daily:
   friendly_name: 'Total Energy Daily'
