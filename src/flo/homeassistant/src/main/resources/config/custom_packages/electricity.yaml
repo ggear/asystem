@@ -156,6 +156,9 @@ sensor:
   - platform: powercalc
     entities:
       - entity_id: light.kitchen_downlights_plug
+        standby_power: 0.6
+        fixed:
+          power: 1.2
   #####################################################################################
   - platform: powercalc
     entities:
@@ -176,6 +179,13 @@ sensor:
       - entity_id: switch.old_rack_outlet_plug
         power_sensor_id: sensor.old_rack_outlet_plug_current_consumption
         force_energy_sensor_creation: true
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: fan.rack_fans_plug
+        standby_power: 0.6
+        fixed:
+          power: 16.2
   #####################################################################################
   - platform: powercalc
     entities:

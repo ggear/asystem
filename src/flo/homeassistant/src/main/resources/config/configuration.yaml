@@ -74,9 +74,7 @@ influxdb:
       - '*_treble'
       - '*_sim_*'
       - '*_microphone_level'
-      - 'adaptive_lighting_bedroom_*'
-      - 'roof_water_booster_mqtt_connect_count'
-      - 'roof_water_booster_wifi_connect_count'
+      - 'adaptive_lighting_*'
   ignore_attributes: !include influxdb-ignores.yaml
   #####################################################################################
 mqtt:
