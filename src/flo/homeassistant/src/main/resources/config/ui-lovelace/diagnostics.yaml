@@ -128,7 +128,7 @@
     - entity: switch.rack_internet_modem_plug
       name: Internet Modem
       icon: mdi:router-wireless
-    - entity: switch.rack_fans_plug
+    - entity: fan.rack_fans_plug
       name: Rack Fans
       icon: mdi:server-remove
     - entity: switch.deck_fans_outlet

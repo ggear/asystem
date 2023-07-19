@@ -701,7 +701,7 @@ switch.roof_network_switch_plug:
 switch.rack_internet_modem_plug:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
-switch.rack_fans_plug:
+fan.rack_fans_plug:
   friendly_name: 'Rack Fans'
   icon: 'mdi:server-remove'
 switch.deck_fans_outlet:
