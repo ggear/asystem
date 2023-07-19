@@ -1,0 +1,36 @@
+{
+  "unique_id": "kitchen_fan_plug",
+  "name": "kitchen_fan_plug",
+  "icon": "mdi:fan",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/kitchen_fan_plug/stat/POWER",
+  "value_template": "{{ value }}",
+  "command_topic": "tasmota/device/kitchen_fan_plug/cmnd/POWER",
+  "availability_topic": "tasmota/device/kitchen_fan_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.104/?",
+    "name": "sonoff-kitchen-fan",
+    "sw_version": "13.0.0",
+    "identifiers": "fan",
+    "model": "POWR316D",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Kitchen",
+    "connections": [
+      [
+        "mac",
+        "c0:49:ef:d1:bc:60"
+      ],
+      [
+        "ip",
+        "10.0.6.104"
+      ]
+    ]
+  }
+}

@@ -32,7 +32,7 @@
     - entity: fan.parents_fan
       name: Parents
       icon: mdi:fan
-    - entity: switch.kitchen_fan_plug
+    - entity: fan.kitchen_fan_plug
       name: Kitchen
       icon: mdi:fan
     - entity: fan.lounge_fan

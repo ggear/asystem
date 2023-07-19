@@ -19,9 +19,13 @@ template:
   #####################################################################################
   - binary_sensor:
       #################################################################################
+      - unique_id: old_kitchen_fan_plug_proxy
+        state: >-
+          {{ states('switch.old_kitchen_fan_plug') }}
+      #################################################################################
       - unique_id: kitchen_fan_plug_proxy
         state: >-
-          {{ states('switch.kitchen_fan_plug') }}
+          {{ states('fan.kitchen_fan_plug') }}
       #################################################################################
       - unique_id: old_kitchen_downlights_plug_proxy
         state: >-
@@ -137,6 +141,20 @@ sensor:
   #####################################################################################
   - platform: powercalc
     entities:
+      - entity_id: binary_sensor.template_old_kitchen_fan_plug_proxy
+        standby_power: 1.54
+        unavailable_power: 0
+        fixed:
+          power: 2.19
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: switch.old_kitchen_fan_plug
+        power_sensor_id: sensor.old_kitchen_fan_plug_current_consumption
+        force_energy_sensor_creation: true
+  #####################################################################################
+  - platform: powercalc
+    entities:
       - entity_id: light.kitchen_downlights_plug
   #####################################################################################
   - platform: powercalc
@@ -237,13 +255,13 @@ sensor:
               - create_group: Kitchen Fans
                 entities:
                   - entity_id: binary_sensor.template_kitchen_fan_plug_proxy
-                    standby_power: 1.54
+                    standby_power: 1.5
                     unavailable_power: 0
                     fixed:
-                      power: 2.19
-                  - entity_id: switch.kitchen_fan_plug
-                    power_sensor_id: sensor.kitchen_fan_plug_current_consumption
-                    force_energy_sensor_creation: true
+                      power: 2
+                  - entity_id: fan.kitchen_fan_plug
+                    power_sensor_id: sensor.kitchen_fan_plug_energy_power
+                    energy_sensor_id: sensor.kitchen_fan_plug_energy_total
               #########################################################################
               - create_group: Lounge Fans
                 entities:

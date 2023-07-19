@@ -77,7 +77,7 @@ fan.parents_fan:
   name: Parents Fan
   aliases: []
   room: Parents
-switch.kitchen_fan_plug:
+fan.kitchen_fan_plug:
   name: Kitchen Fan
   aliases: []
   room: Kitchen

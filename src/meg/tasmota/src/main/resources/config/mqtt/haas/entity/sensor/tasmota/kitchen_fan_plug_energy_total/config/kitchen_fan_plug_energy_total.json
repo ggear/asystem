@@ -1,0 +1,22 @@
+{
+  "unique_id": "kitchen_fan_plug_energy_total",
+  "name": "kitchen_fan_plug_energy_total",
+  "state_class": "total_increasing",
+  "unit_of_measurement": "kWh",
+  "device_class": "energy",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/kitchen_fan_plug/tele/SENSOR",
+  "value_template": "{{ value_json[\"ENERGY\"][\"Total\"] }}",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.104/?",
+    "name": "sonoff-kitchen-fan",
+    "sw_version": "13.0.0",
+    "identifiers": "fan",
+    "model": "POWR316D",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Kitchen"
+  }
+}
