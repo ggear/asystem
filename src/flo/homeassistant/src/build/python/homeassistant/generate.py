@@ -208,19 +208,16 @@ if __name__ == "__main__":
         if metadata_haas_row["unique_id"].endswith("_energy_total"):
             energy_plugs.append(metadata_haas_row["unique_id"].replace("_energy_total", ""))
             for energy_meter_label in energy_meter_labels:
-                _add_energy_plug(
-                    "{}_{}".format(metadata_haas_row["unique_id"], energy_meter_label),
-                    energy_meter_labels[energy_meter_label])
+                _add_energy_plug("{}_{}".format(metadata_haas_row["unique_id"], energy_meter_label),
+                                 energy_meter_labels[energy_meter_label])
     for _, metadata_haas_row in metadata_customise_df.iterrows():
         if metadata_haas_row["entity_namespace"] != "sensor" and metadata_haas_row["unique_id"] not in energy_plugs:
             for energy_meter_label in energy_meter_labels:
                 for energy_sensor_label in energy_powercalc_labels:
-                    _add_energy_plug(
-                        "{}_{}".format(metadata_haas_row["unique_id"], energy_sensor_label),
-                        energy_powercalc_labels[energy_sensor_label])
-                _add_energy_plug(
-                    "{}_energy_{}".format(metadata_haas_row["unique_id"], energy_meter_label),
-                    energy_meter_labels[energy_meter_label])
+                    _add_energy_plug("{}_{}".format(metadata_haas_row["unique_id"], energy_sensor_label),
+                                     energy_powercalc_labels[energy_sensor_label])
+                _add_energy_plug("{}_energy_{}".format(metadata_haas_row["unique_id"], energy_meter_label),
+                                 energy_meter_labels[energy_meter_label])
     metadata_customise_df = metadata_haas_df[
         (metadata_haas_df["index"] > 0) &
         (metadata_haas_df["entity_status"] == "Enabled") &
@@ -229,14 +226,11 @@ if __name__ == "__main__":
         ]
     for _, metadata_haas_row in metadata_customise_df.iterrows():
         for energy_sensor_label in energy_tplink_labels:
-            _add_energy_plug(
-                "{}_{}".format(metadata_haas_row["unique_id"], energy_sensor_label),
-                energy_tplink_labels[energy_sensor_label])
+            _add_energy_plug("{}_{}".format(metadata_haas_row["unique_id"], energy_sensor_label),
+                             energy_tplink_labels[energy_sensor_label])
         for energy_meter_label in energy_meter_labels:
-            _add_energy_plug(
-                "{}_energy_{}".format(metadata_haas_row["unique_id"], energy_meter_label),
-                energy_meter_labels[energy_meter_label])
-
+            _add_energy_plug("{}_energy_{}".format(metadata_haas_row["unique_id"], energy_meter_label),
+                             energy_meter_labels[energy_meter_label])
     metadata_customise_path = abspath(join(DIR_ROOT, "src/main/resources/config/customise.yaml"))
     with open(metadata_customise_path, 'w') as metadata_customise_file:
         metadata_customise_file.write("""
