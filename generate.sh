@@ -35,7 +35,7 @@ function pull_repo() {
     git status
     REPO=$(cd ${1}/../../../.deps/${2}/${3} && pwd)
     TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
-    TAG_MOST_RECENT=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=10) | grep -iv dev | grep -iv beta | grep -iv 0b | head -n 1)
+    TAG_MOST_RECENT=$(git describe --tags --abbrev=0 $(git rev-list --tags --max-count=10) | grep -iv dev | grep -iv beta | grep -iv b0 | grep -iv 0b | head -n 1)
     [ $(git tag | wc -l) -eq 0 ] && TAG_CHECKED_OUT=$(git branch --show-current) && TAG_MOST_RECENT=$(git branch --show-current)
     [ $(git branch | grep "ggear" | wc -l) -gt 0 ] && TAG_MOST_RECENT=${TAG_CHECKED_OUT}
     [ ${TAG_CHECKED_OUT} == ${TAG_MOST_RECENT} ] && echo "Module [${REPO}] [INFO] is up to date with version [${TAG_CHECKED_OUT}]"
