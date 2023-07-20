@@ -442,7 +442,7 @@ def _deploy(context):
     for module in _get_modules(context, "deploy.sh"):
         _print_header(module, "deploy")
         _run_local(context, "deploy.sh", module)
-        _run_local(context, "[ -f docker-compose.yaml ] && echo 'Tail logs command: while true; do docker logs -f {} 2>&1; done' || true"
+        _run_local(context, "[ -f docker-compose.yaml ] && echo 'Tail logs command: while true; do sleep 1 && docker logs -f {} 2>&1; done' || true"
                    .format(_get_service(context, module)), module)
         _print_footer(module, "deploy")
 

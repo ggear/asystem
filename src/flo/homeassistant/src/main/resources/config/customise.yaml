@@ -853,52 +853,72 @@ binary_sensor.deck_west_fan_occupancy:
   friendly_name: 'Deck West'
 sensor.kitchen_fan_plug_energy_total_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_fan_plug_energy_total_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_fan_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.kitchen_fan_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.roof_water_booster_plug_energy_total_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.roof_water_booster_plug_energy_total_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.roof_water_booster_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.roof_water_booster_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.rack_outlet_plug_energy_total_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.rack_outlet_plug_energy_total_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.rack_outlet_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.rack_outlet_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.kitchen_downlights_plug_power:
   friendly_name: 'Current Power'
 sensor.kitchen_downlights_plug_energy:
   friendly_name: 'Total Energy'
 sensor.kitchen_downlights_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_downlights_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_downlights_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.kitchen_downlights_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.rack_fans_plug_power:
   friendly_name: 'Current Power'
 sensor.rack_fans_plug_energy:
   friendly_name: 'Total Energy'
 sensor.rack_fans_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.rack_fans_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.rack_fans_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.rack_fans_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.old_kitchen_fan_plug_current:
   friendly_name: 'Current Amperage'
 sensor.old_kitchen_fan_plug_voltage:
@@ -911,14 +931,19 @@ sensor.old_kitchen_fan_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.old_kitchen_fan_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.old_kitchen_fan_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.old_kitchen_fan_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.old_kitchen_fan_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.old_kitchen_fan_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.old_kitchen_downlights_plug_current:
   friendly_name: 'Current Amperage'
 sensor.old_kitchen_downlights_plug_voltage:
@@ -931,14 +956,19 @@ sensor.old_kitchen_downlights_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.old_kitchen_downlights_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.old_kitchen_downlights_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.old_kitchen_downlights_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.old_kitchen_downlights_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.old_kitchen_downlights_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.deck_festoons_plug_current:
   friendly_name: 'Current Amperage'
 sensor.deck_festoons_plug_voltage:
@@ -951,14 +981,19 @@ sensor.deck_festoons_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.deck_festoons_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.deck_festoons_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.deck_festoons_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.deck_festoons_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.deck_festoons_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.landing_festoons_plug_current:
   friendly_name: 'Current Amperage'
 sensor.landing_festoons_plug_voltage:
@@ -971,14 +1006,19 @@ sensor.landing_festoons_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.landing_festoons_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.landing_festoons_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.landing_festoons_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.landing_festoons_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.landing_festoons_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.bathroom_rails_plug_current:
   friendly_name: 'Current Amperage'
 sensor.bathroom_rails_plug_voltage:
@@ -991,14 +1031,19 @@ sensor.bathroom_rails_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.bathroom_rails_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.bathroom_rails_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.bathroom_rails_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.bathroom_rails_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.bathroom_rails_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.lounge_tv_outlet_plug_current:
   friendly_name: 'Current Amperage'
 sensor.lounge_tv_outlet_plug_voltage:
@@ -1011,14 +1056,19 @@ sensor.lounge_tv_outlet_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.lounge_tv_outlet_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.lounge_tv_outlet_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.lounge_tv_outlet_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.lounge_tv_outlet_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.lounge_tv_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.lounge_sub_plug_current:
   friendly_name: 'Current Amperage'
 sensor.lounge_sub_plug_voltage:
@@ -1031,14 +1081,19 @@ sensor.lounge_sub_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.lounge_sub_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.lounge_sub_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.lounge_sub_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.lounge_sub_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.lounge_sub_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.study_outlet_plug_current:
   friendly_name: 'Current Amperage'
 sensor.study_outlet_plug_voltage:
@@ -1051,14 +1106,19 @@ sensor.study_outlet_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.study_outlet_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.study_outlet_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.study_outlet_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.study_outlet_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.study_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.office_outlet_plug_current:
   friendly_name: 'Current Amperage'
 sensor.office_outlet_plug_voltage:
@@ -1071,14 +1131,19 @@ sensor.office_outlet_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.office_outlet_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.office_outlet_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.office_outlet_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.office_outlet_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.office_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.kitchen_dish_washer_plug_current:
   friendly_name: 'Current Amperage'
 sensor.kitchen_dish_washer_plug_voltage:
@@ -1091,14 +1156,19 @@ sensor.kitchen_dish_washer_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.kitchen_dish_washer_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.kitchen_dish_washer_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_dish_washer_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_dish_washer_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.kitchen_dish_washer_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.laundry_clothes_dryer_plug_current:
   friendly_name: 'Current Amperage'
 sensor.laundry_clothes_dryer_plug_voltage:
@@ -1111,14 +1181,19 @@ sensor.laundry_clothes_dryer_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.laundry_clothes_dryer_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.laundry_clothes_dryer_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.laundry_clothes_dryer_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.laundry_clothes_dryer_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.laundry_clothes_dryer_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.laundry_washing_machine_plug_current:
   friendly_name: 'Current Amperage'
 sensor.laundry_washing_machine_plug_voltage:
@@ -1131,14 +1206,19 @@ sensor.laundry_washing_machine_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.laundry_washing_machine_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.laundry_washing_machine_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.laundry_washing_machine_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.laundry_washing_machine_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.laundry_washing_machine_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.kitchen_coffee_machine_plug_current:
   friendly_name: 'Current Amperage'
 sensor.kitchen_coffee_machine_plug_voltage:
@@ -1151,14 +1231,19 @@ sensor.kitchen_coffee_machine_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.kitchen_coffee_machine_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.kitchen_coffee_machine_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_coffee_machine_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_coffee_machine_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.kitchen_coffee_machine_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.kitchen_fridge_plug_current:
   friendly_name: 'Current Amperage'
 sensor.kitchen_fridge_plug_voltage:
@@ -1171,14 +1256,19 @@ sensor.kitchen_fridge_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.kitchen_fridge_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.kitchen_fridge_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_fridge_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.kitchen_fridge_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.kitchen_fridge_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.deck_freezer_plug_current:
   friendly_name: 'Current Amperage'
 sensor.deck_freezer_plug_voltage:
@@ -1191,14 +1281,19 @@ sensor.deck_freezer_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.deck_freezer_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.deck_freezer_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.deck_freezer_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.deck_freezer_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.deck_freezer_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.study_battery_charger_plug_current:
   friendly_name: 'Current Amperage'
 sensor.study_battery_charger_plug_voltage:
@@ -1211,14 +1306,19 @@ sensor.study_battery_charger_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.study_battery_charger_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.study_battery_charger_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.study_battery_charger_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.study_battery_charger_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.study_battery_charger_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.laundry_vacuum_charger_plug_current:
   friendly_name: 'Current Amperage'
 sensor.laundry_vacuum_charger_plug_voltage:
@@ -1231,14 +1331,19 @@ sensor.laundry_vacuum_charger_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.laundry_vacuum_charger_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.laundry_vacuum_charger_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.laundry_vacuum_charger_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.laundry_vacuum_charger_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.laundry_vacuum_charger_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.ada_tablet_outlet_plug_current:
   friendly_name: 'Current Amperage'
 sensor.ada_tablet_outlet_plug_voltage:
@@ -1251,14 +1356,19 @@ sensor.ada_tablet_outlet_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.ada_tablet_outlet_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.ada_tablet_outlet_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.ada_tablet_outlet_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.ada_tablet_outlet_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.ada_tablet_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.server_flo_outlet_plug_current:
   friendly_name: 'Current Amperage'
 sensor.server_flo_outlet_plug_voltage:
@@ -1271,14 +1381,19 @@ sensor.server_flo_outlet_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.server_flo_outlet_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.server_flo_outlet_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.server_flo_outlet_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.server_flo_outlet_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.server_flo_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.server_meg_outlet_plug_current:
   friendly_name: 'Current Amperage'
 sensor.server_meg_outlet_plug_voltage:
@@ -1291,14 +1406,19 @@ sensor.server_meg_outlet_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.server_meg_outlet_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.server_meg_outlet_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.server_meg_outlet_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.server_meg_outlet_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.server_meg_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.old_rack_outlet_plug_current:
   friendly_name: 'Current Amperage'
 sensor.old_rack_outlet_plug_voltage:
@@ -1311,14 +1431,19 @@ sensor.old_rack_outlet_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.old_rack_outlet_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.old_rack_outlet_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.old_rack_outlet_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.old_rack_outlet_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.old_rack_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.roof_network_switch_plug_current:
   friendly_name: 'Current Amperage'
 sensor.roof_network_switch_plug_voltage:
@@ -1331,14 +1456,19 @@ sensor.roof_network_switch_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.roof_network_switch_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.roof_network_switch_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.roof_network_switch_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.roof_network_switch_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.roof_network_switch_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.rack_internet_modem_plug_current:
   friendly_name: 'Current Amperage'
 sensor.rack_internet_modem_plug_voltage:
@@ -1351,11 +1481,2223 @@ sensor.rack_internet_modem_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
 sensor.rack_internet_modem_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
 sensor.rack_internet_modem_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
 sensor.rack_internet_modem_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
 sensor.rack_internet_modem_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
 sensor.rack_internet_modem_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.ada_fan_power:
+  friendly_name: 'Current Power'
+sensor.ada_fan_energy:
+  friendly_name: 'Total Energy'
+sensor.ada_fan_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.ada_fan_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.ada_fan_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.ada_fan_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.edwin_fan_power:
+  friendly_name: 'Current Power'
+sensor.edwin_fan_energy:
+  friendly_name: 'Total Energy'
+sensor.edwin_fan_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.edwin_fan_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.edwin_fan_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.edwin_fan_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.parents_fan_power:
+  friendly_name: 'Current Power'
+sensor.parents_fan_energy:
+  friendly_name: 'Total Energy'
+sensor.parents_fan_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.parents_fan_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.parents_fan_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.parents_fan_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_old_kitchen_fan_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_old_kitchen_fan_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_old_kitchen_fan_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_old_kitchen_fan_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_old_kitchen_fan_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_old_kitchen_fan_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_fan_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_kitchen_fan_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_kitchen_fan_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_fan_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_fan_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_fan_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.lounge_fan_power:
+  friendly_name: 'Current Power'
+sensor.lounge_fan_energy:
+  friendly_name: 'Total Energy'
+sensor.lounge_fan_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.lounge_fan_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.lounge_fan_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.lounge_fan_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.deck_east_fan_power:
+  friendly_name: 'Current Power'
+sensor.deck_east_fan_energy:
+  friendly_name: 'Total Energy'
+sensor.deck_east_fan_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.deck_east_fan_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.deck_east_fan_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.deck_east_fan_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.deck_west_fan_power:
+  friendly_name: 'Current Power'
+sensor.deck_west_fan_energy:
+  friendly_name: 'Total Energy'
+sensor.deck_west_fan_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.deck_west_fan_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.deck_west_fan_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.deck_west_fan_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.ada_main_fan_light_power:
+  friendly_name: 'Current Power (Light)'
+sensor.ada_main_fan_light_energy:
+  friendly_name: 'Total Energy (Light)'
+sensor.ada_main_fan_light_energy_daily:
+  friendly_name: 'Total Energy Daily (Light)'
+  icon: 'mdi:counter'
+sensor.ada_main_fan_light_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily (Light)'
+  icon: 'mdi:counter'
+sensor.ada_main_fan_light_energy_monthly:
+  friendly_name: 'Total Energy Monthly (Light)'
+  icon: 'mdi:counter'
+sensor.ada_main_fan_light_energy_yearly:
+  friendly_name: 'Total Energy Yearly (Light)'
+  icon: 'mdi:counter'
+sensor.ada_lamp_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.ada_lamp_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.ada_lamp_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.ada_lamp_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.ada_lamp_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.ada_lamp_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.edwin_lamp_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.edwin_lamp_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.edwin_lamp_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.edwin_lamp_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.edwin_lamp_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.edwin_lamp_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.edwin_main_fan_light_power:
+  friendly_name: 'Current Power (Light)'
+sensor.edwin_main_fan_light_energy:
+  friendly_name: 'Total Energy (Light)'
+sensor.edwin_main_fan_light_energy_daily:
+  friendly_name: 'Total Energy Daily (Light)'
+  icon: 'mdi:counter'
+sensor.edwin_main_fan_light_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily (Light)'
+  icon: 'mdi:counter'
+sensor.edwin_main_fan_light_energy_monthly:
+  friendly_name: 'Total Energy Monthly (Light)'
+  icon: 'mdi:counter'
+sensor.edwin_main_fan_light_energy_yearly:
+  friendly_name: 'Total Energy Yearly (Light)'
+  icon: 'mdi:counter'
+sensor.edwin_night_light_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.edwin_night_light_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.edwin_night_light_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.edwin_night_light_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.edwin_night_light_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.edwin_night_light_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.hallway_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.hallway_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_2_power:
+  friendly_name: 'Current Power'
+sensor.hallway_main_bulb_2_energy:
+  friendly_name: 'Total Energy'
+sensor.hallway_main_bulb_2_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_2_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_2_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_2_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_3_power:
+  friendly_name: 'Current Power'
+sensor.hallway_main_bulb_3_energy:
+  friendly_name: 'Total Energy'
+sensor.hallway_main_bulb_3_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_3_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_3_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_3_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_4_power:
+  friendly_name: 'Current Power'
+sensor.hallway_main_bulb_4_energy:
+  friendly_name: 'Total Energy'
+sensor.hallway_main_bulb_4_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_4_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_4_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.hallway_main_bulb_4_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.hallway_sconces_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.hallway_sconces_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.hallway_sconces_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.hallway_sconces_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.hallway_sconces_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.hallway_sconces_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.dining_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.dining_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_2_power:
+  friendly_name: 'Current Power'
+sensor.dining_main_bulb_2_energy:
+  friendly_name: 'Total Energy'
+sensor.dining_main_bulb_2_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_2_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_2_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_2_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_3_power:
+  friendly_name: 'Current Power'
+sensor.dining_main_bulb_3_energy:
+  friendly_name: 'Total Energy'
+sensor.dining_main_bulb_3_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_3_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_3_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_3_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_4_power:
+  friendly_name: 'Current Power'
+sensor.dining_main_bulb_4_energy:
+  friendly_name: 'Total Energy'
+sensor.dining_main_bulb_4_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_4_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_4_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_4_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_5_power:
+  friendly_name: 'Current Power'
+sensor.dining_main_bulb_5_energy:
+  friendly_name: 'Total Energy'
+sensor.dining_main_bulb_5_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_5_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_5_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_5_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_6_power:
+  friendly_name: 'Current Power'
+sensor.dining_main_bulb_6_energy:
+  friendly_name: 'Total Energy'
+sensor.dining_main_bulb_6_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_6_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_6_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.dining_main_bulb_6_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.lounge_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.lounge_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_2_power:
+  friendly_name: 'Current Power'
+sensor.lounge_main_bulb_2_energy:
+  friendly_name: 'Total Energy'
+sensor.lounge_main_bulb_2_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_2_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_2_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_2_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_3_power:
+  friendly_name: 'Current Power'
+sensor.lounge_main_bulb_3_energy:
+  friendly_name: 'Total Energy'
+sensor.lounge_main_bulb_3_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_3_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_3_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.lounge_main_bulb_3_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.lounge_fan_light_power:
+  friendly_name: 'Current Power (Light)'
+sensor.lounge_fan_light_energy:
+  friendly_name: 'Total Energy (Light)'
+sensor.lounge_fan_light_energy_daily:
+  friendly_name: 'Total Energy Daily (Light)'
+  icon: 'mdi:counter'
+sensor.lounge_fan_light_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily (Light)'
+  icon: 'mdi:counter'
+sensor.lounge_fan_light_energy_monthly:
+  friendly_name: 'Total Energy Monthly (Light)'
+  icon: 'mdi:counter'
+sensor.lounge_fan_light_energy_yearly:
+  friendly_name: 'Total Energy Yearly (Light)'
+  icon: 'mdi:counter'
+sensor.lounge_lamp_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.lounge_lamp_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.lounge_lamp_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.lounge_lamp_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.lounge_lamp_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.lounge_lamp_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.parents_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.parents_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_2_power:
+  friendly_name: 'Current Power'
+sensor.parents_main_bulb_2_energy:
+  friendly_name: 'Total Energy'
+sensor.parents_main_bulb_2_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_2_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_2_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_2_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_3_power:
+  friendly_name: 'Current Power'
+sensor.parents_main_bulb_3_energy:
+  friendly_name: 'Total Energy'
+sensor.parents_main_bulb_3_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_3_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_3_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.parents_main_bulb_3_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.parents_jane_bedside_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.parents_jane_bedside_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.parents_jane_bedside_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.parents_jane_bedside_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.parents_jane_bedside_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.parents_jane_bedside_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.parents_graham_bedside_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.parents_graham_bedside_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.parents_graham_bedside_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.parents_graham_bedside_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.parents_graham_bedside_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.parents_graham_bedside_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.study_lamp_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.study_lamp_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.study_lamp_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.study_lamp_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.study_lamp_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.study_lamp_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.kitchen_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.kitchen_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_2_power:
+  friendly_name: 'Current Power'
+sensor.kitchen_main_bulb_2_energy:
+  friendly_name: 'Total Energy'
+sensor.kitchen_main_bulb_2_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_2_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_2_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_2_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_3_power:
+  friendly_name: 'Current Power'
+sensor.kitchen_main_bulb_3_energy:
+  friendly_name: 'Total Energy'
+sensor.kitchen_main_bulb_3_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_3_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_3_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_3_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_4_power:
+  friendly_name: 'Current Power'
+sensor.kitchen_main_bulb_4_energy:
+  friendly_name: 'Total Energy'
+sensor.kitchen_main_bulb_4_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_4_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_4_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.kitchen_main_bulb_4_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_old_kitchen_downlights_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_old_kitchen_downlights_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_old_kitchen_downlights_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_old_kitchen_downlights_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_old_kitchen_downlights_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_old_kitchen_downlights_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.laundry_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.laundry_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.laundry_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.laundry_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.laundry_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.laundry_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.pantry_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.pantry_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.pantry_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.pantry_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.pantry_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.pantry_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.office_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.office_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.office_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.office_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.office_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.office_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.bathroom_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.bathroom_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.bathroom_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.bathroom_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.bathroom_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.bathroom_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.bathroom_sconces_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.bathroom_sconces_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.bathroom_sconces_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.bathroom_sconces_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.bathroom_sconces_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.bathroom_sconces_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.bathroom_sconces_bulb_2_power:
+  friendly_name: 'Current Power'
+sensor.bathroom_sconces_bulb_2_energy:
+  friendly_name: 'Total Energy'
+sensor.bathroom_sconces_bulb_2_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.bathroom_sconces_bulb_2_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.bathroom_sconces_bulb_2_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.bathroom_sconces_bulb_2_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.ensuite_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.ensuite_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.ensuite_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.ensuite_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.ensuite_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.ensuite_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.ensuite_sconces_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.ensuite_sconces_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_2_power:
+  friendly_name: 'Current Power'
+sensor.ensuite_sconces_bulb_2_energy:
+  friendly_name: 'Total Energy'
+sensor.ensuite_sconces_bulb_2_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_2_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_2_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_2_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_3_power:
+  friendly_name: 'Current Power'
+sensor.ensuite_sconces_bulb_3_energy:
+  friendly_name: 'Total Energy'
+sensor.ensuite_sconces_bulb_3_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_3_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_3_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.ensuite_sconces_bulb_3_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.wardrobe_main_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.wardrobe_main_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.wardrobe_main_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.wardrobe_main_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.wardrobe_main_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.wardrobe_main_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_deck_festoons_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_deck_festoons_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_deck_festoons_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_deck_festoons_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_deck_festoons_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_deck_festoons_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_landing_festoons_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_landing_festoons_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_landing_festoons_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_landing_festoons_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_landing_festoons_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_landing_festoons_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.tree_spotlights_bulb_1_power:
+  friendly_name: 'Current Power'
+sensor.tree_spotlights_bulb_1_energy:
+  friendly_name: 'Total Energy'
+sensor.tree_spotlights_bulb_1_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.tree_spotlights_bulb_1_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.tree_spotlights_bulb_1_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.tree_spotlights_bulb_1_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.tree_spotlights_bulb_2_power:
+  friendly_name: 'Current Power'
+sensor.tree_spotlights_bulb_2_energy:
+  friendly_name: 'Total Energy'
+sensor.tree_spotlights_bulb_2_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.tree_spotlights_bulb_2_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.tree_spotlights_bulb_2_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.tree_spotlights_bulb_2_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_bathroom_rails_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_bathroom_rails_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_bathroom_rails_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_bathroom_rails_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_bathroom_rails_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_bathroom_rails_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_roof_water_booster_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_roof_water_booster_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_roof_water_booster_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_roof_water_booster_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_roof_water_booster_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_roof_water_booster_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_lounge_air_purifier_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_lounge_air_purifier_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_lounge_air_purifier_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_lounge_air_purifier_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_lounge_air_purifier_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_lounge_air_purifier_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_dining_air_purifier_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_dining_air_purifier_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.all_standby_energy:
+  friendly_name: 'Total Energy'
+sensor.all_standby_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.all_standby_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.all_standby_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_lounge_tv_outlet_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_lounge_tv_outlet_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_lounge_tv_outlet_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_lounge_tv_outlet_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_lounge_tv_outlet_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_lounge_tv_outlet_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_lounge_sub_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_lounge_sub_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_lounge_sub_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_lounge_sub_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_lounge_sub_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_lounge_sub_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_study_outlet_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_study_outlet_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_study_outlet_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_study_outlet_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_study_outlet_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_study_outlet_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_office_outlet_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_office_outlet_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_office_outlet_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_office_outlet_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_office_outlet_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_office_outlet_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_dish_washer_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_kitchen_dish_washer_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_kitchen_dish_washer_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_dish_washer_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_dish_washer_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_dish_washer_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_laundry_clothes_dryer_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_laundry_clothes_dryer_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_laundry_clothes_dryer_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_laundry_clothes_dryer_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_laundry_clothes_dryer_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_laundry_clothes_dryer_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_laundry_washing_machine_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_laundry_washing_machine_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_laundry_washing_machine_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_laundry_washing_machine_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_laundry_washing_machine_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_laundry_washing_machine_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_coffee_machine_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_kitchen_coffee_machine_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_kitchen_coffee_machine_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_coffee_machine_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_coffee_machine_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_coffee_machine_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_fridge_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_kitchen_fridge_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_kitchen_fridge_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_fridge_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_fridge_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_fridge_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_deck_freezer_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_deck_freezer_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_deck_freezer_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_deck_freezer_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_deck_freezer_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_deck_freezer_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_study_battery_charger_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_study_battery_charger_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_study_battery_charger_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_study_battery_charger_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_study_battery_charger_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_study_battery_charger_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_laundry_vacuum_charger_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_laundry_vacuum_charger_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_laundry_vacuum_charger_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_laundry_vacuum_charger_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_laundry_vacuum_charger_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_laundry_vacuum_charger_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_ada_tablet_outlet_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_ada_tablet_outlet_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_ada_tablet_outlet_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_ada_tablet_outlet_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_ada_tablet_outlet_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_ada_tablet_outlet_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_server_flo_outlet_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_server_flo_outlet_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_server_flo_outlet_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_server_flo_outlet_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_server_flo_outlet_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_server_flo_outlet_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_server_meg_outlet_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_server_meg_outlet_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_server_meg_outlet_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_server_meg_outlet_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_server_meg_outlet_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_server_meg_outlet_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_old_rack_outlet_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_old_rack_outlet_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_old_rack_outlet_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_old_rack_outlet_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_old_rack_outlet_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_old_rack_outlet_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_rack_outlet_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_rack_outlet_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_rack_outlet_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_rack_outlet_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_rack_outlet_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_rack_outlet_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_roof_network_switch_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_roof_network_switch_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_roof_network_switch_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_roof_network_switch_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_roof_network_switch_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_roof_network_switch_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_rack_internet_modem_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_rack_internet_modem_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_rack_internet_modem_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_rack_internet_modem_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_rack_internet_modem_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_rack_internet_modem_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.deck_fans_outlet_power:
+  friendly_name: 'Current Power'
+sensor.deck_fans_outlet_energy:
+  friendly_name: 'Total Energy'
+sensor.deck_fans_outlet_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.deck_fans_outlet_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.deck_fans_outlet_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.deck_fans_outlet_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.kitchen_fan_outlet_power:
+  friendly_name: 'Current Power'
+sensor.kitchen_fan_outlet_energy:
+  friendly_name: 'Total Energy'
+sensor.kitchen_fan_outlet_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_fan_outlet_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_fan_outlet_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.kitchen_fan_outlet_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.edwin_wardrobe_outlet_power:
+  friendly_name: 'Current Power'
+sensor.edwin_wardrobe_outlet_energy:
+  friendly_name: 'Total Energy'
+sensor.edwin_wardrobe_outlet_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.edwin_wardrobe_outlet_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.edwin_wardrobe_outlet_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.edwin_wardrobe_outlet_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.garden_repeater_linkquality_power:
+  friendly_name: 'Current Power'
+sensor.garden_repeater_linkquality_energy:
+  friendly_name: 'Total Energy'
+sensor.garden_repeater_linkquality_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.garden_repeater_linkquality_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.garden_repeater_linkquality_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.garden_repeater_linkquality_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.landing_repeater_linkquality_power:
+  friendly_name: 'Current Power'
+sensor.landing_repeater_linkquality_energy:
+  friendly_name: 'Total Energy'
+sensor.landing_repeater_linkquality_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.landing_repeater_linkquality_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.landing_repeater_linkquality_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.landing_repeater_linkquality_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.driveway_repeater_linkquality_power:
+  friendly_name: 'Current Power'
+sensor.driveway_repeater_linkquality_energy:
+  friendly_name: 'Total Energy'
+sensor.driveway_repeater_linkquality_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.driveway_repeater_linkquality_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.driveway_repeater_linkquality_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.driveway_repeater_linkquality_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.ada_home_power:
+  friendly_name: 'Current Power'
+sensor.ada_home_energy:
+  friendly_name: 'Total Energy'
+sensor.ada_home_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.ada_home_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.ada_home_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.ada_home_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.edwin_home_power:
+  friendly_name: 'Current Power'
+sensor.edwin_home_energy:
+  friendly_name: 'Total Energy'
+sensor.edwin_home_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.edwin_home_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.edwin_home_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.edwin_home_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.parents_home_power:
+  friendly_name: 'Current Power'
+sensor.parents_home_energy:
+  friendly_name: 'Total Energy'
+sensor.parents_home_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.parents_home_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.parents_home_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.parents_home_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.kitchen_home_power:
+  friendly_name: 'Current Power'
+sensor.kitchen_home_energy:
+  friendly_name: 'Total Energy'
+sensor.kitchen_home_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_home_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_home_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.kitchen_home_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.office_home_power:
+  friendly_name: 'Current Power'
+sensor.office_home_energy:
+  friendly_name: 'Total Energy'
+sensor.office_home_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.office_home_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.office_home_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.office_home_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.lounge_home_power:
+  friendly_name: 'Current Power'
+sensor.lounge_home_energy:
+  friendly_name: 'Total Energy'
+sensor.lounge_home_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.lounge_home_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.lounge_home_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.lounge_home_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.lounge_arc_power:
+  friendly_name: 'Current Power'
+sensor.lounge_arc_energy:
+  friendly_name: 'Total Energy'
+sensor.lounge_arc_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.lounge_arc_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.lounge_arc_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.lounge_arc_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.kitchen_move_power:
+  friendly_name: 'Current Power'
+sensor.kitchen_move_energy:
+  friendly_name: 'Total Energy'
+sensor.kitchen_move_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_move_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_move_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.kitchen_move_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.kitchen_five_power:
+  friendly_name: 'Current Power'
+sensor.kitchen_five_energy:
+  friendly_name: 'Total Energy'
+sensor.kitchen_five_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_five_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.kitchen_five_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.kitchen_five_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.parents_move_power:
+  friendly_name: 'Current Power'
+sensor.parents_move_energy:
+  friendly_name: 'Total Energy'
+sensor.parents_move_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.parents_move_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.parents_move_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.parents_move_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.home_energy:
+  friendly_name: 'Home Total Energy'
+sensor.home_energy_weekly:
+  friendly_name: 'Home Total Energy Hept-Daily'
+sensor.home_energy_monthly:
+  friendly_name: 'Home Total Energy Monthly'
+sensor.home_energy_yearly:
+  friendly_name: 'Home Total Energy Yearly'
+sensor.home_base_energy:
+  friendly_name: 'Home Base Total Energy'
+sensor.home_base_energy_weekly:
+  friendly_name: 'Home Base Total Energy Hept-Daily'
+sensor.home_base_energy_monthly:
+  friendly_name: 'Home Base Total Energy Monthly'
+sensor.home_base_energy_yearly:
+  friendly_name: 'Home Base Total Energy Yearly'
+sensor.fans_energy:
+  friendly_name: 'Fans Total Energy'
+sensor.fans_energy_weekly:
+  friendly_name: 'Fans Total Energy Hept-Daily'
+sensor.fans_energy_monthly:
+  friendly_name: 'Fans Total Energy Monthly'
+sensor.fans_energy_yearly:
+  friendly_name: 'Fans Total Energy Yearly'
+sensor.ada_fans_power:
+  friendly_name: 'Ada Fans Current Power'
+sensor.ada_fans_energy:
+  friendly_name: 'Ada Fans Total Energy'
+sensor.ada_fans_energy_daily:
+  friendly_name: 'Ada Fans Total Energy Daily'
+sensor.ada_fans_energy_weekly:
+  friendly_name: 'Ada Fans Total Energy Hept-Daily'
+sensor.ada_fans_energy_monthly:
+  friendly_name: 'Ada Fans Total Energy Monthly'
+sensor.ada_fans_energy_yearly:
+  friendly_name: 'Ada Fans Total Energy Yearly'
+sensor.edwin_fans_power:
+  friendly_name: 'Edwin Fans Current Power'
+sensor.edwin_fans_energy:
+  friendly_name: 'Edwin Fans Total Energy'
+sensor.edwin_fans_energy_daily:
+  friendly_name: 'Edwin Fans Total Energy Daily'
+sensor.edwin_fans_energy_weekly:
+  friendly_name: 'Edwin Fans Total Energy Hept-Daily'
+sensor.edwin_fans_energy_monthly:
+  friendly_name: 'Edwin Fans Total Energy Monthly'
+sensor.edwin_fans_energy_yearly:
+  friendly_name: 'Edwin Fans Total Energy Yearly'
+sensor.parents_fans_power:
+  friendly_name: 'Parents Fans Current Power'
+sensor.parents_fans_energy:
+  friendly_name: 'Parents Fans Total Energy'
+sensor.parents_fans_energy_daily:
+  friendly_name: 'Parents Fans Total Energy Daily'
+sensor.parents_fans_energy_weekly:
+  friendly_name: 'Parents Fans Total Energy Hept-Daily'
+sensor.parents_fans_energy_monthly:
+  friendly_name: 'Parents Fans Total Energy Monthly'
+sensor.parents_fans_energy_yearly:
+  friendly_name: 'Parents Fans Total Energy Yearly'
+sensor.kitchen_fans_power:
+  friendly_name: 'Kitchen Fans Current Power'
+sensor.kitchen_fans_energy:
+  friendly_name: 'Kitchen Fans Total Energy'
+sensor.kitchen_fans_energy_daily:
+  friendly_name: 'Kitchen Fans Total Energy Daily'
+sensor.kitchen_fans_energy_weekly:
+  friendly_name: 'Kitchen Fans Total Energy Hept-Daily'
+sensor.kitchen_fans_energy_monthly:
+  friendly_name: 'Kitchen Fans Total Energy Monthly'
+sensor.kitchen_fans_energy_yearly:
+  friendly_name: 'Kitchen Fans Total Energy Yearly'
+sensor.lounge_fans_power:
+  friendly_name: 'Lounge Fans Current Power'
+sensor.lounge_fans_energy:
+  friendly_name: 'Lounge Fans Total Energy'
+sensor.lounge_fans_energy_daily:
+  friendly_name: 'Lounge Fans Total Energy Daily'
+sensor.lounge_fans_energy_weekly:
+  friendly_name: 'Lounge Fans Total Energy Hept-Daily'
+sensor.lounge_fans_energy_monthly:
+  friendly_name: 'Lounge Fans Total Energy Monthly'
+sensor.lounge_fans_energy_yearly:
+  friendly_name: 'Lounge Fans Total Energy Yearly'
+sensor.deck_fans_power:
+  friendly_name: 'Deck Fans Current Power'
+sensor.deck_fans_energy:
+  friendly_name: 'Deck Fans Total Energy'
+sensor.deck_fans_energy_daily:
+  friendly_name: 'Deck Fans Total Energy Daily'
+sensor.deck_fans_energy_weekly:
+  friendly_name: 'Deck Fans Total Energy Hept-Daily'
+sensor.deck_fans_energy_monthly:
+  friendly_name: 'Deck Fans Total Energy Monthly'
+sensor.deck_fans_energy_yearly:
+  friendly_name: 'Deck Fans Total Energy Yearly'
+sensor.lights_energy:
+  friendly_name: 'Lights Total Energy'
+sensor.lights_energy_weekly:
+  friendly_name: 'Lights Total Energy Hept-Daily'
+sensor.lights_energy_monthly:
+  friendly_name: 'Lights Total Energy Monthly'
+sensor.lights_energy_yearly:
+  friendly_name: 'Lights Total Energy Yearly'
+sensor.ada_lights_power:
+  friendly_name: 'Ada Lights Current Power'
+sensor.ada_lights_energy:
+  friendly_name: 'Ada Lights Total Energy'
+sensor.ada_lights_energy_daily:
+  friendly_name: 'Ada Lights Total Energy Daily'
+sensor.ada_lights_energy_weekly:
+  friendly_name: 'Ada Lights Total Energy Hept-Daily'
+sensor.ada_lights_energy_monthly:
+  friendly_name: 'Ada Lights Total Energy Monthly'
+sensor.ada_lights_energy_yearly:
+  friendly_name: 'Ada Lights Total Energy Yearly'
+sensor.edwin_lights_power:
+  friendly_name: 'Edwin Lights Current Power'
+sensor.edwin_lights_energy:
+  friendly_name: 'Edwin Lights Total Energy'
+sensor.edwin_lights_energy_daily:
+  friendly_name: 'Edwin Lights Total Energy Daily'
+sensor.edwin_lights_energy_weekly:
+  friendly_name: 'Edwin Lights Total Energy Hept-Daily'
+sensor.edwin_lights_energy_monthly:
+  friendly_name: 'Edwin Lights Total Energy Monthly'
+sensor.edwin_lights_energy_yearly:
+  friendly_name: 'Edwin Lights Total Energy Yearly'
+sensor.hallway_lights_power:
+  friendly_name: 'Hallway Lights Current Power'
+sensor.hallway_lights_energy:
+  friendly_name: 'Hallway Lights Total Energy'
+sensor.hallway_lights_energy_daily:
+  friendly_name: 'Hallway Lights Total Energy Daily'
+sensor.hallway_lights_energy_weekly:
+  friendly_name: 'Hallway Lights Total Energy Hept-Daily'
+sensor.hallway_lights_energy_monthly:
+  friendly_name: 'Hallway Lights Total Energy Monthly'
+sensor.hallway_lights_energy_yearly:
+  friendly_name: 'Hallway Lights Total Energy Yearly'
+sensor.dining_lights_power:
+  friendly_name: 'Dining Lights Current Power'
+sensor.dining_lights_energy:
+  friendly_name: 'Dining Lights Total Energy'
+sensor.dining_lights_energy_daily:
+  friendly_name: 'Dining Lights Total Energy Daily'
+sensor.dining_lights_energy_weekly:
+  friendly_name: 'Dining Lights Total Energy Hept-Daily'
+sensor.dining_lights_energy_monthly:
+  friendly_name: 'Dining Lights Total Energy Monthly'
+sensor.dining_lights_energy_yearly:
+  friendly_name: 'Dining Lights Total Energy Yearly'
+sensor.lounge_lights_power:
+  friendly_name: 'Lounge Lights Current Power'
+sensor.lounge_lights_energy:
+  friendly_name: 'Lounge Lights Total Energy'
+sensor.lounge_lights_energy_daily:
+  friendly_name: 'Lounge Lights Total Energy Daily'
+sensor.lounge_lights_energy_weekly:
+  friendly_name: 'Lounge Lights Total Energy Hept-Daily'
+sensor.lounge_lights_energy_monthly:
+  friendly_name: 'Lounge Lights Total Energy Monthly'
+sensor.lounge_lights_energy_yearly:
+  friendly_name: 'Lounge Lights Total Energy Yearly'
+sensor.parents_lights_power:
+  friendly_name: 'Parents Lights Current Power'
+sensor.parents_lights_energy:
+  friendly_name: 'Parents Lights Total Energy'
+sensor.parents_lights_energy_daily:
+  friendly_name: 'Parents Lights Total Energy Daily'
+sensor.parents_lights_energy_weekly:
+  friendly_name: 'Parents Lights Total Energy Hept-Daily'
+sensor.parents_lights_energy_monthly:
+  friendly_name: 'Parents Lights Total Energy Monthly'
+sensor.parents_lights_energy_yearly:
+  friendly_name: 'Parents Lights Total Energy Yearly'
+sensor.study_lights_power:
+  friendly_name: 'Study Lights Current Power'
+sensor.study_lights_energy:
+  friendly_name: 'Study Lights Total Energy'
+sensor.study_lights_energy_daily:
+  friendly_name: 'Study Lights Total Energy Daily'
+sensor.study_lights_energy_weekly:
+  friendly_name: 'Study Lights Total Energy Hept-Daily'
+sensor.study_lights_energy_monthly:
+  friendly_name: 'Study Lights Total Energy Monthly'
+sensor.study_lights_energy_yearly:
+  friendly_name: 'Study Lights Total Energy Yearly'
+sensor.kitchen_lights_power:
+  friendly_name: 'Kitchen Lights Current Power'
+sensor.kitchen_lights_energy:
+  friendly_name: 'Kitchen Lights Total Energy'
+sensor.kitchen_lights_energy_daily:
+  friendly_name: 'Kitchen Lights Total Energy Daily'
+sensor.kitchen_lights_energy_weekly:
+  friendly_name: 'Kitchen Lights Total Energy Hept-Daily'
+sensor.kitchen_lights_energy_monthly:
+  friendly_name: 'Kitchen Lights Total Energy Monthly'
+sensor.kitchen_lights_energy_yearly:
+  friendly_name: 'Kitchen Lights Total Energy Yearly'
+sensor.laundry_lights_power:
+  friendly_name: 'Laundry Lights Current Power'
+sensor.laundry_lights_energy:
+  friendly_name: 'Laundry Lights Total Energy'
+sensor.laundry_lights_energy_daily:
+  friendly_name: 'Laundry Lights Total Energy Daily'
+sensor.laundry_lights_energy_weekly:
+  friendly_name: 'Laundry Lights Total Energy Hept-Daily'
+sensor.laundry_lights_energy_monthly:
+  friendly_name: 'Laundry Lights Total Energy Monthly'
+sensor.laundry_lights_energy_yearly:
+  friendly_name: 'Laundry Lights Total Energy Yearly'
+sensor.pantry_lights_power:
+  friendly_name: 'Pantry Lights Current Power'
+sensor.pantry_lights_energy:
+  friendly_name: 'Pantry Lights Total Energy'
+sensor.pantry_lights_energy_daily:
+  friendly_name: 'Pantry Lights Total Energy Daily'
+sensor.pantry_lights_energy_weekly:
+  friendly_name: 'Pantry Lights Total Energy Hept-Daily'
+sensor.pantry_lights_energy_monthly:
+  friendly_name: 'Pantry Lights Total Energy Monthly'
+sensor.pantry_lights_energy_yearly:
+  friendly_name: 'Pantry Lights Total Energy Yearly'
+sensor.office_lights_power:
+  friendly_name: 'Office Lights Current Power'
+sensor.office_lights_energy:
+  friendly_name: 'Office Lights Total Energy'
+sensor.office_lights_energy_daily:
+  friendly_name: 'Office Lights Total Energy Daily'
+sensor.office_lights_energy_weekly:
+  friendly_name: 'Office Lights Total Energy Hept-Daily'
+sensor.office_lights_energy_monthly:
+  friendly_name: 'Office Lights Total Energy Monthly'
+sensor.office_lights_energy_yearly:
+  friendly_name: 'Office Lights Total Energy Yearly'
+sensor.bathroom_lights_power:
+  friendly_name: 'Bathroom Lights Current Power'
+sensor.bathroom_lights_energy:
+  friendly_name: 'Bathroom Lights Total Energy'
+sensor.bathroom_lights_energy_daily:
+  friendly_name: 'Bathroom Lights Total Energy Daily'
+sensor.bathroom_lights_energy_weekly:
+  friendly_name: 'Bathroom Lights Total Energy Hept-Daily'
+sensor.bathroom_lights_energy_monthly:
+  friendly_name: 'Bathroom Lights Total Energy Monthly'
+sensor.bathroom_lights_energy_yearly:
+  friendly_name: 'Bathroom Lights Total Energy Yearly'
+sensor.ensuite_lights_power:
+  friendly_name: 'Ensuite Lights Current Power'
+sensor.ensuite_lights_energy:
+  friendly_name: 'Ensuite Lights Total Energy'
+sensor.ensuite_lights_energy_daily:
+  friendly_name: 'Ensuite Lights Total Energy Daily'
+sensor.ensuite_lights_energy_weekly:
+  friendly_name: 'Ensuite Lights Total Energy Hept-Daily'
+sensor.ensuite_lights_energy_monthly:
+  friendly_name: 'Ensuite Lights Total Energy Monthly'
+sensor.ensuite_lights_energy_yearly:
+  friendly_name: 'Ensuite Lights Total Energy Yearly'
+sensor.wardrobe_lights_power:
+  friendly_name: 'Wardrobe Lights Current Power'
+sensor.wardrobe_lights_energy:
+  friendly_name: 'Wardrobe Lights Total Energy'
+sensor.wardrobe_lights_energy_daily:
+  friendly_name: 'Wardrobe Lights Total Energy Daily'
+sensor.wardrobe_lights_energy_weekly:
+  friendly_name: 'Wardrobe Lights Total Energy Hept-Daily'
+sensor.wardrobe_lights_energy_monthly:
+  friendly_name: 'Wardrobe Lights Total Energy Monthly'
+sensor.wardrobe_lights_energy_yearly:
+  friendly_name: 'Wardrobe Lights Total Energy Yearly'
+sensor.deck_lights_power:
+  friendly_name: 'Deck Lights Current Power'
+sensor.deck_lights_energy:
+  friendly_name: 'Deck Lights Total Energy'
+sensor.deck_lights_energy_daily:
+  friendly_name: 'Deck Lights Total Energy Daily'
+sensor.deck_lights_energy_weekly:
+  friendly_name: 'Deck Lights Total Energy Hept-Daily'
+sensor.deck_lights_energy_monthly:
+  friendly_name: 'Deck Lights Total Energy Monthly'
+sensor.deck_lights_energy_yearly:
+  friendly_name: 'Deck Lights Total Energy Yearly'
+sensor.landing_lights_power:
+  friendly_name: 'Landing Lights Current Power'
+sensor.landing_lights_energy:
+  friendly_name: 'Landing Lights Total Energy'
+sensor.landing_lights_energy_daily:
+  friendly_name: 'Landing Lights Total Energy Daily'
+sensor.landing_lights_energy_weekly:
+  friendly_name: 'Landing Lights Total Energy Hept-Daily'
+sensor.landing_lights_energy_monthly:
+  friendly_name: 'Landing Lights Total Energy Monthly'
+sensor.landing_lights_energy_yearly:
+  friendly_name: 'Landing Lights Total Energy Yearly'
+sensor.tree_lights_power:
+  friendly_name: 'Tree Lights Current Power'
+sensor.tree_lights_energy:
+  friendly_name: 'Tree Lights Total Energy'
+sensor.tree_lights_energy_daily:
+  friendly_name: 'Tree Lights Total Energy Daily'
+sensor.tree_lights_energy_weekly:
+  friendly_name: 'Tree Lights Total Energy Hept-Daily'
+sensor.tree_lights_energy_monthly:
+  friendly_name: 'Tree Lights Total Energy Monthly'
+sensor.tree_lights_energy_yearly:
+  friendly_name: 'Tree Lights Total Energy Yearly'
+sensor.home_peak_energy:
+  friendly_name: 'Home Peak Total Energy'
+sensor.home_peak_energy_weekly:
+  friendly_name: 'Home Peak Total Energy Hept-Daily'
+sensor.home_peak_energy_monthly:
+  friendly_name: 'Home Peak Total Energy Monthly'
+sensor.home_peak_energy_yearly:
+  friendly_name: 'Home Peak Total Energy Yearly'
+sensor.heating_cooling_power:
+  friendly_name: 'Heating & Cooling Current Power'
+sensor.heating_cooling_energy:
+  friendly_name: 'Heating & Cooling Total Energy'
+sensor.heating_cooling_energy_daily:
+  friendly_name: 'Heating & Cooling Total Energy Daily'
+sensor.heating_cooling_energy_weekly:
+  friendly_name: 'Heating & Cooling Total Energy Hept-Daily'
+sensor.heating_cooling_energy_monthly:
+  friendly_name: 'Heating & Cooling Total Energy Monthly'
+sensor.heating_cooling_energy_yearly:
+  friendly_name: 'Heating & Cooling Total Energy Yearly'
+sensor.bathroom_towel_rails_energy:
+  friendly_name: 'Bathroom Towel Rails Total Energy'
+sensor.bathroom_towel_rails_energy_weekly:
+  friendly_name: 'Bathroom Towel Rails Total Energy Hept-Daily'
+sensor.bathroom_towel_rails_energy_monthly:
+  friendly_name: 'Bathroom Towel Rails Total Energy Monthly'
+sensor.bathroom_towel_rails_energy_yearly:
+  friendly_name: 'Bathroom Towel Rails Total Energy Yearly'
+sensor.roof_water_booster_energy:
+  friendly_name: 'Roof Water Booster Total Energy'
+sensor.roof_water_booster_energy_weekly:
+  friendly_name: 'Roof Water Booster Total Energy Hept-Daily'
+sensor.roof_water_booster_energy_monthly:
+  friendly_name: 'Roof Water Booster Total Energy Monthly'
+sensor.roof_water_booster_energy_yearly:
+  friendly_name: 'Roof Water Booster Total Energy Yearly'
+sensor.dining_fans_power:
+  friendly_name: 'Dining Fans Current Power'
+sensor.dining_fans_energy:
+  friendly_name: 'Dining Fans Total Energy'
+sensor.dining_fans_energy_daily:
+  friendly_name: 'Dining Fans Total Energy Daily'
+sensor.dining_fans_energy_weekly:
+  friendly_name: 'Dining Fans Total Energy Hept-Daily'
+sensor.dining_fans_energy_monthly:
+  friendly_name: 'Dining Fans Total Energy Monthly'
+sensor.dining_fans_energy_yearly:
+  friendly_name: 'Dining Fans Total Energy Yearly'
+sensor.audio_visual_devices_energy:
+  friendly_name: 'Audio Visual Devices Total Energy'
+sensor.audio_visual_devices_energy_weekly:
+  friendly_name: 'Audio Visual Devices Total Energy Hept-Daily'
+sensor.audio_visual_devices_energy_monthly:
+  friendly_name: 'Audio Visual Devices Total Energy Monthly'
+sensor.audio_visual_devices_energy_yearly:
+  friendly_name: 'Audio Visual Devices Total Energy Yearly'
+sensor.lounge_tv_power:
+  friendly_name: 'Lounge TV Current Power'
+sensor.lounge_tv_energy:
+  friendly_name: 'Lounge TV Total Energy'
+sensor.lounge_tv_energy_daily:
+  friendly_name: 'Lounge TV Total Energy Daily'
+sensor.lounge_tv_energy_weekly:
+  friendly_name: 'Lounge TV Total Energy Hept-Daily'
+sensor.lounge_tv_energy_monthly:
+  friendly_name: 'Lounge TV Total Energy Monthly'
+sensor.lounge_tv_energy_yearly:
+  friendly_name: 'Lounge TV Total Energy Yearly'
+sensor.lounge_sub_power:
+  friendly_name: 'Lounge Sub Current Power'
+sensor.lounge_sub_energy:
+  friendly_name: 'Lounge Sub Total Energy'
+sensor.lounge_sub_energy_daily:
+  friendly_name: 'Lounge Sub Total Energy Daily'
+sensor.lounge_sub_energy_weekly:
+  friendly_name: 'Lounge Sub Total Energy Hept-Daily'
+sensor.lounge_sub_energy_monthly:
+  friendly_name: 'Lounge Sub Total Energy Monthly'
+sensor.lounge_sub_energy_yearly:
+  friendly_name: 'Lounge Sub Total Energy Yearly'
+sensor.power_plugs_power:
+  friendly_name: 'Power Plugs Current Power'
+sensor.power_plugs_energy:
+  friendly_name: 'Power Plugs Total Energy'
+sensor.power_plugs_energy_daily:
+  friendly_name: 'Power Plugs Total Energy Daily'
+sensor.power_plugs_energy_weekly:
+  friendly_name: 'Power Plugs Total Energy Hept-Daily'
+sensor.power_plugs_energy_monthly:
+  friendly_name: 'Power Plugs Total Energy Monthly'
+sensor.power_plugs_energy_yearly:
+  friendly_name: 'Power Plugs Total Energy Yearly'
+sensor.study_outlet_energy:
+  friendly_name: 'Study Outlet Total Energy'
+sensor.study_outlet_energy_weekly:
+  friendly_name: 'Study Outlet Total Energy Hept-Daily'
+sensor.study_outlet_energy_monthly:
+  friendly_name: 'Study Outlet Total Energy Monthly'
+sensor.study_outlet_energy_yearly:
+  friendly_name: 'Study Outlet Total Energy Yearly'
+sensor.office_outlet_energy:
+  friendly_name: 'Office Outlet Total Energy'
+sensor.office_outlet_energy_weekly:
+  friendly_name: 'Office Outlet Total Energy Hept-Daily'
+sensor.office_outlet_energy_monthly:
+  friendly_name: 'Office Outlet Total Energy Monthly'
+sensor.office_outlet_energy_yearly:
+  friendly_name: 'Office Outlet Total Energy Yearly'
+sensor.whitegoods_discretionary_power:
+  friendly_name: 'Whitegoods Discretionary Current Power'
+sensor.whitegoods_discretionary_energy:
+  friendly_name: 'Whitegoods Discretionary Total Energy'
+sensor.whitegoods_discretionary_energy_daily:
+  friendly_name: 'Whitegoods Discretionary Total Energy Daily'
+sensor.whitegoods_discretionary_energy_weekly:
+  friendly_name: 'Whitegoods Discretionary Total Energy Hept-Daily'
+sensor.whitegoods_discretionary_energy_monthly:
+  friendly_name: 'Whitegoods Discretionary Total Energy Monthly'
+sensor.whitegoods_discretionary_energy_yearly:
+  friendly_name: 'Whitegoods Discretionary Total Energy Yearly'
+sensor.kitchen_dish_washer_energy:
+  friendly_name: 'Kitchen Dish Washer Total Energy'
+sensor.kitchen_dish_washer_energy_weekly:
+  friendly_name: 'Kitchen Dish Washer Total Energy Hept-Daily'
+sensor.kitchen_dish_washer_energy_monthly:
+  friendly_name: 'Kitchen Dish Washer Total Energy Monthly'
+sensor.kitchen_dish_washer_energy_yearly:
+  friendly_name: 'Kitchen Dish Washer Total Energy Yearly'
+sensor.laundry_clothes_dryer_energy:
+  friendly_name: 'Laundry Clothes Dryer Total Energy'
+sensor.laundry_clothes_dryer_energy_weekly:
+  friendly_name: 'Laundry Clothes Dryer Total Energy Hept-Daily'
+sensor.laundry_clothes_dryer_energy_monthly:
+  friendly_name: 'Laundry Clothes Dryer Total Energy Monthly'
+sensor.laundry_clothes_dryer_energy_yearly:
+  friendly_name: 'Laundry Clothes Dryer Total Energy Yearly'
+sensor.laundry_washing_machine_energy:
+  friendly_name: 'Laundry Washing Machine Total Energy'
+sensor.laundry_washing_machine_energy_weekly:
+  friendly_name: 'Laundry Washing Machine Total Energy Hept-Daily'
+sensor.laundry_washing_machine_energy_monthly:
+  friendly_name: 'Laundry Washing Machine Total Energy Monthly'
+sensor.laundry_washing_machine_energy_yearly:
+  friendly_name: 'Laundry Washing Machine Total Energy Yearly'
+sensor.kitchen_coffee_machine_energy:
+  friendly_name: 'Kitchen Coffee Machine Total Energy'
+sensor.kitchen_coffee_machine_energy_weekly:
+  friendly_name: 'Kitchen Coffee Machine Total Energy Hept-Daily'
+sensor.kitchen_coffee_machine_energy_monthly:
+  friendly_name: 'Kitchen Coffee Machine Total Energy Monthly'
+sensor.kitchen_coffee_machine_energy_yearly:
+  friendly_name: 'Kitchen Coffee Machine Total Energy Yearly'
+sensor.whitegoods_continuous_power:
+  friendly_name: 'Whitegoods Continuous Current Power'
+sensor.whitegoods_continuous_energy:
+  friendly_name: 'Whitegoods Continuous Total Energy'
+sensor.whitegoods_continuous_energy_daily:
+  friendly_name: 'Whitegoods Continuous Total Energy Daily'
+sensor.whitegoods_continuous_energy_weekly:
+  friendly_name: 'Whitegoods Continuous Total Energy Hept-Daily'
+sensor.whitegoods_continuous_energy_monthly:
+  friendly_name: 'Whitegoods Continuous Total Energy Monthly'
+sensor.whitegoods_continuous_energy_yearly:
+  friendly_name: 'Whitegoods Continuous Total Energy Yearly'
+sensor.kitchen_fridge_energy:
+  friendly_name: 'Kitchen Fridge Total Energy'
+sensor.kitchen_fridge_energy_weekly:
+  friendly_name: 'Kitchen Fridge Total Energy Hept-Daily'
+sensor.kitchen_fridge_energy_monthly:
+  friendly_name: 'Kitchen Fridge Total Energy Monthly'
+sensor.kitchen_fridge_energy_yearly:
+  friendly_name: 'Kitchen Fridge Total Energy Yearly'
+sensor.deck_freezer_energy:
+  friendly_name: 'Deck Freezer Total Energy'
+sensor.deck_freezer_energy_weekly:
+  friendly_name: 'Deck Freezer Total Energy Hept-Daily'
+sensor.deck_freezer_energy_monthly:
+  friendly_name: 'Deck Freezer Total Energy Monthly'
+sensor.deck_freezer_energy_yearly:
+  friendly_name: 'Deck Freezer Total Energy Yearly'
+sensor.study_battery_charger_energy:
+  friendly_name: 'Study Battery Charger Total Energy'
+sensor.study_battery_charger_energy_weekly:
+  friendly_name: 'Study Battery Charger Total Energy Hept-Daily'
+sensor.study_battery_charger_energy_monthly:
+  friendly_name: 'Study Battery Charger Total Energy Monthly'
+sensor.study_battery_charger_energy_yearly:
+  friendly_name: 'Study Battery Charger Total Energy Yearly'
+sensor.laundry_vacuum_charger_energy:
+  friendly_name: 'Laundry Vacuum Charger Total Energy'
+sensor.laundry_vacuum_charger_energy_weekly:
+  friendly_name: 'Laundry Vacuum Charger Total Energy Hept-Daily'
+sensor.laundry_vacuum_charger_energy_monthly:
+  friendly_name: 'Laundry Vacuum Charger Total Energy Monthly'
+sensor.laundry_vacuum_charger_energy_yearly:
+  friendly_name: 'Laundry Vacuum Charger Total Energy Yearly'
+sensor.ada_tablet_power:
+  friendly_name: 'Ada Tablet Current Power'
+sensor.ada_tablet_energy:
+  friendly_name: 'Ada Tablet Total Energy'
+sensor.ada_tablet_energy_daily:
+  friendly_name: 'Ada Tablet Total Energy Daily'
+sensor.ada_tablet_energy_weekly:
+  friendly_name: 'Ada Tablet Total Energy Hept-Daily'
+sensor.ada_tablet_energy_monthly:
+  friendly_name: 'Ada Tablet Total Energy Monthly'
+sensor.ada_tablet_energy_yearly:
+  friendly_name: 'Ada Tablet Total Energy Yearly'
+sensor.servers_power:
+  friendly_name: 'Servers Current Power'
+sensor.servers_energy:
+  friendly_name: 'Servers Total Energy'
+sensor.servers_energy_daily:
+  friendly_name: 'Servers Total Energy Daily'
+sensor.servers_energy_weekly:
+  friendly_name: 'Servers Total Energy Hept-Daily'
+sensor.servers_energy_monthly:
+  friendly_name: 'Servers Total Energy Monthly'
+sensor.servers_energy_yearly:
+  friendly_name: 'Servers Total Energy Yearly'
+sensor.server_flo_power:
+  friendly_name: 'Server Flo Current Power'
+sensor.server_flo_energy:
+  friendly_name: 'Server Flo Total Energy'
+sensor.server_flo_energy_daily:
+  friendly_name: 'Server Flo Total Energy Daily'
+sensor.server_flo_energy_weekly:
+  friendly_name: 'Server Flo Total Energy Hept-Daily'
+sensor.server_flo_energy_monthly:
+  friendly_name: 'Server Flo Total Energy Monthly'
+sensor.server_flo_energy_yearly:
+  friendly_name: 'Server Flo Total Energy Yearly'
+sensor.server_meg_power:
+  friendly_name: 'Server Meg Current Power'
+sensor.server_meg_energy:
+  friendly_name: 'Server Meg Total Energy'
+sensor.server_meg_energy_daily:
+  friendly_name: 'Server Meg Total Energy Daily'
+sensor.server_meg_energy_weekly:
+  friendly_name: 'Server Meg Total Energy Hept-Daily'
+sensor.server_meg_energy_monthly:
+  friendly_name: 'Server Meg Total Energy Monthly'
+sensor.server_meg_energy_yearly:
+  friendly_name: 'Server Meg Total Energy Yearly'
+sensor.servers_network_energy:
+  friendly_name: 'Servers & Network Total Energy'
+sensor.servers_network_energy_weekly:
+  friendly_name: 'Servers & Network Total Energy Hept-Daily'
+sensor.servers_network_energy_monthly:
+  friendly_name: 'Servers & Network Total Energy Monthly'
+sensor.servers_network_energy_yearly:
+  friendly_name: 'Servers & Network Total Energy Yearly'
+sensor.server_rack_power:
+  friendly_name: 'Server Rack Current Power'
+sensor.server_rack_energy:
+  friendly_name: 'Server Rack Total Energy'
+sensor.server_rack_energy_daily:
+  friendly_name: 'Server Rack Total Energy Daily'
+sensor.server_rack_energy_weekly:
+  friendly_name: 'Server Rack Total Energy Hept-Daily'
+sensor.server_rack_energy_monthly:
+  friendly_name: 'Server Rack Total Energy Monthly'
+sensor.server_rack_energy_yearly:
+  friendly_name: 'Server Rack Total Energy Yearly'
+sensor.network_switch_power:
+  friendly_name: 'Network Switch Current Power'
+sensor.network_switch_energy:
+  friendly_name: 'Network Switch Total Energy'
+sensor.network_switch_energy_daily:
+  friendly_name: 'Network Switch Total Energy Daily'
+sensor.network_switch_energy_weekly:
+  friendly_name: 'Network Switch Total Energy Hept-Daily'
+sensor.network_switch_energy_monthly:
+  friendly_name: 'Network Switch Total Energy Monthly'
+sensor.network_switch_energy_yearly:
+  friendly_name: 'Network Switch Total Energy Yearly'
+sensor.network_power:
+  friendly_name: 'Network Current Power'
+sensor.network_energy:
+  friendly_name: 'Network Total Energy'
+sensor.network_energy_daily:
+  friendly_name: 'Network Total Energy Daily'
+sensor.network_energy_weekly:
+  friendly_name: 'Network Total Energy Hept-Daily'
+sensor.network_energy_monthly:
+  friendly_name: 'Network Total Energy Monthly'
+sensor.network_energy_yearly:
+  friendly_name: 'Network Total Energy Yearly'
+sensor.internet_modem_power:
+  friendly_name: 'Internet Modem Current Power'
+sensor.internet_modem_energy:
+  friendly_name: 'Internet Modem Total Energy'
+sensor.internet_modem_energy_daily:
+  friendly_name: 'Internet Modem Total Energy Daily'
+sensor.internet_modem_energy_weekly:
+  friendly_name: 'Internet Modem Total Energy Hept-Daily'
+sensor.internet_modem_energy_monthly:
+  friendly_name: 'Internet Modem Total Energy Monthly'
+sensor.internet_modem_energy_yearly:
+  friendly_name: 'Internet Modem Total Energy Yearly'
+sensor.zigbee_repeaters_power:
+  friendly_name: 'Zigbee Repeaters Current Power'
+sensor.zigbee_repeaters_energy:
+  friendly_name: 'Zigbee Repeaters Total Energy'
+sensor.zigbee_repeaters_energy_daily:
+  friendly_name: 'Zigbee Repeaters Total Energy Daily'
+sensor.zigbee_repeaters_energy_weekly:
+  friendly_name: 'Zigbee Repeaters Total Energy Hept-Daily'
+sensor.zigbee_repeaters_energy_monthly:
+  friendly_name: 'Zigbee Repeaters Total Energy Monthly'
+sensor.zigbee_repeaters_energy_yearly:
+  friendly_name: 'Zigbee Repeaters Total Energy Yearly'
+sensor.ada_audio_visual_devices_power:
+  friendly_name: 'Ada Audio Visual Devices Current Power'
+sensor.ada_audio_visual_devices_energy:
+  friendly_name: 'Ada Audio Visual Devices Total Energy'
+sensor.ada_audio_visual_devices_energy_daily:
+  friendly_name: 'Ada Audio Visual Devices Total Energy Daily'
+sensor.ada_audio_visual_devices_energy_weekly:
+  friendly_name: 'Ada Audio Visual Devices Total Energy Hept-Daily'
+sensor.ada_audio_visual_devices_energy_monthly:
+  friendly_name: 'Ada Audio Visual Devices Total Energy Monthly'
+sensor.ada_audio_visual_devices_energy_yearly:
+  friendly_name: 'Ada Audio Visual Devices Total Energy Yearly'
+sensor.edwin_audio_visual_devices_power:
+  friendly_name: 'Edwin Audio Visual Devices Current Power'
+sensor.edwin_audio_visual_devices_energy:
+  friendly_name: 'Edwin Audio Visual Devices Total Energy'
+sensor.edwin_audio_visual_devices_energy_daily:
+  friendly_name: 'Edwin Audio Visual Devices Total Energy Daily'
+sensor.edwin_audio_visual_devices_energy_weekly:
+  friendly_name: 'Edwin Audio Visual Devices Total Energy Hept-Daily'
+sensor.edwin_audio_visual_devices_energy_monthly:
+  friendly_name: 'Edwin Audio Visual Devices Total Energy Monthly'
+sensor.edwin_audio_visual_devices_energy_yearly:
+  friendly_name: 'Edwin Audio Visual Devices Total Energy Yearly'
+sensor.parents_audio_visual_devices_power:
+  friendly_name: 'Parents Audio Visual Devices Current Power'
+sensor.parents_audio_visual_devices_energy:
+  friendly_name: 'Parents Audio Visual Devices Total Energy'
+sensor.parents_audio_visual_devices_energy_daily:
+  friendly_name: 'Parents Audio Visual Devices Total Energy Daily'
+sensor.parents_audio_visual_devices_energy_weekly:
+  friendly_name: 'Parents Audio Visual Devices Total Energy Hept-Daily'
+sensor.parents_audio_visual_devices_energy_monthly:
+  friendly_name: 'Parents Audio Visual Devices Total Energy Monthly'
+sensor.parents_audio_visual_devices_energy_yearly:
+  friendly_name: 'Parents Audio Visual Devices Total Energy Yearly'
+sensor.kitchen_audio_visual_devices_power:
+  friendly_name: 'Kitchen Audio Visual Devices Current Power'
+sensor.kitchen_audio_visual_devices_energy:
+  friendly_name: 'Kitchen Audio Visual Devices Total Energy'
+sensor.kitchen_audio_visual_devices_energy_daily:
+  friendly_name: 'Kitchen Audio Visual Devices Total Energy Daily'
+sensor.kitchen_audio_visual_devices_energy_weekly:
+  friendly_name: 'Kitchen Audio Visual Devices Total Energy Hept-Daily'
+sensor.kitchen_audio_visual_devices_energy_monthly:
+  friendly_name: 'Kitchen Audio Visual Devices Total Energy Monthly'
+sensor.kitchen_audio_visual_devices_energy_yearly:
+  friendly_name: 'Kitchen Audio Visual Devices Total Energy Yearly'
+sensor.office_audio_visual_devices_power:
+  friendly_name: 'Office Audio Visual Devices Current Power'
+sensor.office_audio_visual_devices_energy:
+  friendly_name: 'Office Audio Visual Devices Total Energy'
+sensor.office_audio_visual_devices_energy_daily:
+  friendly_name: 'Office Audio Visual Devices Total Energy Daily'
+sensor.office_audio_visual_devices_energy_weekly:
+  friendly_name: 'Office Audio Visual Devices Total Energy Hept-Daily'
+sensor.office_audio_visual_devices_energy_monthly:
+  friendly_name: 'Office Audio Visual Devices Total Energy Monthly'
+sensor.office_audio_visual_devices_energy_yearly:
+  friendly_name: 'Office Audio Visual Devices Total Energy Yearly'
+sensor.lounge_audio_visual_devices_power:
+  friendly_name: 'Lounge Audio Visual Devices Current Power'
+sensor.lounge_audio_visual_devices_energy:
+  friendly_name: 'Lounge Audio Visual Devices Total Energy'
+sensor.lounge_audio_visual_devices_energy_daily:
+  friendly_name: 'Lounge Audio Visual Devices Total Energy Daily'
+sensor.lounge_audio_visual_devices_energy_weekly:
+  friendly_name: 'Lounge Audio Visual Devices Total Energy Hept-Daily'
+sensor.lounge_audio_visual_devices_energy_monthly:
+  friendly_name: 'Lounge Audio Visual Devices Total Energy Monthly'
+sensor.lounge_audio_visual_devices_energy_yearly:
+  friendly_name: 'Lounge Audio Visual Devices Total Energy Yearly'
