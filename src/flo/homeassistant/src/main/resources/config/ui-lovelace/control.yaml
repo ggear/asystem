@@ -95,7 +95,7 @@
     - entity: light.kitchen_main
       name: Kitchen Main
       icon: mdi:lightbulb-group
-    - entity: switch.old_kitchen_downlights_plug
+    - entity: light.kitchen_downlights_plug
       name: Kitchen Downlights
       icon: mdi:lightbulb-group
     - entity: light.laundry_main
