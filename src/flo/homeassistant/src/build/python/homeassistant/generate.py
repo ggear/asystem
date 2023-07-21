@@ -497,7 +497,7 @@ sonos:
         metadata_contact_df = metadata_haas_df[
             (metadata_haas_df["index"] > 0) &
             (metadata_haas_df["entity_status"] == "Enabled") &
-            (metadata_haas_df["device_model"] == "Contact Sensor") &
+            (metadata_haas_df["device_model"] == "SNZB-04") &
             (metadata_haas_df["unique_id"].str.len() > 0)
             ]
         metadata_contact_dicts = [row.dropna().to_dict() for index, row in metadata_contact_df.iterrows()]
@@ -1394,12 +1394,12 @@ template:
   - binary_sensor:
             """.strip() + "\n")
             for metadata_electricity_proxy_dict in metadata_electricity_proxy_dicts:
-                metadata_electricity_proxy_type = metadata_electricity_proxy_dict["device_identifiers"] \
+                metadata_electricity_proxy_type = metadata_electricity_proxy_dict["device_proxy_type"] \
                     if (
-                        "device_identifiers" in metadata_electricity_proxy_dict and
-                        str(metadata_electricity_proxy_dict["device_identifiers"]) != "" and
-                        str(metadata_electricity_proxy_dict["device_identifiers"]) != "nan" and
-                        str(metadata_electricity_proxy_dict["device_identifiers"]) != "none"
+                        "device_proxy_type" in metadata_electricity_proxy_dict and
+                        str(metadata_electricity_proxy_dict["device_proxy_type"]) != "" and
+                        str(metadata_electricity_proxy_dict["device_proxy_type"]) != "nan" and
+                        str(metadata_electricity_proxy_dict["device_proxy_type"]) != "none"
                 ) else "switch"
                 metadata_electricity_proxy_state = "states('media_player.{}') != \"unavailable\"".format(
                     metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),

@@ -695,9 +695,18 @@ sensor.rack_outlet_plug_energy_power:
 sensor.rack_outlet_plug_energy_total:
   friendly_name: 'Server Rack'
   unit_of_measurement: 'kWh'
+switch.old_roof_network_switch_plug:
+  friendly_name: 'Network Switch'
+  icon: 'mdi:server-network'
 switch.roof_network_switch_plug:
   friendly_name: 'Network Switch'
   icon: 'mdi:server-network'
+sensor.roof_network_switch_plug_energy_power:
+  friendly_name: 'Network Switch'
+  unit_of_measurement: 'W'
+sensor.roof_network_switch_plug_energy_total:
+  friendly_name: 'Network Switch'
+  unit_of_measurement: 'kWh'
 switch.rack_internet_modem_plug:
   friendly_name: 'Internet Modem'
   icon: 'mdi:router-wireless'
@@ -885,6 +894,18 @@ sensor.rack_outlet_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.rack_outlet_plug_energy_total_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.roof_network_switch_plug_energy_total_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.roof_network_switch_plug_energy_total_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.roof_network_switch_plug_energy_total_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.roof_network_switch_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.kitchen_downlights_plug_power:
@@ -1444,29 +1465,29 @@ sensor.old_rack_outlet_plug_energy_monthly:
 sensor.old_rack_outlet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.roof_network_switch_plug_current:
+sensor.old_roof_network_switch_plug_current:
   friendly_name: 'Current Amperage'
-sensor.roof_network_switch_plug_voltage:
+sensor.old_roof_network_switch_plug_voltage:
   friendly_name: 'Current Voltage'
-sensor.roof_network_switch_plug_current_consumption:
+sensor.old_roof_network_switch_plug_current_consumption:
   friendly_name: 'Current Power'
-sensor.roof_network_switch_plug_energy:
+sensor.old_roof_network_switch_plug_energy:
   friendly_name: 'Total Energy'
-sensor.roof_network_switch_plug_total_consumption:
+sensor.old_roof_network_switch_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
-sensor.roof_network_switch_plug_today_s_consumption:
+sensor.old_roof_network_switch_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
   icon: 'mdi:counter'
-sensor.roof_network_switch_plug_energy_daily:
+sensor.old_roof_network_switch_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.roof_network_switch_plug_energy_weekly:
+sensor.old_roof_network_switch_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.roof_network_switch_plug_energy_monthly:
+sensor.old_roof_network_switch_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.roof_network_switch_plug_energy_yearly:
+sensor.old_roof_network_switch_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.rack_internet_modem_plug_current:
@@ -2719,6 +2740,22 @@ sensor.template_rack_outlet_plug_proxy_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.template_rack_outlet_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_old_roof_network_switch_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_old_roof_network_switch_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_old_roof_network_switch_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_old_roof_network_switch_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_old_roof_network_switch_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_old_roof_network_switch_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.template_roof_network_switch_plug_proxy_power:

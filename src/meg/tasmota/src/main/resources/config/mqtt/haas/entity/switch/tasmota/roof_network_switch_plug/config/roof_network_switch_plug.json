@@ -1,0 +1,36 @@
+{
+  "unique_id": "roof_network_switch_plug",
+  "name": "roof_network_switch_plug",
+  "icon": "mdi:server-network",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/roof_network_switch_plug/stat/POWER",
+  "value_template": "{{ value }}",
+  "command_topic": "tasmota/device/roof_network_switch_plug/cmnd/POWER",
+  "availability_topic": "tasmota/device/roof_network_switch_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.105/?",
+    "name": "sonoff-roof-network-switch",
+    "sw_version": "13.0.0",
+    "identifiers": "Network Switch",
+    "model": "POWR316D",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Roof",
+    "connections": [
+      [
+        "mac",
+        "40:22:d8:62:9e:38"
+      ],
+      [
+        "ip",
+        "10.0.6.105"
+      ]
+    ]
+  }
+}

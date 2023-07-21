@@ -18,8 +18,8 @@
 10.0.4.54 google-office-home.janeandgraham.com google-office-home
 10.0.4.55 google-parents-home.janeandgraham.com google-parents-home
 10.0.4.56 google-kitchen-home.janeandgraham.com google-kitchen-home
-10.0.4.57 google-ada-tablet.janeandgraham.com google-ada-tablet
-10.0.4.58 google-edwin-tablet.janeandgraham.com google-edwin-tablet
+10.0.4.57 google-lounge-ada-tablet.janeandgraham.com google-lounge-ada-tablet
+10.0.4.58 google-kitchen-edwin-tablet.janeandgraham.com google-kitchen-edwin-tablet
 10.0.6.100 sonoff-roof-water-booster.janeandgraham.com sonoff-roof-water-booster
 10.0.6.101 sonoff-rack-fans.janeandgraham.com sonoff-rack-fans
 10.0.6.102 sonoff-rack-outlet.janeandgraham.com sonoff-rack-outlet
@@ -28,7 +28,7 @@
 10.0.6.105 sonoff-roof-network-switch.janeandgraham.com sonoff-roof-network-switch
 10.0.6.20 uvc-ada.janeandgraham.com uvc-ada
 10.0.6.21 uvc-edwin.janeandgraham.com uvc-edwin
-10.0.6.22 brother-printer.janeandgraham.com brother-printer
+10.0.6.22 brother-rack-laser-printer.janeandgraham.com brother-rack-laser-printer
 10.0.6.60 senseme-ada-fan.janeandgraham.com senseme-ada-fan
 10.0.6.61 senseme-edwin-fan.janeandgraham.com senseme-edwin-fan
 10.0.6.62 senseme-parents-fan.janeandgraham.com senseme-parents-fan
@@ -38,7 +38,7 @@
 10.0.6.70 tplink-lounge-sub.janeandgraham.com tplink-lounge-sub
 10.0.6.71 tplink-study-battery-charger.janeandgraham.com tplink-study-battery-charger
 10.0.6.72 tplink-laundry-vacuum-charger.janeandgraham.com tplink-laundry-vacuum-charger
-10.0.6.73 tplink-kitchen-dish_washer.janeandgraham.com tplink-kitchen-dish_washer
+10.0.6.73 tplink-kitchen-dish-washer.janeandgraham.com tplink-kitchen-dish-washer
 10.0.6.74 tplink-laundry-clothes-dryer.janeandgraham.com tplink-laundry-clothes-dryer
 10.0.6.75 tplink-laundry-washing-machine.janeandgraham.com tplink-laundry-washing-machine
 10.0.6.76 tplink-kitchen-coffee-machine.janeandgraham.com tplink-kitchen-coffee-machine

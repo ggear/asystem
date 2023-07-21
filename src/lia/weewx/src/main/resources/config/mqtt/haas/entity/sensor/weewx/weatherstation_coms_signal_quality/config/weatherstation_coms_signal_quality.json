@@ -7,9 +7,9 @@
   "qos": "1",
   "device": {
     "via_device": "WeeWX",
-    "name": "weather-station",
+    "name": "davis-rack-weather-station",
     "sw_version": "3.15",
-    "identifiers": "console",
+    "identifiers": "Weather Station",
     "model": "Vantage Pro2",
     "manufacturer": "Davis",
     "suggested_area": "Rack"

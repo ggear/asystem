@@ -18,7 +18,7 @@
     "configuration_url": "http://10.0.6.101/?",
     "name": "sonoff-rack-fans",
     "sw_version": "13.0.0",
-    "identifiers": "fans",
+    "identifiers": "Fans",
     "model": "BASICR2",
     "manufacturer": "Sonoff",
     "suggested_area": "Rack",

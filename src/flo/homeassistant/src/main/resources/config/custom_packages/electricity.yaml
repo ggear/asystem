@@ -127,7 +127,11 @@ template:
       #################################################################################
       - unique_id: rack_outlet_plug_proxy
         state: >-
-          {{ states('outlet.rack_outlet_plug') }}
+          {{ states('switch.rack_outlet_plug') }}
+      #################################################################################
+      - unique_id: old_roof_network_switch_plug_proxy
+        state: >-
+          {{ states('switch.old_roof_network_switch_plug') }}
       #################################################################################
       - unique_id: roof_network_switch_plug_proxy
         state: >-
@@ -178,6 +182,20 @@ sensor:
     entities:
       - entity_id: switch.old_rack_outlet_plug
         power_sensor_id: sensor.old_rack_outlet_plug_current_consumption
+        force_energy_sensor_creation: true
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: binary_sensor.template_old_roof_network_switch_plug_proxy
+        standby_power: 1.54
+        unavailable_power: 0
+        fixed:
+          power: 2.19
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: switch.old_roof_network_switch_plug
+        power_sensor_id: sensor.old_roof_network_switch_plug_current_consumption
         force_energy_sensor_creation: true
   #####################################################################################
   - platform: powercalc
@@ -618,13 +636,13 @@ sensor:
               - create_group: Network Switch
                 entities:
                   - entity_id: binary_sensor.template_roof_network_switch_plug_proxy
-                    standby_power: 1.54
+                    standby_power: 1.5
                     unavailable_power: 0
                     fixed:
-                      power: 2.19
+                      power: 2
                   - entity_id: switch.roof_network_switch_plug
-                    power_sensor_id: sensor.roof_network_switch_plug_current_consumption
-                    force_energy_sensor_creation: true
+                    power_sensor_id: sensor.roof_network_switch_plug_energy_power
+                    energy_sensor_id: sensor.roof_network_switch_plug_energy_total
               #########################################################################
               - create_group: Zigbee Repeaters
                 entities:

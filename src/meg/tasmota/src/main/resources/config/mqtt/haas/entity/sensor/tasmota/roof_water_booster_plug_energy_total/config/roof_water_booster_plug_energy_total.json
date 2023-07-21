@@ -14,7 +14,7 @@
     "configuration_url": "http://10.0.6.100/?",
     "name": "sonoff-roof-water-booster",
     "sw_version": "13.0.0",
-    "identifiers": "water-booster",
+    "identifiers": "Water Booster",
     "model": "POWR3",
     "manufacturer": "Sonoff",
     "suggested_area": "Roof"

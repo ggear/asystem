@@ -18,7 +18,7 @@
     "configuration_url": "http://10.0.6.102/?",
     "name": "sonoff-rack-outlet",
     "sw_version": "13.0.0",
-    "identifiers": "outlet",
+    "identifiers": "Outlet",
     "model": "POWR316D",
     "manufacturer": "Sonoff",
     "suggested_area": "Rack",

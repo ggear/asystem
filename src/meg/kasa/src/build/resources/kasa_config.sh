@@ -101,11 +101,11 @@ else
 	echo '' && echo 'Skipping config for device [office_outlet_plug] at [http://10.0.6.83/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.84 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [roof_network_switch_plug] at [10.0.6.84] ... '
-	kasa --host 10.0.6.84 --type plug alias 'Roof Network Switch Plug'
+	echo '' && echo 'Processing config for device [old_roof_network_switch_plug] at [10.0.6.84] ... '
+	kasa --host 10.0.6.84 --type plug alias 'Old Roof Network Switch Plug'
 	kasa --host 10.0.6.84 --type plug led 'False'
 else
-	echo '' && echo 'Skipping config for device [roof_network_switch_plug] at [http://10.0.6.84/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [old_roof_network_switch_plug] at [http://10.0.6.84/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.85 9999 2>/dev/null; then
 	echo '' && echo 'Processing config for device [rack_internet_modem_plug] at [10.0.6.85] ... '

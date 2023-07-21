@@ -14,7 +14,7 @@
     "configuration_url": "http://10.0.6.104/?",
     "name": "sonoff-kitchen-fan",
     "sw_version": "13.0.0",
-    "identifiers": "fan",
+    "identifiers": "Fan",
     "model": "POWR316D",
     "manufacturer": "Sonoff",
     "suggested_area": "Kitchen"
