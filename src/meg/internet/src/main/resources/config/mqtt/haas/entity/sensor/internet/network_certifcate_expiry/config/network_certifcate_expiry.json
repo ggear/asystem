@@ -13,7 +13,7 @@
     "name": "home-internet-script",
     "sw_version": "ASYSTEM_VERSION",
     "identifiers": "Internet Script",
-    "model": "Python",
+    "model": "Telegraf Python Script",
     "manufacturer": "JaneAndGraham",
     "suggested_area": "Home"
   }

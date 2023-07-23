@@ -349,6 +349,27 @@ compensation:
         ]
     metadata_control_dicts = [row.dropna().to_dict() for index, row in metadata_control_df.iterrows()]
     metadata_control_dicts = sorted(metadata_control_dicts, key=lambda metadata_control_dict: metadata_control_dict['connection_ip'])
+    metadata_control_init_df = metadata_haas_df[
+        (metadata_haas_df["index"] > 0) &
+        (metadata_haas_df["entity_status"] == "Enabled") &
+        (metadata_haas_df["device_via_device"] == "Tasmota") &
+        (metadata_haas_df["entity_namespace"].str.len() > 0) &
+        (metadata_haas_df["entity_namespace"] != "sensor") &
+        (metadata_haas_df["unique_id"].str.len() > 0)
+        ]
+    metadata_control_init_dicts = {}
+    for _, metadata_haas_row in metadata_control_init_df.iterrows():
+        if metadata_haas_row["entity_namespace"] not in metadata_control_init_dicts:
+            metadata_control_init_dicts[metadata_haas_row["entity_namespace"]] = {}
+        metadata_control_init_state = "on" if metadata_haas_row["entity_namespace"] == "switch" and \
+                                              "tasmota_device_config" in metadata_haas_row and \
+                                              "PowerOnState" in json.loads(metadata_haas_row["tasmota_device_config"]) and \
+                                              json.loads(metadata_haas_row["tasmota_device_config"])["PowerOnState"] == 1 \
+            else "off"
+        if metadata_control_init_state not in metadata_control_init_dicts[metadata_haas_row["entity_namespace"]]:
+            metadata_control_init_dicts[metadata_haas_row["entity_namespace"]][metadata_control_init_state] = []
+        metadata_control_init_dicts[metadata_haas_row["entity_namespace"]][metadata_control_init_state] \
+            .append(metadata_haas_row["unique_id"])
     metadata_control_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/control.yaml"))
     with open(metadata_control_path, 'w') as metadata_control_file:
         metadata_control_file.write("""

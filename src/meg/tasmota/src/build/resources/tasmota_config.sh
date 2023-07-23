@@ -14,6 +14,12 @@ if netcat -zw 1 10.0.6.100 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerOnState] already set to [0]'
 	fi
+	if [ "$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerRetain' | grep '{"PowerRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerRetain] to [ON] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerRetain] already set to [ON]'
+	fi
 	if [ "$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=StatusRetain ON'
 		echo ''
@@ -101,6 +107,12 @@ if netcat -zw 1 10.0.6.101 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerOnState] already set to [0]'
 	fi
+	if [ "$(curl -s http://10.0.6.101/cm? --data-urlencode 'cmnd=PowerRetain' | grep '{"PowerRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerRetain] to [ON] with response: ' && curl -s http://10.0.6.101/cm? --data-urlencode 'cmnd=PowerRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerRetain] already set to [ON]'
+	fi
 	if [ "$(curl -s http://10.0.6.101/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s http://10.0.6.101/cm? --data-urlencode 'cmnd=StatusRetain ON'
 		echo ''
@@ -127,6 +139,12 @@ if netcat -zw 1 10.0.6.102 80 2>/dev/null; then
 		echo ''
 	else
 		echo 'Config set skipped, [PowerOnState] already set to [1]'
+	fi
+	if [ "$(curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=PowerRetain' | grep '{"PowerRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerRetain] to [ON] with response: ' && curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=PowerRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
 	if [ "$(curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=StatusRetain ON'
@@ -215,6 +233,12 @@ if netcat -zw 1 10.0.6.103 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [PowerOnState] already set to [1]'
 	fi
+	if [ "$(curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=PowerRetain' | grep '{"PowerRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerRetain] to [ON] with response: ' && curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=PowerRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerRetain] already set to [ON]'
+	fi
 	if [ "$(curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=StatusRetain ON'
 		echo ''
@@ -241,6 +265,12 @@ if netcat -zw 1 10.0.6.104 80 2>/dev/null; then
 		echo ''
 	else
 		echo 'Config set skipped, [PowerOnState] already set to [0]'
+	fi
+	if [ "$(curl -s http://10.0.6.104/cm? --data-urlencode 'cmnd=PowerRetain' | grep '{"PowerRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerRetain] to [ON] with response: ' && curl -s http://10.0.6.104/cm? --data-urlencode 'cmnd=PowerRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
 	if [ "$(curl -s http://10.0.6.104/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s http://10.0.6.104/cm? --data-urlencode 'cmnd=StatusRetain ON'
@@ -328,6 +358,12 @@ if netcat -zw 1 10.0.6.105 80 2>/dev/null; then
 		echo ''
 	else
 		echo 'Config set skipped, [PowerOnState] already set to [1]'
+	fi
+	if [ "$(curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=PowerRetain' | grep '{"PowerRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerRetain] to [ON] with response: ' && curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=PowerRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerRetain] already set to [ON]'
 	fi
 	if [ "$(curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=StatusRetain ON'
