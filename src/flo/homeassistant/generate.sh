@@ -45,7 +45,7 @@ rm -rf src/main/resources/config/www/custom_ui/mini-graph-card
 mkdir -p src/main/resources/config/www/custom_ui/mini-graph-card &&
   wget -q -O src/main/resources/config/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js https://github.com/kalkih/mini-graph-card/releases/download/${VERSION}/mini-graph-card-bundle.js
 
-VERSION=3.3.2
+VERSION=3.3.4
 pull_repo $(pwd) homeassistant variables-component Wibias/hass-variables ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/variable
 mkdir -p src/main/resources/config/custom_components &&
@@ -69,7 +69,7 @@ rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
 
-VERSION=1.15.0
+VERSION=1.16.3
 pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/adaptive_lighting
 mkdir -p src/main/resources/config/custom_components &&
