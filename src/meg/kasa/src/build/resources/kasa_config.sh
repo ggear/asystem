@@ -129,18 +129,18 @@ else
 	echo '' && echo 'Skipping config for device [old_kitchen_fan_plug] at [http://10.0.6.87/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.88 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [deck_festoons_plug] at [10.0.6.88] ... '
-	kasa --host 10.0.6.88 --type plug alias 'Deck Festoons Plug'
+	echo '' && echo 'Processing config for device [old_deck_festoons_plug] at [10.0.6.88] ... '
+	kasa --host 10.0.6.88 --type plug alias 'Old Deck Festoons Plug'
 	kasa --host 10.0.6.88 --type plug led 'False'
 else
-	echo '' && echo 'Skipping config for device [deck_festoons_plug] at [http://10.0.6.88/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [old_deck_festoons_plug] at [http://10.0.6.88/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.89 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [landing_festoons_plug] at [10.0.6.89] ... '
-	kasa --host 10.0.6.89 --type plug alias 'Landing Festoons Plug'
+	echo '' && echo 'Processing config for device [old_landing_festoons_plug] at [10.0.6.89] ... '
+	kasa --host 10.0.6.89 --type plug alias 'Old Landing Festoons Plug'
 	kasa --host 10.0.6.89 --type plug led 'False'
 else
-	echo '' && echo 'Skipping config for device [landing_festoons_plug] at [http://10.0.6.89/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [old_landing_festoons_plug] at [http://10.0.6.89/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.90 9999 2>/dev/null; then
 	echo '' && echo 'Processing config for device [ada_tablet_outlet_plug] at [10.0.6.90] ... '

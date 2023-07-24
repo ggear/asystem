@@ -1,0 +1,34 @@
+{
+  "unique_id": "outdoor_pool_filter_plug",
+  "name": "outdoor_pool_filter_plug",
+  "icon": "mdi:thermometer-water",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/outdoor_pool_filter_plug/stat/POWER",
+  "value_template": "{{ value }}",
+  "command_topic": "tasmota/device/outdoor_pool_filter_plug/cmnd/POWER",
+  "availability_topic": "tasmota/device/outdoor_pool_filter_plug/tele/LWT",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.106/?",
+    "name": "sonoff-pool-pool-filter",
+    "sw_version": "13.0.0",
+    "identifiers": "Pool Filter",
+    "model": "POWR3",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Pool",
+    "connections": [
+      [
+        "mac",
+        "ec:fa:bc:50:61:07"
+      ],
+      [
+        "ip",
+        "10.0.6.106"
+      ]
+    ]
+  }
+}
