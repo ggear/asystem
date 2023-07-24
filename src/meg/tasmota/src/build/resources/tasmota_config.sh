@@ -534,3 +534,81 @@ else
 	echo 'Skipping config for device [outdoor_pool_filter_plug] at [http://10.0.6.106/?] given it is unresponsive'
 fi
 echo ''
+if netcat -zw 1 10.0.6.107 80 2>/dev/null; then
+	echo 'Processing config for device [deck_festoons_plug] at [http://10.0.6.107/?] ... '
+	echo 'Current firmware ['"$(curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
+	decode-config.py -s 10.0.6.107 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/deck_festoons_plug.json || true
+	sleep 1 && while ! netcat -zw 1 10.0.6.107 80 2>/dev/null; do echo 'Waiting for device [deck_festoons_plug] to come up ...' && sleep 1; done
+	if [ "$(curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=PowerOnState 0'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerOnState] already set to [0]'
+	fi
+	if [ "$(curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=PowerRetain' | grep '{"PowerRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerRetain] to [ON] with response: ' && curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=PowerRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerRetain] already set to [ON]'
+	fi
+	if [ "$(curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=StatusRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+	fi
+	if [ "$(curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=TelePeriod 10'
+		echo ''
+	else
+		echo 'Config set skipped, [TelePeriod] already set to [10]'
+	fi
+	printf 'Restarting [deck_festoons_plug] with response: ' && curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=Restart 1'
+	printf '
+'
+	printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.107 80 2>/dev/null; do printf '.' && sleep 1; done
+	printf ' done
+'
+else
+	echo 'Skipping config for device [deck_festoons_plug] at [http://10.0.6.107/?] given it is unresponsive'
+fi
+echo ''
+if netcat -zw 1 10.0.6.108 80 2>/dev/null; then
+	echo 'Processing config for device [landing_festoons_plug] at [http://10.0.6.108/?] ... '
+	echo 'Current firmware ['"$(curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
+	decode-config.py -s 10.0.6.108 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/landing_festoons_plug.json || true
+	sleep 1 && while ! netcat -zw 1 10.0.6.108 80 2>/dev/null; do echo 'Waiting for device [landing_festoons_plug] to come up ...' && sleep 1; done
+	if [ "$(curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=PowerOnState 0'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerOnState] already set to [0]'
+	fi
+	if [ "$(curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=PowerRetain' | grep '{"PowerRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [PowerRetain] to [ON] with response: ' && curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=PowerRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [PowerRetain] already set to [ON]'
+	fi
+	if [ "$(curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=StatusRetain' | grep '{"StatusRetain":"ON"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [StatusRetain] to [ON] with response: ' && curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=StatusRetain ON'
+		echo ''
+	else
+		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+	fi
+	if [ "$(curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=TelePeriod 10'
+		echo ''
+	else
+		echo 'Config set skipped, [TelePeriod] already set to [10]'
+	fi
+	printf 'Restarting [landing_festoons_plug] with response: ' && curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=Restart 1'
+	printf '
+'
+	printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.108 80 2>/dev/null; do printf '.' && sleep 1; done
+	printf ' done
+'
+else
+	echo 'Skipping config for device [landing_festoons_plug] at [http://10.0.6.108/?] given it is unresponsive'
+fi
+echo ''

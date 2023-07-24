@@ -45,6 +45,16 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
+  title: Fans
+  entities:
+    - entity: light.deck_festoons_plug
+      name: Kitchen
+      icon: mdi:fan
+    - entity: light.landing_festoons_plug
+      name: Kitchen
+      icon: mdi:fan
+################################################################################
+- type: entities
   title: Lights
   entities:
     - entity: light.ada_fan
@@ -122,12 +132,6 @@
     - entity: light.wardrobe_main
       name: Wardrobe Main
       icon: mdi:lightbulb-group
-    - entity: switch.deck_festoons_plug
-      name: Deck Festoons
-      icon: mdi:lightbulb-group
-    - entity: switch.landing_festoons_plug
-      name: Landing Festoons
-      icon: mdi:lightbulb-group
 ################################################################################
 - type: custom:layout-break
 ################################################################################
@@ -140,6 +144,9 @@
       icon: mdi:radiator
     - entity: switch.roof_water_booster_plug
       name: Water Booster
+      icon: mdi:thermometer-water
+    - entity: switch.outdoor_pool_filter_plug
+      name: Pool Filter
       icon: mdi:thermometer-water
 ################################################################################
 - type: entities

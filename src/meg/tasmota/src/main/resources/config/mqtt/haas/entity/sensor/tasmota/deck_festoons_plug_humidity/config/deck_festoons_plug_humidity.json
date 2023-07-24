@@ -1,0 +1,22 @@
+{
+  "unique_id": "deck_festoons_plug_humidity",
+  "name": "deck_festoons_plug_humidity",
+  "state_class": "total_increasing",
+  "unit_of_measurement": "%",
+  "device_class": "humidity",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/deck_festoons_plug/tele/SENSOR",
+  "value_template": "{{ value_json[\"ENERGY\"][\"Total\"] }}",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.107/?",
+    "name": "sonoff-deck-festoons",
+    "sw_version": "13.0.0",
+    "identifiers": "Festoons",
+    "model": "THR316D",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Deck"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "unique_id": "landing_festoons_plug",
+  "name": "landing_festoons_plug",
+  "icon": "mdi:fan",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/landing_festoons_plug/stat/POWER",
+  "value_template": "{{ value }}",
+  "command_topic": "tasmota/device/landing_festoons_plug/cmnd/POWER",
+  "availability_topic": "tasmota/device/landing_festoons_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.108/?",
+    "name": "sonoff-landing-festoons",
+    "sw_version": "13.0.0",
+    "identifiers": "Festoons",
+    "model": "THR316D",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Landing",
+    "connections": [
+      [
+        "mac",
+        "34:86:5d:fc:b2:20"
+      ],
+      [
+        "ip",
+        "10.0.6.108"
+      ]
+    ]
+  }
+}

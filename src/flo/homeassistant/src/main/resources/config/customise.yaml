@@ -386,12 +386,27 @@ light.ensuite_sconces:
 light.wardrobe_main:
   friendly_name: 'Wardrobe Main'
   icon: 'mdi:lightbulb-group'
-switch.deck_festoons_plug:
+switch.old_deck_festoons_plug:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:lightbulb-group'
-switch.landing_festoons_plug:
+light.deck_festoons_plug:
+  friendly_name: 'Kitchen'
+  icon: 'mdi:fan'
+sensor.deck_festoons_plug_temperature:
+  friendly_name: 'Kitchen'
+  unit_of_measurement: '°C'
+sensor.deck_festoons_plug_humidity:
+  friendly_name: 'Kitchen'
+  unit_of_measurement: '%'
+switch.old_landing_festoons_plug:
   friendly_name: 'Landing Festoons'
   icon: 'mdi:lightbulb-group'
+light.landing_festoons_plug:
+  friendly_name: 'Kitchen'
+  icon: 'mdi:fan'
+sensor.landing_festoons_plug_temperature:
+  friendly_name: 'Kitchen'
+  unit_of_measurement: '°C'
 light.garden_pedestals:
   friendly_name: 'Garden Pedestals'
   icon: 'mdi:lightbulb-group'
@@ -408,6 +423,15 @@ sensor.roof_water_booster_plug_energy_power:
   friendly_name: 'Current Power'
   unit_of_measurement: 'W'
 sensor.roof_water_booster_plug_energy_total:
+  friendly_name: 'Total Energy'
+  unit_of_measurement: 'kWh'
+switch.outdoor_pool_filter_plug:
+  friendly_name: 'Pool Filter'
+  icon: 'mdi:thermometer-water'
+sensor.outdoor_pool_filter_plug_energy_power:
+  friendly_name: 'Current Power'
+  unit_of_measurement: 'W'
+sensor.outdoor_pool_filter_plug_energy_total:
   friendly_name: 'Total Energy'
   unit_of_measurement: 'kWh'
 fan.lounge_air_purifier:
@@ -450,6 +474,10 @@ sensor.study_battery_charger_power:
   unit_of_measurement: 'W'
 sensor.laundry_vacuum_charger_power:
   friendly_name: 'Vacuum Charger'
+  icon: 'mdi:home-lightning-bolt'
+  unit_of_measurement: 'W'
+sensor.outdoor_pool_filter_power:
+  friendly_name: 'Pool Filter'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.roof_water_booster_power:
@@ -530,6 +558,10 @@ sensor.study_battery_charger_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.laundry_vacuum_charger_energy_daily:
   friendly_name: 'Vacuum Charger'
+  icon: 'mdi:battery-charging'
+  unit_of_measurement: 'kWh'
+sensor.outdoor_pool_filter_energy_daily:
+  friendly_name: 'Pool Filter'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.roof_water_booster_energy_daily:
@@ -884,6 +916,18 @@ sensor.roof_water_booster_plug_energy_total_monthly:
 sensor.roof_water_booster_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
+sensor.outdoor_pool_filter_plug_energy_total_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.outdoor_pool_filter_plug_energy_total_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.outdoor_pool_filter_plug_energy_total_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.outdoor_pool_filter_plug_energy_total_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.rack_outlet_plug_energy_total_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
@@ -922,6 +966,38 @@ sensor.kitchen_downlights_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.kitchen_downlights_plug_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.deck_festoons_plug_power:
+  friendly_name: 'Current Power'
+sensor.deck_festoons_plug_energy:
+  friendly_name: 'Total Energy'
+sensor.deck_festoons_plug_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.deck_festoons_plug_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.deck_festoons_plug_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.deck_festoons_plug_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.landing_festoons_plug_power:
+  friendly_name: 'Current Power'
+sensor.landing_festoons_plug_energy:
+  friendly_name: 'Total Energy'
+sensor.landing_festoons_plug_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.landing_festoons_plug_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.landing_festoons_plug_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.landing_festoons_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.rack_fans_plug_power:
@@ -990,54 +1066,54 @@ sensor.old_kitchen_downlights_plug_energy_monthly:
 sensor.old_kitchen_downlights_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.deck_festoons_plug_current:
+sensor.old_deck_festoons_plug_current:
   friendly_name: 'Current Amperage'
-sensor.deck_festoons_plug_voltage:
+sensor.old_deck_festoons_plug_voltage:
   friendly_name: 'Current Voltage'
-sensor.deck_festoons_plug_current_consumption:
+sensor.old_deck_festoons_plug_current_consumption:
   friendly_name: 'Current Power'
-sensor.deck_festoons_plug_energy:
+sensor.old_deck_festoons_plug_energy:
   friendly_name: 'Total Energy'
-sensor.deck_festoons_plug_total_consumption:
+sensor.old_deck_festoons_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
-sensor.deck_festoons_plug_today_s_consumption:
+sensor.old_deck_festoons_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
   icon: 'mdi:counter'
-sensor.deck_festoons_plug_energy_daily:
+sensor.old_deck_festoons_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.deck_festoons_plug_energy_weekly:
+sensor.old_deck_festoons_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.deck_festoons_plug_energy_monthly:
+sensor.old_deck_festoons_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.deck_festoons_plug_energy_yearly:
+sensor.old_deck_festoons_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.landing_festoons_plug_current:
+sensor.old_landing_festoons_plug_current:
   friendly_name: 'Current Amperage'
-sensor.landing_festoons_plug_voltage:
+sensor.old_landing_festoons_plug_voltage:
   friendly_name: 'Current Voltage'
-sensor.landing_festoons_plug_current_consumption:
+sensor.old_landing_festoons_plug_current_consumption:
   friendly_name: 'Current Power'
-sensor.landing_festoons_plug_energy:
+sensor.old_landing_festoons_plug_energy:
   friendly_name: 'Total Energy'
-sensor.landing_festoons_plug_total_consumption:
+sensor.old_landing_festoons_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
-sensor.landing_festoons_plug_today_s_consumption:
+sensor.old_landing_festoons_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
   icon: 'mdi:counter'
-sensor.landing_festoons_plug_energy_daily:
+sensor.old_landing_festoons_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.landing_festoons_plug_energy_weekly:
+sensor.old_landing_festoons_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.landing_festoons_plug_energy_monthly:
+sensor.old_landing_festoons_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.landing_festoons_plug_energy_yearly:
+sensor.old_landing_festoons_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.bathroom_rails_plug_current:
@@ -2331,6 +2407,22 @@ sensor.wardrobe_main_bulb_1_energy_monthly:
 sensor.wardrobe_main_bulb_1_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
+sensor.template_old_deck_festoons_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_old_deck_festoons_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_old_deck_festoons_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_old_deck_festoons_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_old_deck_festoons_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_old_deck_festoons_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.template_deck_festoons_plug_proxy_power:
   friendly_name: 'Current Power'
 sensor.template_deck_festoons_plug_proxy_energy:
@@ -2345,6 +2437,22 @@ sensor.template_deck_festoons_plug_proxy_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.template_deck_festoons_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_old_landing_festoons_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_old_landing_festoons_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_old_landing_festoons_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_old_landing_festoons_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_old_landing_festoons_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_old_landing_festoons_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.template_landing_festoons_plug_proxy_power:
@@ -2425,6 +2533,22 @@ sensor.template_roof_water_booster_plug_proxy_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.template_roof_water_booster_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_outdoor_pool_filter_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_outdoor_pool_filter_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_outdoor_pool_filter_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_outdoor_pool_filter_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_outdoor_pool_filter_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_outdoor_pool_filter_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.template_lounge_air_purifier_proxy_power:
@@ -3390,6 +3514,18 @@ sensor.roof_water_booster_energy_monthly:
   friendly_name: 'Roof Water Booster Total Energy Monthly'
 sensor.roof_water_booster_energy_yearly:
   friendly_name: 'Roof Water Booster Total Energy Yearly'
+sensor.pool_pool_filter_power:
+  friendly_name: 'Pool Pool Filter Current Power'
+sensor.pool_pool_filter_energy:
+  friendly_name: 'Pool Pool Filter Total Energy'
+sensor.pool_pool_filter_energy_daily:
+  friendly_name: 'Pool Pool Filter Total Energy Daily'
+sensor.pool_pool_filter_energy_weekly:
+  friendly_name: 'Pool Pool Filter Total Energy Hept-Daily'
+sensor.pool_pool_filter_energy_monthly:
+  friendly_name: 'Pool Pool Filter Total Energy Monthly'
+sensor.pool_pool_filter_energy_yearly:
+  friendly_name: 'Pool Pool Filter Total Energy Yearly'
 sensor.dining_fans_power:
   friendly_name: 'Dining Fans Current Power'
 sensor.dining_fans_energy:

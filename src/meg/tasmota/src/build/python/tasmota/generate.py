@@ -26,7 +26,6 @@ if __name__ == "__main__":
         (metadata_df["device_via_device"] == "Tasmota") &
         (metadata_df["entity_namespace"].str.len() > 0) &
         (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["name"].str.len() > 0) &
         (metadata_df["device_model"].str.len() > 0) &
         (metadata_df["device_manufacturer"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
@@ -48,7 +47,7 @@ echo ''
                 with open(tasmota_device_path + ".json", "wt") as tasmota_device_file:
                     metadata_tasmota_config_version = 1 if \
                         any(metadata_tasmota_dict["device_model"] == metadata_tasmota_model
-                            for metadata_tasmota_model in ["POWR316D"]) else 0
+                            for metadata_tasmota_model in ["POWR316D", "THR316D"]) else 0
                     metadata_tasmota_config_dict = {
                         "config_version": metadata_tasmota_config_version,
                         "templatename": "{} {}".format(

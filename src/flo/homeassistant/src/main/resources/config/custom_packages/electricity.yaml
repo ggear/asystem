@@ -31,13 +31,21 @@ template:
         state: >-
           {{ states('switch.old_kitchen_downlights_plug') }}
       #################################################################################
+      - unique_id: old_deck_festoons_plug_proxy
+        state: >-
+          {{ states('switch.old_deck_festoons_plug') }}
+      #################################################################################
       - unique_id: deck_festoons_plug_proxy
         state: >-
-          {{ states('switch.deck_festoons_plug') }}
+          {{ states('light.deck_festoons_plug') }}
+      #################################################################################
+      - unique_id: old_landing_festoons_plug_proxy
+        state: >-
+          {{ states('switch.old_landing_festoons_plug') }}
       #################################################################################
       - unique_id: landing_festoons_plug_proxy
         state: >-
-          {{ states('switch.landing_festoons_plug') }}
+          {{ states('light.landing_festoons_plug') }}
       #################################################################################
       - unique_id: bathroom_rails_plug_proxy
         state: >-
@@ -46,6 +54,10 @@ template:
       - unique_id: roof_water_booster_plug_proxy
         state: >-
           {{ states('switch.roof_water_booster_plug') }}
+      #################################################################################
+      - unique_id: outdoor_pool_filter_plug_proxy
+        state: >-
+          {{ states('switch.outdoor_pool_filter_plug') }}
       #################################################################################
       - unique_id: lounge_air_purifier_proxy
         state: >-
@@ -169,6 +181,34 @@ sensor:
     entities:
       - entity_id: switch.old_kitchen_downlights_plug
         power_sensor_id: sensor.old_kitchen_downlights_plug_current_consumption
+        force_energy_sensor_creation: true
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: binary_sensor.template_old_deck_festoons_plug_proxy
+        standby_power: 0.5
+        unavailable_power: 0
+        fixed:
+          power: 0.9
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: switch.old_deck_festoons_plug
+        power_sensor_id: sensor.old_deck_festoons_plug_current_consumption
+        force_energy_sensor_creation: true
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: binary_sensor.template_old_landing_festoons_plug_proxy
+        standby_power: 0.5
+        unavailable_power: 0
+        fixed:
+          power: 0.9
+  #####################################################################################
+  - platform: powercalc
+    entities:
+      - entity_id: switch.old_landing_festoons_plug
+        power_sensor_id: sensor.old_landing_festoons_plug_current_consumption
         force_energy_sensor_creation: true
   #####################################################################################
   - platform: powercalc
@@ -330,6 +370,30 @@ sensor:
                       min_power: 2.5
                       max_power: 31.1
               #########################################################################
+              - create_group: Deck Lights
+                entities:
+                  - entity_id: binary_sensor.template_deck_festoons_plug_proxy
+                    standby_power: 1.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 2
+                  - entity_id: light.deck_festoons_plug
+                    standby_power: 0
+                    fixed:
+                      power: 4.5
+              #########################################################################
+              - create_group: Landing Lights
+                entities:
+                  - entity_id: binary_sensor.template_landing_festoons_plug_proxy
+                    standby_power: 1.5
+                    unavailable_power: 0
+                    fixed:
+                      power: 2
+                  - entity_id: light.landing_festoons_plug
+                    standby_power: 0
+                    fixed:
+                      power: 31
+              #########################################################################
               - create_group: Dining Fans
                 entities:
                   - entity_id: binary_sensor.template_dining_air_purifier_proxy
@@ -450,28 +514,6 @@ sensor:
               - create_group: Wardrobe Lights
                 entities:
                   - entity_id: light.wardrobe_main_bulb_1
-              #########################################################################
-              - create_group: Deck Lights
-                entities:
-                  - entity_id: binary_sensor.template_deck_festoons_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.deck_festoons_plug
-                    power_sensor_id: sensor.deck_festoons_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Landing Lights
-                entities:
-                  - entity_id: binary_sensor.template_landing_festoons_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.landing_festoons_plug
-                    power_sensor_id: sensor.landing_festoons_plug_current_consumption
-                    force_energy_sensor_creation: true
               #########################################################################
               - create_group: Tree Lights
                 entities:
@@ -701,6 +743,17 @@ sensor:
                   - entity_id: switch.roof_water_booster_plug
                     power_sensor_id: sensor.roof_water_booster_plug_energy_power
                     energy_sensor_id: sensor.roof_water_booster_plug_energy_total
+              #########################################################################
+              - create_group: Pool Pool Filter
+                entities:
+                  - entity_id: binary_sensor.template_outdoor_pool_filter_plug_proxy
+                    standby_power: 1.54
+                    unavailable_power: 0
+                    fixed:
+                      power: 2.19
+                  - entity_id: switch.outdoor_pool_filter_plug
+                    power_sensor_id: sensor.outdoor_pool_filter_plug_energy_power
+                    energy_sensor_id: sensor.outdoor_pool_filter_plug_energy_total
           #############################################################################
           - create_group: Whitegoods Discretionary
             entities:

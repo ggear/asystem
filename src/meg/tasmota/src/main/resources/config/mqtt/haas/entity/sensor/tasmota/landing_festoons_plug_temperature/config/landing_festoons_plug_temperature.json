@@ -1,0 +1,22 @@
+{
+  "unique_id": "landing_festoons_plug_temperature",
+  "name": "landing_festoons_plug_temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/landing_festoons_plug/tele/SENSOR",
+  "value_template": "{{ value_json[\"ENERGY\"][\"Power\"] }}",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.108/?",
+    "name": "sonoff-landing-festoons",
+    "sw_version": "13.0.0",
+    "identifiers": "Festoons",
+    "model": "THR316D",
+    "manufacturer": "Sonoff",
+    "suggested_area": "Landing"
+  }
+}

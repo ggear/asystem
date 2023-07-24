@@ -189,11 +189,11 @@ light.wardrobe_main:
   name: Wardrobe Main Light
   aliases: []
   room: Wardrobe
-switch.deck_festoons_plug:
+light.deck_festoons_plug:
   name: Deck Festoons
   aliases: []
   room: Deck
-switch.landing_festoons_plug:
+light.landing_festoons_plug:
   name: Landing Festoons
   aliases: []
   room: Landing
@@ -213,6 +213,10 @@ switch.roof_water_booster_plug:
   name: Roof Water Booster
   aliases: []
   room: Roof
+switch.outdoor_pool_filter_plug:
+  name: Pool Pool Filter
+  aliases: []
+  room: Pool
 fan.lounge_air_purifier:
   name: Lounge Air Purifier
   aliases: []
