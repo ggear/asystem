@@ -124,10 +124,10 @@
       icon: mdi:lightbulb-group
     - entity: light.deck_festoons_plug
       name: Deck Festoons
-      icon: mdi:fan
+      icon: mdi:lightbulb-group
     - entity: light.landing_festoons_plug
       name: Landing Festoons
-      icon: mdi:fan
+      icon: mdi:lightbulb-group
 ################################################################################
 - type: custom:layout-break
 ################################################################################

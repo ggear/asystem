@@ -18,7 +18,7 @@
     "configuration_url": "http://10.0.6.103/?",
     "name": "sonoff-kitchen-downlights",
     "sw_version": "13.0.0",
-    "identifiers": "downlights",
+    "identifiers": "Downlights",
     "model": "BASICR2",
     "manufacturer": "Sonoff",
     "suggested_area": "Kitchen",

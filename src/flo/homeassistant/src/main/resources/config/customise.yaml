@@ -391,7 +391,7 @@ switch.old_deck_festoons_plug:
   icon: 'mdi:lightbulb-group'
 light.deck_festoons_plug:
   friendly_name: 'Deck Festoons'
-  icon: 'mdi:fan'
+  icon: 'mdi:lightbulb-group'
 sensor.deck_festoons_plug_temperature:
   friendly_name: 'Deck Festoons'
   unit_of_measurement: '°C'
@@ -403,7 +403,7 @@ switch.old_landing_festoons_plug:
   icon: 'mdi:lightbulb-group'
 light.landing_festoons_plug:
   friendly_name: 'Landing Festoons'
-  icon: 'mdi:fan'
+  icon: 'mdi:lightbulb-group'
 sensor.landing_festoons_plug_temperature:
   friendly_name: 'Landing Festoons'
   unit_of_measurement: '°C'

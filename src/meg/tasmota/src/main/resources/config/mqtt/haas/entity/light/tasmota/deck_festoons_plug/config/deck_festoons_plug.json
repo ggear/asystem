@@ -1,7 +1,7 @@
 {
   "unique_id": "deck_festoons_plug",
   "name": "deck_festoons_plug",
-  "icon": "mdi:fan",
+  "icon": "mdi:lightbulb-group",
   "force_update": "false",
   "optimistic": "true",
   "state_topic": "tasmota/device/deck_festoons_plug/stat/POWER",

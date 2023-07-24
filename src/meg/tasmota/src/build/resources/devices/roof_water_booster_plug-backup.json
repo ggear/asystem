@@ -27,7 +27,7 @@
   "baudrate": 19200, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 72, 
+  "bootcount": 80, 
   "bootcount_reset_time": 1656400328, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -52,11 +52,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0x0287", 
-  "cfg_crc32": "0x9968ebb9", 
+  "cfg_crc": "0x9884", 
+  "cfg_crc32": "0x867169fd", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1689741207, 
+  "cfg_timestamp": 1690186474, 
   "config_version": 0, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -150,25 +150,25 @@
   "energy_current_calibration": 16840, 
   "energy_current_calibration2": 16840, 
   "energy_frequency_calibration": 0, 
-  "energy_kWhdoy": 199, 
+  "energy_kWhdoy": 204, 
   "energy_kWhexport_ph": [
     0, 
     256, 
     4194304
   ], 
   "energy_kWhtoday_ph": [
-    401, 
+    234, 
     0, 
     0
   ], 
   "energy_kWhtotal_ph": [
-    0, 
+    20, 
     0, 
     0
   ], 
   "energy_kWhtotal_time": 1656400328, 
   "energy_kWhyesterday_ph": [
-    2247, 
+    2004, 
     0, 
     0
   ], 
@@ -189,16 +189,16 @@
   "energy_power_calibration": 5501, 
   "energy_power_calibration2": 5501, 
   "energy_power_delta": [
-    1, 
-    1, 
-    1
+    25, 
+    0, 
+    0
   ], 
   "energy_usage": {
-    "last_return_kWhtotal": 4, 
+    "last_return_kWhtotal": 22, 
     "last_usage_kWhtotal": 0, 
     "return1_kWhtotal": 0, 
     "return2_kWhtotal": 0, 
-    "usage1_kWhtoday": 4, 
+    "usage1_kWhtoday": 22, 
     "usage1_kWhtotal": 0
   }, 
   "energy_voltage_calibration": 1976, 
@@ -222,7 +222,7 @@
     "mqtt_button_retain": 0, 
     "mqtt_enabled": 1, 
     "mqtt_offline": 0, 
-    "mqtt_power_retain": 0, 
+    "mqtt_power_retain": 1, 
     "mqtt_response": 0, 
     "mqtt_sensor_retain": 0, 
     "mqtt_serial": 0, 
@@ -390,8 +390,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0x8c9d", 
-      "crc32": "0x9968ebb9", 
+      "crc": "0x4187", 
+      "crc32": "0x867169fd", 
       "hardware": "ESP82", 
       "size": 4096, 
       "version": {
@@ -406,15 +406,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0x287", 
-      "crc32": "0x9968ebb9", 
+      "crc": "0x9884", 
+      "crc32": "0x867169fd", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2023-07-19 04:33:27"
+    "timestamp": "2023-07-24 08:14:34"
   }, 
   "hostname": "sonoff-ceiling-water-heater-booster", 
   "hotplug_scan": 0, 
@@ -861,7 +861,7 @@
   "pn532_pack": 0, 
   "pn532_password": 0, 
   "power": {
-    "power1": 1, 
+    "power1": 0, 
     "power2": 0, 
     "power3": 0, 
     "power4": 0, 
@@ -1153,7 +1153,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 356, 
+  "save_flag": 387, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 0, 

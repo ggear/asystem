@@ -3,7 +3,7 @@
     "templatename": "Sonoff THR316D",
     "devicename": "deck_festoons_plug",
     "friendlyname": [
-        "Kitchen"
+        "Deck Festoons"
     ],
     "mqtt_host": "10.0.2.11",
     "mqtt_port": "32404",

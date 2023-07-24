@@ -37,7 +37,7 @@
   "baudrate": 460800, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 6, 
+  "bootcount": 17, 
   "bootcount_reset_time": 1690179283, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -62,11 +62,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0x6807", 
-  "cfg_crc32": "0x66cdcda4", 
+  "cfg_crc": "0x4543", 
+  "cfg_crc32": "0xa3a26714", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1690177407, 
+  "cfg_timestamp": 1690186652, 
   "config_version": 1, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -84,7 +84,7 @@
     "", 
     ""
   ], 
-  "devicename": "Tasmota", 
+  "devicename": "landing_festoons_plug", 
   "dimmer_hw_max": 100, 
   "dimmer_hw_min": 0, 
   "dimmer_step": 10, 
@@ -242,7 +242,7 @@
     "mqtt_button_retain": 0, 
     "mqtt_enabled": 1, 
     "mqtt_offline": 0, 
-    "mqtt_power_retain": 0, 
+    "mqtt_power_retain": 1, 
     "mqtt_response": 0, 
     "mqtt_sensor_retain": 0, 
     "mqtt_serial": 0, 
@@ -356,7 +356,7 @@
     "mqtt_info_retain": 0, 
     "mqtt_persistent": 0, 
     "mqtt_state_retain": 0, 
-    "mqtt_status_retain": 0, 
+    "mqtt_status_retain": 1, 
     "mqtt_switches": 0, 
     "pwm_force_same_phase": 0, 
     "shift595_invert_outputs": 0, 
@@ -393,7 +393,7 @@
     0
   ], 
   "friendlyname": [
-    "Tasmota", 
+    "Landing Festoons", 
     "Tasmota2", 
     "Tasmota3", 
     "Tasmota4", 
@@ -410,8 +410,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0x59ba", 
-      "crc32": "0x66cdcda4", 
+      "crc": "0x3261", 
+      "crc32": "0xa3a26714", 
       "hardware": "ESP32 (excl S3/S2/C3)", 
       "size": 4096, 
       "version": {
@@ -426,15 +426,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0x6807", 
-      "crc32": "0x66cdcda4", 
+      "crc": "0x4543", 
+      "crc32": "0xa3a26714", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2023-07-24 05:43:27"
+    "timestamp": "2023-07-24 08:17:32"
   }, 
   "hostname": "%s-%04d", 
   "hotplug_scan": 0, 
@@ -457,8 +457,8 @@
     0, 
     0
   ], 
-  "influxdb_bucket32": "db", 
-  "influxdb_host32": "influxdb", 
+  "influxdb_bucket32": "", 
+  "influxdb_host32": "", 
   "influxdb_org32": "", 
   "influxdb_period": 0, 
   "influxdb_port": 8086, 
@@ -806,16 +806,16 @@
     "0x07", 
     "0x09"
   ], 
-  "mqtt_fulltopic": "%prefix%/%topic%/", 
+  "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/", 
   "mqtt_grptopic": "tasmotas", 
   "mqtt_grptopic2": [
     "", 
     "", 
     ""
   ], 
-  "mqtt_host": "", 
+  "mqtt_host": "10.0.2.11", 
   "mqtt_keepalive": 30, 
-  "mqtt_port": 1883, 
+  "mqtt_port": 32404, 
   "mqtt_prefix": [
     "cmnd", 
     "stat", 
@@ -824,7 +824,7 @@
   "mqtt_pwd": "DVES_PASS", 
   "mqtt_retry": 10, 
   "mqtt_socket_timeout": 4, 
-  "mqtt_topic": "tasmota_%06X", 
+  "mqtt_topic": "landing_festoons_plug", 
   "mqtt_user": "DVES_USER", 
   "mqtt_wifi_timeout": 200, 
   "mqttlog_level": 0, 
@@ -854,7 +854,7 @@
     0, 
     0, 
     0, 
-    0, 
+    1312, 
     0, 
     0, 
     0, 
@@ -924,7 +924,7 @@
     "power8": 0
   }, 
   "power_esp32": "0x00000000", 
-  "poweronstate": 3, 
+  "poweronstate": 0, 
   "pulse_counter": [
     0, 
     0, 
@@ -1220,7 +1220,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 12, 
+  "save_flag": 35, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 1, 
@@ -1614,7 +1614,7 @@
   ], 
   "tcp_baudrate": 0, 
   "tcp_config": 0, 
-  "tele_period": 300, 
+  "tele_period": 10, 
   "telegram_chatid": "", 
   "telegram_token": "", 
   "teleinfo": {
@@ -1626,7 +1626,7 @@
     "show_stats": 0
   }, 
   "temp_comp": 0, 
-  "templatename": "Sonoff THR320D", 
+  "templatename": "Sonoff THR316D", 
   "tflag": [
     {
       "dow": 1, 
@@ -1887,7 +1887,7 @@
       0, 
       0, 
       0, 
-      226, 
+      225, 
       9280, 
       0, 
       0, 
@@ -1898,10 +1898,10 @@
       320, 
       9184, 
       9216, 
-      9312, 
       0, 
       0, 
-      9313, 
+      224, 
+      0, 
       9248, 
       0, 
       1, 
@@ -1920,7 +1920,7 @@
       0, 
       0
     ], 
-    "name": "Sonoff THR320D"
+    "name": "Sonoff THR316D"
   }, 
   "version": "0xd000000", 
   "web_color": [
