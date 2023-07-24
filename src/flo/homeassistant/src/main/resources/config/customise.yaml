@@ -390,22 +390,22 @@ switch.old_deck_festoons_plug:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:lightbulb-group'
 light.deck_festoons_plug:
-  friendly_name: 'Kitchen'
+  friendly_name: 'Deck Festoons'
   icon: 'mdi:fan'
 sensor.deck_festoons_plug_temperature:
-  friendly_name: 'Kitchen'
+  friendly_name: 'Deck Festoons'
   unit_of_measurement: '°C'
 sensor.deck_festoons_plug_humidity:
-  friendly_name: 'Kitchen'
+  friendly_name: 'Deck Festoons'
   unit_of_measurement: '%'
 switch.old_landing_festoons_plug:
   friendly_name: 'Landing Festoons'
   icon: 'mdi:lightbulb-group'
 light.landing_festoons_plug:
-  friendly_name: 'Kitchen'
+  friendly_name: 'Landing Festoons'
   icon: 'mdi:fan'
 sensor.landing_festoons_plug_temperature:
-  friendly_name: 'Kitchen'
+  friendly_name: 'Landing Festoons'
   unit_of_measurement: '°C'
 light.garden_pedestals:
   friendly_name: 'Garden Pedestals'

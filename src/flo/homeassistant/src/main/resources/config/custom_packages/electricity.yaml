@@ -377,10 +377,6 @@ sensor:
                     unavailable_power: 0
                     fixed:
                       power: 2
-                  - entity_id: light.deck_festoons_plug
-                    standby_power: 0
-                    fixed:
-                      power: 4.5
               #########################################################################
               - create_group: Landing Lights
                 entities:
@@ -389,10 +385,6 @@ sensor:
                     unavailable_power: 0
                     fixed:
                       power: 2
-                  - entity_id: light.landing_festoons_plug
-                    standby_power: 0
-                    fixed:
-                      power: 31
               #########################################################################
               - create_group: Dining Fans
                 entities:
@@ -514,6 +506,20 @@ sensor:
               - create_group: Wardrobe Lights
                 entities:
                   - entity_id: light.wardrobe_main_bulb_1
+              #########################################################################
+              - create_group: Deck Lights
+                entities:
+                  - entity_id: light.deck_festoons_plug
+                    standby_power: 0
+                    fixed:
+                      power: 4.5
+              #########################################################################
+              - create_group: Landing Lights
+                entities:
+                  - entity_id: light.landing_festoons_plug
+                    standby_power: 0
+                    fixed:
+                      power: 31
               #########################################################################
               - create_group: Tree Lights
                 entities:
