@@ -464,47 +464,47 @@ sensor.all_standby_power:
   friendly_name: 'All Standby'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.kitchen_coffee_machine_power:
+sensor.coffee_machine_power:
   friendly_name: 'Coffee Machine'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.study_battery_charger_power:
+sensor.battery_charger_power:
   friendly_name: 'Battery Charger'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.laundry_vacuum_charger_power:
+sensor.vacuum_charger_power:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.outdoor_pool_filter_power:
+sensor.pool_filter_power:
   friendly_name: 'Pool Filter'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.roof_water_booster_power:
+sensor.water_booster_power:
   friendly_name: 'Water Booster'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.kitchen_dish_washer_power:
+sensor.dish_washer_power:
   friendly_name: 'Dish Washer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.laundry_clothes_dryer_power:
+sensor.clothes_dryer_power:
   friendly_name: 'Clothes Dryer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.laundry_washing_machine_power:
+sensor.washing_machine_power:
   friendly_name: 'Washing Machine'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.kitchen_fridge_power:
+sensor.fridge_power:
   friendly_name: 'Kitchen Fridge'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.deck_freezer_power:
+sensor.freezer_power:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.bathroom_towel_rails_power:
+sensor.towel_rails_power:
   friendly_name: 'Towel Rails'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
@@ -548,47 +548,47 @@ sensor.all_standby_energy_daily:
   friendly_name: 'All Standby'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.kitchen_coffee_machine_energy_daily:
+sensor.coffee_machine_energy_daily:
   friendly_name: 'Coffee Machine'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.study_battery_charger_energy_daily:
+sensor.battery_charger_energy_daily:
   friendly_name: 'Battery Charger'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.laundry_vacuum_charger_energy_daily:
+sensor.vacuum_charger_energy_daily:
   friendly_name: 'Vacuum Charger'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.outdoor_pool_filter_energy_daily:
+sensor.pool_filter_energy_daily:
   friendly_name: 'Pool Filter'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.roof_water_booster_energy_daily:
+sensor.water_booster_energy_daily:
   friendly_name: 'Water Booster'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.kitchen_dish_washer_energy_daily:
+sensor.dish_washer_energy_daily:
   friendly_name: 'Dish Washer'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.laundry_clothes_dryer_energy_daily:
+sensor.clothes_dryer_energy_daily:
   friendly_name: 'Clothes Dryer'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.laundry_washing_machine_energy_daily:
+sensor.washing_machine_energy_daily:
   friendly_name: 'Washing Machine'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.kitchen_fridge_energy_daily:
+sensor.fridge_energy_daily:
   friendly_name: 'Kitchen Fridge'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.deck_freezer_energy_daily:
+sensor.freezer_energy_daily:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.bathroom_towel_rails_energy_daily:
+sensor.towel_rails_energy_daily:
   friendly_name: 'Towel Rails'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
@@ -3498,36 +3498,24 @@ sensor.heating_cooling_energy_monthly:
   friendly_name: 'Heating & Cooling Total Energy Monthly'
 sensor.heating_cooling_energy_yearly:
   friendly_name: 'Heating & Cooling Total Energy Yearly'
-sensor.towel_rails_power:
-  friendly_name: 'Towel Rails Current Power'
 sensor.towel_rails_energy:
   friendly_name: 'Towel Rails Total Energy'
-sensor.towel_rails_energy_daily:
-  friendly_name: 'Towel Rails Total Energy Daily'
 sensor.towel_rails_energy_weekly:
   friendly_name: 'Towel Rails Total Energy Hept-Daily'
 sensor.towel_rails_energy_monthly:
   friendly_name: 'Towel Rails Total Energy Monthly'
 sensor.towel_rails_energy_yearly:
   friendly_name: 'Towel Rails Total Energy Yearly'
-sensor.water_booster_power:
-  friendly_name: 'Water Booster Current Power'
 sensor.water_booster_energy:
   friendly_name: 'Water Booster Total Energy'
-sensor.water_booster_energy_daily:
-  friendly_name: 'Water Booster Total Energy Daily'
 sensor.water_booster_energy_weekly:
   friendly_name: 'Water Booster Total Energy Hept-Daily'
 sensor.water_booster_energy_monthly:
   friendly_name: 'Water Booster Total Energy Monthly'
 sensor.water_booster_energy_yearly:
   friendly_name: 'Water Booster Total Energy Yearly'
-sensor.pool_filter_power:
-  friendly_name: 'Pool Filter Current Power'
 sensor.pool_filter_energy:
   friendly_name: 'Pool Filter Total Energy'
-sensor.pool_filter_energy_daily:
-  friendly_name: 'Pool Filter Total Energy Daily'
 sensor.pool_filter_energy_weekly:
   friendly_name: 'Pool Filter Total Energy Hept-Daily'
 sensor.pool_filter_energy_monthly:
@@ -3618,48 +3606,32 @@ sensor.whitegoods_discretionary_energy_monthly:
   friendly_name: 'Whitegoods Discretionary Total Energy Monthly'
 sensor.whitegoods_discretionary_energy_yearly:
   friendly_name: 'Whitegoods Discretionary Total Energy Yearly'
-sensor.dish_washer_power:
-  friendly_name: 'Dish Washer Current Power'
 sensor.dish_washer_energy:
   friendly_name: 'Dish Washer Total Energy'
-sensor.dish_washer_energy_daily:
-  friendly_name: 'Dish Washer Total Energy Daily'
 sensor.dish_washer_energy_weekly:
   friendly_name: 'Dish Washer Total Energy Hept-Daily'
 sensor.dish_washer_energy_monthly:
   friendly_name: 'Dish Washer Total Energy Monthly'
 sensor.dish_washer_energy_yearly:
   friendly_name: 'Dish Washer Total Energy Yearly'
-sensor.clothes_dryer_power:
-  friendly_name: 'Clothes Dryer Current Power'
 sensor.clothes_dryer_energy:
   friendly_name: 'Clothes Dryer Total Energy'
-sensor.clothes_dryer_energy_daily:
-  friendly_name: 'Clothes Dryer Total Energy Daily'
 sensor.clothes_dryer_energy_weekly:
   friendly_name: 'Clothes Dryer Total Energy Hept-Daily'
 sensor.clothes_dryer_energy_monthly:
   friendly_name: 'Clothes Dryer Total Energy Monthly'
 sensor.clothes_dryer_energy_yearly:
   friendly_name: 'Clothes Dryer Total Energy Yearly'
-sensor.washing_machine_power:
-  friendly_name: 'Washing Machine Current Power'
 sensor.washing_machine_energy:
   friendly_name: 'Washing Machine Total Energy'
-sensor.washing_machine_energy_daily:
-  friendly_name: 'Washing Machine Total Energy Daily'
 sensor.washing_machine_energy_weekly:
   friendly_name: 'Washing Machine Total Energy Hept-Daily'
 sensor.washing_machine_energy_monthly:
   friendly_name: 'Washing Machine Total Energy Monthly'
 sensor.washing_machine_energy_yearly:
   friendly_name: 'Washing Machine Total Energy Yearly'
-sensor.coffee_machine_power:
-  friendly_name: 'Coffee Machine Current Power'
 sensor.coffee_machine_energy:
   friendly_name: 'Coffee Machine Total Energy'
-sensor.coffee_machine_energy_daily:
-  friendly_name: 'Coffee Machine Total Energy Daily'
 sensor.coffee_machine_energy_weekly:
   friendly_name: 'Coffee Machine Total Energy Hept-Daily'
 sensor.coffee_machine_energy_monthly:
@@ -3678,40 +3650,40 @@ sensor.whitegoods_continuous_energy_monthly:
   friendly_name: 'Whitegoods Continuous Total Energy Monthly'
 sensor.whitegoods_continuous_energy_yearly:
   friendly_name: 'Whitegoods Continuous Total Energy Yearly'
+sensor.kitchen_fridge_power:
+  friendly_name: 'Kitchen Fridge Current Power'
 sensor.kitchen_fridge_energy:
   friendly_name: 'Kitchen Fridge Total Energy'
+sensor.kitchen_fridge_energy_daily:
+  friendly_name: 'Kitchen Fridge Total Energy Daily'
 sensor.kitchen_fridge_energy_weekly:
   friendly_name: 'Kitchen Fridge Total Energy Hept-Daily'
 sensor.kitchen_fridge_energy_monthly:
   friendly_name: 'Kitchen Fridge Total Energy Monthly'
 sensor.kitchen_fridge_energy_yearly:
   friendly_name: 'Kitchen Fridge Total Energy Yearly'
+sensor.deck_freezer_power:
+  friendly_name: 'Deck Freezer Current Power'
 sensor.deck_freezer_energy:
   friendly_name: 'Deck Freezer Total Energy'
+sensor.deck_freezer_energy_daily:
+  friendly_name: 'Deck Freezer Total Energy Daily'
 sensor.deck_freezer_energy_weekly:
   friendly_name: 'Deck Freezer Total Energy Hept-Daily'
 sensor.deck_freezer_energy_monthly:
   friendly_name: 'Deck Freezer Total Energy Monthly'
 sensor.deck_freezer_energy_yearly:
   friendly_name: 'Deck Freezer Total Energy Yearly'
-sensor.battery_charger_power:
-  friendly_name: 'Battery Charger Current Power'
 sensor.battery_charger_energy:
   friendly_name: 'Battery Charger Total Energy'
-sensor.battery_charger_energy_daily:
-  friendly_name: 'Battery Charger Total Energy Daily'
 sensor.battery_charger_energy_weekly:
   friendly_name: 'Battery Charger Total Energy Hept-Daily'
 sensor.battery_charger_energy_monthly:
   friendly_name: 'Battery Charger Total Energy Monthly'
 sensor.battery_charger_energy_yearly:
   friendly_name: 'Battery Charger Total Energy Yearly'
-sensor.vacuum_charger_power:
-  friendly_name: 'Vacuum Charger Current Power'
 sensor.vacuum_charger_energy:
   friendly_name: 'Vacuum Charger Total Energy'
-sensor.vacuum_charger_energy_daily:
-  friendly_name: 'Vacuum Charger Total Energy Daily'
 sensor.vacuum_charger_energy_weekly:
   friendly_name: 'Vacuum Charger Total Energy Hept-Daily'
 sensor.vacuum_charger_energy_monthly:

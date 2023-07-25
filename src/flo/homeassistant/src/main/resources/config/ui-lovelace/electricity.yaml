@@ -46,37 +46,37 @@
     - entity: sensor.all_standby_power
       name: All Standby
       icon: mdi:home-lightning-bolt
-    - entity: sensor.kitchen_coffee_machine_power
+    - entity: sensor.coffee_machine_power
       name: Coffee Machine
       icon: mdi:home-lightning-bolt
-    - entity: sensor.study_battery_charger_power
+    - entity: sensor.battery_charger_power
       name: Battery Charger
       icon: mdi:home-lightning-bolt
-    - entity: sensor.laundry_vacuum_charger_power
+    - entity: sensor.vacuum_charger_power
       name: Vacuum Charger
       icon: mdi:home-lightning-bolt
-    - entity: sensor.outdoor_pool_filter_power
+    - entity: sensor.pool_filter_power
       name: Pool Filter
       icon: mdi:home-lightning-bolt
-    - entity: sensor.roof_water_booster_power
+    - entity: sensor.water_booster_power
       name: Water Booster
       icon: mdi:home-lightning-bolt
-    - entity: sensor.kitchen_dish_washer_power
+    - entity: sensor.dish_washer_power
       name: Dish Washer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.laundry_clothes_dryer_power
+    - entity: sensor.clothes_dryer_power
       name: Clothes Dryer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.laundry_washing_machine_power
+    - entity: sensor.washing_machine_power
       name: Washing Machine
       icon: mdi:home-lightning-bolt
-    - entity: sensor.kitchen_fridge_power
+    - entity: sensor.fridge_power
       name: Kitchen Fridge
       icon: mdi:home-lightning-bolt
-    - entity: sensor.deck_freezer_power
+    - entity: sensor.freezer_power
       name: Deck Freezer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.bathroom_towel_rails_power
+    - entity: sensor.towel_rails_power
       name: Towel Rails
       icon: mdi:home-lightning-bolt
     - entity: sensor.study_outlet_power
@@ -139,37 +139,37 @@
     - entity: sensor.all_standby_energy_daily
       name: All Standby
       icon: mdi:battery-charging
-    - entity: sensor.kitchen_coffee_machine_energy_daily
+    - entity: sensor.coffee_machine_energy_daily
       name: Coffee Machine
       icon: mdi:battery-charging
-    - entity: sensor.study_battery_charger_energy_daily
+    - entity: sensor.battery_charger_energy_daily
       name: Battery Charger
       icon: mdi:battery-charging
-    - entity: sensor.laundry_vacuum_charger_energy_daily
+    - entity: sensor.vacuum_charger_energy_daily
       name: Vacuum Charger
       icon: mdi:battery-charging
-    - entity: sensor.outdoor_pool_filter_energy_daily
+    - entity: sensor.pool_filter_energy_daily
       name: Pool Filter
       icon: mdi:battery-charging
-    - entity: sensor.roof_water_booster_energy_daily
+    - entity: sensor.water_booster_energy_daily
       name: Water Booster
       icon: mdi:battery-charging
-    - entity: sensor.kitchen_dish_washer_energy_daily
+    - entity: sensor.dish_washer_energy_daily
       name: Dish Washer
       icon: mdi:battery-charging
-    - entity: sensor.laundry_clothes_dryer_energy_daily
+    - entity: sensor.clothes_dryer_energy_daily
       name: Clothes Dryer
       icon: mdi:battery-charging
-    - entity: sensor.laundry_washing_machine_energy_daily
+    - entity: sensor.washing_machine_energy_daily
       name: Washing Machine
       icon: mdi:battery-charging
-    - entity: sensor.kitchen_fridge_energy_daily
+    - entity: sensor.fridge_energy_daily
       name: Kitchen Fridge
       icon: mdi:battery-charging
-    - entity: sensor.deck_freezer_energy_daily
+    - entity: sensor.freezer_energy_daily
       name: Deck Freezer
       icon: mdi:battery-charging
-    - entity: sensor.bathroom_towel_rails_energy_daily
+    - entity: sensor.towel_rails_energy_daily
       name: Towel Rails
       icon: mdi:battery-charging
     - entity: sensor.study_outlet_energy_daily
