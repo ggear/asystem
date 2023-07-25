@@ -20,12 +20,12 @@
 10.0.4.56 google-kitchen-home.janeandgraham.com google-kitchen-home
 10.0.4.57 google-lounge-ada-tablet.janeandgraham.com google-lounge-ada-tablet
 10.0.4.58 google-kitchen-edwin-tablet.janeandgraham.com google-kitchen-edwin-tablet
-10.0.6.100 sonoff-roof-water-booster.janeandgraham.com sonoff-roof-water-booster
+10.0.6.100 sonoff-ceiling-water-booster.janeandgraham.com sonoff-ceiling-water-booster
 10.0.6.101 sonoff-rack-fans.janeandgraham.com sonoff-rack-fans
 10.0.6.102 sonoff-rack-outlet.janeandgraham.com sonoff-rack-outlet
 10.0.6.103 sonoff-kitchen-downlights.janeandgraham.com sonoff-kitchen-downlights
 10.0.6.104 sonoff-kitchen-fan.janeandgraham.com sonoff-kitchen-fan
-10.0.6.105 sonoff-roof-network-switch.janeandgraham.com sonoff-roof-network-switch
+10.0.6.105 sonoff-ceiling-network-switch.janeandgraham.com sonoff-ceiling-network-switch
 10.0.6.106 sonoff-pool-pool-filter.janeandgraham.com sonoff-pool-pool-filter
 10.0.6.107 sonoff-deck-festoons.janeandgraham.com sonoff-deck-festoons
 10.0.6.108 sonoff-landing-festoons.janeandgraham.com sonoff-landing-festoons
@@ -52,7 +52,7 @@
 10.0.6.81 tplink-bathroom-rails.janeandgraham.com tplink-bathroom-rails
 10.0.6.82 tplink-study-outlet.janeandgraham.com tplink-study-outlet
 10.0.6.83 tplink-office-outlet.janeandgraham.com tplink-office-outlet
-10.0.6.84 tplink-roof-network-switch.janeandgraham.com tplink-roof-network-switch
+10.0.6.84 tplink-ceiling-network-switch.janeandgraham.com tplink-ceiling-network-switch
 10.0.6.85 tplink-rack-modem.janeandgraham.com tplink-rack-modem
 10.0.6.86 tplink-rack-outlet.janeandgraham.com tplink-rack-outlet
 10.0.6.87 tplink-kitchen-fan.janeandgraham.com tplink-kitchen-fan

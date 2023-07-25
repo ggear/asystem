@@ -1,0 +1,1880 @@
+{
+  "adc_param1": 4294967295, 
+  "adc_param2": 4294967295, 
+  "adc_param3": -1, 
+  "adc_param4": 1073741824, 
+  "adc_param_type": 0, 
+  "altitude": 0, 
+  "artnet_universe": 0, 
+  "as3935_functions": {
+    "dist_autotune": 0, 
+    "mqtt_only_Light_Event": 0, 
+    "nf_autotune": 0, 
+    "nf_autotune_both": 0
+  }, 
+  "as3935_parameter": {
+    "dist_autotune_time": 0, 
+    "nf_autotune_min": 0, 
+    "nf_autotune_time": 0
+  }, 
+  "as3935_sensor_cfg": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "baudrate": 19200, 
+  "blinkcount": 10, 
+  "blinktime": 10, 
+  "bootcount": 16, 
+  "bootcount_reset_time": 1690182636, 
+  "bri_power_on": 0, 
+  "bri_preset_high": 0, 
+  "bri_preset_low": 0, 
+  "button_debounce": 50, 
+  "button_text": [
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    ""
+  ], 
+  "button_topic": "0", 
+  "cfg_crc": "0x85ed", 
+  "cfg_crc32": "0x3425120a", 
+  "cfg_holder": 4617, 
+  "cfg_size": 4096, 
+  "cfg_timestamp": 1690250939, 
+  "config_version": 0, 
+  "cors_domain": "", 
+  "deepsleep": 0, 
+  "device_group_share_in": 0, 
+  "device_group_share_out": 0, 
+  "device_group_tie": [
+    1, 
+    2, 
+    3, 
+    4
+  ], 
+  "device_group_topic": [
+    "", 
+    "", 
+    "", 
+    ""
+  ], 
+  "devicename": "outdoor_pool_filter_plug", 
+  "dimmer_hw_max": 100, 
+  "dimmer_hw_min": 0, 
+  "dimmer_step": 10, 
+  "display_address": [
+    113, 
+    116, 
+    117, 
+    114, 
+    115, 
+    118, 
+    0, 
+    0
+  ], 
+  "display_cols": [
+    16, 
+    8
+  ], 
+  "display_dimmer_protected": -10, 
+  "display_font": 1, 
+  "display_height": 0, 
+  "display_mode": 1, 
+  "display_model": 0, 
+  "display_options": {
+    "invert": 0, 
+    "type": 0
+  }, 
+  "display_refresh": 2, 
+  "display_rotate": 0, 
+  "display_rows": 2, 
+  "display_size": 1, 
+  "display_width": 0, 
+  "displays": "0xffffffff", 
+  "dns_timeout": 1000, 
+  "domoticz_key_idx": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "domoticz_relay_idx": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "domoticz_sensor_idx": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "domoticz_switch_idx": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "domoticz_update_timer": 0, 
+  "ds3502_state": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "energy_current_calibration": 16945, 
+  "energy_current_calibration2": 3500, 
+  "energy_frequency_calibration": 0, 
+  "energy_kWhdoy": 205, 
+  "energy_kWhexport_ph": [
+    0, 
+    0, 
+    0
+  ], 
+  "energy_kWhtoday_ph": [
+    0, 
+    0, 
+    0
+  ], 
+  "energy_kWhtotal_ph": [
+    3, 
+    0, 
+    0
+  ], 
+  "energy_kWhtotal_time": 1690182635, 
+  "energy_kWhyesterday_ph": [
+    325, 
+    0, 
+    0
+  ], 
+  "energy_max_current": 0, 
+  "energy_max_energy": 0, 
+  "energy_max_energy_start": 0, 
+  "energy_max_power": 0, 
+  "energy_max_power_limit": 0, 
+  "energy_max_power_limit_hold": 10, 
+  "energy_max_power_limit_window": 30, 
+  "energy_max_power_safe_limit": 0, 
+  "energy_max_power_safe_limit_hold": 10, 
+  "energy_max_power_safe_limit_window": 30, 
+  "energy_max_voltage": 0, 
+  "energy_min_current": 0, 
+  "energy_min_power": 0, 
+  "energy_min_voltage": 0, 
+  "energy_power_calibration": 5489, 
+  "energy_power_calibration2": 12530, 
+  "energy_power_delta": [
+    25, 
+    0, 
+    0
+  ], 
+  "energy_usage": {
+    "last_return_kWhtotal": 3, 
+    "last_usage_kWhtotal": 0, 
+    "return1_kWhtotal": 0, 
+    "return2_kWhtotal": 0, 
+    "usage1_kWhtoday": 3, 
+    "usage1_kWhtotal": 0
+  }, 
+  "energy_voltage_calibration": 1994, 
+  "energy_voltage_calibration2": 1950, 
+  "fallback_module": 0, 
+  "flag": {
+    "button_restrict": 0, 
+    "button_single": 0, 
+    "button_swap": 0, 
+    "decimal_text": 0, 
+    "device_index_enable": 0, 
+    "global_state": 0, 
+    "hass_discovery": 0, 
+    "hass_light": 0, 
+    "interlock": 0, 
+    "ir_receive_decimal": 0, 
+    "knx_enable_enhancement": 0, 
+    "knx_enabled": 0, 
+    "light_signal": 0, 
+    "mqtt_add_global_info": 0, 
+    "mqtt_button_retain": 0, 
+    "mqtt_enabled": 1, 
+    "mqtt_offline": 0, 
+    "mqtt_power_retain": 1, 
+    "mqtt_response": 0, 
+    "mqtt_sensor_retain": 0, 
+    "mqtt_serial": 0, 
+    "mqtt_serial_raw": 0, 
+    "mqtt_switch_retain": 0, 
+    "no_power_on_check": 0, 
+    "not_power_linked": 0, 
+    "pressure_conversion": 0, 
+    "pwm_control": 1, 
+    "rf_receive_decimal": 0, 
+    "save_state": 1, 
+    "stop_flash_rotate": 0, 
+    "temperature_conversion": 0, 
+    "ws_clock_reverse": 0
+  }, 
+  "flag2": {
+    "axis_resolution": 0, 
+    "calc_resolution": 3, 
+    "current_resolution": 3, 
+    "emulation": 0, 
+    "energy_resolution": 3, 
+    "frequency_resolution": 0, 
+    "humidity_resolution": 1, 
+    "pressure_resolution": 1, 
+    "speed_conversion": 0, 
+    "temperature_resolution": 1, 
+    "time_format": 0, 
+    "voltage_resolution": 0, 
+    "wattage_resolution": 0, 
+    "weight_resolution": 0
+  }, 
+  "flag3": {
+    "bootcount_update": 0, 
+    "button_switch_force_local": 0, 
+    "buzzer_enable": 0, 
+    "compatibility_check": 0, 
+    "counter_reset_on_tele": 0, 
+    "dds2382_model": 0, 
+    "ds18x20_internal_pullup": 0, 
+    "energy_weekend": 0, 
+    "fast_power_cycle_disable": 0, 
+    "grouptopic_mode": 0, 
+    "gui_hostname_ip": 0, 
+    "hardware_energy_total": 0, 
+    "hass_tele_on_power": 0, 
+    "mdns_enabled": 0, 
+    "mqtt_buttons": 0, 
+    "no_hold_retain": 0, 
+    "no_power_feedback": 0, 
+    "pcf8574_ports_inverted": 0, 
+    "pwm_multi_channels": 0, 
+    "receive_raw": 0, 
+    "shutter_mode": 0, 
+    "sleep_normal": 0, 
+    "slider_dimmer_stay_on": 0, 
+    "time_append_timezone": 0, 
+    "timers_enable": 0, 
+    "tuya_apply_o20": 0, 
+    "tuya_dimmer_min_limit": 0, 
+    "tuya_serial_mqtt_publish": 0, 
+    "use_underscore": 0, 
+    "use_wifi_rescan": 1, 
+    "use_wifi_scan": 0, 
+    "user_esp8285_enable": 0
+  }, 
+  "flag4": {
+    "alexa_ct_range": 0, 
+    "alexa_gen_1": 0, 
+    "awsiot_shadow": 0, 
+    "buzzer_freq_mode": 0, 
+    "compress_rules_cpu": 0, 
+    "device_groups_enabled": 0, 
+    "fade_at_startup": 0, 
+    "led_timeout": 0, 
+    "max6675": 0, 
+    "mqtt_no_retain": 0, 
+    "mqtt_tls": 0, 
+    "multiple_device_groups": 0, 
+    "network_wifi": 1, 
+    "only_json_message": 0, 
+    "powered_off_led": 0, 
+    "pwm_ct_mode": 0, 
+    "remove_zbreceived": 0, 
+    "rotary_poweron_dimlow": 0, 
+    "rotary_uses_rules": 0, 
+    "suppress_irq_no_Event": 0, 
+    "teleinfo_baudrate": 0, 
+    "teleinfo_rawdata": 0, 
+    "tuyamcu_baudrate": 0, 
+    "virtual_ct": 0, 
+    "virtual_ct_cw": 0, 
+    "white_blend_mode": 0, 
+    "zb_disable_autobind": 0, 
+    "zb_index_ep": 0, 
+    "zb_topic_fname": 0, 
+    "zerocross_dimmer": 0, 
+    "zigbee_distinct_topics": 0, 
+    "zigbee_use_names": 0
+  }, 
+  "flag5": {
+    "disable_referer_chk": 1, 
+    "display_no_splash": 0, 
+    "ds18x20_mean": 0, 
+    "energy_phase": 0, 
+    "fade_fixed_duration": 0, 
+    "gui_module_name": 0, 
+    "gui_table_align": 0, 
+    "mi32_enable": 0, 
+    "mm_vs_inch": 0, 
+    "mqtt_info_retain": 0, 
+    "mqtt_persistent": 0, 
+    "mqtt_state_retain": 0, 
+    "mqtt_status_retain": 1, 
+    "mqtt_switches": 0, 
+    "pwm_force_same_phase": 0, 
+    "shift595_invert_outputs": 0, 
+    "show_heap_with_timestamp": 0, 
+    "tls_use_fingerprint": 0, 
+    "tuya_allow_dimmer_0": 0, 
+    "tuya_exclude_from_mqtt": 0, 
+    "tuyasns_no_immediate": 0, 
+    "wait_for_wifi_result": 0, 
+    "wiegand_hex_output": 0, 
+    "wiegand_keypad_to_tag": 0, 
+    "wifi_no_sleep": 0, 
+    "zb_disable_autoquery": 0, 
+    "zb_omit_json_addr": 0, 
+    "zb_received_as_subtopic": 0, 
+    "zb_topic_endpoint": 0, 
+    "zigbee_hide_-bridge_topic": 0, 
+    "zigbee_include_time": 0, 
+    "zigbee_no_batt_autoprobe": 0
+  }, 
+  "flag6": {
+    "artnet_autorun": 0, 
+    "berry_light_scheme": 0, 
+    "berry_no_autoexec": 0, 
+    "bistable_single_pin": 0, 
+    "dns_ipv6_priority": 0, 
+    "matter_enabled": 0, 
+    "mqtt_disable_sserialrec": 0, 
+    "no_voltage_common": 0, 
+    "use_esp32_temperature": 0
+  }, 
+  "flowratemeter_calibration": [
+    0, 
+    0
+  ], 
+  "friendlyname": [
+    "Pool Filter", 
+    "Tasmota2", 
+    "Tasmota3", 
+    "Tasmota4", 
+    "", 
+    "", 
+    "", 
+    ""
+  ], 
+  "global_sensor_index": [
+    0, 
+    0, 
+    0
+  ], 
+  "gpio16_converted": 62880, 
+  "hass_new_discovery": 0, 
+  "header": {
+    "data": {
+      "crc": "0xe8d9", 
+      "crc32": "0x3425120a", 
+      "hardware": "ESP82", 
+      "size": 4096, 
+      "version": {
+        "id": "0xd000000", 
+        "name": "13.0.0"
+      }
+    }, 
+    "env": {
+      "platform": "macOS-10.16-x86_64-i386-64bit", 
+      "python": "3.9.2", 
+      "script": "decode-config.py v13.0.0.0 [b60cdd0]", 
+      "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
+    }, 
+    "template": {
+      "crc": "0x85ed", 
+      "crc32": "0x3425120a", 
+      "size": 4096, 
+      "version": {
+        "id": "0xd000000", 
+        "name": "13.0.0"
+      }
+    }, 
+    "timestamp": "2023-07-25 02:08:59"
+  }, 
+  "hostname": "%s-%04d", 
+  "hotplug_scan": 0, 
+  "hum_comp": 0, 
+  "i2c_drivers": [
+    "0xffffffff", 
+    "0xffffffff", 
+    "0xffffffff"
+  ], 
+  "ina219_mode": 0, 
+  "ina226_i_fs": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "ina226_r_shunt": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "influxdb_bucket": "", 
+  "influxdb_host": "", 
+  "influxdb_org": "", 
+  "influxdb_period": 0, 
+  "influxdb_port": 0, 
+  "influxdb_token": "", 
+  "influxdb_version": 0, 
+  "interlock": [
+    "0x000000ff", 
+    "0x00000000", 
+    "0x00000000", 
+    "0x00000000"
+  ], 
+  "ip_address": [
+    "0.0.0.0", 
+    "10.0.6.1", 
+    "255.255.255.0", 
+    "10.0.6.1", 
+    "0.0.0.0"
+  ], 
+  "ipv4_rgx_address": "192.168.99.1", 
+  "ipv4_rgx_subnetmask": "255.255.255.0", 
+  "keeloq_count": 0, 
+  "keeloq_master_lsb": 0, 
+  "keeloq_master_msb": 0, 
+  "keeloq_serial": 0, 
+  "knx_CB_addr": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "knx_CB_param": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "knx_CB_registered": 0, 
+  "knx_GA_addr": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "knx_GA_param": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "knx_GA_registered": 0, 
+  "knx_physsical_addr": 0, 
+  "last_module": 255, 
+  "latitude": 48.85836, 
+  "ledmask": "0xffff", 
+  "ledpwm_mask": 0, 
+  "ledpwm_off": 0, 
+  "ledpwm_on": 255, 
+  "ledstate": 1, 
+  "light_color": [
+    255, 
+    255, 
+    255, 
+    255, 
+    255
+  ], 
+  "light_correction": 1, 
+  "light_dimmer": 10, 
+  "light_fade": 0, 
+  "light_pixels": 30, 
+  "light_rotation": 0, 
+  "light_scheme": 0, 
+  "light_speed": 1, 
+  "light_step_pixels": 0, 
+  "light_wakeup": 0, 
+  "light_width": 1, 
+  "longitude": 2.294442, 
+  "mbflag2": {
+    "sunrise_dawn_angle": 0, 
+    "tariff_forced": 0, 
+    "temperature_set_res": 1
+  }, 
+  "mcp230xx_config": [
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }, 
+    {
+      "int_count_en": 0, 
+      "int_report_defer": 0, 
+      "int_report_mode": 0, 
+      "int_retain_flag": 0, 
+      "keep_output": 0, 
+      "pinmode": 0, 
+      "pullup": 0, 
+      "saved_state": 0
+    }
+  ], 
+  "mcp230xx_int_prio": 0, 
+  "mcp230xx_int_timer": 0, 
+  "mems": [
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    ""
+  ], 
+  "modbus_sbaudrate": 0, 
+  "modbus_sconfig": 0, 
+  "module": 255, 
+  "monitors": "0xffffffff", 
+  "mqtt_client": "DVES_%06X", 
+  "mqtt_fingerprint1": [
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00", 
+    "0x00"
+  ], 
+  "mqtt_fingerprint2": [
+    "0xda", 
+    "0x39", 
+    "0xa3", 
+    "0xee", 
+    "0x5e", 
+    "0x6b", 
+    "0x4b", 
+    "0x0d", 
+    "0x32", 
+    "0x55", 
+    "0xbf", 
+    "0xef", 
+    "0x95", 
+    "0x60", 
+    "0x18", 
+    "0x90", 
+    "0xaf", 
+    "0xd8", 
+    "0x07", 
+    "0x09"
+  ], 
+  "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/", 
+  "mqtt_grptopic": "tasmotas", 
+  "mqtt_grptopic2": [
+    "", 
+    "", 
+    ""
+  ], 
+  "mqtt_host": "10.0.2.11", 
+  "mqtt_keepalive": 30, 
+  "mqtt_port": 32404, 
+  "mqtt_prefix": [
+    "cmnd", 
+    "stat", 
+    "tele"
+  ], 
+  "mqtt_pwd": "DVES_PASS", 
+  "mqtt_retry": 10, 
+  "mqtt_socket_timeout": 4, 
+  "mqtt_topic": "outdoor_pool_filter_plug", 
+  "mqtt_user": "DVES_USER", 
+  "mqtt_wifi_timeout": 200, 
+  "mqttlog_level": 0, 
+  "my_gp": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "novasds_startingoffset": 30, 
+  "ntp_server": [
+    "2.pool.ntp.org", 
+    "2.europe.pool.ntp.org", 
+    "2.nl.pool.ntp.org"
+  ], 
+  "ot_boiler_setpoint": 0, 
+  "ot_flags": 0, 
+  "ot_hot_water_setpoint": 0, 
+  "ota_url": "http://ota.tasmota.com/tasmota/release/tasmota.bin.gz", 
+  "param": [
+    40, 
+    5, 
+    200, 
+    0, 
+    1, 
+    0, 
+    6, 
+    128, 
+    0, 
+    60, 
+    90, 
+    10, 
+    25, 
+    40, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "pcf8574_config": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "pms_wake_interval": 0, 
+  "pn532_pack": 0, 
+  "pn532_password": 0, 
+  "power": {
+    "power1": 1, 
+    "power2": 0, 
+    "power3": 0, 
+    "power4": 0, 
+    "power5": 0, 
+    "power6": 0, 
+    "power7": 0, 
+    "power8": 0
+  }, 
+  "poweronstate": 0, 
+  "pulse_counter": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "pulse_counter_debounce": 0, 
+  "pulse_counter_debounce_high": 0, 
+  "pulse_counter_debounce_low": 0, 
+  "pulse_counter_type": {
+    "pulse_counter_type1": 0, 
+    "pulse_counter_type2": 0, 
+    "pulse_counter_type3": 0, 
+    "pulse_counter_type4": 0
+  }, 
+  "pulse_timer": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "pwm_dimmer_cfg": {
+    "pwm_count": 0
+  }, 
+  "pwm_frequency": 977, 
+  "pwm_range": 1023, 
+  "pwm_value": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "rf_code": [
+    [
+      "0x21", 
+      "0x16", 
+      "0x01", 
+      "0x0e", 
+      "0x03", 
+      "0x48", 
+      "0x2e", 
+      "0x1a", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ], 
+    [
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00", 
+      "0x00"
+    ]
+  ], 
+  "rf_duplicate_time": 0, 
+  "rf_protocol_mask": "0x0000000000000000", 
+  "rgbwwTable": [
+    255, 
+    255, 
+    255, 
+    255, 
+    255
+  ], 
+  "rgx_pwassword": "", 
+  "rgx_ssid": "", 
+  "rule_enabled": {
+    "rule1": 0, 
+    "rule2": 0, 
+    "rule3": 0
+  }, 
+  "rule_once": {
+    "rule1": 0, 
+    "rule2": 0, 
+    "rule3": 0
+  }, 
+  "rule_stop": {
+    "rule1": 0, 
+    "rule2": 0, 
+    "rule3": 0
+  }, 
+  "rules": [
+    "", 
+    "", 
+    ""
+  ], 
+  "save_data": 1, 
+  "save_flag": 58, 
+  "sbaudrate": 38400, 
+  "sbflag1": {
+    "influxdb_default": 0, 
+    "influxdb_sensor": 0, 
+    "influxdb_state": 0, 
+    "range_extender": 0, 
+    "range_extender_napt": 0, 
+    "serbridge_console": 0, 
+    "sonoff_l1_music_sync": 0, 
+    "telegram_echo_enable": 0, 
+    "telegram_recv_enable": 0, 
+    "telegram_send_enable": 0
+  }, 
+  "script_pram": [
+    [
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0, 
+      0
+    ]
+  ], 
+  "SensorBits1": {
+    "bh1750_1_resolution": 0, 
+    "bh1750_2_resolution": 0, 
+    "flowratemeter_unit": 0, 
+    "hx711_json_weight_change": 0, 
+    "mhz19b_abc_disable": 0
+  }, 
+  "sensors": [
+    [
+      "0xffffffff", 
+      "0xffffffff", 
+      "0xffffffff", 
+      "0xffffffff"
+    ], 
+    [
+      "0xffffffff", 
+      "0xffffffff", 
+      "0xffffffff", 
+      "0xffffffff"
+    ]
+  ], 
+  "serial_config": 11, 
+  "serial_delimiter": 255, 
+  "seriallog_level": 0, 
+  "shd_leading_edge": 0, 
+  "shd_warmup_brightness": 0, 
+  "shd_warmup_time": 0, 
+  "shelly_dimmer": "", 
+  "shift595_device_count": 1, 
+  "shutter_accuracy": 0, 
+  "shutter_button": [
+    {
+      "enabled": 0, 
+      "mqtt_broadcast_all": 0, 
+      "mqtt_broadcast_double": 0, 
+      "mqtt_broadcast_hold": 0, 
+      "mqtt_broadcast_single": 0, 
+      "mqtt_broadcast_triple": 0, 
+      "press_double": "-", 
+      "press_hold": "-", 
+      "press_single": "-", 
+      "press_triple": "-", 
+      "shutter": 1
+    }, 
+    {
+      "enabled": 0, 
+      "mqtt_broadcast_all": 0, 
+      "mqtt_broadcast_double": 0, 
+      "mqtt_broadcast_hold": 0, 
+      "mqtt_broadcast_single": 0, 
+      "mqtt_broadcast_triple": 0, 
+      "press_double": "-", 
+      "press_hold": "-", 
+      "press_single": "-", 
+      "press_triple": "-", 
+      "shutter": 1
+    }, 
+    {
+      "enabled": 0, 
+      "mqtt_broadcast_all": 0, 
+      "mqtt_broadcast_double": 0, 
+      "mqtt_broadcast_hold": 0, 
+      "mqtt_broadcast_single": 0, 
+      "mqtt_broadcast_triple": 0, 
+      "press_double": "-", 
+      "press_hold": "-", 
+      "press_single": "-", 
+      "press_triple": "-", 
+      "shutter": 1
+    }, 
+    {
+      "enabled": 0, 
+      "mqtt_broadcast_all": 0, 
+      "mqtt_broadcast_double": 0, 
+      "mqtt_broadcast_hold": 0, 
+      "mqtt_broadcast_single": 0, 
+      "mqtt_broadcast_triple": 0, 
+      "press_double": "-", 
+      "press_hold": "-", 
+      "press_single": "-", 
+      "press_triple": "-", 
+      "shutter": 1
+    }
+  ], 
+  "shutter_closetime": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "shutter_mode": 0, 
+  "shutter_motordelay": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "shutter_motorstop": 0, 
+  "shutter_opentime": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "shutter_options": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "shutter_position": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "shutter_pwmrange": [
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ]
+  ], 
+  "shutter_set50percent": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "shutter_startrelay": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "shutter_tilt_config": [
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ]
+  ], 
+  "shutter_tilt_pos": [
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "shuttercoeff": [
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0, 
+      0
+    ]
+  ], 
+  "sleep": 50, 
+  "sps30_inuse_hours": 0, 
+  "sserial_config": 3, 
+  "sta_active": 0, 
+  "sta_config": 4, 
+  "sta_pwd": [
+    "ryHFFAE68", 
+    ""
+  ], 
+  "sta_ssid": [
+    "BeavisAndButthead", 
+    ""
+  ], 
+  "state_text": [
+    "OFF", 
+    "ON", 
+    "TOGGLE", 
+    "HOLD"
+  ], 
+  "switch_debounce": 50, 
+  "switch_topic": "0", 
+  "switchmode": [
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0, 
+    0
+  ], 
+  "switchtext": [
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    "", 
+    ""
+  ], 
+  "syslog_host": "", 
+  "syslog_level": 0, 
+  "syslog_port": 514, 
+  "tariff": [
+    [
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0
+    ]
+  ], 
+  "tcp_baudrate": 0, 
+  "tcp_config": 0, 
+  "tele_period": 10, 
+  "telegram_chatid": "", 
+  "telegram_token": "", 
+  "teleinfo": {
+    "mode_standard": 0, 
+    "raw_limit": 0, 
+    "raw_report_changed": 0, 
+    "raw_send": 0, 
+    "raw_skip": 0, 
+    "show_stats": 0
+  }, 
+  "temp_comp": 0, 
+  "templatename": "Sonoff POWR3", 
+  "tflag": [
+    {
+      "dow": 1, 
+      "hemis": 0, 
+      "hour": 3, 
+      "month": 10, 
+      "week": 0
+    }, 
+    {
+      "dow": 1, 
+      "hemis": 0, 
+      "hour": 2, 
+      "month": 3, 
+      "week": 0
+    }
+  ], 
+  "timer": [
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }, 
+    {
+      "arm": 0, 
+      "days": "0b0000000", 
+      "device": 0, 
+      "mode": 0, 
+      "power": 0, 
+      "repeat": 0, 
+      "time": "0x000", 
+      "window": 0
+    }
+  ], 
+  "timezone": 1, 
+  "timezone_minutes": 0, 
+  "toffset": [
+    60, 
+    120
+  ], 
+  "tuya_fnid_map": [
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }, 
+    {
+      "dpid": 0, 
+      "fnid": 0
+    }
+  ], 
+  "tuyamcu_topic": 0, 
+  "user_template": {
+    "base": 43, 
+    "flag": 0, 
+    "gpio": [
+      32, 
+      3072, 
+      0, 
+      3104, 
+      0, 
+      0, 
+      0, 
+      0, 
+      256, 
+      320, 
+      0, 
+      0, 
+      0, 
+      0
+    ], 
+    "name": "Sonoff POWR3"
+  }, 
+  "version": "0xd000000", 
+  "web_color": [
+    "0xeaeaea", 
+    "0x252525", 
+    "0x4f4f4f", 
+    "0x000000", 
+    "0xdddddd", 
+    "0x65c115", 
+    "0x1f1f1f", 
+    "0xff5661", 
+    "0x008000", 
+    "0xfaffff", 
+    "0x1fa3ec", 
+    "0x0e70a4", 
+    "0xd43535", 
+    "0x931f1f", 
+    "0x47c266", 
+    "0x5aaf6f", 
+    "0xfaffff", 
+    "0x999999"
+  ], 
+  "web_color2": [
+    "0xeaeaea"
+  ], 
+  "web_password": "", 
+  "web_refresh": 2345, 
+  "web_time_end": 0, 
+  "web_time_start": 0, 
+  "weblog_level": 2, 
+  "webserver": 2, 
+  "weight_absconv_a": 0, 
+  "weight_absconv_b": 0, 
+  "weight_calibration": 0, 
+  "weight_change": 0, 
+  "weight_item": 0, 
+  "weight_max": 0.0, 
+  "weight_offset": 0, 
+  "weight_reference": 0, 
+  "weight_user_tare": 0, 
+  "wifi_bssid": [
+    250, 
+    159, 
+    194, 
+    253, 
+    176, 
+    247
+  ], 
+  "wifi_channel": 6, 
+  "wifi_output_power": 170, 
+  "windmeter_pulse_debounce": 0, 
+  "windmeter_pulses_x_rot": 0, 
+  "windmeter_radius": 0, 
+  "windmeter_speed_factor": 0, 
+  "windmeter_tele_pchange": 0, 
+  "ws_color": [
+    [
+      255, 
+      0, 
+      255
+    ], 
+    [
+      0, 
+      255, 
+      0
+    ], 
+    [
+      255, 
+      0, 
+      0
+    ], 
+    [
+      0, 
+      0, 
+      0
+    ]
+  ], 
+  "ws_width": [
+    1, 
+    3, 
+    5
+  ], 
+  "zb_channel": 0, 
+  "zb_ext_panid": "0x0000000000000000", 
+  "zb_pan_id": "0x0000000000000000", 
+  "zb_precfgkey_h": "0x0000000000000000", 
+  "zb_precfgkey_l": "0x0000000000000000", 
+  "zb_txradio_dbm": 0
+}

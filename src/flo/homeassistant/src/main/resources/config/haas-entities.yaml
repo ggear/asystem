@@ -210,9 +210,9 @@ switch.bathroom_rails_plug:
   aliases: []
   room: Bathroom
 switch.roof_water_booster_plug:
-  name: Roof Water Booster
+  name: Ceiling Water Booster
   aliases: []
-  room: Roof
+  room: Ceiling
 switch.outdoor_pool_filter_plug:
   name: Pool Pool Filter
   aliases: []

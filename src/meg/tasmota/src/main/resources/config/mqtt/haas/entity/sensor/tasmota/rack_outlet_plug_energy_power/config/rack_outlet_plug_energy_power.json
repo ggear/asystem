@@ -6,12 +6,11 @@
   "device_class": "power",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/rack_outlet_plug/tele/SENSOR",
+  "state_topic": "tasmota/device/template_roof_network_switch_plug_proxy/tele/SENSOR",
   "value_template": "{{ value_json[\"ENERGY\"][\"Power\"] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.102/?",
     "identifiers": "sonoff-rack-outlet",
     "name": "Sonoff Rack Outlet",
     "model": "POWR316D",

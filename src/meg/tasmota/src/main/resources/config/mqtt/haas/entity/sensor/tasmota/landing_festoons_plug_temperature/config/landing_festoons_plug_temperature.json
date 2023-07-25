@@ -6,12 +6,11 @@
   "device_class": "temperature",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/landing_festoons_plug/tele/SENSOR",
+  "state_topic": "tasmota/device/garden_pedestals_bulb_3/tele/SENSOR",
   "value_template": "{{ value_json[\"DS18B20\"][\"Temperature\"] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.108/?",
     "identifiers": "sonoff-landing-festoons",
     "name": "Sonoff Landing Festoons",
     "model": "THR316D",

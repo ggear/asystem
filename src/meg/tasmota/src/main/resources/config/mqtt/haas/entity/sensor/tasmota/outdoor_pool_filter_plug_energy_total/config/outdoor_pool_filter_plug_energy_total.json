@@ -6,12 +6,11 @@
   "device_class": "energy",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/outdoor_pool_filter_plug/tele/SENSOR",
+  "state_topic": "tasmota/device/kitchen_downlights_plug/tele/SENSOR",
   "value_template": "{{ value_json[\"ENERGY\"][\"Total\"] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.106/?",
     "identifiers": "sonoff-pool-pool-filter",
     "name": "Sonoff Pool Pool Filter",
     "model": "POWR3",

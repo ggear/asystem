@@ -3498,34 +3498,42 @@ sensor.heating_cooling_energy_monthly:
   friendly_name: 'Heating & Cooling Total Energy Monthly'
 sensor.heating_cooling_energy_yearly:
   friendly_name: 'Heating & Cooling Total Energy Yearly'
-sensor.bathroom_towel_rails_energy:
-  friendly_name: 'Bathroom Towel Rails Total Energy'
-sensor.bathroom_towel_rails_energy_weekly:
-  friendly_name: 'Bathroom Towel Rails Total Energy Hept-Daily'
-sensor.bathroom_towel_rails_energy_monthly:
-  friendly_name: 'Bathroom Towel Rails Total Energy Monthly'
-sensor.bathroom_towel_rails_energy_yearly:
-  friendly_name: 'Bathroom Towel Rails Total Energy Yearly'
-sensor.roof_water_booster_energy:
-  friendly_name: 'Roof Water Booster Total Energy'
-sensor.roof_water_booster_energy_weekly:
-  friendly_name: 'Roof Water Booster Total Energy Hept-Daily'
-sensor.roof_water_booster_energy_monthly:
-  friendly_name: 'Roof Water Booster Total Energy Monthly'
-sensor.roof_water_booster_energy_yearly:
-  friendly_name: 'Roof Water Booster Total Energy Yearly'
-sensor.pool_pool_filter_power:
-  friendly_name: 'Pool Pool Filter Current Power'
-sensor.pool_pool_filter_energy:
-  friendly_name: 'Pool Pool Filter Total Energy'
-sensor.pool_pool_filter_energy_daily:
-  friendly_name: 'Pool Pool Filter Total Energy Daily'
-sensor.pool_pool_filter_energy_weekly:
-  friendly_name: 'Pool Pool Filter Total Energy Hept-Daily'
-sensor.pool_pool_filter_energy_monthly:
-  friendly_name: 'Pool Pool Filter Total Energy Monthly'
-sensor.pool_pool_filter_energy_yearly:
-  friendly_name: 'Pool Pool Filter Total Energy Yearly'
+sensor.towel_rails_power:
+  friendly_name: 'Towel Rails Current Power'
+sensor.towel_rails_energy:
+  friendly_name: 'Towel Rails Total Energy'
+sensor.towel_rails_energy_daily:
+  friendly_name: 'Towel Rails Total Energy Daily'
+sensor.towel_rails_energy_weekly:
+  friendly_name: 'Towel Rails Total Energy Hept-Daily'
+sensor.towel_rails_energy_monthly:
+  friendly_name: 'Towel Rails Total Energy Monthly'
+sensor.towel_rails_energy_yearly:
+  friendly_name: 'Towel Rails Total Energy Yearly'
+sensor.water_booster_power:
+  friendly_name: 'Water Booster Current Power'
+sensor.water_booster_energy:
+  friendly_name: 'Water Booster Total Energy'
+sensor.water_booster_energy_daily:
+  friendly_name: 'Water Booster Total Energy Daily'
+sensor.water_booster_energy_weekly:
+  friendly_name: 'Water Booster Total Energy Hept-Daily'
+sensor.water_booster_energy_monthly:
+  friendly_name: 'Water Booster Total Energy Monthly'
+sensor.water_booster_energy_yearly:
+  friendly_name: 'Water Booster Total Energy Yearly'
+sensor.pool_filter_power:
+  friendly_name: 'Pool Filter Current Power'
+sensor.pool_filter_energy:
+  friendly_name: 'Pool Filter Total Energy'
+sensor.pool_filter_energy_daily:
+  friendly_name: 'Pool Filter Total Energy Daily'
+sensor.pool_filter_energy_weekly:
+  friendly_name: 'Pool Filter Total Energy Hept-Daily'
+sensor.pool_filter_energy_monthly:
+  friendly_name: 'Pool Filter Total Energy Monthly'
+sensor.pool_filter_energy_yearly:
+  friendly_name: 'Pool Filter Total Energy Yearly'
 sensor.dining_fans_power:
   friendly_name: 'Dining Fans Current Power'
 sensor.dining_fans_energy:
@@ -3610,38 +3618,54 @@ sensor.whitegoods_discretionary_energy_monthly:
   friendly_name: 'Whitegoods Discretionary Total Energy Monthly'
 sensor.whitegoods_discretionary_energy_yearly:
   friendly_name: 'Whitegoods Discretionary Total Energy Yearly'
-sensor.kitchen_dish_washer_energy:
-  friendly_name: 'Kitchen Dish Washer Total Energy'
-sensor.kitchen_dish_washer_energy_weekly:
-  friendly_name: 'Kitchen Dish Washer Total Energy Hept-Daily'
-sensor.kitchen_dish_washer_energy_monthly:
-  friendly_name: 'Kitchen Dish Washer Total Energy Monthly'
-sensor.kitchen_dish_washer_energy_yearly:
-  friendly_name: 'Kitchen Dish Washer Total Energy Yearly'
-sensor.laundry_clothes_dryer_energy:
-  friendly_name: 'Laundry Clothes Dryer Total Energy'
-sensor.laundry_clothes_dryer_energy_weekly:
-  friendly_name: 'Laundry Clothes Dryer Total Energy Hept-Daily'
-sensor.laundry_clothes_dryer_energy_monthly:
-  friendly_name: 'Laundry Clothes Dryer Total Energy Monthly'
-sensor.laundry_clothes_dryer_energy_yearly:
-  friendly_name: 'Laundry Clothes Dryer Total Energy Yearly'
-sensor.laundry_washing_machine_energy:
-  friendly_name: 'Laundry Washing Machine Total Energy'
-sensor.laundry_washing_machine_energy_weekly:
-  friendly_name: 'Laundry Washing Machine Total Energy Hept-Daily'
-sensor.laundry_washing_machine_energy_monthly:
-  friendly_name: 'Laundry Washing Machine Total Energy Monthly'
-sensor.laundry_washing_machine_energy_yearly:
-  friendly_name: 'Laundry Washing Machine Total Energy Yearly'
-sensor.kitchen_coffee_machine_energy:
-  friendly_name: 'Kitchen Coffee Machine Total Energy'
-sensor.kitchen_coffee_machine_energy_weekly:
-  friendly_name: 'Kitchen Coffee Machine Total Energy Hept-Daily'
-sensor.kitchen_coffee_machine_energy_monthly:
-  friendly_name: 'Kitchen Coffee Machine Total Energy Monthly'
-sensor.kitchen_coffee_machine_energy_yearly:
-  friendly_name: 'Kitchen Coffee Machine Total Energy Yearly'
+sensor.dish_washer_power:
+  friendly_name: 'Dish Washer Current Power'
+sensor.dish_washer_energy:
+  friendly_name: 'Dish Washer Total Energy'
+sensor.dish_washer_energy_daily:
+  friendly_name: 'Dish Washer Total Energy Daily'
+sensor.dish_washer_energy_weekly:
+  friendly_name: 'Dish Washer Total Energy Hept-Daily'
+sensor.dish_washer_energy_monthly:
+  friendly_name: 'Dish Washer Total Energy Monthly'
+sensor.dish_washer_energy_yearly:
+  friendly_name: 'Dish Washer Total Energy Yearly'
+sensor.clothes_dryer_power:
+  friendly_name: 'Clothes Dryer Current Power'
+sensor.clothes_dryer_energy:
+  friendly_name: 'Clothes Dryer Total Energy'
+sensor.clothes_dryer_energy_daily:
+  friendly_name: 'Clothes Dryer Total Energy Daily'
+sensor.clothes_dryer_energy_weekly:
+  friendly_name: 'Clothes Dryer Total Energy Hept-Daily'
+sensor.clothes_dryer_energy_monthly:
+  friendly_name: 'Clothes Dryer Total Energy Monthly'
+sensor.clothes_dryer_energy_yearly:
+  friendly_name: 'Clothes Dryer Total Energy Yearly'
+sensor.washing_machine_power:
+  friendly_name: 'Washing Machine Current Power'
+sensor.washing_machine_energy:
+  friendly_name: 'Washing Machine Total Energy'
+sensor.washing_machine_energy_daily:
+  friendly_name: 'Washing Machine Total Energy Daily'
+sensor.washing_machine_energy_weekly:
+  friendly_name: 'Washing Machine Total Energy Hept-Daily'
+sensor.washing_machine_energy_monthly:
+  friendly_name: 'Washing Machine Total Energy Monthly'
+sensor.washing_machine_energy_yearly:
+  friendly_name: 'Washing Machine Total Energy Yearly'
+sensor.coffee_machine_power:
+  friendly_name: 'Coffee Machine Current Power'
+sensor.coffee_machine_energy:
+  friendly_name: 'Coffee Machine Total Energy'
+sensor.coffee_machine_energy_daily:
+  friendly_name: 'Coffee Machine Total Energy Daily'
+sensor.coffee_machine_energy_weekly:
+  friendly_name: 'Coffee Machine Total Energy Hept-Daily'
+sensor.coffee_machine_energy_monthly:
+  friendly_name: 'Coffee Machine Total Energy Monthly'
+sensor.coffee_machine_energy_yearly:
+  friendly_name: 'Coffee Machine Total Energy Yearly'
 sensor.whitegoods_continuous_power:
   friendly_name: 'Whitegoods Continuous Current Power'
 sensor.whitegoods_continuous_energy:
@@ -3670,22 +3694,30 @@ sensor.deck_freezer_energy_monthly:
   friendly_name: 'Deck Freezer Total Energy Monthly'
 sensor.deck_freezer_energy_yearly:
   friendly_name: 'Deck Freezer Total Energy Yearly'
-sensor.study_battery_charger_energy:
-  friendly_name: 'Study Battery Charger Total Energy'
-sensor.study_battery_charger_energy_weekly:
-  friendly_name: 'Study Battery Charger Total Energy Hept-Daily'
-sensor.study_battery_charger_energy_monthly:
-  friendly_name: 'Study Battery Charger Total Energy Monthly'
-sensor.study_battery_charger_energy_yearly:
-  friendly_name: 'Study Battery Charger Total Energy Yearly'
-sensor.laundry_vacuum_charger_energy:
-  friendly_name: 'Laundry Vacuum Charger Total Energy'
-sensor.laundry_vacuum_charger_energy_weekly:
-  friendly_name: 'Laundry Vacuum Charger Total Energy Hept-Daily'
-sensor.laundry_vacuum_charger_energy_monthly:
-  friendly_name: 'Laundry Vacuum Charger Total Energy Monthly'
-sensor.laundry_vacuum_charger_energy_yearly:
-  friendly_name: 'Laundry Vacuum Charger Total Energy Yearly'
+sensor.battery_charger_power:
+  friendly_name: 'Battery Charger Current Power'
+sensor.battery_charger_energy:
+  friendly_name: 'Battery Charger Total Energy'
+sensor.battery_charger_energy_daily:
+  friendly_name: 'Battery Charger Total Energy Daily'
+sensor.battery_charger_energy_weekly:
+  friendly_name: 'Battery Charger Total Energy Hept-Daily'
+sensor.battery_charger_energy_monthly:
+  friendly_name: 'Battery Charger Total Energy Monthly'
+sensor.battery_charger_energy_yearly:
+  friendly_name: 'Battery Charger Total Energy Yearly'
+sensor.vacuum_charger_power:
+  friendly_name: 'Vacuum Charger Current Power'
+sensor.vacuum_charger_energy:
+  friendly_name: 'Vacuum Charger Total Energy'
+sensor.vacuum_charger_energy_daily:
+  friendly_name: 'Vacuum Charger Total Energy Daily'
+sensor.vacuum_charger_energy_weekly:
+  friendly_name: 'Vacuum Charger Total Energy Hept-Daily'
+sensor.vacuum_charger_energy_monthly:
+  friendly_name: 'Vacuum Charger Total Energy Monthly'
+sensor.vacuum_charger_energy_yearly:
+  friendly_name: 'Vacuum Charger Total Energy Yearly'
 sensor.ada_tablet_power:
   friendly_name: 'Ada Tablet Current Power'
 sensor.ada_tablet_energy:
@@ -3802,75 +3834,111 @@ sensor.zigbee_repeaters_energy_monthly:
   friendly_name: 'Zigbee Repeaters Total Energy Monthly'
 sensor.zigbee_repeaters_energy_yearly:
   friendly_name: 'Zigbee Repeaters Total Energy Yearly'
-sensor.ada_audio_visual_devices_power:
-  friendly_name: 'Ada Audio Visual Devices Current Power'
-sensor.ada_audio_visual_devices_energy:
-  friendly_name: 'Ada Audio Visual Devices Total Energy'
-sensor.ada_audio_visual_devices_energy_daily:
-  friendly_name: 'Ada Audio Visual Devices Total Energy Daily'
-sensor.ada_audio_visual_devices_energy_weekly:
-  friendly_name: 'Ada Audio Visual Devices Total Energy Hept-Daily'
-sensor.ada_audio_visual_devices_energy_monthly:
-  friendly_name: 'Ada Audio Visual Devices Total Energy Monthly'
-sensor.ada_audio_visual_devices_energy_yearly:
-  friendly_name: 'Ada Audio Visual Devices Total Energy Yearly'
-sensor.edwin_audio_visual_devices_power:
-  friendly_name: 'Edwin Audio Visual Devices Current Power'
-sensor.edwin_audio_visual_devices_energy:
-  friendly_name: 'Edwin Audio Visual Devices Total Energy'
-sensor.edwin_audio_visual_devices_energy_daily:
-  friendly_name: 'Edwin Audio Visual Devices Total Energy Daily'
-sensor.edwin_audio_visual_devices_energy_weekly:
-  friendly_name: 'Edwin Audio Visual Devices Total Energy Hept-Daily'
-sensor.edwin_audio_visual_devices_energy_monthly:
-  friendly_name: 'Edwin Audio Visual Devices Total Energy Monthly'
-sensor.edwin_audio_visual_devices_energy_yearly:
-  friendly_name: 'Edwin Audio Visual Devices Total Energy Yearly'
-sensor.parents_audio_visual_devices_power:
-  friendly_name: 'Parents Audio Visual Devices Current Power'
-sensor.parents_audio_visual_devices_energy:
-  friendly_name: 'Parents Audio Visual Devices Total Energy'
-sensor.parents_audio_visual_devices_energy_daily:
-  friendly_name: 'Parents Audio Visual Devices Total Energy Daily'
-sensor.parents_audio_visual_devices_energy_weekly:
-  friendly_name: 'Parents Audio Visual Devices Total Energy Hept-Daily'
-sensor.parents_audio_visual_devices_energy_monthly:
-  friendly_name: 'Parents Audio Visual Devices Total Energy Monthly'
-sensor.parents_audio_visual_devices_energy_yearly:
-  friendly_name: 'Parents Audio Visual Devices Total Energy Yearly'
-sensor.kitchen_audio_visual_devices_power:
-  friendly_name: 'Kitchen Audio Visual Devices Current Power'
-sensor.kitchen_audio_visual_devices_energy:
-  friendly_name: 'Kitchen Audio Visual Devices Total Energy'
-sensor.kitchen_audio_visual_devices_energy_daily:
-  friendly_name: 'Kitchen Audio Visual Devices Total Energy Daily'
-sensor.kitchen_audio_visual_devices_energy_weekly:
-  friendly_name: 'Kitchen Audio Visual Devices Total Energy Hept-Daily'
-sensor.kitchen_audio_visual_devices_energy_monthly:
-  friendly_name: 'Kitchen Audio Visual Devices Total Energy Monthly'
-sensor.kitchen_audio_visual_devices_energy_yearly:
-  friendly_name: 'Kitchen Audio Visual Devices Total Energy Yearly'
-sensor.office_audio_visual_devices_power:
-  friendly_name: 'Office Audio Visual Devices Current Power'
-sensor.office_audio_visual_devices_energy:
-  friendly_name: 'Office Audio Visual Devices Total Energy'
-sensor.office_audio_visual_devices_energy_daily:
-  friendly_name: 'Office Audio Visual Devices Total Energy Daily'
-sensor.office_audio_visual_devices_energy_weekly:
-  friendly_name: 'Office Audio Visual Devices Total Energy Hept-Daily'
-sensor.office_audio_visual_devices_energy_monthly:
-  friendly_name: 'Office Audio Visual Devices Total Energy Monthly'
-sensor.office_audio_visual_devices_energy_yearly:
-  friendly_name: 'Office Audio Visual Devices Total Energy Yearly'
-sensor.lounge_audio_visual_devices_power:
-  friendly_name: 'Lounge Audio Visual Devices Current Power'
-sensor.lounge_audio_visual_devices_energy:
-  friendly_name: 'Lounge Audio Visual Devices Total Energy'
-sensor.lounge_audio_visual_devices_energy_daily:
-  friendly_name: 'Lounge Audio Visual Devices Total Energy Daily'
-sensor.lounge_audio_visual_devices_energy_weekly:
-  friendly_name: 'Lounge Audio Visual Devices Total Energy Hept-Daily'
-sensor.lounge_audio_visual_devices_energy_monthly:
-  friendly_name: 'Lounge Audio Visual Devices Total Energy Monthly'
-sensor.lounge_audio_visual_devices_energy_yearly:
-  friendly_name: 'Lounge Audio Visual Devices Total Energy Yearly'
+sensor.ada_home_devices_power:
+  friendly_name: 'Ada Home Devices Current Power'
+sensor.ada_home_devices_energy:
+  friendly_name: 'Ada Home Devices Total Energy'
+sensor.ada_home_devices_energy_daily:
+  friendly_name: 'Ada Home Devices Total Energy Daily'
+sensor.ada_home_devices_energy_weekly:
+  friendly_name: 'Ada Home Devices Total Energy Hept-Daily'
+sensor.ada_home_devices_energy_monthly:
+  friendly_name: 'Ada Home Devices Total Energy Monthly'
+sensor.ada_home_devices_energy_yearly:
+  friendly_name: 'Ada Home Devices Total Energy Yearly'
+sensor.edwin_home_devices_power:
+  friendly_name: 'Edwin Home Devices Current Power'
+sensor.edwin_home_devices_energy:
+  friendly_name: 'Edwin Home Devices Total Energy'
+sensor.edwin_home_devices_energy_daily:
+  friendly_name: 'Edwin Home Devices Total Energy Daily'
+sensor.edwin_home_devices_energy_weekly:
+  friendly_name: 'Edwin Home Devices Total Energy Hept-Daily'
+sensor.edwin_home_devices_energy_monthly:
+  friendly_name: 'Edwin Home Devices Total Energy Monthly'
+sensor.edwin_home_devices_energy_yearly:
+  friendly_name: 'Edwin Home Devices Total Energy Yearly'
+sensor.parents_home_devices_power:
+  friendly_name: 'Parents Home Devices Current Power'
+sensor.parents_home_devices_energy:
+  friendly_name: 'Parents Home Devices Total Energy'
+sensor.parents_home_devices_energy_daily:
+  friendly_name: 'Parents Home Devices Total Energy Daily'
+sensor.parents_home_devices_energy_weekly:
+  friendly_name: 'Parents Home Devices Total Energy Hept-Daily'
+sensor.parents_home_devices_energy_monthly:
+  friendly_name: 'Parents Home Devices Total Energy Monthly'
+sensor.parents_home_devices_energy_yearly:
+  friendly_name: 'Parents Home Devices Total Energy Yearly'
+sensor.kitchen_home_devices_power:
+  friendly_name: 'Kitchen Home Devices Current Power'
+sensor.kitchen_home_devices_energy:
+  friendly_name: 'Kitchen Home Devices Total Energy'
+sensor.kitchen_home_devices_energy_daily:
+  friendly_name: 'Kitchen Home Devices Total Energy Daily'
+sensor.kitchen_home_devices_energy_weekly:
+  friendly_name: 'Kitchen Home Devices Total Energy Hept-Daily'
+sensor.kitchen_home_devices_energy_monthly:
+  friendly_name: 'Kitchen Home Devices Total Energy Monthly'
+sensor.kitchen_home_devices_energy_yearly:
+  friendly_name: 'Kitchen Home Devices Total Energy Yearly'
+sensor.office_home_devices_power:
+  friendly_name: 'Office Home Devices Current Power'
+sensor.office_home_devices_energy:
+  friendly_name: 'Office Home Devices Total Energy'
+sensor.office_home_devices_energy_daily:
+  friendly_name: 'Office Home Devices Total Energy Daily'
+sensor.office_home_devices_energy_weekly:
+  friendly_name: 'Office Home Devices Total Energy Hept-Daily'
+sensor.office_home_devices_energy_monthly:
+  friendly_name: 'Office Home Devices Total Energy Monthly'
+sensor.office_home_devices_energy_yearly:
+  friendly_name: 'Office Home Devices Total Energy Yearly'
+sensor.lounge_home_devices_power:
+  friendly_name: 'Lounge Home Devices Current Power'
+sensor.lounge_home_devices_energy:
+  friendly_name: 'Lounge Home Devices Total Energy'
+sensor.lounge_home_devices_energy_daily:
+  friendly_name: 'Lounge Home Devices Total Energy Daily'
+sensor.lounge_home_devices_energy_weekly:
+  friendly_name: 'Lounge Home Devices Total Energy Hept-Daily'
+sensor.lounge_home_devices_energy_monthly:
+  friendly_name: 'Lounge Home Devices Total Energy Monthly'
+sensor.lounge_home_devices_energy_yearly:
+  friendly_name: 'Lounge Home Devices Total Energy Yearly'
+sensor.kitchen_move_devices_power:
+  friendly_name: 'Kitchen Move Devices Current Power'
+sensor.kitchen_move_devices_energy:
+  friendly_name: 'Kitchen Move Devices Total Energy'
+sensor.kitchen_move_devices_energy_daily:
+  friendly_name: 'Kitchen Move Devices Total Energy Daily'
+sensor.kitchen_move_devices_energy_weekly:
+  friendly_name: 'Kitchen Move Devices Total Energy Hept-Daily'
+sensor.kitchen_move_devices_energy_monthly:
+  friendly_name: 'Kitchen Move Devices Total Energy Monthly'
+sensor.kitchen_move_devices_energy_yearly:
+  friendly_name: 'Kitchen Move Devices Total Energy Yearly'
+sensor.kitchen_five_devices_power:
+  friendly_name: 'Kitchen Five Devices Current Power'
+sensor.kitchen_five_devices_energy:
+  friendly_name: 'Kitchen Five Devices Total Energy'
+sensor.kitchen_five_devices_energy_daily:
+  friendly_name: 'Kitchen Five Devices Total Energy Daily'
+sensor.kitchen_five_devices_energy_weekly:
+  friendly_name: 'Kitchen Five Devices Total Energy Hept-Daily'
+sensor.kitchen_five_devices_energy_monthly:
+  friendly_name: 'Kitchen Five Devices Total Energy Monthly'
+sensor.kitchen_five_devices_energy_yearly:
+  friendly_name: 'Kitchen Five Devices Total Energy Yearly'
+sensor.parents_move_devices_power:
+  friendly_name: 'Parents Move Devices Current Power'
+sensor.parents_move_devices_energy:
+  friendly_name: 'Parents Move Devices Total Energy'
+sensor.parents_move_devices_energy_daily:
+  friendly_name: 'Parents Move Devices Total Energy Daily'
+sensor.parents_move_devices_energy_weekly:
+  friendly_name: 'Parents Move Devices Total Energy Hept-Daily'
+sensor.parents_move_devices_energy_monthly:
+  friendly_name: 'Parents Move Devices Total Energy Monthly'
+sensor.parents_move_devices_energy_yearly:
+  friendly_name: 'Parents Move Devices Total Energy Yearly'

@@ -556,41 +556,43 @@ sensor:
                     power_sensor_id: sensor.ada_tablet_outlet_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
-              - create_group: Ada Audio Visual Devices
+              - create_group: Ada Home Devices
                 entities:
                   - entity_id: media_player.ada_home
-                    name: Ada Home
               #########################################################################
-              - create_group: Edwin Audio Visual Devices
+              - create_group: Edwin Home Devices
                 entities:
                   - entity_id: media_player.edwin_home
-                    name: Edwin Home
               #########################################################################
-              - create_group: Parents Audio Visual Devices
+              - create_group: Parents Home Devices
                 entities:
                   - entity_id: media_player.parents_home
                     model: Nest Hub 2gen
-                  - entity_id: media_player.parents_move
-                    name: Parents Move
               #########################################################################
-              - create_group: Kitchen Audio Visual Devices
+              - create_group: Kitchen Home Devices
                 entities:
                   - entity_id: media_player.kitchen_home
                     model: Nest Hub 2gen
-                  - entity_id: media_player.kitchen_move
-                    name: Kitchen Move
-                  - entity_id: media_player.kitchen_five
-                    name: Kitchen Five
               #########################################################################
-              - create_group: Office Audio Visual Devices
+              - create_group: Office Home Devices
                 entities:
                   - entity_id: media_player.office_home
-                    name: Office Home
               #########################################################################
-              - create_group: Lounge Audio Visual Devices
+              - create_group: Lounge Home Devices
                 entities:
                   - entity_id: media_player.lounge_home
-                    name: Lounge Home
+              #########################################################################
+              - create_group: Kitchen Move Devices
+                entities:
+                  - entity_id: media_player.kitchen_move
+              #########################################################################
+              - create_group: Kitchen Five Devices
+                entities:
+                  - entity_id: media_player.kitchen_five
+              #########################################################################
+              - create_group: Parents Move Devices
+                entities:
+                  - entity_id: media_player.parents_move
           #############################################################################
           - create_group: Power Plugs
             entities:
@@ -617,7 +619,7 @@ sensor:
                     power_sensor_id: sensor.office_outlet_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
-              - create_group: Study Battery Charger
+              - create_group: Battery Charger
                 entities:
                   - entity_id: binary_sensor.template_study_battery_charger_plug_proxy
                     standby_power: 0.5
@@ -628,7 +630,7 @@ sensor:
                     power_sensor_id: sensor.study_battery_charger_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
-              - create_group: Laundry Vacuum Charger
+              - create_group: Vacuum Charger
                 entities:
                   - entity_id: binary_sensor.template_laundry_vacuum_charger_plug_proxy
                     standby_power: 0.5
@@ -722,7 +724,7 @@ sensor:
           - create_group: Heating & Cooling
             entities:
               #########################################################################
-              - create_group: Bathroom Towel Rails
+              - create_group: Towel Rails
                 entities:
                   - entity_id: binary_sensor.template_bathroom_rails_plug_proxy
                     standby_power: 1.54
@@ -733,7 +735,7 @@ sensor:
                     power_sensor_id: sensor.bathroom_rails_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
-              - create_group: Roof Water Booster
+              - create_group: Water Booster
                 entities:
                   - entity_id: binary_sensor.template_roof_water_booster_plug_proxy
                     standby_power: 1.54
@@ -744,7 +746,7 @@ sensor:
                     power_sensor_id: sensor.roof_water_booster_plug_energy_power
                     energy_sensor_id: sensor.roof_water_booster_plug_energy_total
               #########################################################################
-              - create_group: Pool Pool Filter
+              - create_group: Pool Filter
                 entities:
                   - entity_id: binary_sensor.template_outdoor_pool_filter_plug_proxy
                     standby_power: 1.54
@@ -758,7 +760,7 @@ sensor:
           - create_group: Whitegoods Discretionary
             entities:
               #########################################################################
-              - create_group: Kitchen Dish Washer
+              - create_group: Dish Washer
                 entities:
                   - entity_id: binary_sensor.template_kitchen_dish_washer_plug_proxy
                     standby_power: 0.5
@@ -769,7 +771,7 @@ sensor:
                     power_sensor_id: sensor.kitchen_dish_washer_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
-              - create_group: Laundry Clothes Dryer
+              - create_group: Clothes Dryer
                 entities:
                   - entity_id: binary_sensor.template_laundry_clothes_dryer_plug_proxy
                     standby_power: 0.5
@@ -780,7 +782,7 @@ sensor:
                     power_sensor_id: sensor.laundry_clothes_dryer_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
-              - create_group: Laundry Washing Machine
+              - create_group: Washing Machine
                 entities:
                   - entity_id: binary_sensor.template_laundry_washing_machine_plug_proxy
                     standby_power: 0.5
@@ -791,7 +793,7 @@ sensor:
                     power_sensor_id: sensor.laundry_washing_machine_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
-              - create_group: Kitchen Coffee Machine
+              - create_group: Coffee Machine
                 entities:
                   - entity_id: binary_sensor.template_kitchen_coffee_machine_plug_proxy
                     standby_power: 0.5

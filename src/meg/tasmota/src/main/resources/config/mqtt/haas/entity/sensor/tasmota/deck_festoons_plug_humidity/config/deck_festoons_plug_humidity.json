@@ -6,12 +6,11 @@
   "device_class": "humidity",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/deck_festoons_plug/tele/SENSOR",
+  "state_topic": "tasmota/device/garden_pedestals_bulb_1/tele/SENSOR",
   "value_template": "{{ value_json[\"SI7021\"][\"Humidity\"] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.107/?",
     "identifiers": "sonoff-deck-festoons",
     "name": "Sonoff Deck Festoons",
     "model": "THR316D",
