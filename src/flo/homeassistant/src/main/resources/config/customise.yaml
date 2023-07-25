@@ -427,7 +427,7 @@ sensor.ceiling_water_booster_plug_energy_total:
   unit_of_measurement: 'kWh'
 switch.garden_pool_filter_plug:
   friendly_name: 'Pool Filter'
-  icon: 'mdi:thermometer-water'
+  icon: 'mdi:pool'
 sensor.garden_pool_filter_plug_energy_power:
   friendly_name: 'Current Power'
   unit_of_measurement: 'W'

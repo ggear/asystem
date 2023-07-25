@@ -143,7 +143,7 @@
       icon: mdi:thermometer-water
     - entity: switch.garden_pool_filter_plug
       name: Pool Filter
-      icon: mdi:thermometer-water
+      icon: mdi:pool
 ################################################################################
 - type: entities
   title: Air Purifiers
