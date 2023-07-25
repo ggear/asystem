@@ -7,7 +7,7 @@
   "force_update": "false",
   "optimistic": "true",
   "state_topic": "tasmota/device/landing_festoons_plug/tele/SENSOR",
-  "value_template": "{{ value_json[\"DS18B20\"][\"Temperature\"] }}",
+  "value_template": "{{ value_json['SI7021']['Temperature'] if (value_json['SI7021']['Temperature'] is defined and (value_json['SI7021']['Temperature'] | float(-200) > -100) and (value_json['SI7021']['Temperature'] | float(200) < 100)) else states('sensor.deck_festoons_plug_temperature') }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",

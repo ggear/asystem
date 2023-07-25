@@ -26,6 +26,12 @@ if netcat -zw 1 10.0.6.100 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
 	fi
+	if [ "$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=SensorRetain OFF'
+		echo ''
+	else
+		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
+	fi
 	if [ "$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=TelePeriod 10'
 		echo ''
@@ -119,6 +125,12 @@ if netcat -zw 1 10.0.6.101 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
 	fi
+	if [ "$(curl -s http://10.0.6.101/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s http://10.0.6.101/cm? --data-urlencode 'cmnd=SensorRetain OFF'
+		echo ''
+	else
+		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
+	fi
 	printf 'Restarting [rack_fans_plug] with response: ' && curl -s http://10.0.6.101/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
@@ -151,6 +163,12 @@ if netcat -zw 1 10.0.6.102 80 2>/dev/null; then
 		echo ''
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+	fi
+	if [ "$(curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=SensorRetain OFF'
+		echo ''
+	else
+		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.102/cm? --data-urlencode 'cmnd=TelePeriod 10'
@@ -245,6 +263,12 @@ if netcat -zw 1 10.0.6.103 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
 	fi
+	if [ "$(curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=SensorRetain OFF'
+		echo ''
+	else
+		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
+	fi
 	printf 'Restarting [kitchen_downlights_plug] with response: ' && curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
@@ -277,6 +301,12 @@ if netcat -zw 1 10.0.6.104 80 2>/dev/null; then
 		echo ''
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+	fi
+	if [ "$(curl -s http://10.0.6.104/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s http://10.0.6.104/cm? --data-urlencode 'cmnd=SensorRetain OFF'
+		echo ''
+	else
+		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s http://10.0.6.104/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.104/cm? --data-urlencode 'cmnd=TelePeriod 10'
@@ -371,6 +401,12 @@ if netcat -zw 1 10.0.6.105 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
 	fi
+	if [ "$(curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=SensorRetain OFF'
+		echo ''
+	else
+		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
+	fi
 	if [ "$(curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=TelePeriod 10'
 		echo ''
@@ -463,6 +499,12 @@ if netcat -zw 1 10.0.6.106 80 2>/dev/null; then
 		echo ''
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+	fi
+	if [ "$(curl -s http://10.0.6.106/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s http://10.0.6.106/cm? --data-urlencode 'cmnd=SensorRetain OFF'
+		echo ''
+	else
+		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s http://10.0.6.106/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.106/cm? --data-urlencode 'cmnd=TelePeriod 10'
@@ -557,6 +599,12 @@ if netcat -zw 1 10.0.6.107 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
 	fi
+	if [ "$(curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=SensorRetain OFF'
+		echo ''
+	else
+		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
+	fi
 	if [ "$(curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.107/cm? --data-urlencode 'cmnd=TelePeriod 10'
 		echo ''
@@ -595,6 +643,12 @@ if netcat -zw 1 10.0.6.108 80 2>/dev/null; then
 		echo ''
 	else
 		echo 'Config set skipped, [StatusRetain] already set to [ON]'
+	fi
+	if [ "$(curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=SensorRetain' | grep '{"SensorRetain":"OFF"}' | wc -l)" -ne 1 ]; then
+		printf 'Config set [SensorRetain] to [OFF] with response: ' && curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=SensorRetain OFF'
+		echo ''
+	else
+		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
 	if [ "$(curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=TelePeriod' | grep '{"TelePeriod":10}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [TelePeriod] to [10] with response: ' && curl -s http://10.0.6.108/cm? --data-urlencode 'cmnd=TelePeriod 10'

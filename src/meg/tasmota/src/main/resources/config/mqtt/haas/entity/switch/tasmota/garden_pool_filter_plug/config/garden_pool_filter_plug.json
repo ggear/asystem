@@ -1,7 +1,7 @@
 {
   "unique_id": "garden_pool_filter_plug",
   "name": "garden_pool_filter_plug",
-  "icon": "mdi:thermometer-water",
+  "icon": "mdi:pool",
   "force_update": "false",
   "optimistic": "true",
   "state_topic": "tasmota/device/garden_pool_filter_plug/stat/POWER",

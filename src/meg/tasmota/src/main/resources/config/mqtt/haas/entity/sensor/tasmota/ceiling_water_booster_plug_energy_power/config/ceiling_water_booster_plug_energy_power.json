@@ -7,7 +7,7 @@
   "force_update": "false",
   "optimistic": "true",
   "state_topic": "tasmota/device/ceiling_water_booster_plug/tele/SENSOR",
-  "value_template": "{{ value_json[\"ENERGY\"][\"Power\"] }}",
+  "value_template": "{{ value_json['ENERGY']['Power'] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",

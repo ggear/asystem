@@ -86,10 +86,10 @@ mqtt:
 #  discovery_prefix: 'haas/entity'
 #  birth_message:
 #    topic: 'hass/system/status'
-#    payload: 'online'
+#    payload: 'Online'
 #  will_message:
 #    topic: 'hass/system/status'
-#    payload: 'offline'
+#    payload: 'Offline'
 #######################################################################################
 discovery:
   ignore:

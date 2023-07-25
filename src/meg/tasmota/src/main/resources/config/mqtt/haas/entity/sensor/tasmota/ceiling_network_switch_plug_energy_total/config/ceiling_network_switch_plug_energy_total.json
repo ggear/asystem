@@ -7,7 +7,7 @@
   "force_update": "false",
   "optimistic": "true",
   "state_topic": "tasmota/device/ceiling_network_switch_plug/tele/SENSOR",
-  "value_template": "{{ value_json[\"ENERGY\"][\"Total\"] }}",
+  "value_template": "{{ value_json['ENERGY']['Total'] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
