@@ -70,10 +70,10 @@
     - entity: sensor.washing_machine_power
       name: Washing Machine
       icon: mdi:home-lightning-bolt
-    - entity: sensor.fridge_power
+    - entity: sensor.kitchen_fridge_power
       name: Kitchen Fridge
       icon: mdi:home-lightning-bolt
-    - entity: sensor.freezer_power
+    - entity: sensor.deck_freezer_power
       name: Deck Freezer
       icon: mdi:home-lightning-bolt
     - entity: sensor.towel_rails_power
@@ -163,10 +163,10 @@
     - entity: sensor.washing_machine_energy_daily
       name: Washing Machine
       icon: mdi:battery-charging
-    - entity: sensor.fridge_energy_daily
+    - entity: sensor.kitchen_fridge_energy_daily
       name: Kitchen Fridge
       icon: mdi:battery-charging
-    - entity: sensor.freezer_energy_daily
+    - entity: sensor.deck_freezer_energy_daily
       name: Deck Freezer
       icon: mdi:battery-charging
     - entity: sensor.towel_rails_energy_daily

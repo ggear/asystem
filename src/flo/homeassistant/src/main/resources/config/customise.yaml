@@ -496,11 +496,11 @@ sensor.washing_machine_power:
   friendly_name: 'Washing Machine'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.fridge_power:
+sensor.kitchen_fridge_power:
   friendly_name: 'Kitchen Fridge'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.freezer_power:
+sensor.deck_freezer_power:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
@@ -580,11 +580,11 @@ sensor.washing_machine_energy_daily:
   friendly_name: 'Washing Machine'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.fridge_energy_daily:
+sensor.kitchen_fridge_energy_daily:
   friendly_name: 'Kitchen Fridge'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
-sensor.freezer_energy_daily:
+sensor.deck_freezer_energy_daily:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
@@ -3650,24 +3650,16 @@ sensor.whitegoods_continuous_energy_monthly:
   friendly_name: 'Whitegoods Continuous Total Energy Monthly'
 sensor.whitegoods_continuous_energy_yearly:
   friendly_name: 'Whitegoods Continuous Total Energy Yearly'
-sensor.kitchen_fridge_power:
-  friendly_name: 'Kitchen Fridge Current Power'
 sensor.kitchen_fridge_energy:
   friendly_name: 'Kitchen Fridge Total Energy'
-sensor.kitchen_fridge_energy_daily:
-  friendly_name: 'Kitchen Fridge Total Energy Daily'
 sensor.kitchen_fridge_energy_weekly:
   friendly_name: 'Kitchen Fridge Total Energy Hept-Daily'
 sensor.kitchen_fridge_energy_monthly:
   friendly_name: 'Kitchen Fridge Total Energy Monthly'
 sensor.kitchen_fridge_energy_yearly:
   friendly_name: 'Kitchen Fridge Total Energy Yearly'
-sensor.deck_freezer_power:
-  friendly_name: 'Deck Freezer Current Power'
 sensor.deck_freezer_energy:
   friendly_name: 'Deck Freezer Total Energy'
-sensor.deck_freezer_energy_daily:
-  friendly_name: 'Deck Freezer Total Energy Daily'
 sensor.deck_freezer_energy_weekly:
   friendly_name: 'Deck Freezer Total Energy Hept-Daily'
 sensor.deck_freezer_energy_monthly:
