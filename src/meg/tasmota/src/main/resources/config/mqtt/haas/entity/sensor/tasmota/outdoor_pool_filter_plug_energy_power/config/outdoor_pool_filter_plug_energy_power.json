@@ -6,7 +6,7 @@
   "device_class": "power",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/kitchen_downlights_plug/tele/SENSOR",
+  "state_topic": "tasmota/device/outdoor_pool_filter_plug/tele/SENSOR",
   "value_template": "{{ value_json[\"ENERGY\"][\"Power\"] }}",
   "qos": "1",
   "device": {

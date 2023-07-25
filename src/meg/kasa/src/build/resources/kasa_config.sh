@@ -73,11 +73,11 @@ else
 	echo '' && echo 'Skipping config for device [old_kitchen_downlights_plug] at [http://10.0.6.79/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.80 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [lounge_tv_outlet_plug] at [10.0.6.80] ... '
-	kasa --host 10.0.6.80 --type plug alias 'Lounge Tv Outlet Plug'
+	echo '' && echo 'Processing config for device [lounge_tv_plug] at [10.0.6.80] ... '
+	kasa --host 10.0.6.80 --type plug alias 'Lounge Tv Plug'
 	kasa --host 10.0.6.80 --type plug led 'False'
 else
-	echo '' && echo 'Skipping config for device [lounge_tv_outlet_plug] at [http://10.0.6.80/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [lounge_tv_plug] at [http://10.0.6.80/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.81 9999 2>/dev/null; then
 	echo '' && echo 'Processing config for device [bathroom_rails_plug] at [10.0.6.81] ... '
@@ -143,24 +143,24 @@ else
 	echo '' && echo 'Skipping config for device [old_landing_festoons_plug] at [http://10.0.6.89/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.90 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [ada_tablet_outlet_plug] at [10.0.6.90] ... '
-	kasa --host 10.0.6.90 --type plug alias 'Ada Tablet Outlet Plug'
+	echo '' && echo 'Processing config for device [ada_tablet_plug] at [10.0.6.90] ... '
+	kasa --host 10.0.6.90 --type plug alias 'Ada Tablet Plug'
 	kasa --host 10.0.6.90 --type plug led 'False'
 else
-	echo '' && echo 'Skipping config for device [ada_tablet_outlet_plug] at [http://10.0.6.90/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [ada_tablet_plug] at [http://10.0.6.90/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.91 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [server_flo_outlet_plug] at [10.0.6.91] ... '
-	kasa --host 10.0.6.91 --type plug alias 'Server Flo Outlet Plug'
+	echo '' && echo 'Processing config for device [server_flo_plug] at [10.0.6.91] ... '
+	kasa --host 10.0.6.91 --type plug alias 'Server Flo Plug'
 	kasa --host 10.0.6.91 --type plug led 'True'
 else
-	echo '' && echo 'Skipping config for device [server_flo_outlet_plug] at [http://10.0.6.91/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [server_flo_plug] at [http://10.0.6.91/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.92 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [server_meg_outlet_plug] at [10.0.6.92] ... '
-	kasa --host 10.0.6.92 --type plug alias 'Server Meg Outlet Plug'
+	echo '' && echo 'Processing config for device [server_meg_plug] at [10.0.6.92] ... '
+	kasa --host 10.0.6.92 --type plug alias 'Server Meg Plug'
 	kasa --host 10.0.6.92 --type plug led 'True'
 else
-	echo '' && echo 'Skipping config for device [server_meg_outlet_plug] at [http://10.0.6.92/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [server_meg_plug] at [http://10.0.6.92/?] given it is unresponsive'
 fi
 echo ''

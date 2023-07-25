@@ -74,7 +74,7 @@
   title: Power Plugs
   show_header_toggle: false
   entities:
-    - entity: switch.lounge_tv_outlet_plug
+    - entity: switch.lounge_tv_plug
       name: Lounge TV
       icon: mdi:television
     - entity: switch.lounge_sub_plug
@@ -110,13 +110,13 @@
     - entity: switch.laundry_vacuum_charger_plug
       name: Vacuum Charger
       icon: mdi:battery-charging-30
-    - entity: switch.ada_tablet_outlet_plug
+    - entity: switch.ada_tablet_plug
       name: Ada Tablet
       icon: mdi:tablet
-    - entity: switch.server_flo_outlet_plug
+    - entity: switch.server_flo_plug
       name: Server Flo
       icon: mdi:server
-    - entity: switch.server_meg_outlet_plug
+    - entity: switch.server_meg_plug
       name: Server Meg
       icon: mdi:server
     - entity: switch.rack_outlet_plug

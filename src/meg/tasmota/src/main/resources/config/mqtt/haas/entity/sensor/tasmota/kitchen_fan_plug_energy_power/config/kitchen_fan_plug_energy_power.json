@@ -6,7 +6,7 @@
   "device_class": "power",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/kitchen_home/tele/SENSOR",
+  "state_topic": "tasmota/device/kitchen_fan_plug/tele/SENSOR",
   "value_template": "{{ value_json[\"ENERGY\"][\"Power\"] }}",
   "qos": "1",
   "device": {

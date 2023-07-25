@@ -6,7 +6,7 @@
   "device_class": "energy",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/kitchen_main_bulb_3/tele/SENSOR",
+  "state_topic": "tasmota/device/roof_water_booster_plug/tele/SENSOR",
   "value_template": "{{ value_json[\"ENERGY\"][\"Total\"] }}",
   "qos": "1",
   "device": {

@@ -73,9 +73,9 @@ template:
           fan_speed: >-
             {{ states('sensor.dining_air_purifier_fan_speed') | int(0) }}
       #################################################################################
-      - unique_id: lounge_tv_outlet_plug_proxy
+      - unique_id: lounge_tv_plug_proxy
         state: >-
-          {{ states('switch.lounge_tv_outlet_plug') }}
+          {{ states('switch.lounge_tv_plug') }}
       #################################################################################
       - unique_id: lounge_sub_plug_proxy
         state: >-
@@ -121,17 +121,17 @@ template:
         state: >-
           {{ states('switch.laundry_vacuum_charger_plug') }}
       #################################################################################
-      - unique_id: ada_tablet_outlet_plug_proxy
+      - unique_id: ada_tablet_plug_proxy
         state: >-
-          {{ states('switch.ada_tablet_outlet_plug') }}
+          {{ states('switch.ada_tablet_plug') }}
       #################################################################################
-      - unique_id: server_flo_outlet_plug_proxy
+      - unique_id: server_flo_plug_proxy
         state: >-
-          {{ states('switch.server_flo_outlet_plug') }}
+          {{ states('switch.server_flo_plug') }}
       #################################################################################
-      - unique_id: server_meg_outlet_plug_proxy
+      - unique_id: server_meg_plug_proxy
         state: >-
-          {{ states('switch.server_meg_outlet_plug') }}
+          {{ states('switch.server_meg_plug') }}
       #################################################################################
       - unique_id: old_rack_outlet_plug_proxy
         state: >-
@@ -260,25 +260,25 @@ sensor:
   - platform: powercalc
     create_group: Server Flo
     entities:
-      - entity_id: binary_sensor.template_server_flo_outlet_plug_proxy
+      - entity_id: binary_sensor.template_server_flo_plug_proxy
         standby_power: 0.5
         unavailable_power: 0
         fixed:
           power: 0.9
-      - entity_id: switch.server_flo_outlet_plug
-        power_sensor_id: sensor.server_flo_outlet_plug_current_consumption
+      - entity_id: switch.server_flo_plug
+        power_sensor_id: sensor.server_flo_plug_current_consumption
         force_energy_sensor_creation: true
   #####################################################################################
   - platform: powercalc
     create_group: Server Meg
     entities:
-      - entity_id: binary_sensor.template_server_meg_outlet_plug_proxy
+      - entity_id: binary_sensor.template_server_meg_plug_proxy
         standby_power: 0.5
         unavailable_power: 0
         fixed:
           power: 0.9
-      - entity_id: switch.server_meg_outlet_plug
-        power_sensor_id: sensor.server_meg_outlet_plug_current_consumption
+      - entity_id: switch.server_meg_plug
+        power_sensor_id: sensor.server_meg_plug_current_consumption
         force_energy_sensor_creation: true
   #####################################################################################
   - platform: powercalc
@@ -525,13 +525,13 @@ sensor:
               #########################################################################
               - create_group: Lounge TV
                 entities:
-                  - entity_id: binary_sensor.template_lounge_tv_outlet_plug_proxy
+                  - entity_id: binary_sensor.template_lounge_tv_plug_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
                       power: 2.19
-                  - entity_id: switch.lounge_tv_outlet_plug
-                    power_sensor_id: sensor.lounge_tv_outlet_plug_current_consumption
+                  - entity_id: switch.lounge_tv_plug
+                    power_sensor_id: sensor.lounge_tv_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
               - create_group: Lounge Sub
@@ -547,13 +547,13 @@ sensor:
               #########################################################################
               - create_group: Ada Tablet
                 entities:
-                  - entity_id: binary_sensor.template_ada_tablet_outlet_plug_proxy
+                  - entity_id: binary_sensor.template_ada_tablet_plug_proxy
                     standby_power: 0.5
                     unavailable_power: 0
                     fixed:
                       power: 0.9
-                  - entity_id: switch.ada_tablet_outlet_plug
-                    power_sensor_id: sensor.ada_tablet_outlet_plug_current_consumption
+                  - entity_id: switch.ada_tablet_plug
+                    power_sensor_id: sensor.ada_tablet_plug_current_consumption
                     force_energy_sensor_creation: true
               #########################################################################
               - create_group: Ada Home Devices
