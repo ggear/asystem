@@ -14,6 +14,17 @@ input_boolean:
     initial: off
   #####################################################################################
 automation:
+  - id: routine_init
+    alias: "Routine: Run init code after startup"
+    mode: single
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - service: system_log.write
+        data_template:
+          level: error
+          message: "Home Assistant has started!"
   #####################################################################################
   - id: routine_home_movie_on
     alias: "Routine: Put home into Movie mode"
