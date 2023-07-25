@@ -23,7 +23,7 @@ automation:
     action:
       - service: system_log.write
         data_template:
-          level: error
+          level: info
           message: "Home Assistant has started!"
   #####################################################################################
   - id: routine_home_movie_on
