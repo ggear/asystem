@@ -51,9 +51,9 @@ template:
         state: >-
           {{ states('switch.bathroom_rails_plug') }}
       #################################################################################
-      - unique_id: roof_water_booster_plug_proxy
+      - unique_id: ceiling_water_booster_plug_proxy
         state: >-
-          {{ states('switch.roof_water_booster_plug') }}
+          {{ states('switch.ceiling_water_booster_plug') }}
       #################################################################################
       - unique_id: outdoor_pool_filter_plug_proxy
         state: >-
@@ -145,9 +145,9 @@ template:
         state: >-
           {{ states('switch.old_roof_network_switch_plug') }}
       #################################################################################
-      - unique_id: roof_network_switch_plug_proxy
+      - unique_id: ceiling_network_switch_plug_proxy
         state: >-
-          {{ states('switch.roof_network_switch_plug') }}
+          {{ states('switch.ceiling_network_switch_plug') }}
       #################################################################################
       - unique_id: rack_internet_modem_plug_proxy
         state: >-
@@ -682,14 +682,14 @@ sensor:
               #########################################################################
               - create_group: Network Switch
                 entities:
-                  - entity_id: binary_sensor.template_roof_network_switch_plug_proxy
+                  - entity_id: binary_sensor.template_ceiling_network_switch_plug_proxy
                     standby_power: 1.5
                     unavailable_power: 0
                     fixed:
                       power: 2
-                  - entity_id: switch.roof_network_switch_plug
-                    power_sensor_id: sensor.roof_network_switch_plug_energy_power
-                    energy_sensor_id: sensor.roof_network_switch_plug_energy_total
+                  - entity_id: switch.ceiling_network_switch_plug
+                    power_sensor_id: sensor.ceiling_network_switch_plug_energy_power
+                    energy_sensor_id: sensor.ceiling_network_switch_plug_energy_total
               #########################################################################
               - create_group: Zigbee Repeaters
                 entities:
@@ -737,14 +737,14 @@ sensor:
               #########################################################################
               - create_group: Water Booster
                 entities:
-                  - entity_id: binary_sensor.template_roof_water_booster_plug_proxy
+                  - entity_id: binary_sensor.template_ceiling_water_booster_plug_proxy
                     standby_power: 1.54
                     unavailable_power: 0
                     fixed:
                       power: 2.19
-                  - entity_id: switch.roof_water_booster_plug
-                    power_sensor_id: sensor.roof_water_booster_plug_energy_power
-                    energy_sensor_id: sensor.roof_water_booster_plug_energy_total
+                  - entity_id: switch.ceiling_water_booster_plug
+                    power_sensor_id: sensor.ceiling_water_booster_plug_energy_power
+                    energy_sensor_id: sensor.ceiling_water_booster_plug_energy_total
               #########################################################################
               - create_group: Pool Filter
                 entities:

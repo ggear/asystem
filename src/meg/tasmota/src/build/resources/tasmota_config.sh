@@ -4,10 +4,10 @@
 #######################################################################################
 echo ''
 if netcat -zw 1 10.0.6.100 80 2>/dev/null; then
-	echo 'Processing config for device [roof_water_booster_plug] at [http://10.0.6.100/?] ... '
+	echo 'Processing config for device [ceiling_water_booster_plug] at [http://10.0.6.100/?] ... '
 	echo 'Current firmware ['"$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.6.100 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/roof_water_booster_plug.json || true
-	sleep 1 && while ! netcat -zw 1 10.0.6.100 80 2>/dev/null; do echo 'Waiting for device [roof_water_booster_plug] to come up ...' && sleep 1; done
+	decode-config.py -s 10.0.6.100 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/ceiling_water_booster_plug.json || true
+	sleep 1 && while ! netcat -zw 1 10.0.6.100 80 2>/dev/null; do echo 'Waiting for device [ceiling_water_booster_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=PowerOnState 0'
 		echo ''
@@ -86,14 +86,14 @@ if netcat -zw 1 10.0.6.100 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [CurrentHigh] already set to [0]'
 	fi
-	printf 'Restarting [roof_water_booster_plug] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=Restart 1'
+	printf 'Restarting [ceiling_water_booster_plug] with response: ' && curl -s http://10.0.6.100/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
 	printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.100 80 2>/dev/null; do printf '.' && sleep 1; done
 	printf ' done
 '
 else
-	echo 'Skipping config for device [roof_water_booster_plug] at [http://10.0.6.100/?] given it is unresponsive'
+	echo 'Skipping config for device [ceiling_water_booster_plug] at [http://10.0.6.100/?] given it is unresponsive'
 fi
 echo ''
 if netcat -zw 1 10.0.6.101 80 2>/dev/null; then
@@ -349,10 +349,10 @@ else
 fi
 echo ''
 if netcat -zw 1 10.0.6.105 80 2>/dev/null; then
-	echo 'Processing config for device [roof_network_switch_plug] at [http://10.0.6.105/?] ... '
+	echo 'Processing config for device [ceiling_network_switch_plug] at [http://10.0.6.105/?] ... '
 	echo 'Current firmware ['"$(curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.6.105 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/roof_network_switch_plug.json || true
-	sleep 1 && while ! netcat -zw 1 10.0.6.105 80 2>/dev/null; do echo 'Waiting for device [roof_network_switch_plug] to come up ...' && sleep 1; done
+	decode-config.py -s 10.0.6.105 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/ceiling_network_switch_plug.json || true
+	sleep 1 && while ! netcat -zw 1 10.0.6.105 80 2>/dev/null; do echo 'Waiting for device [ceiling_network_switch_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":1}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [1] with response: ' && curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=PowerOnState 1'
 		echo ''
@@ -431,14 +431,14 @@ if netcat -zw 1 10.0.6.105 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [CurrentHigh] already set to [0]'
 	fi
-	printf 'Restarting [roof_network_switch_plug] with response: ' && curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=Restart 1'
+	printf 'Restarting [ceiling_network_switch_plug] with response: ' && curl -s http://10.0.6.105/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
 	printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.105 80 2>/dev/null; do printf '.' && sleep 1; done
 	printf ' done
 '
 else
-	echo 'Skipping config for device [roof_network_switch_plug] at [http://10.0.6.105/?] given it is unresponsive'
+	echo 'Skipping config for device [ceiling_network_switch_plug] at [http://10.0.6.105/?] given it is unresponsive'
 fi
 echo ''
 if netcat -zw 1 10.0.6.106 80 2>/dev/null; then

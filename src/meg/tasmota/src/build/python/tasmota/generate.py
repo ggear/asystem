@@ -1,6 +1,7 @@
 import glob
 import json
 import os
+import shutil
 import sys
 
 import pandas as pd
@@ -33,6 +34,8 @@ if __name__ == "__main__":
     write_entity_metadata("tasmota", DIR_ROOT, metadata_tasmota_df)
     metadata_tasmota_dicts = [row.dropna().to_dict() for index, row in metadata_tasmota_df.iterrows()]
     tasmota_config_path = os.path.join(DIR_ROOT, "src/build/resources/tasmota_config.sh")
+    tasmota_devices_path = os.path.join(DIR_ROOT, "src/build/resources/devices")
+    os.makedirs(tasmota_devices_path, exist_ok=True)
     with open(tasmota_config_path, "wt") as tasmota_config_file:
         tasmota_config_file.write("""
 #!/bin/bash
@@ -42,7 +45,7 @@ if __name__ == "__main__":
 echo ''
         """.strip() + "\n")
         for metadata_tasmota_dict in metadata_tasmota_dicts:
-            tasmota_device_path = os.path.join(DIR_ROOT, "src/build/resources/devices/", metadata_tasmota_dict["unique_id"])
+            tasmota_device_path = os.path.join(tasmota_devices_path, metadata_tasmota_dict["unique_id"])
             if metadata_tasmota_dict["entity_namespace"] != "sensor":
                 with open(tasmota_device_path + ".json", "wt") as tasmota_device_file:
                     metadata_tasmota_config_version = 1 if \

@@ -27,7 +27,7 @@
   "baudrate": 460800, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 88, 
+  "bootcount": 98, 
   "bootcount_reset_time": 1670056591, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -52,11 +52,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0xf2e9", 
-  "cfg_crc32": "0x57b725ba", 
+  "cfg_crc": "0xf3a7", 
+  "cfg_crc32": "0x0cf859e8", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1690186478, 
+  "cfg_timestamp": 1690261846, 
   "config_version": 0, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -390,8 +390,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0x9d45", 
-      "crc32": "0x57b725ba", 
+      "crc": "0x2009", 
+      "crc32": "0xcf859e8", 
       "hardware": "ESP82", 
       "size": 4096, 
       "version": {
@@ -406,15 +406,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0xf2e9", 
-      "crc32": "0x57b725ba", 
+      "crc": "0xf3a7", 
+      "crc32": "0xcf859e8", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2023-07-24 08:14:38"
+    "timestamp": "2023-07-25 05:10:46"
   }, 
   "hostname": "sonoff-rack-fans", 
   "hotplug_scan": 0, 
@@ -1153,7 +1153,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 221, 
+  "save_flag": 233, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 0, 

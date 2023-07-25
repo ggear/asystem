@@ -1,12 +1,12 @@
 {
-  "unique_id": "roof_water_booster_plug_energy_total",
-  "name": "roof_water_booster_plug_energy_total",
+  "unique_id": "ceiling_water_booster_plug_energy_total",
+  "name": "ceiling_water_booster_plug_energy_total",
   "state_class": "total_increasing",
   "unit_of_measurement": "kWh",
   "device_class": "energy",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/roof_water_booster_plug/tele/SENSOR",
+  "state_topic": "tasmota/device/ceiling_water_booster_plug/tele/SENSOR",
   "value_template": "{{ value_json[\"ENERGY\"][\"Total\"] }}",
   "qos": "1",
   "device": {

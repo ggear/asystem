@@ -122,7 +122,7 @@
     - entity: switch.rack_outlet_plug
       name: Server Rack
       icon: mdi:server
-    - entity: switch.roof_network_switch_plug
+    - entity: switch.ceiling_network_switch_plug
       name: Network Switch
       icon: mdi:server-network
     - entity: switch.rack_internet_modem_plug
