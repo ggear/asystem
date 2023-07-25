@@ -442,10 +442,10 @@ else
 fi
 echo ''
 if netcat -zw 1 10.0.6.106 80 2>/dev/null; then
-	echo 'Processing config for device [outdoor_pool_filter_plug] at [http://10.0.6.106/?] ... '
+	echo 'Processing config for device [garden_pool_filter_plug] at [http://10.0.6.106/?] ... '
 	echo 'Current firmware ['"$(curl -s http://10.0.6.106/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.6.106 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/outdoor_pool_filter_plug.json || true
-	sleep 1 && while ! netcat -zw 1 10.0.6.106 80 2>/dev/null; do echo 'Waiting for device [outdoor_pool_filter_plug] to come up ...' && sleep 1; done
+	decode-config.py -s 10.0.6.106 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/garden_pool_filter_plug.json || true
+	sleep 1 && while ! netcat -zw 1 10.0.6.106 80 2>/dev/null; do echo 'Waiting for device [garden_pool_filter_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s http://10.0.6.106/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":0}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [0] with response: ' && curl -s http://10.0.6.106/cm? --data-urlencode 'cmnd=PowerOnState 0'
 		echo ''
@@ -524,14 +524,14 @@ if netcat -zw 1 10.0.6.106 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [CurrentHigh] already set to [0]'
 	fi
-	printf 'Restarting [outdoor_pool_filter_plug] with response: ' && curl -s http://10.0.6.106/cm? --data-urlencode 'cmnd=Restart 1'
+	printf 'Restarting [garden_pool_filter_plug] with response: ' && curl -s http://10.0.6.106/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
 	printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.106 80 2>/dev/null; do printf '.' && sleep 1; done
 	printf ' done
 '
 else
-	echo 'Skipping config for device [outdoor_pool_filter_plug] at [http://10.0.6.106/?] given it is unresponsive'
+	echo 'Skipping config for device [garden_pool_filter_plug] at [http://10.0.6.106/?] given it is unresponsive'
 fi
 echo ''
 if netcat -zw 1 10.0.6.107 80 2>/dev/null; then

@@ -27,7 +27,7 @@
   "baudrate": 19200, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 91, 
+  "bootcount": 92, 
   "bootcount_reset_time": 1656400328, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -52,11 +52,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0xae34", 
-  "cfg_crc32": "0x4e25716f", 
+  "cfg_crc": "0x1aad", 
+  "cfg_crc32": "0x266d9c13", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1690263696, 
+  "cfg_timestamp": 1690265196, 
   "config_version": 0, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -157,7 +157,7 @@
     4194304
   ], 
   "energy_kWhtoday_ph": [
-    9149, 
+    10449, 
     0, 
     0
   ], 
@@ -194,11 +194,11 @@
     0
   ], 
   "energy_usage": {
-    "last_return_kWhtotal": 0, 
+    "last_return_kWhtotal": 104, 
     "last_usage_kWhtotal": 0, 
     "return1_kWhtotal": 0, 
     "return2_kWhtotal": 0, 
-    "usage1_kWhtoday": 0, 
+    "usage1_kWhtoday": 104, 
     "usage1_kWhtotal": 0
   }, 
   "energy_voltage_calibration": 1976, 
@@ -390,8 +390,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0xa7a", 
-      "crc32": "0x4e25716f", 
+      "crc": "0x8841", 
+      "crc32": "0x266d9c13", 
       "hardware": "ESP82", 
       "size": 4096, 
       "version": {
@@ -406,15 +406,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0xae34", 
-      "crc32": "0x4e25716f", 
+      "crc": "0x1aad", 
+      "crc32": "0x266d9c13", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2023-07-25 05:41:36"
+    "timestamp": "2023-07-25 06:06:36"
   }, 
   "hostname": "sonoff-ceiling-water-heater-booster", 
   "hotplug_scan": 0, 
@@ -1153,7 +1153,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 414, 
+  "save_flag": 416, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 0, 

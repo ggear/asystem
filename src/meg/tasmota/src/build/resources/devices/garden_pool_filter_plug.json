@@ -1,7 +1,7 @@
 {
     "config_version": 0,
     "templatename": "Sonoff POWR3",
-    "devicename": "outdoor_pool_filter_plug",
+    "devicename": "garden_pool_filter_plug",
     "friendlyname": [
         "Pool Filter"
     ],
@@ -9,7 +9,7 @@
     "mqtt_port": "32404",
     "mqtt_client": "DVES_%06X",
     "mqtt_grptopic": "tasmotas",
-    "mqtt_topic": "outdoor_pool_filter_plug",
+    "mqtt_topic": "garden_pool_filter_plug",
     "mqtt_fulltopic": "tasmota/device/%topic%/%prefix%/",
     "mqtt_prefix": [
         "cmnd",

@@ -425,13 +425,13 @@ sensor.ceiling_water_booster_plug_energy_power:
 sensor.ceiling_water_booster_plug_energy_total:
   friendly_name: 'Total Energy'
   unit_of_measurement: 'kWh'
-switch.outdoor_pool_filter_plug:
+switch.garden_pool_filter_plug:
   friendly_name: 'Pool Filter'
   icon: 'mdi:thermometer-water'
-sensor.outdoor_pool_filter_plug_energy_power:
+sensor.garden_pool_filter_plug_energy_power:
   friendly_name: 'Current Power'
   unit_of_measurement: 'W'
-sensor.outdoor_pool_filter_plug_energy_total:
+sensor.garden_pool_filter_plug_energy_total:
   friendly_name: 'Total Energy'
   unit_of_measurement: 'kWh'
 fan.lounge_air_purifier:
@@ -916,16 +916,16 @@ sensor.ceiling_water_booster_plug_energy_total_monthly:
 sensor.ceiling_water_booster_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.outdoor_pool_filter_plug_energy_total_daily:
+sensor.garden_pool_filter_plug_energy_total_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.outdoor_pool_filter_plug_energy_total_weekly:
+sensor.garden_pool_filter_plug_energy_total_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.outdoor_pool_filter_plug_energy_total_monthly:
+sensor.garden_pool_filter_plug_energy_total_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.outdoor_pool_filter_plug_energy_total_yearly:
+sensor.garden_pool_filter_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.rack_outlet_plug_energy_total_daily:
@@ -2535,20 +2535,20 @@ sensor.template_ceiling_water_booster_plug_proxy_energy_monthly:
 sensor.template_ceiling_water_booster_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.template_outdoor_pool_filter_plug_proxy_power:
+sensor.template_garden_pool_filter_plug_proxy_power:
   friendly_name: 'Current Power'
-sensor.template_outdoor_pool_filter_plug_proxy_energy:
+sensor.template_garden_pool_filter_plug_proxy_energy:
   friendly_name: 'Total Energy'
-sensor.template_outdoor_pool_filter_plug_proxy_energy_daily:
+sensor.template_garden_pool_filter_plug_proxy_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.template_outdoor_pool_filter_plug_proxy_energy_weekly:
+sensor.template_garden_pool_filter_plug_proxy_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.template_outdoor_pool_filter_plug_proxy_energy_monthly:
+sensor.template_garden_pool_filter_plug_proxy_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.template_outdoor_pool_filter_plug_proxy_energy_yearly:
+sensor.template_garden_pool_filter_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.template_lounge_air_purifier_proxy_power:

@@ -213,10 +213,10 @@ switch.ceiling_water_booster_plug:
   name: Ceiling Water Booster
   aliases: []
   room: Ceiling
-switch.outdoor_pool_filter_plug:
-  name: Pool Pool Filter
+switch.garden_pool_filter_plug:
+  name: Garden Pool Filter
   aliases: []
-  room: Pool
+  room: Garden
 fan.lounge_air_purifier:
   name: Lounge Air Purifier
   aliases: []

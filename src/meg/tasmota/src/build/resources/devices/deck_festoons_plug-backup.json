@@ -37,7 +37,7 @@
   "baudrate": 460800, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 27, 
+  "bootcount": 29, 
   "bootcount_reset_time": 1690179459, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -62,11 +62,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0xb0c9", 
-  "cfg_crc32": "0x464cc297", 
+  "cfg_crc": "0xb0ed", 
+  "cfg_crc32": "0xb066130e", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1690261961, 
+  "cfg_timestamp": 1690265255, 
   "config_version": 1, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -410,8 +410,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0xa720", 
-      "crc32": "0x464cc297", 
+      "crc": "0x1ac3", 
+      "crc32": "0xb066130e", 
       "hardware": "ESP32 (excl S3/S2/C3)", 
       "size": 4096, 
       "version": {
@@ -426,15 +426,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0xb0c9", 
-      "crc32": "0x464cc297", 
+      "crc": "0xb0ed", 
+      "crc32": "0xb066130e", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2023-07-25 05:12:41"
+    "timestamp": "2023-07-25 06:07:35"
   }, 
   "hostname": "%s-%04d", 
   "hotplug_scan": 0, 
@@ -1220,7 +1220,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 70, 
+  "save_flag": 72, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 1, 

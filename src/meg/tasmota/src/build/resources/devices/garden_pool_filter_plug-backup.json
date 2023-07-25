@@ -27,7 +27,7 @@
   "baudrate": 19200, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 19, 
+  "bootcount": 20, 
   "bootcount_reset_time": 1690182636, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -52,11 +52,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0xc390", 
-  "cfg_crc32": "0x5f023408", 
+  "cfg_crc": "0xdacd", 
+  "cfg_crc32": "0x96dd54d9", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1690263702, 
+  "cfg_timestamp": 1690265250, 
   "config_version": 0, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -157,7 +157,7 @@
     0
   ], 
   "energy_kWhtoday_ph": [
-    8841, 
+    10143, 
     0, 
     0
   ], 
@@ -194,11 +194,11 @@
     0
   ], 
   "energy_usage": {
-    "last_return_kWhtotal": 91, 
+    "last_return_kWhtotal": 104, 
     "last_usage_kWhtotal": 0, 
     "return1_kWhtotal": 0, 
     "return2_kWhtotal": 0, 
-    "usage1_kWhtoday": 91, 
+    "usage1_kWhtoday": 104, 
     "usage1_kWhtotal": 0
   }, 
   "energy_voltage_calibration": 1994, 
@@ -390,8 +390,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0x7638", 
-      "crc32": "0x5f023408", 
+      "crc": "0xd96f", 
+      "crc32": "0x96dd54d9", 
       "hardware": "ESP82", 
       "size": 4096, 
       "version": {
@@ -406,15 +406,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0xc390", 
-      "crc32": "0x5f023408", 
+      "crc": "0xdacd", 
+      "crc32": "0x96dd54d9", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2023-07-25 05:41:42"
+    "timestamp": "2023-07-25 06:07:30"
   }, 
   "hostname": "%s-%04d", 
   "hotplug_scan": 0, 
@@ -1153,7 +1153,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 65, 
+  "save_flag": 67, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 0, 
