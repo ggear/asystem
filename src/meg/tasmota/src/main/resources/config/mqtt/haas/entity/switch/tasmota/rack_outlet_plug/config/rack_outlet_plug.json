@@ -16,11 +16,11 @@
   "device": {
     "via_device": "Tasmota",
     "configuration_url": "http://10.0.6.102/?",
-    "name": "sonoff-rack-outlet",
-    "sw_version": "13.0.0",
-    "identifiers": "Outlet",
+    "identifiers": "sonoff-rack-outlet",
+    "name": "Sonoff Rack Outlet",
     "model": "POWR316D",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Rack",
     "connections": [
       [

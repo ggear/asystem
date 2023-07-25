@@ -14,11 +14,11 @@
   "device": {
     "via_device": "Tasmota",
     "configuration_url": "http://10.0.6.100/?",
-    "name": "sonoff-roof-water-booster",
-    "sw_version": "13.0.0",
-    "identifiers": "Water Booster",
+    "identifiers": "sonoff-roof-water-booster",
+    "name": "Sonoff Roof Water Booster",
     "model": "POWR3",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Roof",
     "connections": [
       [

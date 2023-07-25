@@ -7,4 +7,4 @@ export $(xargs <${ROOT_DIR}/.env)
 export VERNEMQ_HOST=${VERNEMQ_HOST_PROD}
 
 ${ROOT_DIR}/src/main/resources/config/mqtt.sh
-#${ROOT_DIR}/src/build/resources/tasmota_config.sh
+${ROOT_DIR}/src/build/resources/tasmota_config.sh

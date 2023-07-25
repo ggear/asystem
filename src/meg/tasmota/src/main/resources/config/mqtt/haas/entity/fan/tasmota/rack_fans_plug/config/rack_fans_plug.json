@@ -16,11 +16,11 @@
   "device": {
     "via_device": "Tasmota",
     "configuration_url": "http://10.0.6.101/?",
-    "name": "sonoff-rack-fans",
-    "sw_version": "13.0.0",
-    "identifiers": "Fans",
+    "identifiers": "sonoff-rack-fans",
+    "name": "Sonoff Rack Fans",
     "model": "BASICR2",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Rack",
     "connections": [
       [

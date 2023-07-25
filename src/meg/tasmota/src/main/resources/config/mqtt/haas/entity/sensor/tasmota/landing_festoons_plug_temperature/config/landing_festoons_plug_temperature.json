@@ -6,17 +6,17 @@
   "device_class": "temperature",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/kitchen_main_bulb_4/tele/SENSOR",
+  "state_topic": "tasmota/device/landing_festoons_plug/tele/SENSOR",
   "value_template": "{{ value_json[\"DS18B20\"][\"Temperature\"] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "https://zigbee2mqtt.janeandgraham.com/#/device/0x001788010343b9d8",
-    "name": "sonoff-landing-festoons",
-    "sw_version": "13.0.0",
-    "identifiers": "Festoons",
+    "configuration_url": "http://10.0.6.108/?",
+    "identifiers": "sonoff-landing-festoons",
+    "name": "Sonoff Landing Festoons",
     "model": "THR316D",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Landing"
   }
 }

@@ -6,17 +6,17 @@
   "device_class": "power",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/landing_festoons_plug/tele/SENSOR",
+  "state_topic": "tasmota/device/roof_water_booster_plug/tele/SENSOR",
   "value_template": "{{ value_json[\"ENERGY\"][\"Power\"] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.108/?",
-    "name": "sonoff-roof-water-booster",
-    "sw_version": "13.0.0",
-    "identifiers": "Water Booster",
+    "configuration_url": "http://10.0.6.100/?",
+    "identifiers": "sonoff-roof-water-booster",
+    "name": "Sonoff Roof Water Booster",
     "model": "POWR3",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Roof"
   }
 }

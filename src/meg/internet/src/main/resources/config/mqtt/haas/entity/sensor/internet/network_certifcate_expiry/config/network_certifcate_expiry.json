@@ -10,11 +10,11 @@
   "qos": "1",
   "device": {
     "via_device": "Internet",
-    "name": "home-internet-script",
-    "sw_version": "ASYSTEM_VERSION",
-    "identifiers": "Internet Script",
+    "identifiers": "internet-script",
+    "name": "Internet Script",
     "model": "Telegraf Python Script",
     "manufacturer": "JaneAndGraham",
+    "sw_version": "ASYSTEM_VERSION",
     "suggested_area": "Home"
   }
 }

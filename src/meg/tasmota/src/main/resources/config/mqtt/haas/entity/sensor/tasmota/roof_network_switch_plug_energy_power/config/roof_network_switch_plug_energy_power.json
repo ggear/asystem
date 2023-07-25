@@ -6,17 +6,17 @@
   "device_class": "power",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/laundry_vacuum_charger_plug/tele/SENSOR",
+  "state_topic": "tasmota/device/roof_network_switch_plug/tele/SENSOR",
   "value_template": "{{ value_json[\"ENERGY\"][\"Power\"] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "0",
-    "name": "sonoff-roof-network-switch",
-    "sw_version": "13.0.0",
-    "identifiers": "Network Switch",
+    "configuration_url": "http://10.0.6.105/?",
+    "identifiers": "sonoff-roof-network-switch",
+    "name": "Sonoff Roof Network Switch",
     "model": "POWR316D",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Roof"
   }
 }

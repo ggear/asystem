@@ -59,7 +59,7 @@ if __name__ == "__main__":
   devices:
                 """.format(
                     metadata_groups_id,
-                    metadata_groups_dict[metadata_groups_id]["device_name"].replace("-", " ").title(),
+                    metadata_groups_dict[metadata_groups_id]["device_name"],
                     metadata_groups_dict[metadata_groups_id]["zigbee_config"].replace("\n", "\n  "),
                 ).strip() + "\n")
                 for metadata_device_dict in metadata_grouped_devices_dict[metadata_groups_id]:
@@ -95,8 +95,8 @@ while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/st
 ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
             """.format(
                 metadata_config_dict["connection_mac"],
-                metadata_config_dict["device_name"].replace("-", " ").title(),
-                metadata_groups_dict[metadata_config_dict["zigbee_group"]]["device_name"].replace("-", " ").title(),
+                metadata_config_dict["device_name"],
+                metadata_groups_dict[metadata_config_dict["zigbee_group"]]["device_name"],
                 metadata_config_dict["zigbee_device_config"].replace("'", "\"") if "zigbee_device_config" in metadata_config_dict else "",
             ).strip() + "\n")
         print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
@@ -112,7 +112,7 @@ ROOT_DIR=$(dirname $(readlink -f "$0"))
 while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
         """.strip() + "\n")
         for metadata_config_clean_dict in metadata_config_dicts:
-            metadata_name = metadata_config_clean_dict["device_name"].replace("-", " ").title()
+            metadata_name = metadata_config_clean_dict["device_name"]
             metadata_config_clean_file.write("""
         mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{}' && echo '[INFO] Device [{}] removed from all groups' && sleep 1
                     """.format(
@@ -143,7 +143,7 @@ while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/st
   {}
                 """.format(
                 metadata_devices_dict["connection_mac"],
-                metadata_devices_dict["device_name"].replace("-", " ").title(),
+                metadata_devices_dict["device_name"],
                 metadata_devices_dict["zigbee_config"].replace("\n", "\n  "),
             ).strip() + "\n")
         print("Build generate script [zigbee2mqtt] entity device metadata persisted to [{}]".format(metadata_devices_path))

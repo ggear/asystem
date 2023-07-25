@@ -11,11 +11,11 @@
   "qos": "1",
   "device": {
     "via_device": "WeeWX",
-    "name": "davis-rack-weather-station",
-    "sw_version": "3.15",
-    "identifiers": "Weather Station",
+    "identifiers": "davis-rack-weather-station",
+    "name": "Davis Rack Weather Station",
     "model": "Vantage Pro2",
     "manufacturer": "Davis",
+    "sw_version": "4.10.2",
     "suggested_area": "Rack"
   }
 }

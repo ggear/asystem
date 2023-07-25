@@ -29,7 +29,7 @@ if __name__ == "__main__":
     metadata_dhcp_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_name"].str.len() > 0) &
+        (metadata_df["device_identifiers"].str.len() > 0) &
         (metadata_df["connection_vlan"].str.len() > 0) &
         (metadata_df["connection_mac"].str.len() > 0)
         ]
@@ -83,14 +83,14 @@ if __name__ == "__main__":
                 metadata_dhcp_dict["connection_mac"],
                 (metadata_dhcp_dict["connection_ip"] + ",") \
                     if "connection_ip" in metadata_dhcp_dict and len(metadata_dhcp_dict["connection_ip"]) > 0 else "",
-                metadata_dhcp_dict["device_name"],
+                metadata_dhcp_dict["device_identifiers"],
             ))
             if "connection_ip" in metadata_dhcp_dict and len(metadata_dhcp_dict["connection_ip"]) > 0:
-                if metadata_dhcp_dict["device_name"] not in metadata_dhcp_hosts:
-                    metadata_dhcp_hosts[metadata_dhcp_dict["device_name"]] = \
+                if metadata_dhcp_dict["device_identifiers"] not in metadata_dhcp_hosts:
+                    metadata_dhcp_hosts[metadata_dhcp_dict["device_identifiers"]] = \
                         [metadata_dhcp_dict["connection_ip"]]
                 else:
-                    metadata_dhcp_hosts[metadata_dhcp_dict["device_name"]] \
+                    metadata_dhcp_hosts[metadata_dhcp_dict["device_identifiers"]] \
                         .append(metadata_dhcp_dict["connection_ip"])
     for dnsmasq_conf_path in metadata_dhcp_dnsmasq:
         with open(dnsmasq_conf_path, "w") as dnsmasq_conf_file:

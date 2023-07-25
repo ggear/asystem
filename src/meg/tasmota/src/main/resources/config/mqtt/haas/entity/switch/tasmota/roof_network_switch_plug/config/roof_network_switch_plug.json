@@ -16,11 +16,11 @@
   "device": {
     "via_device": "Tasmota",
     "configuration_url": "http://10.0.6.105/?",
-    "name": "sonoff-roof-network-switch",
-    "sw_version": "13.0.0",
-    "identifiers": "Network Switch",
+    "identifiers": "sonoff-roof-network-switch",
+    "name": "Sonoff Roof Network Switch",
     "model": "POWR316D",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Roof",
     "connections": [
       [

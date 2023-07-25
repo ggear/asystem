@@ -6,17 +6,17 @@
   "device_class": "energy",
   "force_update": "false",
   "optimistic": "true",
-  "state_topic": "tasmota/device/parents_jane_bedside/tele/SENSOR",
+  "state_topic": "tasmota/device/kitchen_fan_plug/tele/SENSOR",
   "value_template": "{{ value_json[\"ENERGY\"][\"Total\"] }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "0",
-    "name": "sonoff-kitchen-fan",
-    "sw_version": "13.0.0",
-    "identifiers": "Fan",
+    "configuration_url": "http://10.0.6.104/?",
+    "identifiers": "sonoff-kitchen-fan",
+    "name": "Sonoff Kitchen Fan",
     "model": "POWR316D",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Kitchen"
   }
 }

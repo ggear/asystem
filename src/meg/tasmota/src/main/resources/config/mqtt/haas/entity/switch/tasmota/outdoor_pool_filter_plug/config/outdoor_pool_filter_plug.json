@@ -14,11 +14,11 @@
   "device": {
     "via_device": "Tasmota",
     "configuration_url": "http://10.0.6.106/?",
-    "name": "sonoff-pool-pool-filter",
-    "sw_version": "13.0.0",
-    "identifiers": "Pool Filter",
+    "identifiers": "sonoff-pool-pool-filter",
+    "name": "Sonoff Pool Pool Filter",
     "model": "POWR3",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Pool",
     "connections": [
       [

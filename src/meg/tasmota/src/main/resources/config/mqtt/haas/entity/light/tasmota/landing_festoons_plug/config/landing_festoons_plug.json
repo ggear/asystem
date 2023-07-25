@@ -16,11 +16,11 @@
   "device": {
     "via_device": "Tasmota",
     "configuration_url": "http://10.0.6.108/?",
-    "name": "sonoff-landing-festoons",
-    "sw_version": "13.0.0",
-    "identifiers": "Festoons",
+    "identifiers": "sonoff-landing-festoons",
+    "name": "Sonoff Landing Festoons",
     "model": "THR316D",
     "manufacturer": "Sonoff",
+    "sw_version": "13.0.0",
     "suggested_area": "Landing",
     "connections": [
       [
