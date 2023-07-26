@@ -197,10 +197,6 @@ light.landing_festoons_plug:
   name: Landing Festoons
   aliases: []
   room: Landing
-light.garden_pedestals:
-  name: Garden Pedestals
-  aliases: []
-  room: Garden
 light.tree_spotlights:
   name: Tree Spotlights
   aliases: []

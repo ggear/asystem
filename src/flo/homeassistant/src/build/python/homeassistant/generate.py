@@ -141,8 +141,9 @@ if __name__ == "__main__":
                     print("Build generate script [homeassistant] entity metadata [{}.{}] verified"
                           .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
             else:
-                print("Build generate script [homeassistant] entity metadata [{}.{}] not found"
-                      .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
+                if "haas_display_mode" in metadata_verify_dict and metadata_verify_dict["entity_namespace"] not in ["action"]:
+                    print("Build generate script [homeassistant] entity metadata [{}.{}] not found"
+                          .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
         except Exception as exception:
             print("Build generate script [homeassistant] could not connect to HAAS with error [{}]".format(exception))
 

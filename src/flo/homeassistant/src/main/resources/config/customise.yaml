@@ -407,9 +407,6 @@ light.landing_festoons_plug:
 sensor.landing_festoons_plug_temperature:
   friendly_name: 'Landing Festoons'
   unit_of_measurement: '°C'
-light.garden_pedestals:
-  friendly_name: 'Garden Pedestals'
-  icon: 'mdi:lightbulb-group'
 light.tree_spotlights:
   friendly_name: 'Tree Spotlights'
   icon: 'mdi:lightbulb-group'
