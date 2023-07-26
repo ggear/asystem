@@ -27,7 +27,7 @@
   "baudrate": 19200, 
   "blinkcount": 10, 
   "blinktime": 10, 
-  "bootcount": 20, 
+  "bootcount": 37, 
   "bootcount_reset_time": 1690182636, 
   "bri_power_on": 0, 
   "bri_preset_high": 0, 
@@ -52,11 +52,11 @@
     ""
   ], 
   "button_topic": "0", 
-  "cfg_crc": "0xdacd", 
-  "cfg_crc32": "0x96dd54d9", 
+  "cfg_crc": "0x380b", 
+  "cfg_crc32": "0xe707f7ad", 
   "cfg_holder": 4617, 
   "cfg_size": 4096, 
-  "cfg_timestamp": 1690265250, 
+  "cfg_timestamp": 1690339662, 
   "config_version": 0, 
   "cors_domain": "", 
   "deepsleep": 0, 
@@ -74,7 +74,7 @@
     "", 
     ""
   ], 
-  "devicename": "outdoor_pool_filter_plug", 
+  "devicename": "garden_pool_filter_plug", 
   "dimmer_hw_max": 100, 
   "dimmer_hw_min": 0, 
   "dimmer_step": 10, 
@@ -150,25 +150,25 @@
   "energy_current_calibration": 16945, 
   "energy_current_calibration2": 3500, 
   "energy_frequency_calibration": 0, 
-  "energy_kWhdoy": 205, 
+  "energy_kWhdoy": 206, 
   "energy_kWhexport_ph": [
     0, 
     0, 
     0
   ], 
   "energy_kWhtoday_ph": [
-    10143, 
+    3452, 
     0, 
     0
   ], 
   "energy_kWhtotal_ph": [
-    3, 
+    0, 
     0, 
     0
   ], 
   "energy_kWhtotal_time": 1690182635, 
   "energy_kWhyesterday_ph": [
-    325, 
+    19567, 
     0, 
     0
   ], 
@@ -194,11 +194,11 @@
     0
   ], 
   "energy_usage": {
-    "last_return_kWhtotal": 104, 
+    "last_return_kWhtotal": 34, 
     "last_usage_kWhtotal": 0, 
     "return1_kWhtotal": 0, 
     "return2_kWhtotal": 0, 
-    "usage1_kWhtoday": 104, 
+    "usage1_kWhtoday": 34, 
     "usage1_kWhtotal": 0
   }, 
   "energy_voltage_calibration": 1994, 
@@ -390,8 +390,8 @@
   "hass_new_discovery": 0, 
   "header": {
     "data": {
-      "crc": "0xd96f", 
-      "crc32": "0x96dd54d9", 
+      "crc": "0x5836", 
+      "crc32": "0xe707f7ad", 
       "hardware": "ESP82", 
       "size": 4096, 
       "version": {
@@ -406,15 +406,15 @@
       "system": "Darwin x86_64 22.5.0 Darwin Kernel Version 22.5.0: Thu Jun  8 22:22:22 PDT 2023; root:xnu-8796.121.3~7/RELEASE_X86_64"
     }, 
     "template": {
-      "crc": "0xdacd", 
-      "crc32": "0x96dd54d9", 
+      "crc": "0x380b", 
+      "crc32": "0xe707f7ad", 
       "size": 4096, 
       "version": {
         "id": "0xd000000", 
         "name": "13.0.0"
       }
     }, 
-    "timestamp": "2023-07-25 06:07:30"
+    "timestamp": "2023-07-26 02:47:42"
   }, 
   "hostname": "%s-%04d", 
   "hotplug_scan": 0, 
@@ -793,7 +793,7 @@
   "mqtt_pwd": "DVES_PASS", 
   "mqtt_retry": 10, 
   "mqtt_socket_timeout": 4, 
-  "mqtt_topic": "outdoor_pool_filter_plug", 
+  "mqtt_topic": "garden_pool_filter_plug", 
   "mqtt_user": "DVES_USER", 
   "mqtt_wifi_timeout": 200, 
   "mqttlog_level": 0, 
@@ -1153,7 +1153,7 @@
     ""
   ], 
   "save_data": 1, 
-  "save_flag": 67, 
+  "save_flag": 107, 
   "sbaudrate": 38400, 
   "sbflag1": {
     "influxdb_default": 0, 
@@ -1517,7 +1517,7 @@
     "show_stats": 0
   }, 
   "temp_comp": 0, 
-  "templatename": "Sonoff POWR3", 
+  "templatename": "SONOFF POWR3", 
   "tflag": [
     {
       "dow": 1, 
@@ -1788,7 +1788,7 @@
       0, 
       0
     ], 
-    "name": "Sonoff POWR3"
+    "name": "SONOFF POWR3"
   }, 
   "version": "0xd000000", 
   "web_color": [

@@ -1,5 +1,5 @@
 {
-    "config_version": 0,
+    "config_version": 1,
     "templatename": "SONOFF THR316D / SI7021",
     "devicename": "deck_festoons_plug",
     "friendlyname": [

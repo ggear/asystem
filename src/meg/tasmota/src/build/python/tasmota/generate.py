@@ -1,7 +1,6 @@
 import glob
 import json
 import os
-import shutil
 import sys
 
 import pandas as pd
@@ -49,7 +48,7 @@ echo ''
             if metadata_tasmota_dict["entity_namespace"] != "sensor":
                 with open(tasmota_device_path + ".json", "wt") as tasmota_device_file:
                     metadata_tasmota_config_version = 1 if \
-                        any(metadata_tasmota_dict["device_model"] == metadata_tasmota_model
+                        any(metadata_tasmota_dict["device_model"].startswith(metadata_tasmota_model)
                             for metadata_tasmota_model in ["POWR316D", "THR316D"]) else 0
                     metadata_tasmota_config_dict = {
                         "config_version": metadata_tasmota_config_version,

@@ -1,5 +1,5 @@
 {
-    "config_version": 0,
+    "config_version": 1,
     "templatename": "SONOFF THR316D / DS18x20",
     "devicename": "landing_festoons_plug",
     "friendlyname": [
