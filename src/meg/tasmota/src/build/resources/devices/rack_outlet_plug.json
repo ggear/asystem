@@ -1,6 +1,6 @@
 {
     "config_version": 1,
-    "templatename": "Sonoff POWR316D",
+    "templatename": "SONOFF POWR316D",
     "devicename": "rack_outlet_plug",
     "friendlyname": [
         "Server Rack"

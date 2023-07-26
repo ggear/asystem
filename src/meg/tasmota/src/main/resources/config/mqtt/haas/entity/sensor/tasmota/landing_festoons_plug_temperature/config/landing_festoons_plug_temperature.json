@@ -7,14 +7,14 @@
   "force_update": "false",
   "optimistic": "true",
   "state_topic": "tasmota/device/landing_festoons_plug/tele/SENSOR",
-  "value_template": "{{ value_json['SI7021']['Temperature'] if (value_json['SI7021']['Temperature'] is defined and (value_json['SI7021']['Temperature'] | float(-200) > -100) and (value_json['SI7021']['Temperature'] | float(200) < 100)) else states('sensor.deck_festoons_plug_temperature') }}",
+  "value_template": "{{ value_json['SI7021']['Temperature'] if (value_json['SI7021']['Temperature'] is defined and (value_json['SI7021']['Temperature'] | float(-200) > -100) and (value_json['SI7021']['Temperature'] | float(200) < 100)) else states('sensor.landing_festoons_plug_temperature') }}",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
     "identifiers": "sonoff-landing-festoons",
-    "name": "Sonoff Landing Festoons",
-    "model": "THR316D",
-    "manufacturer": "Sonoff",
+    "name": "Landing Festoons",
+    "model": "THR316D / DS18x20",
+    "manufacturer": "SONOFF",
     "sw_version": "13.0.0",
     "suggested_area": "Landing"
   }

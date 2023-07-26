@@ -12,9 +12,9 @@
   "device": {
     "via_device": "Tasmota",
     "identifiers": "sonoff-ceiling-water-booster",
-    "name": "Sonoff Ceiling Water Booster",
+    "name": "Ceiling Water Booster",
     "model": "POWR3",
-    "manufacturer": "Sonoff",
+    "manufacturer": "SONOFF",
     "sw_version": "13.0.0",
     "suggested_area": "Ceiling"
   }

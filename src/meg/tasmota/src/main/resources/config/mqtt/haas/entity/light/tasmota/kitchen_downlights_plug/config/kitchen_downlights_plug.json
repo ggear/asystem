@@ -17,9 +17,9 @@
     "via_device": "Tasmota",
     "configuration_url": "http://10.0.6.103/?",
     "identifiers": "sonoff-kitchen-downlights",
-    "name": "Sonoff Kitchen Downlights",
+    "name": "Kitchen Downlights",
     "model": "BASICR2",
-    "manufacturer": "Sonoff",
+    "manufacturer": "SONOFF",
     "sw_version": "13.0.0",
     "suggested_area": "Kitchen",
     "connections": [

@@ -1,6 +1,6 @@
 {
     "config_version": 0,
-    "templatename": "Sonoff BASICR2",
+    "templatename": "SONOFF BASICR2",
     "devicename": "kitchen_downlights_plug",
     "friendlyname": [
         "Kitchen Downlights"

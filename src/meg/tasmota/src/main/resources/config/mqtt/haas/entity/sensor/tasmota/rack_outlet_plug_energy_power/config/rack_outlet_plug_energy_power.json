@@ -12,9 +12,9 @@
   "device": {
     "via_device": "Tasmota",
     "identifiers": "sonoff-rack-outlet",
-    "name": "Sonoff Rack Outlet",
+    "name": "Rack Outlet",
     "model": "POWR316D",
-    "manufacturer": "Sonoff",
+    "manufacturer": "SONOFF",
     "sw_version": "13.0.0",
     "suggested_area": "Rack"
   }

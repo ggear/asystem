@@ -12,7 +12,7 @@
   "device": {
     "via_device": "WeeWX",
     "identifiers": "davis-rack-weather-station",
-    "name": "Davis Rack Weather Station",
+    "name": "Rack Weather Station",
     "model": "Vantage Pro2",
     "manufacturer": "Davis",
     "sw_version": "4.10.2",

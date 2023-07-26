@@ -17,9 +17,9 @@
     "via_device": "Tasmota",
     "configuration_url": "http://10.0.6.104/?",
     "identifiers": "sonoff-kitchen-fan",
-    "name": "Sonoff Kitchen Fan",
+    "name": "Kitchen Fan",
     "model": "POWR316D",
-    "manufacturer": "Sonoff",
+    "manufacturer": "SONOFF",
     "sw_version": "13.0.0",
     "suggested_area": "Kitchen",
     "connections": [

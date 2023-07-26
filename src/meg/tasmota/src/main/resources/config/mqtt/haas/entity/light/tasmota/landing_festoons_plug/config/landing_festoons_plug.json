@@ -17,9 +17,9 @@
     "via_device": "Tasmota",
     "configuration_url": "http://10.0.6.108/?",
     "identifiers": "sonoff-landing-festoons",
-    "name": "Sonoff Landing Festoons",
-    "model": "THR316D",
-    "manufacturer": "Sonoff",
+    "name": "Landing Festoons",
+    "model": "THR316D / DS18x20",
+    "manufacturer": "SONOFF",
     "sw_version": "13.0.0",
     "suggested_area": "Landing",
     "connections": [

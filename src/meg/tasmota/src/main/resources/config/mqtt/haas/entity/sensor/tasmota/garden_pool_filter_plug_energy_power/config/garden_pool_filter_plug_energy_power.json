@@ -12,9 +12,9 @@
   "device": {
     "via_device": "Tasmota",
     "identifiers": "sonoff-garden-pool-filter",
-    "name": "Sonoff Garden Pool Filter",
+    "name": "Garden Pool Filter",
     "model": "POWR3",
-    "manufacturer": "Sonoff",
+    "manufacturer": "SONOFF",
     "sw_version": "13.0.0",
     "suggested_area": "Garden"
   }

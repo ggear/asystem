@@ -12,7 +12,7 @@
   "device": {
     "via_device": "WeeWX",
     "identifiers": "davis-roof-weather-station",
-    "name": "Davis Roof Weather Station",
+    "name": "Roof Weather Station",
     "model": "Vantage Pro2",
     "manufacturer": "Davis",
     "sw_version": "4.10.2",

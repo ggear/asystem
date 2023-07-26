@@ -12,9 +12,9 @@
   "device": {
     "via_device": "Tasmota",
     "identifiers": "sonoff-deck-festoons",
-    "name": "Sonoff Deck Festoons",
-    "model": "THR316D",
-    "manufacturer": "Sonoff",
+    "name": "Deck Festoons",
+    "model": "THR316D / SI7021",
+    "manufacturer": "SONOFF",
     "sw_version": "13.0.0",
     "suggested_area": "Deck"
   }
