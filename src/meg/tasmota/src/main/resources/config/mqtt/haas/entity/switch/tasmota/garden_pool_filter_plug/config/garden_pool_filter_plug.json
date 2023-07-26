@@ -8,6 +8,8 @@
   "value_template": "{{ value }}",
   "command_topic": "tasmota/device/garden_pool_filter_plug/cmnd/POWER",
   "availability_topic": "tasmota/device/garden_pool_filter_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
   "payload_available": "Online",
   "payload_not_available": "Offline",
   "qos": "1",

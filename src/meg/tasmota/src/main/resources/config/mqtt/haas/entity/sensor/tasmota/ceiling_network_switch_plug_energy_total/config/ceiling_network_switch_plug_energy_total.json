@@ -8,6 +8,11 @@
   "optimistic": "true",
   "state_topic": "tasmota/device/ceiling_network_switch_plug/tele/SENSOR",
   "value_template": "{{ value_json['ENERGY']['Total'] }}",
+  "availability_topic": "tasmota/device/ceiling_network_switch_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",

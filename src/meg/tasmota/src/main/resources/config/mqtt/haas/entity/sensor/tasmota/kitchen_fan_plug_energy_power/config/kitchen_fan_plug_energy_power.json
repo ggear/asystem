@@ -8,6 +8,11 @@
   "optimistic": "true",
   "state_topic": "tasmota/device/kitchen_fan_plug/tele/SENSOR",
   "value_template": "{{ value_json['ENERGY']['Power'] }}",
+  "availability_topic": "tasmota/device/kitchen_fan_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
