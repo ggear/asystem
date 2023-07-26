@@ -5,6 +5,7 @@ import sys
 import pandas as pd
 import requests
 import urllib3
+import re
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
@@ -99,21 +100,19 @@ if __name__ == "__main__":
                 mac = metadata_dhcp_dnsmasq_line.split("=")[1].split(",")[0].strip()
                 name = metadata_dhcp_dnsmasq_line.split("=")[1].split(",")[-1].strip()
                 if mac in unifi_clients:
-                    if unifi_clients[mac] != name:
-                        print(
-                            "Build generate script [udmutilities] dnsmasq config host [{}] doesn't match UniFi alias [{}]".format(
-                                name,
-                                unifi_clients[mac],
-                            ), file=sys.stderr)
+                    if unifi_clients[mac] != name and unifi_clients[mac] != "":
+                        print("Build generate script [udmutilities] dnsmasq config host [{}] doesn't match UniFi alias [{}]".format(
+                            name,
+                            unifi_clients[mac],
+                        ), file=sys.stderr)
                     else:
-                        print(
-                            "Build generate script [udmutilities] dnsmasq config host [{}] matches UniFi alias [{}]".format(
-                                name,
-                                unifi_clients[mac],
-                            ))
+                        print("Build generate script [udmutilities] dnsmasq config host [{}] matches UniFi alias [{}]".format(
+                            name,
+                            unifi_clients[mac],
+                        ))
                 else:
-                    print(
-                        "Build generate script [udmutilities] dnsmasq config host [{}] not found in UniFi".format(
+                    if not re.match(r"u??\-.*", name):
+                        print("Build generate script [udmutilities] dnsmasq config host [{}] not found in UniFi".format(
                             name,
                         ), file=sys.stderr)
         print("Build generate script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
