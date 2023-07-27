@@ -69,7 +69,7 @@ rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
 
-VERSION=1.17.2
+VERSION=1.17.3
 pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/adaptive_lighting
 mkdir -p src/main/resources/config/custom_components &&
