@@ -274,9 +274,32 @@ pip install --break-system-packages --no-input docker-compose==1.29.2
 docker-compose -v
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
+if [ -f /etc/default/grub ] && [ $(grep "GRUB_TIMEOUT=10" /etc/default/grub | wc -l) -eq 0 ]; then
+  sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=10/' /etc/default/grub
+  update-grub
+fi
 if [ -f /etc/default/grub ] && [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq 0 ]; then
   sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="cdgroup_enable=memory swapaccount=1"/' /etc/default/grub
   update-grub
+fi
+
+################################################################################
+# Devices
+################################################################################
+cat <<EOF >/etc/udev/rules.d/99-usb-serial.rules
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", SYMLINK+="ttyUSBTempProbe"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="0001", SYMLINK+="ttyUSBVantagePro2"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1cf1", ATTRS{idProduct}=="0030", ATTRS{serial}=="DE2418477", SYMLINK+="ttyUSBConbeeII"
+EOF
+chmod -x /etc/udev/rules.d/99-usb-serial.rules
+udevadm control --reload-rules && udevadm trigger && sleep 2
+
+################################################################################
+# Digitemp
+################################################################################
+mkdir -p /etc/digitemp
+if [ -L /dev/ttyUSBTempProbe ]; then
+  digitemp_DS9097 -i -s /dev/ttyUSBTempProbe -c /etc/digitemp/temp_probe.conf
 fi
 
 ################################################################################
