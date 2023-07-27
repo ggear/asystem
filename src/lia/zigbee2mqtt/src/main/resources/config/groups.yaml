@@ -188,17 +188,6 @@
   off_state: 'all_members_off'
   devices:
     - '0x00178801040ede93'
-'115':
-  friendly_name: 'Garden Pedestals'
-  retain: true
-  transition: 4
-  optimistic: true
-  off_state: 'all_members_off'
-  devices:
-    - '0x001788010c692175'
-    - '0x001788010c69214a'
-    - '0x001788010c5c4266'
-    - '0x001788010c692144'
 '116':
   friendly_name: 'Tree Spotlights'
   retain: true
