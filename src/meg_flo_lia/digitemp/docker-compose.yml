@@ -3,7 +3,7 @@ version: '3.7'
 services:
   digitemp:
     container_name: digitemp
-    image: telegraf:1.27.1
+    image: telegraf:1.27.2
     init: true
     restart: ${SERVICE_RESTART}
     privileged: true
