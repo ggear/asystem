@@ -329,7 +329,7 @@ compensation:
     unique_id: {}
     source: sensor.{}
     precision: 1
-    data_points: {}
+    data_points:{}
             """.format(
                 metadata_compensation_dict["unique_id"],
                 metadata_compensation_dict["unique_id"],

@@ -73,6 +73,14 @@ sensor.rack_top_temperature:
   friendly_name: 'Rack Top'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
+sensor.rack_bottom_temperature:
+  friendly_name: 'Rack Bottom'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.rack_external_temperature:
+  friendly_name: 'Rack External'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
 sensor.rack_temperature:
   friendly_name: 'Rack'
   icon: 'mdi:thermometer'

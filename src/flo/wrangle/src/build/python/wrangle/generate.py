@@ -16,7 +16,6 @@ if __name__ == "__main__":
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
         (metadata_df["unique_id"].str.len() > 0) &
-        (metadata_df["unique_id_device"].str.len() > 0) &
         (metadata_df["device_via_device"] == "Wrangle")
         ]
     metadata_wrangle_dicts = [row.dropna().to_dict() for index, row in metadata_wrangle_df.iterrows()]

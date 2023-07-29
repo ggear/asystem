@@ -6,15 +6,15 @@
   "icon": "mdi:cloud-refresh",
   "force_update": "false",
   "state_topic": "telegraf/macmini-meg/internet",
-  "value_template": "{% if value_json is defined and value_json.fields is defined and value_json.fields.ping_med_ms is defined %}\n  {{ value_json.fields.ping_med_ms | int(0) }}\n{% else %}\n  {{ \"\"\"\" }}\n{% endif %}",
+  "value_template": "{{ (value_json['fields']['ping_med_ms'] | int(0)) if (value_json['fields']['ping_med_ms'] is defined) else (states('sensor.network_internet_ping') | int(None)) }}",
   "qos": "1",
   "device": {
     "via_device": "Internet",
-    "identifiers": "internet-script",
-    "name": "Internet Script",
-    "model": "Telegraf Python Script",
-    "manufacturer": "JaneAndGraham",
+    "identifiers": "asystem-rack-internet-script",
+    "name": "Rack Internet Script",
+    "model": "Python Script",
+    "manufacturer": "ASYSTEM",
     "sw_version": "ASYSTEM_VERSION",
-    "suggested_area": "Home"
+    "suggested_area": "Rack"
   }
 }

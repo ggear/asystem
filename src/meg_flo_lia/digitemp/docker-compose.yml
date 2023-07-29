@@ -9,8 +9,6 @@ services:
     privileged: true
     environment:
       - TZ=Australia/Perth
-      - INFLUXDB_HTTP_PORT
-      - INFLUXDB_HOST
     volumes:
       - /etc/digitemp:/etc/digitemp
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
