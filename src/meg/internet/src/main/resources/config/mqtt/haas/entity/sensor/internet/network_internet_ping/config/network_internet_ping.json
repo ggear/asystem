@@ -3,7 +3,6 @@
   "name": "network_internet_ping",
   "state_class": "measurement",
   "unit_of_measurement": "ms",
-  "device_class": "duration",
   "icon": "mdi:cloud-refresh",
   "force_update": "false",
   "state_topic": "telegraf/macmini-meg/internet",
