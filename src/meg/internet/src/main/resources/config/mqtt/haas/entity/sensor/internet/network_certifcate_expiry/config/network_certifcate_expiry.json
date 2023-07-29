@@ -5,7 +5,7 @@
   "unit_of_measurement": "d",
   "icon": "mdi:cloud-lock",
   "force_update": "false",
-  "state_topic": "telegraf/macmini-mae/internet",
+  "state_topic": "telegraf/macmini-meg/internet",
   "value_template": "{% if value_json is defined and value_json.fields is defined and value_json.fields.expiry_s is defined %}\n  {{ ((value_json.fields.expiry_s | int(0)) / 60 / 60 / 24) | round(2) }}\n{% else %}\n  {{ \"\" }}\n{% endif %}",
   "qos": "1",
   "device": {

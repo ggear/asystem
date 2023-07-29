@@ -6,7 +6,7 @@
   "device_class": "data_rate",
   "icon": "mdi:cloud-download",
   "force_update": "false",
-  "state_topic": "telegraf/macmini-mae/internet",
+  "state_topic": "telegraf/macmini-meg/internet",
   "value_template": "{% if value_json is defined and value_json.fields is defined and value_json.fields.download_mbps is defined %}\n  {{ value_json.fields.download_mbps | float(0) | round(2) }}\n{% else %}\n  {{ \"\" }}\n{% endif %}",
   "qos": "1",
   "device": {

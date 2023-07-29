@@ -6,7 +6,7 @@
   "device_class": "duration",
   "icon": "mdi:cloud-refresh",
   "force_update": "false",
-  "state_topic": "telegraf/macmini-mae/internet",
+  "state_topic": "telegraf/macmini-meg/internet",
   "value_template": "{% if value_json is defined and value_json.fields is defined and value_json.fields.ping_med_ms is defined %}\n  {{ value_json.fields.ping_med_ms | int(0) }}\n{% else %}\n  {{ \"\"\"\" }}\n{% endif %}",
   "qos": "1",
   "device": {

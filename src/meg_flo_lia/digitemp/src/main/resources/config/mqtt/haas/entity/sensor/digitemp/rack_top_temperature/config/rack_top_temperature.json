@@ -6,7 +6,7 @@
   "device_class": "temperature",
   "icon": "mdi:thermometer",
   "force_update": "false",
-  "state_topic": "telegraf/macmini-mae/digitemp",
+  "state_topic": "telegraf/macmini-meg/digitemp",
   "qos": "1",
   "device": {
     "via_device": "DigiTemp",
