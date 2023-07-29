@@ -15,7 +15,8 @@ from requests import post
 from speedtest import NoMatchedServers
 from speedtest import Speedtest
 
-HOST_HOME_NAME = "nginx.janeandgraham.com"
+HOST_HOME_NAME = "home.janeandgraham.com"
+HOST_NGINX_NAME = "nginx.janeandgraham.com"
 
 HOST_SPEEDTEST_PING_IDS = []
 HOST_SPEEDTEST_THROUGHPUT_ID = "12494"
@@ -384,9 +385,9 @@ def certificate():
     run_code = RUN_CODE_FAIL_CONFIG
     home_host_certificate_expiry = None
     try:
-        home_host_connection = ssl.create_default_context().wrap_socket(socket.socket(socket.AF_INET), server_hostname=HOST_HOME_NAME)
+        home_host_connection = ssl.create_default_context().wrap_socket(socket.socket(socket.AF_INET), server_hostname=HOST_NGINX_NAME)
         home_host_connection.settimeout(SERVICE_TIMEOUT_SECONDS)
-        home_host_connection.connect((HOST_HOME_NAME, 443))
+        home_host_connection.connect((HOST_NGINX_NAME, 443))
         home_host_certificate_expiry = \
             int((datetime.strptime(home_host_connection.getpeercert()['notAfter'], DATE_TLS) - datetime.now()).total_seconds())
     except Exception as exception:
@@ -416,7 +417,7 @@ def certificate():
         run_code,
         ",host_location={},host_name={}{}".format(
             HOST_INTERNET_LOCATION,
-            HOST_HOME_NAME,
+            HOST_NGINX_NAME,
             " expiry_s={},uptime_delta_s={},uptime_s={},".format(
                 home_host_certificate_expiry if home_host_certificate_expiry is not None else 0,
                 uptime_delta,
