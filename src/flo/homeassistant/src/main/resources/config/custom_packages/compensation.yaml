@@ -91,6 +91,14 @@ compensation:
       - [ 1, 1 ]
       - [ 2, 2 ]
   #####################################################################################
+  rack_top_temperature:
+    unique_id: rack_top_temperature
+    source: sensor.rack_top_temperature
+    precision: 1
+    data_points: 
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  #####################################################################################
   compensation_sensor_rack_temperature:
     unique_id: compensation_sensor_rack_temperature
     source: sensor.rack_temperature

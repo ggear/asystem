@@ -1,7 +1,5 @@
 import glob
-import json
 import os
-import shutil
 import sys
 
 DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
@@ -25,4 +23,3 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
     write_entity_metadata("internet", DIR_ROOT, metadata_publish_df)
-

@@ -69,6 +69,10 @@ sensor.bertram_2_office_basement_temperature:
 sensor.compensation_sensor_bertram_2_office_basement_temperature:
   friendly_name: 'Basement'
   icon: 'mdi:thermometer'
+sensor.rack_top_temperature:
+  friendly_name: 'Rack Top'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
 sensor.rack_temperature:
   friendly_name: 'Rack'
   icon: 'mdi:thermometer'

@@ -60,46 +60,47 @@ def load_entity_metadata():
 
 
 def write_entity_metadata(module_name, module_root_dir, metadata_df):
-    metadata_df = metadata_df.copy()
-    for metadata_col in metadata_df.columns:
-        if all((metadata_col_val is None) or isinstance(metadata_col_val, str) for metadata_col_val in metadata_df[metadata_col]):
-            metadata_df[metadata_col] = metadata_df[metadata_col].str.replace("compensation_sensor_", "")
-    metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
-    metadata_columns_rename = {column: column.replace("device_", "") for column in metadata_columns}
-    metadata_publish_dir_root = os.path.join(module_root_dir, "src/main/resources/config/mqtt")
-    if os.path.exists(metadata_publish_dir_root):
-        shutil.rmtree(metadata_publish_dir_root)
-    for index, row in metadata_df.iterrows():
-        metadata_dict = row[[
-            "unique_id",
-            "name",
-            "state_class",
-            "unit_of_measurement",
-            "device_class",
-            "icon",
-            "force_update",
-            "optimistic",
-            "state_topic",
-            "value_template",
-            "command_topic",
-            "availability_topic",
-            "payload_on",
-            "payload_off",
-            "payload_available",
-            "payload_not_available",
-            "qos",
-        ]].dropna().to_dict()
-        metadata_dict["device"] = row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
-        if "connections" in metadata_dict["device"]:
-            metadata_dict["device"]["connections"] = json.loads(metadata_dict["device"]["connections"])
-        metadata_publish_dir = os.path.abspath(os.path.join(metadata_publish_dir_root, row['discovery_topic']))
-        os.makedirs(metadata_publish_dir)
-        metadata_publish_str = json.dumps(metadata_dict, ensure_ascii=False, indent=2) + "\n"
-        metadata_publish_path = os.path.abspath(os.path.join(metadata_publish_dir, metadata_dict["unique_id"] + ".json"))
-        with open(metadata_publish_path, 'a') as metadata_publish_file:
-            metadata_publish_file.write(metadata_publish_str)
-            print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
-                  .format(module_name, metadata_dict["unique_id"], metadata_publish_path))
+    if len(metadata_df) > 0:
+        metadata_df = metadata_df.copy()
+        for metadata_col in metadata_df.columns:
+            if all((metadata_col_val is None) or isinstance(metadata_col_val, str) for metadata_col_val in metadata_df[metadata_col]):
+                metadata_df[metadata_col] = metadata_df[metadata_col].str.replace("compensation_sensor_", "")
+        metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
+        metadata_columns_rename = {column: column.replace("device_", "") for column in metadata_columns}
+        metadata_publish_dir_root = os.path.join(module_root_dir, "src/main/resources/config/mqtt")
+        if os.path.exists(metadata_publish_dir_root):
+            shutil.rmtree(metadata_publish_dir_root)
+        for index, row in metadata_df.iterrows():
+            metadata_dict = row[[
+                "unique_id",
+                "name",
+                "state_class",
+                "unit_of_measurement",
+                "device_class",
+                "icon",
+                "force_update",
+                "optimistic",
+                "state_topic",
+                "value_template",
+                "command_topic",
+                "availability_topic",
+                "payload_on",
+                "payload_off",
+                "payload_available",
+                "payload_not_available",
+                "qos",
+            ]].dropna().to_dict()
+            metadata_dict["device"] = row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
+            if "connections" in metadata_dict["device"]:
+                metadata_dict["device"]["connections"] = json.loads(metadata_dict["device"]["connections"])
+            metadata_publish_dir = os.path.abspath(os.path.join(metadata_publish_dir_root, row['discovery_topic']))
+            os.makedirs(metadata_publish_dir)
+            metadata_publish_str = json.dumps(metadata_dict, ensure_ascii=False, indent=2) + "\n"
+            metadata_publish_path = os.path.abspath(os.path.join(metadata_publish_dir, metadata_dict["unique_id"] + ".json"))
+            with open(metadata_publish_path, 'a') as metadata_publish_file:
+                metadata_publish_file.write(metadata_publish_str)
+                print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
+                      .format(module_name, metadata_dict["unique_id"], metadata_publish_path))
 
 
 if __name__ == "__main__":

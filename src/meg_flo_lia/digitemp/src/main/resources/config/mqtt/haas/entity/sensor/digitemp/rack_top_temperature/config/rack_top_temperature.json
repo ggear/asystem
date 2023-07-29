@@ -1,0 +1,16 @@
+{
+  "unique_id": "rack_top_temperature",
+  "name": "rack_top_temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": "false",
+  "state_topic": "telegraf/macmini-mae/digitemp",
+  "qos": "1",
+  "device": {
+    "via_device": "DigiTemp",
+    "manufacturer": "DigiTemp",
+    "suggested_area": "Rack"
+  }
+}

@@ -42,6 +42,7 @@ from homeassistant.components.light import (
 from homeassistant.components.light import DOMAIN as LIGHT_DOMAIN
 from homeassistant.components.switch import DOMAIN as SWITCH_DOMAIN
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.config_entries import SOURCE_IMPORT
 from homeassistant.const import (
     ATTR_AREA_ID,
     ATTR_DOMAIN,
@@ -78,6 +79,7 @@ from homeassistant.helpers.event import (
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.sun import get_astral_location
 from homeassistant.helpers.template import area_entities
+from homeassistant.loader import bind_hass
 from homeassistant.util import slugify
 from homeassistant.util.color import (
     color_RGB_to_xy,
@@ -274,6 +276,7 @@ def is_our_context(context: Context | None) -> bool:
     return is_our_context_id(context.id)
 
 
+@bind_hass
 def _switches_with_lights(
     hass: HomeAssistant,
     lights: list[str],
@@ -282,12 +285,12 @@ def _switches_with_lights(
     config_entries = hass.config_entries.async_entries(DOMAIN)
     data = hass.data[DOMAIN]
     switches = []
+    all_check_lights = _expand_light_groups(hass, lights)
     for config in config_entries:
         entry = data.get(config.entry_id)
         if entry is None:  # entry might be disabled and therefore missing
             continue
         switch = data[config.entry_id]["instance"]
-        all_check_lights = _expand_light_groups(hass, lights)
         switch._expand_light_groups()
         # Check if any of the lights are in the switch's lights
         if set(switch.lights) & set(all_check_lights):
@@ -299,6 +302,7 @@ class NoSwitchFoundError(ValueError):
     """No switches found for lights."""
 
 
+@bind_hass
 def _switch_with_lights(
     hass: HomeAssistant,
     lights: list[str],
@@ -328,6 +332,7 @@ def _switch_with_lights(
 
 # For documentation on this function, see integration_entities() from HomeAssistant Core:
 # https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/template.py#L1109
+@bind_hass
 def _switches_from_service_call(
     hass: HomeAssistant,
     service_call: ServiceCall,
@@ -440,10 +445,27 @@ async def async_setup_entry(  # noqa: PLR0915
     assert hass is not None
     data = hass.data[DOMAIN]
     assert config_entry.entry_id in data
-    manager = data.setdefault(
-        ATTR_ADAPTIVE_LIGHTING_MANAGER,
-        AdaptiveLightingManager(hass, config_entry),
+    _LOGGER.debug(
+        "Setting up AdaptiveLighting with data: %s and config_entry %s",
+        data,
+        config_entry,
     )
+    if (  # Skip deleted YAML config entries
+        config_entry.source == SOURCE_IMPORT
+        and config_entry.unique_id not in data.get("__yaml__", [])
+    ):
+        _LOGGER.warning(
+            "Deleting AdaptiveLighting switch '%s' because YAML"
+            " defined switch has been removed from YAML configuration",
+            config_entry.unique_id,
+        )
+        await hass.config_entries.async_remove(config_entry.entry_id)
+        return
+
+    if (manager := data.get(ATTR_ADAPTIVE_LIGHTING_MANAGER)) is None:
+        manager = AdaptiveLightingManager(hass, config_entry)
+        data[ATTR_ADAPTIVE_LIGHTING_MANAGER] = manager
+
     sleep_mode_switch = SimpleSwitch(
         which="Sleep Mode",
         initial_state=False,
@@ -617,6 +639,7 @@ def _is_state_event(event: Event, from_or_to_state: Iterable[str]):
     )
 
 
+@bind_hass
 def _expand_light_groups(hass: HomeAssistant, lights: list[str]) -> list[str]:
     all_lights = set()
     manager = hass.data[DOMAIN][ATTR_ADAPTIVE_LIGHTING_MANAGER]
@@ -635,6 +658,7 @@ def _expand_light_groups(hass: HomeAssistant, lights: list[str]) -> list[str]:
     return list(all_lights)
 
 
+@bind_hass
 def _supported_features(hass: HomeAssistant, light: str) -> set[str]:
     state = hass.states.get(light)
     supported_features = state.attributes.get(ATTR_SUPPORTED_FEATURES, 0)
@@ -2128,7 +2152,11 @@ class AdaptiveLightingManager:
         """Cancel ongoing adaptation service calls for a specific light entity."""
         brightness_task = self.adaptation_tasks_brightness.get(light_id)
         color_task = self.adaptation_tasks_color.get(light_id)
-        if which in ("both", "brightness") and brightness_task is not None:
+        if (
+            which in ("both", "brightness")
+            and brightness_task is not None
+            and not brightness_task.done()
+        ):
             _LOGGER.debug(
                 "Cancelled ongoing brightness adaptation calls (%s) for '%s'",
                 brightness_task,
@@ -2139,6 +2167,7 @@ class AdaptiveLightingManager:
             which in ("both", "color")
             and color_task is not None
             and color_task is not brightness_task
+            and not color_task.done()
         ):
             _LOGGER.debug(
                 "Cancelled ongoing color adaptation calls (%s) for '%s'",

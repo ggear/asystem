@@ -1,7 +1,5 @@
 import glob
-import json
 import os
-import shutil
 import sys
 
 DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
@@ -19,10 +17,9 @@ if __name__ == "__main__":
     metadata_publish_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "Internet") &
+        (metadata_df["device_via_device"] == "DigiTemp") &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
-    write_entity_metadata("internet", DIR_ROOT, metadata_publish_df)
-
+    write_entity_metadata("digitemp", DIR_ROOT, metadata_publish_df)
