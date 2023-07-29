@@ -15,7 +15,7 @@ from requests import post
 from speedtest import NoMatchedServers
 from speedtest import Speedtest
 
-HOST_HOME_NAME = "home.janeandgraham.com"
+HOST_HOME_NAME = "nginx.janeandgraham.com"
 
 HOST_SPEEDTEST_PING_IDS = []
 HOST_SPEEDTEST_THROUGHPUT_ID = "12494"
