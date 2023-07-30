@@ -1,19 +1,14 @@
-# https://github.com/influxdata/telegraf/releases
 version: '3.7'
 services:
   digitemp:
     container_name: digitemp
-    image: telegraf:1.27.2
+    image: digitemp:${SERVICE_VERSION_ABSOLUTE}
     init: true
     restart: ${SERVICE_RESTART}
-    privileged: true
     environment:
       - TZ=Australia/Perth
     volumes:
-      - /etc/digitemp:/etc/digitemp
-      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-    devices:
-      - /dev/ttyUSBConbeeII:/dev/ttyUSBConbeeII
+      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
     logging:
       driver: "json-file"
       options:
