@@ -168,7 +168,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data[DOMAIN][entry.entry_id] = TPLinkDataUpdateCoordinator(hass, device)
 
-    # HACK: Update for haas-2023.2 deprecating async_setup_platforms
+    # HACK: Update for hass-2023.2 deprecating async_setup_platforms
     # hass.config_entries.async_setup_platforms(entry, PLATFORMS)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 

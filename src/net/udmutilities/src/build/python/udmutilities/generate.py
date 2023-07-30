@@ -131,10 +131,10 @@ if __name__ == "__main__":
             ))
 
     metadata_dhcpaliases_path = os.path.abspath(os.path.join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))
-    with open(metadata_dhcpaliases_path, 'w') as metadata_haas_file:
+    with open(metadata_dhcpaliases_path, 'w') as metadata_hass_file:
         for name in modules:
             if "{}_HTTP_PORT".format(name.upper()) in modules[name][1]:
-                metadata_haas_file.write("cname={},{}.janeandgraham.com,{}\n".format(
+                metadata_hass_file.write("cname={},{}.janeandgraham.com,{}\n".format(
                     name,
                     name,
                     modules["nginx"][0][0],

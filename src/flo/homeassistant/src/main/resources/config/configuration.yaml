@@ -58,7 +58,7 @@ influxdb:
   measurement_attr: 'domain__device_class'
   default_measurement: 'sensor'
   tags:
-    source: 'haas'
+    source: 'hass'
     version: !env_var SERVICE_VERSION_COMPACT
   tags_attributes:
     - 'state_class'
@@ -78,18 +78,22 @@ influxdb:
   ignore_attributes: !include influxdb-ignores.yaml
   #####################################################################################
 mqtt:
-# The UI is now used to configure MQTT
+# The UI is now used to configure MQTT, perhaps return with a version 2022.2.9-
 #  broker: !env_var VERNEMQ_HOST
 #  port: !env_var VERNEMQ_PORT
-#  client_id: 'haas'
+#  client_id: 'homeassistant'
 #  discovery: true
-#  discovery_prefix: 'haas/entity'
+#  discovery_prefix: 'homeassistant/entity'
 #  birth_message:
-#    topic: 'haas/system/status'
+#    topic: 'homeassistant/system/status'
 #    payload: 'Online'
+#    qos: 3
+#    retain: true
 #  will_message:
-#    topic: 'haas/system/status'
+#    topic: 'homeassistant/system/status'
 #    payload: 'Offline'
+#    qos: 3
+#    retain: true
 #######################################################################################
 discovery:
   ignore:
@@ -100,7 +104,7 @@ google_assistant:
   service_account: !include .google_service_account.json
   report_state: true
   expose_by_default: false
-  entity_config: !include haas-entities.yaml
+  entity_config: !include hass-entities.yaml
 #######################################################################################
 automation: !include automations.yaml
 #######################################################################################

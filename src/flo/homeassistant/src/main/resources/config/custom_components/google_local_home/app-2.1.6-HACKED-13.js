@@ -48,7 +48,7 @@ class RequestResponseHandler {
         throw this.createError(ErrorCode.DEVICE_VERIFICATION_FAILED, `Unable to find HASS connection info.`, deviceManager.getRegisteredDevices());
     }
     get logPrefix() {
-        return `[Intent:${this.intent}${this.haVersion ? `, HAAS Version:${this.haVersion}` : ''}]`;
+        return `[Intent:${this.intent}${this.haVersion ? `, HASS Version:${this.haVersion}` : ''}]`;
     }
     logMessage(msg, ...extraLog) {
         if (extraLog.length > 0) {
@@ -85,7 +85,7 @@ class RequestResponseHandler {
         command.additionalHeaders = {
             "HA-Cloud-Version": VERSION,
         };
-        this.logMessage("HAAS request posting ...", command);
+        this.logMessage("HASS request posting ...", command);
         let rawResponse;
         try {
             rawResponse = (await deviceManager.send(command));
@@ -119,7 +119,7 @@ class RequestResponseHandler {
             throw this.createError(ErrorCode.GENERIC_ERROR, `Error parsing body: ${rawResponse.httpResponse.body}`, rawResponse.httpResponse.body);
         }
         response["intent"] = this.intent
-        this.logMessage(`HAAS response received [HTTP:${rawResponse.httpResponse.statusCode}, Retry:${isRetry}]`, response);
+        this.logMessage(`HASS response received [HTTP:${rawResponse.httpResponse.statusCode}, Retry:${isRetry}]`, response);
         return response;
     }
 }

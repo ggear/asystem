@@ -12,5 +12,6 @@ printf "Entity Metadata publish script sleeping before publishing ... " && sleep
 
 ${ROOT_DIR}/../../lia/weewx/deploy.sh
 ${ROOT_DIR}/../../meg/tasmota/deploy.sh
+${ROOT_DIR}/../../meg/digitemp/deploy.sh
 ${ROOT_DIR}/../../meg/internet/deploy.sh
 ${ROOT_DIR}/../../lia/zigbee2mqtt/deploy.sh

@@ -7,8 +7,8 @@ mqtt:
   base_topic: zigbee
   server: 'mqtt://$VERNEMQ_IP:$VERNEMQ_PORT'
 homeassistant:
-  discovery_topic: 'haas/entity'
-  status_topic: 'haas/status'
+  discovery_topic: 'homeassistant/entity'
+  status_topic: 'homeassistant/system/status'
   legacy_entity_attributes: false
   legacy_triggers: true
 availability:

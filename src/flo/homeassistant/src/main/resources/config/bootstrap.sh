@@ -22,7 +22,7 @@ echo "--------------------------------------------------------------------------
 #   - TP-Link Smart Home (local polling, no internet, requires Areas to be manually configured)
 #   - Google Cast (local polling, requires internet, requires IP CSV which could be hacked in - see 'custom_packages/media.yaml')
 #   - Brother Printer (local polling, no internet, requires manual config with IP)
-#   - Google (local push, requires internet, need to add new devices and enter HAAS 'graham' password)
+#   - Google (local push, requires internet, need to add new devices and enter HASS 'graham' password)
 #   - Withings (cloud polling, requires internet, requires manual config of profile 'Graham' and authentication)
 #   - Netatmo (cloud polling, requires internet, requires manual config by logging into 'netatmo.com' and providing Areas)
 #   - Bureau of Meteorology (cloud polling, requires internet, requires manual config and then restart - see 'custom_packages/weather.yaml' which could be hacked in)

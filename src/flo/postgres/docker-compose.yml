@@ -10,9 +10,9 @@ x-common: &common
     - POSTGRES_USER=${POSTGRES_USER}
     - PGPASSWORD=${POSTGRES_KEY}
     - POSTGRES_PASSWORD=${POSTGRES_KEY}
-    - POSTGRES_USER_HAAS
-    - POSTGRES_KEY_HAAS
-    - POSTGRES_DATABASE_HAAS
+    - POSTGRES_USER_HASS
+    - POSTGRES_KEY_HASS
+    - POSTGRES_DATABASE_HASS
     - PGDATA=/var/lib/postgresql/data/pgdata
   logging:
     driver: "json-file"
