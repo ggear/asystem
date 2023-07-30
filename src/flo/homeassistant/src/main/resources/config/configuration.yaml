@@ -81,14 +81,14 @@ mqtt:
 # The UI is now used to configure MQTT
 #  broker: !env_var VERNEMQ_HOST
 #  port: !env_var VERNEMQ_PORT
-#  client_id: 'hass'
+#  client_id: 'haas'
 #  discovery: true
 #  discovery_prefix: 'haas/entity'
 #  birth_message:
-#    topic: 'hass/system/status'
+#    topic: 'haas/system/status'
 #    payload: 'Online'
 #  will_message:
-#    topic: 'hass/system/status'
+#    topic: 'haas/system/status'
 #    payload: 'Offline'
 #######################################################################################
 discovery:
