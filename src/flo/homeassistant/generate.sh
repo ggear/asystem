@@ -81,12 +81,6 @@ rm -rf src/main/resources/config/custom_components/powercalc
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/powercalc-component/custom_components/powercalc src/main/resources/config/custom_components
 
-VERSION=ggear-mqtt
-pull_repo $(pwd) homeassistant mqtt-component ggear/homeassistant-core ${VERSION} ${1}
-rm -rf src/main/resources/config/custom_components/mqtt
-mkdir -p src/main/resources/config/custom_components &&
-  cp -rvf ../../../.deps/homeassistant/mqtt-component/homeassistant/components/mqtt src/main/resources/config/custom_components
-
 VERSION=ggear-influxdb
 pull_repo $(pwd) homeassistant influxdb-component ggear/homeassistant-core ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/influxdb
