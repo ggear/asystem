@@ -1,9 +1,5 @@
 [
   {
-    "unique_id": "rack_bottom_temperature",
-    "connection_mac": "po"
-  },
-  {
     "unique_id": "rack_external_temperature",
     "connection_mac": "0x28ff641e870006ae"
   }
