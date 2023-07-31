@@ -15,7 +15,7 @@ if __name__ == "__main__":
     with open(metadata_digitemp_path, 'r') as metadata_digitemp_file:
         sensor_bus = UART_Adapter(SERIAL_DEVICE)
         for metadata_digitemp_dict in json.load(metadata_digitemp_file):
-            sensor = TemperatureSensor(sensor_bus, rom=metadata_digitemp_dict["connection_mac"])
+            sensor = TemperatureSensor(sensor_bus, rom=metadata_digitemp_dict["connection_mac"].replace("0x", ""))
 
             print("{} {} {}".format(metadata_digitemp_dict["unique_id"], metadata_digitemp_dict["connection_mac"], sensor.get_temperature()))
 
