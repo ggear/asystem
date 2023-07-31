@@ -20,6 +20,7 @@ PACKAGES=(
   fswatch
   util-linux
   mediainfo
+  digitemp
   bsdmainutils
   netselect-apt
   smartmontools

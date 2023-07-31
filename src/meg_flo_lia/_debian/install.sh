@@ -25,6 +25,7 @@ apt-get install -y --allow-downgrades 'screen=4.9.0-4'
 apt-get install -y --allow-downgrades 'fswatch=1.14.0+repack-13.1+b1'
 apt-get install -y --allow-downgrades 'util-linux=2.38.1-5+b1'
 apt-get install -y --allow-downgrades 'mediainfo=23.04-1'
+apt-get install -y --allow-downgrades 'digitemp=3.7.2-2'
 apt-get install -y --allow-downgrades 'bsdmainutils=12.1.8'
 apt-get install -y --allow-downgrades 'netselect-apt=0.3.ds1-30.1'
 apt-get install -y --allow-downgrades 'smartmontools=7.3-1+b1'
@@ -51,7 +52,7 @@ apt-get install -y --allow-downgrades 'iotop=0.6-42-ga14256a-0.1+b2'
 apt-get install -y --allow-downgrades 'hdparm=9.65+ds-1'
 apt-get install -y --allow-downgrades 'stress-ng=0.15.06-2'
 apt-get install -y --allow-downgrades 'memtester=4.6.0-1'
-apt-get install -y --allow-downgrades 'linux-cpupower=6.1.38-1'
+apt-get install -y --allow-downgrades 'linux-cpupower=6.1.38-2'
 apt-get install -y --allow-downgrades 'firmware-linux-nonfree=20230210-5'
 apt-get install -y --allow-downgrades 'hwinfo=21.82-1'
 apt-get install -y --allow-downgrades 'lshw=02.19.git.2021.06.19.996aaad9c7-2+b1'
@@ -301,6 +302,7 @@ mkdir -p /etc/digitemp
 if [ -L /dev/ttyUSBTempProbe ]; then
   digitemp_DS9097 -i -s /dev/ttyUSBTempProbe -c /etc/digitemp/temp_probe.conf
 fi
+digitemp_DS9097 -a -c /etc/digitemp/temp_probe.conf
 
 ################################################################################
 # Boot
