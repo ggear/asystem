@@ -164,7 +164,7 @@ class Sun2Entity(Entity):
                     dispatcher_send(self.hass, SIG_HA_LOC_UPDATED, loc_data)
 
             update_local_loc_data()
-            self.hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, update_local_loc_data)
+            self.hass.sensor_bus.async_listen(EVENT_CORE_CONFIG_UPDATE, update_local_loc_data)
 
         try:
             loc_data = cast(LocData, self.hass.data[DOMAIN][self._loc_params])

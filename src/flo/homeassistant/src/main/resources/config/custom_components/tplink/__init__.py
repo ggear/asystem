@@ -138,7 +138,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         if discovered := await async_discover_devices(hass):
             async_trigger_discovery(hass, discovered)
 
-    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _async_discovery)
+    hass.sensor_bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _async_discovery)
     async_track_time_interval(hass, _async_discovery, DISCOVERY_INTERVAL)
 
     return True

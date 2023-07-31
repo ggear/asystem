@@ -13,9 +13,9 @@ if __name__ == "__main__":
 
     metadata_digitemp_path = abspath(join("/asystem/runtime/sensors.json"))
     with open(metadata_digitemp_path, 'r') as metadata_digitemp_file:
-        bus = UART_Adapter(SERIAL_DEVICE)
+        sensor_bus = UART_Adapter(SERIAL_DEVICE)
         for metadata_digitemp_dict in json.load(metadata_digitemp_file):
-            sensor = TemperatureSensor(bus, rom=metadata_digitemp_dict["connection_mac"])
+            sensor = TemperatureSensor(sensor_bus, rom=metadata_digitemp_dict["connection_mac"])
 
             print("{} {} {}".format(metadata_digitemp_dict["unique_id"], metadata_digitemp_dict["connection_mac"], sensor.get_temperature()))
 

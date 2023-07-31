@@ -179,7 +179,7 @@ class BomDataUpdateCoordinator(DataUpdateCoordinator):
             ),
         )
 
-        self.entity_registry_updated_unsub = self.hass.bus.async_listen(
+        self.entity_registry_updated_unsub = self.hass.sensor_bus.async_listen(
             er.EVENT_ENTITY_REGISTRY_UPDATED, self.entity_registry_updated
         )
 

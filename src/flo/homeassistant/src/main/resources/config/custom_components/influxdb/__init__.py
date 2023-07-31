@@ -523,7 +523,7 @@ def setup(hass: HomeAssistant, config: ConfigType) -> bool:
         instance.join()
         influx.close()
 
-    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, shutdown)
+    hass.sensor_bus.listen_once(EVENT_HOMEASSISTANT_STOP, shutdown)
 
     return True
 
@@ -540,7 +540,7 @@ class InfluxThread(threading.Thread):
         self.max_tries = max_tries
         self.write_errors = 0
         self.shutdown = False
-        hass.bus.listen(EVENT_STATE_CHANGED, self._event_listener)
+        hass.sensor_bus.listen(EVENT_STATE_CHANGED, self._event_listener)
 
     @callback
     def _event_listener(self, event):

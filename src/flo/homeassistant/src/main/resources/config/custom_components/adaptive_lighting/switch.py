@@ -431,7 +431,7 @@ def _fire_manual_control_event(
         light,
     )
     switch.manager.mark_as_manual_control(light)
-    hass.bus.async_fire(
+    hass.sensor_bus.async_fire(
         f"{DOMAIN}.manual_control",
         {ATTR_ENTITY_ID: light, SWITCH_DOMAIN: switch.entity_id},
         context=context,
@@ -982,7 +982,7 @@ class AdaptiveSwitch(SwitchEntity, RestoreEntity):
         if self.hass.is_running:
             await self._setup_listeners()
         else:
-            self.hass.bus.async_listen_once(
+            self.hass.sensor_bus.async_listen_once(
                 EVENT_HOMEASSISTANT_STARTED,
                 self._setup_listeners,
             )
@@ -1926,11 +1926,11 @@ class AdaptiveLightingManager:
 
         # Setup listeners and its callbacks to remove them later
         self.listener_removers = [
-            self.hass.bus.async_listen(
+            self.hass.sensor_bus.async_listen(
                 EVENT_CALL_SERVICE,
                 self.turn_on_off_event_listener,
             ),
-            self.hass.bus.async_listen(
+            self.hass.sensor_bus.async_listen(
                 EVENT_STATE_CHANGED,
                 self.state_changed_event_listener,
             ),

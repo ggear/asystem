@@ -121,7 +121,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 _LOGGER.debug("Stopping dyson discovery")
                 discovery.stop_discovery()
 
-            hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_discovery)
+            hass.sensor_bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, stop_discovery)
 
         await hass.async_add_executor_job(
             discovery.register_device, device, setup_entry

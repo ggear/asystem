@@ -224,7 +224,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 domain_groups,  # type: ignore
             )
 
-        hass.bus.async_listen_once(
+        hass.sensor_bus.async_listen_once(
             EVENT_HOMEASSISTANT_STARTED,
             _create_domain_groups,
         )
@@ -240,7 +240,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             ),
         )
 
-    hass.bus.async_listen_once(
+    hass.sensor_bus.async_listen_once(
         EVENT_HOMEASSISTANT_STARTED,
         _create_standby_group,
     )

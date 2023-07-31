@@ -226,7 +226,7 @@ class AverageSensor(SensorEntity):
                 )
                 await async_sensor_state_listener(None, None, None)
 
-        self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, async_sensor_startup)
+        self.hass.sensor_bus.async_listen_once(EVENT_HOMEASSISTANT_START, async_sensor_startup)
 
     @staticmethod
     def _has_state(state) -> bool:

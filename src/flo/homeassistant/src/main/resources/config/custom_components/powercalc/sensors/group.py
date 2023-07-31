@@ -784,7 +784,7 @@ class PreviousStateStore:
             await self.persist_states()
 
         # Dump states when stopping hass
-        self.hass.bus.async_listen_once(
+        self.hass.sensor_bus.async_listen_once(
             EVENT_HOMEASSISTANT_STOP,
             _async_dump_states_at_stop,
         )
