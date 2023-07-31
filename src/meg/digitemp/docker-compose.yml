@@ -11,7 +11,7 @@ services:
       - ${SERVICE_DATA_DIR}:/asystem/runtime
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
     devices:
-      - /dev/ttyUSBTempProbe:/dev/ttyUSBTempProbe
+      - /dev/ttyUSBTempProbe:/dev/ttyUSBTempProbe:rw
     logging:
       driver: "json-file"
       options:
