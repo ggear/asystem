@@ -9,6 +9,8 @@ services:
       - TZ=Australia/Perth
     volumes:
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
+    devices:
+      - /dev/ttyUSBTempProbe:/dev/ttyUSBTempProbe
     logging:
       driver: "json-file"
       options:
