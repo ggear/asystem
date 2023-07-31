@@ -12,7 +12,7 @@ FORMAT_TEMPLATE = "digitemp,metric=temperature,rom_id={},run_code={}{},run_ms={}
 if __name__ == "__main__":
 
     metadata_digitemp_path = abspath(join("/asystem/runtime/sensors.json"))
-    with open(metadata_digitemp_path, 'w') as metadata_digitemp_file:
+    with open(metadata_digitemp_path, 'r') as metadata_digitemp_file:
         bus = UART_Adapter(SERIAL_DEVICE)
         for metadata_digitemp_dict in json.load(metadata_digitemp_file):
             sensor = TemperatureSensor(bus, rom=metadata_digitemp_dict["connection_mac"])
