@@ -9,7 +9,7 @@ from digitemp.master import UART_Adapter
 
 FILE_SERIAL_DEVICE = "/dev/ttyUSBTempProbe"
 FILE_SENSORS = "/asystem/runtime/sensors.json"
-FORMAT_TEMPLATE = "digitemp,metric={},rom_id={},run_code={} {}run_ms={} {}"
+FORMAT_TEMPLATE = "digitemp,metric=temperature,sensor_name={},sensor_rom={},run_code={} {}run_ms={} {}"
 
 if __name__ == "__main__":
     metadata_digitemp_path = abspath(FILE_SENSORS)
@@ -34,7 +34,7 @@ if __name__ == "__main__":
                     metadata_digitemp_dict["unique_id"],
                     metadata_digitemp_dict["connection_mac"],
                     run_code,
-                    "temp_celcius={},".format(temperature) if run_code == 0 else "",
+                    "{}_temp_celcius={},".format(metadata_digitemp_dict["unique_id"], temperature) if run_code == 0 else "",
                     int((time.time() - run_time_start) * 1000),
                     int(time.time() * 1000000000),
                 ))
