@@ -7,6 +7,7 @@
   "icon": "mdi:thermometer",
   "force_update": "false",
   "state_topic": "telegraf/raspbpi-lia/digitemp",
+  "value_template": "{{ (value_json['fields']['rack_external_temperature_celcius'] | float(None)) if (value_json['fields']['rack_external_temperature_celcius'] is defined) else (states('sensor.rack_external_temperature') | float(None)) }}",
   "qos": "1",
   "device": {
     "via_device": "DigiTemp",
