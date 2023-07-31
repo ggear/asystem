@@ -1,26 +1,35 @@
 import json
 from os.path import *
-
+import sys
+import time
 from digitemp.device import TemperatureSensor
 from digitemp.master import UART_Adapter
+import traceback
 
 SERIAL_DEVICE = "/dev/ttyUSBTempProbe"
+STACKTRACE_REFERENCE_LIMIT = 1
 
-FORMAT_TEMPLATE = "digitemp,metric=temperature,rom_id={},run_code={}{},run_ms={} {}"
+FORMAT_TEMPLATE = "digitemp,metric={},rom_id={},run_code={},run_ms={},temp_cel={} {}"
 
 if __name__ == "__main__":
     metadata_digitemp_path = abspath(join("/asystem/runtime/sensors.json"))
     with open(metadata_digitemp_path, 'r') as metadata_digitemp_file:
-        sensor_bus = UART_Adapter(SERIAL_DEVICE)
         for metadata_digitemp_dict in json.load(metadata_digitemp_file):
-            sensor = TemperatureSensor(sensor_bus, rom=metadata_digitemp_dict["connection_mac"].replace("0x", ""))
-
-            print("{} {} {}".format(metadata_digitemp_dict["unique_id"], metadata_digitemp_dict["connection_mac"], sensor.get_temperature()))
-
-            # print(FORMAT_TEMPLATE.format(
-            #     "108739A80208006F",
-            #     0,
-            #     ",temp_cel={}".format(10),
-            #     "10",
-            #     int(time.time() * 1000000000),
-            # ))
+            run_code = 0
+            temperature = None
+            run_time_start = time.time()
+            try:
+                temperature = TemperatureSensor(UART_Adapter(SERIAL_DEVICE),
+                                                rom=metadata_digitemp_dict["connection_mac"].replace("0x", "")).get_temperature()
+            except Exception as error:
+                print("Error getting temperature sensor value - ", end="", file=sys.stderr)
+                traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
+                run_code = 1
+            print(FORMAT_TEMPLATE.format(
+                metadata_digitemp_dict["unique_id"],
+                metadata_digitemp_dict["connection_mac"],
+                run_code,
+                int((time.time() - run_time_start) * 1000),
+                temperature,
+                int(time.time() * 1000000000),
+            ))
