@@ -1,7 +1,6 @@
 import json
-
-import time
 from os.path import *
+
 from digitemp.device import TemperatureSensor
 from digitemp.master import UART_Adapter
 
@@ -10,7 +9,6 @@ SERIAL_DEVICE = "/dev/ttyUSBTempProbe"
 FORMAT_TEMPLATE = "digitemp,metric=temperature,rom_id={},run_code={}{},run_ms={} {}"
 
 if __name__ == "__main__":
-
     metadata_digitemp_path = abspath(join("/asystem/runtime/sensors.json"))
     with open(metadata_digitemp_path, 'r') as metadata_digitemp_file:
         sensor_bus = UART_Adapter(SERIAL_DEVICE)
