@@ -10,6 +10,7 @@ RUN apt-get -y --no-install-recommends install python3=$PYTHON_VERSION-3
 RUN apt-get -y --no-install-recommends install python3-dev=$PYTHON_VERSION-3
 RUN apt-get -y --no-install-recommends install python-is-python3=$PYTHON_VERSION-1
 RUN apt-get -y --no-install-recommends install python3-pip=20.3.4-4+deb11u1
+RUN apt-get -y --no-install-recommends install netcat-openbsd=1.217-3
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 FROM image_package as image_install

@@ -34,7 +34,7 @@ if __name__ == "__main__":
                     metadata_digitemp_dict["unique_id"],
                     metadata_digitemp_dict["connection_mac"],
                     run_code,
-                    "{}_celcius={},".format(metadata_digitemp_dict["unique_id"], temperature) if run_code == 0 else "",
+                    "{}_celsius={},".format(metadata_digitemp_dict["unique_id"], temperature) if run_code == 0 else "",
                     int((time.time() - run_time_start) * 1000),
                     int(time.time() * 1000000000),
                 ))

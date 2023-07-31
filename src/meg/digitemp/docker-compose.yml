@@ -21,3 +21,9 @@ services:
       resources:
         limits:
           memory: 64M
+    healthcheck:
+      test: netcat -zw 1 localhost ${DIGITEMP_MONITOR_PORT} || exit 1
+      interval: 300s
+      retries: 3
+      start_period: 20s
+      timeout: 10s
