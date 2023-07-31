@@ -15,6 +15,12 @@
     "model": "DS18x20",
     "manufacturer": "DigiTemp",
     "sw_version": "UART to 1-Wire Protocol",
-    "suggested_area": "Rack"
+    "suggested_area": "Rack",
+    "connections": [
+      [
+        "mac",
+        "0xX"
+      ]
+    ]
   }
 }

@@ -70,7 +70,7 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df):
         metadata_publish_dir_root = os.path.join(module_root_dir, "src/main/resources/config/mqtt")
         if os.path.exists(metadata_publish_dir_root):
             shutil.rmtree(metadata_publish_dir_root)
-        for index, row in metadata_df.iterrows():
+        for _, row in metadata_df.iterrows():
             metadata_dict = row[[
                 "unique_id",
                 "name",

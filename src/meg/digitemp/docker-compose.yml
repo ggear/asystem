@@ -8,6 +8,7 @@ services:
     environment:
       - TZ=Australia/Perth
     volumes:
+      - ${SERVICE_DATA_DIR}:/asystem/runtime
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
     devices:
       - /dev/ttyUSBTempProbe:/dev/ttyUSBTempProbe

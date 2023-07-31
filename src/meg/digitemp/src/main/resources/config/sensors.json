@@ -1,0 +1,14 @@
+[
+  {
+    "unique_id": "rack_top_temperature",
+    "connection_mac": "0x28FF641E870006AE"
+  },
+  {
+    "unique_id": "rack_bottom_temperature",
+    "connection_mac": "0xX"
+  },
+  {
+    "unique_id": "rack_external_temperature",
+    "connection_mac": "0xX"
+  }
+]
