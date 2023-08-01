@@ -7,6 +7,8 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
+      - VERNEMQ_HOST
+      - VERNEMQ_PORT
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/runtime:rw
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
