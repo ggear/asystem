@@ -41,7 +41,7 @@ apt-get install -y --allow-downgrades 'software-properties-common=0.99.30-4'
 apt-get install -y --allow-downgrades 'mkvtoolnix=74.0.0-1'
 apt-get install -y --allow-downgrades 'docker-ce=5:24.0.5-1~debian.12~bookworm'
 apt-get install -y --allow-downgrades 'docker-ce-cli=5:24.0.5-1~debian.12~bookworm'
-apt-get install -y --allow-downgrades 'containerd.io=1.6.21-1'
+apt-get install -y --allow-downgrades 'containerd.io=1.6.22-1'
 apt-get install -y --allow-downgrades 'cifs-utils=2:7.0-2'
 apt-get install -y --allow-downgrades 'samba=2:4.17.9+dfsg-0+deb12u3'
 apt-get install -y --allow-downgrades 'cups=2.4.2-3+deb12u1'
@@ -298,11 +298,13 @@ udevadm control --reload-rules && udevadm trigger && sleep 2
 ################################################################################
 # Digitemp
 ################################################################################
-mkdir -p /etc/digitemp
 if [ -L /dev/ttyUSBTempProbe ]; then
+  mkdir -p /etc/digitemp
   digitemp_DS9097 -i -s /dev/ttyUSBTempProbe -c /etc/digitemp/temp_probe.conf
+  digitemp_DS9097 -a -c /etc/digitemp/temp_probe.conf
+else
+  rm -rf /etc/digitemp*
 fi
-digitemp_DS9097 -a -c /etc/digitemp/temp_probe.conf
 
 ################################################################################
 # Boot
