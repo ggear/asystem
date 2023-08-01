@@ -16,6 +16,12 @@ services:
       - ${SERVICE_DATA_DIR}/healthcheck.sh:/bootstrap/healthcheck.sh:ro
     devices:
       - /dev/ttyUSBTempProbe:/dev/ttyUSBTempProbe:rw
+    healthcheck:
+      test: /bootstrap/healthcheck.sh
+      retries: 3
+      timeout: 10s
+      interval: 60s
+      start_period: 20s
     logging:
       driver: "json-file"
       options:
@@ -25,9 +31,3 @@ services:
       resources:
         limits:
           memory: 64M
-    healthcheck:
-      test: /bootstrap/healthcheck.sh
-      retries: 3
-      timeout: 10s
-      interval: 60s
-      start_period: 20s
