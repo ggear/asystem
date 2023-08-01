@@ -182,7 +182,7 @@ def setup_platform(
 
     add_entities(entities, update_before_add=True)
 
-    hass.sensor_bus.listen_once(EVENT_HOMEASSISTANT_STOP, lambda _: influx.close())
+    hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP, lambda _: influx.close())
 
 
 class InfluxSensor(SensorEntity):

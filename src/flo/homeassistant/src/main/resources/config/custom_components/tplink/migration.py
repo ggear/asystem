@@ -63,7 +63,7 @@ def async_migrate_legacy_entries(
     async def _async_cleanup_legacy_entry(_now: datetime) -> None:
         await async_cleanup_legacy_entry(hass, legacy_entry.entry_id)
 
-    hass.sensor_bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _async_cleanup_legacy_entry)
+    hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _async_cleanup_legacy_entry)
 
 
 @callback
