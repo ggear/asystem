@@ -29,5 +29,5 @@ services:
       test: /bootstrap/healthcheck.sh
       retries: 3
       timeout: 10s
-      interval: 30s
+      interval: 60s
       start_period: 20s
