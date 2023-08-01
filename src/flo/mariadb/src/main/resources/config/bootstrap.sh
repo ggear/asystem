@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! mariadb-admin -h${MARIADB_HOST} -u${MARIADB_USER} -p${MARIADB_PASSWORD} ping >>/dev/null 2>&1; do
+while ! mariadb-admin -h${MARIADB_HOST} -u${MARIADB_USER} -p${MARIADB_PASSWORD} ping >/dev/null 2>&1; do
   echo "Waiting for service to come up ..." && sleep 1
 done
 

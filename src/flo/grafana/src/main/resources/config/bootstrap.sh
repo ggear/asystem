@@ -7,7 +7,7 @@ echo "--------------------------------------------------------------------------
 LIBRARIES_HOME=${LIBRARIES_HOME:-"/bootstrap"}
 DASHBOARDS_HOME=${DASHBOARDS_HOME:-"/bootstrap/dashboards"}
 
-while ! curl -sf ${GRAFANA_URL}/api/admin/stats >>/dev/null 2>&1; do
+while ! curl -sf ${GRAFANA_URL}/api/admin/stats >/dev/null 2>&1; do
   echo "Waiting for service to come up ..." && sleep 1
 done
 

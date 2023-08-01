@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! influx ping --host http://${INFLUXDB_HOST}:${INFLUXDB_HTTP_PORT} >>/dev/null 2>&1; do
+while ! influx ping --host http://${INFLUXDB_HOST}:${INFLUXDB_HTTP_PORT} >/dev/null 2>&1; do
   echo "Waiting for service to come up ..." && sleep 1
 done
 
