@@ -23,6 +23,9 @@ COPY src/reqs_run.txt /asystem
 RUN cat /asystem/reqs_run.txt | xargs -n 1 pip install && rm -rf /asystem/reqs_run.txt
 COPY src/main/python/ /asystem/
 
-HEALTHCHECK --interval=311s --start-period=60s --start-interval=20s --timeout=20s --retries=3 CMD /bootstrap/healthcheck.sh
+# TODO: Requires Docker 25.0.0+
+#HEALTHCHECK --interval=311s --start-period=60s --start-interval=20s --timeout=20s --retries=3 CMD /bootstrap/healthcheck.sh
+HEALTHCHECK --interval=311s --start-period=60s --timeout=20s --retries=3 CMD /bootstrap/healthcheck.sh
+
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["telegraf"]
