@@ -15,7 +15,7 @@ services:
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
       - ${SERVICE_DATA_DIR}/healthcheck.sh:/bootstrap/healthcheck.sh:ro
     devices:
-      - /dev/ttyUSBTempProbe:/dev/ttyUSBTempProbe:rw
+      - /dev/ttyUSBTempProbe:/dev/ttyUSB0:rw
     healthcheck:
       test: /bootstrap/healthcheck.sh
       retries: 3
