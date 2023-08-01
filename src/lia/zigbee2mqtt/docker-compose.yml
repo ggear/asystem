@@ -29,7 +29,7 @@ services:
     ports:
       - ${ZIGBEE2MQTT_HTTP_PORT}:${ZIGBEE2MQTT_HTTP_PORT}
     devices:
-      - /dev/ttyUSBConbeeII:/dev/ttyACM0
+      - /dev/ttyUSBConbeeII:/dev/ttyUSBConbeeII:rw
     deploy:
       resources:
         limits:

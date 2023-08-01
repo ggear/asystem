@@ -20,7 +20,7 @@ services:
       - ${SERVICE_DATA_DIR}:/data
       - ${SERVICE_DATA_DIR}/skins:/home/weewx/skins
     devices:
-      - ${WEEWX_DEV}:/dev/ttyUSBVantagePro2
+      - ${WEEWX_DEV}:/dev/ttyUSBVantagePro2:rw
     logging:
       driver: "json-file"
       options:

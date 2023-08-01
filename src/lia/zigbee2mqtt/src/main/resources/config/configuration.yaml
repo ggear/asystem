@@ -24,7 +24,7 @@ device_options:
 devices: devices.yaml
 groups: groups.yaml
 serial:
-  port: /dev/ttyACM0
+  port: /dev/ttyUSBConbeeII
 advanced:
   channel: 11
   last_seen: ISO_8601_local
