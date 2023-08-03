@@ -8,7 +8,7 @@ import sys
 DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
 for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, "{}/src/build/python".format(dir_module))
+        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_entity_metadata
 from homeassistant.generate import write_entity_metadata
@@ -38,6 +38,7 @@ if __name__ == "__main__":
     metadata_digitemp_path = abspath(join(DIR_ROOT, "src/main/resources/config/sensors.json"))
     with open(metadata_digitemp_path, 'w') as metadata_digitemp_file:
         metadata_digitemp_file.write(json.dumps(metadata_digitemp_dicts, indent=2))
+    print("Build generate script [digitemp] sensor metadata persisted to [{}]".format(metadata_digitemp_path))
 
     metadata_digitemp_dicts = [row.dropna().to_dict() for index, row in metadata_digitemp_df.iterrows()]
     metadata_digitemp_health_path = abspath(join(DIR_ROOT, "src/main/resources/config/healthcheck.sh"))
@@ -58,3 +59,4 @@ telegraf --once >/dev/null 2>&1 &&
                 metadata_digitemp_state_topic,
                 len(metadata_digitemp_dicts),
             ).strip() + "\n")
+    print("Build generate script [digitemp] health script persisted to [{}]".format(metadata_digitemp_health_path))

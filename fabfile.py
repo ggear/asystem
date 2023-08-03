@@ -6,15 +6,15 @@
 
 import collections
 import glob
-import math
 import os
 # TODO: Rewrite as BundleWrap/pyinfra/K8s?
 import re
 import signal
-import sys
 from os.path import *
 
+import math
 import requests
+import sys
 from fabric import task
 from packaging import version
 from pathlib2 import Path
@@ -382,7 +382,7 @@ def _unittest(context, filter_module=None):
 def _package(context, filter_module=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package")
-        host_arch = HOSTS[_get_host(context, module)][1]
+        host_arch = HOSTS[_get_host(module)][1]
         if is_release and host_arch != "x86_64":
             _run_local(context, "docker buildx build "
                                 "--progress=plain "
@@ -442,8 +442,9 @@ def _deploy(context):
     for module in _get_modules(context, "deploy.sh"):
         _print_header(module, "deploy")
         _run_local(context, "deploy.sh", module)
-        _run_local(context, "[ -f docker-compose.yaml ] && echo 'Tail logs command: while true; do sleep 1 && docker logs -f {} 2>&1; done' || true"
-                   .format(_get_service(context, module)), module)
+        _run_local(context,
+                   "[ -f docker-compose.yaml ] && echo 'Tail logs command: while true; do sleep 1 && docker logs -f {} 2>&1; done' || true"
+                   .format(_get_service(module)), module)
         _print_footer(module, "deploy")
 
 
@@ -461,7 +462,7 @@ def _release(context):
         _run_local(context, "git add -A && git commit -m 'Update asystem-{}' && git tag -a {} -m 'Release asystem-{}'"
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in modules:
-        for host in _get_hosts(context, module):
+        for host in _get_hosts(module):
             _clean(context, filter_module=module)
             _generate(context, filter_module=module, filter_host=host, is_release=True)
             _build(context, filter_module=module, is_release=True)
@@ -491,7 +492,7 @@ def _release(context):
                 else:
                     _run_local(context, "touch target/release/install.sh", module)
                 _print_header("{}/{}".format(host, _name(module)), "release")
-                install = "{}/{}/{}".format(DIR_INSTALL, _get_service(context, module), _get_versions()[0])
+                install = "{}/{}/{}".format(DIR_INSTALL, _get_service(module), _get_versions()[0])
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
                            .format(ssh_pass, host, install, install))
@@ -541,6 +542,20 @@ def _get_module_paths(context):
     return module_paths
 
 
+def _get_modules_all(filter_path=None):
+    modules = {}
+    for module_path in glob.glob(join(DIR_ROOT_MODULE, "*/*")):
+        group_path = Path(join(module_path, ".group"))
+        if isfile(group_path) and group_path.read_text().strip().isdigit() and int(group_path.read_text().strip()) >= 0 and \
+                (filter_path is None or isfile(join(module_path, filter_path))):
+            module = module_path.replace(dirname(dirname(module_path)) + "/", "")
+            for host in _get_hosts(module):
+                if host not in modules:
+                    modules[host] = []
+                modules[host].append(_get_service(module))
+    return modules
+
+
 def _get_modules(context, filter_path=None, filter_module=None, filter_changes=True):
     if filter_module is None:
         working_modules = []
@@ -579,7 +594,7 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
         sorted_modules = []
         for group in sorted(grouped_modules):
             sorted_modules.extend(grouped_modules[group])
-        module_services = [_get_service(context, module) for module in sorted_modules]
+        module_services = [_get_service(module) for module in sorted_modules]
         if (len(set(module_services)) != len(module_services)):
             raise Exception("Non-unique service names {} detected in module definitions"
                             .format([service for service, count in collections.Counter(module_services).items() if count > 1]))
@@ -599,15 +614,15 @@ def _ssh_pass(context, host):
     return ssh_prefix
 
 
-def _get_service(context, module):
+def _get_service(module):
     return module.split("/")[1]
 
 
-def _get_host(context, module):
+def _get_host(module):
     return module.split("/")[0].split("_")[0]
 
 
-def _get_hosts(context, module):
+def _get_hosts(module):
     return [(HOSTS[host][0] + "-" + host) for host in module.split("/")[0].split("_")]
 
 
@@ -625,7 +640,7 @@ def _get_dependencies(context, module):
 
 
 def _write_env(context, module, working_path=".", filter_host=None, is_release=False):
-    service = _get_service(context, module)
+    service = _get_service(module)
     _run_local(context, "mkdir -p {}".format(working_path), module)
     _run_local(context, "echo 'PYTHON_VERSION=$PYTHON_VERSION\n' > {}/.env"
                .format(working_path), module)
@@ -647,7 +662,7 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
                        "{}/{}/target/runtime-system".format(DIR_ROOT_MODULE, module), working_path), module)
     for dependency in _get_dependencies(context, module):
         host_ips_prod = []
-        host_names_prod = _get_hosts(context, dependency) if _name(module) != _name(dependency) or filter_host is None else [filter_host]
+        host_names_prod = _get_hosts(dependency) if _name(module) != _name(dependency) or filter_host is None else [filter_host]
         _run_local(context, "dscacheutil -flushcache")
         for host in host_names_prod:
             host_ip = _run_local(context, "dig +short {}".format(host), hide='out').stdout.strip()
@@ -658,7 +673,7 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
         host_name_dev = "host.docker.internal"
         host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
                                  hide='out').stdout.strip()
-        dependency_service = _get_service(context, dependency).upper()
+        dependency_service = _get_service(dependency).upper()
         _run_local(context, "echo '' >> {}/.env".format(working_path))
         _run_local(context, "echo '{}_HOST={}' >> {}/.env"
                    .format(dependency_service, host_name_prod if is_release else host_name_dev, working_path), module)

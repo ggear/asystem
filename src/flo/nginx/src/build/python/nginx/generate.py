@@ -12,7 +12,7 @@ pd.options.mode.chained_assignment = None
 DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
 for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
     if dir_module.endswith("homeassistant"):
-      sys.path.insert(0, "{}/src/build/python".format(dir_module))
+      sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_env
 from homeassistant.generate import load_modules
