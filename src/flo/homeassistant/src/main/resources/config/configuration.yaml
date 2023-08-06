@@ -142,7 +142,10 @@ logger:
     homeassistant.core: warn
     ###################################################################################
     homeassistant.loader: error
+
+    # TODO: Disable warnings introduced in 2023.8.1 until zigbee2mqtt has been updated
     homeassistant.components.mqtt.mixins: error
+
     homeassistant.components.integration.sensor: error
     homeassistant.components.compensation.sensor: error
     homeassistant.components.sonos: error
