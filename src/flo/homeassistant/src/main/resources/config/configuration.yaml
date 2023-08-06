@@ -142,6 +142,7 @@ logger:
     homeassistant.core: warn
     ###################################################################################
     homeassistant.loader: error
+    homeassistant.components.mqtt.mixins: error
     homeassistant.components.integration.sensor: error
     homeassistant.components.compensation.sensor: error
     homeassistant.components.sonos: error
