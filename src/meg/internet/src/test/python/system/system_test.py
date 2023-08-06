@@ -11,7 +11,7 @@ sys.path.append('../../../main/python')
 
 TIMEOUT_WARMUP = 30
 
-with open(os.path.abspath("{}/../../../../.env".format(os.path.dirname(os.path.realpath(__file__)))), 'r') as profile_file:
+with open(abspath("{}/../../../../.env".format(dirname(realpath(__file__)))), 'r') as profile_file:
     for profile_line in profile_file:
         if "=" in profile_line and not profile_line.startswith("#"):
             os.environ[profile_line.strip().split("=", 1)[0]] = profile_line.strip().split("=", 1)[1]

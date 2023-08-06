@@ -4,14 +4,15 @@ import sys
 
 import pandas as pd
 import urllib3
+from os.path import *
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_env
 from homeassistant.generate import load_entity_metadata
@@ -42,7 +43,7 @@ if __name__ == "__main__":
         if metadata_groups_devices_dict["zigbee_type"] == "Device" and \
                 metadata_groups_devices_dict["zigbee_group"] in metadata_grouped_devices_dict:
             metadata_grouped_devices_dict[metadata_groups_devices_dict["zigbee_group"]].append(metadata_groups_devices_dict)
-    metadata_groups_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/groups.yaml"))
+    metadata_groups_path = abspath(join(DIR_ROOT, "src/main/resources/config/groups.yaml"))
     with open(metadata_groups_path, 'w') as metadata_groups_file:
         metadata_groups_file.write("""
 #######################################################################################
@@ -80,7 +81,7 @@ if __name__ == "__main__":
         (metadata_df["connection_mac"].str.len() > 0)
         ]
     metadata_config_dicts = [row.dropna().to_dict() for index, row in metadata_config_df.iterrows()]
-    metadata_config_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/mqtt_config.sh"))
+    metadata_config_path = abspath(join(DIR_ROOT, "src/main/resources/config/mqtt_config.sh"))
     with open(metadata_config_path, 'w') as metadata_config_file:
         metadata_config_file.write("""
 #!/bin/sh
@@ -101,7 +102,7 @@ ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
             ).strip() + "\n")
         print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
 
-    metadata_config_clean_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/mqtt_config_clean.sh"))
+    metadata_config_clean_path = abspath(join(DIR_ROOT, "src/main/resources/config/mqtt_config_clean.sh"))
     with open(metadata_config_clean_path, 'w') as metadata_config_clean_file:
         metadata_config_clean_file.write("""
 #!/bin/sh
@@ -129,7 +130,7 @@ while [ $(mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/st
         (metadata_df["connection_mac"].str.len() > 0)
         ]
     metadata_devices_dicts = [row.dropna().to_dict() for index, row in metadata_devices_df.iterrows()]
-    metadata_devices_path = os.path.abspath(os.path.join(DIR_ROOT, "src/main/resources/config/devices.yaml"))
+    metadata_devices_path = abspath(join(DIR_ROOT, "src/main/resources/config/devices.yaml"))
     with open(metadata_devices_path, 'w') as metadata_devices_file:
         metadata_devices_file.write("""
 #######################################################################################

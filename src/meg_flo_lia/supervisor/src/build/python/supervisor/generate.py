@@ -5,15 +5,15 @@ from os.path import *
 
 import sys
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_entity_metadata
 from homeassistant.generate import write_entity_metadata
 
-sys.path.insert(0, os.path.join(DIR_ROOT, "../.."))
+sys.path.insert(0, abspath(join(DIR_ROOT, "../../..")))
 
 from fabfile import _get_modules_all
 

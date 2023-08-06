@@ -11,9 +11,10 @@ from requests import post
 import time
 import subprocess
 from tabulate import tabulate
+from os.path import *
 
 TIMEOUT_WARMUP = 30
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 for key, value in list(library.load_profile(library.get_file(".env")).items()):
     os.environ[key] = value
@@ -21,12 +22,12 @@ for key, value in list(library.load_profile(library.get_file(".env")).items()):
 
 def test_warmup():
     print("")
-    dir_test = os.path.join(DIR_ROOT, "src/test/resources/data")
-    dir_runtime = os.path.join(DIR_ROOT, "target/runtime-system/data")
+    dir_test = join(DIR_ROOT, "src/test/resources/data")
+    dir_runtime = join(DIR_ROOT, "target/runtime-system/data")
     shutil.rmtree(dir_runtime, ignore_errors=True)
     os.makedirs(dir_runtime)
     for dir_typical in glob.glob("{}/*/success_typical".format(dir_test)):
-        shutil.copytree(dir_typical, os.path.join(dir_runtime, os.path.basename(os.path.dirname(dir_typical))))
+        shutil.copytree(dir_typical, join(dir_runtime, basename(dirname(dir_typical))))
     success = False
     time_start_warmup = time.time()
     while not success and (time.time() - time_start_warmup) < TIMEOUT_WARMUP:

@@ -1,19 +1,20 @@
 import glob
 import os
-import sys
+import re
+from os.path import *
 
 import pandas as pd
 import requests
+import sys
 import urllib3
-import re
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_env
 from homeassistant.generate import load_modules
@@ -34,13 +35,13 @@ if __name__ == "__main__":
         (metadata_df["connection_vlan"].str.len() > 0) &
         (metadata_df["connection_mac"].str.len() > 0)
         ]
-    dnsmasq_conf_root_path = os.path.join(DIR_ROOT, "src/main/resources/config/udm-dnsmasq")
+    dnsmasq_conf_root_path = join(DIR_ROOT, "src/main/resources/config/udm-dnsmasq")
     metadata_dhcp_df = metadata_dhcp_df.fillna('')
     if not metadata_dhcp_df.loc[metadata_dhcp_df["connection_ip"] != '', :]["connection_ip"].is_unique:
         raise Exception("Build generate script [udmutilities] found non-unique IP addresses!")
     if not metadata_dhcp_df.loc[metadata_dhcp_df["connection_mac"] != '', :]["connection_mac"].is_unique:
         raise Exception("Build generate script [udmutilities] found non-unique MAC addresses!")
-    for dnsmasq_conf_path in glob.glob(os.path.join(dnsmasq_conf_root_path, "{}*".format(DNSMASQ_CONF_PREFIX))):
+    for dnsmasq_conf_path in glob.glob(join(dnsmasq_conf_root_path, "{}*".format(DNSMASQ_CONF_PREFIX))):
         os.remove(dnsmasq_conf_path)
     unifi_clients = {}
     unifi_session = requests.Session()
@@ -74,7 +75,7 @@ if __name__ == "__main__":
             metadata_dhcp_vlan_df["connection_ip"].str.split(".").str[3].apply(lambda x: '{0:0>3}'.format(x))
         ).sort_index()
         metadata_dhcp_dicts = [row.dropna().to_dict() for index, row in metadata_dhcp_vlan_df.iterrows()]
-        dnsmasq_conf_path = os.path.join(dnsmasq_conf_root_path, "{}-{}-custom.conf".format(
+        dnsmasq_conf_path = join(dnsmasq_conf_root_path, "{}-{}-custom.conf".format(
             DNSMASQ_CONF_PREFIX,
             vlan.replace("net", "vlan" + vlan.split("_")[2].replace("br", "")) if len(vlan) > 0 else "vlanX"
         ))
@@ -118,7 +119,7 @@ if __name__ == "__main__":
         print("Build generate script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
 
     metadata_dhcp_ips = {}
-    hosts_conf_path = os.path.join(DIR_ROOT, "src/main/resources/config/udm-utilities/run-pihole/custom.list")
+    hosts_conf_path = join(DIR_ROOT, "src/main/resources/config/udm-utilities/run-pihole/custom.list")
     for metadata_dhcp_host in metadata_dhcp_hosts:
         metadata_dhcp_hosts[metadata_dhcp_host].sort()
         metadata_dhcp_ips[metadata_dhcp_hosts[metadata_dhcp_host][0]] = metadata_dhcp_host
@@ -130,7 +131,7 @@ if __name__ == "__main__":
                 metadata_dhcp_ips[metadata_dhcp_ip]
             ))
 
-    metadata_dhcpaliases_path = os.path.abspath(os.path.join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))
+    metadata_dhcpaliases_path = abspath(join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))
     with open(metadata_dhcpaliases_path, 'w') as metadata_hass_file:
         for name in modules:
             if "{}_HTTP_PORT".format(name.upper()) in modules[name][1]:

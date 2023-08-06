@@ -47,7 +47,7 @@ def _type_to_str(type_: Any) -> str:  # noqa: PLR0911
     if isinstance(type_, vol.All):
         return _format_voluptuous_instance(type_)
     if isinstance(type_, vol.In):
-        return f"one of `{type_.docker_container}`"
+        return f"one of `{type_.container}`"
     if isinstance(type_, selector.SelectSelector):
         return f"one of `{type_.config['options']}`"
     if isinstance(type_, selector.ColorRGBSelector):

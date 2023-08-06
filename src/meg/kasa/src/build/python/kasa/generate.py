@@ -4,11 +4,12 @@ import os
 import sys
 
 import pandas as pd
+from os.path import *
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_entity_metadata
 
@@ -26,7 +27,7 @@ if __name__ == "__main__":
         (metadata_df["connection_ip"].str.len() > 0)
         ].sort_values("connection_ip")
     metadata_kasa_dicts = [row.dropna().to_dict() for index, row in metadata_kasa_df.iterrows()]
-    kasa_config_path = os.path.join(DIR_ROOT, "src/build/resources/kasa_config.sh")
+    kasa_config_path = join(DIR_ROOT, "src/build/resources/kasa_config.sh")
     with open(kasa_config_path, "wt") as kasa_config_file:
         kasa_config_file.write("""
 #!/bin/sh

@@ -175,9 +175,9 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         "errors",
     ]
     version_regexs = [
-        r"Module \[(?P<module_path>.*)\] \[INFO\].*\[(?P<version_checkedout>.*)\].*",
-        r"Module \[(?P<module_path>.*)\] \[WARN\].*\[(?P<version_checkedout>.*)\].*\[(?P<version_upstream>.*)\]",
-        r"Module \[(?P<module_path>.*)\] \[ERROR\] (?P<version_error>.*)",
+        r"Module \[.*(?P<module_path>\.deps.*)\] \[INFO\].*\[(?P<version_checkedout>.*)\].*",
+        r"Module \[.*(?P<module_path>\.deps.*)\] \[WARN\].*\[(?P<version_checkedout>.*)\].*\[(?P<version_upstream>.*)\]",
+        r"Module \[.*(?P<module_path>\.deps.*)\] \[ERROR\] (?P<version_error>.*)",
     ]
     version_formats = [
         "Module [{}] is up to date with version [{}]",
@@ -343,9 +343,9 @@ def _build(context, filter_module=None, is_release=False):
         if isdir(join(DIR_ROOT_MODULE, module, "src/test/go/unit")):
             _run_local(context, "go mod tidy", join(module, "src/test/go/unit"))
             _run_local(context, "go mod download", join(module, "src/test/go/unit"))
-        if isdir(join(DIR_ROOT_MODULE, module, "src/test/go/sys")):
-            _run_local(context, "go mod tidy", join(module, "src/test/go/sys"))
-            _run_local(context, "go mod download", join(module, "src/test/go/sys"))
+        if isdir(join(DIR_ROOT_MODULE, module, "src/test/go/system")):
+            _run_local(context, "go mod tidy", join(module, "src/test/go/system"))
+            _run_local(context, "go mod download", join(module, "src/test/go/system"))
         cargo_file = join(DIR_ROOT_MODULE, module, "Cargo.toml")
         if isfile(cargo_file):
             _run_local(context, "mkdir -p target/package && cp -rvfp Cargo.toml target/package", module, hide='err', warn=True)
@@ -401,16 +401,16 @@ def _package(context, filter_module=None, is_release=False):
 
 
 def _systest(context, filter_module=None):
-    for module in _get_modules(context, "src/test/*/sys", filter_module=filter_module):
+    for module in _get_modules(context, "src/test/*/system", filter_module=filter_module):
         _up_module(context, module)
         _print_header(module, "systest")
         test_exit_code = 1
-        if isfile(join(DIR_ROOT_MODULE, module, "src/test/python/sys/system_test.py")):
-            test_exit_code = _run_local(context, "python system_test.py", join(module, "src/test/python/sys"), warn=True).exited
-        elif isdir(join(DIR_ROOT_MODULE, module, "src/test/go/sys")):
-            _run_local(context, "go mod tidy", join(module, "src/test/go/sys"))
-            _run_local(context, "go mod download", join(module, "src/test/go/sys"))
-            test_exit_code = _run_local(context, "go test --race", join(module, "src/test/go/sys"), warn=True).exited
+        if isfile(join(DIR_ROOT_MODULE, module, "src/test/python/system/system_test.py")):
+            test_exit_code = _run_local(context, "python system_test.py", join(module, "src/test/python/system"), warn=True).exited
+        elif isdir(join(DIR_ROOT_MODULE, module, "src/test/go/system")):
+            _run_local(context, "go mod tidy", join(module, "src/test/go/system"))
+            _run_local(context, "go mod download", join(module, "src/test/go/system"))
+            test_exit_code = _run_local(context, "go test --race", join(module, "src/test/go/system"), warn=True).exited
         else:
             print("Could not find test to run")
         _down_module(context, module)

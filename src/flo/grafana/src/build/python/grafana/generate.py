@@ -4,15 +4,16 @@ import glob
 import os
 import shutil
 import sys
+from os.path import *
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_entity_metadata
 
-DIR_DASHBOARDS_ROOT = os.path.join(DIR_ROOT, "src/main/resources/config/dashboards")
+DIR_DASHBOARDS_ROOT = join(DIR_ROOT, "src/main/resources/config/dashboards")
 
 PREFIX = "//AS"
 PREFIX_MOBILE = PREFIX + "M"
@@ -81,8 +82,8 @@ if __name__ == "__main__":
 
             [
             """).strip() + "\n\n")
-            snip_path = DIR_DASHBOARDS_ROOT + "/template/private/" + os.path.basename(file.name).replace("graph_", "snippet_")
-            if os.path.isfile(snip_path):
+            snip_path = DIR_DASHBOARDS_ROOT + "/template/private/" + basename(file.name).replace("graph_", "snippet_")
+            if isfile(snip_path):
                 with open(snip_path, 'r') as snip_file:
                     file.write(snip_file.read())
             for domain in metadata_dashboard_dicts[group]:
@@ -133,10 +134,10 @@ if __name__ == "__main__":
     graphs = {"public": {}, "private": {}}
     for scope in ["public", "private"]:
         for graph in glob.glob("{}/template/{}/graph_*.jsonnet".format(DIR_DASHBOARDS_ROOT, scope)):
-            graphs[scope][os.path.basename(graph).replace(".jsonnet", "").replace("graph_", "")] = \
+            graphs[scope][basename(graph).replace(".jsonnet", "").replace("graph_", "")] = \
                 "../../config/dashboards/template/{}/".format(scope)
         for graph in glob.glob("{}/template/{}/generated/graph_*.jsonnet".format(DIR_DASHBOARDS_ROOT, scope)):
-            graphs[scope][os.path.basename(graph).replace(".jsonnet", "").replace("graph_", "")] = \
+            graphs[scope][basename(graph).replace(".jsonnet", "").replace("graph_", "")] = \
                 "../../config/dashboards/template/{}/generated/".format(scope)
     graphs["private"].update(graphs["public"])
     for scope in ["public", "private"]:
@@ -166,7 +167,7 @@ local graph_{} = import 'graph_{}.jsonnet';
 
             """).strip() + "\n")
             for graph in graphs[scope]:
-                defaults = open(os.path.join(DIR_DASHBOARDS_ROOT, graphs[scope][graph], "graph_{}.jsonnet".format(graph))) \
+                defaults = open(join(DIR_DASHBOARDS_ROOT, graphs[scope][graph], "graph_{}.jsonnet".format(graph))) \
                     .readline().rstrip()
                 if defaults.startswith(PREFIX_DASHBOARD_DEFAULTS):
                     defaults = defaults.replace(PREFIX_DASHBOARD_DEFAULTS, "")
@@ -210,7 +211,7 @@ local graph_{} = import 'graph_{}.jsonnet';
             """.strip() + "\n")
     print("Metadata script [grafana] dashboard templates saved")
 
-    shutil.rmtree(os.path.join(DIR_DASHBOARDS_ROOT, "instance"), ignore_errors=True)
+    shutil.rmtree(join(DIR_DASHBOARDS_ROOT, "instance"), ignore_errors=True)
     for scope in ["default", "public", "private"]:
         for form in ["desktop", "tablet", "mobile"]:
             for files in os.walk("{}/template/{}".format(DIR_DASHBOARDS_ROOT, scope)):
@@ -224,11 +225,11 @@ local graph_{} = import 'graph_{}.jsonnet';
                             private_copy = scope == "public" and file_name.startswith("graph_")
                             if private_copy:
                                 destination_path_copy = file_destination_path.replace("public", "private")
-                                if not os.path.exists(os.path.dirname(destination_path_copy)):
-                                    os.makedirs(os.path.dirname(destination_path_copy))
+                                if not exists(dirname(destination_path_copy)):
+                                    os.makedirs(dirname(destination_path_copy))
                                 destination_file_copy = open(destination_path_copy, "w")
-                            if not os.path.exists(os.path.dirname(file_destination_path)):
-                                os.makedirs(os.path.dirname(file_destination_path))
+                            if not exists(dirname(file_destination_path)):
+                                os.makedirs(dirname(file_destination_path))
                             with open(file_destination_path, "w") as destination_file:
                                 for line in file_source:
                                     if not line.startswith(PREFIX) or \
@@ -244,13 +245,13 @@ local graph_{} = import 'graph_{}.jsonnet';
                                             if private_copy:
                                                 destination_file_copy.write(line)
                                 print("{} -> {}".format(
-                                    os.path.abspath(file_source.name),
-                                    os.path.abspath(file_destination_path)
+                                    abspath(file_source.name),
+                                    abspath(file_destination_path)
                                 ))
                             if private_copy:
                                 print("{} -> {}".format(
-                                    os.path.abspath(file_source.name),
-                                    os.path.abspath(destination_path_copy)
+                                    abspath(file_source.name),
+                                    abspath(destination_path_copy)
                                 ))
                                 destination_file_copy.close()
     print("Metadata script [grafana] dashboard specialisations saved")

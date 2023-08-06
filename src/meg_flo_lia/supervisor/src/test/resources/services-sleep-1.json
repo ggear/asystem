@@ -1,0 +1,29 @@
+{
+  "macmini-zoe": [
+    "sleep-1"
+  ],
+  "raspbpi-lia": [
+    "zigbee2mqtt",
+    "digitemp",
+    "weewx",
+    "monitor"
+  ],
+  "macmini-meg": [
+    "letsencrypt",
+    "unifipoller",
+    "internet",
+    "plex",
+    "monitor"
+  ],
+  "macbook-flo": [
+    "homeassistant",
+    "mariadb",
+    "vernemq",
+    "grafana",
+    "influxdb",
+    "wrangle",
+    "postgres",
+    "nginx",
+    "monitor"
+  ]
+}

@@ -1,14 +1,14 @@
 import glob
-import json
 import os
-import shutil
-import sys
-import pandas as pd
+from os.path import *
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+import pandas as pd
+import sys
+
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_entity_metadata
 from homeassistant.generate import write_entity_metadata
@@ -35,7 +35,7 @@ if __name__ == "__main__":
             metadata_weewx_dict["unique_id_device"],
             metadata_weewx_dict["unique_id"].replace("compensation_sensor_", "")
         ).strip() + "\n")
-    weewx_conf_path = os.path.join(DIR_ROOT, "src/main/resources/config/weewx.conf")
+    weewx_conf_path = join(DIR_ROOT, "src/main/resources/config/weewx.conf")
     with open(weewx_conf_path + ".template", "rt") as weewx_conf_template_file:
         with open(weewx_conf_path, "wt") as weewx_conf_file:
             for line in weewx_conf_template_file:

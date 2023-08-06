@@ -1,11 +1,13 @@
 import glob
 import os
+from os.path import *
+
 import sys
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_entity_metadata
 
@@ -19,7 +21,7 @@ if __name__ == "__main__":
         (metadata_df["device_via_device"] == "Wrangle")
         ]
     metadata_wrangle_dicts = [row.dropna().to_dict() for index, row in metadata_wrangle_df.iterrows()]
-    wrangle_conf_path = os.path.join(DIR_ROOT, "src/main/resources/config/mqtt_metadata.csv")
+    wrangle_conf_path = join(DIR_ROOT, "src/main/resources/config/mqtt_metadata.csv")
     for metadata_wrangle_dict in metadata_wrangle_dicts:
         # TODO: Provide implementation
         print(metadata_wrangle_dict)

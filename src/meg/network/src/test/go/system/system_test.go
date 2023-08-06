@@ -14,6 +14,6 @@ func init() {
 }
 
 func TestMQTTConnection(t *testing.T) {
-	client := pkg.OpenMQTTClient("sys_test", []func(client mqtt.Client){})
+	client := pkg.OpenMQTTClient("system_test", []func(client mqtt.Client){})
 	pkg.CloseMQTTClient(client)
 }

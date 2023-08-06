@@ -12,7 +12,7 @@ import pandas as pd
 from pathlib2 import Path
 from requests import get
 
-DIR_ROOT = abspath("{}/../../../..".format(dirname(realpath(__file__))))
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 
 def load_env(root_dir=None):
@@ -67,8 +67,8 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df):
                 metadata_df[metadata_col] = metadata_df[metadata_col].str.replace("compensation_sensor_", "")
         metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
         metadata_columns_rename = {column: column.replace("device_", "") for column in metadata_columns}
-        metadata_publish_dir_root = os.path.join(module_root_dir, "src/main/resources/config/mqtt")
-        if os.path.exists(metadata_publish_dir_root):
+        metadata_publish_dir_root = join(module_root_dir, "src/main/resources/config/mqtt")
+        if exists(metadata_publish_dir_root):
             shutil.rmtree(metadata_publish_dir_root)
         for _, row in metadata_df.iterrows():
             metadata_dict = row[[
@@ -93,10 +93,10 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df):
             metadata_dict["device"] = row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
             if "connections" in metadata_dict["device"]:
                 metadata_dict["device"]["connections"] = json.loads(metadata_dict["device"]["connections"])
-            metadata_publish_dir = os.path.abspath(os.path.join(metadata_publish_dir_root, row['discovery_topic']))
+            metadata_publish_dir = abspath(join(metadata_publish_dir_root, row['discovery_topic']))
             os.makedirs(metadata_publish_dir)
             metadata_publish_str = json.dumps(metadata_dict, ensure_ascii=False, indent=2) + "\n"
-            metadata_publish_path = os.path.abspath(os.path.join(metadata_publish_dir, metadata_dict["unique_id"] + ".json"))
+            metadata_publish_path = abspath(join(metadata_publish_dir, metadata_dict["unique_id"] + ".json"))
             with open(metadata_publish_path, 'a') as metadata_publish_file:
                 metadata_publish_file.write(metadata_publish_str)
                 print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"

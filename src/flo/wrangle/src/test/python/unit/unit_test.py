@@ -11,10 +11,11 @@ import pytest
 from wrangle.plugin import library
 from mock import patch
 import contextlib
+from os.path import *
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
-for key, value in list(library.load_profile(os.path.join(DIR_ROOT, ".env")).items()):
+for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
     os.environ[key] = value
 
 
@@ -175,14 +176,14 @@ class WrangleTest(unittest.TestCase):
         os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = str(disable_data_delta)
         os.environ[library.WRANGLE_DISABLE_FILE_UPLOAD] = str(disable_file_upload)
         os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = str(disable_file_download)
-        dir_target = os.path.join(DIR_ROOT, "target")
-        if not os.path.isdir(dir_target):
+        dir_target = join(DIR_ROOT, "target")
+        if not isdir(dir_target):
             os.makedirs(dir_target)
         module = getattr(importlib.import_module("wrangle.plugin.{}".format(module_name)), module_name.title())()
 
         def load_caches(source, destination):
             shutil.rmtree(destination, ignore_errors=True)
-            if os.path.isdir(source):
+            if isdir(source):
                 shutil.copytree(source, destination)
             module.print_log("Files written from [{}] to [{}]".format(source, destination))
 
@@ -219,7 +220,7 @@ class WrangleTest(unittest.TestCase):
 
         print("")
         for test in tests_asserts:
-            load_caches(os.path.join(DIR_ROOT, "src/test/resources/data", module_name, test), module.input)
+            load_caches(join(DIR_ROOT, "src/test/resources/data", module_name, test), module.input)
             counters = {}
             if not prepare_only:
                 with patch.object(library.Library, "sheet_write") if disable_file_upload else no_op():

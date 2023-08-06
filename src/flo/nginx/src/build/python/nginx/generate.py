@@ -5,14 +5,15 @@ from os.path import *
 
 import pandas as pd
 import urllib3
+from os.path import *
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-      sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_env
 from homeassistant.generate import load_modules
@@ -23,7 +24,7 @@ if __name__ == "__main__":
 
     conf_path = abspath(join(DIR_ROOT, "src/main/resources/config/nginx.conf"))
     with open(conf_path, 'w') as conf_file:
-      conf_file.write("""
+        conf_file.write("""
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
@@ -117,18 +118,18 @@ http {
     }
   }
       """.strip() + "\n\n")
-      for name in modules:
-        ip_key = "{}_IP".format(name.upper())
-        port_key = "{}_HTTP_PORT".format(name.upper())
-        host_public_key = "{}_HOST_PUBLIC".format(name.upper())
-        ws_context_key = "{}_HTTP_WS_CONTEXT".format(name.upper())
-        console_context_key = "{}_HTTP_CONSOLE_CONTEXT".format(name.upper())
-        if port_key in modules[name][1] and name != "nginx":
-            server_names = [name]
-            if host_public_key in modules[name][1]:
-              server_names.append(modules[name][1][host_public_key])
-            for server_name in server_names:
-              conf_file.write("  " + """
+        for name in modules:
+            ip_key = "{}_IP".format(name.upper())
+            port_key = "{}_HTTP_PORT".format(name.upper())
+            host_public_key = "{}_HOST_PUBLIC".format(name.upper())
+            ws_context_key = "{}_HTTP_WS_CONTEXT".format(name.upper())
+            console_context_key = "{}_HTTP_CONSOLE_CONTEXT".format(name.upper())
+            if port_key in modules[name][1] and name != "nginx":
+                server_names = [name]
+                if host_public_key in modules[name][1]:
+                    server_names.append(modules[name][1][host_public_key])
+                for server_name in server_names:
+                    conf_file.write("  " + """
   # {} server for [{}] and domain [{}.janeandgraham.com]
   map $host ${}_url {{ default http://${{{}}}:{}; }}
   server {{
@@ -141,19 +142,19 @@ http {
       proxy_set_header Host $host;
     }}
               """.format(
-                "Remote" if name != server_name else "Local",
-                name,
-                server_name,
-                name,
-                ip_key,
-                modules[name][1][port_key],
-                modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
-                server_name,
-                name,
-                modules[name][1][console_context_key] if console_context_key in modules[name][1] else "",
-              ).strip() + "\n")
-              if ws_context_key in modules[name][1]:
-                conf_file.write("    " + """
+                        "Remote" if name != server_name else "Local",
+                        name,
+                        server_name,
+                        name,
+                        ip_key,
+                        modules[name][1][port_key],
+                        modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
+                        server_name,
+                        name,
+                        modules[name][1][console_context_key] if console_context_key in modules[name][1] else "",
+                    ).strip() + "\n")
+                    if ws_context_key in modules[name][1]:
+                        conf_file.write("    " + """
     location {} {{
       proxy_http_version 1.1;
       proxy_pass ${}_url{};
@@ -162,14 +163,14 @@ http {
       proxy_set_header Connection "upgrade";
     }}
                 """.format(
-                    modules[name][1][ws_context_key],
-                    name,
-                    modules[name][1][ws_context_key],
-                ).strip() + "\n")
-              conf_file.write("  " + """
+                            modules[name][1][ws_context_key],
+                            name,
+                            modules[name][1][ws_context_key],
+                        ).strip() + "\n")
+                    conf_file.write("  " + """
   }
               """.strip() + "\n\n")
-      conf_file.write("""
+        conf_file.write("""
 }
       """.strip() + "\n")
-      print("Build generate script [nginx] entity metadata persisted to [{}]".format(conf_path))
+        print("Build generate script [nginx] entity metadata persisted to [{}]".format(conf_path))

@@ -4,11 +4,12 @@ import os
 import sys
 
 import pandas as pd
+from os.path import *
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_env
 from homeassistant.generate import load_entity_metadata
@@ -32,8 +33,8 @@ if __name__ == "__main__":
         ].sort_values("connection_ip")
     write_entity_metadata("tasmota", DIR_ROOT, metadata_tasmota_df)
     metadata_tasmota_dicts = [row.dropna().to_dict() for index, row in metadata_tasmota_df.iterrows()]
-    tasmota_config_path = os.path.join(DIR_ROOT, "src/build/resources/tasmota_config.sh")
-    tasmota_devices_path = os.path.join(DIR_ROOT, "src/build/resources/devices")
+    tasmota_config_path = join(DIR_ROOT, "src/build/resources/tasmota_config.sh")
+    tasmota_devices_path = join(DIR_ROOT, "src/build/resources/devices")
     os.makedirs(tasmota_devices_path, exist_ok=True)
     with open(tasmota_config_path, "wt") as tasmota_config_file:
         tasmota_config_file.write("""
@@ -44,7 +45,7 @@ if __name__ == "__main__":
 echo ''
         """.strip() + "\n")
         for metadata_tasmota_dict in metadata_tasmota_dicts:
-            tasmota_device_path = os.path.join(tasmota_devices_path, metadata_tasmota_dict["unique_id"])
+            tasmota_device_path = join(tasmota_devices_path, metadata_tasmota_dict["unique_id"])
             if metadata_tasmota_dict["entity_namespace"] != "sensor":
                 with open(tasmota_device_path + ".json", "wt") as tasmota_device_file:
                     metadata_tasmota_config_version = 1 if \
@@ -87,7 +88,7 @@ echo ''
                         metadata_tasmota_dict["connection_ip"],
                         env["TASMOTA_FIRMWARE_VERSION"],
                     ))
-                if not os.path.exists(tasmota_device_path + "-backup.json"):
+                if not exists(tasmota_device_path + "-backup.json"):
                     os.system("netcat -zw 1 {} 80 2>/dev/null && decode-config.py -s {} -o {}-backup.json --json-indent 2".format(
                         metadata_tasmota_dict["connection_ip"],
                         metadata_tasmota_dict["connection_ip"],

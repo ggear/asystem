@@ -3,11 +3,12 @@ import os.path
 import shutil
 import string
 import subprocess
-import sys
 from datetime import datetime
+from os.path import *
 
 import osxphotos
 import pandas as pd
+import sys
 import urllib3
 from osxphotos import ExportOptions
 from osxphotos import PhotoExporter
@@ -16,10 +17,10 @@ from pathvalidate import sanitize_filepath
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
-for dir_module in glob.glob("{}/../../*/*".format(DIR_ROOT)):
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
+for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
     if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, os.path.join(dir_module, "src/build/python"))
+        sys.path.insert(0, join(dir_module, "src/build/python"))
 
 from homeassistant.generate import load_env
 
@@ -28,10 +29,10 @@ DIR_PHOTOS_DB = "/Users/graham/Pictures/Photos Library.photoslibrary"
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
 
-    export_root_path = os.path.join(DIR_ROOT, "../../../../../Backup/photos/photo_album_draft")
+    export_root_path = join(DIR_ROOT, "../../../../../Backup/photos/photo_album_draft")
     shutil.rmtree(export_root_path, ignore_errors=True)
     os.mkdir(export_root_path)
-    photos_db = osxphotos.PhotosDB(os.path.expanduser(DIR_PHOTOS_DB))
+    photos_db = osxphotos.PhotosDB(expanduser(DIR_PHOTOS_DB))
     for folder in photos_db.folder_info:
         if folder.title == "Draft":
             for album in folder.album_info:
@@ -42,8 +43,8 @@ if __name__ == "__main__":
                         album_name = sanitize_filepath(album.title, platform="auto") \
                             .translate(str.maketrans('', '', string.punctuation)).replace(" ", "_") \
                             .encode('ascii', 'ignore').decode('UTF-8')
-                        export_path = os.path.abspath(os.path.join(export_root_path, album_name))
-                        if not os.path.isdir(export_path):
+                        export_path = abspath(join(export_root_path, album_name))
+                        if not isdir(export_path):
                             os.makedirs(export_path)
                         photo_type = photo.filename.split(".")[-1]
                         photo_name = "{}_{:03d}.jpg".format(album_name, index)

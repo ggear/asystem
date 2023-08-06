@@ -8,21 +8,22 @@ from subprocess import check_output
 import dateutil.parser
 import pandas as pd
 import urllib3
+from os.path import *
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
-DIR_ROOT = os.path.abspath("{}/../../../..".format(os.path.dirname(os.path.realpath(__file__))))
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 TIME_FORMAT_FILE = "%Y-%m-%d_%H-%M-%S"
 TIME_FORMAT_COMMAND = "%Y:%m:%d %H:%M:%S"
 IMAGE_TYPES = ["JPG", "PNG", "GIF", "WEBP", "TIFF", "PSD", "RAW", "BMP", "HEIF", "HEIC", "INDD", "JPEG"]
 
 if __name__ == "__main__":
-    export_root_path = os.path.join(DIR_ROOT, "../../../../../Backup/photos/mbox")
+    export_root_path = join(DIR_ROOT, "../../../../../Backup/photos/mbox")
     shutil.rmtree(export_root_path, ignore_errors=True)
     os.mkdir(export_root_path)
-    mbox_db = mailbox.mbox(os.path.expanduser(os.path.join(DIR_ROOT, "src/build/resources/Jane-26-08-22.mbox")))
+    mbox_db = mailbox.mbox(expanduser(join(DIR_ROOT, "src/build/resources/Jane-26-08-22.mbox")))
     for email in mbox_db:
         if email.get_content_maintype() == 'multipart':
             for part in email.walk():
@@ -37,12 +38,12 @@ if __name__ == "__main__":
                         except Exception as exception:
                             print("Error: Could not parse date [{}]".format(email['Date']))
                             email_date = datetime(9999, 1, 1)
-                        image_path = os.path.normpath("{}/{}_{}".format(
+                        image_path = normpath("{}/{}_{}".format(
                             export_root_path,
                             email_date.strftime(TIME_FORMAT_FILE),
                             image_name
                         ).lower())
-                        while os.path.exists(image_path):
+                        while exists(image_path):
                             image_path = image_path.replace(".{}".format(image_type), "_.{}".format(image_type))
                         with open(image_path, 'wb') as image_file:
                             image_payload = part.get_payload(decode=True)

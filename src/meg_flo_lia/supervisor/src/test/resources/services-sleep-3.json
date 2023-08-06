@@ -1,6 +1,12 @@
 {
+  "macmini-zoe": [
+    "sleep-1",
+    "sleep-2",
+    "sleep-3"
+  ],
   "raspbpi-lia": [
     "zigbee2mqtt",
+    "digitemp",
     "weewx",
     "monitor"
   ],
@@ -8,7 +14,6 @@
     "letsencrypt",
     "unifipoller",
     "internet",
-    "digitemp",
     "plex",
     "monitor"
   ],
