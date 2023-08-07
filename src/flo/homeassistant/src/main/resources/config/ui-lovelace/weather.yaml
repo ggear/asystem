@@ -38,7 +38,7 @@
   ############################## IMPORTANT!!! BOM are NOT providing Pressure sensor for forecast.
   ############################## IF you use my entity_pressure sensor the card won't display
   # entity_pressure: sensor.nodemcu_lounge_bme280_seapressure
-  entity_apparent_temp: sensor.roof_temperature
+  entity_apparent_temp: sensor.compensation_sensor_roof_temperature
   entity_daily_summary: sensor.darlington_forecast_extended_text_0
   entity_pop: sensor.bom_today_rain_chance
   entity_pop_intensity: sensor.bom_today_rains
