@@ -139,7 +139,7 @@
       name: Towel Rails
       icon: mdi:radiator
     - entity: switch.ceiling_water_booster_plug
-      name: Water Booster
+      name: Hot Water Booster
       icon: mdi:thermometer-water
     - entity: switch.garden_pool_filter_plug
       name: Pool Filter

@@ -60,16 +60,19 @@
     - entity: sensor.compensation_sensor_laundry_temperature
       name: Laundry
       icon: mdi:thermometer
+    - entity: sensor.compensation_sensor_deck_festoons_plug_temperature
+      name: Ceiling
+      icon: mdi:thermometer
     - entity: sensor.compensation_sensor_bertram_2_office_basement_temperature
       name: Basement
       icon: mdi:thermometer
-    - entity: sensor.rack_top_temperature
+    - entity: sensor.compensation_sensor_rack_top_temperature
       name: Rack Top
       icon: mdi:thermometer
-    - entity: sensor.rack_bottom_temperature
+    - entity: sensor.compensation_sensor_rack_bottom_temperature
       name: Rack Bottom
       icon: mdi:thermometer
-    - entity: sensor.rack_external_temperature
+    - entity: sensor.compensation_sensor_rack_external_temperature
       name: Rack External
       icon: mdi:thermometer
     - entity: sensor.compensation_sensor_rack_temperature
@@ -124,54 +127,54 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.compensation_sensor_roof_humidity
+    - entity: sensor.roof_humidity
       name: Roof
-    - entity: sensor.compensation_sensor_ada_humidity
+    - entity: sensor.ada_humidity
       name: Ada
-    - entity: sensor.compensation_sensor_edwin_humidity
+    - entity: sensor.edwin_humidity
       name: Edwin
-    - entity: sensor.compensation_sensor_bertram_2_office_lounge_humidity
+    - entity: sensor.bertram_2_office_lounge_humidity
       name: Lounge
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.compensation_sensor_roof_humidity
+    - entity: sensor.roof_humidity
       name: Roof
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_ada_humidity
+    - entity: sensor.ada_humidity
       name: Ada
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_edwin_humidity
+    - entity: sensor.edwin_humidity
       name: Edwin
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_bertram_2_office_lounge_humidity
+    - entity: sensor.bertram_2_office_lounge_humidity
       name: Lounge
       icon: mdi:water-percent
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.compensation_sensor_parents_humidity
+    - entity: sensor.parents_humidity
       name: Parents
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_bertram_2_office_humidity
+    - entity: sensor.bertram_2_office_humidity
       name: Office
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_bertram_2_kitchen_humidity
+    - entity: sensor.bertram_2_kitchen_humidity
       name: Kitchen
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_bertram_2_office_pantry_humidity
+    - entity: sensor.bertram_2_office_pantry_humidity
       name: Pantry
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_bertram_2_office_dining_humidity
+    - entity: sensor.bertram_2_office_dining_humidity
       name: Dining
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_laundry_humidity
+    - entity: sensor.laundry_humidity
       name: Laundry
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_bertram_2_office_basement_humidity
+    - entity: sensor.bertram_2_office_basement_humidity
       name: Basement
       icon: mdi:water-percent
-    - entity: sensor.compensation_sensor_rack_humidity
+    - entity: sensor.rack_humidity
       name: Rack
       icon: mdi:water-percent
 ################################################################################
@@ -192,39 +195,36 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.compensation_sensor_edwin_co2
+    - entity: sensor.edwin_co2
       name: Edwin
-    - entity: sensor.compensation_sensor_parents_co2
-      name: Parents
-    - entity: sensor.compensation_sensor_bertram_2_office_co2
+    - entity: sensor.bertram_2_office_co2
       name: Office
-    - entity: sensor.compensation_sensor_bertram_2_office_lounge_co2
+    - entity: sensor.bertram_2_office_lounge_co2
       name: Lounge
+    - entity: sensor.bertram_2_kitchen_co2
+      name: Kitchen
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.compensation_sensor_edwin_co2
+    - entity: sensor.edwin_co2
       name: Edwin
       icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_parents_co2
-      name: Parents
-      icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_bertram_2_office_co2
+    - entity: sensor.bertram_2_office_co2
       name: Office
       icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_bertram_2_office_lounge_co2
+    - entity: sensor.bertram_2_office_lounge_co2
       name: Lounge
       icon: mdi:molecule-co2
-################################################################################
-- type: entities
-  entities:
-    - entity: sensor.compensation_sensor_bertram_2_kitchen_co2
+    - entity: sensor.bertram_2_kitchen_co2
       name: Kitchen
       icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_bertram_2_office_pantry_co2
+################################################################################
+- type: entities
+  entities:
+    - entity: sensor.bertram_2_office_pantry_co2
       name: Pantry
       icon: mdi:molecule-co2
-    - entity: sensor.compensation_sensor_bertram_2_office_dining_co2
+    - entity: sensor.bertram_2_office_dining_co2
       name: Dining
       icon: mdi:molecule-co2
 ################################################################################
@@ -245,36 +245,36 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.compensation_sensor_ada_noise
+    - entity: sensor.ada_noise
       name: Ada
-    - entity: sensor.compensation_sensor_edwin_noise
+    - entity: sensor.edwin_noise
       name: Edwin
-    - entity: sensor.compensation_sensor_parents_noise
+    - entity: sensor.parents_noise
       name: Parents
-    - entity: sensor.compensation_sensor_bertram_2_office_noise
+    - entity: sensor.bertram_2_office_noise
       name: Office
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.compensation_sensor_ada_noise
+    - entity: sensor.ada_noise
       name: Ada
       icon: mdi:volume-high
-    - entity: sensor.compensation_sensor_edwin_noise
+    - entity: sensor.edwin_noise
       name: Edwin
       icon: mdi:volume-high
-    - entity: sensor.compensation_sensor_parents_noise
+    - entity: sensor.parents_noise
       name: Parents
       icon: mdi:volume-high
-    - entity: sensor.compensation_sensor_bertram_2_office_noise
+    - entity: sensor.bertram_2_office_noise
       name: Office
       icon: mdi:volume-high
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.compensation_sensor_bertram_2_kitchen_noise
+    - entity: sensor.bertram_2_kitchen_noise
       name: Kitchen
       icon: mdi:volume-high
-    - entity: sensor.compensation_sensor_laundry_noise
+    - entity: sensor.laundry_noise
       name: Laundry
       icon: mdi:volume-high
 ################################################################################

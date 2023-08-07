@@ -59,7 +59,7 @@
       name: Pool Filter
       icon: mdi:home-lightning-bolt
     - entity: sensor.water_booster_power
-      name: Water Booster
+      name: Hot Water Booster
       icon: mdi:home-lightning-bolt
     - entity: sensor.dish_washer_power
       name: Dish Washer
@@ -152,7 +152,7 @@
       name: Pool Filter
       icon: mdi:battery-charging
     - entity: sensor.water_booster_energy_daily
-      name: Water Booster
+      name: Hot Water Booster
       icon: mdi:battery-charging
     - entity: sensor.dish_washer_energy_daily
       name: Dish Washer

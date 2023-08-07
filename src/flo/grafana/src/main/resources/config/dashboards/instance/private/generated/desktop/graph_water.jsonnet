@@ -106,5 +106,32 @@ from(bucket: "home_private")
                   '))
                   { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 
+                  graph.new(
+                        title='Hot Water',
+                        datasource='InfluxDB_V2',
+                        fill=0,
+                        format='short',
+                        bars=false,
+                        lines=true,
+                        staircase=false,
+                        legend_values=true,
+                        legend_min=true,
+                        legend_max=true,
+                        legend_current=false,
+                        legend_total=false,
+                        legend_avg=true,
+                        legend_alignAsTable=true,
+                        legend_rightSide=true,
+                        legend_sideWidth=400,
+                  ).addTarget(influxdb.target(query='
+from(bucket: "home_private")
+|> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+|> filter(fn: (r) => r["entity_id"] == "landing_festoons_plug_temperature" or r["entity_id"] == "compensation_sensor_landing_festoons_plug_temperature")
+|> filter(fn: (r) => r["_field"] == "value")
+|> keep(columns: ["_time", "_value", "friendly_name"])
+|> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+                  '))
+                  { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
+
             ],
 }

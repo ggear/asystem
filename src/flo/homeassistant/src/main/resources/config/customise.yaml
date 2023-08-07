@@ -63,6 +63,14 @@ sensor.laundry_temperature:
 sensor.compensation_sensor_laundry_temperature:
   friendly_name: 'Laundry'
   icon: 'mdi:thermometer'
+sensor.deck_festoons_plug_temperature:
+  friendly_name: 'Ceiling'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_deck_festoons_plug_temperature:
+  friendly_name: 'Ceiling'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
 sensor.bertram_2_office_basement_temperature:
   friendly_name: 'Basement'
   icon: 'mdi:thermometer'
@@ -73,11 +81,23 @@ sensor.rack_top_temperature:
   friendly_name: 'Rack Top'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
+sensor.compensation_sensor_rack_top_temperature:
+  friendly_name: 'Rack Top'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
 sensor.rack_bottom_temperature:
   friendly_name: 'Rack Bottom'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
+sensor.compensation_sensor_rack_bottom_temperature:
+  friendly_name: 'Rack Bottom'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
 sensor.rack_external_temperature:
+  friendly_name: 'Rack External'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_rack_external_temperature:
   friendly_name: 'Rack External'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
@@ -89,27 +109,27 @@ sensor.compensation_sensor_rack_temperature:
   friendly_name: 'Rack'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.compensation_sensor_roof_apparent_temperature:
+sensor.roof_apparent_temperature:
   friendly_name: 'Roof Apparent'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.compensation_sensor_roof_dew_point:
+sensor.roof_dew_point:
   friendly_name: 'Roof Dew Point'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.compensation_sensor_roof_heat_index:
+sensor.roof_heat_index:
   friendly_name: 'Roof Heat Index'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.compensation_sensor_roof_humidity_index:
+sensor.roof_humidity_index:
   friendly_name: 'Roof Humidity Index'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.compensation_sensor_rack_dew_point:
+sensor.rack_dew_point:
   friendly_name: 'Rack Dew Point'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.compensation_sensor_roof_wind_chill_temperature:
+sensor.roof_wind_chill_temperature:
   friendly_name: 'Wind Chill'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
@@ -119,87 +139,78 @@ sensor.lounge_air_purifier_pm25:
 sensor.dining_air_purifier_pm25:
   friendly_name: 'Dining'
   icon: 'mdi:virus-outline'
-sensor.compensation_sensor_roof_humidity:
+sensor.roof_humidity:
   friendly_name: 'Roof'
   icon: 'mdi:water-percent'
   unit_of_measurement: '%'
-sensor.compensation_sensor_ada_humidity:
+sensor.ada_humidity:
   friendly_name: 'Ada'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_edwin_humidity:
+sensor.edwin_humidity:
   friendly_name: 'Edwin'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_bertram_2_office_lounge_humidity:
+sensor.bertram_2_office_lounge_humidity:
   friendly_name: 'Lounge'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_parents_humidity:
+sensor.parents_humidity:
   friendly_name: 'Parents'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_bertram_2_office_humidity:
+sensor.bertram_2_office_humidity:
   friendly_name: 'Office'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_bertram_2_kitchen_humidity:
+sensor.bertram_2_kitchen_humidity:
   friendly_name: 'Kitchen'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_bertram_2_office_pantry_humidity:
+sensor.bertram_2_office_pantry_humidity:
   friendly_name: 'Pantry'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_bertram_2_office_dining_humidity:
+sensor.bertram_2_office_dining_humidity:
   friendly_name: 'Dining'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_laundry_humidity:
+sensor.laundry_humidity:
   friendly_name: 'Laundry'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_bertram_2_office_basement_humidity:
+sensor.bertram_2_office_basement_humidity:
   friendly_name: 'Basement'
   icon: 'mdi:water-percent'
-sensor.compensation_sensor_rack_humidity:
+sensor.rack_humidity:
   friendly_name: 'Rack'
   icon: 'mdi:water-percent'
   unit_of_measurement: '%'
-sensor.compensation_sensor_ada_co2:
-  friendly_name: 'Ada'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_edwin_co2:
+sensor.edwin_co2:
   friendly_name: 'Edwin'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_parents_co2:
-  friendly_name: 'Parents'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_bertram_2_office_co2:
+sensor.bertram_2_office_co2:
   friendly_name: 'Office'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_bertram_2_office_lounge_co2:
+sensor.bertram_2_office_lounge_co2:
   friendly_name: 'Lounge'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_bertram_2_kitchen_co2:
+sensor.bertram_2_kitchen_co2:
   friendly_name: 'Kitchen'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_bertram_2_office_pantry_co2:
+sensor.bertram_2_office_pantry_co2:
   friendly_name: 'Pantry'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_bertram_2_office_dining_co2:
+sensor.bertram_2_office_dining_co2:
   friendly_name: 'Dining'
   icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_laundry_co2:
-  friendly_name: 'Laundry'
-  icon: 'mdi:molecule-co2'
-sensor.compensation_sensor_ada_noise:
+sensor.ada_noise:
   friendly_name: 'Ada'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_edwin_noise:
+sensor.edwin_noise:
   friendly_name: 'Edwin'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_parents_noise:
+sensor.parents_noise:
   friendly_name: 'Parents'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_bertram_2_office_noise:
+sensor.bertram_2_office_noise:
   friendly_name: 'Office'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_bertram_2_kitchen_noise:
+sensor.bertram_2_kitchen_noise:
   friendly_name: 'Kitchen'
   icon: 'mdi:volume-high'
-sensor.compensation_sensor_laundry_noise:
+sensor.laundry_noise:
   friendly_name: 'Laundry'
   icon: 'mdi:volume-high'
 sensor.roof_cloud_base:
@@ -275,6 +286,14 @@ sensor.roof_storm_rain:
   friendly_name: 'Storm'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'cm'
+sensor.landing_festoons_plug_temperature:
+  friendly_name: 'Hot Water Temperature'
+  icon: 'mdi:thermometer-water'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_landing_festoons_plug_temperature:
+  friendly_name: 'Hot Water Temperature'
+  icon: 'mdi:thermometer-water'
+  unit_of_measurement: '°C'
 input_boolean.home_security:
   friendly_name: 'Secure'
   icon: 'mdi:shield-home'
@@ -404,9 +423,6 @@ switch.old_deck_festoons_plug:
 light.deck_festoons_plug:
   friendly_name: 'Deck Festoons'
   icon: 'mdi:lightbulb-group'
-sensor.deck_festoons_plug_temperature:
-  friendly_name: 'Deck Festoons'
-  unit_of_measurement: '°C'
 sensor.deck_festoons_plug_humidity:
   friendly_name: 'Deck Festoons'
   unit_of_measurement: '%'
@@ -416,9 +432,6 @@ switch.old_landing_festoons_plug:
 light.landing_festoons_plug:
   friendly_name: 'Landing Festoons'
   icon: 'mdi:lightbulb-group'
-sensor.landing_festoons_plug_temperature:
-  friendly_name: 'Landing Festoons'
-  unit_of_measurement: '°C'
 light.tree_spotlights:
   friendly_name: 'Tree Spotlights'
   icon: 'mdi:lightbulb-group'
@@ -426,7 +439,7 @@ switch.bathroom_rails_plug:
   friendly_name: 'Towel Rails'
   icon: 'mdi:radiator'
 switch.ceiling_water_booster_plug:
-  friendly_name: 'Water Booster'
+  friendly_name: 'Hot Water Booster'
   icon: 'mdi:thermometer-water'
 sensor.ceiling_water_booster_plug_energy_power:
   friendly_name: 'Current Power'
@@ -490,7 +503,7 @@ sensor.pool_filter_power:
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.water_booster_power:
-  friendly_name: 'Water Booster'
+  friendly_name: 'Hot Water Booster'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
 sensor.dish_washer_power:
@@ -574,7 +587,7 @@ sensor.pool_filter_energy_daily:
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.water_booster_energy_daily:
-  friendly_name: 'Water Booster'
+  friendly_name: 'Hot Water Booster'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.dish_washer_energy_daily:

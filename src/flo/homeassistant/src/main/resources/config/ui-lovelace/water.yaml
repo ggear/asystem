@@ -40,3 +40,10 @@
       name: Yearly
       icon: mdi:weather-pouring
 ################################################################################
+- type: entities
+  title: Heating & Cooling
+  entities:
+    - entity: sensor.compensation_sensor_landing_festoons_plug_temperature
+      name: Hot Water Temperature
+      icon: mdi:thermometer-water
+################################################################################

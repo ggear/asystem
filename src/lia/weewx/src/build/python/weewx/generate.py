@@ -33,7 +33,7 @@ if __name__ == "__main__":
                 name = {}        
               """.format(
             metadata_weewx_dict["unique_id_device"],
-            metadata_weewx_dict["unique_id"].replace("compensation_sensor_", "")
+            metadata_weewx_dict["unique_id"]
         ).strip() + "\n")
     weewx_conf_path = join(DIR_ROOT, "src/main/resources/config/weewx.conf")
     with open(weewx_conf_path + ".template", "rt") as weewx_conf_template_file:

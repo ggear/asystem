@@ -62,9 +62,6 @@ def load_entity_metadata():
 def write_entity_metadata(module_name, module_root_dir, metadata_df):
     if len(metadata_df) > 0:
         metadata_df = metadata_df.copy()
-        for metadata_col in metadata_df.columns:
-            if all((metadata_col_val is None) or isinstance(metadata_col_val, str) for metadata_col_val in metadata_df[metadata_col]):
-                metadata_df[metadata_col] = metadata_df[metadata_col].str.replace("compensation_sensor_", "")
         metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
         metadata_columns_rename = {column: column.replace("device_", "") for column in metadata_columns}
         metadata_publish_dir_root = join(module_root_dir, "src/main/resources/config/mqtt")
@@ -311,6 +308,7 @@ if __name__ == "__main__":
         (metadata_hass_df["entity_status"] == "Enabled") &
         (metadata_hass_df["entity_namespace"].str.len() > 0) &
         (metadata_hass_df["unique_id"].str.len() > 0) &
+        (metadata_hass_df["linked_entity"].str.len() > 0) &
         (metadata_hass_df["compensation_curve"].str.len() > 0)
         ]
     metadata_compensation_dicts = [row.dropna().to_dict() for index, row in metadata_compensation_df.iterrows()]
@@ -331,9 +329,9 @@ compensation:
     precision: 1
     data_points:{}
             """.format(
+                metadata_compensation_dict["linked_entity"],
+                metadata_compensation_dict["linked_entity"],
                 metadata_compensation_dict["unique_id"],
-                metadata_compensation_dict["unique_id"],
-                metadata_compensation_dict["unique_id"].replace("compensation_sensor_", ""),
                 "\n      - " + metadata_compensation_dict["compensation_curve"].replace("],[", "]\n      - ["),
             ).strip() + "\n")
         metadata_compensation_file.write("  " + """
@@ -421,12 +419,14 @@ tplink:
 #######################################################################################
             """.strip() + "\n")
             for metadata_alias_dict in metadata_alias_dicts:
-                metadata_alias_aliases = ["{}{}{}".format(metadata_alias_dict["device_suggested_area"],
+                metadata_alias_room = metadata_alias_dict["suggested_area_override"] \
+                    if "suggested_area_override" in metadata_alias_dict else metadata_alias_dict["device_suggested_area"]
+                metadata_alias_room_name = metadata_alias_dict["suggested_area_override_name"] \
+                    if "suggested_area_override_name" in metadata_alias_dict else metadata_alias_dict["device_suggested_area"]
+                metadata_alias_aliases = ["{}{}{}".format(metadata_alias_room_name,
                                                           "" if alias.startswith("s ") else " ", alias)
                                           for alias in metadata_alias_dict["google_aliases"].split(',')]
                 metadata_alias_name = metadata_alias_aliases.pop(0)
-                metadata_alias_room = metadata_alias_dict["device_suggested_area_override"] \
-                    if "device_suggested_area_override" in metadata_alias_dict else metadata_alias_dict["device_suggested_area"]
                 metadata_alias_file.write("""
 {}.{}:
   name: {}
