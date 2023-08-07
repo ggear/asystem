@@ -6,7 +6,7 @@
   "icon": "mdi:weather-windy",
   "force_update": "false",
   "state_topic": "weewx/roof_wind_run",
-  "value_template": "{{ value | float(0) | round(1) }}",
+  "value_template": "{{ value | float(None) }}",
   "qos": "1",
   "device": {
     "via_device": "WeeWX",

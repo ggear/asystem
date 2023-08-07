@@ -7,7 +7,7 @@
   "icon": "mdi:thermometer",
   "force_update": "false",
   "state_topic": "telegraf/raspbpi-lia/digitemp",
-  "value_template": "{{ (value_json['fields']['rack_top_temperature_celsius'] | float(0) | round(1)) if (value_json['fields']['rack_top_temperature_celsius'] is defined) else (states('sensor.rack_top_temperature') | float(None)) }}",
+  "value_template": "{{ (value_json['fields']['rack_top_temperature_celsius'] | float(None)) if (value_json['fields']['rack_top_temperature_celsius'] is defined) else (states('sensor.rack_top_temperature') | float(None)) }}",
   "qos": "1",
   "device": {
     "via_device": "DigiTemp",
