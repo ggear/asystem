@@ -91,17 +91,17 @@ compensation:
       - [ 1, 1 ]
       - [ 2, 2 ]
   #####################################################################################
-  compensation_sensor_deck_festoons_plug_temperature:
-    unique_id: compensation_sensor_deck_festoons_plug_temperature
-    source: sensor.deck_festoons_plug_temperature
+  compensation_sensor_utility_temperature:
+    unique_id: compensation_sensor_utility_temperature
+    source: sensor.utility_temperature
     precision: 1
     data_points:
       - [ 1, 1 ]
       - [ 2, 2 ]
   #####################################################################################
-  compensation_sensor_utility_temperature:
-    unique_id: compensation_sensor_utility_temperature
-    source: sensor.utility_temperature
+  compensation_sensor_deck_festoons_plug_temperature:
+    unique_id: compensation_sensor_deck_festoons_plug_temperature
+    source: sensor.deck_festoons_plug_temperature
     precision: 1
     data_points:
       - [ 1, 1 ]

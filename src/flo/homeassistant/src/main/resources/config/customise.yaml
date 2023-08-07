@@ -71,20 +71,20 @@ sensor.compensation_sensor_wardrobe_temperature:
   friendly_name: 'Wardrobe'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
-sensor.deck_festoons_plug_temperature:
-  friendly_name: 'Ceiling'
-  icon: 'mdi:thermometer'
-  unit_of_measurement: '°C'
-sensor.compensation_sensor_deck_festoons_plug_temperature:
-  friendly_name: 'Ceiling'
-  icon: 'mdi:thermometer'
-  unit_of_measurement: '°C'
 sensor.utility_temperature:
   friendly_name: 'Utility'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
 sensor.compensation_sensor_utility_temperature:
   friendly_name: 'Utility'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.deck_festoons_plug_temperature:
+  friendly_name: 'Ceiling'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_deck_festoons_plug_temperature:
+  friendly_name: 'Ceiling'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
 sensor.rack_top_temperature:

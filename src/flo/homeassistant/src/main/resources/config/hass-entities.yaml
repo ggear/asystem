@@ -45,14 +45,14 @@ sensor.compensation_sensor_wardrobe_temperature:
   name: Wardrobe Temperature
   aliases: []
   room: Wardrobe
-sensor.compensation_sensor_deck_festoons_plug_temperature:
-  name: Ceiling Temperature
-  aliases: []
-  room: Ceiling
 sensor.compensation_sensor_utility_temperature:
   name: Rack Temperature
   aliases: []
   room: Rack
+sensor.compensation_sensor_deck_festoons_plug_temperature:
+  name: Ceiling Temperature
+  aliases: []
+  room: Ceiling
 sensor.compensation_sensor_rack_top_temperature:
   name: Rack Temperature
   aliases: []
