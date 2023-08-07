@@ -165,11 +165,11 @@
     - entity: sensor.laundry_humidity
       name: Laundry
       icon: mdi:water-percent
+    - entity: sensor.wardrobe_humidity
+      name: Wardrobe
+      icon: mdi:water-percent
     - entity: sensor.bertram_2_office_basement_humidity
       name: Basement
-      icon: mdi:water-percent
-    - entity: sensor.rack_humidity
-      name: Rack
       icon: mdi:water-percent
 ################################################################################
 - type: custom:layout-break

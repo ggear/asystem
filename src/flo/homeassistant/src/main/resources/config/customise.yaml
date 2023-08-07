@@ -170,13 +170,13 @@ sensor.bertram_2_office_dining_humidity:
 sensor.laundry_humidity:
   friendly_name: 'Laundry'
   icon: 'mdi:water-percent'
+sensor.wardrobe_humidity:
+  friendly_name: 'Wardrobe'
+  icon: 'mdi:water-percent'
+  unit_of_measurement: '%'
 sensor.bertram_2_office_basement_humidity:
   friendly_name: 'Basement'
   icon: 'mdi:water-percent'
-sensor.rack_humidity:
-  friendly_name: 'Rack'
-  icon: 'mdi:water-percent'
-  unit_of_measurement: '%'
 sensor.edwin_co2:
   friendly_name: 'Edwin'
   icon: 'mdi:molecule-co2'
