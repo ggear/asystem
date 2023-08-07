@@ -3,7 +3,7 @@
     "templatename": "SONOFF POWR3",
     "devicename": "ceiling_water_booster_plug",
     "friendlyname": [
-        "Water Booster"
+        "Hot Water Booster"
     ],
     "mqtt_host": "10.0.2.11",
     "mqtt_port": "32404",

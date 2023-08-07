@@ -4,6 +4,7 @@
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",
+  "icon": "mdi:thermometer-water",
   "force_update": "false",
   "optimistic": "true",
   "state_topic": "tasmota/device/landing_festoons_plug/tele/SENSOR",
