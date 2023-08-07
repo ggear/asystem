@@ -1,12 +1,12 @@
 {
-  "unique_id": "rack_humidity",
-  "name": "rack_humidity",
+  "unique_id": "wardrobe_humidity",
+  "name": "wardrobe_humidity",
   "state_class": "measurement",
   "unit_of_measurement": "%",
   "device_class": "humidity",
   "icon": "mdi:water-percent",
   "force_update": "false",
-  "state_topic": "weewx/rack_humidity",
+  "state_topic": "weewx/wardrobe_humidity",
   "value_template": "{{ value | float(0) | round(0) }}",
   "qos": "1",
   "device": {
