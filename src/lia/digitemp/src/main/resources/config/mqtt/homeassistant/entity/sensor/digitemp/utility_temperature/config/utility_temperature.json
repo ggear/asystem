@@ -1,13 +1,13 @@
 {
-  "unique_id": "rack_external_temperature",
-  "name": "rack_external_temperature",
+  "unique_id": "utility_temperature",
+  "name": "utility_temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",
   "icon": "mdi:thermometer",
   "force_update": "false",
   "state_topic": "telegraf/raspbpi-lia/digitemp",
-  "value_template": "{{ (value_json['fields']['rack_external_temperature_celsius'] | float(0) | round(1)) if (value_json['fields']['rack_external_temperature_celsius'] is defined) else (states('sensor.rack_external_temperature') | float(None)) }}",
+  "value_template": "{{ (value_json['fields']['utility_temperature_celsius'] | float(0) | round(1)) if (value_json['fields']['utility_temperature_celsius'] is defined) else (states('sensor.utility_temperature') | float(None)) }}",
   "qos": "1",
   "device": {
     "via_device": "DigiTemp",

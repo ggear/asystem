@@ -83,6 +83,14 @@ compensation:
       - [ 1, 1 ]
       - [ 2, 2 ]
   #####################################################################################
+  compensation_sensor_wardrobe_temperature:
+    unique_id: compensation_sensor_wardrobe_temperature
+    source: sensor.wardrobe_temperature
+    precision: 1
+    data_points:
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  #####################################################################################
   compensation_sensor_deck_festoons_plug_temperature:
     unique_id: compensation_sensor_deck_festoons_plug_temperature
     source: sensor.deck_festoons_plug_temperature
@@ -91,9 +99,9 @@ compensation:
       - [ 1, 1 ]
       - [ 2, 2 ]
   #####################################################################################
-  compensation_sensor_bertram_2_office_basement_temperature:
-    unique_id: compensation_sensor_bertram_2_office_basement_temperature
-    source: sensor.bertram_2_office_basement_temperature
+  compensation_sensor_utility_temperature:
+    unique_id: compensation_sensor_utility_temperature
+    source: sensor.utility_temperature
     precision: 1
     data_points:
       - [ 1, 1 ]
@@ -115,17 +123,9 @@ compensation:
       - [ 1, 1 ]
       - [ 2, 2 ]
   #####################################################################################
-  compensation_sensor_rack_external_temperature:
-    unique_id: compensation_sensor_rack_external_temperature
-    source: sensor.rack_external_temperature
-    precision: 1
-    data_points:
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  #####################################################################################
-  compensation_sensor_rack_temperature:
-    unique_id: compensation_sensor_rack_temperature
-    source: sensor.rack_temperature
+  compensation_sensor_bertram_2_office_basement_temperature:
+    unique_id: compensation_sensor_bertram_2_office_basement_temperature
+    source: sensor.bertram_2_office_basement_temperature
     precision: 1
     data_points:
       - [ 1, 1 ]
