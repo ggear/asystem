@@ -80,7 +80,7 @@ from(bucket: "home_private")
                   { gridPos: { x: 0, y: 2, w: 24, h: 12 } },
 
                   graph.new(
-                        title='Hot Water',
+                        title='Heating & Cooling',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='short',
