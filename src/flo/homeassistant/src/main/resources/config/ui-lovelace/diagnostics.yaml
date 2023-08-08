@@ -2,6 +2,14 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
 - type: entities
+  title: Service Availability
+  entities:
+    - entity: binary_sensor.service_availability_zigbee2mqtt
+      name: Zigbee2MQTT
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
   title: Internet Telemetry
   entities:
     - entity: sensor.network_internet_ping
@@ -43,7 +51,24 @@
 - type: custom:layout-break
 ################################################################################
 - type: entities
-  title: Battery Charge
+  title: Device Maintenance
+  show_header_toggle: false
+  entities:
+    - entity: button.synchronize_devices
+      name: Google Device Syncronise
+################################################################################
+- type: entities
+  title: Device Temperatures
+  entities:
+    - entity: sensor.compensation_sensor_rack_top_temperature
+      name: Rack Top
+      icon: mdi:thermometer
+    - entity: sensor.compensation_sensor_rack_bottom_temperature
+      name: Rack Bottom
+      icon: mdi:thermometer
+################################################################################
+- type: entities
+  title: Device Batteries
   entities:
     - entity: sensor.back_door_lock_battery
       name: Yale Back Door Lock
@@ -213,13 +238,4 @@
     - entity: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
       name: Wardrobe Main
       icon: mdi:lightbulb-group
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
-  title: Device Maintenance
-  show_header_toggle: false
-  entities:
-    - entity: button.synchronize_devices
-      name: Google Device Sync
 ################################################################################

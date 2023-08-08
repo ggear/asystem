@@ -53,14 +53,6 @@ sensor.compensation_sensor_deck_festoons_plug_temperature:
   name: Ceiling Temperature
   aliases: []
   room: Ceiling
-sensor.compensation_sensor_rack_top_temperature:
-  name: Rack Temperature
-  aliases: []
-  room: Rack
-sensor.compensation_sensor_rack_bottom_temperature:
-  name: Rack Temperature
-  aliases: []
-  room: Rack
 sensor.compensation_sensor_bertram_2_office_basement_temperature:
   name: Basement Temperature
   aliases: []
@@ -241,6 +233,14 @@ fan.dining_air_purifier:
   name: Dining Air Purifier
   aliases: []
   room: Dining
+sensor.compensation_sensor_rack_top_temperature:
+  name: Rack Temperature
+  aliases: []
+  room: Rack
+sensor.compensation_sensor_rack_bottom_temperature:
+  name: Rack Temperature
+  aliases: []
+  room: Rack
 input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
   name: Ada Lamp Reset
   aliases: []

@@ -137,7 +137,7 @@ automation:
           - service: mqtt.publish
             data:
               topic: "zigbee/Driveway Repeater"
-              payload: '{ "last_seen": now().strftime("%Y-%m-%dT%H:%M:%S%z")[0:-2]+":00", "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
+              payload: '{ "last_seen": null, "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
       - delay: '00:00:01'
       - if:
           - condition: template
@@ -148,7 +148,7 @@ automation:
           - service: mqtt.publish
             data:
               topic: "zigbee/Landing Repeater"
-              payload: '{ "last_seen": now().strftime("%Y-%m-%dT%H:%M:%S%z")[0:-2]+":00", "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
+              payload: '{ "last_seen": null, "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
       - delay: '00:00:01'
       - if:
           - condition: template
@@ -159,7 +159,7 @@ automation:
           - service: mqtt.publish
             data:
               topic: "zigbee/Garden Repeater"
-              payload: '{ "last_seen": now().strftime("%Y-%m-%dT%H:%M:%S%z")[0:-2]+":00", "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
+              payload: '{ "last_seen": null, "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
       - delay: '00:00:01'
       - if:
           - condition: template
@@ -170,7 +170,7 @@ automation:
           - service: mqtt.publish
             data:
               topic: "zigbee/Kitchen Fan Outlet"
-              payload: '{ "last_seen": now().strftime("%Y-%m-%dT%H:%M:%S%z")[0:-2]+":00", "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
+              payload: '{ "last_seen": null, "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
       - delay: '00:00:01'
       - if:
           - condition: template
@@ -181,7 +181,7 @@ automation:
           - service: mqtt.publish
             data:
               topic: "zigbee/Deck Fans Outlet"
-              payload: '{ "last_seen": now().strftime("%Y-%m-%dT%H:%M:%S%z")[0:-2]+":00", "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
+              payload: '{ "last_seen": null, "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
       - delay: '00:00:01'
       - if:
           - condition: template
@@ -192,7 +192,7 @@ automation:
           - service: mqtt.publish
             data:
               topic: "zigbee/Edwin Wardrobe Outlet"
-              payload: '{ "last_seen": now().strftime("%Y-%m-%dT%H:%M:%S%z")[0:-2]+":00", "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
+              payload: '{ "last_seen": null, "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
       - service: input_boolean.turn_off
         entity_id: input_boolean.network_refresh_zigbee_router_lqi
 #######################################################################################

@@ -107,22 +107,6 @@ compensation:
       - [ 9, 8.7 ]
       - [ 18.2, 18 ]
   #####################################################################################
-  compensation_sensor_rack_top_temperature:
-    unique_id: compensation_sensor_rack_top_temperature
-    source: sensor.rack_top_temperature
-    precision: 1
-    data_points:
-      - [ 8.4, 8.7 ]
-      - [ 17.6, 18 ]
-  #####################################################################################
-  compensation_sensor_rack_bottom_temperature:
-    unique_id: compensation_sensor_rack_bottom_temperature
-    source: sensor.rack_bottom_temperature
-    precision: 1
-    data_points:
-      - [ 8.4, 8.7 ]
-      - [ 17.6, 18 ]
-  #####################################################################################
   compensation_sensor_bertram_2_office_basement_temperature:
     unique_id: compensation_sensor_bertram_2_office_basement_temperature
     source: sensor.bertram_2_office_basement_temperature
@@ -138,4 +122,20 @@ compensation:
     data_points:
       - [ 8.4, 8.7 ]
       - [ 17.7, 18 ]
+  #####################################################################################
+  compensation_sensor_rack_top_temperature:
+    unique_id: compensation_sensor_rack_top_temperature
+    source: sensor.rack_top_temperature
+    precision: 1
+    data_points:
+      - [ 8.4, 8.7 ]
+      - [ 17.6, 18 ]
+  #####################################################################################
+  compensation_sensor_rack_bottom_temperature:
+    unique_id: compensation_sensor_rack_bottom_temperature
+    source: sensor.rack_bottom_temperature
+    precision: 1
+    data_points:
+      - [ 8.4, 8.7 ]
+      - [ 17.6, 18 ]
   #####################################################################################

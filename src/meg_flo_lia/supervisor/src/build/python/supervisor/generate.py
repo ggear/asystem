@@ -1,6 +1,5 @@
 import glob
 import json
-import os
 from os.path import *
 
 import sys
@@ -21,18 +20,18 @@ if __name__ == "__main__":
     metadata_df = load_entity_metadata()
 
     # Build metadata publish JSON
-    metadata_monitor_df = metadata_df[
+    metadata_supervisor_df = metadata_df[
         (metadata_df["index"] > 0) &
         (metadata_df["entity_status"] == "Enabled") &
-        (metadata_df["device_via_device"] == "Monitor") &
+        (metadata_df["device_via_device"] == "Supervisor") &
         (metadata_df["unique_id"].str.len() > 0) &
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["state_topic"].str.len() > 0)
         ]
-    write_entity_metadata("monitor", DIR_ROOT, metadata_monitor_df)
+    write_entity_metadata("supervisor", DIR_ROOT, metadata_supervisor_df)
 
-    metadata_monitor_path = abspath(join(DIR_ROOT, "src/main/resources/config/services.json"))
-    with open(metadata_monitor_path, 'w') as metadata_monitor_file:
-        metadata_monitor_file.write(json.dumps(_get_modules_all("docker-compose.yml"), indent=2))
-    print("Build generate script [monitor] service metadata persisted to [{}]".format(metadata_monitor_path))
+    metadata_supervisor_path = abspath(join(DIR_ROOT, "src/main/resources/config/services.json"))
+    with open(metadata_supervisor_path, 'w') as metadata_supervisor_file:
+        metadata_supervisor_file.write(json.dumps(_get_modules_all("docker-compose.yml"), indent=2))
+    print("Build generate script [supervisor] service metadata persisted to [{}]".format(metadata_supervisor_path))

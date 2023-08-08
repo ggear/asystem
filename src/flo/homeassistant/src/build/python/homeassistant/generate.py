@@ -3,13 +3,12 @@ import glob
 import json
 import os
 import shutil
-import sys
-import time
 from collections import OrderedDict
 from os.path import *
 
-from zoneinfo import ZoneInfo
 import pandas as pd
+import sys
+import time
 from pathlib2 import Path
 from requests import get
 
@@ -1216,7 +1215,7 @@ automation:
           - service: mqtt.publish
             data:
               topic: "zigbee/{}"
-              payload: '{{ "last_seen": now().strftime("%Y-%m-%dT%H:%M:%S%z")[0:-2]+":00", "linkquality": 0, "state": null, "update": {{ "installed_version": null, "latest_version": null, "state": null }}, "update_available": false }}'
+              payload: '{{ "last_seen": null, "linkquality": 0, "state": null, "update": {{ "installed_version": null, "latest_version": null, "state": null }}, "update_available": false }}'
             """.format(
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
