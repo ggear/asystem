@@ -1,9 +1,9 @@
 {
-  "unique_id": "host_raspbpi-lia_availability",
-  "name": "host_raspbpi-lia_availability",
+  "unique_id": "host_lia_availability",
+  "name": "host_lia_availability",
   "device_class": "running",
   "force_update": "false",
-  "state_topic": "asystem/supervisor/host/raspbpi-lia/availability",
+  "state_topic": "asystem/supervisor/host/lia/availability",
   "value_template": "{{ value }}",
   "availability_topic": "asystem/supervisor/availability",
   "qos": "1",

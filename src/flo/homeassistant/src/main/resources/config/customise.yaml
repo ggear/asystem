@@ -632,6 +632,12 @@ sensor.network_certifcate_expiry:
   friendly_name: 'Certifcate Expiry'
   icon: 'mdi:cloud-lock'
   unit_of_measurement: 'd'
+sensor.deck_wifi_access_point_experience:
+  friendly_name: 'Deck Access Point'
+  unit_of_measurement: '%'
+sensor.hallway_wifi_access_point_experience:
+  friendly_name: 'Hallway Access Point'
+  unit_of_measurement: '%'
 sensor.template_driveway_repeater_linkquality_percentage:
   friendly_name: 'Driveway Repeater'
 sensor.template_landing_repeater_linkquality_percentage:
@@ -680,11 +686,11 @@ binary_sensor.service_unifipoller_availability:
   friendly_name: 'Unifipoller'
 binary_sensor.service_monitor_availability:
   friendly_name: 'Monitor'
-binary_sensor.host_raspbpi-lia_availability:
+binary_sensor.host_lia_availability:
   friendly_name: 'Lia'
-binary_sensor.host_macbook-flo_availability:
+binary_sensor.host_flo_availability:
   friendly_name: 'Flo'
-binary_sensor.host_macmini-meg_availability:
+binary_sensor.host_meg_availability:
   friendly_name: 'Meg'
 button.synchronize_devices:
   friendly_name: 'Google Device Syncronise'

@@ -18,8 +18,15 @@
       icon: mdi:cloud-lock
 ################################################################################
 - type: entities
+  title: WiFI Link Quality
+  entities:
+    - entity: sensor.deck_wifi_access_point_experience
+      name: Deck Access Point
+    - entity: sensor.hallway_wifi_access_point_experience
+      name: Hallway Access Point
+################################################################################
+- type: entities
   title: Zigbee Link Quality
-  show_header_toggle: false
   entities:
     - entity: sensor.template_driveway_repeater_linkquality_percentage
       name: Driveway Repeater
@@ -78,17 +85,17 @@
     - entity: binary_sensor.service_monitor_availability
       name: Monitor
 ################################################################################
-- type: custom:layout-break
-################################################################################
 - type: entities
   title: Host Availability
   entities:
-    - entity: binary_sensor.host_raspbpi-lia_availability
+    - entity: binary_sensor.host_lia_availability
       name: Lia
-    - entity: binary_sensor.host_macbook-flo_availability
+    - entity: binary_sensor.host_flo_availability
       name: Flo
-    - entity: binary_sensor.host_macmini-meg_availability
+    - entity: binary_sensor.host_meg_availability
       name: Meg
+################################################################################
+- type: custom:layout-break
 ################################################################################
 - type: entities
   title: Device Maintenance
