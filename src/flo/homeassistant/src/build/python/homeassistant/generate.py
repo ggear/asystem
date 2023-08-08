@@ -993,128 +993,6 @@ input_boolean:
   #####################################################################################
 automation:
   #####################################################################################
-  - id: lighting_sleep_adaptive_lighting
-    alias: "Lighting: Sleep Adaptive Lighting"
-    mode: single
-    trigger:
-      - platform: time
-        at: "01:00:00"
-    condition: [ ]
-    action:
-      ################################################################################
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_default
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_sleep_mode_default
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_color_default
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_default
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          manual_control: false
-      ################################################################################
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_bedroom
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_sleep_mode_bedroom
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_color_bedroom
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_bedroom
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          manual_control: false
-      ################################################################################
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_night
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_sleep_mode_night
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_color_night
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_night
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_night
-          manual_control: false
-      ################################################################################
-  - id: lighting_reset_adaptive_lighting
-    alias: "Lighting: Reset Adaptive Lighting"
-    mode: single
-    trigger:
-      - platform: time
-        at: "05:00:00"
-    condition: [ ]
-    action:
-      ################################################################################
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_default
-      - service: switch.turn_off
-        target:
-          entity_id: switch.adaptive_lighting_sleep_mode_default
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_color_default
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_default
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_default
-          manual_control: false
-      ################################################################################
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_bedroom
-      - service: switch.turn_off
-        target:
-          entity_id: switch.adaptive_lighting_sleep_mode_bedroom
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_color_bedroom
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_bedroom
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_bedroom
-          manual_control: false
-      ################################################################################
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_night
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_sleep_mode_night
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_color_night
-      - service: switch.turn_on
-        target:
-          entity_id: switch.adaptive_lighting_adapt_brightness_night
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_night
-          manual_control: false
-      ################################################################################
-        """.strip() + "\n")
-        metadata_lighting_file.write("  " + """
   - id: lighting_reset_adaptive_lighting_announce
     alias: 'Lighting: Reset Adaptive Lighting on bulb announce'
     mode: single
@@ -1338,13 +1216,12 @@ automation:
           - service: mqtt.publish
             data:
               topic: "zigbee/{}"
-              payload: '{{ "last_seen": "{}", "linkquality": 0, "state": null, "update": {{ "installed_version": null, "latest_version": null, "state": null }}, "update_available": false }}'
+              payload: '{{ "last_seen": now().strftime("%Y-%m-%dT%H:%M:%S%z")[0:-2]+":00", "linkquality": 0, "state": null, "update": {{ "installed_version": null, "latest_version": null, "state": null }}, "update_available": false }}'
             """.format(
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
                 len(metadata_diagnostic_dicts) + 5,
                 metadata_diagnostic_dict["friendly_name"],
-                datetime.datetime.now(tz=ZoneInfo("Australia/Perth")).strftime('%Y-%m-%dT%H:%M:%S%z')[0:-2] + ":00",
             ).strip() + "\n")
         metadata_diagnostic_file.write("      " + """
       - service: input_boolean.turn_off
