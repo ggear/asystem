@@ -5,7 +5,7 @@
   "icon": "mdi:weather-windy",
   "force_update": "false",
   "state_topic": "weewx/roof_wind_samples",
-  "value_template": "{{ value | int(0) }}",
+  "value_template": "{{ value | int(None) }}",
   "qos": "1",
   "device": {
     "via_device": "WeeWX",

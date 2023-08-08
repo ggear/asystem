@@ -6,7 +6,7 @@
   "icon": "mdi:cloud-outline",
   "force_update": "false",
   "state_topic": "weewx/roof_cloud_base",
-  "value_template": "{{ (value | float(0) | round(0)) if (value is defined and value | float(-1) >= 0) else (states('sensor.roof_cloud_base') | float(None)) }}",
+  "value_template": "{{ (value | int(0)) if (value is defined and value | float(-1) >= 0) else (states('sensor.roof_cloud_base') | int(None)) }}",
   "qos": "1",
   "device": {
     "via_device": "WeeWX",

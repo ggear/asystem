@@ -6,7 +6,7 @@
   "device_class": "pressure",
   "force_update": "false",
   "state_topic": "weewx/roof_pressure",
-  "value_template": "{{ (value | float(0) | round(0)) if (value is defined and value | float(-1) >= 0) else (states('sensor.roof_pressure') | float(None)) }}",
+  "value_template": "{{ (value | int(0)) if (value is defined and value | float(-1) >= 0) else (states('sensor.roof_pressure') | int(None)) }}",
   "qos": "1",
   "device": {
     "via_device": "WeeWX",

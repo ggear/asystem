@@ -8,6 +8,7 @@ import time
 from collections import OrderedDict
 from os.path import *
 
+from zoneinfo import ZoneInfo
 import pandas as pd
 from pathlib2 import Path
 from requests import get
@@ -1337,12 +1338,13 @@ automation:
           - service: mqtt.publish
             data:
               topic: "zigbee/{}"
-              payload: '{{"linkquality":0,"update":{{"update_available":false}}}}'
+              payload: '{{ "last_seen": "{}", "linkquality": 0, "state": null, "update": {{ "installed_version": null, "latest_version": null, "state": null }}, "update_available": false }}'
             """.format(
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
                 len(metadata_diagnostic_dicts) + 5,
                 metadata_diagnostic_dict["friendly_name"],
+                datetime.datetime.now(tz=ZoneInfo("Australia/Perth")).strftime('%Y-%m-%dT%H:%M:%S%z')[0:-2] + ":00",
             ).strip() + "\n")
         metadata_diagnostic_file.write("      " + """
       - service: input_boolean.turn_off
