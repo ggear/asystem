@@ -2,14 +2,6 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
 - type: entities
-  title: Service Availability
-  entities:
-    - entity: binary_sensor.service_availability_zigbee2mqtt
-      name: Zigbee2MQTT
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
   title: Internet Telemetry
   entities:
     - entity: sensor.network_internet_ping
@@ -49,6 +41,54 @@
       name: Davis Console
 ################################################################################
 - type: custom:layout-break
+################################################################################
+- type: entities
+  title: Service Availability
+  entities:
+    - entity: binary_sensor.service_homeassistant_availability
+      name: Home Assistant
+    - entity: binary_sensor.service_plex_availability
+      name: Plex
+    - entity: binary_sensor.service_grafana_availability
+      name: Grafana
+    - entity: binary_sensor.service_wrangle_availability
+      name: Wrangle
+    - entity: binary_sensor.service_internet_availability
+      name: Internet
+    - entity: binary_sensor.service_unifi_availability
+      name: UniFi
+    - entity: binary_sensor.service_zigbee2mqtt_availability
+      name: Zigbee2Mqtt
+    - entity: binary_sensor.service_weewx_availability
+      name: Weewx
+    - entity: binary_sensor.service_digitemp_availability
+      name: Digitemp
+    - entity: binary_sensor.service_nginx_availability
+      name: Nginx
+    - entity: binary_sensor.service_influxdb_availability
+      name: Influxdb
+    - entity: binary_sensor.service_mariadb_availability
+      name: Mariadb
+    - entity: binary_sensor.service_postgres_availability
+      name: Postgres
+    - entity: binary_sensor.service_letsencrypt_availability
+      name: Letsencrypt
+    - entity: binary_sensor.service_unifipoller_availability
+      name: Unifipoller
+    - entity: binary_sensor.service_monitor_availability
+      name: Monitor
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
+  title: Host Availability
+  entities:
+    - entity: binary_sensor.host_raspbpi-lia_availability
+      name: Lia
+    - entity: binary_sensor.host_macbook-flo_availability
+      name: Flo
+    - entity: binary_sensor.host_macmini-meg_availability
+      name: Meg
 ################################################################################
 - type: entities
   title: Device Maintenance

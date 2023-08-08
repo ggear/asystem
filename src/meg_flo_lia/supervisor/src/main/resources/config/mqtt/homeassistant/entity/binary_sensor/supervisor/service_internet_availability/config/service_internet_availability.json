@@ -1,10 +1,11 @@
 {
-  "unique_id": "service_availability_zigbee2mqtt",
-  "name": "service_availability_zigbee2mqtt",
+  "unique_id": "service_internet_availability",
+  "name": "service_internet_availability",
   "device_class": "running",
   "force_update": "false",
-  "state_topic": "asystem/supervisor/service_availability_zigbee2mqtt",
+  "state_topic": "asystem/supervisor/service/internet/availability",
   "value_template": "{{ value }}",
+  "availability_topic": "asystem/supervisor/availability",
   "qos": "1",
   "device": {
     "via_device": "Supervisor",

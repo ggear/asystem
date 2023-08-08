@@ -1,0 +1,19 @@
+{
+  "unique_id": "host_macbook-flo_availability",
+  "name": "host_macbook-flo_availability",
+  "device_class": "running",
+  "force_update": "false",
+  "state_topic": "asystem/supervisor/host/macbook-flo/availability",
+  "value_template": "{{ value }}",
+  "availability_topic": "asystem/supervisor/availability",
+  "qos": "1",
+  "device": {
+    "via_device": "Supervisor",
+    "identifiers": "asystem-rack-supervisor-script",
+    "name": "Rack Supervisor Script",
+    "model": "Python Script",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

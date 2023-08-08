@@ -616,8 +616,6 @@ sensor.servers_network_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.withings_weight_kg_graham:
   friendly_name: 'Weight'
-binary_sensor.service_availability_zigbee2mqtt:
-  friendly_name: 'Zigbee2MQTT'
 sensor.network_internet_ping:
   friendly_name: 'Ping'
   icon: 'mdi:cloud-refresh'
@@ -650,6 +648,44 @@ sensor.weatherstation_coms_signal_quality:
   friendly_name: 'Davis Console'
 sensor.template_weatherstation_coms_signal_quality_percentage:
   friendly_name: 'Davis Console'
+binary_sensor.service_homeassistant_availability:
+  friendly_name: 'Home Assistant'
+binary_sensor.service_plex_availability:
+  friendly_name: 'Plex'
+binary_sensor.service_grafana_availability:
+  friendly_name: 'Grafana'
+binary_sensor.service_wrangle_availability:
+  friendly_name: 'Wrangle'
+binary_sensor.service_internet_availability:
+  friendly_name: 'Internet'
+binary_sensor.service_unifi_availability:
+  friendly_name: 'UniFi'
+binary_sensor.service_zigbee2mqtt_availability:
+  friendly_name: 'Zigbee2Mqtt'
+binary_sensor.service_weewx_availability:
+  friendly_name: 'Weewx'
+binary_sensor.service_digitemp_availability:
+  friendly_name: 'Digitemp'
+binary_sensor.service_nginx_availability:
+  friendly_name: 'Nginx'
+binary_sensor.service_influxdb_availability:
+  friendly_name: 'Influxdb'
+binary_sensor.service_mariadb_availability:
+  friendly_name: 'Mariadb'
+binary_sensor.service_postgres_availability:
+  friendly_name: 'Postgres'
+binary_sensor.service_letsencrypt_availability:
+  friendly_name: 'Letsencrypt'
+binary_sensor.service_unifipoller_availability:
+  friendly_name: 'Unifipoller'
+binary_sensor.service_monitor_availability:
+  friendly_name: 'Monitor'
+binary_sensor.host_raspbpi-lia_availability:
+  friendly_name: 'Lia'
+binary_sensor.host_macbook-flo_availability:
+  friendly_name: 'Flo'
+binary_sensor.host_macmini-meg_availability:
+  friendly_name: 'Meg'
 button.synchronize_devices:
   friendly_name: 'Google Device Syncronise'
 sensor.rack_top_temperature:

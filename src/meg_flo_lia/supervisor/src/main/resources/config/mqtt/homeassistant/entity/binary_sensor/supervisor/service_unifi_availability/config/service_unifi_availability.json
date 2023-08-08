@@ -1,0 +1,19 @@
+{
+  "unique_id": "service_unifi_availability",
+  "name": "service_unifi_availability",
+  "device_class": "running",
+  "force_update": "false",
+  "state_topic": "asystem/supervisor/service/unifi/availability",
+  "value_template": "{{ value }}",
+  "availability_topic": "asystem/supervisor/availability",
+  "qos": "1",
+  "device": {
+    "via_device": "Supervisor",
+    "identifiers": "asystem-rack-supervisor-script",
+    "name": "Rack Supervisor Script",
+    "model": "Python Script",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}
