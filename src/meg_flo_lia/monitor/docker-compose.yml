@@ -11,8 +11,10 @@ services:
       - TZ=Australia/Perth
       - HOST_IP
       - HOST_NAME
-      - INFLUXDB_HTTP_PORT
+      - VERNEMQ_HOST
+      - VERNEMQ_PORT
       - INFLUXDB_HOST
+      - INFLUXDB_HTTP_PORT
       - HOST_ETC=/hostfs/etc
       - HOST_PROC=/hostfs/proc
       - HOST_SYS=/hostfs/sys
