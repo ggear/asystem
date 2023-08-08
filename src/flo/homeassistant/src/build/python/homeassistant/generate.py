@@ -1024,7 +1024,7 @@ automation:
         """.strip() + "\n")
         metadata_lighting_file.write("  " + """
   #####################################################################################
-  - id: lighting_reset_adaptive_lighting_all_lights
+  - id: lighting_reset_adaptive_lighting_for_all_lights
     alias: 'Lighting: Reset Adaptive Lighting for All Lights'
     mode: single
     trigger:

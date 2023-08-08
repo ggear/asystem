@@ -123,7 +123,7 @@ automation:
           volume_level: '0.2'
       - service: automation.trigger
         data:
-          entity_id: automation.lighting_reset_adaptive_lighting_all_lights
+          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
   #####################################################################################
   - id: routine_home_wakeup_cube
     alias: "Routine: Wake home up via cube"
@@ -149,7 +149,7 @@ automation:
     action:
       - service: automation.trigger
         data:
-          entity_id: automation.lighting_reset_adaptive_lighting_all_lights
+          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
       - delay: '00:00:01'
       - service: input_boolean.turn_off
         entity_id: input_boolean.home_reset
