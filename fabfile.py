@@ -381,7 +381,7 @@ def _unittest(context, filter_module=None):
 
 def _package(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
-        _print_header(module, "package", host=None if filter_host is None else _get_host_label(filter_host))
+        _print_header(module, "package", host=None if filter_host is None else filter_host)
         host_arch = HOSTS[_get_host(module) if filter_host is None else _get_host_label(filter_host)][1]
         if is_release and host_arch != "x86_64":
             _run_local(context, "docker buildx build "
@@ -397,7 +397,7 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
                                 "--build-arg GO_VERSION "
                                 "--tag {}:{} ."
                        .format(_name(module), _get_versions()[0]), module)
-        _print_footer(module, "package", host=None if filter_host is None else _get_host_label(filter_host))
+        _print_footer(module, "package", host=None if filter_host is None else filter_host)
 
 
 def _systest(context, filter_module=None):
