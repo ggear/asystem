@@ -469,6 +469,9 @@ def _release(context):
             _clean(context, filter_module=module)
             _generate(context, filter_module=module, filter_host=module, is_release=True)
             _build(context, filter_module=module, is_release=True)
+
+            print(_get_host_label(host))
+
             _package(context, filter_module=module, filter_host_label=_get_host_label(host), is_release=True)
             _print_header(module, "release")
             host_up = True
