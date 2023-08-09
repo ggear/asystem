@@ -384,6 +384,7 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
         _print_header(module, "package")
 
         print(_get_host(module) if filter_host is None else filter_host)
+        exit(1)
 
         host_arch = HOSTS[_get_host(module) if filter_host is None else filter_host][1]
         if is_release and host_arch != "x86_64":
