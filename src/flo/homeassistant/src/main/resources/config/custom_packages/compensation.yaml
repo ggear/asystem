@@ -123,14 +123,6 @@ compensation:
       - [ 8.4, 8.7 ]
       - [ 17.7, 18 ]
   #####################################################################################
-  compensation_sensor_host_lia_temperature:
-    unique_id: compensation_sensor_host_lia_temperature
-    source: sensor.host_lia_temperature
-    precision: 1
-    data_points:
-      - [ 1, 1 ]
-      - [ 2, 2 ]
-  #####################################################################################
   compensation_sensor_host_flo_temperature:
     unique_id: compensation_sensor_host_flo_temperature
     source: sensor.host_flo_temperature
@@ -142,6 +134,14 @@ compensation:
   compensation_sensor_host_meg_temperature:
     unique_id: compensation_sensor_host_meg_temperature
     source: sensor.host_meg_temperature
+    precision: 1
+    data_points:
+      - [ 1, 1 ]
+      - [ 2, 2 ]
+  #####################################################################################
+  compensation_sensor_host_lia_temperature:
+    unique_id: compensation_sensor_host_lia_temperature
+    source: sensor.host_lia_temperature
     precision: 1
     data_points:
       - [ 1, 1 ]
