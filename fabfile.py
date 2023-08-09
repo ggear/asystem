@@ -297,33 +297,33 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
             _print_footer("asystem", "pull versions {}".format(type), host=filter_host)
 
 
-def _clean(context, filter_module=None):
+def _clean(context, filter_module=None, filter_host=None):
     if filter_module is not None:
-        _print_header("asystem", "clean transients")
+        _print_header("asystem", "clean transients", host=filter_host)
         _run_local(context, "find . -name *.pyc -prune -exec rm -rf {} \;")
         _run_local(context, "find . -name __pycache__ -prune -exec rm -rf {} \;")
         _run_local(context, "find . -name .pytest_cache -prune -exec rm -rf {} \;")
         _run_local(context, "find . -name .coverage -prune -exec rm -rf {} \;")
         _run_local(context, "find . -name Cargo.lock -prune -exec rm -rf {} \;")
-        _print_footer("asystem", "clean transients")
+        _print_footer("asystem", "clean transients", host=filter_host)
     for module in _get_modules(context, filter_module=filter_module, filter_changes=False):
-        _print_header(module, "clean target")
+        _print_header(module, "clean target", host=filter_host)
 
         # TODO: Disable deleting .env, leave last build in place for running push.py scripts
         # _run_local(context, "rm -rf {}/{}/.env".format(DIR_ROOT, module))
 
         _run_local(context, "rm -rf {}/{}/target".format(DIR_ROOT_MODULE, module))
-        _print_footer(module, "clean target")
+        _print_footer(module, "clean target", host=filter_host)
     _run_local(context, "find . -name .DS_Store -exec rm -r {} \;")
 
 
-def _build(context, filter_module=None, is_release=False):
+def _build(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, filter_module=filter_module):
-        _print_header(module, "build process")
+        _print_header(module, "build process", host=filter_host)
         _process_target(context, module, is_release)
-        _print_footer(module, "build process")
+        _print_footer(module, "build process", host=filter_host)
     for module in _get_modules(context, "src", filter_module=filter_module):
-        _print_header(module, "build compile")
+        _print_header(module, "build compile", host=filter_host)
         if isdir(join(DIR_ROOT_MODULE, module, "src/main/python")):
             _print_line("Linting sources ...")
 
@@ -356,7 +356,7 @@ def _build(context, filter_module=None, is_release=False):
                 with open(join(DIR_ROOT_MODULE, module, 'target/package/Cargo.toml'), 'w') as cargo_file_destination:
                     cargo_file_destination.write(cargo_file_text)
             _run_local(context, "cargo update && cargo build", join(module, "target/package"))
-        _print_footer(module, "build compile")
+        _print_footer(module, "build compile", host=filter_host)
 
 
 def _unittest(context, filter_module=None):
@@ -463,9 +463,9 @@ def _release(context):
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in modules:
         for host in _get_hosts(module):
-            _clean(context, filter_module=module)
+            _clean(context, filter_module=module, filter_host=host)
             _generate(context, filter_module=module, filter_host=host, is_release=True)
-            _build(context, filter_module=module, is_release=True)
+            _build(context, filter_module=module, filter_host=host, is_release=True)
             _package(context, filter_module=module, filter_host=host, is_release=True)
             _print_header(module, "release", host=host)
             host_up = True
