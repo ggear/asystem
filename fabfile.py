@@ -187,19 +187,19 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
     version_messages = {type: [] for type in version_types}
     module_generate_stdout = {}
     for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
-        _print_header(module, "generate env")
+        _print_header(module, "generate env", host=filter_host)
         _write_env(context, module, join(DIR_ROOT_MODULE, module, "target/release") if is_release else join(DIR_ROOT_MODULE, module),
                    filter_host=filter_host, is_release=is_release)
-        _print_footer(module, "generate env")
+        _print_footer(module, "generate env", host=filter_host)
     for module in _get_modules(context, "generate.sh", filter_changes=False):
-        _print_header(module, "generate shell script")
+        _print_header(module, "generate shell script", host=filter_host)
         module_generate_stdout[module] = \
             _run_local(context, "{}/{}/generate.sh {}".format(DIR_ROOT_MODULE, module, is_pull), join(DIR_ROOT_MODULE, module)).stdout
-        _print_footer(module, "generate shell script")
+        _print_footer(module, "generate shell script", host=filter_host)
     for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
-        _print_header(module, "generate python script")
+        _print_header(module, "generate python script", host=filter_host)
         _run_local(context, "python {}/{}/src/build/python/{}/generate.py".format(DIR_ROOT_MODULE, module, _name(module)), DIR_ROOT)
-        _print_footer(module, "generate python script")
+        _print_footer(module, "generate python script", host=filter_host)
     if is_pull:
         for module in module_generate_stdout:
             for line in module_generate_stdout[module].splitlines():
@@ -291,10 +291,10 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                     version_messages[version_types[2]].append(version_formats[2].format(
                         module, "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
         for type in version_types:
-            _print_header("asystem", "pull versions {}".format(type))
+            _print_header("asystem", "pull versions {}".format(type), host=filter_host)
             for message in sorted(version_messages[type]):
                 print(message)
-            _print_footer("asystem", "pull versions {}".format(type))
+            _print_footer("asystem", "pull versions {}".format(type), host=filter_host)
 
 
 def _clean(context, filter_module=None):
@@ -381,7 +381,7 @@ def _unittest(context, filter_module=None):
 
 def _package(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
-        _print_header(module, "package", host=None if filter_host is None else filter_host)
+        _print_header(module, "package", host=filter_host)
         host_arch = HOSTS[_get_host(module) if filter_host is None else _get_host_label(filter_host)][1]
         if is_release and host_arch != "x86_64":
             _run_local(context, "docker buildx build "
@@ -397,7 +397,7 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
                                 "--build-arg GO_VERSION "
                                 "--tag {}:{} ."
                        .format(_name(module), _get_versions()[0]), module)
-        _print_footer(module, "package", host=None if filter_host is None else filter_host)
+        _print_footer(module, "package", host=filter_host)
 
 
 def _systest(context, filter_module=None):
@@ -467,7 +467,7 @@ def _release(context):
             _generate(context, filter_module=module, filter_host=host, is_release=True)
             _build(context, filter_module=module, is_release=True)
             _package(context, filter_module=module, filter_host=host, is_release=True)
-            _print_header(module, "release")
+            _print_header(module, "release", host=host)
             host_up = True
             try:
                 ssh_pass = _ssh_pass(context, host)
@@ -491,7 +491,7 @@ def _release(context):
                     _run_local(context, "cp -rvfp target/package/install* target/release", module)
                 else:
                     _run_local(context, "touch target/release/install.sh", module)
-                _print_header("{}/{}".format(host, _name(module)), "release")
+                _print_header("{}/{}".format(host, _name(module)), "release", host=host)
                 install = "{}/{}/{}".format(DIR_INSTALL, _get_service(module), _get_versions()[0])
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
@@ -514,10 +514,10 @@ def _release(context):
                 install_local_path = Path(join(DIR_ROOT_MODULE, module, "install_local.sh"))
                 if install_local_path.exists():
                     _run_local(context, install_local_path)
-                _print_footer("{}/{}".format(host, _name(module)), "release")
+                _print_footer("{}/{}".format(host, _name(module)), "release", host=host)
             else:
                 print("Module ignored")
-            _print_footer(module, "release")
+            _print_footer(module, "release", host=host)
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
