@@ -468,11 +468,7 @@ def _release(context):
     for module in modules:
         for host in _get_hosts(module):
             _clean(context, filter_module=module)
-
-            print(module)
-            exit(1)
-
-            _generate(context, filter_module=module, filter_host=module, is_release=True)
+            _generate(context, filter_module=module, filter_host=host, is_release=True)
             _build(context, filter_module=module, is_release=True)
             _package(context, filter_module=module, filter_host=host, is_release=True)
             _print_header(module, "release")
