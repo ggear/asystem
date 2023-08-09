@@ -1,12 +1,10 @@
-# https://github.com/influxdata/telegraf/releases
 version: '3.7'
 services:
   monitor:
     container_name: monitor
-    image: telegraf:1.27.3
+    image: monitor:${SERVICE_VERSION_ABSOLUTE}
     init: true
     restart: ${SERVICE_RESTART}
-    privileged: true
     environment:
       - TZ=Australia/Perth
       - HOST_IP
