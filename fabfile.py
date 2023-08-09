@@ -258,7 +258,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                 sorted(docker_image_tags_json["results"], key=lambda x: x['last_updated'], reverse=True):
                             docker_image_version = docker_image_metatdata_hub["name"]
                             if not any(substring.lower() in docker_image_version.lower()
-                                       for substring in [".0b", "-rc", "beta", "windows"]) and any(
+                                       for substring in ["rc", ".0b", "beta", "windows"]) and any(
                                 i.isdigit() for i in docker_image_version):
                                 docker_image_tags.append(docker_image_version)
                                 docker_image_version_match = re.match(docker_image_metadata["version_regex"], docker_image_version)

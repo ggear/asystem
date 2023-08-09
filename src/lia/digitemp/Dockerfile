@@ -8,7 +8,6 @@ RUN apt-get -y --no-install-recommends install build-essential=12.9
 RUN apt-get -y --no-install-recommends install libffi-dev=3.4.4-1
 RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.13.dfsg-1
 RUN apt-get -y --no-install-recommends install libssl-dev=3.0.9-1
-RUN apt-get -y --no-install-recommends install wget=1.21.3-1+b2
 RUN apt-get -y --no-install-recommends install jq=1.6-2.1
 RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1.2
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
