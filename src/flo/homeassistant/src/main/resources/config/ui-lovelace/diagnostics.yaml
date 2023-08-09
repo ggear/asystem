@@ -107,7 +107,7 @@
 - type: entities
   title: Device Conditions Rack
   entities:
-    - entity: sensor.utility_temperature_proxy
+    - entity: sensor.template_utility_temperature_proxy
       name: Rack Ambient
       icon: mdi:thermometer
     - entity: sensor.compensation_sensor_rack_top_temperature
@@ -124,8 +124,18 @@
       icon: mdi:thermometer
 ################################################################################
 - type: entities
+  title: Device Conditions Ceiling
+  entities:
+    - entity: sensor.template_deck_festoons_plug_temperature_proxy
+      name: Ceiling Ambient
+      icon: mdi:thermometer
+################################################################################
+- type: entities
   title: Device Conditions Wardrobe
   entities:
+    - entity: sensor.template_wardrobe_temperature_proxy
+      name: Wardobe Ambient
+      icon: mdi:thermometer
     - entity: sensor.compensation_sensor_host_lia_temperature
       name: Raspberry Pi Lia
       icon: mdi:thermometer

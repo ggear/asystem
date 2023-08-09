@@ -6,9 +6,20 @@ template:
   - sensor:
       #################################################################################
       - unique_id: utility_temperature_proxy
-        device_class: battery
+        device_class: temperature
         state_class: measurement
-        unit_of_measurement: "%"
-        state: >-
-          { states('sensor.utility_temperature') }
+        unit_of_measurement: "°C"
+        state: '{{ states("sensor.compensation_sensor_utility_temperature") | float(None) }}'
+      #################################################################################
+      - unique_id: deck_festoons_plug_temperature_proxy
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        state: '{{ states("sensor.compensation_sensor_deck_festoons_plug_temperature") | float(None) }}'
+      #################################################################################
+      - unique_id: wardrobe_temperature_proxy
+        device_class: temperature
+        state_class: measurement
+        unit_of_measurement: "°C"
+        state: '{{ states("sensor.compensation_sensor_wardrobe_temperature") | float(None) }}'
 #######################################################################################
