@@ -694,6 +694,10 @@ binary_sensor.host_lia_availability:
   friendly_name: 'Raspberry Pi Lia'
 button.synchronize_devices:
   friendly_name: 'Google Device Syncronise'
+sensor.utility_temperature_proxy:
+  friendly_name: 'Rack Ambient'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
 sensor.rack_top_temperature:
   friendly_name: 'Rack Top'
   icon: 'mdi:thermometer'

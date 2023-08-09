@@ -443,6 +443,60 @@ tplink:
 #######################################################################################
                 """.strip() + "\n")
 
+
+
+
+
+
+        # Build proxy YAML
+        metadata_proxy_df = metadata_hass_df[
+            (metadata_hass_df["index"] > 0) &
+            (metadata_hass_df["entity_status"] == "Enabled") &
+            (metadata_hass_df["device_via_device"] == "Proxy") &
+            (metadata_hass_df["entity_namespace"] == "sensor") &
+            (metadata_hass_df["unique_id"].str.len() > 0) &
+            (metadata_hass_df["friendly_name"].str.len() > 0) &
+            (metadata_hass_df["linked_entity"].str.len() > 0)
+            ]
+        metadata_proxy_dicts = [row.dropna().to_dict() for index, row in metadata_proxy_df.iterrows()]
+        metadata_proxy_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/proxy.yaml"))
+        with open(metadata_proxy_path, 'w') as metadata_proxy_file:
+            metadata_proxy_file.write("""
+#######################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!
+#######################################################################################
+template:
+  #####################################################################################
+            """.strip() + "\n")
+            for metadata_proxy_dict in metadata_proxy_dicts:
+                metadata_proxy_file.write("  " + """
+  - sensor:
+      #################################################################################
+      - unique_id: {}
+        device_class: battery
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >-
+          {{ states('sensor.{}') }}
+                    """.format(
+                    metadata_proxy_dict["unique_id"],
+                    metadata_proxy_dict["linked_entity"],
+                ).strip() + "\n")
+            metadata_proxy_file.write("""
+#######################################################################################
+                """.strip() + "\n")
+
+
+
+
+
+
+
+
+
+
+
+
     # Build media YAML
     metadata_media_df = metadata_hass_df[
         (metadata_hass_df["index"] > 0) &
