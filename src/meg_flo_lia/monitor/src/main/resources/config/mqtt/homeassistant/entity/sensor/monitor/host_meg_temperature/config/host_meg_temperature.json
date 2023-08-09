@@ -1,0 +1,21 @@
+{
+  "unique_id": "host_meg_temperature",
+  "name": "host_meg_temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": "false",
+  "state_topic": "telegraf/macmini-meg/monitor/sensors",
+  "value_template": "{{ (value_json[\"metrics\"] | selectattr('tags.feature', 'eq', 'package_id_0') | map(attribute='fields.temp_input') | first | default(None) | float(None)) if (value_json['metrics'] is defined) else (states('sensor.host_meg_temperature') | float(None)) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "Monitor",
+    "identifiers": "telegraf-rack-lia-temperature",
+    "name": "Rack Lia Temperature",
+    "model": "Sensors",
+    "manufacturer": "Telegraf",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

@@ -1,0 +1,42 @@
+{% set value_json={
+    "metrics":
+    [
+        {
+            "fields":
+            {
+                "temp_crit": 100,
+                "temp_crit_alarm": 0,
+                "temp_input": 49,
+                "temp_max": 84
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "coretemp-isa-0000",
+                "feature": "package_id_0",
+                "host": "macbook-flo"
+            },
+            "timestamp": 1691476060
+        },
+        {
+            "fields":
+            {
+                "temp_crit": 100,
+                "temp_crit_alarm": 0,
+                "temp_input": 48,
+                "temp_max": 84
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "coretemp-isa-0000",
+                "feature": "core_0",
+                "host": "macbook-flo"
+            },
+            "timestamp": 1691476060
+        }
+    ]
+} %}
+
+{% set temp=(value_json["metrics"] | selectattr('tags.feature', 'eq', 'package_id_0') | map(attribute='fields.temp_input') | first | default(None) | float(None)) if (value_json['metrics'] is defined) else (states('sensor.host_flo_temperature') | float(None)) %} {% if temp is not none %} {{ temp | round(1) }} {% else %} {{ None }} {% endif %}
+{{ (value_json["metrics"] | selectattr('tags.feature', 'eq', 'package_id_0') | map(attribute='fields.temp_input') | first | default(None) | float(None)) if (value_json['metrics'] is defined) else (states('sensor.host_flo_temperature') | float(None)) }}

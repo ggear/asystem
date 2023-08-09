@@ -694,6 +694,30 @@ binary_sensor.host_meg_availability:
   friendly_name: 'Meg'
 button.synchronize_devices:
   friendly_name: 'Google Device Syncronise'
+sensor.host_lia_temperature:
+  friendly_name: 'Lia'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_host_lia_temperature:
+  friendly_name: 'Lia'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.host_flo_temperature:
+  friendly_name: 'Flo'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_host_flo_temperature:
+  friendly_name: 'Flo'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.host_meg_temperature:
+  friendly_name: 'Meg'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_host_meg_temperature:
+  friendly_name: 'Meg'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
 sensor.rack_top_temperature:
   friendly_name: 'Rack Top'
   icon: 'mdi:thermometer'

@@ -1,0 +1,933 @@
+{% set value_json={
+    "metrics":
+    [
+        {
+            "fields":
+            {
+                "temp_crit": 100,
+                "temp_crit_alarm": 0,
+                "temp_input": 31,
+                "temp_max": 100
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "coretemp-isa-0000",
+                "feature": "package_id_0",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_crit": 100,
+                "temp_crit_alarm": 0,
+                "temp_input": 28,
+                "temp_max": 100
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "coretemp-isa-0000",
+                "feature": "core_0",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_crit": 100,
+                "temp_crit_alarm": 0,
+                "temp_input": 31,
+                "temp_max": 100
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "coretemp-isa-0000",
+                "feature": "core_1",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_alarm": 0,
+                "temp_crit": 84.85,
+                "temp_input": 21.85,
+                "temp_max": 69.85,
+                "temp_min": -0.15
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "nvme-pci-0400",
+                "feature": "composite",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "fan_input": 1794,
+                "fan_max": 4800,
+                "fan_min": 1800
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "exhaust__",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 26
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "ta0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 15.5
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "ta0v",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 26
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "ta0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 23.75
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "ta1p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 23.75
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "ta1p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 31.25
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "ta2p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 31.25
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "ta2p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 28
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc0c",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 31
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc0e",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 32.5
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc0f",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 93
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc0g",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 1.25
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc0j",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 27.75
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 28
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc0c",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 27.75
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 31
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc1c",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 31
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tc1c",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 32
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tcgc",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 32
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tcgc",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 98
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tcpg",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 27
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tcsc",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 27
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tcsc",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -0.25
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tctd",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 31
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tcxc",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 31
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tcxc",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -69
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tcxr",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0a",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0b",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0c",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0f",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 9
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0o",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0r",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0a",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0b",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th0c",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1a",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1b",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1c",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1f",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 9
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1o",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": -127
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1r",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 35
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1a",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 35
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1b",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 35
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "th1c",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 26
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tm0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 26
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tm0v",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 26
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tm0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 37
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tpcd",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 37
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tpcd",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 24
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "ts0v",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 24.5
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tw0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 24.5
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tw0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 34.5
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "te0t",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 34.5
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "te0t",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 24.25
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tm0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 24.25
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tm0p",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 29.75
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "tp0c",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        },
+        {
+            "fields":
+            {
+                "temp_input": 49
+            },
+            "name": "sensors",
+            "tags":
+            {
+                "chip": "applesmc-isa-0300",
+                "feature": "ts0g",
+                "host": "macmini-meg"
+            },
+            "timestamp": 1691544875
+        }
+    ]
+} %}
+
+{% set temp=(value_json["metrics"] | selectattr('tags.feature', 'eq', 'package_id_0') | map(attribute='fields.temp_input') | first | default(None) | float(None)) if (value_json['metrics'] is defined) else (states('sensor.host_meg_temperature') | float(None)) %} {% if temp is not none %} {{ temp | round(1) }} {% else %} {{ None }} {% endif %}
+{{ (value_json["metrics"] | selectattr('tags.feature', 'eq', 'package_id_0') | map(attribute='fields.temp_input') | first | default(None) | float(None)) if (value_json['metrics'] is defined) else (states('sensor.host_meg_temperature') | float(None)) }}
