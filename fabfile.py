@@ -379,14 +379,13 @@ def _unittest(context, filter_module=None):
         _print_footer(module, "unittest")
 
 
-def _package(context, filter_module=None, filter_host=None, is_release=False):
+def _package(context, filter_module=None, filter_host_label=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package")
 
-        print(_get_host(module) if filter_host is None else filter_host)
+        print(_get_host(module) if filter_host_label is None else filter_host_label)
 
-
-        host_arch = HOSTS[_get_host(module) if filter_host is None else filter_host][1]
+        host_arch = HOSTS[_get_host(module) if filter_host_label is None else filter_host_label][1]
         if is_release and host_arch != "x86_64":
             _run_local(context, "docker buildx build "
                                 "--progress=plain "
@@ -468,9 +467,9 @@ def _release(context):
     for module in modules:
         for host in _get_hosts(module):
             _clean(context, filter_module=module)
-            _generate(context, filter_module=module, filter_host=host, is_release=True)
+            _generate(context, filter_module=module, filter_host=module, is_release=True)
             _build(context, filter_module=module, is_release=True)
-            _package(context, filter_module=module, filter_host=host, is_release=True)
+            _package(context, filter_module=module, filter_host_label=_get_host_label(host), is_release=True)
             _print_header(module, "release")
             host_up = True
             try:
@@ -624,6 +623,10 @@ def _get_service(module):
 
 def _get_host(module):
     return module.split("/")[0].split("_")[0]
+
+
+def _get_host_label(host):
+    return host.split("-")[1]
 
 
 def _get_hosts(module):
