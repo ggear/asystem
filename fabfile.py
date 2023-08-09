@@ -379,10 +379,10 @@ def _unittest(context, filter_module=None):
         _print_footer(module, "unittest")
 
 
-def _package(context, filter_module=None, is_release=False):
+def _package(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
         _print_header(module, "package")
-        host_arch = HOSTS[_get_host(module)][1]
+        host_arch = HOSTS[_get_host(module) if filter_host is None else filter_host][1]
         if is_release and host_arch != "x86_64":
             _run_local(context, "docker buildx build "
                                 "--progress=plain "
@@ -466,7 +466,7 @@ def _release(context):
             _clean(context, filter_module=module)
             _generate(context, filter_module=module, filter_host=host, is_release=True)
             _build(context, filter_module=module, is_release=True)
-            _package(context, filter_module=module, is_release=True)
+            _package(context, filter_module=module, filter_host=host, is_release=True)
             _print_header(module, "release")
             host_up = True
             try:
