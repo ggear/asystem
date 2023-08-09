@@ -379,10 +379,10 @@ def _unittest(context, filter_module=None):
         _print_footer(module, "unittest")
 
 
-def _package(context, filter_module=None, filter_host_label=None, is_release=False):
+def _package(context, filter_module=None, filter_host=None, is_release=False):
     for module in _get_modules(context, "Dockerfile", filter_module=filter_module):
-        _print_header(module, "package")
-        host_arch = HOSTS[_get_host(module) if filter_host_label is None else _get_host_label(filter_host_label)][1]
+        _print_header(module, "package", host=None if filter_host is None else _get_host_label(filter_host))
+        host_arch = HOSTS[_get_host(module) if filter_host is None else _get_host_label(filter_host)][1]
         if is_release and host_arch != "x86_64":
             _run_local(context, "docker buildx build "
                                 "--progress=plain "
@@ -397,7 +397,7 @@ def _package(context, filter_module=None, filter_host_label=None, is_release=Fal
                                 "--build-arg GO_VERSION "
                                 "--tag {}:{} ."
                        .format(_name(module), _get_versions()[0]), module)
-        _print_footer(module, "package")
+        _print_footer(module, "package", host=None if filter_host is None else _get_host_label(filter_host))
 
 
 def _systest(context, filter_module=None):
@@ -466,7 +466,7 @@ def _release(context):
             _clean(context, filter_module=module)
             _generate(context, filter_module=module, filter_host=host, is_release=True)
             _build(context, filter_module=module, is_release=True)
-            _package(context, filter_module=module, filter_host_label=host, is_release=True)
+            _package(context, filter_module=module, filter_host=host, is_release=True)
             _print_header(module, "release")
             host_up = True
             try:
@@ -811,12 +811,14 @@ def _print_line(message):
     sys.stdout.flush()
 
 
-def _print_header(module, stage):
-    _print_line(HEADER.format(stage.upper(), module.lower().replace('/', '-'), _get_versions()[0]))
+def _print_header(module, stage, host=None):
+    label = module if host is None else module.replace(_get_host_label(host), "[" + _get_host_label(host) + "]")
+    _print_line(HEADER.format(stage.upper(), label.lower().replace('/', '-'), _get_versions()[0]))
 
 
-def _print_footer(module, stage):
-    _print_line(FOOTER.format(stage.upper(), module.lower().replace('/', '-'), _get_versions()[0]))
+def _print_footer(module, stage, host=None):
+    label = module if host is None else module.replace(_get_host_label(host), "[" + _get_host_label(host) + "]")
+    _print_line(FOOTER.format(stage.upper(), label.lower().replace('/', '-'), _get_versions()[0]))
 
 
 DIR_HOME = "/home/asystem"
