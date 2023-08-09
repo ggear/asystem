@@ -7,7 +7,7 @@
   "force_update": "false",
   "optimistic": "true",
   "state_topic": "tasmota/device/deck_festoons_plug/tele/SENSOR",
-  "value_template": "{{ value_json['SI7021']['Humidity'] if (value_json['SI7021']['Humidity'] is defined and (value_json['SI7021']['Humidity'] | float(-200) > 0) and (value_json['SI7021']['Humidity'] | float(200) < 101)) else (states('sensor.deck_festoons_plug_humidity') | float(None)) }}",
+  "value_template": "{{ value_json['SI7021']['Humidity'] if (value_json['SI7021']['Humidity'] is defined and (value_json['SI7021']['Humidity'] | int(-200) > 0) and (value_json['SI7021']['Humidity'] | int(200) < 101)) else (states('sensor.deck_festoons_plug_humidity') | int(None)) }}",
   "availability_topic": "tasmota/device/deck_festoons_plug/tele/LWT",
   "payload_on": "ON",
   "payload_off": "OFF",

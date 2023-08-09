@@ -7,6 +7,7 @@ local graph_containers = import 'graph_containers.jsonnet';
 local graph_equity = import 'graph_equity.jsonnet';
 local graph_health = import 'graph_health.jsonnet';
 local graph_network = import 'graph_network.jsonnet';
+local graph_diagnostics = import 'graph_diagnostics.jsonnet';
 local graph_water = import 'graph_water.jsonnet';
 local graph_conditions = import 'graph_conditions.jsonnet';
 local graph_electricity = import 'graph_electricity.jsonnet';
@@ -101,6 +102,20 @@ local graph_interest = import 'graph_interest.jsonnet';
                         time_from='now-6h', refresh='', timepicker=timepicker.new(refresh_intervals=['30s'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_network.graphs()),
+
+
+            diagnostics_dashboard:
+                  dashboard.new(
+                        schemaVersion=30,
+                        title='Diagnostics',
+                        uid='diagnostics-desktop',
+                        editable=true,
+                        hideControls=false,
+                        graphTooltip='shared_tooltip',
+                        tags=['private', 'desktop'],
+                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                  )
+                  .addPanels(graph_diagnostics.graphs()),
 
 
             water_dashboard:
