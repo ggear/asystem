@@ -686,14 +686,30 @@ binary_sensor.service_unifipoller_availability:
   friendly_name: 'Unifipoller'
 binary_sensor.service_monitor_availability:
   friendly_name: 'Monitor'
-binary_sensor.host_lia_availability:
-  friendly_name: 'Lia'
 binary_sensor.host_flo_availability:
-  friendly_name: 'Flo'
+  friendly_name: 'MacBook Flo'
 binary_sensor.host_meg_availability:
-  friendly_name: 'Meg'
+  friendly_name: 'Mac Mini Meg'
+binary_sensor.host_lia_availability:
+  friendly_name: 'Raspberry Pi Lia'
 button.synchronize_devices:
   friendly_name: 'Google Device Syncronise'
+sensor.rack_top_temperature:
+  friendly_name: 'Rack Top'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_rack_top_temperature:
+  friendly_name: 'Rack Top'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.rack_bottom_temperature:
+  friendly_name: 'Rack Bottom'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_rack_bottom_temperature:
+  friendly_name: 'Rack Bottom'
+  icon: 'mdi:thermometer'
+  unit_of_measurement: '°C'
 sensor.host_flo_temperature:
   friendly_name: 'MacBook Flo'
   icon: 'mdi:thermometer'
@@ -716,22 +732,6 @@ sensor.host_lia_temperature:
   unit_of_measurement: '°C'
 sensor.compensation_sensor_host_lia_temperature:
   friendly_name: 'Raspberry Pi Lia'
-  icon: 'mdi:thermometer'
-  unit_of_measurement: '°C'
-sensor.rack_top_temperature:
-  friendly_name: 'Rack Top'
-  icon: 'mdi:thermometer'
-  unit_of_measurement: '°C'
-sensor.compensation_sensor_rack_top_temperature:
-  friendly_name: 'Rack Top'
-  icon: 'mdi:thermometer'
-  unit_of_measurement: '°C'
-sensor.rack_bottom_temperature:
-  friendly_name: 'Rack Bottom'
-  icon: 'mdi:thermometer'
-  unit_of_measurement: '°C'
-sensor.compensation_sensor_rack_bottom_temperature:
-  friendly_name: 'Rack Bottom'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
 sensor.back_door_lock_battery:
