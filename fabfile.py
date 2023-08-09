@@ -491,7 +491,6 @@ def _release(context):
                     _run_local(context, "cp -rvfp target/package/install* target/release", module)
                 else:
                     _run_local(context, "touch target/release/install.sh", module)
-                _print_header("{}/{}".format(host, _name(module)), "release", host=host)
                 install = "{}/{}/{}".format(DIR_INSTALL, _get_service(module), _get_versions()[0])
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
@@ -514,7 +513,6 @@ def _release(context):
                 install_local_path = Path(join(DIR_ROOT_MODULE, module, "install_local.sh"))
                 if install_local_path.exists():
                     _run_local(context, install_local_path)
-                _print_footer("{}/{}".format(host, _name(module)), "release", host=host)
             else:
                 print("Module ignored")
             _print_footer(module, "release", host=host)
