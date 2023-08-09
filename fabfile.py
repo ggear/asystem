@@ -466,12 +466,13 @@ def _release(context):
                    .format(_get_versions()[0], _get_versions()[0], _get_versions()[0]), env={"HOME": os.environ["HOME"]})
     for module in modules:
         for host in _get_hosts(module):
-            _clean(context, filter_module=module)
-            _generate(context, filter_module=module, filter_host=module, is_release=True)
-            _build(context, filter_module=module, is_release=True)
 
             print(_get_host_label(host))
 
+
+            _clean(context, filter_module=module)
+            _generate(context, filter_module=module, filter_host=module, is_release=True)
+            _build(context, filter_module=module, is_release=True)
             _package(context, filter_module=module, filter_host_label=_get_host_label(host), is_release=True)
             _print_header(module, "release")
             host_up = True
