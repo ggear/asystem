@@ -14,6 +14,7 @@ services:
       - INFLUXDB_TOKEN
     volumes:
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
+      - ${SERVICE_DATA_DIR}:/asystem/runtime
     logging:
       driver: "json-file"
       options:

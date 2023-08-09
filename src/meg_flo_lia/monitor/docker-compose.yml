@@ -27,6 +27,7 @@ services:
       - /run/utmp:/hostfs/var/run/utmp:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ${SERVICE_DATA_DIR}:/asystem/runtime
     logging:
       driver: "json-file"
       options:
