@@ -5,14 +5,10 @@ x-common: &common
   user: root
   environment:
     - TZ=Australia/Perth
-    - POSTGRES_HOST
-    - POSTGRES_PORT
-    - POSTGRES_USER=${POSTGRES_USER}
-    - PGPASSWORD=${POSTGRES_KEY}
-    - POSTGRES_PASSWORD=${POSTGRES_KEY}
-    - POSTGRES_USER_HASS
-    - POSTGRES_KEY_HASS
-    - POSTGRES_DATABASE_HASS
+    - TIMESCALEDB_HOST
+    - TIMESCALEDB_PORT
+    - POSTGRES_USER=${TIMESCALEDB_USER}
+    - POSTGRES_PASSWORD=${TIMESCALEDB_KEY}
     - PGDATA=/var/lib/postgresql/data/pgdata
   logging:
     driver: "json-file"
@@ -28,7 +24,7 @@ services:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}:/var/lib/postgresql/data
     ports:
-      - ${POSTGRES_PORT}:5432
+      - ${TIMESCALEDB_PORT}:5432
     deploy:
       resources:
         limits:

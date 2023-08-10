@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! pg_isready -q -h ${POSTGRES_HOST} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -t 1 >/dev/null 2>&1; do
+while ! pg_isready -q -h ${TIMESCALEDB_HOST} -p ${TIMESCALEDB_PORT} -U ${POSTGRES_USER} -t 1 >/dev/null 2>&1; do
   echo "Waiting for service to come up ..." && sleep 1
 done
 
