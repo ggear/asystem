@@ -1,5 +1,6 @@
 {
   "object_id": "ceiling_water_booster_plug_energy_total",
+  "unique_id": "ceiling_water_booster_plug_energy_total",
   "name": "Ceiling Water Booster Plug Energy Total",
   "state_class": "total_increasing",
   "unit_of_measurement": "kWh",

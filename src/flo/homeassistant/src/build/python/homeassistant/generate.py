@@ -87,7 +87,8 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df):
                 "payload_not_available",
                 "qos",
             ]].dropna().to_dict()
-            metadata_dict_clone = {"object_id": metadata_dict.pop("unique_id")}
+            metadata_unique_id = metadata_dict["unique_id"]
+            metadata_dict_clone = {"object_id": metadata_dict["unique_id"]}
             metadata_dict_clone.update(metadata_dict)
             metadata_dict = metadata_dict_clone
             metadata_dict["device"] = row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
@@ -96,11 +97,11 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df):
             metadata_publish_dir = abspath(join(metadata_publish_dir_root, row['discovery_topic']))
             os.makedirs(metadata_publish_dir)
             metadata_publish_str = json.dumps(metadata_dict, ensure_ascii=False, indent=2) + "\n"
-            metadata_publish_path = abspath(join(metadata_publish_dir, metadata_dict["object_id"] + ".json"))
+            metadata_publish_path = abspath(join(metadata_publish_dir, metadata_unique_id + ".json"))
             with open(metadata_publish_path, 'a') as metadata_publish_file:
                 metadata_publish_file.write(metadata_publish_str)
                 print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
-                      .format(module_name, metadata_dict["object_id"], metadata_publish_path))
+                      .format(module_name, metadata_unique_id, metadata_publish_path))
 
 
 if __name__ == "__main__":

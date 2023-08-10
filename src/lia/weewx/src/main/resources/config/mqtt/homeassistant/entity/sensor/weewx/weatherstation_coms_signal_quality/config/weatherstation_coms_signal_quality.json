@@ -1,5 +1,6 @@
 {
   "object_id": "weatherstation_coms_signal_quality",
+  "unique_id": "weatherstation_coms_signal_quality",
   "name": "Weatherstation Coms Signal Quality",
   "force_update": "false",
   "state_topic": "weewx/weatherstation_coms_signal_quality",

@@ -1,5 +1,6 @@
 {
   "object_id": "rack_fans_plug",
+  "unique_id": "rack_fans_plug",
   "name": "Rack Fans Plug",
   "icon": "mdi:server-remove",
   "force_update": "false",

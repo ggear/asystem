@@ -1,5 +1,6 @@
 {
   "object_id": "roof_yearly_rain",
+  "unique_id": "roof_yearly_rain",
   "name": "Roof Yearly Rain",
   "state_class": "total",
   "unit_of_measurement": "cm",

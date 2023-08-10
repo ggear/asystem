@@ -1,5 +1,6 @@
 {
   "object_id": "network_certificate_expiry",
+  "unique_id": "network_certificate_expiry",
   "name": "Network Certificate Expiry",
   "state_class": "measurement",
   "unit_of_measurement": "d",

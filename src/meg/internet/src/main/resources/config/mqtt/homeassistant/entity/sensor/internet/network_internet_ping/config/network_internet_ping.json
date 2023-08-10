@@ -1,5 +1,6 @@
 {
   "object_id": "network_internet_ping",
+  "unique_id": "network_internet_ping",
   "name": "Network Internet Ping",
   "state_class": "measurement",
   "unit_of_measurement": "ms",

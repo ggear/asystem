@@ -1,5 +1,6 @@
 {
   "object_id": "landing_festoons_plug_temperature",
+  "unique_id": "landing_festoons_plug_temperature",
   "name": "Landing Festoons Plug Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",

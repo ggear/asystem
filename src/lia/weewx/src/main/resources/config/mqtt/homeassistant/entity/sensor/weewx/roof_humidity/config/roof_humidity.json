@@ -1,5 +1,6 @@
 {
   "object_id": "roof_humidity",
+  "unique_id": "roof_humidity",
   "name": "Roof Humidity",
   "state_class": "measurement",
   "unit_of_measurement": "%",

@@ -1,5 +1,6 @@
 {
   "object_id": "garden_pool_filter_plug",
+  "unique_id": "garden_pool_filter_plug",
   "name": "Garden Pool Filter Plug",
   "icon": "mdi:pool",
   "force_update": "false",

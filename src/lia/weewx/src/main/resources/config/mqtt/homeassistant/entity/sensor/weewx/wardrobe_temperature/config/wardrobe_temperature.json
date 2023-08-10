@@ -1,5 +1,6 @@
 {
   "object_id": "wardrobe_temperature",
+  "unique_id": "wardrobe_temperature",
   "name": "Wardrobe Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",

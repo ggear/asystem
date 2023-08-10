@@ -1,5 +1,6 @@
 {
   "object_id": "roof_24hour_rain",
+  "unique_id": "roof_24hour_rain",
   "name": "Roof 24Hour Rain",
   "state_class": "total",
   "unit_of_measurement": "mm",

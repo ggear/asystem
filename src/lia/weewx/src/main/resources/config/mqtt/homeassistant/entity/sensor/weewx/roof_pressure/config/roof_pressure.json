@@ -1,5 +1,6 @@
 {
   "object_id": "roof_pressure",
+  "unique_id": "roof_pressure",
   "name": "Roof Pressure",
   "state_class": "measurement",
   "unit_of_measurement": "mbar",

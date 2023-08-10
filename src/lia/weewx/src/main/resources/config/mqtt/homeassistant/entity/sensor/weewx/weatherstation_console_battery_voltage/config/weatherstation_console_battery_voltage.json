@@ -1,5 +1,6 @@
 {
   "object_id": "weatherstation_console_battery_voltage",
+  "unique_id": "weatherstation_console_battery_voltage",
   "name": "Weatherstation Console Battery Voltage",
   "state_class": "measurement",
   "unit_of_measurement": "V",

@@ -1,5 +1,6 @@
 {
   "object_id": "rack_bottom_temperature",
+  "unique_id": "rack_bottom_temperature",
   "name": "Rack Bottom Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",

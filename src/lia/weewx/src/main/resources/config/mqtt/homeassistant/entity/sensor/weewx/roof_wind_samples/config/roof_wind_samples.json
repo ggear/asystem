@@ -1,5 +1,6 @@
 {
   "object_id": "roof_wind_samples",
+  "unique_id": "roof_wind_samples",
   "name": "Roof Wind Samples",
   "state_class": "measurement",
   "icon": "mdi:weather-windy",

@@ -1,5 +1,6 @@
 {
   "object_id": "host_meg_availability",
+  "unique_id": "host_meg_availability",
   "name": "Host Meg Availability",
   "device_class": "running",
   "force_update": "false",
