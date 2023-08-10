@@ -10,10 +10,10 @@ printf "Entity Metadata publish script dropping topics complete\n\n"
 
 printf "Entity Metadata publish script sleeping before publishing ... " && sleep 2 && printf "done\n\n"
 
-${ROOT_DIR}/../../lia/weewx/deploy.sh
-${ROOT_DIR}/../../meg/tasmota/deploy.sh
-${ROOT_DIR}/../../lia/digitemp/deploy.sh
-${ROOT_DIR}/../../meg/internet/deploy.sh
-${ROOT_DIR}/../../meg_flo_lia/monitor/deploy.sh
-${ROOT_DIR}/../../meg_flo_lia/supervise/deploy.sh
-${ROOT_DIR}/../../lia/zigbee2mqtt/deploy.sh
+${ROOT_DIR}/../../*/weewx/deploy.sh
+${ROOT_DIR}/../../*/tasmota/deploy.sh
+${ROOT_DIR}/../../*/digitemp/deploy.sh
+${ROOT_DIR}/../../*/internet/deploy.sh
+${ROOT_DIR}/../../*/monitor/deploy.sh
+${ROOT_DIR}/../../*/supervise/deploy.sh
+${ROOT_DIR}/../../*/zigbee2mqtt/deploy.sh
