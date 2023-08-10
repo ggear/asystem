@@ -95,10 +95,6 @@ mqtt:
 #    qos: 3
 #    retain: true
 #######################################################################################
-discovery:
-  ignore:
-    - 'homekit'
-#######################################################################################
 google_assistant:
   project_id: 'home-assistant-31854'
   service_account: !include .google_service_account.json

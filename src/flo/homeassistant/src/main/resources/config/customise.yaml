@@ -1981,6 +1981,22 @@ sensor.hallway_sconces_bulb_1_energy_monthly:
 sensor.hallway_sconces_bulb_1_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
+sensor.hallway_sconces_bulb_2_power:
+  friendly_name: 'Current Power'
+sensor.hallway_sconces_bulb_2_energy:
+  friendly_name: 'Total Energy'
+sensor.hallway_sconces_bulb_2_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.hallway_sconces_bulb_2_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.hallway_sconces_bulb_2_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.hallway_sconces_bulb_2_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.dining_main_bulb_1_power:
   friendly_name: 'Current Power'
 sensor.dining_main_bulb_1_energy:

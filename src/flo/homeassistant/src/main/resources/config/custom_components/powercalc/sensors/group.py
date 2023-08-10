@@ -492,7 +492,16 @@ class GroupedSensor(BaseEntity, RestoreSensor, SensorEntity):
                 _LOGGER.warning("Could not restore last state: %s", err)
 
             # throttle group energy updates to only once each 30 seconds
-            state_listener = Throttle(timedelta(seconds=30))(state_listener)
+            
+
+
+            # HACK: Reduce group update throttle threshold to 5s
+            # state_listener = Throttle(timedelta(seconds=30))(state_listener)
+            state_listener = Throttle(timedelta(seconds=5))(state_listener)
+            # HACK: End hack
+
+
+
 
         self._prev_state_store = await PreviousStateStore.async_get_instance(self.hass)
 

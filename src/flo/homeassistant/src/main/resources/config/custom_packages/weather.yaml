@@ -511,11 +511,11 @@ binary_sensor:
       - elevation:
           above: 25
           name: Sun Above 25
-  - platform: workday
-    country: AU
-    province: WA
-    workdays: [ mon, tue, wed, thu, fri ]
-    excludes: [ sat, sun, holiday ]
+#  - platform: workday
+#    country: AU
+#    province: WA
+#    workdays: [ mon, tue, wed, thu, fri ]
+#    excludes: [ sat, sun, holiday ]
 
 automation:
   - alias: 'Weather: Update BOM Icons'

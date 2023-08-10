@@ -14,7 +14,624 @@ powercalc:
     - weekly
     - monthly
     - yearly
-#######################################################################################
+  #####################################################################################
+  sensors:
+    ###################################################################################
+    - entity_id: binary_sensor.template_old_kitchen_fan_plug_proxy
+      standby_power: 1.54
+      unavailable_power: 0
+      fixed:
+        power: 2.19
+    ###################################################################################
+    - entity_id: switch.old_kitchen_fan_plug
+      power_sensor_id: sensor.old_kitchen_fan_plug_current_consumption
+      force_energy_sensor_creation: true
+    ###################################################################################
+    - entity_id: binary_sensor.template_old_kitchen_downlights_plug_proxy
+      standby_power: 1.54
+      unavailable_power: 0
+      fixed:
+        power: 2.19
+    ###################################################################################
+    - entity_id: switch.old_kitchen_downlights_plug
+      power_sensor_id: sensor.old_kitchen_downlights_plug_current_consumption
+      force_energy_sensor_creation: true
+    ###################################################################################
+    - entity_id: binary_sensor.template_old_deck_festoons_plug_proxy
+      standby_power: 0.5
+      unavailable_power: 0
+      fixed:
+        power: 0.9
+    ###################################################################################
+    - entity_id: switch.old_deck_festoons_plug
+      power_sensor_id: sensor.old_deck_festoons_plug_current_consumption
+      force_energy_sensor_creation: true
+    ###################################################################################
+    - entity_id: binary_sensor.template_old_landing_festoons_plug_proxy
+      standby_power: 0.5
+      unavailable_power: 0
+      fixed:
+        power: 0.9
+    ###################################################################################
+    - entity_id: switch.old_landing_festoons_plug
+      power_sensor_id: sensor.old_landing_festoons_plug_current_consumption
+      force_energy_sensor_creation: true
+    ###################################################################################
+    - entity_id: sensor.all_standby
+      power_sensor_id: sensor.all_standby_power
+      energy_sensor_id: sensor.all_standby_energy
+    ###################################################################################
+    - entity_id: binary_sensor.template_old_rack_outlet_plug_proxy
+      standby_power: 1.54
+      unavailable_power: 0
+      fixed:
+        power: 2.19
+    ###################################################################################
+    - entity_id: switch.old_rack_outlet_plug
+      power_sensor_id: sensor.old_rack_outlet_plug_current_consumption
+      force_energy_sensor_creation: true
+    ###################################################################################
+    - entity_id: binary_sensor.template_old_roof_network_switch_plug_proxy
+      standby_power: 1.54
+      unavailable_power: 0
+      fixed:
+        power: 2.19
+    ###################################################################################
+    - entity_id: switch.old_roof_network_switch_plug
+      power_sensor_id: sensor.old_roof_network_switch_plug_current_consumption
+      force_energy_sensor_creation: true
+    ###################################################################################
+    - entity_id: fan.rack_fans_plug
+      standby_power: 0.6
+      fixed:
+        power: 16.2
+    ###################################################################################
+    - entity_id: media_player.lounge_arc
+      name: Lounge Arc
+    ###################################################################################
+    - create_group: Server Flo
+      entities:
+        - entity_id: binary_sensor.template_server_flo_plug_proxy
+          standby_power: 0.5
+          unavailable_power: 0
+          fixed:
+            power: 0.9
+        - entity_id: switch.server_flo_plug
+          power_sensor_id: sensor.server_flo_plug_current_consumption
+          force_energy_sensor_creation: true
+    ###################################################################################
+    - create_group: Server Meg
+      entities:
+        - entity_id: binary_sensor.template_server_meg_plug_proxy
+          standby_power: 0.5
+          unavailable_power: 0
+          fixed:
+            power: 0.9
+        - entity_id: switch.server_meg_plug
+          power_sensor_id: sensor.server_meg_plug_current_consumption
+          force_energy_sensor_creation: true
+    ###################################################################################
+    - create_group: Internet Modem
+      entities:
+        - entity_id: binary_sensor.template_rack_internet_modem_plug_proxy
+          standby_power: 0.5
+          unavailable_power: 0
+          fixed:
+            power: 0.9
+        - entity_id: switch.rack_internet_modem_plug
+          power_sensor_id: sensor.rack_internet_modem_plug_current_consumption
+          force_energy_sensor_creation: true
+    ###################################################################################
+    - create_group: Home
+      entities:
+        ###############################################################################
+        - create_group: Home Base
+          entities:
+            ###########################################################################
+            - create_group: Fans
+              entities:
+                #######################################################################
+                - create_group: Ada Fans
+                  entities:
+                    - entity_id: fan.ada_fan
+                      standby_power: 1.3
+                      linear:
+                        min_power: 2.5
+                        max_power: 31.1
+                #######################################################################
+                - create_group: Edwin Fans
+                  entities:
+                    - entity_id: fan.edwin_fan
+                      standby_power: 1.3
+                      linear:
+                        min_power: 2.5
+                        max_power: 31.1
+                #######################################################################
+                - create_group: Parents Fans
+                  entities:
+                    - entity_id: fan.parents_fan
+                      standby_power: 1.3
+                      linear:
+                        min_power: 2.5
+                        max_power: 31.1
+                #######################################################################
+                - create_group: Kitchen Fans
+                  entities:
+                    - entity_id: binary_sensor.template_kitchen_fan_plug_proxy
+                      standby_power: 1.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 2
+                    - entity_id: fan.kitchen_fan_plug
+                      power_sensor_id: sensor.kitchen_fan_plug_energy_power
+                      energy_sensor_id: sensor.kitchen_fan_plug_energy_total
+                #######################################################################
+                - create_group: Lounge Fans
+                  entities:
+                    - entity_id: fan.lounge_fan
+                      standby_power: 1.3
+                      linear:
+                        min_power: 2.5
+                        max_power: 31.1
+                    - entity_id: binary_sensor.template_lounge_air_purifier_proxy
+                      standby_power: 0.5
+                      linear:
+                        attribute: fan_speed
+                        calibrate:
+                          - 0 -> 0
+                          - 1 -> 1.7
+                          - 2 -> 3.6
+                          - 3 -> 8.1
+                          - 4 -> 16.6
+                          - 5 -> 21.9
+                #######################################################################
+                - create_group: Deck Fans
+                  entities:
+                    - entity_id: fan.deck_east_fan
+                      standby_power: 1.3
+                      linear:
+                        min_power: 2.5
+                        max_power: 31.1
+                    - entity_id: fan.deck_west_fan
+                      standby_power: 1.3
+                      linear:
+                        min_power: 2.5
+                        max_power: 31.1
+                #######################################################################
+                - create_group: Dining Fans
+                  entities:
+                    - entity_id: binary_sensor.template_dining_air_purifier_proxy
+                      standby_power: 0.5
+                      linear:
+                        attribute: fan_speed
+                        calibrate:
+                          - 0 -> 0
+                          - 1 -> 1.7
+                          - 2 -> 3.6
+                          - 3 -> 8.1
+                          - 4 -> 16.6
+                          - 5 -> 21.9
+            ###########################################################################
+            - create_group: Lights
+              entities:
+                #######################################################################
+                - create_group: Ada Lights
+                  entities:
+                    - entity_id: light.ada_fan
+                      name: Ada Main Fan Light
+                      unique_id: ada_main_light_fan
+                      linear:
+                        min_power: 0.5
+                        max_power: 16.3
+                    - entity_id: light.ada_lamp_bulb_1
+                #######################################################################
+                - create_group: Edwin Lights
+                  entities:
+                    - entity_id: light.edwin_lamp_bulb_1
+                    - entity_id: light.edwin_fan
+                      name: Edwin Main Fan Light
+                      unique_id: edwin_main_light_fan
+                      linear:
+                        min_power: 0.5
+                        max_power: 16.3
+                    - entity_id: light.edwin_night_light_bulb_1
+                #######################################################################
+                - create_group: Hallway Lights
+                  entities:
+                    - entity_id: light.hallway_main_bulb_1
+                    - entity_id: light.hallway_main_bulb_2
+                    - entity_id: light.hallway_main_bulb_3
+                    - entity_id: light.hallway_main_bulb_4
+                    - entity_id: light.hallway_sconces_bulb_1
+                    - entity_id: light.hallway_sconces_bulb_2
+                #######################################################################
+                - create_group: Dining Lights
+                  entities:
+                    - entity_id: light.dining_main_bulb_1
+                    - entity_id: light.dining_main_bulb_2
+                    - entity_id: light.dining_main_bulb_3
+                    - entity_id: light.dining_main_bulb_4
+                    - entity_id: light.dining_main_bulb_5
+                    - entity_id: light.dining_main_bulb_6
+                #######################################################################
+                - create_group: Lounge Lights
+                  entities:
+                    - entity_id: light.lounge_main_bulb_1
+                    - entity_id: light.lounge_main_bulb_2
+                    - entity_id: light.lounge_main_bulb_3
+                    - entity_id: light.lounge_fan
+                      name: Lounge Fan Light
+                      unique_id: lounge_light_fan
+                      linear:
+                        min_power: 0.5
+                        max_power: 16.3
+                    - entity_id: light.lounge_lamp_bulb_1
+                #######################################################################
+                - create_group: Parents Lights
+                  entities:
+                    - entity_id: light.parents_main_bulb_1
+                    - entity_id: light.parents_main_bulb_2
+                    - entity_id: light.parents_main_bulb_3
+                    - entity_id: light.parents_jane_bedside_bulb_1
+                    - entity_id: light.parents_graham_bedside_bulb_1
+                #######################################################################
+                - create_group: Study Lights
+                  entities:
+                    - entity_id: light.study_lamp_bulb_1
+                #######################################################################
+                - create_group: Kitchen Lights
+                  entities:
+                    - entity_id: light.kitchen_main_bulb_1
+                    - entity_id: light.kitchen_main_bulb_2
+                    - entity_id: light.kitchen_main_bulb_3
+                    - entity_id: light.kitchen_main_bulb_4
+                    - entity_id: light.kitchen_downlights_plug
+                      standby_power: 0.6
+                      fixed:
+                        power: 35.2
+                #######################################################################
+                - create_group: Laundry Lights
+                  entities:
+                    - entity_id: light.laundry_main_bulb_1
+                #######################################################################
+                - create_group: Pantry Lights
+                  entities:
+                    - entity_id: light.pantry_main_bulb_1
+                #######################################################################
+                - create_group: Office Lights
+                  entities:
+                    - entity_id: light.office_main_bulb_1
+                #######################################################################
+                - create_group: Bathroom Lights
+                  entities:
+                    - entity_id: light.bathroom_main_bulb_1
+                    - entity_id: light.bathroom_sconces_bulb_1
+                    - entity_id: light.bathroom_sconces_bulb_2
+                #######################################################################
+                - create_group: Ensuite Lights
+                  entities:
+                    - entity_id: light.ensuite_main_bulb_1
+                    - entity_id: light.ensuite_sconces_bulb_1
+                    - entity_id: light.ensuite_sconces_bulb_2
+                    - entity_id: light.ensuite_sconces_bulb_3
+                #######################################################################
+                - create_group: Wardrobe Lights
+                  entities:
+                    - entity_id: light.wardrobe_main_bulb_1
+                #######################################################################
+                - create_group: Deck Lights
+                  entities:
+                    - entity_id: binary_sensor.template_deck_festoons_plug_proxy
+                      standby_power: 1.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 2
+                    - entity_id: light.deck_festoons_plug
+                      standby_power: 0
+                      fixed:
+                        power: 4.5
+                #######################################################################
+                - create_group: Landing Lights
+                  entities:
+                    - entity_id: binary_sensor.template_landing_festoons_plug_proxy
+                      standby_power: 1.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 2
+                    - entity_id: light.landing_festoons_plug
+                      standby_power: 0
+                      fixed:
+                        power: 31
+                #######################################################################
+                - create_group: Tree Lights
+                  entities:
+                    - entity_id: light.tree_spotlights_bulb_1
+                    - entity_id: light.tree_spotlights_bulb_2
+            ###########################################################################
+            - create_group: Audio Visual Devices
+              entities:
+                #######################################################################
+                - create_group: Lounge TV
+                  entities:
+                    - entity_id: binary_sensor.template_lounge_tv_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.lounge_tv_plug
+                      power_sensor_id: sensor.lounge_tv_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Lounge Sub
+                  entities:
+                    - entity_id: binary_sensor.template_lounge_sub_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.lounge_sub_plug
+                      power_sensor_id: sensor.lounge_sub_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Ada Tablet
+                  entities:
+                    - entity_id: binary_sensor.template_ada_tablet_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.ada_tablet_plug
+                      power_sensor_id: sensor.ada_tablet_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Ada Home Devices
+                  entities:
+                    - entity_id: media_player.ada_home
+                #######################################################################
+                - create_group: Edwin Home Devices
+                  entities:
+                    - entity_id: media_player.edwin_home
+                #######################################################################
+                - create_group: Parents Home Devices
+                  entities:
+                    - entity_id: media_player.parents_home
+                      model: Nest Hub 2gen
+                #######################################################################
+                - create_group: Kitchen Home Devices
+                  entities:
+                    - entity_id: media_player.kitchen_home
+                      model: Nest Hub 2gen
+                #######################################################################
+                - create_group: Office Home Devices
+                  entities:
+                    - entity_id: media_player.office_home
+                #######################################################################
+                - create_group: Lounge Home Devices
+                  entities:
+                    - entity_id: media_player.lounge_home
+                #######################################################################
+                - create_group: Kitchen Move Devices
+                  entities:
+                    - entity_id: media_player.kitchen_move
+                #######################################################################
+                - create_group: Kitchen Five Devices
+                  entities:
+                    - entity_id: media_player.kitchen_five
+                #######################################################################
+                - create_group: Parents Move Devices
+                  entities:
+                    - entity_id: media_player.parents_move
+            ###########################################################################
+            - create_group: Power Plugs
+              entities:
+                #######################################################################
+                - create_group: Study Outlet
+                  entities:
+                    - entity_id: binary_sensor.template_study_outlet_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.study_outlet_plug
+                      power_sensor_id: sensor.study_outlet_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Office Outlet
+                  entities:
+                    - entity_id: binary_sensor.template_office_outlet_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.office_outlet_plug
+                      power_sensor_id: sensor.office_outlet_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Battery Charger
+                  entities:
+                    - entity_id: binary_sensor.template_study_battery_charger_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.study_battery_charger_plug
+                      power_sensor_id: sensor.study_battery_charger_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Vacuum Charger
+                  entities:
+                    - entity_id: binary_sensor.template_laundry_vacuum_charger_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.laundry_vacuum_charger_plug
+                      power_sensor_id: sensor.laundry_vacuum_charger_plug_current_consumption
+                      force_energy_sensor_creation: true
+            ###########################################################################
+            - create_group: Whitegoods Continuous
+              entities:
+                #######################################################################
+                - create_group: Kitchen Fridge
+                  entities:
+                    - entity_id: binary_sensor.template_kitchen_fridge_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.kitchen_fridge_plug
+                      power_sensor_id: sensor.kitchen_fridge_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Deck Freezer
+                  entities:
+                    - entity_id: binary_sensor.template_deck_freezer_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.deck_freezer_plug
+                      power_sensor_id: sensor.deck_freezer_plug_current_consumption
+                      force_energy_sensor_creation: true
+            ###########################################################################
+            - create_group: Servers & Network
+              entities:
+                #######################################################################
+                - create_group: Server Rack
+                  entities:
+                    - entity_id: binary_sensor.template_rack_outlet_plug_proxy
+                      standby_power: 1.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 2
+                    - entity_id: switch.rack_outlet_plug
+                      power_sensor_id: sensor.rack_outlet_plug_energy_power
+                      energy_sensor_id: sensor.rack_outlet_plug_energy_total
+                #######################################################################
+                - create_group: Network Switch
+                  entities:
+                    - entity_id: binary_sensor.template_ceiling_network_switch_plug_proxy
+                      standby_power: 1.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 2
+                    - entity_id: switch.ceiling_network_switch_plug
+                      power_sensor_id: sensor.ceiling_network_switch_plug_energy_power
+                      energy_sensor_id: sensor.ceiling_network_switch_plug_energy_total
+                #######################################################################
+                - create_group: Zigbee Repeaters
+                  entities:
+                    - entity_id: switch.deck_fans_outlet
+                      standby_power: 0.2
+                      fixed:
+                        power: 0.5
+                    - entity_id: switch.kitchen_fan_outlet
+                      standby_power: 0.2
+                      fixed:
+                        power: 0.5
+                    - entity_id: switch.edwin_wardrobe_outlet
+                      standby_power: 0.2
+                      fixed:
+                        power: 0.5
+                    - entity_id: sensor.garden_repeater_linkquality
+                      standby_power: 0
+                      fixed:
+                        power: 0.4
+                    - entity_id: sensor.landing_repeater_linkquality
+                      standby_power: 0
+                      fixed:
+                        power: 0.4
+                    - entity_id: sensor.driveway_repeater_linkquality
+                      standby_power: 0
+                      fixed:
+                        power: 0.4
+        ###############################################################################
+        - create_group: Home Peak
+          entities:
+            ###########################################################################
+            - create_group: Heating & Cooling
+              entities:
+                #######################################################################
+                - create_group: Towel Rails
+                  entities:
+                    - entity_id: binary_sensor.template_bathroom_rails_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.bathroom_rails_plug
+                      power_sensor_id: sensor.bathroom_rails_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Water Booster
+                  entities:
+                    - entity_id: binary_sensor.template_ceiling_water_booster_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.ceiling_water_booster_plug
+                      power_sensor_id: sensor.ceiling_water_booster_plug_energy_power
+                      energy_sensor_id: sensor.ceiling_water_booster_plug_energy_total
+                #######################################################################
+                - create_group: Pool Filter
+                  entities:
+                    - entity_id: binary_sensor.template_garden_pool_filter_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.garden_pool_filter_plug
+                      power_sensor_id: sensor.garden_pool_filter_plug_energy_power
+                      energy_sensor_id: sensor.garden_pool_filter_plug_energy_total
+            ###########################################################################
+            - create_group: Whitegoods Discretionary
+              entities:
+                #######################################################################
+                - create_group: Dish Washer
+                  entities:
+                    - entity_id: binary_sensor.template_kitchen_dish_washer_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.kitchen_dish_washer_plug
+                      power_sensor_id: sensor.kitchen_dish_washer_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Clothes Dryer
+                  entities:
+                    - entity_id: binary_sensor.template_laundry_clothes_dryer_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.laundry_clothes_dryer_plug
+                      power_sensor_id: sensor.laundry_clothes_dryer_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Washing Machine
+                  entities:
+                    - entity_id: binary_sensor.template_laundry_washing_machine_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.laundry_washing_machine_plug
+                      power_sensor_id: sensor.laundry_washing_machine_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Coffee Machine
+                  entities:
+                    - entity_id: binary_sensor.template_kitchen_coffee_machine_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.kitchen_coffee_machine_plug
+                      power_sensor_id: sensor.kitchen_coffee_machine_plug_current_consumption
+                      force_energy_sensor_creation: true
+  #####################################################################################
 template:
   #####################################################################################
   - binary_sensor:
@@ -153,654 +770,3 @@ template:
         state: >-
           {{ states('switch.rack_internet_modem_plug') }}
       #################################################################################
-sensor:
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: binary_sensor.template_old_kitchen_fan_plug_proxy
-        standby_power: 1.54
-        unavailable_power: 0
-        fixed:
-          power: 2.19
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: switch.old_kitchen_fan_plug
-        power_sensor_id: sensor.old_kitchen_fan_plug_current_consumption
-        force_energy_sensor_creation: true
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: binary_sensor.template_old_kitchen_downlights_plug_proxy
-        standby_power: 1.54
-        unavailable_power: 0
-        fixed:
-          power: 2.19
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: switch.old_kitchen_downlights_plug
-        power_sensor_id: sensor.old_kitchen_downlights_plug_current_consumption
-        force_energy_sensor_creation: true
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: binary_sensor.template_old_deck_festoons_plug_proxy
-        standby_power: 0.5
-        unavailable_power: 0
-        fixed:
-          power: 0.9
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: switch.old_deck_festoons_plug
-        power_sensor_id: sensor.old_deck_festoons_plug_current_consumption
-        force_energy_sensor_creation: true
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: binary_sensor.template_old_landing_festoons_plug_proxy
-        standby_power: 0.5
-        unavailable_power: 0
-        fixed:
-          power: 0.9
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: switch.old_landing_festoons_plug
-        power_sensor_id: sensor.old_landing_festoons_plug_current_consumption
-        force_energy_sensor_creation: true
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: sensor.all_standby
-        power_sensor_id: sensor.all_standby_power
-        energy_sensor_id: sensor.all_standby_energy
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: binary_sensor.template_old_rack_outlet_plug_proxy
-        standby_power: 1.54
-        unavailable_power: 0
-        fixed:
-          power: 2.19
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: switch.old_rack_outlet_plug
-        power_sensor_id: sensor.old_rack_outlet_plug_current_consumption
-        force_energy_sensor_creation: true
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: binary_sensor.template_old_roof_network_switch_plug_proxy
-        standby_power: 1.54
-        unavailable_power: 0
-        fixed:
-          power: 2.19
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: switch.old_roof_network_switch_plug
-        power_sensor_id: sensor.old_roof_network_switch_plug_current_consumption
-        force_energy_sensor_creation: true
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: fan.rack_fans_plug
-        standby_power: 0.6
-        fixed:
-          power: 16.2
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: media_player.lounge_arc
-        name: Lounge Arc
-  #####################################################################################
-  - platform: powercalc
-    create_group: Server Flo
-    entities:
-      - entity_id: binary_sensor.template_server_flo_plug_proxy
-        standby_power: 0.5
-        unavailable_power: 0
-        fixed:
-          power: 0.9
-      - entity_id: switch.server_flo_plug
-        power_sensor_id: sensor.server_flo_plug_current_consumption
-        force_energy_sensor_creation: true
-  #####################################################################################
-  - platform: powercalc
-    create_group: Server Meg
-    entities:
-      - entity_id: binary_sensor.template_server_meg_plug_proxy
-        standby_power: 0.5
-        unavailable_power: 0
-        fixed:
-          power: 0.9
-      - entity_id: switch.server_meg_plug
-        power_sensor_id: sensor.server_meg_plug_current_consumption
-        force_energy_sensor_creation: true
-  #####################################################################################
-  - platform: powercalc
-    create_group: Internet Modem
-    entities:
-      - entity_id: binary_sensor.template_rack_internet_modem_plug_proxy
-        standby_power: 0.5
-        unavailable_power: 0
-        fixed:
-          power: 0.9
-      - entity_id: switch.rack_internet_modem_plug
-        power_sensor_id: sensor.rack_internet_modem_plug_current_consumption
-        force_energy_sensor_creation: true
-  #####################################################################################
-  - platform: powercalc
-    create_group: Home
-    entities:
-      #################################################################################
-      - create_group: Home Base
-        entities:
-          #############################################################################
-          - create_group: Fans
-            entities:
-              #########################################################################
-              - create_group: Ada Fans
-                entities:
-                  - entity_id: fan.ada_fan
-                    standby_power: 1.3
-                    linear:
-                      min_power: 2.5
-                      max_power: 31.1
-              #########################################################################
-              - create_group: Edwin Fans
-                entities:
-                  - entity_id: fan.edwin_fan
-                    standby_power: 1.3
-                    linear:
-                      min_power: 2.5
-                      max_power: 31.1
-              #########################################################################
-              - create_group: Parents Fans
-                entities:
-                  - entity_id: fan.parents_fan
-                    standby_power: 1.3
-                    linear:
-                      min_power: 2.5
-                      max_power: 31.1
-              #########################################################################
-              - create_group: Kitchen Fans
-                entities:
-                  - entity_id: binary_sensor.template_kitchen_fan_plug_proxy
-                    standby_power: 1.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 2
-                  - entity_id: fan.kitchen_fan_plug
-                    power_sensor_id: sensor.kitchen_fan_plug_energy_power
-                    energy_sensor_id: sensor.kitchen_fan_plug_energy_total
-              #########################################################################
-              - create_group: Lounge Fans
-                entities:
-                  - entity_id: fan.lounge_fan
-                    standby_power: 1.3
-                    linear:
-                      min_power: 2.5
-                      max_power: 31.1
-                  - entity_id: binary_sensor.template_lounge_air_purifier_proxy
-                    standby_power: 0.5
-                    linear:
-                      attribute: fan_speed
-                      calibrate:
-                        - 0 -> 0
-                        - 1 -> 1.7
-                        - 2 -> 3.6
-                        - 3 -> 8.1
-                        - 4 -> 16.6
-                        - 5 -> 21.9
-              #########################################################################
-              - create_group: Deck Fans
-                entities:
-                  - entity_id: fan.deck_east_fan
-                    standby_power: 1.3
-                    linear:
-                      min_power: 2.5
-                      max_power: 31.1
-                  - entity_id: fan.deck_west_fan
-                    standby_power: 1.3
-                    linear:
-                      min_power: 2.5
-                      max_power: 31.1
-              #########################################################################
-              - create_group: Dining Fans
-                entities:
-                  - entity_id: binary_sensor.template_dining_air_purifier_proxy
-                    standby_power: 0.5
-                    linear:
-                      attribute: fan_speed
-                      calibrate:
-                        - 0 -> 0
-                        - 1 -> 1.7
-                        - 2 -> 3.6
-                        - 3 -> 8.1
-                        - 4 -> 16.6
-                        - 5 -> 21.9
-          #############################################################################
-          - create_group: Lights
-            entities:
-              #########################################################################
-              - create_group: Ada Lights
-                entities:
-                  - entity_id: light.ada_fan
-                    name: Ada Main Fan Light
-                    unique_id: ada_main_light_fan
-                    linear:
-                      min_power: 0.5
-                      max_power: 16.3
-                  - entity_id: light.ada_lamp_bulb_1
-              #########################################################################
-              - create_group: Edwin Lights
-                entities:
-                  - entity_id: light.edwin_lamp_bulb_1
-                  - entity_id: light.edwin_fan
-                    name: Edwin Main Fan Light
-                    unique_id: edwin_main_light_fan
-                    linear:
-                      min_power: 0.5
-                      max_power: 16.3
-                  - entity_id: light.edwin_night_light_bulb_1
-              #########################################################################
-              - create_group: Hallway Lights
-                entities:
-                  - entity_id: light.hallway_main_bulb_1
-                  - entity_id: light.hallway_main_bulb_2
-                  - entity_id: light.hallway_main_bulb_3
-                  - entity_id: light.hallway_main_bulb_4
-                  - entity_id: light.hallway_sconces_bulb_1
-                  - entity_id: light.hallway_sconces_bulb_1
-              #########################################################################
-              - create_group: Dining Lights
-                entities:
-                  - entity_id: light.dining_main_bulb_1
-                  - entity_id: light.dining_main_bulb_2
-                  - entity_id: light.dining_main_bulb_3
-                  - entity_id: light.dining_main_bulb_4
-                  - entity_id: light.dining_main_bulb_5
-                  - entity_id: light.dining_main_bulb_6
-              #########################################################################
-              - create_group: Lounge Lights
-                entities:
-                  - entity_id: light.lounge_main_bulb_1
-                  - entity_id: light.lounge_main_bulb_2
-                  - entity_id: light.lounge_main_bulb_3
-                  - entity_id: light.lounge_fan
-                    name: Lounge Fan Light
-                    unique_id: lounge_light_fan
-                    linear:
-                      min_power: 0.5
-                      max_power: 16.3
-                  - entity_id: light.lounge_lamp_bulb_1
-              #########################################################################
-              - create_group: Parents Lights
-                entities:
-                  - entity_id: light.parents_main_bulb_1
-                  - entity_id: light.parents_main_bulb_2
-                  - entity_id: light.parents_main_bulb_3
-                  - entity_id: light.parents_jane_bedside_bulb_1
-                  - entity_id: light.parents_graham_bedside_bulb_1
-              #########################################################################
-              - create_group: Study Lights
-                entities:
-                  - entity_id: light.study_lamp_bulb_1
-              #########################################################################
-              - create_group: Kitchen Lights
-                entities:
-                  - entity_id: light.kitchen_main_bulb_1
-                  - entity_id: light.kitchen_main_bulb_2
-                  - entity_id: light.kitchen_main_bulb_3
-                  - entity_id: light.kitchen_main_bulb_4
-                  - entity_id: light.kitchen_downlights_plug
-                    standby_power: 0.6
-                    fixed:
-                      power: 35.2
-              #########################################################################
-              - create_group: Laundry Lights
-                entities:
-                  - entity_id: light.laundry_main_bulb_1
-              #########################################################################
-              - create_group: Pantry Lights
-                entities:
-                  - entity_id: light.pantry_main_bulb_1
-              #########################################################################
-              - create_group: Office Lights
-                entities:
-                  - entity_id: light.office_main_bulb_1
-              #########################################################################
-              - create_group: Bathroom Lights
-                entities:
-                  - entity_id: light.bathroom_main_bulb_1
-                  - entity_id: light.bathroom_sconces_bulb_1
-                  - entity_id: light.bathroom_sconces_bulb_2
-              #########################################################################
-              - create_group: Ensuite Lights
-                entities:
-                  - entity_id: light.ensuite_main_bulb_1
-                  - entity_id: light.ensuite_sconces_bulb_1
-                  - entity_id: light.ensuite_sconces_bulb_2
-                  - entity_id: light.ensuite_sconces_bulb_3
-              #########################################################################
-              - create_group: Wardrobe Lights
-                entities:
-                  - entity_id: light.wardrobe_main_bulb_1
-              #########################################################################
-              - create_group: Deck Lights
-                entities:
-                  - entity_id: binary_sensor.template_deck_festoons_plug_proxy
-                    standby_power: 1.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 2
-                  - entity_id: light.deck_festoons_plug
-                    standby_power: 0
-                    fixed:
-                      power: 4.5
-              #########################################################################
-              - create_group: Landing Lights
-                entities:
-                  - entity_id: binary_sensor.template_landing_festoons_plug_proxy
-                    standby_power: 1.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 2
-                  - entity_id: light.landing_festoons_plug
-                    standby_power: 0
-                    fixed:
-                      power: 31
-              #########################################################################
-              - create_group: Tree Lights
-                entities:
-                  - entity_id: light.tree_spotlights_bulb_1
-                  - entity_id: light.tree_spotlights_bulb_2
-          #############################################################################
-          - create_group: Audio Visual Devices
-            entities:
-              #########################################################################
-              - create_group: Lounge TV
-                entities:
-                  - entity_id: binary_sensor.template_lounge_tv_plug_proxy
-                    standby_power: 1.54
-                    unavailable_power: 0
-                    fixed:
-                      power: 2.19
-                  - entity_id: switch.lounge_tv_plug
-                    power_sensor_id: sensor.lounge_tv_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Lounge Sub
-                entities:
-                  - entity_id: binary_sensor.template_lounge_sub_plug_proxy
-                    standby_power: 1.54
-                    unavailable_power: 0
-                    fixed:
-                      power: 2.19
-                  - entity_id: switch.lounge_sub_plug
-                    power_sensor_id: sensor.lounge_sub_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Ada Tablet
-                entities:
-                  - entity_id: binary_sensor.template_ada_tablet_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.ada_tablet_plug
-                    power_sensor_id: sensor.ada_tablet_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Ada Home Devices
-                entities:
-                  - entity_id: media_player.ada_home
-              #########################################################################
-              - create_group: Edwin Home Devices
-                entities:
-                  - entity_id: media_player.edwin_home
-              #########################################################################
-              - create_group: Parents Home Devices
-                entities:
-                  - entity_id: media_player.parents_home
-                    model: Nest Hub 2gen
-              #########################################################################
-              - create_group: Kitchen Home Devices
-                entities:
-                  - entity_id: media_player.kitchen_home
-                    model: Nest Hub 2gen
-              #########################################################################
-              - create_group: Office Home Devices
-                entities:
-                  - entity_id: media_player.office_home
-              #########################################################################
-              - create_group: Lounge Home Devices
-                entities:
-                  - entity_id: media_player.lounge_home
-              #########################################################################
-              - create_group: Kitchen Move Devices
-                entities:
-                  - entity_id: media_player.kitchen_move
-              #########################################################################
-              - create_group: Kitchen Five Devices
-                entities:
-                  - entity_id: media_player.kitchen_five
-              #########################################################################
-              - create_group: Parents Move Devices
-                entities:
-                  - entity_id: media_player.parents_move
-          #############################################################################
-          - create_group: Power Plugs
-            entities:
-              #########################################################################
-              - create_group: Study Outlet
-                entities:
-                  - entity_id: binary_sensor.template_study_outlet_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.study_outlet_plug
-                    power_sensor_id: sensor.study_outlet_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Office Outlet
-                entities:
-                  - entity_id: binary_sensor.template_office_outlet_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.office_outlet_plug
-                    power_sensor_id: sensor.office_outlet_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Battery Charger
-                entities:
-                  - entity_id: binary_sensor.template_study_battery_charger_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.study_battery_charger_plug
-                    power_sensor_id: sensor.study_battery_charger_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Vacuum Charger
-                entities:
-                  - entity_id: binary_sensor.template_laundry_vacuum_charger_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.laundry_vacuum_charger_plug
-                    power_sensor_id: sensor.laundry_vacuum_charger_plug_current_consumption
-                    force_energy_sensor_creation: true
-          #############################################################################
-          - create_group: Whitegoods Continuous
-            entities:
-              #########################################################################
-              - create_group: Kitchen Fridge
-                entities:
-                  - entity_id: binary_sensor.template_kitchen_fridge_plug_proxy
-                    standby_power: 1.54
-                    unavailable_power: 0
-                    fixed:
-                      power: 2.19
-                  - entity_id: switch.kitchen_fridge_plug
-                    power_sensor_id: sensor.kitchen_fridge_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Deck Freezer
-                entities:
-                  - entity_id: binary_sensor.template_deck_freezer_plug_proxy
-                    standby_power: 1.54
-                    unavailable_power: 0
-                    fixed:
-                      power: 2.19
-                  - entity_id: switch.deck_freezer_plug
-                    power_sensor_id: sensor.deck_freezer_plug_current_consumption
-                    force_energy_sensor_creation: true
-          #############################################################################
-          - create_group: Servers & Network
-            entities:
-              #########################################################################
-              - create_group: Server Rack
-                entities:
-                  - entity_id: binary_sensor.template_rack_outlet_plug_proxy
-                    standby_power: 1.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 2
-                  - entity_id: switch.rack_outlet_plug
-                    power_sensor_id: sensor.rack_outlet_plug_energy_power
-                    energy_sensor_id: sensor.rack_outlet_plug_energy_total
-              #########################################################################
-              - create_group: Network Switch
-                entities:
-                  - entity_id: binary_sensor.template_ceiling_network_switch_plug_proxy
-                    standby_power: 1.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 2
-                  - entity_id: switch.ceiling_network_switch_plug
-                    power_sensor_id: sensor.ceiling_network_switch_plug_energy_power
-                    energy_sensor_id: sensor.ceiling_network_switch_plug_energy_total
-              #########################################################################
-              - create_group: Zigbee Repeaters
-                entities:
-                  - entity_id: switch.deck_fans_outlet
-                    standby_power: 0.2
-                    fixed:
-                      power: 0.5
-                  - entity_id: switch.kitchen_fan_outlet
-                    standby_power: 0.2
-                    fixed:
-                      power: 0.5
-                  - entity_id: switch.edwin_wardrobe_outlet
-                    standby_power: 0.2
-                    fixed:
-                      power: 0.5
-                  - entity_id: sensor.garden_repeater_linkquality
-                    standby_power: 0
-                    fixed:
-                      power: 0.4
-                  - entity_id: sensor.landing_repeater_linkquality
-                    standby_power: 0
-                    fixed:
-                      power: 0.4
-                  - entity_id: sensor.driveway_repeater_linkquality
-                    standby_power: 0
-                    fixed:
-                      power: 0.4
-      #################################################################################
-      - create_group: Home Peak
-        entities:
-          #############################################################################
-          - create_group: Heating & Cooling
-            entities:
-              #########################################################################
-              - create_group: Towel Rails
-                entities:
-                  - entity_id: binary_sensor.template_bathroom_rails_plug_proxy
-                    standby_power: 1.54
-                    unavailable_power: 0
-                    fixed:
-                      power: 2.19
-                  - entity_id: switch.bathroom_rails_plug
-                    power_sensor_id: sensor.bathroom_rails_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Water Booster
-                entities:
-                  - entity_id: binary_sensor.template_ceiling_water_booster_plug_proxy
-                    standby_power: 1.54
-                    unavailable_power: 0
-                    fixed:
-                      power: 2.19
-                  - entity_id: switch.ceiling_water_booster_plug
-                    power_sensor_id: sensor.ceiling_water_booster_plug_energy_power
-                    energy_sensor_id: sensor.ceiling_water_booster_plug_energy_total
-              #########################################################################
-              - create_group: Pool Filter
-                entities:
-                  - entity_id: binary_sensor.template_garden_pool_filter_plug_proxy
-                    standby_power: 1.54
-                    unavailable_power: 0
-                    fixed:
-                      power: 2.19
-                  - entity_id: switch.garden_pool_filter_plug
-                    power_sensor_id: sensor.garden_pool_filter_plug_energy_power
-                    energy_sensor_id: sensor.garden_pool_filter_plug_energy_total
-          #############################################################################
-          - create_group: Whitegoods Discretionary
-            entities:
-              #########################################################################
-              - create_group: Dish Washer
-                entities:
-                  - entity_id: binary_sensor.template_kitchen_dish_washer_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.kitchen_dish_washer_plug
-                    power_sensor_id: sensor.kitchen_dish_washer_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Clothes Dryer
-                entities:
-                  - entity_id: binary_sensor.template_laundry_clothes_dryer_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.laundry_clothes_dryer_plug
-                    power_sensor_id: sensor.laundry_clothes_dryer_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Washing Machine
-                entities:
-                  - entity_id: binary_sensor.template_laundry_washing_machine_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.laundry_washing_machine_plug
-                    power_sensor_id: sensor.laundry_washing_machine_plug_current_consumption
-                    force_energy_sensor_creation: true
-              #########################################################################
-              - create_group: Coffee Machine
-                entities:
-                  - entity_id: binary_sensor.template_kitchen_coffee_machine_plug_proxy
-                    standby_power: 0.5
-                    unavailable_power: 0
-                    fixed:
-                      power: 0.9
-                  - entity_id: switch.kitchen_coffee_machine_plug
-                    power_sensor_id: sensor.kitchen_coffee_machine_plug_current_consumption
-                    force_energy_sensor_creation: true
-  #####################################################################################

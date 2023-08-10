@@ -1332,7 +1332,90 @@ powercalc:
     - weekly
     - monthly
     - yearly
-#######################################################################################
+  #####################################################################################
+  sensors:
+            """.strip() + "\n")
+            for dict in metadata_electricity_ungrouped_dicts:
+                dict_config = \
+                    ("\n      " + dict["powercalc_config"].replace("\n", "\n      ")) \
+                        if "powercalc_config" in dict else ""
+                metadata_electricity_file.write("    " + """
+    ###################################################################################
+    - entity_id: {}.{}{}
+                """.format(
+                    dict["entity_namespace"],
+                    dict["unique_id"],
+                    dict_config,
+                ).strip() + "\n")
+            for dict_group1 in metadata_electricity_single_group_dicts:
+                dict_config = \
+                    ("\n        " + dict["powercalc_config"].replace("\n", "\n        ")) \
+                        if "powercalc_config" in dict else ""
+                metadata_electricity_file.write("    " + """
+    ###################################################################################
+    - create_group: {}
+      entities:
+                """.format(
+                    dict_group1,
+                ).strip() + "\n")
+                for dict in metadata_electricity_single_group_dicts[dict_group1]:
+                    dict_config = \
+                        ("\n          " + dict["powercalc_config"].replace("\n", "\n          ")) \
+                            if "powercalc_config" in dict else ""
+                    metadata_electricity_file.write("        " + """
+        - entity_id: {}.{}{}
+                    """.format(
+                        dict["entity_namespace"],
+                        dict["unique_id"],
+                        dict_config,
+                    ).strip() + "\n")
+            for dict_group1 in metadata_electricity_dicts:
+                metadata_electricity_file.write("    " + """
+    ###################################################################################
+    - create_group: {}
+      entities:
+                """.format(
+                    dict_group1
+                ).strip() + "\n")
+                for dict_group2 in metadata_electricity_dicts[dict_group1]:
+                    metadata_electricity_file.write("        " + """
+        ###############################################################################
+        - create_group: {}
+          entities:
+                    """.format(
+                        dict_group2
+                    ).strip() + "\n")
+                    for dict_group3 in metadata_electricity_dicts[dict_group1][dict_group2]:
+                        metadata_electricity_file.write("            " + """
+            ###########################################################################
+            - create_group: {}
+              entities:
+                        """.format(
+                            dict_group3
+                        ).strip() + "\n")
+                        for dict_group4 in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3]:
+                            metadata_electricity_file.write("                " + """
+                #######################################################################
+                - create_group: {}
+                  entities:
+                            """.format(
+                                dict_group4,
+                            ).strip() + "\n")
+                            for dict in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4]:
+                                dict_config = \
+                                    ("\n                      " + dict["powercalc_config"].replace("\n", "\n                      ")) \
+                                        if "powercalc_config" in dict else ""
+                                metadata_electricity_file.write("                    " + """
+                    - entity_id: {}.{}{}
+                              """.format(
+                                    dict["entity_namespace"],
+                                    dict["unique_id"],
+                                    dict_config,
+                                ).strip() + "\n")
+            metadata_electricity_file.write("  " + """
+  #####################################################################################
+            """.strip() + "\n")
+            metadata_electricity_file.write("""
 template:
   #####################################################################################
   - binary_sensor:
@@ -1389,93 +1472,6 @@ template:
                     ).strip() + "\n")
             metadata_electricity_file.write("      " + """
       #################################################################################
-            """.strip() + "\n")
-            metadata_electricity_file.write("""
-sensor:
-            """.strip() + "\n")
-            for dict in metadata_electricity_ungrouped_dicts:
-                dict_config = \
-                    ("\n        " + dict["powercalc_config"].replace("\n", "\n        ")) \
-                        if "powercalc_config" in dict else ""
-                metadata_electricity_file.write("  " + """
-  #####################################################################################
-  - platform: powercalc
-    entities:
-      - entity_id: {}.{}{}
-                """.format(
-                    dict["entity_namespace"],
-                    dict["unique_id"],
-                    dict_config,
-                ).strip() + "\n")
-            for dict_group1 in metadata_electricity_single_group_dicts:
-                dict_config = \
-                    ("\n        " + dict["powercalc_config"].replace("\n", "\n        ")) \
-                        if "powercalc_config" in dict else ""
-                metadata_electricity_file.write("  " + """
-  #####################################################################################
-  - platform: powercalc
-    create_group: {}
-    entities:
-                """.format(
-                    dict_group1,
-                ).strip() + "\n")
-                for dict in metadata_electricity_single_group_dicts[dict_group1]:
-                    dict_config = \
-                        ("\n        " + dict["powercalc_config"].replace("\n", "\n        ")) \
-                            if "powercalc_config" in dict else ""
-                    metadata_electricity_file.write("      " + """
-      - entity_id: {}.{}{}
-                    """.format(
-                        dict["entity_namespace"],
-                        dict["unique_id"],
-                        dict_config,
-                    ).strip() + "\n")
-            for dict_group1 in metadata_electricity_dicts:
-                metadata_electricity_file.write("  " + """
-  #####################################################################################
-  - platform: powercalc
-    create_group: {}
-    entities:
-                """.format(
-                    dict_group1
-                ).strip() + "\n")
-                for dict_group2 in metadata_electricity_dicts[dict_group1]:
-                    metadata_electricity_file.write("      " + """
-      #################################################################################
-      - create_group: {}
-        entities:
-                    """.format(
-                        dict_group2
-                    ).strip() + "\n")
-                    for dict_group3 in metadata_electricity_dicts[dict_group1][dict_group2]:
-                        metadata_electricity_file.write("          " + """
-          #############################################################################
-          - create_group: {}
-            entities:
-                        """.format(
-                            dict_group3
-                        ).strip() + "\n")
-                        for dict_group4 in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3]:
-                            metadata_electricity_file.write("              " + """
-              #########################################################################
-              - create_group: {}
-                entities:
-                            """.format(
-                                dict_group4,
-                            ).strip() + "\n")
-                            for dict in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4]:
-                                dict_config = \
-                                    ("\n                    " + dict["powercalc_config"].replace("\n", "\n                    ")) \
-                                        if "powercalc_config" in dict else ""
-                                metadata_electricity_file.write("                  " + """
-                  - entity_id: {}.{}{}
-                              """.format(
-                                    dict["entity_namespace"],
-                                    dict["unique_id"],
-                                    dict_config,
-                                ).strip() + "\n")
-            metadata_electricity_file.write("  " + """
-  #####################################################################################
             """.strip() + "\n")
 
     # Build action YAML
