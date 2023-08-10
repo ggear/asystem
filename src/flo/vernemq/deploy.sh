@@ -10,10 +10,13 @@ printf "Entity Metadata publish script dropping topics complete\n\n"
 
 printf "Entity Metadata publish script sleeping before publishing ... " && sleep 2 && printf "done\n\n"
 
-${ROOT_DIR}/../../*/weewx/deploy.sh
-${ROOT_DIR}/../../*/tasmota/deploy.sh
-${ROOT_DIR}/../../*/digitemp/deploy.sh
-${ROOT_DIR}/../../*/internet/deploy.sh
-${ROOT_DIR}/../../*/monitor/deploy.sh
-${ROOT_DIR}/../../*/supervise/deploy.sh
-${ROOT_DIR}/../../*/zigbee2mqtt/deploy.sh
+for MQTT_SCRIPT in $(find ""${ROOT_DIR}/../.."" -name mqtt.sh -type f -path "*src*"); do
+  DEPLOY_SCRIPT="$(dirname "${MQTT_SCRIPT}")/../../../../deploy.sh"
+  if [ -f "${DEPLOY_SCRIPT}" ]; then
+    echo "" &&
+      echo "----------------------------------------------------------------------------------------------------" &&
+      echo "Executing deploy script [$(realpath ${DEPLOY_SCRIPT})]" &&
+      echo "----------------------------------------------------------------------------------------------------" &&
+      echo "" && ${DEPLOY_SCRIPT}
+  fi
+done
