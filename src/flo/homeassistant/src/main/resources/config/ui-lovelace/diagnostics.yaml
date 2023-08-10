@@ -13,7 +13,7 @@
     - entity: sensor.network_internet_download
       name: Download
       icon: mdi:cloud-download
-    - entity: sensor.network_certifcate_expiry
+    - entity: sensor.network_certificate_expiry
       name: Certifcate Expiry
       icon: mdi:cloud-lock
 ################################################################################

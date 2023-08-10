@@ -628,7 +628,7 @@ sensor.network_internet_download:
   friendly_name: 'Download'
   icon: 'mdi:cloud-download'
   unit_of_measurement: 'MB/s'
-sensor.network_certifcate_expiry:
+sensor.network_certificate_expiry:
   friendly_name: 'Certifcate Expiry'
   icon: 'mdi:cloud-lock'
   unit_of_measurement: 'd'
