@@ -6,7 +6,7 @@ USER root
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apk add --no-cache jq==1.6-r2
 RUN apk add --no-cache git==2.38.5-r0
-RUN apk add --no-cache curl==8.1.2-r0
+RUN apk add --no-cache curl==8.2.0-r1
 RUN apk add --no-cache make==4.3-r1
 RUN apk add --no-cache musl-dev==1.2.3-r5
 RUN apk add --no-cache gcc==12.2.1_git20220924-r4

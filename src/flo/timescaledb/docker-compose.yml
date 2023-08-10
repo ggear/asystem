@@ -1,0 +1,47 @@
+version: '3.7'
+x-common: &common
+  image: timescaledb:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  user: root
+  environment:
+    - TZ=Australia/Perth
+    - POSTGRES_HOST
+    - POSTGRES_PORT
+    - POSTGRES_USER=${POSTGRES_USER}
+    - PGPASSWORD=${POSTGRES_KEY}
+    - POSTGRES_PASSWORD=${POSTGRES_KEY}
+    - POSTGRES_USER_HASS
+    - POSTGRES_KEY_HASS
+    - POSTGRES_DATABASE_HASS
+    - PGDATA=/var/lib/postgresql/data/pgdata
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
+services:
+  timescaledb:
+    container_name: timescaledb
+    <<: *common
+    restart: ${SERVICE_RESTART}
+    volumes:
+      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
+      - ${SERVICE_DATA_DIR}:/var/lib/postgresql/data
+    ports:
+      - ${POSTGRES_PORT}:5432
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+  timescaledb_bootstrap:
+    container_name: timescaledb_bootstrap
+    <<: *common
+    restart: 'no'
+    volumes:
+      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
+      - ${SERVICE_DATA_DIR}:/var/lib/postgresql/data
+    entrypoint: /bin/bash
+    command:
+      - /bootstrap/bootstrap.sh
+    depends_on:
+      - timescaledb
