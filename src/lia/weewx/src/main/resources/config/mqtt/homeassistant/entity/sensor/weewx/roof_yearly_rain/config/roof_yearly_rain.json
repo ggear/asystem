@@ -1,6 +1,6 @@
 {
   "unique_id": "roof_yearly_rain",
-  "name": "roof_yearly_rain",
+  "name": "Roof Yearly Rain",
   "state_class": "total",
   "unit_of_measurement": "cm",
   "icon": "mdi:weather-pouring",

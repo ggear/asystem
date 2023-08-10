@@ -1,6 +1,6 @@
 {
   "unique_id": "roof_hourly_rain",
-  "name": "roof_hourly_rain",
+  "name": "Roof Hourly Rain",
   "state_class": "total",
   "unit_of_measurement": "mm",
   "icon": "mdi:weather-pouring",

@@ -1,6 +1,6 @@
 {
   "unique_id": "kitchen_fan_plug_energy_power",
-  "name": "kitchen_fan_plug_energy_power",
+  "name": "Kitchen Fan Plug Energy Power",
   "state_class": "measurement",
   "unit_of_measurement": "W",
   "device_class": "power",

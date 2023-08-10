@@ -1,6 +1,6 @@
 {
   "unique_id": "host_meg_availability",
-  "name": "host_meg_availability",
+  "name": "Host Meg Availability",
   "device_class": "running",
   "force_update": "false",
   "state_topic": "asystem/supervisor/host/meg/availability",

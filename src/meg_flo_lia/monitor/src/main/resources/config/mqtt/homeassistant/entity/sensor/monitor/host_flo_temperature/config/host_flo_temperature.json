@@ -1,6 +1,6 @@
 {
   "unique_id": "host_flo_temperature",
-  "name": "host_flo_temperature",
+  "name": "Host Flo Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

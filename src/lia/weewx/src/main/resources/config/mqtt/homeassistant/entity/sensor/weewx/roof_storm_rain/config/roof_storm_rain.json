@@ -1,6 +1,6 @@
 {
   "unique_id": "roof_storm_rain",
-  "name": "roof_storm_rain",
+  "name": "Roof Storm Rain",
   "state_class": "measurement",
   "unit_of_measurement": "cm",
   "icon": "mdi:weather-pouring",

@@ -1,6 +1,6 @@
 {
   "unique_id": "roof_cloud_base",
-  "name": "roof_cloud_base",
+  "name": "Roof Cloud Base",
   "state_class": "measurement",
   "unit_of_measurement": "m",
   "icon": "mdi:cloud-outline",

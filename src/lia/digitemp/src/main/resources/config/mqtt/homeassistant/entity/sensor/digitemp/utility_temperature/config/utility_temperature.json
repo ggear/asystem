@@ -1,6 +1,6 @@
 {
   "unique_id": "utility_temperature",
-  "name": "utility_temperature",
+  "name": "Utility Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

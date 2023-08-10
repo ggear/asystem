@@ -1,6 +1,6 @@
 {
   "unique_id": "roof_daily_rain",
-  "name": "roof_daily_rain",
+  "name": "Roof Daily Rain",
   "state_class": "total",
   "unit_of_measurement": "mm",
   "icon": "mdi:weather-pouring",

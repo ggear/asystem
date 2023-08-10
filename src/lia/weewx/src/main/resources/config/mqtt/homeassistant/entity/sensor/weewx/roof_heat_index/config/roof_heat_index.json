@@ -1,6 +1,6 @@
 {
   "unique_id": "roof_heat_index",
-  "name": "roof_heat_index",
+  "name": "Roof Heat Index",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

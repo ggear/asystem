@@ -1,6 +1,6 @@
 {
   "unique_id": "wardrobe_humidity",
-  "name": "wardrobe_humidity",
+  "name": "Wardrobe Humidity",
   "state_class": "measurement",
   "unit_of_measurement": "%",
   "device_class": "humidity",

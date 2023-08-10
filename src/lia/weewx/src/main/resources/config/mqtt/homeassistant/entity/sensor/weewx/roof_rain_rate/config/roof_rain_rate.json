@@ -1,6 +1,6 @@
 {
   "unique_id": "roof_rain_rate",
-  "name": "roof_rain_rate",
+  "name": "Roof Rain Rate",
   "state_class": "measurement",
   "unit_of_measurement": "mm/h",
   "icon": "mdi:weather-pouring",

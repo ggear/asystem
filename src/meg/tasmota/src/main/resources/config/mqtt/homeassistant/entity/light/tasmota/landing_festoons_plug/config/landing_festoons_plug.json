@@ -1,6 +1,6 @@
 {
   "unique_id": "landing_festoons_plug",
-  "name": "landing_festoons_plug",
+  "name": "Landing Festoons Plug",
   "icon": "mdi:lightbulb-group",
   "force_update": "false",
   "optimistic": "true",

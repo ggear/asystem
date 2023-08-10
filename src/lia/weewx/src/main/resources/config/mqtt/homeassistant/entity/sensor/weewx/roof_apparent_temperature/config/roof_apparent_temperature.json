@@ -1,6 +1,6 @@
 {
   "unique_id": "roof_apparent_temperature",
-  "name": "roof_apparent_temperature",
+  "name": "Roof Apparent Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

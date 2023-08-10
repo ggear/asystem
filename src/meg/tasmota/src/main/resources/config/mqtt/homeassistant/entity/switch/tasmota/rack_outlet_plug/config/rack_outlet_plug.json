@@ -1,6 +1,6 @@
 {
   "unique_id": "rack_outlet_plug",
-  "name": "rack_outlet_plug",
+  "name": "Rack Outlet Plug",
   "icon": "mdi:server",
   "force_update": "false",
   "optimistic": "true",

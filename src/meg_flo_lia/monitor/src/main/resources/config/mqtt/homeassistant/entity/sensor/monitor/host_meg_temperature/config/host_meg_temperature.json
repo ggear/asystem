@@ -1,6 +1,6 @@
 {
   "unique_id": "host_meg_temperature",
-  "name": "host_meg_temperature",
+  "name": "Host Meg Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

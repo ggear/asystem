@@ -1,6 +1,6 @@
 {
   "unique_id": "hallway_wifi_access_point_experience",
-  "name": "hallway_wifi_access_point_experience",
+  "name": "Hallway Wifi Access Point Experience",
   "state_class": "measurement",
   "unit_of_measurement": "%",
   "device_class": "signal_strength",

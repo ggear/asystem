@@ -1,6 +1,6 @@
 {
   "unique_id": "rack_dew_point",
-  "name": "rack_dew_point",
+  "name": "Rack Dew Point",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

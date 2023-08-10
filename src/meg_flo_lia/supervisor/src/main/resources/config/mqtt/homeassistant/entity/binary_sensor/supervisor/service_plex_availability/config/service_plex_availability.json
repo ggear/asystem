@@ -1,6 +1,6 @@
 {
   "unique_id": "service_plex_availability",
-  "name": "service_plex_availability",
+  "name": "Service Plex Availability",
   "device_class": "running",
   "force_update": "false",
   "state_topic": "asystem/supervisor/service/plex/availability",

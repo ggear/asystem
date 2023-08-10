@@ -1,6 +1,6 @@
 {
   "unique_id": "network_internet_upload",
-  "name": "network_internet_upload",
+  "name": "Network Internet Upload",
   "state_class": "measurement",
   "unit_of_measurement": "MB/s",
   "device_class": "data_rate",

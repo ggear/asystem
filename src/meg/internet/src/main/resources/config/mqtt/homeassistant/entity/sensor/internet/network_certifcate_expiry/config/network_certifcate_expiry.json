@@ -1,6 +1,6 @@
 {
   "unique_id": "network_certifcate_expiry",
-  "name": "network_certifcate_expiry",
+  "name": "Network Certifcate Expiry",
   "state_class": "measurement",
   "unit_of_measurement": "d",
   "icon": "mdi:cloud-lock",

@@ -1,6 +1,6 @@
 {
   "unique_id": "roof_wind_run",
-  "name": "roof_wind_run",
+  "name": "Roof Wind Run",
   "state_class": "measurement",
   "unit_of_measurement": "km",
   "icon": "mdi:weather-windy",

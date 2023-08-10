@@ -1,6 +1,6 @@
 {
   "unique_id": "host_flo_availability",
-  "name": "host_flo_availability",
+  "name": "Host Flo Availability",
   "device_class": "running",
   "force_update": "false",
   "state_topic": "asystem/supervisor/host/flo/availability",

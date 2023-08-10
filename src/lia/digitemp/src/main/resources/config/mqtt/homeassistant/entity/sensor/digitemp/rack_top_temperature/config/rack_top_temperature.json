@@ -1,6 +1,6 @@
 {
   "unique_id": "rack_top_temperature",
-  "name": "rack_top_temperature",
+  "name": "Rack Top Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

@@ -1,6 +1,6 @@
 {
   "unique_id": "host_lia_temperature",
-  "name": "host_lia_temperature",
+  "name": "Host Lia Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

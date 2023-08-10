@@ -1,6 +1,6 @@
 {
   "unique_id": "kitchen_fan_plug_energy_total",
-  "name": "kitchen_fan_plug_energy_total",
+  "name": "Kitchen Fan Plug Energy Total",
   "state_class": "total_increasing",
   "unit_of_measurement": "kWh",
   "device_class": "energy",
