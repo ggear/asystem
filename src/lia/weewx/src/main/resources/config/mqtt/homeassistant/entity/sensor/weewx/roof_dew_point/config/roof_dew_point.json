@@ -1,5 +1,5 @@
 {
-  "unique_id": "roof_dew_point",
+  "object_id": "roof_dew_point",
   "name": "Roof Dew Point",
   "state_class": "measurement",
   "unit_of_measurement": "°C",

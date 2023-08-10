@@ -1,5 +1,5 @@
 {
-  "unique_id": "network_internet_download",
+  "object_id": "network_internet_download",
   "name": "Network Internet Download",
   "state_class": "measurement",
   "unit_of_measurement": "MB/s",

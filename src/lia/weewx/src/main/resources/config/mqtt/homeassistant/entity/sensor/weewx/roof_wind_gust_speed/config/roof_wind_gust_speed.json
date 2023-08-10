@@ -1,5 +1,5 @@
 {
-  "unique_id": "roof_wind_gust_speed",
+  "object_id": "roof_wind_gust_speed",
   "name": "Roof Wind Gust Speed",
   "state_class": "measurement",
   "unit_of_measurement": "km/h",

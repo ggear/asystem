@@ -1,5 +1,5 @@
 {
-  "unique_id": "roof_wind_chill_temperature",
+  "object_id": "roof_wind_chill_temperature",
   "name": "Roof Wind Chill Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",

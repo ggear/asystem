@@ -86,13 +86,13 @@ mqtt:
 #  discovery_prefix: 'homeassistant/entity'
 #  birth_message:
 #    topic: 'homeassistant/system/status'
-#    payload: 'Online'
-#    qos: 3
+#    payload: 'online'
+#    qos: 2
 #    retain: true
 #  will_message:
 #    topic: 'homeassistant/system/status'
-#    payload: 'Offline'
-#    qos: 3
+#    payload: 'offline'
+#    qos: 2
 #    retain: true
 #######################################################################################
 google_assistant:

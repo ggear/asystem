@@ -1,5 +1,5 @@
 {
-  "unique_id": "host_flo_temperature",
+  "object_id": "host_flo_temperature",
   "name": "Host Flo Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",

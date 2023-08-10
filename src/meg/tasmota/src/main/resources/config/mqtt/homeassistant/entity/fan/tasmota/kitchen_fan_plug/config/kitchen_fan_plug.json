@@ -1,5 +1,5 @@
 {
-  "unique_id": "kitchen_fan_plug",
+  "object_id": "kitchen_fan_plug",
   "name": "Kitchen Fan Plug",
   "icon": "mdi:fan",
   "force_update": "false",

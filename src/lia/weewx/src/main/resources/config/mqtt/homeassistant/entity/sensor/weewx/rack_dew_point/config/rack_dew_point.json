@@ -1,5 +1,5 @@
 {
-  "unique_id": "rack_dew_point",
+  "object_id": "rack_dew_point",
   "name": "Rack Dew Point",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
@@ -11,11 +11,11 @@
   "qos": "1",
   "device": {
     "via_device": "WeeWX",
-    "identifiers": "davis-rack-weather-station",
-    "name": "Rack Weather Station",
+    "identifiers": "davis-wardrobe-weather-station-console",
+    "name": "Wardrobe Weather Station Console",
     "model": "Vantage Pro2",
     "manufacturer": "Davis",
     "sw_version": "4.10.2",
-    "suggested_area": "Rack"
+    "suggested_area": "Wardrobe"
   }
 }

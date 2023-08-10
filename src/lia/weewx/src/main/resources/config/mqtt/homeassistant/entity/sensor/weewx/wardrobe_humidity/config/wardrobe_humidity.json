@@ -1,5 +1,5 @@
 {
-  "unique_id": "wardrobe_humidity",
+  "object_id": "wardrobe_humidity",
   "name": "Wardrobe Humidity",
   "state_class": "measurement",
   "unit_of_measurement": "%",
@@ -11,8 +11,8 @@
   "qos": "1",
   "device": {
     "via_device": "WeeWX",
-    "identifiers": "davis-wardrobe-weather-station",
-    "name": "Wardrobe Weather Station",
+    "identifiers": "davis-wardrobe-weather-station-console",
+    "name": "Wardrobe Weather Station Console",
     "model": "Vantage Pro2",
     "manufacturer": "Davis",
     "sw_version": "4.10.2",

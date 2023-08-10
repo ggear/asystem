@@ -1,5 +1,5 @@
 {
-  "unique_id": "roof_monthly_rain",
+  "object_id": "roof_monthly_rain",
   "name": "Roof Monthly Rain",
   "state_class": "total",
   "unit_of_measurement": "cm",

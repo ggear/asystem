@@ -1,5 +1,5 @@
 {
-  "unique_id": "roof_daily_rain",
+  "object_id": "roof_daily_rain",
   "name": "Roof Daily Rain",
   "state_class": "total",
   "unit_of_measurement": "mm",

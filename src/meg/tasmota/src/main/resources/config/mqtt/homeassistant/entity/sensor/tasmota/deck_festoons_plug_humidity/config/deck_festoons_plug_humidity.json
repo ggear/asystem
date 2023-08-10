@@ -1,5 +1,5 @@
 {
-  "unique_id": "deck_festoons_plug_humidity",
+  "object_id": "deck_festoons_plug_humidity",
   "name": "Deck Festoons Plug Humidity",
   "state_class": "measurement",
   "unit_of_measurement": "%",

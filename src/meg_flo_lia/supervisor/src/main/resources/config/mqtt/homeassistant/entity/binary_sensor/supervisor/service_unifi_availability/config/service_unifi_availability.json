@@ -1,5 +1,5 @@
 {
-  "unique_id": "service_unifi_availability",
+  "object_id": "service_unifi_availability",
   "name": "Service Unifi Availability",
   "device_class": "running",
   "force_update": "false",

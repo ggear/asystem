@@ -1,5 +1,5 @@
 {
-  "unique_id": "roof_humidity_index",
+  "object_id": "roof_humidity_index",
   "name": "Roof Humidity Index",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
