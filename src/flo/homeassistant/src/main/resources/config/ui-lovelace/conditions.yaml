@@ -63,9 +63,6 @@
     - entity: sensor.compensation_sensor_wardrobe_temperature
       name: Wardrobe
       icon: mdi:thermometer
-    - entity: sensor.compensation_sensor_utility_temperature
-      name: Utility
-      icon: mdi:thermometer
     - entity: sensor.compensation_sensor_deck_festoons_plug_temperature
       name: Ceiling
       icon: mdi:thermometer
