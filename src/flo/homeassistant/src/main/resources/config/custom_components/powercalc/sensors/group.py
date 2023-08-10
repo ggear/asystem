@@ -497,7 +497,7 @@ class GroupedSensor(BaseEntity, RestoreSensor, SensorEntity):
 
             # HACK: Reduce group update throttle threshold to 5s
             # state_listener = Throttle(timedelta(seconds=30))(state_listener)
-            state_listener = Throttle(timedelta(seconds=30))(state_listener)
+            state_listener = Throttle(timedelta(seconds=5))(state_listener)
             # HACK: End hack
 
 
