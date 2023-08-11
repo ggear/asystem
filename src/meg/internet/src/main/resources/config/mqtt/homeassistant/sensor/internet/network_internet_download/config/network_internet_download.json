@@ -1,7 +1,7 @@
 {
   "object_id": "network_internet_download",
   "unique_id": "network_internet_download",
-  "name": "Rack Internet Script Network Internet Download",
+  "name": "Network Internet Download",
   "state_class": "measurement",
   "unit_of_measurement": "MB/s",
   "device_class": "data_rate",

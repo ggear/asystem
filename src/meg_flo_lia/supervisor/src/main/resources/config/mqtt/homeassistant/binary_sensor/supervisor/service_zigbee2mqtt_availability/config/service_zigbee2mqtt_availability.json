@@ -1,7 +1,7 @@
 {
   "object_id": "service_zigbee2mqtt_availability",
   "unique_id": "service_zigbee2mqtt_availability",
-  "name": "Rack Supervisor Script Service Zigbee2Mqtt Availability",
+  "name": "Service Zigbee2Mqtt Availability",
   "device_class": "running",
   "force_update": "false",
   "state_topic": "asystem/supervisor/service/zigbee2mqtt/availability",

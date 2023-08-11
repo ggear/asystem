@@ -1,7 +1,7 @@
 {
   "object_id": "deck_wifi_access_point_experience",
   "unique_id": "deck_wifi_access_point_experience",
-  "name": "Rack Internet Script Deck Wifi Access Point Experience",
+  "name": "Deck Wifi Access Point Experience",
   "state_class": "measurement",
   "unit_of_measurement": "%",
   "device_class": "signal_strength",

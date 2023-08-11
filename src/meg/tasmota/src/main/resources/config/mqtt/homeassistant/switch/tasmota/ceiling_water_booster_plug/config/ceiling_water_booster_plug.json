@@ -1,7 +1,7 @@
 {
   "object_id": "ceiling_water_booster_plug",
   "unique_id": "ceiling_water_booster_plug",
-  "name": "Ceiling Water Booster Ceiling Water Booster Plug",
+  "name": "Ceiling Water Booster Plug",
   "icon": "mdi:thermometer-water",
   "force_update": "false",
   "optimistic": "true",

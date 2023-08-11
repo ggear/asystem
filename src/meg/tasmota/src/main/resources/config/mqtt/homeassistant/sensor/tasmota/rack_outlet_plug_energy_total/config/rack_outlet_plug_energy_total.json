@@ -1,7 +1,7 @@
 {
   "object_id": "rack_outlet_plug_energy_total",
   "unique_id": "rack_outlet_plug_energy_total",
-  "name": "Rack Outlet Rack Outlet Plug Energy Total",
+  "name": "Rack Outlet Plug Energy Total",
   "state_class": "total_increasing",
   "unit_of_measurement": "kWh",
   "device_class": "energy",

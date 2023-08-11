@@ -1,7 +1,7 @@
 {
   "object_id": "deck_festoons_plug",
   "unique_id": "deck_festoons_plug",
-  "name": "Deck Festoons Deck Festoons Plug",
+  "name": "Deck Festoons Plug",
   "icon": "mdi:lightbulb-group",
   "force_update": "false",
   "optimistic": "true",

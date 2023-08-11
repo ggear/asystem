@@ -1,7 +1,7 @@
 {
   "object_id": "wardrobe_temperature",
   "unique_id": "wardrobe_temperature",
-  "name": "Wardrobe Weather Station Console Wardrobe Temperature",
+  "name": "Wardrobe Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

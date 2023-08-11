@@ -1,7 +1,7 @@
 {
   "object_id": "roof_wind_gust_direction",
   "unique_id": "roof_wind_gust_direction",
-  "name": "Roof Weather Station Roof Wind Gust Direction",
+  "name": "Roof Wind Gust Direction",
   "state_class": "measurement",
   "unit_of_measurement": "°",
   "icon": "mdi:weather-windy",

@@ -1,7 +1,7 @@
 {
   "object_id": "host_lia_temperature",
   "unique_id": "host_lia_temperature",
-  "name": "Rack Lia Temperature Host Lia Temperature",
+  "name": "Host Lia Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

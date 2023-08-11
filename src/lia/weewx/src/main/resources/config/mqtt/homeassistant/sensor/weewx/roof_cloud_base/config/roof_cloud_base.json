@@ -1,7 +1,7 @@
 {
   "object_id": "roof_cloud_base",
   "unique_id": "roof_cloud_base",
-  "name": "Roof Weather Station Roof Cloud Base",
+  "name": "Roof Cloud Base",
   "state_class": "measurement",
   "unit_of_measurement": "m",
   "icon": "mdi:cloud-outline",

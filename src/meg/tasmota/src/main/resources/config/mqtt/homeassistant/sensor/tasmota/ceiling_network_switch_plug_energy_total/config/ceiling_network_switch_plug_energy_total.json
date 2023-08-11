@@ -1,7 +1,7 @@
 {
   "object_id": "ceiling_network_switch_plug_energy_total",
   "unique_id": "ceiling_network_switch_plug_energy_total",
-  "name": "Ceiling Network Switch Ceiling Network Switch Plug Energy Total",
+  "name": "Ceiling Network Switch Plug Energy Total",
   "state_class": "total_increasing",
   "unit_of_measurement": "kWh",
   "device_class": "energy",

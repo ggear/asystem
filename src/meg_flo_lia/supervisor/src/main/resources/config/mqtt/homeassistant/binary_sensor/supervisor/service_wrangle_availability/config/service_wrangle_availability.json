@@ -1,7 +1,7 @@
 {
   "object_id": "service_wrangle_availability",
   "unique_id": "service_wrangle_availability",
-  "name": "Rack Supervisor Script Service Wrangle Availability",
+  "name": "Service Wrangle Availability",
   "device_class": "running",
   "force_update": "false",
   "state_topic": "asystem/supervisor/service/wrangle/availability",

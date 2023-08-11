@@ -1,7 +1,7 @@
 {
   "object_id": "kitchen_downlights_plug",
   "unique_id": "kitchen_downlights_plug",
-  "name": "Kitchen Downlights Kitchen Downlights Plug",
+  "name": "Kitchen Downlights Plug",
   "icon": "mdi:lightbulb-group",
   "force_update": "false",
   "optimistic": "true",

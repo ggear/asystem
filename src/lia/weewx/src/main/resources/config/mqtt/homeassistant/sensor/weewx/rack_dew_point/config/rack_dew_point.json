@@ -1,7 +1,7 @@
 {
   "object_id": "rack_dew_point",
   "unique_id": "rack_dew_point",
-  "name": "Wardrobe Weather Station Console Rack Dew Point",
+  "name": "Rack Dew Point",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

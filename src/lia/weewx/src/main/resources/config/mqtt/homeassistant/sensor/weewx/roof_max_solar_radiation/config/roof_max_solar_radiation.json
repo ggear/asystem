@@ -1,7 +1,7 @@
 {
   "object_id": "roof_max_solar_radiation",
   "unique_id": "roof_max_solar_radiation",
-  "name": "Roof Weather Station Roof Max Solar Radiation",
+  "name": "Roof Max Solar Radiation",
   "state_class": "measurement",
   "unit_of_measurement": "wpm²",
   "icon": "mdi:solar-power",

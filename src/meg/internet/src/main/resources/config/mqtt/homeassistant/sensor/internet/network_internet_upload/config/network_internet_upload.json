@@ -1,7 +1,7 @@
 {
   "object_id": "network_internet_upload",
   "unique_id": "network_internet_upload",
-  "name": "Rack Internet Script Network Internet Upload",
+  "name": "Network Internet Upload",
   "state_class": "measurement",
   "unit_of_measurement": "MB/s",
   "device_class": "data_rate",

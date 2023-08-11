@@ -1,7 +1,7 @@
 {
   "object_id": "network_internet_ping",
   "unique_id": "network_internet_ping",
-  "name": "Rack Internet Script Network Internet Ping",
+  "name": "Network Internet Ping",
   "state_class": "measurement",
   "unit_of_measurement": "ms",
   "icon": "mdi:cloud-refresh",

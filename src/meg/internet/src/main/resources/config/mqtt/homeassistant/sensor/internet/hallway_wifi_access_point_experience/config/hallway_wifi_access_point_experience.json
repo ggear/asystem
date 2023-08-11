@@ -1,7 +1,7 @@
 {
   "object_id": "hallway_wifi_access_point_experience",
   "unique_id": "hallway_wifi_access_point_experience",
-  "name": "Rack Internet Script Hallway Wifi Access Point Experience",
+  "name": "Hallway Wifi Access Point Experience",
   "state_class": "measurement",
   "unit_of_measurement": "%",
   "device_class": "signal_strength",

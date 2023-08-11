@@ -1,7 +1,7 @@
 {
   "object_id": "deck_festoons_plug_temperature",
   "unique_id": "deck_festoons_plug_temperature",
-  "name": "Deck Festoons Deck Festoons Plug Temperature",
+  "name": "Deck Festoons Plug Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

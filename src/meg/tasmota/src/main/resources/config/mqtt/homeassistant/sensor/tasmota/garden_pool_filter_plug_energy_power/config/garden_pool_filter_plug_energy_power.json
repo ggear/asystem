@@ -1,7 +1,7 @@
 {
   "object_id": "garden_pool_filter_plug_energy_power",
   "unique_id": "garden_pool_filter_plug_energy_power",
-  "name": "Garden Pool Filter Garden Pool Filter Plug Energy Power",
+  "name": "Garden Pool Filter Plug Energy Power",
   "state_class": "measurement",
   "unit_of_measurement": "W",
   "device_class": "power",

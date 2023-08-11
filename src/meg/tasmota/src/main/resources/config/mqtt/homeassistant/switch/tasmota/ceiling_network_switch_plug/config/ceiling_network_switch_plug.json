@@ -1,7 +1,7 @@
 {
   "object_id": "ceiling_network_switch_plug",
   "unique_id": "ceiling_network_switch_plug",
-  "name": "Ceiling Network Switch Ceiling Network Switch Plug",
+  "name": "Ceiling Network Switch Plug",
   "icon": "mdi:server-network",
   "force_update": "false",
   "optimistic": "true",

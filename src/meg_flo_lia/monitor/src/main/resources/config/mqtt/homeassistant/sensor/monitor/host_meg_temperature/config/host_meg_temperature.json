@@ -1,7 +1,7 @@
 {
   "object_id": "host_meg_temperature",
   "unique_id": "host_meg_temperature",
-  "name": "Rack Lia Temperature Host Meg Temperature",
+  "name": "Host Meg Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

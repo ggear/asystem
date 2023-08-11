@@ -1,7 +1,7 @@
 {
   "object_id": "service_letsencrypt_availability",
   "unique_id": "service_letsencrypt_availability",
-  "name": "Rack Supervisor Script Service Letsencrypt Availability",
+  "name": "Service Letsencrypt Availability",
   "device_class": "running",
   "force_update": "false",
   "state_topic": "asystem/supervisor/service/letsencrypt/availability",

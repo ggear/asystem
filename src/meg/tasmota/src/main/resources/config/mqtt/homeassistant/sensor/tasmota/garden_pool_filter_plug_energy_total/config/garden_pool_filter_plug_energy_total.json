@@ -1,7 +1,7 @@
 {
   "object_id": "garden_pool_filter_plug_energy_total",
   "unique_id": "garden_pool_filter_plug_energy_total",
-  "name": "Garden Pool Filter Garden Pool Filter Plug Energy Total",
+  "name": "Garden Pool Filter Plug Energy Total",
   "state_class": "total_increasing",
   "unit_of_measurement": "kWh",
   "device_class": "energy",

@@ -1,7 +1,7 @@
 {
   "object_id": "network_certificate_expiry",
   "unique_id": "network_certificate_expiry",
-  "name": "Rack Internet Script Network Certificate Expiry",
+  "name": "Network Certificate Expiry",
   "state_class": "measurement",
   "unit_of_measurement": "d",
   "icon": "mdi:cloud-lock",

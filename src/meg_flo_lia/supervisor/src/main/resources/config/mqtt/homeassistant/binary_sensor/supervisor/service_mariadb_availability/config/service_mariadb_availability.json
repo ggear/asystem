@@ -1,7 +1,7 @@
 {
   "object_id": "service_mariadb_availability",
   "unique_id": "service_mariadb_availability",
-  "name": "Rack Supervisor Script Service Mariadb Availability",
+  "name": "Service Mariadb Availability",
   "device_class": "running",
   "force_update": "false",
   "state_topic": "asystem/supervisor/service/mariadb/availability",

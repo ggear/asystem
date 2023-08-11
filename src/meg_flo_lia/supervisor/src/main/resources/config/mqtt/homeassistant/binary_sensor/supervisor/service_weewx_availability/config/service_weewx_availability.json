@@ -1,7 +1,7 @@
 {
   "object_id": "service_weewx_availability",
   "unique_id": "service_weewx_availability",
-  "name": "Rack Supervisor Script Service Weewx Availability",
+  "name": "Service Weewx Availability",
   "device_class": "running",
   "force_update": "false",
   "state_topic": "asystem/supervisor/service/weewx/availability",

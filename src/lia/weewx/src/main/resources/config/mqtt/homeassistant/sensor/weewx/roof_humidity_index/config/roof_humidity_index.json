@@ -1,7 +1,7 @@
 {
   "object_id": "roof_humidity_index",
   "unique_id": "roof_humidity_index",
-  "name": "Roof Weather Station Roof Humidity Index",
+  "name": "Roof Humidity Index",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

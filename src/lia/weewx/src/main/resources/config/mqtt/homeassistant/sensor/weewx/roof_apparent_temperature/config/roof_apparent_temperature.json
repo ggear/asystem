@@ -1,7 +1,7 @@
 {
   "object_id": "roof_apparent_temperature",
   "unique_id": "roof_apparent_temperature",
-  "name": "Roof Weather Station Roof Apparent Temperature",
+  "name": "Roof Apparent Temperature",
   "state_class": "measurement",
   "unit_of_measurement": "°C",
   "device_class": "temperature",

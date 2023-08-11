@@ -1,7 +1,7 @@
 {
   "object_id": "ceiling_water_booster_plug_energy_power",
   "unique_id": "ceiling_water_booster_plug_energy_power",
-  "name": "Ceiling Water Booster Ceiling Water Booster Plug Energy Power",
+  "name": "Ceiling Water Booster Plug Energy Power",
   "state_class": "measurement",
   "unit_of_measurement": "W",
   "device_class": "power",

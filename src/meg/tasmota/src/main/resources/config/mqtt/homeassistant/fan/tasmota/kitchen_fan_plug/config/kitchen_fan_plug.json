@@ -1,7 +1,7 @@
 {
   "object_id": "kitchen_fan_plug",
   "unique_id": "kitchen_fan_plug",
-  "name": "Kitchen Fan Kitchen Fan Plug",
+  "name": "Kitchen Fan Plug",
   "icon": "mdi:fan",
   "force_update": "false",
   "optimistic": "true",

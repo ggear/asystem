@@ -1,7 +1,7 @@
 {
   "object_id": "roof_hourly_rain",
   "unique_id": "roof_hourly_rain",
-  "name": "Roof Weather Station Roof Hourly Rain",
+  "name": "Roof Hourly Rain",
   "state_class": "total",
   "unit_of_measurement": "mm",
   "icon": "mdi:weather-pouring",

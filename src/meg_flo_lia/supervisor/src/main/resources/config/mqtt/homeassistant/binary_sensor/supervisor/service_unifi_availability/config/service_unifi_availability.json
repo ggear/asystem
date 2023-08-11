@@ -1,7 +1,7 @@
 {
   "object_id": "service_unifi_availability",
   "unique_id": "service_unifi_availability",
-  "name": "Rack Supervisor Script Service Unifi Availability",
+  "name": "Service Unifi Availability",
   "device_class": "running",
   "force_update": "false",
   "state_topic": "asystem/supervisor/service/unifi/availability",
