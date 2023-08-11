@@ -1,0 +1,21 @@
+{
+  "object_id": "roof_rain_rate",
+  "unique_id": "roof_rain_rate",
+  "name": "Roof Weather Station Roof Rain Rate",
+  "state_class": "measurement",
+  "unit_of_measurement": "mm/h",
+  "icon": "mdi:weather-pouring",
+  "force_update": "false",
+  "state_topic": "weewx/roof_rain_rate",
+  "value_template": "{{ (value | float(0) * 10 | round(2)) if (value is defined and value | float(-1) >= 0) else (states('sensor.roof_rain_rate') | float(None)) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "WeeWX",
+    "identifiers": "davis-roof-weather-station",
+    "name": "Roof Weather Station",
+    "model": "Vantage Pro2",
+    "manufacturer": "Davis",
+    "sw_version": "4.10.2",
+    "suggested_area": "Roof"
+  }
+}

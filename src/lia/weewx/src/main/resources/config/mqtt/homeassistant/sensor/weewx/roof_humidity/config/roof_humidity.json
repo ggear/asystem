@@ -1,0 +1,22 @@
+{
+  "object_id": "roof_humidity",
+  "unique_id": "roof_humidity",
+  "name": "Roof Weather Station Roof Humidity",
+  "state_class": "measurement",
+  "unit_of_measurement": "%",
+  "device_class": "humidity",
+  "icon": "mdi:water-percent",
+  "force_update": "false",
+  "state_topic": "weewx/roof_humidity",
+  "value_template": "{{ (value | int(0)) if (value is defined and value | int(-1) >= 0) else (states('sensor.roof_humidity') | int(None)) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "WeeWX",
+    "identifiers": "davis-roof-weather-station",
+    "name": "Roof Weather Station",
+    "model": "Vantage Pro2",
+    "manufacturer": "Davis",
+    "sw_version": "4.10.2",
+    "suggested_area": "Roof"
+  }
+}

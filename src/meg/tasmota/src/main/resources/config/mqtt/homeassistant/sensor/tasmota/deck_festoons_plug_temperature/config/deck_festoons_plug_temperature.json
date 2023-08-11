@@ -1,0 +1,28 @@
+{
+  "object_id": "deck_festoons_plug_temperature",
+  "unique_id": "deck_festoons_plug_temperature",
+  "name": "Deck Festoons Deck Festoons Plug Temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/deck_festoons_plug/tele/SENSOR",
+  "value_template": "{{ value_json['SI7021']['Temperature'] if (value_json['SI7021']['Temperature'] is defined and (value_json['SI7021']['Temperature'] | float(-200) > -100) and (value_json['SI7021']['Temperature'] | float(200) < 100)) else (states('sensor.deck_festoons_plug_temperature') | float(None)) }}",
+  "availability_topic": "tasmota/device/deck_festoons_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "identifiers": "sonoff-deck-festoons",
+    "name": "Deck Festoons",
+    "model": "THR316D / SI7021",
+    "manufacturer": "SONOFF",
+    "sw_version": "13.0.0",
+    "suggested_area": "Deck"
+  }
+}

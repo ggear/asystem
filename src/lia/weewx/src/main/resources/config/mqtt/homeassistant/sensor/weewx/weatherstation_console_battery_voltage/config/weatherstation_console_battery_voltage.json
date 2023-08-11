@@ -1,0 +1,22 @@
+{
+  "object_id": "weatherstation_console_battery_voltage",
+  "unique_id": "weatherstation_console_battery_voltage",
+  "name": "Wardrobe Weather Station Console Weatherstation Console Battery Voltage",
+  "state_class": "measurement",
+  "unit_of_measurement": "V",
+  "device_class": "voltage",
+  "icon": "mdi:battery-30",
+  "force_update": "false",
+  "state_topic": "weewx/weatherstation_console_battery_voltage",
+  "value_template": "{{ value | float(None) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "WeeWX",
+    "identifiers": "davis-wardrobe-weather-station-console",
+    "name": "Wardrobe Weather Station Console",
+    "model": "Vantage Pro2",
+    "manufacturer": "Davis",
+    "sw_version": "4.10.2",
+    "suggested_area": "Wardrobe"
+  }
+}

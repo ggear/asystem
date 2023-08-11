@@ -1,0 +1,37 @@
+{
+  "object_id": "ceiling_water_booster_plug",
+  "unique_id": "ceiling_water_booster_plug",
+  "name": "Ceiling Water Booster Ceiling Water Booster Plug",
+  "icon": "mdi:thermometer-water",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/ceiling_water_booster_plug/stat/POWER",
+  "value_template": "{{ value }}",
+  "command_topic": "tasmota/device/ceiling_water_booster_plug/cmnd/POWER",
+  "availability_topic": "tasmota/device/ceiling_water_booster_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.100/?",
+    "identifiers": "sonoff-ceiling-water-booster",
+    "name": "Ceiling Water Booster",
+    "model": "POWR3",
+    "manufacturer": "SONOFF",
+    "sw_version": "13.0.0",
+    "suggested_area": "Ceiling",
+    "connections": [
+      [
+        "mac",
+        "ec:fa:bc:50:3e:02"
+      ],
+      [
+        "ip",
+        "10.0.6.100"
+      ]
+    ]
+  }
+}

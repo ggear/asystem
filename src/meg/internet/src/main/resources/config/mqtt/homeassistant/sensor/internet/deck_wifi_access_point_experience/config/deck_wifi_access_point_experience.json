@@ -1,0 +1,22 @@
+{
+  "object_id": "deck_wifi_access_point_experience",
+  "unique_id": "deck_wifi_access_point_experience",
+  "name": "Rack Internet Script Deck Wifi Access Point Experience",
+  "state_class": "measurement",
+  "unit_of_measurement": "%",
+  "device_class": "signal_strength",
+  "force_update": "false",
+  "state_topic": "telegraf/macmini-meg/internet",
+  "value_template": "{{ value }}",
+  "availability_topic": "telegraf/macmini-meg/status",
+  "qos": "1",
+  "device": {
+    "via_device": "Internet",
+    "identifiers": "asystem-rack-internet-script",
+    "name": "Rack Internet Script",
+    "model": "Python Script",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

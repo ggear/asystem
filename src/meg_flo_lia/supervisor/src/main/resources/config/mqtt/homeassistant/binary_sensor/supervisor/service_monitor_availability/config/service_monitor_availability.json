@@ -1,0 +1,20 @@
+{
+  "object_id": "service_monitor_availability",
+  "unique_id": "service_monitor_availability",
+  "name": "Rack Supervisor Script Service Monitor Availability",
+  "device_class": "running",
+  "force_update": "false",
+  "state_topic": "asystem/supervisor/service/monitor/availability",
+  "value_template": "{{ value }}",
+  "availability_topic": "asystem/supervisor/availability",
+  "qos": "1",
+  "device": {
+    "via_device": "Supervisor",
+    "identifiers": "asystem-rack-supervisor-script",
+    "name": "Rack Supervisor Script",
+    "model": "Python Script",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

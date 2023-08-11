@@ -1,0 +1,28 @@
+{
+  "object_id": "rack_bottom_temperature",
+  "unique_id": "rack_bottom_temperature",
+  "name": "Rack Temperature Rack Bottom Temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": "false",
+  "state_topic": "telegraf/raspbpi-lia/digitemp",
+  "value_template": "{{ (value_json['fields']['rack_bottom_temperature_celsius'] | float(None)) if (value_json['fields']['rack_bottom_temperature_celsius'] is defined) else (states('sensor.rack_bottom_temperature') | float(None)) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "DigiTemp",
+    "identifiers": "digitemp-rack-temperature",
+    "name": "Rack Temperature",
+    "model": "DS18x20",
+    "manufacturer": "DigiTemp",
+    "sw_version": "UART to 1-Wire Protocol",
+    "suggested_area": "Rack",
+    "connections": [
+      [
+        "mac",
+        "0x28FF641E870576A9"
+      ]
+    ]
+  }
+}

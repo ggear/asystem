@@ -1,0 +1,27 @@
+{
+  "object_id": "ceiling_water_booster_plug_energy_power",
+  "unique_id": "ceiling_water_booster_plug_energy_power",
+  "name": "Ceiling Water Booster Ceiling Water Booster Plug Energy Power",
+  "state_class": "measurement",
+  "unit_of_measurement": "W",
+  "device_class": "power",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/ceiling_water_booster_plug/tele/SENSOR",
+  "value_template": "{{ value_json['ENERGY']['Power'] }}",
+  "availability_topic": "tasmota/device/ceiling_water_booster_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "identifiers": "sonoff-ceiling-water-booster",
+    "name": "Ceiling Water Booster",
+    "model": "POWR3",
+    "manufacturer": "SONOFF",
+    "sw_version": "13.0.0",
+    "suggested_area": "Ceiling"
+  }
+}

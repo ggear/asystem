@@ -1,0 +1,21 @@
+{
+  "object_id": "roof_max_solar_radiation",
+  "unique_id": "roof_max_solar_radiation",
+  "name": "Roof Weather Station Roof Max Solar Radiation",
+  "state_class": "measurement",
+  "unit_of_measurement": "wpm²",
+  "icon": "mdi:solar-power",
+  "force_update": "false",
+  "state_topic": "weewx/roof_max_solar_radiation",
+  "value_template": "{{ (value | int(0)) if (value is defined and value | float(-1) >= 0) else (states('sensor.roof_max_solar_radiation') | int(None)) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "WeeWX",
+    "identifiers": "davis-roof-weather-station",
+    "name": "Roof Weather Station",
+    "model": "Vantage Pro2",
+    "manufacturer": "Davis",
+    "sw_version": "4.10.2",
+    "suggested_area": "Roof"
+  }
+}

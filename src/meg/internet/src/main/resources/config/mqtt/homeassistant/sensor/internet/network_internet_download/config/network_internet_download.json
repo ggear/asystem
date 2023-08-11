@@ -1,0 +1,22 @@
+{
+  "object_id": "network_internet_download",
+  "unique_id": "network_internet_download",
+  "name": "Rack Internet Script Network Internet Download",
+  "state_class": "measurement",
+  "unit_of_measurement": "MB/s",
+  "device_class": "data_rate",
+  "icon": "mdi:cloud-download",
+  "force_update": "false",
+  "state_topic": "telegraf/macmini-meg/internet",
+  "value_template": "{{ (value_json['fields']['download_mbps'] | float(0) | round(2)) if (value_json['fields']['download_mbps'] is defined) else (states('sensor.network_internet_download') | float(None)) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "Internet",
+    "identifiers": "asystem-rack-internet-script",
+    "name": "Rack Internet Script",
+    "model": "Python Script",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

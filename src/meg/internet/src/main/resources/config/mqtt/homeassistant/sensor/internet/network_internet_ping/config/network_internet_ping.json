@@ -1,0 +1,21 @@
+{
+  "object_id": "network_internet_ping",
+  "unique_id": "network_internet_ping",
+  "name": "Rack Internet Script Network Internet Ping",
+  "state_class": "measurement",
+  "unit_of_measurement": "ms",
+  "icon": "mdi:cloud-refresh",
+  "force_update": "false",
+  "state_topic": "telegraf/macmini-meg/internet",
+  "value_template": "{{ (value_json['fields']['ping_med_ms'] | int(0)) if (value_json['fields']['ping_med_ms'] is defined) else (states('sensor.network_internet_ping') | int(None)) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "Internet",
+    "identifiers": "asystem-rack-internet-script",
+    "name": "Rack Internet Script",
+    "model": "Python Script",
+    "manufacturer": "ASYSTEM",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Rack"
+  }
+}

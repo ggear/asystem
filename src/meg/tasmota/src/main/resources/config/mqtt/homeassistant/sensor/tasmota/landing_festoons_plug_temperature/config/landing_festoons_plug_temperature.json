@@ -1,0 +1,28 @@
+{
+  "object_id": "landing_festoons_plug_temperature",
+  "unique_id": "landing_festoons_plug_temperature",
+  "name": "Landing Festoons Landing Festoons Plug Temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer-water",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/landing_festoons_plug/tele/SENSOR",
+  "value_template": "{{ value_json['DS18B20']['Temperature'] if (value_json['DS18B20']['Temperature'] is defined and (value_json['DS18B20']['Temperature'] | float(-200) > -100) and (value_json['DS18B20']['Temperature'] | float(200) < 100)) else (states('sensor.landing_festoons_plug_temperature') | float(None)) }}",
+  "availability_topic": "tasmota/device/landing_festoons_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "identifiers": "sonoff-landing-festoons",
+    "name": "Landing Festoons",
+    "model": "THR316D / DS18x20",
+    "manufacturer": "SONOFF",
+    "sw_version": "13.0.0",
+    "suggested_area": "Landing"
+  }
+}

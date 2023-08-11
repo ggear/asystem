@@ -1,0 +1,22 @@
+{
+  "object_id": "roof_dew_point",
+  "unique_id": "roof_dew_point",
+  "name": "Roof Weather Station Roof Dew Point",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": "false",
+  "state_topic": "weewx/roof_dew_point",
+  "value_template": "{{ value | float(None) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "WeeWX",
+    "identifiers": "davis-roof-weather-station",
+    "name": "Roof Weather Station",
+    "model": "Vantage Pro2",
+    "manufacturer": "Davis",
+    "sw_version": "4.10.2",
+    "suggested_area": "Roof"
+  }
+}

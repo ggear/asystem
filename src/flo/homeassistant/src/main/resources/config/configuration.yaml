@@ -83,14 +83,14 @@ mqtt:
 #  port: !env_var VERNEMQ_PORT
 #  client_id: 'homeassistant'
 #  discovery: true
-#  discovery_prefix: 'homeassistant/entity'
+#  discovery_prefix: 'homeassistant'
 #  birth_message:
-#    topic: 'homeassistant/system/status'
+#    topic: 'homeassistant/status'
 #    payload: 'online'
 #    qos: 2
 #    retain: true
 #  will_message:
-#    topic: 'homeassistant/system/status'
+#    topic: 'homeassistant/status'
 #    payload: 'offline'
 #    qos: 2
 #    retain: true

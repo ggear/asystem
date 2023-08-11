@@ -1,0 +1,37 @@
+{
+  "object_id": "rack_fans_plug",
+  "unique_id": "rack_fans_plug",
+  "name": "Rack Fans Rack Fans Plug",
+  "icon": "mdi:server-remove",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/rack_fans_plug/stat/POWER",
+  "value_template": "{{ value }}",
+  "command_topic": "tasmota/device/rack_fans_plug/cmnd/POWER",
+  "availability_topic": "tasmota/device/rack_fans_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.6.101/?",
+    "identifiers": "sonoff-rack-fans",
+    "name": "Rack Fans",
+    "model": "BASICR2",
+    "manufacturer": "SONOFF",
+    "sw_version": "13.0.0",
+    "suggested_area": "Rack",
+    "connections": [
+      [
+        "mac",
+        "4c:eb:d6:b5:a5:28"
+      ],
+      [
+        "ip",
+        "10.0.6.101"
+      ]
+    ]
+  }
+}

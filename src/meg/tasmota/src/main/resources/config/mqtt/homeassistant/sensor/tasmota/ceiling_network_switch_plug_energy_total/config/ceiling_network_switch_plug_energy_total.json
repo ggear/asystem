@@ -1,0 +1,27 @@
+{
+  "object_id": "ceiling_network_switch_plug_energy_total",
+  "unique_id": "ceiling_network_switch_plug_energy_total",
+  "name": "Ceiling Network Switch Ceiling Network Switch Plug Energy Total",
+  "state_class": "total_increasing",
+  "unit_of_measurement": "kWh",
+  "device_class": "energy",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/ceiling_network_switch_plug/tele/SENSOR",
+  "value_template": "{{ value_json['ENERGY']['Total'] }}",
+  "availability_topic": "tasmota/device/ceiling_network_switch_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "identifiers": "sonoff-ceiling-network-switch",
+    "name": "Ceiling Network Switch",
+    "model": "POWR316D",
+    "manufacturer": "SONOFF",
+    "sw_version": "13.0.0",
+    "suggested_area": "Ceiling"
+  }
+}
