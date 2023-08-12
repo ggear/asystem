@@ -1210,13 +1210,12 @@ compensation:
   weatherstation_console_battery_percent:
     unique_id: weatherstation_console_battery_percent
     source: sensor.weatherstation_console_battery_voltage
-    precision: 1
     unit_of_measurement: "%"
     lower_limit: true
     upper_limit: true
     data_points:
       - [ 3.8, 0 ]
-      - [ 4.0, 100 ]
+      - [ 4.1, 100 ]
 #######################################################################################
 template:
   #####################################################################################
@@ -1227,7 +1226,7 @@ template:
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{ states('sensor.compensation_sensor_weatherstation_console_battery_voltage') | float(0) | int }}
+          {{ states('sensor.compensation_sensor_weatherstation_console_battery_voltage') | int(None) }}
       #################################################################################
       - unique_id: weatherstation_coms_signal_quality_percentage
         device_class: signal_strength
