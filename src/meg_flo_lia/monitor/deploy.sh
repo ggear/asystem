@@ -10,7 +10,8 @@ export VERNEMQ_HOST=${VERNEMQ_HOST_PROD}
 
 ${ROOT_DIR}/src/main/resources/config/mqtt.sh
 
-printf "Entity Metadata publish script sleeping before publishing data ... " && sleep 2 && printf "done\n\n"
+printf "Entity Metadata publish script [monitor] sleeping before publishing data topics ... " && sleep 2 && printf "done\n\nEntity Metadata publish script [monitor] publishing data topics:\n"
+
 for HOST in ${HOSTS}; do
   HOST="$(grep ${HOST} ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-${HOST}"
   printf "Entity Metadata publish script publishing data on [${HOST}]:\n"

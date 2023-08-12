@@ -1,10 +1,9 @@
 import glob
-import os
-import sys
+from os.path import *
 
 import pandas as pd
+import sys
 import urllib3
-from os.path import *
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None

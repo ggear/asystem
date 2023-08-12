@@ -8,9 +8,11 @@ compensation:
     source: sensor.weatherstation_console_battery_voltage
     precision: 1
     unit_of_measurement: "%"
+    lower_limit: true
+    upper_limit: true
     data_points:
-      - [ 4.5, 100 ]
-      - [ 3.0, 0 ]
+      - [ 3.8, 0 ]
+      - [ 4.0, 100 ]
 #######################################################################################
 template:
   #####################################################################################

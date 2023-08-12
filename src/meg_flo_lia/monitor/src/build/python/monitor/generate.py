@@ -1,7 +1,7 @@
 import glob
-import os
-import sys
 from os.path import *
+
+import sys
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
@@ -23,4 +23,5 @@ if __name__ == "__main__":
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
-    write_entity_metadata("monitor", DIR_ROOT, metadata_publish_df)
+    write_entity_metadata("monitor", DIR_ROOT, metadata_publish_df,
+                          "homeassistant/+/monitor/#", "telegraf/+/monitor/#")

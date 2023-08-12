@@ -1,5 +1,4 @@
 import glob
-import os
 from os.path import *
 
 import pandas as pd
@@ -51,4 +50,5 @@ if __name__ == "__main__":
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
-    write_entity_metadata("weewx", DIR_ROOT, metadata_publish_df)
+    write_entity_metadata("weewx", DIR_ROOT, metadata_publish_df,
+                          "homeassistant/+/weewx/#", "weewx/#")

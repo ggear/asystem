@@ -27,7 +27,8 @@ if __name__ == "__main__":
         (metadata_df["state_topic"].str.len() > 0) &
         (metadata_df["connection_mac"].str.len() > 0)
         ]
-    write_entity_metadata("digitemp", DIR_ROOT, metadata_digitemp_df)
+    write_entity_metadata("digitemp", DIR_ROOT, metadata_digitemp_df,
+                          "homeassistant/+/digitemp/#", "telegraf/+/digitemp/#", )
 
     metadata_digitemp_dicts = []
     for _, row in metadata_digitemp_df.iterrows():

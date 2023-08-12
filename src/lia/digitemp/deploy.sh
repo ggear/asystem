@@ -10,5 +10,6 @@ export VERNEMQ_HOST=${VERNEMQ_HOST_PROD}
 
 ${ROOT_DIR}/src/main/resources/config/mqtt.sh
 
-printf "Entity Metadata publish script sleeping before publishing data ... " && sleep 2 && printf "done\n\nEntity Metadata publish script publishing data:\n"
+printf "Entity Metadata publish script [digitemp] sleeping before publishing data topics ... " && sleep 2 && printf "done\n\nEntity Metadata publish script [digitemp] publishing data topics:\n"
+
 ssh root@${HOST} "docker exec digitemp telegraf --debug --once"

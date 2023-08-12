@@ -59,7 +59,7 @@ def load_entity_metadata():
     return metadata_df
 
 
-def write_entity_metadata(module_name, module_root_dir, metadata_df):
+def write_entity_metadata(module_name, module_root_dir, metadata_df, topics_discovery, topics_data):
     if len(metadata_df) > 0:
         metadata_df = metadata_df.copy()
         metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
@@ -102,6 +102,42 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df):
                 metadata_publish_file.write(metadata_publish_str)
                 print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
                       .format(module_name, metadata_unique_id, metadata_publish_path))
+
+        metadata_publish_script_path = abspath(metadata_publish_dir_root + ".sh")
+        with open(metadata_publish_script_path, 'w') as metadata_publish_script_file:
+            metadata_publish_script_file.write("""
+#!/bin/bash
+
+ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
+
+printf "\\nEntity Metadata publish script [{}] dropping discovery topics:\\n"
+mosquitto_sub -h $VERNEMQ_HOST -p $VERNEMQ_PORT --remove-retained -F '%t' -t '{}' -W 1 2>/dev/null
+
+printf "\\nEntity Metadata publish script [{}] sleeping before dropping data topics ... " && sleep 2 && printf "done\\n\\n"
+
+printf "Entity Metadata publish script [{}] dropping data topics:\\n"
+mosquitto_sub -h $VERNEMQ_HOST -p $VERNEMQ_PORT --remove-retained -F '%t' -t '{}' -W 1 2>/dev/null
+
+printf "\\nEntity Metadata publish script [{}] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\\n\\n"
+
+printf "Entity Metadata publish script [{}] publishing discovery topics:\\n"
+find $ROOT_DIR -name "*.json" -print0 | while read -d $'\\0' METADATA_FILE; do
+  METADATA_TOPIC=$(dirname "${{METADATA_FILE/$ROOT_DIR\\//}}")
+  mosquitto_pub -h $VERNEMQ_HOST -p $VERNEMQ_PORT -t $METADATA_TOPIC -f $METADATA_FILE -r
+  printf "$METADATA_TOPIC\\n"
+done
+printf "\\n"
+            """.format(
+                module_name,
+                topics_discovery,
+                module_name,
+                module_name,
+                topics_data,
+                module_name,
+                module_name,
+            ).strip())
+        print(
+            "Build generate script [{}] entity metadata publish script persisted to [{}]".format(module_name, metadata_publish_script_path))
 
 
 if __name__ == "__main__":
@@ -1176,9 +1212,11 @@ compensation:
     source: sensor.weatherstation_console_battery_voltage
     precision: 1
     unit_of_measurement: "%"
+    lower_limit: true
+    upper_limit: true
     data_points:
-      - [ 4.5, 100 ]
-      - [ 3.0, 0 ]
+      - [ 3.8, 0 ]
+      - [ 4.0, 100 ]
 #######################################################################################
 template:
   #####################################################################################

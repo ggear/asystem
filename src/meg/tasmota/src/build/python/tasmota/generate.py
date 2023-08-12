@@ -1,10 +1,10 @@
 import glob
 import json
 import os
-import sys
+from os.path import *
 
 import pandas as pd
-from os.path import *
+import sys
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
@@ -31,7 +31,9 @@ if __name__ == "__main__":
         (metadata_df["device_manufacturer"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ].sort_values("connection_ip")
-    write_entity_metadata("tasmota", DIR_ROOT, metadata_tasmota_df)
+    write_entity_metadata("tasmota", DIR_ROOT, metadata_tasmota_df,
+                          "homeassistant/+/tasmota/#", "tasmota/#")
+
     metadata_tasmota_dicts = [row.dropna().to_dict() for index, row in metadata_tasmota_df.iterrows()]
     tasmota_config_path = join(DIR_ROOT, "src/build/resources/tasmota_config.sh")
     tasmota_devices_path = join(DIR_ROOT, "src/build/resources/devices")
