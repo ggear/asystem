@@ -711,7 +711,7 @@ template:
           {{% if states('sensor.{}') not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
             {{{{ states('sensor.{}') }}}}
           {{% else %}}
-            {{{{ states('sensor.{}') }}}}
+            {{{{ states('sensor.{}') | float(None) }}}}
           {{% endif %}}
                 """.format(
                     metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", ""),
