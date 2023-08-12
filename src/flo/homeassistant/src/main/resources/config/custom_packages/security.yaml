@@ -75,7 +75,7 @@ template:
         unit_of_measurement: "%"
         state: >-
           {% if states('sensor.back_door_sensor_battery') not in ['unavailable', 'unknown', 'none', 'n/a'] %}
-            {{ states('sensor.back_door_sensor_battery') }}
+            {{ states('sensor.back_door_sensor_battery') | int(None) }}
           {% else %}
             {{ states('sensor.template_back_door_sensor_battery_last') | int(None) }}
           {% endif %}
@@ -86,7 +86,7 @@ template:
         unit_of_measurement: "%"
         state: >-
           {% if states('sensor.front_door_sensor_battery') not in ['unavailable', 'unknown', 'none', 'n/a'] %}
-            {{ states('sensor.front_door_sensor_battery') }}
+            {{ states('sensor.front_door_sensor_battery') | int(None) }}
           {% else %}
             {{ states('sensor.template_front_door_sensor_battery_last') | int(None) }}
           {% endif %}

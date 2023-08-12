@@ -709,7 +709,7 @@ template:
         unit_of_measurement: "%"
         state: >-
           {{% if states('sensor.{}') not in ['unavailable', 'unknown', 'none', 'n/a'] %}}
-            {{{{ states('sensor.{}') }}}}
+            {{{{ states('sensor.{}') | int(None) }}}}
           {{% else %}}
             {{{{ states('sensor.{}') | int(None) }}}}
           {{% endif %}}
