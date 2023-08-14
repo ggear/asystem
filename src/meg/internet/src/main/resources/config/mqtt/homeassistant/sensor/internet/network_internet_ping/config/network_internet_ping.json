@@ -7,7 +7,7 @@
   "icon": "mdi:cloud-refresh",
   "force_update": "false",
   "state_topic": "telegraf/macmini-meg/internet",
-  "value_template": "{{ (value_json['fields']['ping_med_ms'] | int(0)) if (value_json['fields']['ping_med_ms'] is defined) else (states('sensor.network_internet_ping') | int(None)) }}",
+  "value_template": "{{ (value_json[\"metrics\"] | selectattr('tags.metric', 'eq', 'ping') | map(attribute='fields.ping_med_ms') | first | default(0) | float(0)) | round(2) if (value_json['metrics'] is defined) else (states('sensor.network_internet_ping') | float(0)) }}",
   "qos": "1",
   "device": {
     "via_device": "Internet",

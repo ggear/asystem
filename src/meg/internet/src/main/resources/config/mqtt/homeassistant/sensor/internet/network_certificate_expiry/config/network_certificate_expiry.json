@@ -7,7 +7,7 @@
   "icon": "mdi:cloud-lock",
   "force_update": "false",
   "state_topic": "telegraf/macmini-meg/internet",
-  "value_template": "{{ (((value_json['fields']['expiry_s'] | float(0)) / 60 / 60 / 24) | round(2)) if (value_json['fields']['expiry_s'] is defined) else (states('sensor.network_certificate_expiry') | float(None)) }}",
+  "value_template": "{{ (value_json[\"metrics\"] | selectattr('tags.metric', 'eq', 'certificate') | map(attribute='fields.expiry_s') | first | default(0) | int(0) / 60 / 60 / 24) | round(2) if (value_json['metrics'] is defined) else (states('sensor.network_certificate_expiry') | float(0)) }}",
   "qos": "1",
   "device": {
     "via_device": "Internet",

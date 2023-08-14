@@ -8,7 +8,7 @@
   "icon": "mdi:cloud-download",
   "force_update": "false",
   "state_topic": "telegraf/macmini-meg/internet",
-  "value_template": "{{ (value_json['fields']['download_mbps'] | float(0) | round(2)) if (value_json['fields']['download_mbps'] is defined) else (states('sensor.network_internet_download') | float(None)) }}",
+  "value_template": "{{ (value_json[\"metrics\"] | selectattr('tags.metric', 'eq', 'download') | map(attribute='fields.download_mbps') | first | default(0) | float(0)) | round(2) if (value_json['metrics'] is defined) else (states('sensor.network_internet_download') | float(0)) }}",
   "qos": "1",
   "device": {
     "via_device": "Internet",

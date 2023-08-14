@@ -1,46 +1,230 @@
 {% set value_json={
-    "fields":
-    {
-        "expiry_s": 2668183,
-        "run_ms": 71,
-        "uptime_delta_s": 63,
-        "uptime_s": 21919
-    },
-    "name": "internet",
-    "tags":
-    {
-        "host": "macmini-meg",
-        "host_id": "udm-rack",
-        "host_location": "darlington",
-        "host_name": "nginx.janeandgraham.com",
-        "metric": "certificate",
-        "run_code": "0"
-    },
-    "timestamp": 1691980927
+    "metrics":
+    [
+        {
+            "fields":
+            {
+                "ping_max_ms": 15.298,
+                "ping_med_ms": 15.106,
+                "ping_min_ms": 15.061,
+                "pings_lost": 0,
+                "run_ms": 6614
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "speedtest-15136",
+                "host_location": "perth",
+                "host_name": "speed.per.aussiebroadband.com.au",
+                "metric": "ping",
+                "run_code": "0"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "run_ms": 38,
+                "upload_mbps": 0.6194193421456217
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "speedtest-55299",
+                "host_location": "perth",
+                "host_name": "spd01-per.au.superloop.com",
+                "metric": "upload",
+                "run_code": "-1"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "download_mbps": 3.3806698937876294,
+                "run_ms": 32
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "speedtest-45707",
+                "host_location": "perth",
+                "host_name": "speedtest-p1.interphone.com.au",
+                "metric": "download",
+                "run_code": "-1"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "ip": "1.159.148.145",
+                "run_ms": 2
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "udm-rack",
+                "host_location": "darlington",
+                "host_name": "home.janeandgraham.com",
+                "host_resolver": "127.0.0.1",
+                "metric": "lookup",
+                "run_code": "0"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "ip": "1.159.148.145",
+                "run_ms": 9
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "udm-rack",
+                "host_location": "darlington",
+                "host_name": "home.janeandgraham.com",
+                "host_resolver": "10.0.0.1",
+                "metric": "lookup",
+                "run_code": "0"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "ip": "1.159.148.145",
+                "run_ms": 58
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "udm-rack",
+                "host_location": "darlington",
+                "host_name": "home.janeandgraham.com",
+                "host_resolver": "162.159.44.190",
+                "metric": "lookup",
+                "run_code": "0"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "ip": "1.159.148.145",
+                "run_ms": 58
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "udm-rack",
+                "host_location": "darlington",
+                "host_name": "home.janeandgraham.com",
+                "host_resolver": "1.1.1.1",
+                "metric": "lookup",
+                "run_code": "0"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "ip": "1.159.148.145",
+                "run_ms": 146
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "udm-rack",
+                "host_location": "darlington",
+                "host_name": "home.janeandgraham.com",
+                "host_resolver": "8.8.8.8",
+                "metric": "lookup",
+                "run_code": "0"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "ip": "1.159.148.145",
+                "run_ms": 300,
+                "uptime_delta_s": 140
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "udm-rack",
+                "host_location": "darlington",
+                "host_name": "home.janeandgraham.com",
+                "host_resolver": "*.*.*.*",
+                "metric": "lookup",
+                "run_code": "0"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "expiry_s": 2663300,
+                "run_ms": 155,
+                "uptime_delta_s": 140,
+                "uptime_s": 3401
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "udm-rack",
+                "host_location": "darlington",
+                "host_name": "nginx.janeandgraham.com",
+                "metric": "certificate",
+                "run_code": "0"
+            },
+            "timestamp": 1691985809
+        },
+        {
+            "fields":
+            {
+                "metrics_failed": 0,
+                "metrics_succeeded": 6,
+                "run_ms": 9163,
+                "uptime_delta_s": 140,
+                "uptime_s": 3401
+            },
+            "name": "internet",
+            "tags":
+            {
+                "host": "macmini-meg",
+                "host_id": "udm-rack",
+                "host_location": "darlington",
+                "host_name": "home.janeandgraham.com",
+                "metric": "network",
+                "run_code": "0"
+            },
+            "timestamp": 1691985809
+        }
+    ]
 } %}
 
-{% set value_json={
-    "fields":
-    {
-        "metrics_failed": 0,
-        "metrics_succeeded": 6,
-        "run_ms": 4901,
-        "uptime_delta_s": 63,
-        "uptime_s": 21919
-    },
-    "name": "internet",
-    "tags":
-    {
-        "host": "macmini-meg",
-        "host_id": "udm-rack",
-        "host_location": "darlington",
-        "host_name": "home.janeandgraham.com",
-        "metric": "network",
-        "run_code": "0"
-    },
-    "timestamp": 1691980927
-} %}
+{{ states('sensor.network_certificate_expiry') | float(0) }}
+{{ (value_json["metrics"] | selectattr('tags.metric', 'eq', 'certificate') | map(attribute='fields.expiry_s') | first | default(0) | int(0) / 60 / 60 / 24) | round(2) if (value_json['metrics'] is defined) else (states('sensor.network_certificate_expiry') | float(0)) }}
 
-{{ states('sensor.network_certificate_expiry') }}
-{{ states('sensor.network_certificate_expiry') | float(None) }}
-{{ (((value_json['fields']['expiry_s'] | int(0)) / 60 / 60 / 24) | round(2)) if (value_json['fields']['expiry_s'] is defined) else (states('sensor.network_certificate_expiry') | float(None)) }}
+{{ states('sensor.network_internet_download') | float(0) }}
+{{ (value_json["metrics"] | selectattr('tags.metric', 'eq', 'download') | map(attribute='fields.download_mbps') | first | default(0) | float(0)) | round(2) if (value_json['metrics'] is defined) else (states('sensor.network_internet_download') | float(0)) }}
+
+{{ states('sensor.network_internet_upload') | float(0) }}
+{{ (value_json["metrics"] | selectattr('tags.metric', 'eq', 'upload') | map(attribute='fields.upload_mbps') | first | default(0) | float(0)) | round(2) if (value_json['metrics'] is defined) else (states('sensor.network_internet_upload') | float(0)) }}
+
+{{ states('sensor.network_internet_ping') | float(0) }}
+{{ (value_json["metrics"] | selectattr('tags.metric', 'eq', 'ping') | map(attribute='fields.ping_med_ms') | first | default(0) | float(0)) | round(2) if (value_json['metrics'] is defined) else (states('sensor.network_internet_ping') | float(0)) }}
