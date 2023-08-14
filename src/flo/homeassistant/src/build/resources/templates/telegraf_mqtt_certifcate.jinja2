@@ -1,0 +1,22 @@
+{% set value_json={
+    "fields":
+    {
+        "expiry_s": 266970,
+        "run_ms": 22,
+        "uptime_delta_s": 200,
+        "uptime_s": 20397
+    },
+    "name": "internet",
+    "tags":
+    {
+        "host": "macmini-meg",
+        "host_id": "udm-rack",
+        "host_location": "darlington",
+        "host_name": "nginx.janeandgraham.com",
+        "metric": "certificate",
+        "run_code": "0"
+    },
+    "timestamp": 1691979405
+} %}
+
+{{ (((value_json['fields']['expiry_s'] | int(0)) / 60 / 60 / 24) | round(2)) if (value_json['fields']['expiry_s'] is defined) else (states('sensor.network_certificate_expiry') | float(None)) }}
