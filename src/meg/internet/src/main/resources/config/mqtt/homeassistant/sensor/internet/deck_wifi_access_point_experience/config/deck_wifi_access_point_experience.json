@@ -7,7 +7,7 @@
   "device_class": "signal_strength",
   "force_update": "false",
   "state_topic": "telegraf/macmini-meg/internet",
-  "value_template": "{{ 100 }}",
+  "value_template": "{{ value | float(None) }}",
   "qos": "1",
   "device": {
     "via_device": "Internet",
