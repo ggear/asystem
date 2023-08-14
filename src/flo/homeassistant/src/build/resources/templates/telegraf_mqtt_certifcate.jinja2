@@ -1,10 +1,10 @@
 {% set value_json={
     "fields":
     {
-        "expiry_s": 266970,
-        "run_ms": 22,
-        "uptime_delta_s": 200,
-        "uptime_s": 20397
+        "expiry_s": 2668183,
+        "run_ms": 71,
+        "uptime_delta_s": 63,
+        "uptime_s": 21919
     },
     "name": "internet",
     "tags":
@@ -16,7 +16,31 @@
         "metric": "certificate",
         "run_code": "0"
     },
-    "timestamp": 1691979405
+    "timestamp": 1691980927
 } %}
 
+{% set value_json={
+    "fields":
+    {
+        "metrics_failed": 0,
+        "metrics_succeeded": 6,
+        "run_ms": 4901,
+        "uptime_delta_s": 63,
+        "uptime_s": 21919
+    },
+    "name": "internet",
+    "tags":
+    {
+        "host": "macmini-meg",
+        "host_id": "udm-rack",
+        "host_location": "darlington",
+        "host_name": "home.janeandgraham.com",
+        "metric": "network",
+        "run_code": "0"
+    },
+    "timestamp": 1691980927
+} %}
+
+{{ states('sensor.network_certificate_expiry') }}
+{{ states('sensor.network_certificate_expiry') | float(None) }}
 {{ (((value_json['fields']['expiry_s'] | int(0)) / 60 / 60 / 24) | round(2)) if (value_json['fields']['expiry_s'] is defined) else (states('sensor.network_certificate_expiry') | float(None)) }}
