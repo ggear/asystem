@@ -11,6 +11,7 @@ RUN apt-get -y --no-install-recommends install libbz2-dev=1.0.8-5+b1
 RUN apt-get -y --no-install-recommends install libffi-dev=3.4.4-1
 RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.13.dfsg-1
 RUN apt-get -y --no-install-recommends install libssl-dev=3.0.9-1
+RUN apt-get -y --no-install-recommends install libsqlite3-dev=3.40.1-2
 RUN apt-get -y --no-install-recommends install poppler-utils=22.12.0-2+b1
 RUN apt-get -y --no-install-recommends install libpoppler-cpp-dev=22.12.0-2+b1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
