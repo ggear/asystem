@@ -1,6 +1,6 @@
 import datetime
-import os
 from collections import OrderedDict
+from os.path import *
 
 import pandas as pd
 
@@ -67,7 +67,7 @@ class Currency(library.Library):
             #     for month in range(1 if year != ATO_START_YEAR else ATO_START_MONTH,
             #                        13 if year < datetime.datetime.now().year else datetime.datetime.now().month):
             #         month_string = datetime.date(2000, month, 1).strftime('%B')
-            #         year_month_file = os.path.join(self.input, "ato_fx_{}-{}.xls".format(year, str(month).zfill(2)))
+            #         year_month_file = join(self.input, "ato_fx_{}-{}.xls".format(year, str(month).zfill(2)))
             #         year_month_file_downloaded = False
             #         for url_suffix in ATO_URL_SUFFIX:
             #             file_status = self.http_download((ATO_URL_PREFIX + url_suffix)
@@ -113,11 +113,11 @@ class Currency(library.Library):
             #                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
             #                 break
             #         if not year_month_file_downloaded:
-            #             self.print_log("Error downloading file [{}]".format(os.path.basename(year_month_file)))
+            #             self.print_log("Error downloading file [{}]".format(basename(year_month_file)))
             #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
 
             for years in RBA_YEARS:
-                years_file = os.path.join(self.input, "rba_fx_{}.xls".format(years))
+                years_file = join(self.input, "rba_fx_{}.xls".format(years))
                 file_status = self.http_download(RBA_URL.format(years), years_file, check='current' in years)
                 if file_status[0]:
                     if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:

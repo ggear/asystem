@@ -1,17 +1,18 @@
+import contextlib
+import copy
+import importlib
+import os
+import shutil
 import sys
+import unittest
+from os.path import *
+
+import pytest
+from mock import patch
 
 sys.path.append('../../../main/python')
 
-import copy
-import os
-import shutil
-import unittest
-import importlib
-import pytest
 from wrangle.plugin import library
-from mock import patch
-import contextlib
-from os.path import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
@@ -22,12 +23,12 @@ for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("currency", {"success_typical": ASSERT_RUN},
+        self.run_module("interest", {"success_typical": ASSERT_RUN},
                         enable_log=True,
                         enable_rerun=False,
-                        enable_random_rows=True,
+                        enable_random_rows=False,
                         disable_write_stdout=True,
-                        disable_data_delta=True,
+                        disable_data_delta=False,
                         disable_file_upload=True,
                         disable_file_download=False,
                         )
@@ -60,14 +61,14 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 162,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 144,
                 },
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_CURRENT_COLUMNS: 162,
+                    library.CTR_ACT_CURRENT_COLUMNS: 144,
                     library.CTR_ACT_UPDATE_COLUMNS: 108,
-                    library.CTR_ACT_DELTA_COLUMNS: 162,
+                    library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
         })})
@@ -76,14 +77,14 @@ class WrangleTest(unittest.TestCase):
         self.run_module("equity", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 162,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 144,
                 },
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_CURRENT_COLUMNS: 162,
-                    library.CTR_ACT_UPDATE_COLUMNS: 117,
-                    library.CTR_ACT_DELTA_COLUMNS: 162,
+                    library.CTR_ACT_CURRENT_COLUMNS: 144,
+                    library.CTR_ACT_UPDATE_COLUMNS: 144,
+                    library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },
         })})
@@ -93,13 +94,13 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 99,
+                    library.CTR_ACT_CURRENT_COLUMNS: 99,
+                    library.CTR_ACT_DELTA_COLUMNS: 99,
                 },
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_CURRENT_COLUMNS: 91,
-                    library.CTR_ACT_UPDATE_COLUMNS: 51,
-                    library.CTR_ACT_DELTA_COLUMNS: 91,
+                    library.CTR_ACT_UPDATE_COLUMNS: 29,
                 },
             },
         })})
@@ -109,13 +110,13 @@ class WrangleTest(unittest.TestCase):
             "counter_equals": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_PREVIOUS_COLUMNS: 99,
+                    library.CTR_ACT_CURRENT_COLUMNS: 99,
+                    library.CTR_ACT_DELTA_COLUMNS: 99,
                 },
             },
             "counter_greater": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_CURRENT_COLUMNS: 91,
-                    library.CTR_ACT_UPDATE_COLUMNS: 51,
-                    library.CTR_ACT_DELTA_COLUMNS: 91,
+                    library.CTR_ACT_UPDATE_COLUMNS: 29,
                 },
             },
         })})
@@ -124,10 +125,10 @@ class WrangleTest(unittest.TestCase):
         self.run_module("interest", {"success_typical": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                    library.CTR_ACT_CURRENT_COLUMNS: 15,
-                    library.CTR_ACT_UPDATE_COLUMNS: 15,
-                    library.CTR_ACT_DELTA_COLUMNS: 15,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 18,
+                    library.CTR_ACT_CURRENT_COLUMNS: 18,
+                    library.CTR_ACT_UPDATE_COLUMNS: 18,
+                    library.CTR_ACT_DELTA_COLUMNS: 18,
                 },
             },
         })})
@@ -136,10 +137,10 @@ class WrangleTest(unittest.TestCase):
         self.run_module("interest", {"success_partial": merge_asserts(ASSERT_RUN, {
             "counter_equals": {
                 library.CTR_SRC_DATA: {
-                    library.CTR_ACT_PREVIOUS_COLUMNS: 15,
-                    library.CTR_ACT_CURRENT_COLUMNS: 15,
-                    library.CTR_ACT_UPDATE_COLUMNS: 15,
-                    library.CTR_ACT_DELTA_COLUMNS: 15,
+                    library.CTR_ACT_PREVIOUS_COLUMNS: 18,
+                    library.CTR_ACT_CURRENT_COLUMNS: 18,
+                    library.CTR_ACT_UPDATE_COLUMNS: 18,
+                    library.CTR_ACT_DELTA_COLUMNS: 18,
                 },
             },
         })})

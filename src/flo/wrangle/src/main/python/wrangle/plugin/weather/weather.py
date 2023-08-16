@@ -32,7 +32,7 @@ class Weather(library.Library):
             # for year in range(DAILY_START_YEAR, now.year + 1):
             #     for month in range(DAILY_START_MONTH if year == DAILY_START_YEAR else 1, (now.month + 1) if year == now.year else 13):
             #         daily_url = DAILY_URL.format(year, month)
-            #         daily_file = os.path.join(self.input, daily_url.split("/")[-1])
+            #         daily_file = join(self.input, daily_url.split("/")[-1])
             #         file_status = self.ftp_download(daily_url, daily_file, check=year == now.year and month == now.month)
             #         if file_status[0]:
             #             if library.test(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
@@ -51,7 +51,7 @@ class Weather(library.Library):
             #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
 
             # TODO: HTTP now fails, convert to FTP
-            # monthly_stats_file = os.path.join(self.input, MONTHLY_STATS_URL.split("/")[-1])
+            # monthly_stats_file = join(self.input, MONTHLY_STATS_URL.split("/")[-1])
             # file_status = self.http_download(MONTHLY_STATS_URL, monthly_stats_file)
             # if file_status[0]:
             #     if library.test(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:
@@ -70,7 +70,7 @@ class Weather(library.Library):
             #     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
 
             # TODO: FTP site seems to be down now too?
-            # weekly_forecast_file = os.path.join(self.input, WEEKLY_FORECAST_URL.split("/")[-1])
+            # weekly_forecast_file = join(self.input, WEEKLY_FORECAST_URL.split("/")[-1])
             # file_status = self.ftp_download(WEEKLY_FORECAST_URL, weekly_forecast_file)
             # if file_status[0]:
             #     if library.test(library.ENV_REPROCESS_ALL_FILES) or file_status[1]:

@@ -1,7 +1,7 @@
 import glob
 import importlib
-import os
 import sys
+from os.path import *
 
 from wrangle.plugin import library
 
@@ -9,9 +9,9 @@ from wrangle.plugin import library
 def main():
     module_count = 0
     module_errored_count = 0
-    for module_path in glob.glob("{}/plugin/*/*.py".format(os.path.dirname(os.path.realpath(__file__)))):
+    for module_path in glob.glob("{}/plugin/*/*.py".format(dirname(realpath(__file__)))):
         if not module_path.endswith("__init__.py"):
-            module_name = os.path.basename(os.path.dirname(module_path))
+            module_name = basename(dirname(module_path))
             module = getattr(importlib.import_module("wrangle.plugin.{}".format(module_name)), module_name.title())()
             module_count += 1
             module_errored = False

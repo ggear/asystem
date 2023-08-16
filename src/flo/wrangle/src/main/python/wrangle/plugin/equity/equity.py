@@ -1,8 +1,8 @@
 import calendar
 import datetime
-import os
 from collections import OrderedDict
 from datetime import datetime
+from os.path import *
 from warnings import simplefilter
 
 import numpy as np
@@ -37,7 +37,6 @@ STATEMENT_ATTRIBUTES = ("Date", "Type", "Owner", "Currency", "Rate", "Units", "V
 STOCK = OrderedDict([
     ('WDS', {"start": "2009-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('SIG', {"start": "2006-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
-    ('OZL', {"start": "2009-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('VAS', {"start": "2010-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('VHY', {"start": "2011-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('VAE', {"start": "2016-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
@@ -50,12 +49,15 @@ STOCK = OrderedDict([
     ('URNM', {"start": "2022-07", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
 ])
 
+STOCK_DROP_TICKERS = ["MSG"]
+
 DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
 DRIVE_URL_PORTFOLIO = "https://docs.google.com/spreadsheets/d/1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
 
 
 class Equity(library.Library):
 
+    # noinspection PyTypeChecker
     def _run(self):
         new_data = False
         equity_df = pd.DataFrame()
@@ -98,9 +100,9 @@ class Equity(library.Library):
             files = self.drive_sync(self.input_drive, self.input)
             self.add_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
             for file_name in files:
-                if os.path.basename(file_name).startswith("58861"):
+                if basename(file_name).startswith("58861"):
                     statement_files[file_name] = files[file_name]
-                elif os.path.basename(file_name).startswith("Yahoo"):
+                elif basename(file_name).startswith("Yahoo"):
                     if files[file_name][0] and (library.test(library.WRANGLE_DISABLE_DATA_DELTA) or files[file_name][1]):
                         stock_files[file_name] = files[file_name]
             new_data = library.test(library.WRANGLE_DISABLE_DATA_DELTA) or \
@@ -117,7 +119,7 @@ class Equity(library.Library):
             if stock_files[stock_file_name][0]:
                 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or stock_files[stock_file_name][1]:
                     try:
-                        stock_ticker = os.path.basename(stock_file_name).split('_')[1]
+                        stock_ticker = basename(stock_file_name).split('_')[1]
                         stock_df = pd.read_csv(stock_file_name) \
                             .add_prefix("{} ".format(stock_ticker)).rename({"{} Date".format(stock_ticker): 'Date'}, axis=1)
                         stock_df["{} Currency Rate Base".format(stock_ticker)] = 1.0
@@ -168,7 +170,7 @@ class Equity(library.Library):
                                         statement_data[statement_file_name]["Errors"].append("File missing required heading")
                                 while line_index < len(statement_lines):
                                     statement_data[statement_file_name]['Parse'] += "File [{}]: Page [{:02d}]: Line [{:02d}]:  " \
-                                        .format(os.path.basename(statement_file_name), page_index, line_index)
+                                        .format(basename(statement_file_name), page_index, line_index)
                                     statement_line = statement_lines[line_index].strip()
                                     statement_tokens = statement_line.split()
                                     token_index = 0
@@ -275,13 +277,13 @@ class Equity(library.Library):
                         statement_position = statement_data[file_name]["Positions"]
                         statements_positions.extend(list(statement_position.values()))
                         self.print_log("File [{}] processed as [{}] with positions {}"
-                                       .format(os.path.basename(file_name), STATUS_SUCCESS, list(statement_position.keys())))
+                                       .format(basename(file_name), STATUS_SUCCESS, list(statement_position.keys())))
                     elif statement_data[file_name]['Status'] == STATUS_SKIPPED:
-                        self.print_log("File [{}] processed as [{}]".format(os.path.basename(file_name), STATUS_SKIPPED))
+                        self.print_log("File [{}] processed as [{}]".format(basename(file_name), STATUS_SKIPPED))
                     else:
-                        self.print_log("File [{}] processed as [{}] at parsing point:".format(os.path.basename(file_name), STATUS_FAILURE))
+                        self.print_log("File [{}] processed as [{}] at parsing point:".format(basename(file_name), STATUS_FAILURE))
                         self.print_log(statement_data[file_name]["Parse"].split("\n"))
-                        self.print_log("File [{}] processed as [{}] with errors:".format(os.path.basename(file_name), STATUS_FAILURE))
+                        self.print_log("File [{}] processed as [{}] with errors:".format(basename(file_name), STATUS_FAILURE))
                         if not statement_data[file_name]["Errors"]:
                             statement_data[file_name]["Errors"] = ["<NONE>"]
                         error_index = 0
@@ -317,47 +319,50 @@ class Equity(library.Library):
                         equity_df = pd.concat([equity_df, stocks_df[stock][~stocks_df[stock].index.duplicated()]], axis=1, sort=True)
                 equity_df.index = pd.to_datetime(equity_df.index)  # type: ignore
                 equity_df = equity_df.resample('D').ffill().replace('', np.nan).ffill()
-                bank_name = "RBA_Interest_Bank_rates"
-                bank_cols = ["Date", "Bank Rate"]
-                bank_query = """
-from(bucket: "data_public")
-    |> range(start: 1993-01-01T00:00:00.000Z, stop: now())
-    |> filter(fn: (r) => r["_measurement"] == "interest")
-    |> filter(fn: (r) => r["_field"] == "bank")
-    |> filter(fn: (r) => r["period"] == "1mo")
-    |> keep(columns: ["_time", "_value"])
-    |> sort(columns: ["_time"])
-    |> sort(columns: ["_time"])
-    |> unique(column: "_time")
-                """
-                bank_rates = self.database_read(bank_query, bank_cols, bank_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
-                if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(bank_rates) == 0:
-                    bank_rates = self.database_read(bank_query, bank_cols, bank_name, True)
-                bank_rates.loc[len(bank_rates.index)] = \
-                    [datetime.today().strftime('%Y-%m-%d 00:00:00+00:00'), bank_rates.loc[len(bank_rates.index) - 1, "Bank Rate"]]
-                bank_rates["Bank Rate"] = bank_rates["Bank Rate"].apply(pd.to_numeric)
-                bank_rates["BSAV Price Open"] = 1
-                bank_rates["BSAV Price Close"] = bank_rates["Bank Rate"] / 1200 + 1
-                for i in range(1, len(bank_rates)):
-                    bank_rates.loc[i, "BSAV Price Open"] = bank_rates.loc[i - 1, "BSAV Price Close"]
-                    bank_rates.loc[i, "BSAV Price Close"] = bank_rates.loc[i, "BSAV Price Open"] * \
-                                                            (bank_rates.loc[i, "Bank Rate"] / 1200 + 1)
-                bank_rates.index = pd.to_datetime(pd.to_datetime(bank_rates["Date"], utc=True).dt.date)
-                bank_rates.sort_index(inplace=True)
-                bank_rates = bank_rates[~bank_rates.index.duplicated(keep='last')]
-                bank_rates = bank_rates.resample('D').interpolate(limit_direction='both', limit_area='inside').replace('', np.nan).ffill()
-                bank_rates["BSAV Price Close"] = bank_rates["BSAV Price Open"]
-                bank_rates["BSAV Price Low"] = bank_rates[["BSAV Price Open", "BSAV Price Close"]].min(axis=1)
-                bank_rates["BSAV Price High"] = bank_rates[["BSAV Price Open", "BSAV Price Close"]].max(axis=1)
-                bank_rates["BSAV Currency Base"] = "AUD"
-                bank_rates["BSAV Paid Dividends"] = 0.0
-                bank_rates["BSAV Currency Rate Base"] = 1.0
-                bank_rates["BSAV Currency Rate Spot"] = 1.0
-                bank_rates["BSAV Stock Splits"] = 0.0
-                bank_rates["BSAV Market Volume"] = 0.0
-                del bank_rates["Date"]
-                del bank_rates["Bank Rate"]
-                equity_df = pd.concat([equity_df, bank_rates], axis=1, sort=True)
+
+                # TODO: Remove BSAV, to be added when Portfolio updated (below)
+                # bank_name = "RBA_Interest_Bank_rates"
+                # bank_cols = ["Date", "Bank Rate"]
+                # bank_query = """
+                # from(bucket: "data_public")
+                #     |> range(start: 1993-01-01T00:00:00.000Z, stop: now())
+                #     |> filter(fn: (r) => r["_measurement"] == "interest")
+                #     |> filter(fn: (r) => r["_field"] == "bank")
+                #     |> filter(fn: (r) => r["period"] == "1mo")
+                #     |> keep(columns: ["_time", "_value"])
+                #     |> sort(columns: ["_time"])
+                #     |> sort(columns: ["_time"])
+                #     |> unique(column: "_time")
+                #                 """
+                # bank_rates = self.database_read(bank_query, bank_cols, bank_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
+                # if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(bank_rates) == 0:
+                #     bank_rates = self.database_read(bank_query, bank_cols, bank_name, True)
+                # bank_rates.loc[len(bank_rates.index)] = \
+                #     [datetime.today().strftime('%Y-%m-%d 00:00:00+00:00'), bank_rates.loc[len(bank_rates.index) - 1, "Bank Rate"]]
+                # bank_rates["Bank Rate"] = bank_rates["Bank Rate"].apply(pd.to_numeric)
+                # bank_rates["BSAV Price Open"] = 1
+                # bank_rates["BSAV Price Close"] = bank_rates["Bank Rate"] / 1200 + 1
+                # for i in range(1, len(bank_rates)):
+                #     bank_rates.loc[i, "BSAV Price Open"] = bank_rates.loc[i - 1, "BSAV Price Close"]
+                #     bank_rates.loc[i, "BSAV Price Close"] = bank_rates.loc[i, "BSAV Price Open"] * \
+                #                                             (bank_rates.loc[i, "Bank Rate"] / 1200 + 1)
+                # bank_rates.index = pd.to_datetime(pd.to_datetime(bank_rates["Date"], utc=True).dt.date)
+                # bank_rates.sort_index(inplace=True)
+                # bank_rates = bank_rates[~bank_rates.index.duplicated(keep='last')]
+                # bank_rates = bank_rates.resample('D').interpolate(limit_direction='both', limit_area='inside').replace('', np.nan).ffill()
+                # bank_rates["BSAV Price Close"] = bank_rates["BSAV Price Open"]
+                # bank_rates["BSAV Price Low"] = bank_rates[["BSAV Price Open", "BSAV Price Close"]].min(axis=1)
+                # bank_rates["BSAV Price High"] = bank_rates[["BSAV Price Open", "BSAV Price Close"]].max(axis=1)
+                # bank_rates["BSAV Currency Base"] = "AUD"
+                # bank_rates["BSAV Paid Dividends"] = 0.0
+                # bank_rates["BSAV Currency Rate Base"] = 1.0
+                # bank_rates["BSAV Currency Rate Spot"] = 1.0
+                # bank_rates["BSAV Stock Splits"] = 0.0
+                # bank_rates["BSAV Market Volume"] = 0.0
+                # del bank_rates["Date"]
+                # del bank_rates["Bank Rate"]
+                # equity_df = pd.concat([equity_df, bank_rates], axis=1, sort=True)
+
                 equity_df = pd.concat([equity_df, statement_df], axis=1, sort=True)
                 equity_df.index = pd.to_datetime(equity_df.index)
                 equity_df = equity_df[~equity_df.index.duplicated(keep='last')]
@@ -383,38 +388,40 @@ from(bucket: "data_public")
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
+
             def aggregate_function(data_df):
                 return data_df.apply(pd.to_numeric, errors='ignore').round(4)
 
             equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, aggregate_function)
             if len(equity_delta_df):
                 tickers = [ticker.replace(" Price Close", "") for ticker in equity_current_df.columns if ticker.endswith("Price Close")]
-                equity_subset_df = equity_current_df[[ticker + dimension for ticker in tickers for dimension in [
+                equity_sheet_df = equity_current_df[[ticker + dimension for ticker in tickers for dimension in [
                     " Price Close",
                     " Currency Rate Base",
                 ]]]
-                equity_subset_df.insert(0, "Date", equity_subset_df.index.strftime('%Y-%m-%d'))
-                equity_subset_df = equity_subset_df[equity_subset_df['Date'] > '2007-01-01'].sort_index(ascending=False)
-                self.sheet_write(equity_subset_df, DRIVE_URL, {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
+                equity_sheet_df.insert(0, "Date", equity_sheet_df.index.strftime('%Y-%m-%d'))
+                equity_database_df = equity_sheet_df[equity_sheet_df['Date'] > '2007-01-01'].sort_index(ascending=False)
+                self.sheet_write(equity_database_df, DRIVE_URL, {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
                 self.print_log("Data has [{}] columns and [{}] rows pre enrichment"
                                .format(len(equity_current_df.columns), len(equity_current_df)))
-                equity_subset_df = equity_current_df.copy().dropna(axis=1, how='all')
+                equity_database_df = equity_current_df.copy().dropna(axis=1, how='all')
+                tickers = [ticker.replace(" Price Close", "") for ticker in equity_database_df.columns if ticker.endswith("Price Close")]
                 columns_numeric = []
-                for column in equity_subset_df.columns:
+                for column in equity_database_df.columns:
                     if "Currency Base" not in column:
                         columns_numeric.append(column)
-                equity_subset_df[columns_numeric] = equity_subset_df[columns_numeric].apply(pd.to_numeric)
+                equity_database_df[columns_numeric] = equity_database_df[columns_numeric].apply(pd.to_numeric)
                 column = [(ticker + " " + column) for column in
                           [dimension_target for dimension_target in DIMENSIONS if dimension_target not in
                            ["Market Volume", "Paid Dividends", "Stock Splits"]] for ticker in tickers]
-                equity_subset_df.loc[:, column] = equity_subset_df.loc[:, column].ffill().bfill()
+                equity_database_df.loc[:, column] = equity_database_df.loc[:, column].ffill().bfill()
                 column = [(ticker + " " + column) for column in
                           ["Market Volume", "Paid Dividends", "Stock Splits"] for ticker in tickers]
-                equity_subset_df.loc[:, column] = equity_subset_df.loc[:, column].fillna(0.0)
-                equity_subset_df = equity_subset_df.set_index(equity_subset_df.index.date).sort_index()
-                equity_subset_df = equity_subset_df.sort_index(axis=1)
+                equity_database_df.loc[:, column] = equity_database_df.loc[:, column].fillna(0.0)
+                equity_database_df = equity_database_df.set_index(equity_database_df.index.date).sort_index()
+                equity_database_df = equity_database_df.sort_index(axis=1)
                 self.print_log("Data has [{}] columns and [{}] rows post copy"
-                               .format(len(equity_subset_df.columns), len(equity_subset_df)))
+                               .format(len(equity_database_df.columns), len(equity_database_df)))
                 fx_rates = {}
                 for fx_pair in CURRENCIES:
                     fx_name = "RBA_FX_{}_rates".format(fx_pair)
@@ -430,7 +437,7 @@ from(bucket: "data_public")
     |> sort(columns: ["_time"])
     |> unique(column: "_time")
                     """.format(
-                        pytz.UTC.localize(pd.to_datetime(equity_subset_df.index[0])).isoformat(),
+                        pytz.UTC.localize(pd.to_datetime(equity_database_df.index[0])).isoformat(),
                         fx_pair.lower(),
                     )
                     fx_rates[fx_pair] = self.database_read(fx_query, fx_cols, fx_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
@@ -453,73 +460,73 @@ from(bucket: "data_public")
                 index_weights[index_weights.columns] = index_weights[index_weights.columns].apply(pd.to_numeric)
                 indexes = index_weights.columns.values.tolist()
                 self.print_log("Data has [{}] columns and [{}] rows post externals download"
-                               .format(len(equity_subset_df.columns), len(equity_subset_df)))
+                               .format(len(equity_database_df.columns), len(equity_database_df)))
                 for ticker in tickers:
-                    base_currencies = equity_subset_df[ticker + " Currency Base"]
+                    base_currencies = equity_database_df[ticker + " Currency Base"]
                     base_currency = base_currencies.loc[~base_currencies.isnull()].values[0]
                     if base_currency == "AUD":
-                        equity_subset_df[ticker + " Currency Rate Spot"] = 1.0
+                        equity_database_df[ticker + " Currency Rate Spot"] = 1.0
                     else:
-                        equity_subset_df = equity_subset_df.join(fx_rates[base_currency]) \
+                        equity_database_df = equity_database_df.join(fx_rates[base_currency]) \
                             .rename(columns={"Rate": ticker + " Currency Rate Spot"})
                     for index in index_weights.columns:
                         index_weight = index_weights[index_weights.index == ticker][index]
                         index_weght_value = index_weight.values[0] if len(index_weight) > 0 else 0.0
-                        equity_subset_df[ticker + " Index " + index.title() + " Weight"] = index_weght_value
+                        equity_database_df[ticker + " Index " + index.title() + " Weight"] = index_weght_value
                     for column in [" Price Open", " Price High", " Price Low", " Price Close"]:
-                        equity_subset_df[ticker + column + " Base"] = \
-                            equity_subset_df[ticker + column] * \
-                            equity_subset_df[ticker + " Currency Rate Base"]
-                        equity_subset_df[ticker + column + " Spot"] = \
-                            equity_subset_df[ticker + column + " Base"] / \
-                            equity_subset_df[ticker + " Currency Rate Spot"]
+                        equity_database_df[ticker + column + " Base"] = \
+                            equity_database_df[ticker + column] * \
+                            equity_database_df[ticker + " Currency Rate Base"]
+                        equity_database_df[ticker + column + " Spot"] = \
+                            equity_database_df[ticker + column + " Base"] / \
+                            equity_database_df[ticker + " Currency Rate Spot"]
                         for index in indexes:
-                            equity_subset_df[ticker + " Index " + index.title() + column + " Base"] = \
-                                equity_subset_df[ticker + " Index " + index.title() + " Weight"] * \
-                                equity_subset_df[ticker + column + " Base"]
-                            equity_subset_df[ticker + " Index " + index.title() + column + " Spot"] = \
-                                equity_subset_df[ticker + " Index " + index.title() + " Weight"] * \
-                                equity_subset_df[ticker + column + " Spot"]
+                            equity_database_df[ticker + " Index " + index.title() + column + " Base"] = \
+                                equity_database_df[ticker + " Index " + index.title() + " Weight"] * \
+                                equity_database_df[ticker + column + " Base"]
+                            equity_database_df[ticker + " Index " + index.title() + column + " Spot"] = \
+                                equity_database_df[ticker + " Index " + index.title() + " Weight"] * \
+                                equity_database_df[ticker + column + " Spot"]
                 self.print_log("Data has [{}] columns and [{}] rows post equity enrichment"
-                               .format(len(equity_subset_df.columns), len(equity_subset_df)))
+                               .format(len(equity_database_df.columns), len(equity_database_df)))
                 for index in indexes:
-                    equity_subset_df[index + " Currency Base"] = "AUD"
-                    equity_subset_df[index + " Paid Dividends"] = 0.0
-                    equity_subset_df[index + " Currency Rate Base"] = 1.0
-                    equity_subset_df[index + " Currency Rate Spot"] = 1.0
-                    equity_subset_df[index + " Stock Splits"] = 0.0
-                    equity_subset_df[index + " Market Volume"] = 0.0
+                    equity_database_df[index + " Currency Base"] = "AUD"
+                    equity_database_df[index + " Paid Dividends"] = 0.0
+                    equity_database_df[index + " Currency Rate Base"] = 1.0
+                    equity_database_df[index + " Currency Rate Spot"] = 1.0
+                    equity_database_df[index + " Stock Splits"] = 0.0
+                    equity_database_df[index + " Market Volume"] = 0.0
                     for column in [" Price Close", " Price High", " Price Low", " Price Open"]:
-                        equity_subset_df[index + column] = 0.0
+                        equity_database_df[index + column] = 0.0
                         for index_ticker_component in tickers:
                             if index_ticker_component not in indexes:
-                                equity_subset_df[index + column] += \
-                                    equity_subset_df[index_ticker_component + " Index " + index.title() + column + " Spot"]
+                                equity_database_df[index + column] += \
+                                    equity_database_df[index_ticker_component + " Index " + index.title() + column + " Spot"]
                         for snapshot in [" Base", " Spot"]:
-                            equity_subset_df[index + column + snapshot] = \
-                                equity_subset_df[index + column]
+                            equity_database_df[index + column + snapshot] = \
+                                equity_database_df[index + column]
                             for index_sub in indexes:
-                                equity_subset_df[index + " Index " + index_sub.title() + column + snapshot] = \
-                                    equity_subset_df[index + column] if index == index_sub else 0.0
+                                equity_database_df[index + " Index " + index_sub.title() + column + snapshot] = \
+                                    equity_database_df[index + column] if index == index_sub else 0.0
                 self.print_log("Data has [{}] columns and [{}] rows post index enrichment"
-                               .format(len(equity_subset_df.columns), len(equity_subset_df)))
+                               .format(len(equity_database_df.columns), len(equity_database_df)))
                 for ticker in tickers + indexes:
-                    equity_subset_df[ticker + " Market Volume Value"] = \
-                        equity_subset_df[ticker + " Market Volume"] * \
-                        equity_subset_df[ticker + " Price Close Spot"]
+                    equity_database_df[ticker + " Market Volume Value"] = \
+                        equity_database_df[ticker + " Market Volume"] * \
+                        equity_database_df[ticker + " Price Close Spot"]
                     for snapshot in ["Base", "Spot"]:
                         for period in [1, 30, 90]:
-                            equity_subset_df[ticker + " Price Change " + snapshot + " (" + str(period) + ")"] = \
-                                equity_subset_df[ticker + " Price Close " + snapshot].diff(period).fillna(0.0)
-                            equity_subset_df[ticker + " Price Change Percentage " + snapshot + " (" + str(period) + ")"] = \
-                                equity_subset_df[ticker + " Price Close " + snapshot].pct_change(period).fillna(0.0) * 100
+                            equity_database_df[ticker + " Price Change " + snapshot + " (" + str(period) + ")"] = \
+                                equity_database_df[ticker + " Price Close " + snapshot].diff(period).fillna(0.0)
+                            equity_database_df[ticker + " Price Change Percentage " + snapshot + " (" + str(period) + ")"] = \
+                                equity_database_df[ticker + " Price Close " + snapshot].pct_change(period).fillna(0.0) * 100
                 self.print_log("Data has [{}] columns and [{}] rows post change enrichment"
-                               .format(len(equity_subset_df.columns), len(equity_subset_df)))
-                equity_subset_df = equity_subset_df.sort_index(axis=1)
+                               .format(len(equity_database_df.columns), len(equity_database_df)))
+                equity_database_df = equity_database_df.sort_index(axis=1)
                 self.print_log("Data has [{}] columns and [{}] rows post enrichment"
-                               .format(len(equity_subset_df.columns), len(equity_subset_df)))
-                equity_subset_df.index = pd.to_datetime(equity_subset_df.index)
-                tickers = [ticker.replace(" Price Close", "") for ticker in equity_subset_df.columns if ticker.endswith("Price Close")]
+                               .format(len(equity_database_df.columns), len(equity_database_df)))
+                equity_database_df.index = pd.to_datetime(equity_database_df.index)
+                tickers = [ticker.replace(" Price Close", "") for ticker in equity_database_df.columns if ticker.endswith("Price Close")]
                 for metadata in [
                     ([
                          " Price Close",
@@ -562,13 +569,13 @@ from(bucket: "data_public")
                         for ticker in tickers:
                             columns.append(ticker + column_sub)
                             columns_rename[ticker + column_sub] = ticker.lower()
-                        self.database_write(equity_subset_df[columns].rename(columns=columns_rename), global_tags={
+                        self.database_write(equity_database_df[columns].rename(columns=columns_rename), global_tags={
                             "type": column_sub.split('(')[0].strip().replace(" ", "-").lower(),
                             "period": metadata[2],
                             "unit": metadata[1]
                         })
                 self.print_log("Data has [{}] columns and [{}] rows post serialisation"
-                               .format(len(equity_subset_df.columns), len(equity_subset_df)))
+                               .format(len(equity_database_df.columns), len(equity_database_df)))
                 self.state_write()
         except Exception as exception:
             self.print_log("Unexpected error processing equity data", exception)

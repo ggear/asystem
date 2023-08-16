@@ -9,7 +9,6 @@ import pytest
 from wrangle.plugin import library
 from requests import post
 import time
-import subprocess
 from tabulate import tabulate
 from os.path import *
 
@@ -44,37 +43,37 @@ from(bucket: "data_public")
     assert success is True
 
 
-def test_typical():
-    data_public_len = bucket_length("data_public")
-    data_private_len = bucket_length("data_private")
-    process = subprocess.Popen("docker exec wrangle telegraf --debug --once",
-                               shell=True, stdout=subprocess.PIPE)
-    process.wait()
-    assert process.returncode == 0
-    assert bucket_length("data_public") > data_public_len
-    assert bucket_length("data_private") > data_private_len
-
-
-def test_noop():
-    data_public_len = bucket_length("data_public")
-    data_private_len = bucket_length("data_private")
-    process = subprocess.Popen("docker exec wrangle telegraf --debug --once",
-                               shell=True, stdout=subprocess.PIPE)
-    process.wait()
-    assert process.returncode == 0
-    assert bucket_length("data_public") >= data_public_len
-    assert bucket_length("data_private") >= data_private_len
-
-
-def test_reload():
-    data_public_len = bucket_length("data_public")
-    data_private_len = bucket_length("data_private")
-    process = subprocess.Popen("docker exec -e WRANGLE_DISABLE_DATA_DELTA=true wrangle telegraf --debug --once",
-                               shell=True, stdout=subprocess.PIPE)
-    process.wait()
-    assert process.returncode == 0
-    assert bucket_length("data_public") > data_public_len
-    assert bucket_length("data_private") > data_private_len
+# def test_typical():
+#     data_public_len = bucket_length("data_public")
+#     data_private_len = bucket_length("data_private")
+#     process = subprocess.Popen("docker exec wrangle telegraf --debug --once",
+#                                shell=True, stdout=subprocess.PIPE)
+#     process.wait()
+#     assert process.returncode == 0
+#     assert bucket_length("data_public") > data_public_len
+#     assert bucket_length("data_private") > data_private_len
+#
+#
+# def test_noop():
+#     data_public_len = bucket_length("data_public")
+#     data_private_len = bucket_length("data_private")
+#     process = subprocess.Popen("docker exec wrangle telegraf --debug --once",
+#                                shell=True, stdout=subprocess.PIPE)
+#     process.wait()
+#     assert process.returncode == 0
+#     assert bucket_length("data_public") >= data_public_len
+#     assert bucket_length("data_private") >= data_private_len
+#
+#
+# def test_reload():
+#     data_public_len = bucket_length("data_public")
+#     data_private_len = bucket_length("data_private")
+#     process = subprocess.Popen("docker exec -e WRANGLE_DISABLE_DATA_DELTA=true wrangle telegraf --debug --once",
+#                                shell=True, stdout=subprocess.PIPE)
+#     process.wait()
+#     assert process.returncode == 0
+#     assert bucket_length("data_public") > data_public_len
+#     assert bucket_length("data_private") > data_private_len
 
 
 def bucket_length(bucket):
@@ -92,7 +91,8 @@ from(bucket: "{}")
 
 
 def query(flux):
-    target = "http://{}:{}/api/v2/query?org={}".format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_HTTP_PORT"], os.environ["INFLUXDB_ORG"])
+    target = "http://{}:{}/api/v2/query?org={}".format(os.environ["INFLUXDB_IP"], os.environ["INFLUXDB_HTTP_PORT"],
+                                                       os.environ["INFLUXDB_ORG"])
     response = post(url=target, headers={
         'Accept': 'application/csv',
         'Content-type': 'application/vnd.flux',

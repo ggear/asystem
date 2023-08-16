@@ -1,5 +1,5 @@
-import os
 from collections import OrderedDict
+from os.path import *
 
 import pandas as pd
 
@@ -29,7 +29,7 @@ class Interest(library.Library):
         if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD):
             new_data = False
             retail_df = pd.DataFrame()
-            retail_file = os.path.join(self.input, "retail.xls")
+            retail_file = join(self.input, "retail.xls")
             file_status = self.http_download(RETAIL_URL, retail_file)
             if file_status[0]:
                 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
@@ -49,7 +49,7 @@ class Interest(library.Library):
             else:
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
             inflation_df = pd.DataFrame()
-            inflation_file = os.path.join(self.input, "inflation.xls")
+            inflation_file = join(self.input, "inflation.xls")
             file_status = self.http_download(INFLATION_URL, inflation_file)
             if file_status[0]:
                 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:

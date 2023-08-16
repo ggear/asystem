@@ -23,6 +23,7 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 from ftplib import FTP
+from os.path import *
 
 import dropbox
 import influxdb
@@ -106,10 +107,10 @@ def print_log(process, message, exception=None, level="debug"):
 
 
 def get_file(file_name):
-    if os.path.isfile(file_name):
+    if isfile(file_name):
         return file_name
-    file_name = os.path.basename(file_name)
-    working = os.path.dirname(__file__)
+    file_name = basename(file_name)
+    working = dirname(__file__)
     paths = [
         "/root/{}".format(file_name),
         "/etc/telegraf/{}".format(file_name),
@@ -118,21 +119,21 @@ def get_file(file_name):
         "{}/../../../../../{}".format(working, file_name),
     ]
     for path in paths:
-        if os.path.isfile(path):
+        if isfile(path):
             return path
     raise IOError("Could not find file [{}] in the usual places {}".format(file_name, paths))
 
 
 def get_dir(dir_name):
-    working = os.path.dirname(__file__)
+    working = dirname(__file__)
     parent_paths = [
         "/asystem/runtime",
         "{}/../../../../../target".format(working),
     ]
     for parent_path in parent_paths:
-        if os.path.isdir(parent_path):
-            path = os.path.abspath("{}/{}".format(parent_path, dir_name))
-            if not os.path.isdir(path):
+        if isdir(parent_path):
+            path = abspath("{}/{}".format(parent_path, dir_name))
+            if not isdir(path):
                 os.makedirs(path)
             return path
     raise IOError("Could not find path in the usual places {}".format(parent_paths))
@@ -226,11 +227,11 @@ class Library(object, metaclass=ABCMeta):
             ])),
         ])
 
-    # noinspection PyProtectedMember
+    # noinspection PyProtectedMember,PyUnresolvedReferences
     def http_download(self, url_file, local_path, check=True, force=False, ignore=False):
-        local_path = os.path.abspath(local_path)
-        if not force and not check and os.path.isfile(local_path):
-            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_path), local_path))
+        local_path = abspath(local_path)
+        if not force and not check and isfile(local_path):
+            self.print_log("File [{}] cached at [{}]".format(basename(local_path), local_path))
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return True, False
         else:
@@ -249,8 +250,8 @@ class Library(object, metaclass=ABCMeta):
                                 datetime.utcfromtimestamp(0)).total_seconds())
                 return None
 
-            if not force and check and os.path.isfile(local_path):
-                modified_timestamp_cached = int(os.path.getmtime(local_path))
+            if not force and check and isfile(local_path):
+                modified_timestamp_cached = int(getmtime(local_path))
                 try:
                     request = urllib.request.Request(url_file, headers=client)
                     request.get_method = lambda: 'HEAD'
@@ -258,7 +259,7 @@ class Library(object, metaclass=ABCMeta):
                     modified_timestamp = get_modified(response.headers)
                     if modified_timestamp is not None:
                         if modified_timestamp_cached == modified_timestamp:
-                            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_path), local_path))
+                            self.print_log("File [{}] cached at [{}]".format(basename(local_path), local_path))
                             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                             return True, False
                 except (Exception,):
@@ -266,8 +267,8 @@ class Library(object, metaclass=ABCMeta):
             try:
                 response = urllib.request.urlopen(urllib.request.Request(url_file, headers=client),
                                                   context=ssl._create_unverified_context())
-                if not os.path.exists(os.path.dirname(local_path)):
-                    os.makedirs(os.path.dirname(local_path))
+                if not exists(dirname(local_path)):
+                    os.makedirs(dirname(local_path))
                 with open(local_path, 'wb') as local_file:
                     local_file.write(response.read())
                 modified_timestamp = get_modified(response.headers)
@@ -276,19 +277,19 @@ class Library(object, metaclass=ABCMeta):
                         os.utime(local_path, (modified_timestamp, modified_timestamp))
                 except Exception as exception:
                     self.print_log("File [{}] modified timestamp set failed [{}]".format(local_path, modified_timestamp), exception)
-                self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_path), local_path))
+                self.print_log("File [{}] downloaded to [{}]".format(basename(local_path), local_path))
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 return True, True
             except Exception as exception:
                 if not ignore:
-                    self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_path), url_file), exception)
+                    self.print_log("File [{}] not available at [{}]".format(basename(local_path), url_file), exception)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return False, False
 
     def ftp_download(self, url_file, local_file, check=True, force=False, ignore=False):
-        local_file = os.path.abspath(local_file)
-        if not force and not check and os.path.isfile(local_file):
-            self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
+        local_file = abspath(local_file)
+        if not force and not check and isfile(local_file):
+            self.print_log("File [{}] cached at [{}]".format(basename(local_file), local_file))
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
             return True, False
         else:
@@ -300,44 +301,44 @@ class Library(object, metaclass=ABCMeta):
                 client.login()
                 modified_timestamp = int((parser.parse(client.voidcmd("MDTM {}".format(url_path))[4:].strip()) -
                                           datetime.utcfromtimestamp(0)).total_seconds())
-                if not force and check and os.path.isfile(local_file):
-                    modified_timestamp_cached = int(os.path.getmtime(local_file))
+                if not force and check and isfile(local_file):
+                    modified_timestamp_cached = int(getmtime(local_file))
                     if modified_timestamp_cached == modified_timestamp:
-                        self.print_log("File [{}] cached at [{}]".format(os.path.basename(local_file), local_file))
+                        self.print_log("File [{}] cached at [{}]".format(basename(local_file), local_file))
                         self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                         client.quit()
                         return True, False
-                if not os.path.exists(os.path.dirname(local_file)):
-                    os.makedirs(os.path.dirname(local_file))
+                if not exists(dirname(local_file)):
+                    os.makedirs(dirname(local_file))
                 client.retrbinary("RETR {}".format(url_path), open(local_file, 'wb').write)
                 try:
                     os.utime(local_file, (modified_timestamp, modified_timestamp))
                 except Exception as exception:
                     self.print_log("File [{}] modified timestamp set failed [{}]".format(local_file, modified_timestamp), exception)
-                self.print_log("File [{}] downloaded to [{}]".format(os.path.basename(local_file), local_file))
+                self.print_log("File [{}] downloaded to [{}]".format(basename(local_file), local_file))
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                 client.quit()
                 return True, True
             except Exception as exception:
                 if client is not None:
                     client.quit()
-                self.print_log("File [{}] not available at [{}]".format(os.path.basename(local_file), url_file), exception)
+                self.print_log("File [{}] not available at [{}]".format(basename(local_file), url_file), exception)
                 if not ignore:
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
         return False, False
 
     def stock_download(self, local_path, ticker, start, end, end_of_day='17:00', check=True, force=False, ignore=False):
-        local_path = os.path.abspath(local_path)
+        local_path = abspath(local_path)
         now = datetime.now()
         end_exclusive = datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)
         if start != end_exclusive:
-            if not force and not check and os.path.isfile(local_path):
-                self.print_log("File [{}: {} {}] cached at [{}]".format(os.path.basename(local_path), start, end, local_path))
+            if not force and not check and isfile(local_path):
+                self.print_log("File [{}: {} {}] cached at [{}]".format(basename(local_path), start, end, local_path))
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return True, False
             else:
                 try:
-                    if not force and check and os.path.isfile(local_path):
+                    if not force and check and isfile(local_path):
                         if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]):
                             end_data = datetime.strptime(pd.read_csv(local_path).values[-1][0], '%Y-%m-%d').date()
                             end_expected = BDay().rollback(now).date()
@@ -349,7 +350,7 @@ class Library(object, metaclass=ABCMeta):
                                     end_expected = end_expected - timedelta(days=2 if now.weekday() == 5 else 1)
                             if end_data == end_expected:
                                 self.print_log("File [{}: {} {}] cached at [{}]"
-                                               .format(os.path.basename(local_path), start, end, local_path))
+                                               .format(basename(local_path), start, end, local_path))
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return True, False
                     data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, debug=False)
@@ -361,8 +362,8 @@ class Library(object, metaclass=ABCMeta):
                             self.print_log("No data returned for [{} - {} {}]".format(ticker, start, end_exclusive))
                         else:
                             raise Exception("No data returned for [{} - {} {}]".format(ticker, start, end_exclusive))
-                    if not os.path.exists(os.path.dirname(local_path)):
-                        os.makedirs(os.path.dirname(local_path))
+                    if not exists(dirname(local_path)):
+                        os.makedirs(dirname(local_path))
                     data_df.to_csv(local_path, encoding='utf-8')
                     modified_timestamp = int((datetime.strptime(pd.read_csv(local_path).values[-1][0], '%Y-%m-%d') +
                                               timedelta(hours=8) - datetime.utcfromtimestamp(0)).total_seconds())
@@ -370,7 +371,7 @@ class Library(object, metaclass=ABCMeta):
                         os.utime(local_path, (modified_timestamp, modified_timestamp))
                     except Exception as exception:
                         self.print_log("File [{}] modified timestamp set failed [{}]".format(local_path, modified_timestamp), exception)
-                    self.print_log("File [{}: {} {}] downloaded to [{}]".format(os.path.basename(local_path), start, end, local_path))
+                    self.print_log("File [{}: {} {}] downloaded to [{}]".format(basename(local_path), start, end, local_path))
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                     return True, True
                 except Exception as exception:
@@ -427,9 +428,9 @@ class Library(object, metaclass=ABCMeta):
 
         local_files = {}
         for local_file in glob.glob("{}/*".format(local_dir)):
-            local_files[os.path.basename(local_file)] = {
+            local_files[basename(local_file)] = {
                 "hash": file_hash(local_file) if check else None,
-                "modified": int(os.path.getmtime(local_file)) if check else None
+                "modified": int(getmtime(local_file)) if check else None
             }
         dropbox_files = {}
         service = dropbox.Dropbox(os.getenv('DROPBOX_TOKEN'))
@@ -449,13 +450,13 @@ class Library(object, metaclass=ABCMeta):
         actioned_files = {}
         for dropbox_file in dropbox_files:
             file_actioned = False
-            local_path = os.path.abspath("{}/{}".format(local_dir, dropbox_file))
+            local_path = abspath("{}/{}".format(local_dir, dropbox_file))
             if dropbox_file not in local_files or (check and (
                     dropbox_files[dropbox_file]["modified"] != local_files[dropbox_file]["modified"] or
                     dropbox_files[dropbox_file]["hash"] != local_files[dropbox_file]["hash"]
             )):
-                if not os.path.exists(os.path.dirname(local_path)):
-                    os.makedirs(os.path.dirname(local_path))
+                if not exists(dirname(local_path)):
+                    os.makedirs(dirname(local_path))
                 with open(local_path, "wb") as local_file:
                     metadata, response = service.files_download(path="{}/{}".format(dropbox_dir, dropbox_file))
                     local_file.write(response.content)
@@ -487,9 +488,9 @@ class Library(object, metaclass=ABCMeta):
 
         local_files = {}
         for local_file in glob.glob("{}/*".format(local_dir)):
-            local_files[os.path.basename(local_file)] = {
+            local_files[basename(local_file)] = {
                 "hash": file_hash(local_file) if check else None,
-                "modified": int(os.path.getmtime(local_file)) if check else None
+                "modified": int(getmtime(local_file)) if check else None
             }
         drive_files = {}
         credentials = service_account.Credentials.from_service_account_file(
@@ -513,7 +514,7 @@ class Library(object, metaclass=ABCMeta):
         if download:
             for drive_file in drive_files:
                 file_actioned = False
-                local_path = os.path.abspath("{}/{}".format(local_dir, drive_file))
+                local_path = abspath("{}/{}".format(local_dir, drive_file))
                 if drive_file not in local_files or (check and (
                         drive_files[drive_file]["modified"] > local_files[drive_file]["modified"]
                 )):
@@ -523,8 +524,8 @@ class Library(object, metaclass=ABCMeta):
                     done = False
                     while not done:
                         _, done = downloader.next_chunk()
-                    if not os.path.exists(os.path.dirname(local_path)):
-                        os.makedirs(os.path.dirname(local_path))
+                    if not exists(dirname(local_path)):
+                        os.makedirs(dirname(local_path))
                     with open(local_path, 'wb') as local_file:
                         local_file.write(buffer_file.getvalue())
                     try:
@@ -547,7 +548,7 @@ class Library(object, metaclass=ABCMeta):
             for local_file in local_files:
                 if not local_file.startswith("_"):
                     file_actioned = False
-                    local_path = os.path.abspath("{}/{}".format(local_dir, local_file))
+                    local_path = abspath("{}/{}".format(local_dir, local_file))
                     if local_file not in drive_files or (check and (
                             drive_files[local_file]["modified"] != local_files[local_file]["modified"] or
                             drive_files[local_file]["hash"] != local_files[local_file]["hash"]
@@ -564,16 +565,16 @@ class Library(object, metaclass=ABCMeta):
         return collections.OrderedDict(sorted(actioned_files.items()))
 
     def state_cache(self, data_df_update, aggregate_function=None):
-        file_delta = os.path.abspath("{}/__{}_Delta.csv".format(self.input, self.name.title()))
-        file_update = os.path.abspath("{}/__{}_Update.csv".format(self.input, self.name.title()))
-        file_current = os.path.abspath("{}/__{}_Current.csv".format(self.input, self.name.title()))
-        file_previous = os.path.abspath("{}/__{}_Previous.csv".format(self.input, self.name.title()))
-        if not os.path.isdir(self.input):
+        file_delta = abspath("{}/__{}_Delta.csv".format(self.input, self.name.title()))
+        file_update = abspath("{}/__{}_Update.csv".format(self.input, self.name.title()))
+        file_current = abspath("{}/__{}_Current.csv".format(self.input, self.name.title()))
+        file_previous = abspath("{}/__{}_Previous.csv".format(self.input, self.name.title()))
+        if not isdir(self.input):
             os.makedirs(self.input)
         if not test(WRANGLE_DISABLE_FILE_DOWNLOAD) and test(WRANGLE_DISABLE_DATA_DELTA):
-            if os.path.isfile(file_current):
+            if isfile(file_current):
                 os.remove(file_current)
-        data_df_current = pd.read_csv(file_current, index_col=0, dtype=str) if os.path.isfile(file_current) else pd.DataFrame()
+        data_df_current = pd.read_csv(file_current, index_col=0, dtype=str) if isfile(file_current) else pd.DataFrame()
         data_df_current.index = pd.to_datetime(data_df_current.index)  # type: ignore
         data_df_current.index.name = 'Date'
         if test(WRANGLE_DISABLE_FILE_DOWNLOAD):
@@ -593,18 +594,18 @@ class Library(object, metaclass=ABCMeta):
         data_df_update.index = pd.to_datetime(data_df_update.index)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_COLUMNS, len(data_df_update.columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_ROWS, len(data_df_update))
-        if os.path.isfile(file_current):
+        if isfile(file_current):
             shutil.move(file_current, file_previous)
-        elif os.path.isfile(file_previous):
+        elif isfile(file_previous):
             os.remove(file_previous)
-        data_df_previous = pd.read_csv(file_previous, index_col=0, dtype=str) if os.path.isfile(file_previous) else pd.DataFrame()
+        data_df_previous = pd.read_csv(file_previous, index_col=0, dtype=str) if isfile(file_previous) else pd.DataFrame()
         data_df_previous.index = pd.to_datetime(data_df_previous.index)  # type: ignore
         self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_COLUMNS, len(data_df_previous.columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_PREVIOUS_ROWS, len(data_df_previous))
         for data_column in data_columns:
             if data_column not in data_df_previous:
                 data_df_previous[data_column] = ""
-        self.print_log("File [{}] written to [{}]".format(os.path.basename(file_previous), file_previous))
+        self.print_log("File [{}] written to [{}]".format(basename(file_previous), file_previous))
         data_df_current = pd.concat([data_df_current, data_df_update])
         data_df_current = data_df_current[~data_df_current.index.duplicated(keep='last')]
         data_df_current = data_df_current[data_columns]
@@ -615,8 +616,8 @@ class Library(object, metaclass=ABCMeta):
         data_df_current.index = pd.to_datetime(data_df_current.index)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
-        self.print_log("File [{}] written to [{}]".format(os.path.basename(file_current), file_current))
-        self.print_log("File [{}] written to [{}]".format(os.path.basename(file_update), file_update))
+        self.print_log("File [{}] written to [{}]".format(basename(file_current), file_current))
+        self.print_log("File [{}] written to [{}]".format(basename(file_update), file_update))
         data_df_delta = pd.concat([data_df_current, data_df_previous])
         data_df_delta['Date'] = data_df_delta.index
         data_df_delta = data_df_delta.drop_duplicates(keep=False)
@@ -629,7 +630,7 @@ class Library(object, metaclass=ABCMeta):
             data_df_delta = pd.DataFrame()
         self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_COLUMNS, len(data_df_delta.columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_ROWS, len(data_df_delta))
-        self.print_log("File [{}] written to [{}]".format(os.path.basename(file_delta), file_delta))
+        self.print_log("File [{}] written to [{}]".format(basename(file_delta), file_delta))
         return data_df_delta, data_df_current, data_df_previous
 
     def state_write(self):
@@ -637,7 +638,7 @@ class Library(object, metaclass=ABCMeta):
             if not test(WRANGLE_DISABLE_FILE_UPLOAD):
                 self.drive_sync(self.input_drive, self.input, check=True, download=False, upload=True)
                 self.print_log("Directory [{}] uploaded to [https://drive.google.com/drive/folders/{}]"
-                               .format(os.path.basename(self.input), self.input_drive))
+                               .format(basename(self.input), self.input_drive))
         except Exception as exception:
             self.print_log("Directory [{}] failed to upload to [https://drive.google.com/drive/folders/{}]"
                            .format(self.input, self.input_drive), exception)
@@ -648,13 +649,13 @@ class Library(object, metaclass=ABCMeta):
             metadata = {'modifiedTime': datetime.utcfromtimestamp(modified_time).strftime('%Y-%m-%dT%H:%M:%S.%fZ')}
             if not test(WRANGLE_DISABLE_FILE_UPLOAD):
                 if drive_id is None:
-                    metadata['name'] = os.path.basename(local_file)
+                    metadata['name'] = basename(local_file)
                     metadata['parents'] = [drive_dir]
                     request = service.files().create(body=metadata, media_body=data).execute()
                 else:
                     request = service.files().update(fileId=drive_id, body=metadata, media_body=data).execute()
                 self.print_log("File [{}] uploaded to [https://drive.google.com/file/d/{}]"
-                               .format(os.path.basename(local_file), request.get('id') if drive_id is None else drive_id))
+                               .format(basename(local_file), request.get('id') if drive_id is None else drive_id))
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_UPLOADED)
         except Exception as exception:
             self.print_log("File [{}] failed to upload to [https://drive.google.com/drive/folders/{}]"
@@ -662,18 +663,33 @@ class Library(object, metaclass=ABCMeta):
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
 
     def sheet_read(self, drive_url, file_cache, read_cache=False, write_cache=True, sheet_params=None):
+        data_df = None
         if sheet_params is None:
             sheet_params = {}
-        file_path = os.path.abspath("{}/{}.csv".format(self.input, file_cache))
+        file_path = abspath("{}/{}.csv".format(self.input, file_cache))
         if read_cache:
-            if not os.path.isfile(file_path):
+            if not isfile(file_path):
                 raise Exception("Dataframe [{}] could not be loaded from [{}] because file does not exist"
                                 .format(file_cache, file_path))
             data_df = pd.read_csv(file_path, dtype=str)
             self.print_log("Dataframe [{}] loaded from [{}]".format(file_cache, file_path))
         else:
-            data_df = Spread(drive_url).sheet_to_df(**sheet_params)
-            self.print_log("Dataframe [{}] downloaded from [{}]".format(file_cache, drive_url))
+            retries = 0
+            retries_max = 3
+            retries_exception = None
+            while retries < retries_max:
+                try:
+                    retries += 1
+                    data_df = Spread(drive_url).sheet_to_df(**sheet_params)
+                    self.print_log("Dataframe [{}] downloaded from [{}]".format(file_cache, drive_url))
+                    break
+                except Exception as exception:
+                    time.sleep(5)
+                    retries_exception = exception
+                    pass
+            if data_df is None:
+                raise Exception("Dataframe [{}] could not be loaded from [{}] after retrying [{}] times"
+                                .format(drive_url, retries_max), retries_exception)
         if not read_cache and write_cache:
             data_df.to_csv(file_path, index=False, encoding='utf-8')
             self.print_log("Dataframe [{}] cached at [{}]".format(file_cache, file_path))
@@ -693,9 +709,9 @@ class Library(object, metaclass=ABCMeta):
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     def database_read(self, flux_query, column_names, file_cache, read_cache=False, write_cache=True):
-        file_path = os.path.abspath("{}/{}.csv".format(self.input, file_cache))
+        file_path = abspath("{}/{}.csv".format(self.input, file_cache))
         if read_cache:
-            if not os.path.isfile(file_path):
+            if not isfile(file_path):
                 data_df = pd.DataFrame(columns=column_names)
                 self.print_log("Dataframe [{}] unavailable at [{}]".format(file_cache, file_path))
             else:
@@ -703,12 +719,12 @@ class Library(object, metaclass=ABCMeta):
                 self.print_log("Dataframe [{}] loaded from [{}]".format(file_cache, file_path))
         else:
             rows = []
+            query_url = "http://{}:{}/api/v2/query?org={}".format(
+                os.environ["INFLUXDB_IP_PROD"],
+                os.environ["INFLUXDB_HTTP_PORT"],
+                os.environ["INFLUXDB_ORG"],
+            )
             try:
-                query_url = "http://{}:{}/api/v2/query?org={}".format(
-                    os.environ["INFLUXDB_IP_PROD"],
-                    os.environ["INFLUXDB_HTTP_PORT"],
-                    os.environ["INFLUXDB_ORG"],
-                )
                 response = requests.post(url=query_url, headers={
                     'Accept': 'application/csv',
                     'Content-type': 'application/vnd.flux',
@@ -732,18 +748,18 @@ class Library(object, metaclass=ABCMeta):
 
     def database_trunc(self):
         for bucket in [os.environ["INFLUXDB_BUCKET_DATA_PUBLIC"], os.environ["INFLUXDB_BUCKET_DATA_PRIVATE"]]:
+            trunc_url = "http://{}:{}/api/v2/delete?org={}&bucket={}".format(
+                os.environ["INFLUXDB_IP"],
+                os.environ["INFLUXDB_HTTP_PORT"],
+                os.environ["INFLUXDB_ORG"],
+                bucket,
+            )
+            trunc_query = json.dumps({
+                "start": "1900-01-01T00:00:00Z",
+                "stop": (date.today() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "predicate": "_measurement=\"" + self.name.lower() + "\""
+            })
             try:
-                trunc_url = "http://{}:{}/api/v2/delete?org={}&bucket={}".format(
-                    os.environ["INFLUXDB_IP"],
-                    os.environ["INFLUXDB_HTTP_PORT"],
-                    os.environ["INFLUXDB_ORG"],
-                    bucket,
-                )
-                trunc_query = json.dumps({
-                    "start": "1900-01-01T00:00:00Z",
-                    "stop": (date.today() + timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                    "predicate": "_measurement=\"" + self.name.lower() + "\""
-                })
                 response = post(url=trunc_url, headers={
                     'Accept': 'application/csv',
                     'Content-type': 'application/vnd.flux',
@@ -754,8 +770,8 @@ class Library(object, metaclass=ABCMeta):
                                    .format(self.name.lower(), trunc_query, response.status_code, trunc_url))
                 else:
                     self.print_log("Measurement [{}] truncated at [{}]".format(self.name.lower(), trunc_url))
-            except Exception:
-                self.print_log("Measurement [{}] could not be truncated at [{}]".format(self.name.lower(), trunc_url))
+            except Exception as exception:
+                self.print_log("Measurement [{}] could not be truncated at [{}]".format(self.name.lower(), trunc_url), exception)
 
     # noinspection PyProtectedMember
     def database_write(self, data_df, global_tags=None):
@@ -794,7 +810,7 @@ class Library(object, metaclass=ABCMeta):
         files = {}
         for file_name in os.listdir(file_dir):
             if file_name.startswith(file_prefix):
-                file_path = os.path.join(file_dir, file_name)
+                file_path = join(file_dir, file_name)
                 files[file_path] = True, True
                 self.print_log("File [{}] found at [{}]".format(file_name, file_path))
         return files
@@ -818,4 +834,4 @@ class Library(object, metaclass=ABCMeta):
         self.name = name
         self.reset_counters()
         self.input_drive = input_drive
-        self.input = os.path.abspath(get_dir("data/{}".format(name.lower())))
+        self.input = abspath(get_dir("data/{}".format(name.lower())))

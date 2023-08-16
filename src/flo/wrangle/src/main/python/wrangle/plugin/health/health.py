@@ -1,6 +1,6 @@
 import json
-import os
 from datetime import datetime
+from os.path import *
 
 import numpy as np
 import pandas as pd
@@ -29,8 +29,9 @@ class Health(library.Library):
                     if files[file_name][0] and (library.test(library.WRANGLE_DISABLE_DATA_DELTA) or files[file_name][1]):
 
                         def normalise(df):
-                            df['Date'] = pd.to_datetime(df['Date'])
-                            df = df.set_index('Date')
+                            if len(df) > 0:
+                                df['Date'] = pd.to_datetime(df['Date'])
+                                df = df.set_index('Date')
                             return df
 
                         def get(labels, label):
@@ -39,7 +40,7 @@ class Health(library.Library):
                                     return item[1]
                             raise Exception("Health label [{}] not found in list {}".format(label, labels))
 
-                        if os.path.basename(file_name).startswith("_Sleep-"):
+                        if basename(file_name).startswith("_Sleep-"):
                             if len(sleep_yesterday_df) == 0:
                                 with open(file_name) as data_file:
                                     file_objs = list(json.load(data_file).items())
@@ -68,7 +69,7 @@ class Health(library.Library):
                                         except Exception as exception:
                                             self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-                        elif os.path.basename(file_name).startswith("_SleepReadiness-"):
+                        elif basename(file_name).startswith("_SleepReadiness-"):
                             if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 7:
                                 with open(file_name) as data_file:
                                     file_objs = list(json.load(data_file).items())
@@ -92,7 +93,7 @@ class Health(library.Library):
                                         except Exception as exception:
                                             self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-                        elif os.path.basename(file_name).startswith("_SleepRings-"):
+                        elif basename(file_name).startswith("_SleepRings-"):
                             if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 12:
                                 with open(file_name) as data_file:
                                     file_objs = list(json.load(data_file).items())
@@ -132,7 +133,7 @@ class Health(library.Library):
                                         except Exception as exception:
                                             self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-                        elif os.path.basename(file_name).startswith("Sleep-"):
+                        elif basename(file_name).startswith("Sleep-"):
 
                             def duration_normalise(df, name):
                                 df[name] = df[name].replace('--', 0)
@@ -187,10 +188,10 @@ class Health(library.Library):
                             except Exception as exception:
                                 self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-                        elif os.path.basename(file_name).startswith("_Health-") or os.path.basename(file_name).startswith("Health-"):
+                        elif basename(file_name).startswith("_Health-") or basename(file_name).startswith("Health-"):
                             try:
                                 file_name_rewritten = file_name.replace(".csv", "-rewritten.csv")
-                                if not os.path.isfile(file_name_rewritten):
+                                if not isfile(file_name_rewritten):
                                     file_lines = []
                                     with open(file_name, 'r') as file_original:
                                         with open(file_name_rewritten, 'w') as file_rewrite:
@@ -236,7 +237,7 @@ class Health(library.Library):
                             except Exception as exception:
                                 self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-                        elif os.path.basename(file_name).startswith("_Workout-") or os.path.basename(file_name).startswith("Workout-"):
+                        elif basename(file_name).startswith("_Workout-") or basename(file_name).startswith("Workout-"):
                             try:
                                 file_df = pd.read_csv(file_name, skipinitialspace=True)
                                 file_df['Start'] = pd.to_datetime(file_df['Start'], format='%Y-%m-%d %H:%M')
@@ -339,7 +340,9 @@ class Health(library.Library):
                     workout_columns = []
                     workout_types = set()
                     for workout_column in workout_df.columns.values.tolist():
-                        workout_types.add(workout_column.split(' ')[0].split('-')[1])
+                        workout_column_tokens = workout_column.split(' ')[0].split('-')
+                        if len(workout_column_tokens) > 1:
+                            workout_types.add(workout_column_tokens[1])
                     for workout_type in workout_types:
                         for workout_dimension in [
                             'Start (dt)',
