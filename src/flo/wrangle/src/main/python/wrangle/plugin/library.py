@@ -765,6 +765,7 @@ class Library(object, metaclass=ABCMeta):
                 "predicate": "_measurement=\"" + self.name.lower() + "\""
             })
             try:
+                self.print_log("Measurement [{}] truncate pending at [{}]".format(self.name.lower(), trunc_url))
                 response = post(url=trunc_url, headers={
                     'Accept': 'application/csv',
                     'Content-type': 'application/vnd.flux',
