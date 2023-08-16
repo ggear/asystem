@@ -775,7 +775,7 @@ class Library(object, metaclass=ABCMeta):
                     self.print_log("Measurement [{}] could not be truncated with query [{}] and HTTP code [{}] at [{}]"
                                    .format(self.name.lower(), trunc_query, response.status_code, trunc_url))
                 else:
-                    self.print_log("Measurement [{}] truncated at [{}]".format(self.name.lower(), trunc_url))
+                    self.print_log("Measurement [{}] truncate executed at [{}]".format(self.name.lower(), trunc_url))
             except Exception as exception:
                 self.print_log("Measurement [{}] could not be truncated at [{}]".format(self.name.lower(), trunc_url), exception)
 
