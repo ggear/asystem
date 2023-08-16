@@ -7,6 +7,8 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
+      - VERNEMQ_HOST
+      - VERNEMQ_PORT
       - INFLUXDB_IP
       - INFLUXDB_HTTP_PORT
       - INFLUXDB_ORG
