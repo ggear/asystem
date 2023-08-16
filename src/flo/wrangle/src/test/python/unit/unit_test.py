@@ -23,7 +23,7 @@ for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("health", {"success_typical": ASSERT_RUN},
+        self.run_module("currency", {"success_typical": ASSERT_RUN},
                         enable_log=True,
                         enable_rerun=False,
                         enable_random_rows=False,

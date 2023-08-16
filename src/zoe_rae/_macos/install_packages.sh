@@ -18,6 +18,7 @@ brew install \
   exiftool \
   poppler \
   telnet \
+  poppler \
   mosquitto \
   pkg-config \
   docker-slim \
