@@ -1,21 +1,36 @@
 # https://github.com/influxdata/telegraf/releases
-FROM telegraf:1.25.3 as image_base
+FROM telegraf:1.27.3 as image_base
        
 FROM image_base as image_package
 ARG PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
-RUN apt-get -y --no-install-recommends install python3=$PYTHON_VERSION-3
-RUN apt-get -y --no-install-recommends install python3-dev=$PYTHON_VERSION-3
-RUN apt-get -y --no-install-recommends install python-is-python3=$PYTHON_VERSION-1
-RUN apt-get -y --no-install-recommends install python3-pip=20.3.4-4+deb11u1
 RUN apt-get -y --no-install-recommends install build-essential=12.9
-RUN apt-get -y --no-install-recommends install poppler-utils=20.09.0-3.1+deb11u1
-RUN apt-get -y --no-install-recommends install libpoppler-cpp-dev=20.09.0-3.1+deb11u1
+RUN apt-get -y --no-install-recommends install libffi-dev=3.4.4-1
+RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.13.dfsg-1
+RUN apt-get -y --no-install-recommends install libssl-dev=3.0.9-1
+RUN apt-get -y --no-install-recommends install poppler-utils=22.12.0-2+b1
+RUN apt-get -y --no-install-recommends install libpoppler-cpp-dev=22.12.0-2+b1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 FROM image_package as image_install
+ARG PYTHON_VERSION
+ENV PYTHONUNBUFFERED=1
+RUN mkdir -p /tmp
+WORKDIR /tmp
+RUN wget https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
+RUN tar zxf Python-$PYTHON_VERSION.tgz
+WORKDIR /tmp/Python-$PYTHON_VERSION
+RUN ./configure --prefix=/usr/local
+RUN make
+RUN make install
+RUN /usr/local/bin/python3 --version
+RUN /usr/local/bin/python3 -m pip install --upgrade pip
+RUN /usr/local/bin/pip3 --version
+RUN rm -rf /tmp/*
+
+FROM image_install as image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem
@@ -29,6 +44,5 @@ COPY src/main/resources/.google_service_account.json /etc/telegraf
 COPY src/main/python/ /asystem/
 COPY src/main/resources/entrypoint.sh /
 
-FROM image_install as image_runtime
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["telegraf"]

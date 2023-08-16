@@ -1,7 +1,6 @@
 {
   "raspbpi-lia": [
     "zigbee2mqtt",
-    "digitemp",
     "weewx",
     "monitor"
   ],
@@ -9,6 +8,7 @@
     "letsencrypt",
     "unifipoller",
     "internet",
+    "digitemp",
     "plex",
     "monitor"
   ],

@@ -26,7 +26,14 @@ brew upgrade
 brew cleanup
 
 ################################################################################
-# Install Brew Packages
+# Install Python Packages
 ################################################################################
+#conda env list
+#conda remove -y -n python3 --all
+#conda create -y -n python3 python=3.11.4
 pip install \
-  fabric
+  fabric \
+  docker \
+  requests \
+  packaging \
+  pathlib2

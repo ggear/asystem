@@ -168,8 +168,8 @@ class Health(library.Library):
                                 sleep_history_df['Sleep Readiness Rating'] = np.NaN
                                 sleep_history_df['Sleep Duration (hr)'] = duration_decimalise(file_df, 'Asleep')
                                 sleep_history_df['Sleep Awake (hr)'] = \
-                                    (sleep_history_df['Sleep Finish (dt)'] - sleep_history_df['Sleep Start (dt)']) \
-                                        .astype('timedelta64[s]') / (60 * 60) - sleep_history_df['Sleep Duration (hr)']
+                                    ((sleep_history_df['Sleep Finish (dt)'] - sleep_history_df['Sleep Start (dt)']) \
+                                     .astype('timedelta64[s]')).dt.total_seconds() / 3600 - sleep_history_df['Sleep Duration (hr)']
                                 sleep_history_df['Sleep Awake (hr)'] = \
                                     sleep_history_df['Sleep Awake (hr)'].mask(sleep_history_df['Sleep Awake (hr)'] < 0, np.NaN)
                                 sleep_history_df['Sleep Quality (hr)'] = duration_decimalise(file_df, 'Quality sleep')
@@ -198,7 +198,7 @@ class Health(library.Library):
                                             for file_line in file_original.readlines():
                                                 file_rewrite.write(file_line.replace(' \n', '\n'))
                                 file_df = pd.read_csv(file_name_rewritten)
-                                file_df = file_df.dropna(how='all', thresh=2).dropna(axis=1, how='all')
+                                file_df = file_df.dropna(how='all').dropna(axis=1, how='all')
                                 if 'Sleep Analysis [Asleep] (hours)' in file_df:
                                     del file_df['Sleep Analysis [Asleep] (hours)']
                                 if 'Sleep Analysis [Asleep] (hr)' in file_df:

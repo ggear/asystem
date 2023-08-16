@@ -1,4 +1,0 @@
-fabric==2.5.0
-pathlib2==2.3.2
-paho-mqtt==1.5.0
-pytest==7.1.1

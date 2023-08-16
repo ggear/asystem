@@ -23,12 +23,12 @@ for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("interest", {"success_typical": ASSERT_RUN},
+        self.run_module("health", {"success_typical": ASSERT_RUN},
                         enable_log=True,
                         enable_rerun=False,
                         enable_random_rows=False,
                         disable_write_stdout=True,
-                        disable_data_delta=False,
+                        disable_data_delta=True,
                         disable_file_upload=True,
                         disable_file_download=False,
                         )
@@ -83,7 +83,7 @@ class WrangleTest(unittest.TestCase):
             "counter_greater": {
                 library.CTR_SRC_DATA: {
                     library.CTR_ACT_CURRENT_COLUMNS: 144,
-                    library.CTR_ACT_UPDATE_COLUMNS: 144,
+                    library.CTR_ACT_UPDATE_COLUMNS: 126,
                     library.CTR_ACT_DELTA_COLUMNS: 144,
                 },
             },

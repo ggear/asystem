@@ -74,6 +74,7 @@ pd.set_option('display.width', None)
 pd.set_option('display.float_format', lambda x: '%.5f' % x)
 pd.options.mode.chained_assignment = None
 
+logging.getLogger('yfinance').setLevel(logging.ERROR)
 logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
 warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
@@ -84,9 +85,6 @@ WRANGLE_ENABLE_DATA_TRUNC = 'WRANGLE_ENABLE_DATA_TRUNC'
 WRANGLE_DISABLE_DATA_DELTA = 'WRANGLE_DISABLE_DATA_DELTA'
 WRANGLE_DISABLE_FILE_UPLOAD = 'WRANGLE_DISABLE_FILE_UPLOAD'
 WRANGLE_DISABLE_FILE_DOWNLOAD = 'WRANGLE_DISABLE_FILE_DOWNLOAD'
-
-# TODO: Remove hack once incremental load fixed
-os.environ["WRANGLE_DISABLE_DATA_DELTA"] = "True"
 
 
 def test(variable, default=False):
@@ -353,7 +351,14 @@ class Library(object, metaclass=ABCMeta):
                                                .format(basename(local_path), start, end, local_path))
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return True, False
-                    data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive, debug=False)
+                    data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive)
+
+                    # NOTE: Adapt to yfinance-0.1.70 format, removing Timezones and Capital Gains
+                    data_df.index = data_df.index.tz_localize(None)
+                    if "Capital Gains" in data_df:
+                        data_df = data_df.drop(columns=["Capital Gains"])
+                    # NOTE: End
+
                     if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]) \
                             and data_df.index[-1].date() == now.date() and now.strftime('%H:%M') < end_of_day:
                         data_df = data_df[:-1]
