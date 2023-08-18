@@ -2,19 +2,22 @@
 #
 # Fabric2 management script, to be invoked by fab command
 #
+# TODO: Rewrite as BundleWrap/pyinfra/K8s?
+#       - http://blog.rfox.eu/en/Explorations/Trying_Ansible_alternatives_in_python.html
+#       - https://news.ycombinator.com/item?id=23506223
+#
 ###############################################################################
 
 import collections
 import glob
+import math
 import os
-# TODO: Rewrite as BundleWrap/pyinfra/K8s?
 import re
 import signal
+import sys
 from os.path import *
 
-import math
 import requests
-import sys
 from fabric import task
 from packaging import version
 from pathlib2 import Path
@@ -116,16 +119,15 @@ def release(context):
 
 def _setup(context):
     _print_header("asystem", "setup")
-    _print_line(
-        "Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(_get_versions()[2], _get_versions()[1], _get_versions()[0]))
-    if len(_run_local(context, "conda env list | grep ${PYTHON_HOME} || true", hide='out').stdout) == 0:
-        _run_local(context, "conda create -y -n asystem-python python=$PYTHON_VERSION")
-        _print_line("Installing requirements ...")
-        for requirement in glob.glob("{}/*/*/*/reqs_*.txt".format(DIR_ROOT_MODULE)):
-            _run_local(context, "pip install -r {}".format(requirement))
-    if len(_run_local(context, "ls ${GO_HOME} || true", hide='out').stdout) == 0:
-        _run_local(context, "echo Cannot find go install at [${GO_HOME}] && false")
-    _run_local(context, "[ ! -d ${GOPATH} ] && mkdir -vp ${GOPATH}/{bin,src,pkg} || true")
+    _print_line("Versions:\n\tCompact: {}\n\tNumeric: {}\n\tAbsolute: {}\n".format(
+        _get_versions()[2],
+        _get_versions()[1],
+        _get_versions()[0])
+    )
+    for environment in ["python", "go", "rust"]:
+        if len(_run_local(context, "conda env list | grep ${}_HOME || true".format(environment.upper()), hide='out').stdout) == 0:
+            _run_local(context, "conda create -y -n asystem-{} -c conda-forge {}=${}_VERSION"
+                       .format(environment, environment, environment.upper()))
     _print_footer("asystem", "setup")
 
 
@@ -134,10 +136,10 @@ def _purge(context):
     _run_local(context, "[ $(docker ps -a -q | wc -l) -gt 0 ] && docker rm -vf $(docker ps -a -q)", warn=True)
     _run_local(context, "[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q)", warn=True)
     _run_local(context, "docker system prune --volumes -f")
-    if len(_run_local(context, "conda env list | grep $PYTHON_HOME || true", hide='out').stdout) > 0:
-        _run_local(context, "conda remove -y -n asystem-python --all")
-        _run_local(context, "rm -rvf $PYTHON_HOME|| true")
-    _run_local(context, "rm -rvf $GOPATH|| true")
+    for environment in ["python", "go", "rust"]:
+        if len(_run_local(context, "conda env list | grep ${}_HOME || true".format(environment.upper()), hide='out').stdout) > 0:
+            _run_local(context, "conda remove -y -n asystem-{} --all".format(environment))
+            _run_local(context, "chmod -R 777 ${}_HOME && rm -rvf ${}_HOME|| true".format(environment.upper(), environment.upper()))
     _print_footer("asystem", "purge")
 
 
@@ -163,6 +165,11 @@ def _pull(context):
                         "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
     _run_local(context, "git pull --all")
     _print_footer("asystem", "pull main")
+    _print_header("asystem", "pull conda")
+    _run_local(context, "conda update -y --all")
+    for requirement in glob.glob(join(DIR_ROOT_MODULE, "*/*/*/reqs_*.txt")):
+        _run_local(context, "pip install -r {}".format(requirement))
+    _print_footer("asystem", "pull conda")
     _generate(context, filter_changes=False, is_pull=True)
 
 
@@ -331,6 +338,7 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
         if isfile(join(DIR_ROOT_MODULE, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
         if isdir(join(DIR_ROOT_MODULE, module, "src/main/go/pkg")):
+            _run_local(context, "[ ! -d ${GOPATH} ] && mkdir -vp ${GOPATH}/{bin,src,pkg} || true")
             _run_local(context, "go mod tidy", join(module, "src/main/go/pkg"))
             _run_local(context, "go mod download", join(module, "src/main/go/pkg"))
             _run_local(context, "GOCACHE={} go build".format(join(DIR_ROOT_MODULE, module, "target/gocache")),

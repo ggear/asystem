@@ -9,6 +9,8 @@ rm -rf /Users/graham/.profile
 cat <<EOF >/Users/graham/.bash_profile
 # .bash_profile
 
+printf '\e[?2004l'
+
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
@@ -26,7 +28,7 @@ alias fab="fab -e"
 alias ssh-copy-id='sshcopyid_func'
 function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.ssh/authorized_keys' ;}
 
-export PATH=~/.cargo/bin:~/.conda/envs/python3/bin:/Library/Conda/anaconda2/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:${PATH}
+export PATH=~/.cargo/bin:~/.conda/envs/python3/bin:/Library/Conda/anaconda3/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:${PATH}
 
 EOF
 cat <<EOF >/var/root/.profile

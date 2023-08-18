@@ -680,7 +680,8 @@ class Library(object, metaclass=ABCMeta):
             self.print_log("Dataframe [{}] loaded from [{}]".format(file_cache, file_path))
         else:
             retries = 0
-            retries_max = 3
+            retries_max = 5
+            retries_sleep_s = 10
             retries_exception = None
             while retries < retries_max:
                 try:
@@ -689,12 +690,12 @@ class Library(object, metaclass=ABCMeta):
                     self.print_log("Dataframe [{}] downloaded from [{}]".format(file_cache, drive_url))
                     break
                 except Exception as exception:
-                    time.sleep(5)
+                    time.sleep(retries_sleep_s)
                     retries_exception = exception
                     pass
             if data_df is None:
-                raise Exception("Dataframe [{}] could not be loaded from [{}] after retrying [{}] times"
-                                .format(drive_url, retries_max), retries_exception)
+                raise Exception("Dataframe [{}] could not be loaded from [{}] after retrying [{}] times over [{}] seconds"
+                                .format(file_cache, drive_url, retries_max, retries_max * retries_sleep_s), retries_exception)
         if not read_cache and write_cache:
             data_df.to_csv(file_path, index=False, encoding='utf-8')
             self.print_log("Dataframe [{}] cached at [{}]".format(file_cache, file_path))
