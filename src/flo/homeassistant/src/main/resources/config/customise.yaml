@@ -371,11 +371,8 @@ light.study_lamp:
 light.kitchen_main:
   friendly_name: 'Kitchen Main'
   icon: 'mdi:lightbulb-group'
-switch.old_kitchen_downlights_plug:
-  friendly_name: 'Kitchen Downlights'
-  icon: 'mdi:lightbulb-group'
-light.kitchen_downlights_plug:
-  friendly_name: 'Kitchen Downlights'
+light.kitchen_bench_lights_plug:
+  friendly_name: 'Kitchen Bench'
   icon: 'mdi:lightbulb-group'
 light.laundry_main:
   friendly_name: 'Laundry Main'
@@ -820,6 +817,9 @@ switch.server_flo_plug:
 switch.server_meg_plug:
   friendly_name: 'Server Meg'
   icon: 'mdi:server'
+switch.server_lia_plug:
+  friendly_name: 'Server Lia'
+  icon: 'mdi:server'
 switch.old_rack_outlet_plug:
   friendly_name: 'Server Rack'
 switch.rack_outlet_plug:
@@ -1054,20 +1054,20 @@ sensor.ceiling_network_switch_plug_energy_total_monthly:
 sensor.ceiling_network_switch_plug_energy_total_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.kitchen_downlights_plug_power:
+sensor.kitchen_bench_lights_plug_power:
   friendly_name: 'Current Power'
-sensor.kitchen_downlights_plug_energy:
+sensor.kitchen_bench_lights_plug_energy:
   friendly_name: 'Total Energy'
-sensor.kitchen_downlights_plug_energy_daily:
+sensor.kitchen_bench_lights_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.kitchen_downlights_plug_energy_weekly:
+sensor.kitchen_bench_lights_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.kitchen_downlights_plug_energy_monthly:
+sensor.kitchen_bench_lights_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.kitchen_downlights_plug_energy_yearly:
+sensor.kitchen_bench_lights_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.deck_festoons_plug_power:
@@ -1141,31 +1141,6 @@ sensor.old_kitchen_fan_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.old_kitchen_fan_plug_energy_yearly:
-  friendly_name: 'Total Energy Yearly'
-  icon: 'mdi:counter'
-sensor.old_kitchen_downlights_plug_current:
-  friendly_name: 'Current Amperage'
-sensor.old_kitchen_downlights_plug_voltage:
-  friendly_name: 'Current Voltage'
-sensor.old_kitchen_downlights_plug_current_consumption:
-  friendly_name: 'Current Power'
-sensor.old_kitchen_downlights_plug_energy:
-  friendly_name: 'Total Energy'
-sensor.old_kitchen_downlights_plug_total_consumption:
-  friendly_name: 'Total Energy (Plug)'
-sensor.old_kitchen_downlights_plug_today_s_consumption:
-  friendly_name: 'Total Energy Daily (Plug)'
-  icon: 'mdi:counter'
-sensor.old_kitchen_downlights_plug_energy_daily:
-  friendly_name: 'Total Energy Daily'
-  icon: 'mdi:counter'
-sensor.old_kitchen_downlights_plug_energy_weekly:
-  friendly_name: 'Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.old_kitchen_downlights_plug_energy_monthly:
-  friendly_name: 'Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.old_kitchen_downlights_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.old_deck_festoons_plug_current:
@@ -1616,6 +1591,31 @@ sensor.server_meg_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.server_meg_plug_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.server_lia_plug_current:
+  friendly_name: 'Current Amperage'
+sensor.server_lia_plug_voltage:
+  friendly_name: 'Current Voltage'
+sensor.server_lia_plug_current_consumption:
+  friendly_name: 'Current Power'
+sensor.server_lia_plug_energy:
+  friendly_name: 'Total Energy'
+sensor.server_lia_plug_total_consumption:
+  friendly_name: 'Total Energy (Plug)'
+sensor.server_lia_plug_today_s_consumption:
+  friendly_name: 'Total Energy Daily (Plug)'
+  icon: 'mdi:counter'
+sensor.server_lia_plug_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.server_lia_plug_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.server_lia_plug_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.server_lia_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.old_rack_outlet_plug_current:
@@ -2333,22 +2333,6 @@ sensor.kitchen_main_bulb_4_energy_monthly:
 sensor.kitchen_main_bulb_4_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.template_old_kitchen_downlights_plug_proxy_power:
-  friendly_name: 'Current Power'
-sensor.template_old_kitchen_downlights_plug_proxy_energy:
-  friendly_name: 'Total Energy'
-sensor.template_old_kitchen_downlights_plug_proxy_energy_daily:
-  friendly_name: 'Total Energy Daily'
-  icon: 'mdi:counter'
-sensor.template_old_kitchen_downlights_plug_proxy_energy_weekly:
-  friendly_name: 'Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.template_old_kitchen_downlights_plug_proxy_energy_monthly:
-  friendly_name: 'Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.template_old_kitchen_downlights_plug_proxy_energy_yearly:
-  friendly_name: 'Total Energy Yearly'
-  icon: 'mdi:counter'
 sensor.laundry_main_bulb_1_power:
   friendly_name: 'Current Power'
 sensor.laundry_main_bulb_1_energy:
@@ -2950,6 +2934,22 @@ sensor.template_server_meg_plug_proxy_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
 sensor.template_server_meg_plug_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_server_lia_plug_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_server_lia_plug_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_server_lia_plug_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_server_lia_plug_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_server_lia_plug_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_server_lia_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.template_old_rack_outlet_plug_proxy_power:
@@ -3856,6 +3856,18 @@ sensor.servers_network_energy_monthly:
   friendly_name: 'Servers & Network Total Energy Monthly'
 sensor.servers_network_energy_yearly:
   friendly_name: 'Servers & Network Total Energy Yearly'
+sensor.server_lia_power:
+  friendly_name: 'Server Lia Current Power'
+sensor.server_lia_energy:
+  friendly_name: 'Server Lia Total Energy'
+sensor.server_lia_energy_daily:
+  friendly_name: 'Server Lia Total Energy Daily'
+sensor.server_lia_energy_weekly:
+  friendly_name: 'Server Lia Total Energy Hept-Daily'
+sensor.server_lia_energy_monthly:
+  friendly_name: 'Server Lia Total Energy Monthly'
+sensor.server_lia_energy_yearly:
+  friendly_name: 'Server Lia Total Energy Yearly'
 sensor.server_rack_power:
   friendly_name: 'Server Rack Current Power'
 sensor.server_rack_energy:

@@ -23,7 +23,7 @@
 10.0.6.100 sonoff-ceiling-water-booster.janeandgraham.com sonoff-ceiling-water-booster
 10.0.6.101 sonoff-rack-fans.janeandgraham.com sonoff-rack-fans
 10.0.6.102 sonoff-rack-outlet.janeandgraham.com sonoff-rack-outlet
-10.0.6.103 sonoff-kitchen-downlights.janeandgraham.com sonoff-kitchen-downlights
+10.0.6.103 sonoff-kitchen-bench-lights.janeandgraham.com sonoff-kitchen-bench-lights
 10.0.6.104 sonoff-kitchen-fan.janeandgraham.com sonoff-kitchen-fan
 10.0.6.105 sonoff-ceiling-network-switch.janeandgraham.com sonoff-ceiling-network-switch
 10.0.6.106 sonoff-garden-pool-filter.janeandgraham.com sonoff-garden-pool-filter
@@ -47,7 +47,7 @@
 10.0.6.76 tplink-kitchen-coffee-machine.janeandgraham.com tplink-kitchen-coffee-machine
 10.0.6.77 tplink-kitchen-fridge.janeandgraham.com tplink-kitchen-fridge
 10.0.6.78 tplink-deck-freezer.janeandgraham.com tplink-deck-freezer
-10.0.6.79 tplink-kitchen-downlights.janeandgraham.com tplink-kitchen-downlights
+10.0.6.79 tplink-wardrobe-raspberrypi-lia.janeandgraham.com tplink-wardrobe-raspberrypi-lia
 10.0.6.80 tplink-lounge-tv.janeandgraham.com tplink-lounge-tv
 10.0.6.81 tplink-bathroom-rails.janeandgraham.com tplink-bathroom-rails
 10.0.6.82 tplink-study-outlet.janeandgraham.com tplink-study-outlet

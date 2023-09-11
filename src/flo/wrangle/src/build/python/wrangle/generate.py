@@ -24,6 +24,6 @@ if __name__ == "__main__":
     wrangle_conf_path = join(DIR_ROOT, "src/main/resources/config/mqtt_metadata.csv")
     for metadata_wrangle_dict in metadata_wrangle_dicts:
         # TODO: Provide implementation
-        print(metadata_wrangle_dict)
+        pass
 
     print("Build generate script [wrangle] entity metadata persisted to [{}]".format(wrangle_conf_path))

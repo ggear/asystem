@@ -217,6 +217,9 @@
     - entity: switch.server_meg_plug
       name: Server Meg
       icon: mdi:server
+    - entity: switch.server_lia_plug
+      name: Server Lia
+      icon: mdi:server
     - entity: switch.rack_outlet_plug
       name: Server Rack
       icon: mdi:server

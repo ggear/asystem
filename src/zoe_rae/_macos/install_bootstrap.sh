@@ -120,27 +120,6 @@ brew update
 brew upgrade
 
 ################################################################################
-# Python
-################################################################################
-if [ ! -d /Library/Conda/anaconda2/bin/conda ]; then
-  cd ~/Temp
-  rm -rf /Library/Conda && mkdir -p /Library/Conda && chmod 777 /Library/Conda
-  wget https://repo.anaconda.com/miniconda/Miniconda3-4.5.12-MacOSX-x86_64.sh
-  chmod +x Miniconda3-4.5.12-MacOSX-x86_64.sh
-  ./Miniconda3-4.5.12-MacOSX-x86_64.sh -p /Library/Conda/anaconda2 -b
-  rm Miniconda3-4.5.12-MacOSX-x86_64.sh
-  conda config --set channel_priority false
-  conda config --append envs_dirs $HOME/.conda/envs
-  conda create -y -n python2 python=2.7.18
-  conda create -y -n python3 python=3.10
-fi
-
-################################################################################
-# Python
-################################################################################
-rustup-init --no-modify-path -y -q
-
-################################################################################
 # ASystem
 ################################################################################
 if [ ! -d ~/Code/asystem ]; then

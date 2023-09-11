@@ -111,19 +111,19 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df, topics_disc
 ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
 
 printf "\\nEntity Metadata publish script [{}] dropping discovery topics:\\n"
-mosquitto_sub -h $VERNEMQ_HOST -p $VERNEMQ_PORT --remove-retained -F '%t' -t '{}' -W 1 2>/dev/null
+mosquitto_sub -h $VERNEMQ_IP -p $VERNEMQ_PORT --remove-retained -F '%t' -t '{}' -W 1 2>/dev/null
 
 printf "\\nEntity Metadata publish script [{}] sleeping before dropping data topics ... " && sleep 2 && printf "done\\n\\n"
 
 printf "Entity Metadata publish script [{}] dropping data topics:\\n"
-mosquitto_sub -h $VERNEMQ_HOST -p $VERNEMQ_PORT --remove-retained -F '%t' -t '{}' -W 1 2>/dev/null
+mosquitto_sub -h $VERNEMQ_IP -p $VERNEMQ_PORT --remove-retained -F '%t' -t '{}' -W 1 2>/dev/null
 
 printf "\\nEntity Metadata publish script [{}] sleeping before publishing discovery topics ... " && sleep 2 && printf "done\\n\\n"
 
 printf "Entity Metadata publish script [{}] publishing discovery topics:\\n"
 find $ROOT_DIR -name "*.json" -print0 | while read -d $'\\0' METADATA_FILE; do
   METADATA_TOPIC=$(dirname "${{METADATA_FILE/$ROOT_DIR\\//}}")
-  mosquitto_pub -h $VERNEMQ_HOST -p $VERNEMQ_PORT -t $METADATA_TOPIC -f $METADATA_FILE -r
+  mosquitto_pub -h $VERNEMQ_IP -p $VERNEMQ_PORT -t $METADATA_TOPIC -f $METADATA_FILE -r
   printf "$METADATA_TOPIC\\n"
 done
 printf "\\n"
@@ -467,6 +467,7 @@ tplink:
                                                           "" if alias.startswith("s ") else " ", alias)
                                           for alias in metadata_alias_dict["google_aliases"].split(',')]
                 metadata_alias_name = metadata_alias_aliases.pop(0)
+                metadata_alias_aliases.extend(metadata_alias_dict["google_aliases"].split(','))
                 metadata_alias_file.write("""
 {}.{}:
   name: {}

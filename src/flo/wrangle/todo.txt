@@ -1,4 +1,4 @@
-  # TODO:
+# TODO:
 - Import historic weather data (high/low/rain) to influxDB (monthly), ticked every 1 minutes from last tick in database to current time from BOM (rain divided by days in month).
 - Do the same for historic actuals for corresponding measures (daily), and also for aggregates (monthly).
 - Display on same high/low graph daily view on stepped chart showing the discrepancies.

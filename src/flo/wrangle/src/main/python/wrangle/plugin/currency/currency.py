@@ -5,6 +5,11 @@ from os.path import *
 import pandas as pd
 
 from .. import library
+from ..library import PD_BACKEND_DEFAULT
+from ..library import PD_ENGINE_DEFAULT
+
+PANDAS_ENGINE = PD_ENGINE_DEFAULT
+PANDAS_BACKEND = PD_BACKEND_DEFAULT
 
 PAIRS = ['AUD/GBP', 'AUD/USD', 'AUD/SGD']
 
@@ -49,7 +54,7 @@ RBA_YEARS = [
 
 RBA_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/{}.xls"
 
-DRIVE_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
+DRIVE_KEY = "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
 
 
 class Currency(library.Library):
@@ -108,7 +113,8 @@ class Currency(library.Library):
             #                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
             #                                 break
             #                         except Exception as exception:
-            #                             self.print_log("Unexpected error processing file [{}]".format(year_month_file), exception)
+            #                             self.print_log("Unexpected error processing file [{}]"
+            #                                       .format(year_month_file), exception=exception)
             #                 else:
             #                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
             #                 break
@@ -134,7 +140,7 @@ class Currency(library.Library):
                                                    ignore_index=True, verify_integrity=True, sort=True)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
-                            self.print_log("Unexpected error processing file [{}]".format(years_file), exception)
+                            self.print_log("Unexpected error processing file [{}]".format(years_file), exception=exception)
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                     else:
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
@@ -164,7 +170,7 @@ class Currency(library.Library):
                     del rba_df['Source']
                     rba_df = rba_df.reindex(columns=COLUMNS)
             except Exception as exception:
-                self.print_log("Unexpected error processing currency dataframe", exception)
+                self.print_log("Unexpected error processing currency dataframe", exception=exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
@@ -177,32 +183,35 @@ class Currency(library.Library):
                         data_df['{} {}'.format(pair, period)] = (data_df[pair].pct_change(PERIODS[period])) * 100
                 return data_df.fillna(0).apply(pd.to_numeric).round(4)
 
-            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, aggregate_function)
+            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, aggregate_function,
+                                                               engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
             if len(rba_delta_df):
                 rba_current_df.insert(0, "Date", rba_current_df.index.strftime('%Y-%m-%d'))
                 rba_current_df = rba_current_df[rba_current_df['Date'] > '2006-01-01'].sort_index(ascending=False)
                 rba_current_df = rba_current_df.set_index(pd.to_datetime(rba_current_df.index)).sort_index()
-                self.sheet_write(rba_current_df[["Date"] + PAIRS], DRIVE_URL,
+                self.sheet_write(rba_current_df[["Date"] + PAIRS], DRIVE_KEY,
                                  {'index': False, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
-                self.database_write(rba_current_df[PAIRS], global_tags={
-                    "type": "snapshot",
-                    "period": "1d",
-                    "unit": "$"
-                })
+                self.stdout_write(
+                    self.dataframe_to_lineprotocol(rba_current_df[PAIRS], global_tags={
+                        "type": "snapshot",
+                        "period": "1d",
+                        "unit": "$"
+                    }, print_label="currency-1-day-snapshot"))
                 for fx_period in PERIODS:
                     columns = ["{} {}".format(fx_pair, fx_period).strip() for fx_pair in PAIRS]
                     columns_rename = {}
                     for column in columns:
                         columns_rename[column] = column.split(" ")[0]
                     rba_current_df[columns] = rba_current_df[columns].apply(pd.to_numeric)
-                    self.database_write(rba_current_df[columns].rename(columns=columns_rename), global_tags={
-                        "type": "delta",
-                        "period": "{:0.0f}d".format(PERIODS[fx_period]),
-                        "unit": "%"
-                    })
+                    self.stdout_write(
+                        self.dataframe_to_lineprotocol(rba_current_df[columns].rename(columns=columns_rename), global_tags={
+                            "type": "delta",
+                            "period": "{:0.0f}d".format(PERIODS[fx_period]),
+                            "unit": "%"
+                        }, print_label="currency-{}".format(fx_period).lower().replace(" ", "-")))
                 self.state_write()
         except Exception as exception:
-            self.print_log("Unexpected error processing currency data", exception)
+            self.print_log("Unexpected error processing currency data", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -

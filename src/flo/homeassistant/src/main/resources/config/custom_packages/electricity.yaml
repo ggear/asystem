@@ -27,16 +27,6 @@ powercalc:
       power_sensor_id: sensor.old_kitchen_fan_plug_current_consumption
       force_energy_sensor_creation: true
     ###################################################################################
-    - entity_id: binary_sensor.template_old_kitchen_downlights_plug_proxy
-      standby_power: 1.54
-      unavailable_power: 0
-      fixed:
-        power: 2.19
-    ###################################################################################
-    - entity_id: switch.old_kitchen_downlights_plug
-      power_sensor_id: sensor.old_kitchen_downlights_plug_current_consumption
-      force_energy_sensor_creation: true
-    ###################################################################################
     - entity_id: binary_sensor.template_old_deck_festoons_plug_proxy
       standby_power: 0.5
       unavailable_power: 0
@@ -285,7 +275,7 @@ powercalc:
                     - entity_id: light.kitchen_main_bulb_2
                     - entity_id: light.kitchen_main_bulb_3
                     - entity_id: light.kitchen_main_bulb_4
-                    - entity_id: light.kitchen_downlights_plug
+                    - entity_id: light.kitchen_bench_lights_plug
                       standby_power: 0.6
                       fixed:
                         power: 35.2
@@ -497,6 +487,17 @@ powercalc:
             - create_group: Servers & Network
               entities:
                 #######################################################################
+                - create_group: Server Lia
+                  entities:
+                    - entity_id: binary_sensor.template_server_lia_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.server_lia_plug
+                      power_sensor_id: sensor.server_lia_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
                 - create_group: Server Rack
                   entities:
                     - entity_id: binary_sensor.template_rack_outlet_plug_proxy
@@ -644,10 +645,6 @@ template:
         state: >-
           {{ states('fan.kitchen_fan_plug') }}
       #################################################################################
-      - unique_id: old_kitchen_downlights_plug_proxy
-        state: >-
-          {{ states('switch.old_kitchen_downlights_plug') }}
-      #################################################################################
       - unique_id: old_deck_festoons_plug_proxy
         state: >-
           {{ states('switch.old_deck_festoons_plug') }}
@@ -749,6 +746,10 @@ template:
       - unique_id: server_meg_plug_proxy
         state: >-
           {{ states('switch.server_meg_plug') }}
+      #################################################################################
+      - unique_id: server_lia_plug_proxy
+        state: >-
+          {{ states('switch.server_lia_plug') }}
       #################################################################################
       - unique_id: old_rack_outlet_plug_proxy
         state: >-

@@ -40,8 +40,25 @@
       name: Yearly
       icon: mdi:weather-pouring
 ################################################################################
+- type: custom:mini-graph-card
+  name: Heating & Cooling
+  icon: mdi:thermometer-water
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - entity: sensor.compensation_sensor_landing_festoons_plug_temperature
+      name: Hot Water Temperature
+################################################################################
 - type: entities
-  title: Heating & Cooling
   entities:
     - entity: sensor.compensation_sensor_landing_festoons_plug_temperature
       name: Hot Water Temperature

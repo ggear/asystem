@@ -4,7 +4,7 @@ x-common: &common
   user: root
   environment:
     - TZ=Australia/Perth
-    - VERNEMQ_HOST
+    - VERNEMQ_IP
     - VERNEMQ_PORT
     - DOCKER_VERNEMQ_ACCEPT_EULA=yes
     - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on
@@ -29,7 +29,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1G
+          memory: 2G
   vernemq_bootstrap:
     container_name: vernemq_bootstrap
     <<: *common

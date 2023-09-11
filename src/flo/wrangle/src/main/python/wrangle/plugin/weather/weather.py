@@ -3,6 +3,11 @@ import datetime
 import pandas as pd
 
 from .. import library
+from ..library import PD_BACKEND_DEFAULT
+from ..library import PD_ENGINE_DEFAULT
+
+PANDAS_ENGINE = PD_ENGINE_DEFAULT
+PANDAS_BACKEND = PD_BACKEND_DEFAULT
 
 DAILY_START_MONTH = 1
 DAILY_START_YEAR = 2009
@@ -43,7 +48,7 @@ class Weather(library.Library):
             #
             #                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
             #                 except Exception as exception:
-            #                     self.print_log("Unexpected error processing file [{}]".format(daily_file), exception)
+            #                     self.print_log("Unexpected error processing file [{}]".format(daily_file), exception=exception)
             #                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
             #             else:
             #                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
@@ -62,7 +67,7 @@ class Weather(library.Library):
             #
             #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
             #         except Exception as exception:
-            #             self.print_log("Unexpected error processing file [{}]".format(monthly_stats_file), exception)
+            #             self.print_log("Unexpected error processing file [{}]".format(monthly_stats_file), exception=exception)
             #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
             #     else:
             #         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
@@ -81,7 +86,7 @@ class Weather(library.Library):
             #
             #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
             #         except Exception as exception:
-            #             self.print_log("Unexpected error processing file [{}]".format(weekly_forecast_file), exception)
+            #             self.print_log("Unexpected error processing file [{}]".format(weekly_forecast_file), exception=exception)
             #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
             #     else:
             #         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
@@ -94,16 +99,17 @@ class Weather(library.Library):
                 None
 
             except Exception as exception:
-                self.print_log("Unexpected error processing weather dataframe", exception)
+                self.print_log("Unexpected error processing weather dataframe", exception=exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            weather_delta_df, weather_current_df, _ = self.state_cache(pd.DataFrame({"some_dummy_data": [1.0]}))
+            weather_delta_df, weather_current_df, _ = self.state_cache(pd.DataFrame({"some_dummy_data": [1.0]}),
+                                                                       engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
             self.state_write()
         except Exception as exception:
-            self.print_log("Unexpected error processing weather data", exception)
+            self.print_log("Unexpected error processing weather data", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -

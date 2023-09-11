@@ -4,6 +4,11 @@ from os.path import *
 import pandas as pd
 
 from .. import library
+from ..library import PD_BACKEND_DEFAULT
+from ..library import PD_ENGINE_DEFAULT
+
+PANDAS_ENGINE = PD_ENGINE_DEFAULT
+PANDAS_BACKEND = PD_BACKEND_DEFAULT
 
 LABELS = ['Bank', 'Inflation', 'Net']
 PERIODS = OrderedDict([
@@ -18,7 +23,7 @@ COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period 
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xls"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xls"
 
-DRIVE_URL = "https://docs.google.com/spreadsheets/d/10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
+DRIVE_KEY = "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
 
 
 class Interest(library.Library):
@@ -42,7 +47,7 @@ class Interest(library.Library):
                         retail_df = retail_df.set_index('Date')
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                     except Exception as exception:
-                        self.print_log("Unexpected error processing file [{}]".format(retail_file), exception)
+                        self.print_log("Unexpected error processing file [{}]".format(retail_file), exception=exception)
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
@@ -62,7 +67,7 @@ class Interest(library.Library):
                         inflation_df = inflation_df.set_index('Date')
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                     except Exception as exception:
-                        self.print_log("Unexpected error processing file [{}]".format(inflation_file), exception)
+                        self.print_log("Unexpected error processing file [{}]".format(inflation_file), exception=exception)
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
@@ -76,7 +81,7 @@ class Interest(library.Library):
                     interest_df = interest_df.reindex(columns=COLUMNS)
                     interest_df = interest_df[interest_df.index > '1982-03-01']
             except Exception as exception:
-                self.print_log("Unexpected error processing interest dataframe", exception)
+                self.print_log("Unexpected error processing interest dataframe", exception=exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
@@ -89,30 +94,33 @@ class Interest(library.Library):
                         data_df['{} {}'.format(int_rate, period)] = data_df[int_rate].rolling(PERIODS[period]).mean()
                 return data_df.fillna(0).apply(pd.to_numeric).round(2)
 
-            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, aggregate_function)
+            interest_delta_df, interest_current_df, _ = self.state_cache(interest_df, aggregate_function,
+                                                                         engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
             if len(interest_delta_df):
                 interest_current_df = interest_current_df.set_index(pd.to_datetime(interest_current_df.index)).sort_index()
                 interest_current_df.insert(0, "Date", interest_current_df.index.strftime('%Y-%m-%d'))
                 self.sheet_write(interest_current_df[interest_current_df['Date'] > '2015-01-01'].sort_index(ascending=False),
-                                 DRIVE_URL, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
-                self.database_write(interest_current_df[LABELS], global_tags={
-                    "type": "mean",
-                    "period": "1mo",
-                    "unit": "%"
-                })
+                                 DRIVE_KEY, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
+                self.stdout_write(
+                    self.dataframe_to_lineprotocol(interest_current_df[LABELS], global_tags={
+                        "type": "mean",
+                        "period": "1mo",
+                        "unit": "%"
+                    }, print_label="interest-1-month-mean"))
                 for int_period in PERIODS:
                     columns = ["{} {}".format(int_rate, int_period).strip() for int_rate in LABELS]
                     columns_rename = {}
                     for column in columns:
                         columns_rename[column] = column.split(" ")[0]
-                    self.database_write(interest_delta_df[columns].rename(columns=columns_rename), global_tags={
-                        "type": "mean",
-                        "period": "{:0.0f}y".format(PERIODS[int_period] / 12),
-                        "unit": "%"
-                    })
+                    self.stdout_write(
+                        self.dataframe_to_lineprotocol(interest_delta_df[columns].rename(columns=columns_rename), global_tags={
+                            "type": "mean",
+                            "period": "{:0.0f}y".format(PERIODS[int_period] / 12),
+                            "unit": "%"
+                        }, print_label="interest-{}".format(int_period).lower().replace(" ", "-")))
                 self.state_write()
         except Exception as exception:
-            self.print_log("Unexpected error processing interest data", exception)
+            self.print_log("Unexpected error processing interest data", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -

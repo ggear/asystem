@@ -5,7 +5,7 @@ x-common: &common
   user: root
   environment:
     - TZ=Australia/Perth
-    - POSTGRES_HOST
+    - POSTGRES_IP
     - POSTGRES_PORT
     - POSTGRES_USER=${POSTGRES_USER}
     - POSTGRES_PASSWORD=${POSTGRES_KEY}

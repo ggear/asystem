@@ -1,5 +1,5 @@
 # https://github.com/weewx/weewx/releases
-FROM python:3.11.4-slim-bullseye as image_base
+FROM python:3.11.5-slim-bullseye as image_base
 
 ENV WEEWX_HOME="/home/weewx"
 

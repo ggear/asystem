@@ -10,6 +10,8 @@ cat <<EOF >/Users/graham/.bash_profile
 # .bash_profile
 
 printf '\e[?2004l'
+tput rmam
+# tput smam
 
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad

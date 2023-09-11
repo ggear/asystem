@@ -1,5 +1,5 @@
 # https://github.com/influxdata/telegraf/releases
-FROM telegraf:1.27.3 as image_base
+FROM telegraf:1.27.4 as image_base
        
 FROM image_base as image_package
 ARG PYTHON_VERSION
@@ -36,7 +36,7 @@ FROM image_install as image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem
-RUN cat /asystem/reqs_run.txt | xargs -n 1 pip install && rm -rf /asystem/reqs_run.txt
+RUN cat /asystem/reqs_run.txt | xargs -n 1 /usr/local/bin/pip3 install && rm -rf /asystem/reqs_run.txt
 RUN mkdir -p /root/.config
 COPY src/main/resources/.gspread_pandas /root/.config/gspread_pandas
 COPY src/main/resources/.google_service_account.json /root

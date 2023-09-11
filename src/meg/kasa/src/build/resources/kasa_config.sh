@@ -66,11 +66,11 @@ else
 	echo '' && echo 'Skipping config for device [deck_freezer_plug] at [http://10.0.6.78/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.79 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [old_kitchen_downlights_plug] at [10.0.6.79] ... '
-	kasa --host 10.0.6.79 --type plug alias 'Old Kitchen Downlights Plug'
+	echo '' && echo 'Processing config for device [server_lia_plug] at [10.0.6.79] ... '
+	kasa --host 10.0.6.79 --type plug alias 'Server Lia Plug'
 	kasa --host 10.0.6.79 --type plug led 'False'
 else
-	echo '' && echo 'Skipping config for device [old_kitchen_downlights_plug] at [http://10.0.6.79/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [server_lia_plug] at [http://10.0.6.79/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.6.80 9999 2>/dev/null; then
 	echo '' && echo 'Processing config for device [lounge_tv_plug] at [10.0.6.80] ... '

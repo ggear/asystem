@@ -5,7 +5,7 @@ x-common: &common
   user: root
   environment:
     - TZ=Australia/Perth
-    - TIMESCALEDB_HOST
+    - TIMESCALEDB_IP
     - TIMESCALEDB_PORT
     - POSTGRES_USER=${TIMESCALEDB_USER}
     - POSTGRES_PASSWORD=${TIMESCALEDB_KEY}

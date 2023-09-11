@@ -37,6 +37,8 @@ if FAB_SKIP_GROUP_ALLBUT in os.environ:
 @task(aliases=["sup"] + ["setup"[0:i] for i in range(1, len("setup"))])
 def setup(context):
     _setup(context)
+    _clean(context)
+    _pull(context)
 
 
 @task(aliases=["prg", "f"] + ["purge"[0:i] for i in range(3, len("purge"))])
@@ -124,8 +126,14 @@ def _setup(context):
         _get_versions()[1],
         _get_versions()[0])
     )
+    pull_conda = True
     for environment in ["python", "go", "rust"]:
         if len(_run_local(context, "conda env list | grep ${}_HOME || true".format(environment.upper()), hide='out').stdout) == 0:
+            if pull_conda:
+                pull_conda = False
+                _print_header("asystem", "pull conda")
+                _run_local(context, "conda update -y --all")
+                _print_footer("asystem", "pull conda")
             _run_local(context, "conda create -y -n asystem-{} -c conda-forge {}=${}_VERSION"
                        .format(environment, environment, environment.upper()))
     _print_footer("asystem", "setup")
@@ -139,7 +147,8 @@ def _purge(context):
     for environment in ["python", "go", "rust"]:
         if len(_run_local(context, "conda env list | grep ${}_HOME || true".format(environment.upper()), hide='out').stdout) > 0:
             _run_local(context, "conda remove -y -n asystem-{} --all".format(environment))
-            _run_local(context, "chmod -R 777 ${}_HOME && rm -rvf ${}_HOME|| true".format(environment.upper(), environment.upper()))
+            _run_local(context,
+                       "chmod -R 777 ${}_HOME 2>/dev/null && rm -rvf ${}_HOME || true".format(environment.upper(), environment.upper()))
     _print_footer("asystem", "purge")
 
 
@@ -165,11 +174,11 @@ def _pull(context):
                         "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
     _run_local(context, "git pull --all")
     _print_footer("asystem", "pull main")
-    _print_header("asystem", "pull conda")
-    _run_local(context, "conda update -y --all")
+    _print_header("asystem", "pull dependencies")
     for requirement in glob.glob(join(DIR_ROOT_MODULE, "*/*/*/reqs_*.txt")):
         _run_local(context, "pip install -r {}".format(requirement))
-    _print_footer("asystem", "pull conda")
+    _run_local(context, "pip list --outdated")
+    _print_footer("asystem", "pull dependencies")
     _generate(context, filter_changes=False, is_pull=True)
 
 
@@ -256,7 +265,9 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                 if not docker_image_metadata["version_current"].startswith("$GO_VERSION"):
                     docker_image_tags_url = "https://hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size=100" \
                         .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
+                    print("Getting docker image versions from [{}] ... ".format(docker_image_tags_url), end="", flush=True)
                     docker_image_tags_json = requests.get(docker_image_tags_url).json()
+                    print("done", flush=True)
                     docker_image_tags = []
                     if "results" in docker_image_tags_json:
                         for docker_image_metatdata_hub in \

@@ -1,5 +1,6 @@
 import calendar
 import datetime
+import time
 from collections import OrderedDict
 from datetime import datetime
 from os.path import *
@@ -11,8 +12,13 @@ import pdftotext
 import pytz
 
 from .. import library
+from ..library import PD_BACKEND_DEFAULT
+from ..library import PD_ENGINE_DEFAULT
 
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
+
+PANDAS_ENGINE = PD_ENGINE_DEFAULT
+PANDAS_BACKEND = PD_BACKEND_DEFAULT
 
 STATUS_FAILURE = "failure"
 STATUS_SKIPPED = "skipped"
@@ -51,13 +57,13 @@ STOCK = OrderedDict([
 
 STOCK_DROP_TICKERS = ["MSG"]
 
-DRIVE_URL = "https://docs.google.com/spreadsheets/d/1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
-DRIVE_URL_PORTFOLIO = "https://docs.google.com/spreadsheets/d/1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
+DRIVE_KEY = "1qMllD2sPCPYA-URgyo7cp6aXogJcYNCKQ7Dw35_PCgM"
+DRIVE_KEY_PORTFOLIO = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
 
 
 class Equity(library.Library):
 
-    # noinspection PyTypeChecker
+    # noinspection PyTypeChecker,PyUnresolvedReferences
     def _run(self):
         new_data = False
         equity_df = pd.DataFrame()
@@ -82,7 +88,8 @@ class Equity(library.Library):
                                         year,
                                         month,
                                         calendar.monthrange(year, month)[1]),
-                                    STOCK[stock]["end of day"], check=year == today.year and month == today.month)
+                                    STOCK[stock]["end of day"], check=year == today.year and month == today.month,
+                                    engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                     else:
                         file_name = "{}/Yahoo_{}_{}.csv".format(self.input, stock, year)
                         stock_files[file_name] = self.stock_download(
@@ -94,10 +101,11 @@ class Equity(library.Library):
                                 year,
                                 12,
                                 31),
-                            STOCK[stock]["end of day"], check=False)
+                            STOCK[stock]["end of day"], check=False,
+                            engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
             files_cached = self.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED)
             files_downloaded = self.get_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_DOWNLOADED)
-            files = self.drive_sync(self.input_drive, self.input)
+            files = self.drive_sync(self.input_drive, self.input, download=(not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD)))
             self.add_counter(library.CTR_SRC_SOURCES, library.CTR_ACT_CACHED, -1 * (files_cached + files_downloaded))
             for file_name in files:
                 if basename(file_name).startswith("58861"):
@@ -114,13 +122,14 @@ class Equity(library.Library):
             stock_files = self.file_list(self.input, "Yahoo")
             statement_files = self.file_list(self.input, "58861")
             new_data = stock_files or statement_files
+        stocks_started_time = time.time()
         stocks_df = {}
         for stock_file_name in stock_files:
             if stock_files[stock_file_name][0]:
                 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or stock_files[stock_file_name][1]:
                     try:
                         stock_ticker = basename(stock_file_name).split('_')[1]
-                        stock_df = pd.read_csv(stock_file_name) \
+                        stock_df = self.dataframe_read(stock_file_name, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND) \
                             .add_prefix("{} ".format(stock_ticker)).rename({"{} Date".format(stock_ticker): 'Date'}, axis=1)
                         stock_df["{} Currency Rate Base".format(stock_ticker)] = 1.0
                         stock_df["{} Currency Base".format(stock_ticker)] = "AUD"
@@ -132,12 +141,13 @@ class Equity(library.Library):
                             stocks_df[stock_ticker] = stock_df
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                     except Exception as exception:
-                        self.print_log("Unexpected error processing file [{}]".format(stock_file_name), exception)
+                        self.print_log("Unexpected error processing file [{}]".format(stock_file_name), exception=exception)
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
+        statement_started_time = time.time()
         statement_data = {}
         for statement_file_name in statement_files:
             if statement_files[statement_file_name][0]:
@@ -271,7 +281,9 @@ class Equity(library.Library):
         try:
             if new_data:
                 statements_positions = []
-                self.print_log("Data has [{}] statements pre processing".format(len(statement_data)))
+                self.print_log("File [{}] found [{}] statements pre-load"
+                               .format("funds", len(statement_data)), started=statement_started_time)
+                started_time = time.time()
                 for file_name in statement_data:
                     if statement_data[file_name]['Status'] == STATUS_SUCCESS:
                         statement_position = statement_data[file_name]["Positions"]
@@ -290,7 +302,9 @@ class Equity(library.Library):
                         while error_index < len(statement_data[file_name]["Errors"]):
                             self.print_log(" {:2d}: {}".format(error_index, statement_data[file_name]["Errors"][error_index]))
                             error_index += 1
-                statement_df = pd.DataFrame(statements_positions)
+                statement_df = self.dataframe_new(statements_positions,
+                                                  print_label="funds", print_suffix="pre-processing", started=started_time)
+                started_time = time.time()
                 if len(statement_df) > 0:
                     statement_df["Price"] = statement_df["Value"] / statement_df["Units"]
                     statement_df['Rate'] = 1.0 / statement_df['Rate']
@@ -313,7 +327,9 @@ class Equity(library.Library):
                     for column in statement_df.columns:
                         if column.endswith('Currency Base'):
                             statement_df[column] = statement_df[column].loc[statement_df[column].first_valid_index()]
-                self.print_log("Data has [{}] statement rows post processing".format(len(statement_df)))
+                self.dataframe_print(statement_df,
+                                     print_label="funds", print_suffix="post-processing", started=started_time)
+                started_time = time.time()
                 for stock in STOCK:
                     if stock in stocks_df:
                         equity_df = pd.concat([equity_df, stocks_df[stock][~stocks_df[stock].index.duplicated()]], axis=1, sort=True)
@@ -322,7 +338,7 @@ class Equity(library.Library):
 
                 # TODO: Remove BSAV, to be added when Portfolio updated (below)
                 # bank_name = "RBA_Interest_Bank_rates"
-                # bank_cols = ["Date", "Bank Rate"]
+                # bank_cols = OrderedDict([("Date", "object"), ("Bank Rate", "float64")])
                 # bank_query = """
                 # from(bucket: "data_public")
                 #     |> range(start: 1993-01-01T00:00:00.000Z, stop: now())
@@ -334,9 +350,11 @@ class Equity(library.Library):
                 #     |> sort(columns: ["_time"])
                 #     |> unique(column: "_time")
                 #                 """
-                # bank_rates = self.database_read(bank_query, bank_cols, bank_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
+                # bank_rates = self.database_read(bank_name, bank_query, bank_cols, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
+                #       engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                 # if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(bank_rates) == 0:
-                #     bank_rates = self.database_read(bank_query, bank_cols, bank_name, True)
+                #     bank_rates = self.database_read(bank_name, bank_query, bank_cols, True,
+                #       engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                 # bank_rates.loc[len(bank_rates.index)] = \
                 #     [datetime.today().strftime('%Y-%m-%d 00:00:00+00:00'), bank_rates.loc[len(bank_rates.index) - 1, "Bank Rate"]]
                 # bank_rates["Bank Rate"] = bank_rates["Bank Rate"].apply(pd.to_numeric)
@@ -368,21 +386,23 @@ class Equity(library.Library):
                 equity_df = equity_df[~equity_df.index.duplicated(keep='last')]
                 equity_df.index = pd.to_datetime(equity_df.index)
                 equity_df = equity_df.sort_index(axis=1)
-                self.print_log("Data has [{}] rows post statement and stock merge".format(len(equity_df)))
-                equity_df_manual = self.sheet_read(DRIVE_URL, "Equity_manual",
+                self.dataframe_print(equity_df, print_label="stock", print_verb="processed", print_suffix="post-merge",
+                                     started=started_time)
+                started_time = time.time()
+                equity_df_manual = self.sheet_read("Equity_manual", DRIVE_KEY, sheet_name="Manual",
                                                    read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
-                                                   sheet_params={"sheet": "Manual", "index": None, "start_row": 1})
+                                                   engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                 equity_df_manual.index = pd.to_datetime(equity_df_manual["Date"])
                 del equity_df_manual["Date"]
                 equity_df_manual = equity_df_manual.apply(pd.to_numeric)
-                equity_df_manual = equity_df_manual.resample('D').interpolate(limit_direction='both', limit_area='inside') \
-                    .replace('', np.nan).ffill()
+                equity_df_manual = equity_df_manual.resample('D').interpolate(limit_direction='both', limit_area='inside').ffill()
                 equity_df.update(equity_df_manual)
                 equity_df = equity_df.sort_index(axis=1).interpolate(limit_direction='both', limit_area='inside') \
                     .replace('', np.nan).ffill()
-                self.print_log("Data has [{}] rows post sheet merge".format(len(equity_df)))
+                self.dataframe_print(equity_df, print_label="equity", print_verb="processed", print_suffix="post-merge",
+                                     started=started_time)
         except Exception as exception:
-            self.print_log("Unexpected error processing equity dataframe", exception)
+            self.print_log("Unexpected error processing equity dataframe", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
@@ -392,18 +412,21 @@ class Equity(library.Library):
             def aggregate_function(data_df):
                 return data_df.apply(pd.to_numeric, errors='ignore').round(4)
 
-            equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, aggregate_function)
+            equity_delta_df, equity_current_df, _ = self.state_cache(equity_df, aggregate_function,
+                                                                     engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
             if len(equity_delta_df):
+                started_time = time.time()
                 tickers = [ticker.replace(" Price Close", "") for ticker in equity_current_df.columns if ticker.endswith("Price Close")]
                 equity_sheet_df = equity_current_df[[ticker + dimension for ticker in tickers for dimension in [
                     " Price Close",
                     " Currency Rate Base",
                 ]]]
                 equity_sheet_df.insert(0, "Date", equity_sheet_df.index.strftime('%Y-%m-%d'))
-                equity_database_df = equity_sheet_df[equity_sheet_df['Date'] > '2007-01-01'].sort_index(ascending=False)
-                self.sheet_write(equity_database_df, DRIVE_URL, {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
-                self.print_log("Data has [{}] columns and [{}] rows pre enrichment"
-                               .format(len(equity_current_df.columns), len(equity_current_df)))
+                equity_sheet_df = equity_sheet_df[equity_sheet_df['Date'] > '2007-01-01'].sort_index(ascending=False)
+                self.dataframe_print(equity_current_df, print_label="sheet", print_verb="processed", print_suffix="pre-upload",
+                                     started=started_time)
+                self.sheet_write(equity_sheet_df, DRIVE_KEY, {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
+                started_time = time.time()
                 equity_database_df = equity_current_df.copy().dropna(axis=1, how='all')
                 tickers = [ticker.replace(" Price Close", "") for ticker in equity_database_df.columns if ticker.endswith("Price Close")]
                 columns_numeric = []
@@ -420,12 +443,13 @@ class Equity(library.Library):
                 equity_database_df.loc[:, column] = equity_database_df.loc[:, column].fillna(0.0)
                 equity_database_df = equity_database_df.set_index(equity_database_df.index.date).sort_index()
                 equity_database_df = equity_database_df.sort_index(axis=1)
-                self.print_log("Data has [{}] columns and [{}] rows post copy"
-                               .format(len(equity_database_df.columns), len(equity_database_df)))
+                self.dataframe_print(equity_database_df, print_label="equity", print_verb="processed", print_suffix="pre-enrichment",
+                                     started=started_time)
+                started_time = time.time()
                 fx_rates = {}
                 for fx_pair in CURRENCIES:
                     fx_name = "RBA_FX_{}_rates".format(fx_pair)
-                    fx_cols = ["Date", "Rate"]
+                    fx_cols = OrderedDict([("Date", "object"), ("Rate", "float64")])
                     fx_query = """
 from(bucket: "data_public")
     |> range(start: {}, stop: now())
@@ -440,9 +464,11 @@ from(bucket: "data_public")
                         pytz.UTC.localize(pd.to_datetime(equity_database_df.index[0])).isoformat(),
                         fx_pair.lower(),
                     )
-                    fx_rates[fx_pair] = self.database_read(fx_query, fx_cols, fx_name, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD))
+                    fx_rates[fx_pair] = self.database_read(fx_name, fx_query, fx_cols, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
+                                                           engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                     if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(fx_rates[fx_pair]) == 0:
-                        fx_rates[fx_pair] = self.database_read(fx_query, fx_cols, fx_name, True)
+                        fx_rates[fx_pair] = self.database_read(fx_name, fx_query, fx_cols, True,
+                                                               engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                     fx_rates[fx_pair] = fx_rates[fx_pair].set_index(pd.to_datetime(fx_rates[fx_pair]["Date"]).dt.date).sort_index()
                     fx_rates[fx_pair] = fx_rates[fx_pair][~fx_rates[fx_pair].index.duplicated(keep='last')]
                     del fx_rates[fx_pair]["Date"]
@@ -450,20 +476,18 @@ from(bucket: "data_public")
 
                 # TODO: Add Bank to spreadsheet, rename Baseline to Market, add Bank to indexes
 
-                index_weights = self.sheet_read(DRIVE_URL_PORTFOLIO, "Index_weights",
+                index_weights = self.sheet_read("Index_weights", DRIVE_KEY_PORTFOLIO, sheet_name="Indexes", sheet_data_start=2,
                                                 read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
-                                                sheet_params={"sheet": "Indexes", "index": None, "start_row": 2})
+                                                engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                 index_weights = index_weights.replace('#N/A', np.nan)
                 index_weights = index_weights.set_index(index_weights["Exchange Symbol"]).sort_index()
                 index_weights = index_weights[["Holdings Quantity", "Watch Quantity", "Baseline Quantity"]]
                 index_weights.columns = index_weights.columns.str.rstrip(' Quantity')
                 index_weights[index_weights.columns] = index_weights[index_weights.columns].apply(pd.to_numeric)
                 indexes = index_weights.columns.values.tolist()
-                self.print_log("Data has [{}] columns and [{}] rows post externals download"
-                               .format(len(equity_database_df.columns), len(equity_database_df)))
                 for ticker in tickers:
                     base_currencies = equity_database_df[ticker + " Currency Base"]
-                    base_currency = base_currencies.loc[~base_currencies.isnull()].values[0]
+                    base_currency = base_currencies.loc[(~base_currencies.isnull()) & (base_currencies.str.len() > 0)].values[0]
                     if base_currency == "AUD":
                         equity_database_df[ticker + " Currency Rate Spot"] = 1.0
                     else:
@@ -487,8 +511,9 @@ from(bucket: "data_public")
                             equity_database_df[ticker + " Index " + index.title() + column + " Spot"] = \
                                 equity_database_df[ticker + " Index " + index.title() + " Weight"] * \
                                 equity_database_df[ticker + column + " Spot"]
-                self.print_log("Data has [{}] columns and [{}] rows post equity enrichment"
-                               .format(len(equity_database_df.columns), len(equity_database_df)))
+                self.dataframe_print(equity_database_df, print_label="equity", print_verb="processed",
+                                     print_suffix="post-enrichment-stage-1", started=started_time)
+                started_time = time.time()
                 for index in indexes:
                     equity_database_df[index + " Currency Base"] = "AUD"
                     equity_database_df[index + " Paid Dividends"] = 0.0
@@ -508,8 +533,9 @@ from(bucket: "data_public")
                             for index_sub in indexes:
                                 equity_database_df[index + " Index " + index_sub.title() + column + snapshot] = \
                                     equity_database_df[index + column] if index == index_sub else 0.0
-                self.print_log("Data has [{}] columns and [{}] rows post index enrichment"
-                               .format(len(equity_database_df.columns), len(equity_database_df)))
+                self.dataframe_print(equity_database_df, print_label="equity", print_verb="processed",
+                                     print_suffix="post-enrichment-stage-2", started=started_time)
+                started_time = time.time()
                 for ticker in tickers + indexes:
                     equity_database_df[ticker + " Market Volume Value"] = \
                         equity_database_df[ticker + " Market Volume"] * \
@@ -520,11 +546,10 @@ from(bucket: "data_public")
                                 equity_database_df[ticker + " Price Close " + snapshot].diff(period).fillna(0.0)
                             equity_database_df[ticker + " Price Change Percentage " + snapshot + " (" + str(period) + ")"] = \
                                 equity_database_df[ticker + " Price Close " + snapshot].pct_change(period).fillna(0.0) * 100
-                self.print_log("Data has [{}] columns and [{}] rows post change enrichment"
-                               .format(len(equity_database_df.columns), len(equity_database_df)))
                 equity_database_df = equity_database_df.sort_index(axis=1)
-                self.print_log("Data has [{}] columns and [{}] rows post enrichment"
-                               .format(len(equity_database_df.columns), len(equity_database_df)))
+                self.dataframe_print(equity_database_df, print_label="equity", print_verb="processed",
+                                     print_suffix="post-enrichment-stage-3", started=started_time)
+                started_time = time.time()
                 equity_database_df.index = pd.to_datetime(equity_database_df.index)
                 tickers = [ticker.replace(" Price Close", "") for ticker in equity_database_df.columns if ticker.endswith("Price Close")]
                 for metadata in [
@@ -569,16 +594,21 @@ from(bucket: "data_public")
                         for ticker in tickers:
                             columns.append(ticker + column_sub)
                             columns_rename[ticker + column_sub] = ticker.lower()
-                        self.database_write(equity_database_df[columns].rename(columns=columns_rename), global_tags={
-                            "type": column_sub.split('(')[0].strip().replace(" ", "-").lower(),
-                            "period": metadata[2],
-                            "unit": metadata[1]
-                        })
-                self.print_log("Data has [{}] columns and [{}] rows post serialisation"
-                               .format(len(equity_database_df.columns), len(equity_database_df)))
+                        self.stdout_write(
+                            self.dataframe_to_lineprotocol(equity_database_df[columns].rename(columns=columns_rename), global_tags={
+                                "type": column_sub.split('(')[0].strip().replace(" ", "-").lower(),
+                                "period": metadata[2],
+                                "unit": metadata[1]
+                            }, print_label="equity-{}".format(column_sub.strip()
+                                                              .replace(" ", "-")
+                                                              .replace("(", "")
+                                                              .replace(")", "")
+                                                              ).lower()))
+                self.dataframe_print(equity_database_df, print_label="equity", print_verb="processed",
+                                     print_suffix="post-lineprotocol-write", started=started_time)
                 self.state_write()
         except Exception as exception:
-            self.print_log("Unexpected error processing equity data", exception)
+            self.print_log("Unexpected error processing equity data", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -

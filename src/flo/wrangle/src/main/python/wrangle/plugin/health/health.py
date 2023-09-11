@@ -6,6 +6,11 @@ import numpy as np
 import pandas as pd
 
 from .. import library
+from ..library import PD_BACKEND_DEFAULT
+from ..library import PD_ENGINE_DEFAULT
+
+PANDAS_ENGINE = PD_ENGINE_DEFAULT
+PANDAS_BACKEND = PD_BACKEND_DEFAULT
 
 
 class Health(library.Library):
@@ -67,7 +72,7 @@ class Health(library.Library):
                                                 sleep_yesterday_df = file_df
                                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                                         except Exception as exception:
-                                            self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                                            self.print_log("Unexpected error processing file [{}]".format(file_name), exception=exception)
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                         elif basename(file_name).startswith("_SleepReadiness-"):
                             if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 7:
@@ -91,7 +96,7 @@ class Health(library.Library):
                                             sleep_yesterday_df = pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True)
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                                         except Exception as exception:
-                                            self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                                            self.print_log("Unexpected error processing file [{}]".format(file_name), exception=exception)
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                         elif basename(file_name).startswith("_SleepRings-"):
                             if len(sleep_yesterday_df) == 1 and len(sleep_yesterday_df.columns) == 12:
@@ -131,7 +136,7 @@ class Health(library.Library):
                                                 pd.concat([sleep_yesterday_df, file_df], axis=1, sort=True))], sort=True)
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                                         except Exception as exception:
-                                            self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                                            self.print_log("Unexpected error processing file [{}]".format(file_name), exception=exception)
                                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                         elif basename(file_name).startswith("Sleep-"):
 
@@ -149,7 +154,8 @@ class Health(library.Library):
 
                             try:
                                 sleep_history_df = pd.DataFrame()
-                                file_df = pd.read_csv(file_name, skipinitialspace=True)
+                                file_df = self.dataframe_read(file_name, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND,
+                                                              skipinitialspace=True)
                                 file_df['Start'] = file_df['Fell asleep in'].replace('--', 0)
                                 file_df['Start'] = duration_decimalise(file_df, 'Start', 1)
                                 file_df['Start'] = pd.to_timedelta(file_df['Start'], 's')
@@ -168,7 +174,7 @@ class Health(library.Library):
                                 sleep_history_df['Sleep Readiness Rating'] = np.NaN
                                 sleep_history_df['Sleep Duration (hr)'] = duration_decimalise(file_df, 'Asleep')
                                 sleep_history_df['Sleep Awake (hr)'] = \
-                                    ((sleep_history_df['Sleep Finish (dt)'] - sleep_history_df['Sleep Start (dt)']) \
+                                    ((sleep_history_df['Sleep Finish (dt)'] - sleep_history_df['Sleep Start (dt)'])
                                      .astype('timedelta64[s]')).dt.total_seconds() / 3600 - sleep_history_df['Sleep Duration (hr)']
                                 sleep_history_df['Sleep Awake (hr)'] = \
                                     sleep_history_df['Sleep Awake (hr)'].mask(sleep_history_df['Sleep Awake (hr)'] < 0, np.NaN)
@@ -186,7 +192,7 @@ class Health(library.Library):
                                 sleep_df = pd.concat([sleep_df, normalise(sleep_history_df)], sort=True)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                             except Exception as exception:
-                                self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                                self.print_log("Unexpected error processing file [{}]".format(file_name), exception=exception)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                         elif basename(file_name).startswith("_Health-") or basename(file_name).startswith("Health-"):
                             try:
@@ -197,7 +203,7 @@ class Health(library.Library):
                                         with open(file_name_rewritten, 'w') as file_rewrite:
                                             for file_line in file_original.readlines():
                                                 file_rewrite.write(file_line.replace(' \n', '\n'))
-                                file_df = pd.read_csv(file_name_rewritten)
+                                file_df = self.dataframe_read(file_name_rewritten, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                                 file_df = file_df.dropna(how='all').dropna(axis=1, how='all')
                                 if 'Sleep Analysis [Asleep] (hours)' in file_df:
                                     del file_df['Sleep Analysis [Asleep] (hours)']
@@ -235,11 +241,12 @@ class Health(library.Library):
                                 health_df = pd.concat([health_df, normalise(file_df)], sort=True)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                             except Exception as exception:
-                                self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                                self.print_log("Unexpected error processing file [{}]".format(file_name), exception=exception)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                         elif basename(file_name).startswith("_Workout-") or basename(file_name).startswith("Workout-"):
                             try:
-                                file_df = pd.read_csv(file_name, skipinitialspace=True)
+                                file_df = self.dataframe_read(file_name, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND,
+                                                              skipinitialspace=True)
                                 file_df['Start'] = pd.to_datetime(file_df['Start'], format='%Y-%m-%d %H:%M')
                                 file_df['End'] = pd.to_datetime(file_df['End'], format='%Y-%m-%d %H:%M')
                                 if len(file_df['Duration']) > 0:
@@ -275,7 +282,7 @@ class Health(library.Library):
                                 workout_df = pd.concat([workout_df, normalise(file_df)], sort=True)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                             except Exception as exception:
-                                self.print_log("Unexpected error processing file [{}]".format(file_name), exception)
+                                self.print_log("Unexpected error processing file [{}]".format(file_name), exception=exception)
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                         else:
                             self.print_log("Error: Unknown file format [{}]".format(file_name))
@@ -360,13 +367,13 @@ class Health(library.Library):
                 data_df = pd.concat([health_df, workout_df, sleep_df], axis=1, sort=True)
                 data_df.index.name = 'Date'
             except Exception as exception:
-                self.print_log("Unexpected error processing health dataframe", exception)
+                self.print_log("Unexpected error processing health dataframe", exception=exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            data_delta_df, _, _ = self.state_cache(data_df)
+            data_delta_df, _, _ = self.state_cache(data_df, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
             if len(data_delta_df):
                 buckets = {}
                 for column in data_delta_df.columns.tolist():
@@ -385,14 +392,15 @@ class Health(library.Library):
                                 pd.to_datetime(data_bucket_df[data_bucket_df[column].notna()][column]).astype('int64') // 10 ** 9
                         else:
                             data_bucket_df[column] = pd.to_numeric(data_bucket_df[column])
-                    self.database_write(data_bucket_df.rename(columns=buckets[bucket][1]), global_tags={
-                        "type": bucket[0],
-                        "period": "1d",
-                        "unit": bucket[1]
-                    })
+                    self.stdout_write(
+                        self.dataframe_to_lineprotocol(data_bucket_df.rename(columns=buckets[bucket][1]), global_tags={
+                            "type": bucket[0],
+                            "period": "1d",
+                            "unit": bucket[1]
+                        }, print_label="health-{}".format("-".join(bucket)).lower()))
                 self.state_write()
         except Exception as exception:
-            self.print_log("Unexpected error processing health data", exception)
+            self.print_log("Unexpected error processing health data", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED) +
                              self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -

@@ -1,0 +1,6 @@
+from(bucket: "home_private")
+  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
+  |> filter(fn: (r) => r["entity_id"] == "compensation_sensor_landing_festoons_plug_temperature")
+  |> filter(fn: (r) => r["_field"] == "value")
+  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
+  |> yield(name: "max")

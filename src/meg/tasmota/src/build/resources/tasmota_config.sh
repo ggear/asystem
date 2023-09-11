@@ -241,10 +241,10 @@ else
 fi
 echo ''
 if netcat -zw 1 10.0.6.103 80 2>/dev/null; then
-	echo 'Processing config for device [kitchen_downlights_plug] at [http://10.0.6.103/?] ... '
+	echo 'Processing config for device [kitchen_bench_lights_plug] at [http://10.0.6.103/?] ... '
 	echo 'Current firmware ['"$(curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()"'] versus required [13.0.0]'
-	decode-config.py -s 10.0.6.103 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/kitchen_downlights_plug.json || true
-	sleep 1 && while ! netcat -zw 1 10.0.6.103 80 2>/dev/null; do echo 'Waiting for device [kitchen_downlights_plug] to come up ...' && sleep 1; done
+	decode-config.py -s 10.0.6.103 -i /Users/graham/Code/asystem/src/meg/tasmota/src/build/resources/devices/kitchen_bench_lights_plug.json || true
+	sleep 1 && while ! netcat -zw 1 10.0.6.103 80 2>/dev/null; do echo 'Waiting for device [kitchen_bench_lights_plug] to come up ...' && sleep 1; done
 	if [ "$(curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=PowerOnState' | grep '{"PowerOnState":1}' | wc -l)" -ne 1 ]; then
 		printf 'Config set [PowerOnState] to [1] with response: ' && curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=PowerOnState 1'
 		echo ''
@@ -269,14 +269,14 @@ if netcat -zw 1 10.0.6.103 80 2>/dev/null; then
 	else
 		echo 'Config set skipped, [SensorRetain] already set to [OFF]'
 	fi
-	printf 'Restarting [kitchen_downlights_plug] with response: ' && curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=Restart 1'
+	printf 'Restarting [kitchen_bench_lights_plug] with response: ' && curl -s http://10.0.6.103/cm? --data-urlencode 'cmnd=Restart 1'
 	printf '
 '
 	printf 'Waiting for device to come up .' && sleep 1 && printf '.' && sleep 1 && printf '.' && while ! netcat -zw 1 10.0.6.103 80 2>/dev/null; do printf '.' && sleep 1; done
 	printf ' done
 '
 else
-	echo 'Skipping config for device [kitchen_downlights_plug] at [http://10.0.6.103/?] given it is unresponsive'
+	echo 'Skipping config for device [kitchen_bench_lights_plug] at [http://10.0.6.103/?] given it is unresponsive'
 fi
 echo ''
 if netcat -zw 1 10.0.6.104 80 2>/dev/null; then

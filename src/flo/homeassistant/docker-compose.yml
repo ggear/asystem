@@ -1,7 +1,7 @@
 # https://github.com/home-assistant/core/releases
 version: '3.7'
 x-common: &common
-  image: homeassistant/home-assistant:2023.8.2
+  image: homeassistant/home-assistant:2023.9.1
   user: root
   environment:
     - TZ=Australia/Perth
@@ -10,9 +10,9 @@ x-common: &common
     - HOMEASSISTANT_DB
     - HOMEASSISTANT_INTERNAL_URL
     - HOMEASSISTANT_EXTERNAL_URL
-    - VERNEMQ_HOST
+    - VERNEMQ_IP
     - VERNEMQ_PORT
-    - INFLUXDB_HOST
+    - INFLUXDB_IP
     - INFLUXDB_HTTP_PORT
     - INFLUXDB_ORG
     - INFLUXDB_TOKEN

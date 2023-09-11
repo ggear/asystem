@@ -39,7 +39,7 @@ tts:
 recorder:
   db_url: !env_var HOMEASSISTANT_DB
   commit_interval: 120
-  purge_keep_days: 1
+  purge_keep_days: 5
   auto_purge: true
 # TODO: Disabled all sensors in favour of redirecting to Grafana for graphing?
 #  exclude:
@@ -49,7 +49,7 @@ recorder:
 influxdb:
   api_version: 2
   ssl: false
-  host: !env_var INFLUXDB_HOST
+  host: !env_var INFLUXDB_IP
   port: !env_var INFLUXDB_HTTP_PORT
   token: !env_var INFLUXDB_TOKEN
   organization: !env_var INFLUXDB_ORG
@@ -79,7 +79,7 @@ influxdb:
   #####################################################################################
 mqtt:
 # The UI is now used to configure MQTT, perhaps return with a version 2022.2.9-
-#  broker: !env_var VERNEMQ_HOST
+#  broker: !env_var VERNEMQ_IP
 #  port: !env_var VERNEMQ_PORT
 #  client_id: 'homeassistant'
 #  discovery: true
