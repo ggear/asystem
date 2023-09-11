@@ -161,6 +161,7 @@ def _backup(context):
                         "-not -path './.idea*' "
                         "-not -path '*__pycache__*' "
                         "-not -path '*.pytest_cache*' "
+                        "-not -path '*/target/*' "
                         "-not -name asystem.iml "
                         "-type f -print) > /Users/graham/Backup/asystem/.gitexternal", DIR_ROOT)
     _run_local(context, "mkdir -p /Users/graham/Backup/asystem && "
