@@ -9,7 +9,7 @@ services:
       - TZ=Australia/Perth
       - WEEWX_UID=weewx
       - WEEWX_GID=dialout
-      - MARIADB_HOST_IP
+      - MARIADB_IP
       - MARIADB_USER_WEEWX
       - MARIADB_DATABASE_WEEWX
       - VERNEMQ_IP
