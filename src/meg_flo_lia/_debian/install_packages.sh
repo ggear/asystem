@@ -57,6 +57,7 @@ PACKAGES=(
   locales
   python3
   python3-pip
+  libedgetpu1-std
 )
 apt-get update
 for PACKAGE in "${PACKAGES[@]}"; do
