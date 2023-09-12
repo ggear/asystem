@@ -26,7 +26,7 @@ for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("currency", {"success_typical": ASSERT_RUN},
+        self.run_module("equity", {"success_typical": ASSERT_RUN},
                         enable_log=True,
                         enable_rerun=False,
                         disable_data_delta=True,
@@ -287,32 +287,72 @@ class WrangleTest(unittest.TestCase):
     def test_library_database(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
 
+        invalid_name = "invalid"
+        invalid_query = "!"
+        invalid_str = "[Index(int64)]"
+        os.environ[library.WRANGLE_ENABLE_LOG] = "false"
+        for data_df in [
+            test.database_read(invalid_name, invalid_query, read_cache=True, write_cache=True),
+            test.database_read(invalid_name, invalid_query, read_cache=False, write_cache=True),
+            test.database_read(invalid_name, invalid_query, read_cache=True, write_cache=True),
+        ]:
+            self.assertEqual(invalid_str, test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+
+        empty_name = "empty"
+        empty_query = """
+            from(bucket: "data_public")
+              |> range(start: -10ms, stop: now())
+              |> filter(fn: (r) => r._measurement == "a_non_existent_metric")
+        """
+        empty_type = {"Date": "int64"}
+        empty_str = "[Index(int64){}]"
+        os.environ[library.WRANGLE_ENABLE_LOG] = "true"
+        for data_df in [
+            test.database_read(empty_name, empty_query, read_cache=True, write_cache=True),
+            test.database_read(empty_name, empty_query, read_cache=False, write_cache=True),
+            test.database_read(empty_name, empty_query, read_cache=True, write_cache=True),
+        ]:
+            self.assertEqual(empty_str.format(""), test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+        for data_df in [
+            test.database_read(empty_name, empty_query, column_types=empty_type, read_cache=True, write_cache=True),
+            test.database_read(empty_name, empty_query, column_types=empty_type, read_cache=False, write_cache=True),
+            test.database_read(empty_name, empty_query, column_types=empty_type, read_cache=True, write_cache=True),
+        ]:
+            self.assertEqual(empty_str.format(",Date(int64)"), test.dataframe_to_str(data_df))
+            self.assertEqual(0, len(data_df))
+
         data_name = "RBA_FX_GBP_rates"
         data_query = """
             from(bucket: "data_public")
-                |> range(start: 1985-01-02T00:00:00+00:00, stop: now())
-                |> filter(fn: (r) => r["_measurement"] == "currency")
-                |> filter(fn: (r) => r["period"] == "1d")
-                |> filter(fn: (r) => r["type"] == "snapshot")
-                |> filter(fn: (r) => r["_field"] == "aud/GBP")
-                |> keep(columns: ["_time", "_value"])
-                |> sort(columns: ["_time"])
-                |> unique(column: "_time")
+            |> range(start: 1985-01-02T00:00:00+00:00, stop: now())
+            |> filter(fn: (r) => r["_measurement"] == "currency")
+            |> filter(fn: (r) => r["period"] == "1d")
+            |> filter(fn: (r) => r["type"] == "snapshot")
+            |> filter(fn: (r) => r["_field"] == "aud/gbp")
+            |> keep(columns: ["_time", "_value"])
+            |> sort(columns: ["_time"])
+            |> unique(column: "_time")
+            |> rename(columns: {_time: "Date", _value: "Rate"})
         """
-        data_type = OrderedDict([("Date", "object"), ("Rate", "float64")])
-        data_str = "[Index(int64),Date(object),Rate(float64)]"
-
-        # os.environ[library.WRANGLE_ENABLE_LOG] = "false"
-        # self.assertEqual(data_str, test.dataframe_to_str(test.database_read(data_name, "!", data_type, read_cache=False)))
-        # self.assertEqual(0, len(test.database_read(data_name, "!", data_type, read_cache=False)))
-        #
+        data_type = OrderedDict([("Date", "float128"), ("Rate", "float64")])
+        data_str = "[Index(int64),Date({}),Rate(float64)]"
         os.environ[library.WRANGLE_ENABLE_LOG] = "true"
-        self.assertEqual(data_str, test.dataframe_to_str(test.database_read(data_name, data_query, data_type, read_cache=False)))
-        # self.assertGreater(len(test.database_read(data_name, data_query, data_type, read_cache=False)), 6000)
-        #
-        # os.environ[library.WRANGLE_ENABLE_LOG] = "true"
-        # self.assertEqual(data_str, test.dataframe_to_str(test.database_read(data_name, data_query, data_type, read_cache=True)))
-        # self.assertGreater(len(test.database_read(data_name, data_query, data_type, read_cache=True)), 6000)
+        for data_df in [
+            test.database_read(data_name, data_query, read_cache=True, write_cache=True),
+            test.database_read(data_name, data_query, read_cache=False, write_cache=True),
+            test.database_read(data_name, data_query, read_cache=True, write_cache=True),
+        ]:
+            self.assertEqual(data_str.format("int64"), test.dataframe_to_str(data_df))
+            self.assertGreater(len(data_df), 6000)
+        for data_df in [
+            test.database_read(data_name, data_query, column_types=data_type, read_cache=True, write_cache=True),
+            test.database_read(data_name, data_query, column_types=data_type, read_cache=False, write_cache=True),
+            test.database_read(data_name, data_query, column_types=data_type, read_cache=True, write_cache=True),
+        ]:
+            self.assertEqual(data_str.format("float128"), test.dataframe_to_str(data_df))
+            self.assertGreater(len(data_df), 6000)
 
     def test_library_dataframe(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")

@@ -727,11 +727,12 @@ class Library(object, metaclass=ABCMeta):
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
 
     def sheet_read(self, file_cache, drive_key, sheet_name=None, sheet_data_start=1, sheet_load_secs=10, sheet_retry_max=5,
-                   column_types={}, read_cache=False, write_cache=False, engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
+                   column_types={}, read_cache=False, write_cache=False, print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC,
+                   engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
         started_time = time.time()
         data_df = None
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
-        file_path = abspath("{}/{}.csv".format(self.input, file_cache))
+        file_path = abspath("{}/_{}.csv".format(self.input, file_cache))
         if read_cache and isfile(file_path):
             data_df = self.dataframe_read(file_path, column_types, print_label=file_cache, engine=engine, dtype_backend=dtype_backend)
         if data_df is None:
@@ -750,6 +751,8 @@ class Library(object, metaclass=ABCMeta):
                             column_types=column_types,
                             dropna_columns=True,
                             print_label=file_cache,
+                            print_head=print_head,
+                            print_tail=print_tail,
                             dtype_backend=dtype_backend
                         )
                         for data_df_col in data_df:
@@ -790,18 +793,15 @@ class Library(object, metaclass=ABCMeta):
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     def database_read(self, file_cache, flux_query, column_types={}, read_cache=False, write_cache=False,
-                      print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC,
-                      engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
+                      print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC, engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
         started_time = time.time()
-        file_path = abspath("{}/{}.csv".format(self.input, file_cache))
-        if read_cache:
-            if not isfile(file_path):
-                data_df = self.dataframe_new(column_types=column_types)
-                self.print_log("DataFrame [{}] unavailable at [{}]".format(file_cache, file_path))
-            else:
-                data_df = self.dataframe_read(file_path, column_types, print_label=file_cache, engine=engine, dtype_backend=dtype_backend)
-        else:
+        data_df = None
+        file_path = abspath("{}/_{}.csv".format(self.input, file_cache))
+        if read_cache and isfile(file_path):
+            data_df = self.dataframe_read(file_path, column_types, print_label=file_cache, engine=engine, dtype_backend=dtype_backend)
+        if data_df is None:
             rows = []
+            columns = []
             query_url = "http://{}:{}/api/v2/query?org={}".format(
                 os.environ["INFLUXDB_IP_PROD"],
                 os.environ["INFLUXDB_HTTP_PORT"],
@@ -816,17 +816,22 @@ class Library(object, metaclass=ABCMeta):
                 if not response.ok:
                     raise SystemError("HTTP [{}] returned with response [{}] after query [{}]"
                                       .format(response.status_code, response.text.strip(), flux_query))
-                for row in response.text.strip().split("\n")[1:]:
-                    cols = row.strip().split(",")
-                    if len(cols) > 4:
-                        rows.append([parser.parse(cols[3])] + cols[4:])
+                table = response.text.strip().split("\n")
+                if len(table) > 0:
+                    columns = table[0].strip().split(",")[3:]
+                    for row in table[1:]:
+                        cols = row.strip().split(",")
+                        if len(cols) > 4:
+                            rows.append([parser.parse(cols[3])] + cols[4:])
+                self.print_log("DataFrame [{}] downloaded from [{}]".format(file_cache, query_url), started=started_time)
             except Exception as exception:
+                rows = []
                 self.print_log("DataFrame [{}] unavailable at [{}]".format(file_cache, query_url), exception=exception)
             query_log = ["DataFrame [{}] query [{}]:".format(file_cache, flux_query.replace(" ", "").replace("\n", ""))]
             query_log.extend([line.strip() for line in flux_query.split("\n")])
             self.print_log(query_log)
-            self.print_log("DataFrame [{}] downloaded from [{}]".format(file_cache, query_url), started=started_time)
-            data_df = self.dataframe_new(data=rows, column_types=column_types, print_label=file_cache, dtype_backend=dtype_backend)
+            data_df = self.dataframe_new(data=rows, columns=columns, column_types=column_types, print_label=file_cache,
+                                         print_head=print_head, print_tail=print_tail, dtype_backend=dtype_backend)
         if not read_cache and write_cache and len(data_df) > 0:
             self.dataframe_write(data_df, file_path, write_index=False, print_label=file_cache)
         return data_df
@@ -921,8 +926,8 @@ class Library(object, metaclass=ABCMeta):
                                .format("" if print_label is None else " [{}]".format(print_label), column_type_attempt))
             if data_df is not None or column_type is None:
                 break
-        data_df = self.dataframe_convert_types(data_df, column_types=column_types,
-                                               dropna_columns=dropna_columns, fillna_str=fillna_str, dtype_backend=dtype_backend)
+        data_df = self.dataframe_convert_types(data_df, column_types=column_types, dropna_columns=dropna_columns, fillna_str=fillna_str,
+                                               dtype_backend=dtype_backend)
         if len(data) > 0 or len(column_names) > 0:
             self.dataframe_print(data_df, compact=(len(data) == 0), print_label=print_label, print_suffix=print_suffix,
                                  print_head=print_head, print_tail=print_tail, started=started_time)

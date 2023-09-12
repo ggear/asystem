@@ -449,7 +449,6 @@ class Equity(library.Library):
                 fx_rates = {}
                 for fx_pair in CURRENCIES:
                     fx_name = "RBA_FX_{}_rates".format(fx_pair)
-                    fx_cols = OrderedDict([("Date", "object"), ("Rate", "float64")])
                     fx_query = """
 from(bucket: "data_public")
     |> range(start: {}, stop: now())
@@ -460,15 +459,17 @@ from(bucket: "data_public")
     |> keep(columns: ["_time", "_value"])
     |> sort(columns: ["_time"])
     |> unique(column: "_time")
+    |> rename(columns: {{_time: "Date", _value: "Rate"}})
                     """.format(
                         pytz.UTC.localize(pd.to_datetime(equity_database_df.index[0])).isoformat(),
                         fx_pair.lower(),
                     )
-                    fx_rates[fx_pair] = self.database_read(fx_name, fx_query, fx_cols, library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
+                    fx_rates[fx_pair] = self.database_read(fx_name, fx_query,
+                                                           read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
                                                            engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                     if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD) and len(fx_rates[fx_pair]) == 0:
-                        fx_rates[fx_pair] = self.database_read(fx_name, fx_query, fx_cols, True,
-                                                               engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
+                        fx_rates[fx_pair] = self.database_read(fx_name, fx_query,
+                                                               read_cache=True, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                     fx_rates[fx_pair] = fx_rates[fx_pair].set_index(pd.to_datetime(fx_rates[fx_pair]["Date"]).dt.date).sort_index()
                     fx_rates[fx_pair] = fx_rates[fx_pair][~fx_rates[fx_pair].index.duplicated(keep='last')]
                     del fx_rates[fx_pair]["Date"]
