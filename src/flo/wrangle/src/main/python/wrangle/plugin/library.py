@@ -1052,9 +1052,7 @@ class Library(object, metaclass=ABCMeta):
                 for line in lines:
                     if line:
                         self.stdout_write(line)
-                sys.stdout.flush()
-        else:
-            sys.stdout.flush()
+        sys.stdout.flush()
 
     def counter_write(self):
         values = []
