@@ -87,9 +87,10 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 
 WRANGLE_ENABLE_LOG = 'WRANGLE_ENABLE_LOG'
-WRANGLE_ENABLE_RANDOM_ROWS = 'WRANGLE_ENABLE_RANDOM_ROWS'
+WRANGLE_ENABLE_DATA_SUBSET = 'WRANGLE_ENABLE_DATA_SUBSET'
 WRANGLE_ENABLE_DATA_TRUNC = 'WRANGLE_ENABLE_DATA_TRUNC'
 WRANGLE_DISABLE_DATA_DELTA = 'WRANGLE_DISABLE_DATA_DELTA'
+WRANGLE_DISABLE_DATA_LINEPROTOCOL = 'WRANGLE_DISABLE_DATA_LINEPROTOCOL'
 WRANGLE_DISABLE_FILE_UPLOAD = 'WRANGLE_DISABLE_FILE_UPLOAD'
 WRANGLE_DISABLE_FILE_DOWNLOAD = 'WRANGLE_DISABLE_FILE_DOWNLOAD'
 
@@ -957,36 +958,37 @@ class Library(object, metaclass=ABCMeta):
     def dataframe_to_lineprotocol(self, data_df, global_tags=None, print_label=None):
         started_time = time.time()
         lines = []
-        if global_tags is None:
-            global_tags = {}
-        global_tags["source"] = "wrangle"
-        global_tags["version"] = os.getenv("SERVICE_VERSION_COMPACT", "-1")
-        try:
-            if test(WRANGLE_ENABLE_RANDOM_ROWS) and len(data_df) > 0:
-                data_df = data_df.sample(1, replace=True).sort_index()
-            column_rename = {}
-            for column in data_df.columns:
-                column_rename[column] = column.strip().replace(' ', '-').lower()
-                data_df[column] = pd.to_numeric(data_df[column], downcast='float')
-            data_df = data_df.rename(columns=column_rename)
-            data_df.index = pd.to_datetime(data_df.index)
+        if not test(WRANGLE_DISABLE_DATA_LINEPROTOCOL):
+            if global_tags is None:
+                global_tags = {}
+            global_tags["source"] = "wrangle"
+            global_tags["version"] = os.getenv("SERVICE_VERSION_COMPACT", "-1")
+            try:
+                if test(WRANGLE_ENABLE_DATA_SUBSET) and len(data_df) > 0:
+                    data_df = data_df.sample(1, replace=True).sort_index()
+                column_rename = {}
+                for column in data_df.columns:
+                    column_rename[column] = column.strip().replace(' ', '-').lower()
+                    data_df[column] = pd.to_numeric(data_df[column], downcast='float')
+                data_df = data_df.rename(columns=column_rename)
+                data_df.index = pd.to_datetime(data_df.index)
 
-            # TODO: Implement sec precision
-            # lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
-            #     data_df, self.name.lower(), tag_columns=[], global_tags=global_tags, time_precision="s")
-            lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
-                data_df, self.name.lower(), tag_columns=[], global_tags=global_tags)
+                # TODO: Implement sec precision
+                # lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
+                #     data_df, self.name.lower(), tag_columns=[], global_tags=global_tags, time_precision="s")
+                lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
+                    data_df, self.name.lower(), tag_columns=[], global_tags=global_tags)
 
-            self.dataframe_print(data_df, print_label=print_label, print_verb="serialised",
-                                 print_suffix="to [{:,}] lines".format(len(lines)), started=started_time)
-            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
-            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
-        except Exception as exception:
-            self.print_log("DataFrame {} serialisation failed"
-                           .format("" if print_label is None else " [{}]".format(print_label)),
-                           data=self.dataframe_to_str(data_df, compact=False),
-                           exception=exception)
-            self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
+                self.dataframe_print(data_df, print_label=print_label, print_verb="serialised",
+                                     print_suffix="to [{:,}] lines".format(len(lines)), started=started_time)
+                self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
+                self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
+            except Exception as exception:
+                self.print_log("DataFrame {} serialisation failed"
+                               .format("" if print_label is None else " [{}]".format(print_label)),
+                               data=self.dataframe_to_str(data_df, compact=False),
+                               exception=exception)
+                self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
         return lines
 
     def dataframe_to_str(self, data_df, compact=True, print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC):

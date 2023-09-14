@@ -459,7 +459,7 @@ class WrangleTest(unittest.TestCase):
                    disable_write_lineprotocol=False, disable_write_stdout=True, disable_data_delta=False, disable_file_upload=True,
                    disable_file_download=False):
         os.environ[library.WRANGLE_ENABLE_LOG] = str(enable_log)
-        os.environ[library.WRANGLE_ENABLE_RANDOM_ROWS] = str(enable_random_rows)
+        os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = str(enable_random_rows)
         os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = str(disable_data_delta)
         os.environ[library.WRANGLE_DISABLE_FILE_UPLOAD] = str(disable_file_upload)
         os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = str(disable_file_download)
@@ -538,7 +538,7 @@ class WrangleTest(unittest.TestCase):
         shutil.rmtree(join(DIR_ROOT, "target/data"), ignore_errors=True)
         os.makedirs(join(DIR_ROOT, "target/data"))
         os.environ[library.WRANGLE_ENABLE_LOG] = "true"
-        os.environ[library.WRANGLE_ENABLE_RANDOM_ROWS] = "false"
+        os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = "false"
         os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = "true"
         os.environ[library.WRANGLE_DISABLE_FILE_UPLOAD] = "true"
         os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = "false"
