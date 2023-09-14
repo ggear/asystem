@@ -31,10 +31,10 @@ class WrangleTest(unittest.TestCase):
                         enable_rerun=False,
                         disable_data_delta=True,
                         disable_file_download=False,
-                        enable_random_rows=False,
+                        enable_data_subset=False,
                         disable_write_stdout=True,
                         disable_file_upload=True,
-                        disable_write_lineprotocol=True,
+                        disable_data_lineprotocol=True,
                         )
 
     def test_currency_typical(self):
@@ -455,12 +455,13 @@ class WrangleTest(unittest.TestCase):
                          len((test.dataframe_new(df_data, column_types={column: "SOME_UKNOWN_TYPE" for column in df_data[0]}))))
 
     #
-    def run_module(self, module_name, tests_asserts, enable_log=True, prepare_only=False, enable_rerun=True, enable_random_rows=False,
-                   disable_write_lineprotocol=False, disable_write_stdout=True, disable_data_delta=False, disable_file_upload=True,
+    def run_module(self, module_name, tests_asserts, enable_log=True, prepare_only=False, enable_rerun=True, enable_data_subset=False,
+                   disable_data_lineprotocol=True, disable_write_stdout=True, disable_data_delta=False, disable_file_upload=True,
                    disable_file_download=False):
         os.environ[library.WRANGLE_ENABLE_LOG] = str(enable_log)
-        os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = str(enable_random_rows)
+        os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = str(enable_data_subset)
         os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = str(disable_data_delta)
+        os.environ[library.WRANGLE_DISABLE_DATA_LINEPROTOCOL] = str(disable_data_lineprotocol)
         os.environ[library.WRANGLE_DISABLE_FILE_UPLOAD] = str(disable_file_upload)
         os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = str(disable_file_download)
         dir_target = join(DIR_ROOT, "target")
@@ -510,7 +511,7 @@ class WrangleTest(unittest.TestCase):
             load_caches(join(DIR_ROOT, "src/test/resources/data", module_name, test), module.input)
             counters = {}
             if not prepare_only:
-                with patch.object(library.Library, "dataframe_to_lineprotocol") if disable_write_lineprotocol else no_op():
+                with patch.object(library.Library, "dataframe_to_lineprotocol") if disable_data_lineprotocol else no_op():
                     with patch.object(library.Library, "sheet_write") if disable_file_upload else no_op():
                         with patch.object(library.Library, "drive_write") if disable_file_upload else no_op():
                             with patch.object(library.Library, "stdout_write") if disable_write_stdout else no_op():
@@ -540,6 +541,7 @@ class WrangleTest(unittest.TestCase):
         os.environ[library.WRANGLE_ENABLE_LOG] = "true"
         os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = "false"
         os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = "true"
+        os.environ[library.WRANGLE_DISABLE_DATA_LINEPROTOCOL] = "true"
         os.environ[library.WRANGLE_DISABLE_FILE_UPLOAD] = "true"
         os.environ[library.WRANGLE_DISABLE_FILE_DOWNLOAD] = "false"
 
