@@ -26,15 +26,15 @@ for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("equity", {"success_typical": ASSERT_RUN},
-                        enable_log=True,
-                        enable_rerun=False,
+        self.run_module("currency", {"success_typical": ASSERT_RUN},
                         disable_data_delta=True,
                         disable_file_download=False,
                         enable_data_subset=False,
                         disable_write_stdout=True,
-                        disable_file_upload=True,
                         disable_data_lineprotocol=True,
+                        disable_file_upload=True,
+                        enable_rerun=False,
+                        enable_log=True,
                         )
 
     def test_currency_typical(self):
@@ -456,7 +456,7 @@ class WrangleTest(unittest.TestCase):
 
     #
     def run_module(self, module_name, tests_asserts, enable_log=True, prepare_only=False, enable_rerun=True, enable_data_subset=False,
-                   disable_data_lineprotocol=True, disable_write_stdout=True, disable_data_delta=False, disable_file_upload=True,
+                   disable_data_lineprotocol=False, disable_write_stdout=True, disable_data_delta=False, disable_file_upload=True,
                    disable_file_download=False):
         os.environ[library.WRANGLE_ENABLE_LOG] = str(enable_log)
         os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = str(enable_data_subset)
@@ -511,27 +511,26 @@ class WrangleTest(unittest.TestCase):
             load_caches(join(DIR_ROOT, "src/test/resources/data", module_name, test), module.input)
             counters = {}
             if not prepare_only:
-                with patch.object(library.Library, "dataframe_to_lineprotocol") if disable_data_lineprotocol else no_op():
-                    with patch.object(library.Library, "sheet_write") if disable_file_upload else no_op():
-                        with patch.object(library.Library, "drive_write") if disable_file_upload else no_op():
-                            with patch.object(library.Library, "stdout_write") if disable_write_stdout else no_op():
-                                print("STARTING (run)     [{}]   [{}]".format(module_name.title(), test))
+                with patch.object(library.Library, "sheet_write") if disable_file_upload else no_op():
+                    with patch.object(library.Library, "drive_write") if disable_file_upload else no_op():
+                        with patch.object(library.Library, "stdout_write") if disable_write_stdout else no_op():
+                            print("STARTING (run)     [{}]   [{}]".format(module_name.title(), test))
+                            module.run()
+                            print("FINISHED (run)     [{}]   [{}]\n".format(module_name.title(), test))
+                            assert_counters(module.get_counters(), tests_asserts[test])
+                            if enable_rerun:
+                                module.reset_counters()
+                                print("STARTING (no-op)   [{}]   [{}]".format(module_name.title(), test))
                                 module.run()
-                                print("FINISHED (run)     [{}]   [{}]\n".format(module_name.title(), test))
-                                assert_counters(module.get_counters(), tests_asserts[test])
-                                if enable_rerun:
-                                    module.reset_counters()
-                                    print("STARTING (no-op)   [{}]   [{}]".format(module_name.title(), test))
-                                    module.run()
-                                    print("FINISHED (no-op)   [{}]   [{}]\n\n".format(module_name.title(), test))
-                                    assert_counters(module.get_counters(), ASSERT_NOOP)
-                                    module.reset_counters()
-                                    print("STARTING (reload)   [{}]   [{}]".format(module_name.title(), test))
-                                    os.environ['WRANGLE_DISABLE_DATA_DELTA'] = 'true'
-                                    module.run()
-                                    os.environ['WRANGLE_DISABLE_DATA_DELTA'] = 'false'
-                                    print("FINISHED (reload)   [{}]   [{}]\n\n".format(module_name.title(), test))
-                                    assert_counters(module.get_counters(), ASSERT_RELOAD)
+                                print("FINISHED (no-op)   [{}]   [{}]\n\n".format(module_name.title(), test))
+                                assert_counters(module.get_counters(), ASSERT_NOOP)
+                                module.reset_counters()
+                                print("STARTING (reload)   [{}]   [{}]".format(module_name.title(), test))
+                                os.environ['WRANGLE_DISABLE_DATA_DELTA'] = 'true'
+                                module.run()
+                                os.environ['WRANGLE_DISABLE_DATA_DELTA'] = 'false'
+                                print("FINISHED (reload)   [{}]   [{}]\n\n".format(module_name.title(), test))
+                                assert_counters(module.get_counters(), ASSERT_RELOAD)
         return counters
 
     def setUp(self):
