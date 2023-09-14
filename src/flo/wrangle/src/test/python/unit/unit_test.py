@@ -26,8 +26,9 @@ for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("currency", {"success_typical": ASSERT_RUN},
-                        disable_data_delta=True,
+        self.run_module("equity", {"success_typical": ASSERT_RUN},
+                        disable_data_delta=False,
+                        enable_write_cache=False,
                         disable_file_download=False,
                         enable_data_subset=False,
                         disable_write_stdout=True,
@@ -186,7 +187,7 @@ class WrangleTest(unittest.TestCase):
                                                "MCK Price Close": "float64",
                                                "MCK Currency Rate Base": "float64",
                                            },
-                                           read_cache=library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD),
+                                           write_cache=True,
                                            engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
         equity_df_manual.index = pd.to_datetime(equity_df_manual["Date"])
         del equity_df_manual["Date"]
@@ -202,9 +203,9 @@ class WrangleTest(unittest.TestCase):
         nonexist_str = "[Index(int64)]"
         os.environ[library.WRANGLE_ENABLE_LOG] = "false"
         for data_df in [
-            test.sheet_read(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, read_cache=True, write_cache=True),
-            test.sheet_read(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
-            test.sheet_read(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, read_cache=True, write_cache=True),
+            test.sheet_read(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_read(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
+            test.sheet_read(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
         ]:
             self.assertEqual(nonexist_str, test.dataframe_to_str(data_df))
             self.assertEqual(0, len(data_df))
@@ -214,9 +215,9 @@ class WrangleTest(unittest.TestCase):
         loading_str = "[Index(int64)]"
         os.environ[library.WRANGLE_ENABLE_LOG] = "false"
         for data_df in [
-            test.sheet_read(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, read_cache=True, write_cache=True),
-            test.sheet_read(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, read_cache=False, write_cache=True),
-            test.sheet_read(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, read_cache=True, write_cache=True),
+            test.sheet_read(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_read(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
+            test.sheet_read(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
         ]:
             self.assertEqual(loading_str, test.dataframe_to_str(data_df))
             self.assertEqual(0, len(data_df))
@@ -226,9 +227,9 @@ class WrangleTest(unittest.TestCase):
         empty_str = "[Index(int64)]"
         os.environ[library.WRANGLE_ENABLE_LOG] = "true"
         for data_df in [
-            test.sheet_read(empty_name, empty_key, read_cache=True, write_cache=True),
-            test.sheet_read(empty_name, empty_key, read_cache=False, write_cache=True),
-            test.sheet_read(empty_name, empty_key, read_cache=True, write_cache=True),
+            test.sheet_read(empty_name, empty_key, write_cache=True),
+            test.sheet_read(empty_name, empty_key, write_cache=False),
+            test.sheet_read(empty_name, empty_key, write_cache=True),
         ]:
             self.assertEqual(empty_str, test.dataframe_to_str(data_df))
             self.assertEqual(0, len(data_df))
@@ -256,19 +257,19 @@ class WrangleTest(unittest.TestCase):
         test_str_string = ["string" for _ in range(0, len(test_type_num))]
         os.environ[library.WRANGLE_ENABLE_LOG] = "true"
         for data_df in [
-            test.sheet_read(test_name + "-1", test_key, sheet_data_start=3, read_cache=True, write_cache=True),
-            test.sheet_read(test_name + "-1", test_key, sheet_data_start=3, read_cache=False, write_cache=True),
-            test.sheet_read(test_name + "-1", test_key, sheet_data_start=3, read_cache=True, write_cache=True),
-            test.sheet_read(test_name + "-2", test_key, sheet_data_start=3, column_types=test_type_num, read_cache=True, write_cache=True),
-            test.sheet_read(test_name + "-2", test_key, sheet_data_start=3, column_types=test_type_num, read_cache=False, write_cache=True),
-            test.sheet_read(test_name + "-2", test_key, sheet_data_start=3, column_types=test_type_num, read_cache=True, write_cache=True),
+            test.sheet_read(test_name + "-1", test_key, sheet_data_start=3, write_cache=True),
+            test.sheet_read(test_name + "-1", test_key, sheet_data_start=3, write_cache=False),
+            test.sheet_read(test_name + "-1", test_key, sheet_data_start=3, write_cache=True),
+            test.sheet_read(test_name + "-2", test_key, sheet_data_start=3, column_types=test_type_num, write_cache=True),
+            test.sheet_read(test_name + "-2", test_key, sheet_data_start=3, column_types=test_type_num, write_cache=False),
+            test.sheet_read(test_name + "-2", test_key, sheet_data_start=3, column_types=test_type_num, write_cache=True),
         ]:
             self.assertEqual(test_str.format(*test_str_types), test.dataframe_to_str(data_df))
             self.assertEqual(4, len(data_df))
         for data_df in [
-            test.sheet_read(test_name + "-3", test_key, sheet_data_start=3, column_types=test_type_str, read_cache=True, write_cache=True),
-            test.sheet_read(test_name + "-3", test_key, sheet_data_start=3, column_types=test_type_str, read_cache=False, write_cache=True),
-            test.sheet_read(test_name + "-3", test_key, sheet_data_start=3, column_types=test_type_str, read_cache=True, write_cache=True),
+            test.sheet_read(test_name + "-3", test_key, sheet_data_start=3, column_types=test_type_str, write_cache=True),
+            test.sheet_read(test_name + "-3", test_key, sheet_data_start=3, column_types=test_type_str, write_cache=False),
+            test.sheet_read(test_name + "-3", test_key, sheet_data_start=3, column_types=test_type_str, write_cache=True),
         ]:
             self.assertEqual(test_str.format(*test_str_string), test.dataframe_to_str(data_df))
             self.assertEqual(4, len(data_df))
@@ -277,9 +278,9 @@ class WrangleTest(unittest.TestCase):
         data_key = "1Kf9-Gk7aD4aBdq2JCfz5zVUMWAtvJo2ZfqmSQyo8Bjk"
         data_str = "[Index(int64),Exchange Symbol(object),Holdings Quantity(float64),Unit Price(object),Watch Value(object),Watch Quantity(float64),Baseline Quantity(float64)]"
         for data_df in [
-            test.sheet_read(data_name + "-1", data_key, sheet_name="Indexes", sheet_data_start=2, read_cache=True, write_cache=True),
-            test.sheet_read(data_name + "-1", data_key, sheet_name="Indexes", sheet_data_start=2, read_cache=False, write_cache=True),
-            test.sheet_read(data_name + "-1", data_key, sheet_name="Indexes", sheet_data_start=2, read_cache=True, write_cache=True),
+            test.sheet_read(data_name + "-1", data_key, sheet_name="Indexes", sheet_data_start=2, write_cache=True),
+            test.sheet_read(data_name + "-1", data_key, sheet_name="Indexes", sheet_data_start=2, write_cache=False),
+            test.sheet_read(data_name + "-1", data_key, sheet_name="Indexes", sheet_data_start=2, write_cache=True),
         ]:
             self.assertEqual(data_str, test.dataframe_to_str(data_df))
             self.assertEqual(18, len(data_df))
@@ -292,9 +293,9 @@ class WrangleTest(unittest.TestCase):
         invalid_str = "[Index(int64)]"
         os.environ[library.WRANGLE_ENABLE_LOG] = "false"
         for data_df in [
-            test.database_read(invalid_name, invalid_query, read_cache=True, write_cache=True),
-            test.database_read(invalid_name, invalid_query, read_cache=False, write_cache=True),
-            test.database_read(invalid_name, invalid_query, read_cache=True, write_cache=True),
+            test.database_read(invalid_name, invalid_query, write_cache=True),
+            test.database_read(invalid_name, invalid_query, write_cache=False),
+            test.database_read(invalid_name, invalid_query, write_cache=True),
         ]:
             self.assertEqual(invalid_str, test.dataframe_to_str(data_df))
             self.assertEqual(0, len(data_df))
@@ -309,16 +310,16 @@ class WrangleTest(unittest.TestCase):
         empty_str = "[Index(int64){}]"
         os.environ[library.WRANGLE_ENABLE_LOG] = "true"
         for data_df in [
-            test.database_read(empty_name, empty_query, read_cache=True, write_cache=True),
-            test.database_read(empty_name, empty_query, read_cache=False, write_cache=True),
-            test.database_read(empty_name, empty_query, read_cache=True, write_cache=True),
+            test.database_read(empty_name, empty_query, write_cache=True),
+            test.database_read(empty_name, empty_query, write_cache=False),
+            test.database_read(empty_name, empty_query, write_cache=True),
         ]:
             self.assertEqual(empty_str.format(""), test.dataframe_to_str(data_df))
             self.assertEqual(0, len(data_df))
         for data_df in [
-            test.database_read(empty_name, empty_query, column_types=empty_type, read_cache=True, write_cache=True),
-            test.database_read(empty_name, empty_query, column_types=empty_type, read_cache=False, write_cache=True),
-            test.database_read(empty_name, empty_query, column_types=empty_type, read_cache=True, write_cache=True),
+            test.database_read(empty_name, empty_query, column_types=empty_type, write_cache=True),
+            test.database_read(empty_name, empty_query, column_types=empty_type, write_cache=False),
+            test.database_read(empty_name, empty_query, column_types=empty_type, write_cache=True),
         ]:
             self.assertEqual(empty_str.format(",Date(int64)"), test.dataframe_to_str(data_df))
             self.assertEqual(0, len(data_df))
@@ -340,16 +341,16 @@ class WrangleTest(unittest.TestCase):
         data_str = "[Index(int64),Date({}),Rate(float64)]"
         os.environ[library.WRANGLE_ENABLE_LOG] = "true"
         for data_df in [
-            test.database_read(data_name, data_query, read_cache=True, write_cache=True),
-            test.database_read(data_name, data_query, read_cache=False, write_cache=True),
-            test.database_read(data_name, data_query, read_cache=True, write_cache=True),
+            test.database_read(data_name, data_query, write_cache=True),
+            test.database_read(data_name, data_query, write_cache=False),
+            test.database_read(data_name, data_query, write_cache=True),
         ]:
             self.assertEqual(data_str.format("int64"), test.dataframe_to_str(data_df))
             self.assertGreater(len(data_df), 6000)
         for data_df in [
-            test.database_read(data_name, data_query, column_types=data_type, read_cache=True, write_cache=True),
-            test.database_read(data_name, data_query, column_types=data_type, read_cache=False, write_cache=True),
-            test.database_read(data_name, data_query, column_types=data_type, read_cache=True, write_cache=True),
+            test.database_read(data_name, data_query, column_types=data_type, write_cache=True),
+            test.database_read(data_name, data_query, column_types=data_type, write_cache=False),
+            test.database_read(data_name, data_query, column_types=data_type, write_cache=True),
         ]:
             self.assertEqual(data_str.format("float128"), test.dataframe_to_str(data_df))
             self.assertGreater(len(data_df), 6000)
@@ -456,9 +457,10 @@ class WrangleTest(unittest.TestCase):
 
     #
     def run_module(self, module_name, tests_asserts, enable_log=True, prepare_only=False, enable_rerun=True, enable_data_subset=False,
-                   disable_data_lineprotocol=False, disable_write_stdout=True, disable_data_delta=False, disable_file_upload=True,
-                   disable_file_download=False):
+                   enable_write_cache=False, disable_data_lineprotocol=False, disable_write_stdout=True, disable_data_delta=False,
+                   disable_file_upload=True, disable_file_download=False):
         os.environ[library.WRANGLE_ENABLE_LOG] = str(enable_log)
+        os.environ[library.WRANGLE_ENABLE_DATA_CACHE] = str(enable_write_cache)
         os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = str(enable_data_subset)
         os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = str(disable_data_delta)
         os.environ[library.WRANGLE_DISABLE_DATA_LINEPROTOCOL] = str(disable_data_lineprotocol)
@@ -539,6 +541,7 @@ class WrangleTest(unittest.TestCase):
         os.makedirs(join(DIR_ROOT, "target/data"))
         os.environ[library.WRANGLE_ENABLE_LOG] = "true"
         os.environ[library.WRANGLE_ENABLE_DATA_SUBSET] = "false"
+        os.environ[library.WRANGLE_ENABLE_DATA_CACHE] = "false"
         os.environ[library.WRANGLE_DISABLE_DATA_DELTA] = "true"
         os.environ[library.WRANGLE_DISABLE_DATA_LINEPROTOCOL] = "true"
         os.environ[library.WRANGLE_DISABLE_FILE_UPLOAD] = "true"

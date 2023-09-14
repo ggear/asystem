@@ -89,6 +89,7 @@ warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
 WRANGLE_ENABLE_LOG = 'WRANGLE_ENABLE_LOG'
 WRANGLE_ENABLE_DATA_SUBSET = 'WRANGLE_ENABLE_DATA_SUBSET'
 WRANGLE_ENABLE_DATA_TRUNC = 'WRANGLE_ENABLE_DATA_TRUNC'
+WRANGLE_ENABLE_DATA_CACHE = 'WRANGLE_ENABLE_DATA_CACHE'
 WRANGLE_DISABLE_DATA_DELTA = 'WRANGLE_DISABLE_DATA_DELTA'
 WRANGLE_DISABLE_DATA_LINEPROTOCOL = 'WRANGLE_DISABLE_DATA_LINEPROTOCOL'
 WRANGLE_DISABLE_FILE_UPLOAD = 'WRANGLE_DISABLE_FILE_UPLOAD'
@@ -357,8 +358,7 @@ class Library(object, metaclass=ABCMeta):
         end_exclusive = datetime.strptime(end, '%Y-%m-%d').date() + timedelta(days=1)
         if start != end_exclusive:
             if not force and not check and isfile(local_path):
-                self.print_log("File [{}: {} {}] cached at [{}]"
-                               .format(basename(local_path), start, end, local_path), started=started_time)
+                self.print_log("File [{}] cached at [{}]".format(basename(local_path), local_path), started=started_time)
                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                 return True, False
             else:
@@ -378,13 +378,13 @@ class Library(object, metaclass=ABCMeta):
                                     else:
                                         end_expected = end_expected - timedelta(days=2 if now.weekday() == 5 else 1)
                                 if end_data == end_expected:
-                                    self.print_log("File [{}: {} {}] cached at [{}]"
-                                                   .format(basename(local_path), start, end, local_path), started=started_time)
+                                    self.print_log("File [{}:] cached at [{}]"
+                                                   .format(basename(local_path), local_path), started=started_time)
                                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                     return True, False
                             else:
-                                self.print_log("File [{}: {} {}] cached (but empty) at [{}]"
-                                               .format(basename(local_path), start, end, local_path), started=started_time)
+                                self.print_log("File [{}] cached (but empty) at [{}]"
+                                               .format(basename(local_path), local_path), started=started_time)
                                 self.add_counter(CTR_SRC_SOURCES, CTR_ACT_CACHED)
                                 return True, False
                     data_df = yf.Ticker(ticker).history(start=start, end=end_exclusive)
@@ -415,8 +415,8 @@ class Library(object, metaclass=ABCMeta):
                         except Exception as exception:
                             self.print_log("File [{}] modified timestamp set failed [{}]"
                                            .format(local_path, modified_timestamp), exception=exception)
-                    self.print_log("File [{}: {} {}] downloaded to [{}]"
-                                   .format(basename(local_path), start, end, local_path), started=started_time)
+                    self.print_log("File [{}] downloaded to [{}]"
+                                   .format(basename(local_path), local_path), started=started_time)
                     self.add_counter(CTR_SRC_SOURCES, CTR_ACT_DOWNLOADED)
                     return True, True
                 except Exception as exception:
@@ -526,7 +526,7 @@ class Library(object, metaclass=ABCMeta):
                 self.print_log("File [{}] cached at [{}]".format(dropbox_file, local_path), started=started_time_file)
             actioned_files[local_path] = True, file_actioned
         self.print_log("Directory [{}] downloaded [{}] files from [https://www.dropbox.com/home/{}]"
-                       .format(basename(local_dir), len(actioned_files), dropbox_dir), started=started_time)
+                       .format(basename(local_dir).title(), len(actioned_files), dropbox_dir), started=started_time)
         return collections.OrderedDict(sorted(actioned_files.items()))
 
     def drive_sync(self, drive_dir, local_dir, check=True, download=True, upload=False):
@@ -620,7 +620,7 @@ class Library(object, metaclass=ABCMeta):
                                        .format(local_file, drive_files[local_file]["id"]), started=started_time_file)
                     actioned_files[local_path] = True, file_actioned
         self.print_log("Directory [{}] synchronised [{}] files from [https://drive.google.com/drive/folders/{}]"
-                       .format(basename(local_dir), len(actioned_files), drive_dir), started=started_time)
+                       .format(basename(local_dir).title(), len(actioned_files), drive_dir), started=started_time)
         return collections.OrderedDict(sorted(actioned_files.items()))
 
     def state_cache(self, data_df_update, aggregate_function=None, engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
@@ -728,13 +728,13 @@ class Library(object, metaclass=ABCMeta):
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
 
     def sheet_read(self, file_cache, drive_key, sheet_name=None, sheet_data_start=1, sheet_load_secs=10, sheet_retry_max=5,
-                   column_types={}, read_cache=False, write_cache=False, print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC,
+                   column_types={}, write_cache=False, print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC,
                    engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
         started_time = time.time()
         data_df = None
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
         file_path = abspath("{}/_{}.csv".format(self.input, file_cache))
-        if read_cache and isfile(file_path):
+        if not write_cache and isfile(file_path):
             data_df = self.dataframe_read(file_path, column_types, print_label=file_cache, engine=engine, dtype_backend=dtype_backend)
         if data_df is None:
             retries = 0
@@ -776,7 +776,7 @@ class Library(object, metaclass=ABCMeta):
         if data_df is None:
             data_df = self.dataframe_new(column_types=column_types)
         else:
-            if not read_cache and write_cache and len(data_df) > 0:
+            if write_cache and len(data_df) > 0:
                 self.dataframe_write(data_df, file_path, write_index=False, print_label=file_cache)
         return data_df
 
@@ -793,12 +793,12 @@ class Library(object, metaclass=ABCMeta):
             self.print_log("DataFrame failed to upload to [{}]".format(drive_url), exception=exception)
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
-    def database_read(self, file_cache, flux_query, column_types={}, read_cache=False, write_cache=False,
+    def database_read(self, file_cache, flux_query, column_types={}, write_cache=False,
                       print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC, engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
         started_time = time.time()
         data_df = None
         file_path = abspath("{}/_{}.csv".format(self.input, file_cache))
-        if read_cache and isfile(file_path):
+        if not write_cache and isfile(file_path):
             data_df = self.dataframe_read(file_path, column_types, print_label=file_cache, engine=engine, dtype_backend=dtype_backend)
         if data_df is None:
             rows = []
@@ -833,7 +833,7 @@ class Library(object, metaclass=ABCMeta):
             self.print_log(query_log)
             data_df = self.dataframe_new(data=rows, columns=columns, column_types=column_types, print_label=file_cache,
                                          print_head=print_head, print_tail=print_tail, dtype_backend=dtype_backend)
-        if not read_cache and write_cache and len(data_df) > 0:
+        if write_cache and len(data_df) > 0:
             self.dataframe_write(data_df, file_path, write_index=False, print_label=file_cache)
         return data_df
 
@@ -874,7 +874,9 @@ class Library(object, metaclass=ABCMeta):
                         print_tail=PD_PRINT_TRUNC):
         started_time = time.time()
         data_df.to_csv(local_path, index=write_index, encoding='utf-8')
-        return self.dataframe_print(data_df, print_label=print_label, print_verb="written", print_suffix="to [{}]".format(local_path),
+        return self.dataframe_print(data_df, print_label=basename(local_path).split(".")[0].removeprefix("_").removeprefix("__") \
+            if print_label is None else print_label,
+                                    print_verb="written", print_suffix="to [{}]".format(local_path),
                                     print_head=print_head, print_tail=print_tail, started=started_time)
 
     def dataframe_read(self, local_path, column_types={}, dropna_columns=False, fillna_str=False, print_label=None,
@@ -884,8 +886,10 @@ class Library(object, metaclass=ABCMeta):
         data_df = pd.read_csv(local_path, dtype="str", keep_default_na=False, engine=engine, dtype_backend=dtype_backend, **kwargs)
         data_df = self.dataframe_convert_types(data_df, column_types=column_types,
                                                dropna_columns=dropna_columns, fillna_str=fillna_str, dtype_backend=dtype_backend)
-        return self.dataframe_print(data_df, print_label=print_label, print_suffix="from [{}]".format(local_path),
-                                    print_head=print_head, print_tail=print_tail, started=started_time)
+        return self.dataframe_print(data_df, print_label=basename(local_path).split(".")[0].removeprefix("_").removeprefix("__") \
+            if print_label is None else print_label,
+                                    print_suffix="from [{}]".format(local_path), print_head=print_head,
+                                    print_tail=print_tail, started=started_time)
 
     def dataframe_new(self, data=[], columns=[], column_types={}, dropna_columns=False, fillna_str=False, print_label=None,
                       print_suffix=None, print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC, dtype_backend=no_default, started=None):
