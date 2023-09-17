@@ -129,7 +129,7 @@ class Equity(library.Library):
                 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or stock_files[stock_file_name][1]:
                     try:
                         stock_ticker = basename(stock_file_name).split('_')[1]
-                        stock_df = self.dataframe_read(stock_file_name, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND) \
+                        stock_df = self.dataframe_read_pd(stock_file_name, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND) \
                             .add_prefix("{} ".format(stock_ticker)).rename({"{} Date".format(stock_ticker): 'Date'}, axis=1)
                         stock_df["{} Currency Rate Base".format(stock_ticker)] = 1.0
                         stock_df["{} Currency Base".format(stock_ticker)] = "AUD"
@@ -302,8 +302,8 @@ class Equity(library.Library):
                         while error_index < len(statement_data[file_name]["Errors"]):
                             self.print_log(" {:2d}: {}".format(error_index, statement_data[file_name]["Errors"][error_index]))
                             error_index += 1
-                statement_df = self.dataframe_new(statements_positions,
-                                                  print_label="Funds", print_suffix="pre-processing", started=started_time)
+                statement_df = self.dataframe_new_pd(statements_positions,
+                                                     print_label="Funds", print_suffix="pre-processing", started=started_time)
                 started_time = time.time()
                 if len(statement_df) > 0:
                     statement_df["Price"] = statement_df["Value"] / statement_df["Units"]
@@ -327,8 +327,8 @@ class Equity(library.Library):
                     for column in statement_df.columns:
                         if column.endswith('Currency Base'):
                             statement_df[column] = statement_df[column].loc[statement_df[column].first_valid_index()]
-                self.dataframe_print(statement_df,
-                                     print_label="Funds", print_suffix="post-processing", started=started_time)
+                self.dataframe_print_pd(statement_df,
+                                        print_label="Funds", print_suffix="post-processing", started=started_time)
                 started_time = time.time()
                 for stock in STOCK:
                     if stock in stocks_df:
@@ -386,8 +386,8 @@ class Equity(library.Library):
                 equity_df = equity_df[~equity_df.index.duplicated(keep='last')]
                 equity_df.index = pd.to_datetime(equity_df.index)
                 equity_df = equity_df.sort_index(axis=1)
-                self.dataframe_print(equity_df, print_label="Stock", print_verb="processed", print_suffix="post-merge",
-                                     started=started_time)
+                self.dataframe_print_pd(equity_df, print_label="Stock", print_verb="processed", print_suffix="post-merge",
+                                        started=started_time)
                 started_time = time.time()
                 equity_df_manual = self.sheet_read("Manual_Stock_Prices_Sheet", DRIVE_KEY, sheet_name="Manual",
                                                    write_cache=library.test(library.WRANGLE_ENABLE_DATA_CACHE),
@@ -399,8 +399,8 @@ class Equity(library.Library):
                 equity_df.update(equity_df_manual)
                 equity_df = equity_df.sort_index(axis=1).interpolate(limit_direction='both', limit_area='inside') \
                     .replace('', np.nan).ffill()
-                self.dataframe_print(equity_df, print_label="Equity", print_verb="processed", print_suffix="post-merge",
-                                     started=started_time)
+                self.dataframe_print_pd(equity_df, print_label="Equity", print_verb="processed", print_suffix="post-merge",
+                                        started=started_time)
         except Exception as exception:
             self.print_log("Unexpected error processing equity dataframe", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
@@ -423,8 +423,8 @@ class Equity(library.Library):
                 ]]]
                 equity_sheet_df.insert(0, "Date", equity_sheet_df.index.strftime('%Y-%m-%d'))
                 equity_sheet_df = equity_sheet_df[equity_sheet_df['Date'] > '2007-01-01'].sort_index(ascending=False)
-                self.dataframe_print(equity_current_df, print_label="Sheet", print_verb="processed", print_suffix="pre-upload",
-                                     started=started_time)
+                self.dataframe_print_pd(equity_current_df, print_label="Sheet", print_verb="processed", print_suffix="pre-upload",
+                                        started=started_time)
                 self.sheet_write(equity_sheet_df, DRIVE_KEY, {'index': False, 'sheet': 'History', 'start': 'A1', 'replace': True})
                 started_time = time.time()
                 equity_database_df = equity_current_df.copy().dropna(axis=1, how='all')
@@ -443,8 +443,8 @@ class Equity(library.Library):
                 equity_database_df.loc[:, column] = equity_database_df.loc[:, column].fillna(0.0)
                 equity_database_df = equity_database_df.set_index(equity_database_df.index.date).sort_index()
                 equity_database_df = equity_database_df.sort_index(axis=1)
-                self.dataframe_print(equity_database_df, print_label="Equity", print_verb="processed", print_suffix="pre-enrichment",
-                                     started=started_time)
+                self.dataframe_print_pd(equity_database_df, print_label="Equity", print_verb="processed", print_suffix="pre-enrichment",
+                                        started=started_time)
                 started_time = time.time()
                 fx_rates = {}
                 for fx_pair in CURRENCIES:
@@ -509,8 +509,8 @@ from(bucket: "data_public")
                             equity_database_df[ticker + " Index " + index.title() + column + " Spot"] = \
                                 equity_database_df[ticker + " Index " + index.title() + " Weight"] * \
                                 equity_database_df[ticker + column + " Spot"]
-                self.dataframe_print(equity_database_df, print_label="Equity", print_verb="processed",
-                                     print_suffix="post-enrichment-stage-1", started=started_time)
+                self.dataframe_print_pd(equity_database_df, print_label="Equity", print_verb="processed",
+                                        print_suffix="post-enrichment-stage-1", started=started_time)
                 started_time = time.time()
                 for index in indexes:
                     equity_database_df[index + " Currency Base"] = "AUD"
@@ -531,8 +531,8 @@ from(bucket: "data_public")
                             for index_sub in indexes:
                                 equity_database_df[index + " Index " + index_sub.title() + column + snapshot] = \
                                     equity_database_df[index + column] if index == index_sub else 0.0
-                self.dataframe_print(equity_database_df, print_label="Equity", print_verb="processed",
-                                     print_suffix="post-enrichment-stage-2", started=started_time)
+                self.dataframe_print_pd(equity_database_df, print_label="Equity", print_verb="processed",
+                                        print_suffix="post-enrichment-stage-2", started=started_time)
                 started_time = time.time()
                 for ticker in tickers + indexes:
                     equity_database_df[ticker + " Market Volume Value"] = \
@@ -545,8 +545,8 @@ from(bucket: "data_public")
                             equity_database_df[ticker + " Price Change Percentage " + snapshot + " (" + str(period) + ")"] = \
                                 equity_database_df[ticker + " Price Close " + snapshot].pct_change(period).fillna(0.0) * 100
                 equity_database_df = equity_database_df.sort_index(axis=1)
-                self.dataframe_print(equity_database_df, print_label="Equity", print_verb="processed",
-                                     print_suffix="post-enrichment-stage-3", started=started_time)
+                self.dataframe_print_pd(equity_database_df, print_label="Equity", print_verb="processed",
+                                        print_suffix="post-enrichment-stage-3", started=started_time)
                 started_time = time.time()
                 equity_database_df.index = pd.to_datetime(equity_database_df.index)
                 tickers = [ticker.replace(" Price Close", "") for ticker in equity_database_df.columns if ticker.endswith("Price Close")]
@@ -593,7 +593,7 @@ from(bucket: "data_public")
                             columns.append(ticker + column_sub)
                             columns_rename[ticker + column_sub] = ticker.lower()
                         self.stdout_write(
-                            self.dataframe_to_lineprotocol(equity_database_df[columns].rename(columns=columns_rename), global_tags={
+                            self.dataframe_to_lineprotocol_pd(equity_database_df[columns].rename(columns=columns_rename), global_tags={
                                 "type": column_sub.split('(')[0].strip().replace(" ", "-").lower(),
                                 "period": metadata[2],
                                 "unit": metadata[1]
@@ -602,8 +602,8 @@ from(bucket: "data_public")
                                                               .replace("(", "")
                                                               .replace(")", "")
                                                               ).lower()))
-                self.dataframe_print(equity_database_df, print_label="Equity", print_verb="processed",
-                                     print_suffix="post-lineprotocol-write", started=started_time)
+                self.dataframe_print_pd(equity_database_df, print_label="Equity", print_verb="processed",
+                                        print_suffix="post-lineprotocol-write", started=started_time)
                 self.state_write()
         except Exception as exception:
             self.print_log("Unexpected error processing equity data", exception=exception)

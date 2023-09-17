@@ -27,7 +27,7 @@ class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
         self.run_module("equity", {"success_typical": ASSERT_RUN},
-                        disable_data_delta=False,
+                        disable_data_delta=True,
                         enable_write_cache=False,
                         disable_file_download=False,
                         enable_data_subset=False,
@@ -193,7 +193,8 @@ class WrangleTest(unittest.TestCase):
         del equity_df_manual["Date"]
         equity_df_manual = equity_df_manual.apply(pd.to_numeric)
         equity_df_manual = equity_df_manual.resample('D').interpolate(limit_direction='both', limit_area='inside').ffill()
-        test.dataframe_print(equity_df_manual, print_label="equity_manual_new", print_verb="processed", print_suffix="into new dataframe")
+        test.dataframe_print_pd(equity_df_manual, print_label="equity_manual_new", print_verb="processed",
+                                print_suffix="into new dataframe")
 
     def test_library_sheet(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
@@ -207,7 +208,7 @@ class WrangleTest(unittest.TestCase):
             test.sheet_read(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
             test.sheet_read(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
         ]:
-            self.assertEqual(nonexist_str, test.dataframe_to_str(data_df))
+            self.assertEqual(nonexist_str, test.dataframe_to_str_pd(data_df))
             self.assertEqual(0, len(data_df))
 
         loading_name = "loading"
@@ -219,7 +220,7 @@ class WrangleTest(unittest.TestCase):
             test.sheet_read(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
             test.sheet_read(loading_name, loading_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
         ]:
-            self.assertEqual(loading_str, test.dataframe_to_str(data_df))
+            self.assertEqual(loading_str, test.dataframe_to_str_pd(data_df))
             self.assertEqual(0, len(data_df))
 
         empty_name = "empty"
@@ -231,7 +232,7 @@ class WrangleTest(unittest.TestCase):
             test.sheet_read(empty_name, empty_key, write_cache=False),
             test.sheet_read(empty_name, empty_key, write_cache=True),
         ]:
-            self.assertEqual(empty_str, test.dataframe_to_str(data_df))
+            self.assertEqual(empty_str, test.dataframe_to_str_pd(data_df))
             self.assertEqual(0, len(data_df))
 
         test_name = "test"
@@ -264,14 +265,14 @@ class WrangleTest(unittest.TestCase):
             test.sheet_read(test_name + "-2", test_key, sheet_data_start=3, column_types=test_type_num, write_cache=False),
             test.sheet_read(test_name + "-2", test_key, sheet_data_start=3, column_types=test_type_num, write_cache=True),
         ]:
-            self.assertEqual(test_str.format(*test_str_types), test.dataframe_to_str(data_df))
+            self.assertEqual(test_str.format(*test_str_types), test.dataframe_to_str_pd(data_df))
             self.assertEqual(4, len(data_df))
         for data_df in [
             test.sheet_read(test_name + "-3", test_key, sheet_data_start=3, column_types=test_type_str, write_cache=True),
             test.sheet_read(test_name + "-3", test_key, sheet_data_start=3, column_types=test_type_str, write_cache=False),
             test.sheet_read(test_name + "-3", test_key, sheet_data_start=3, column_types=test_type_str, write_cache=True),
         ]:
-            self.assertEqual(test_str.format(*test_str_string), test.dataframe_to_str(data_df))
+            self.assertEqual(test_str.format(*test_str_string), test.dataframe_to_str_pd(data_df))
             self.assertEqual(4, len(data_df))
 
         data_name = "Index_weights"
@@ -282,7 +283,7 @@ class WrangleTest(unittest.TestCase):
             test.sheet_read(data_name + "-1", data_key, sheet_name="Indexes", sheet_data_start=2, write_cache=False),
             test.sheet_read(data_name + "-1", data_key, sheet_name="Indexes", sheet_data_start=2, write_cache=True),
         ]:
-            self.assertEqual(data_str, test.dataframe_to_str(data_df))
+            self.assertEqual(data_str, test.dataframe_to_str_pd(data_df))
             self.assertEqual(18, len(data_df))
 
     def test_library_database(self):
@@ -297,7 +298,7 @@ class WrangleTest(unittest.TestCase):
             test.database_read(invalid_name, invalid_query, write_cache=False),
             test.database_read(invalid_name, invalid_query, write_cache=True),
         ]:
-            self.assertEqual(invalid_str, test.dataframe_to_str(data_df))
+            self.assertEqual(invalid_str, test.dataframe_to_str_pd(data_df))
             self.assertEqual(0, len(data_df))
 
         empty_name = "empty"
@@ -314,14 +315,14 @@ class WrangleTest(unittest.TestCase):
             test.database_read(empty_name, empty_query, write_cache=False),
             test.database_read(empty_name, empty_query, write_cache=True),
         ]:
-            self.assertEqual(empty_str.format(""), test.dataframe_to_str(data_df))
+            self.assertEqual(empty_str.format(""), test.dataframe_to_str_pd(data_df))
             self.assertEqual(0, len(data_df))
         for data_df in [
             test.database_read(empty_name, empty_query, column_types=empty_type, write_cache=True),
             test.database_read(empty_name, empty_query, column_types=empty_type, write_cache=False),
             test.database_read(empty_name, empty_query, column_types=empty_type, write_cache=True),
         ]:
-            self.assertEqual(empty_str.format(",Date(int64)"), test.dataframe_to_str(data_df))
+            self.assertEqual(empty_str.format(",Date(int64)"), test.dataframe_to_str_pd(data_df))
             self.assertEqual(0, len(data_df))
 
         data_name = "RBA_FX_GBP_rates"
@@ -345,17 +346,33 @@ class WrangleTest(unittest.TestCase):
             test.database_read(data_name, data_query, write_cache=False),
             test.database_read(data_name, data_query, write_cache=True),
         ]:
-            self.assertEqual(data_str.format("int64"), test.dataframe_to_str(data_df))
+            self.assertEqual(data_str.format("int64"), test.dataframe_to_str_pd(data_df))
             self.assertGreater(len(data_df), 6000)
         for data_df in [
             test.database_read(data_name, data_query, column_types=data_type, write_cache=True),
             test.database_read(data_name, data_query, column_types=data_type, write_cache=False),
             test.database_read(data_name, data_query, column_types=data_type, write_cache=True),
         ]:
-            self.assertEqual(data_str.format("float128"), test.dataframe_to_str(data_df))
+            self.assertEqual(data_str.format("float128"), test.dataframe_to_str_pd(data_df))
             self.assertGreater(len(data_df), 6000)
 
     def test_library_dataframe(self):
+        test = Test("Test", "SOME_NON_EXISTANT_GUID")
+
+        test.dataframe_print(test.dataframe_new())
+
+        test.dataframe_new(columns=["Column 1"])
+
+        test.dataframe_new(data={
+            'Company': ['Ford', 'Toyota', 'Toyota', 'Honda', 'Toyota',
+                        'Ford', 'Honda', 'Subaru', 'Ford', 'Subaru'],
+            'Model': ['F-Series', 'RAV4', 'Camry', 'CR-V', 'Tacoma',
+                      'Explorer', 'Accord', 'CrossTrek', 'Escape', 'Outback'],
+            'Sales': [58283, 32390, 25500, 18081, 21837, 19076, 11619, 15126,
+                      13272, None]
+        }, print_label="Polars_Test")
+
+    def test_library_dataframe_pd(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
 
         df_empty_str = "[Index(int64)]"
@@ -370,90 +387,90 @@ class WrangleTest(unittest.TestCase):
         df_data_lots = [{"C{}".format(c): v * v / 0.2 for c in range(1, df_data_lots_cols + 1)} for v in range(1, df_data_lots_rows + 1)]
 
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new()))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd()))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new([])))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd([])))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new([], [])))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd([], [])))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new([], [], {})))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd([], [], {})))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new([{}])))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd([{}])))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new([{}], [])))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd([{}], [])))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new([{}], [], {})))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd([{}], [], {})))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new([[]])))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd([[]])))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new([[]], [])))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd([[]], [])))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new([[]], [], {})))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd([[]], [], {})))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new(columns=[])))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(columns=[])))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new(column_types={})))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(column_types={})))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new(dtype_backend=no_default)))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(dtype_backend=no_default)))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new(dtype_backend="numpy_nullable")))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(dtype_backend="numpy_nullable")))
         self.assertEqual(df_empty_str,
-                         test.dataframe_to_str(test.dataframe_new(dtype_backend="pyarrow")))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(dtype_backend="pyarrow")))
 
         self.assertEqual(df_data_str.format("int64", "float64", "int64"),
-                         test.dataframe_to_str(test.dataframe_new(df_data)))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(df_data)))
         self.assertEqual(df_data_str.format("int64", "string", "int64"),
-                         test.dataframe_to_str(test.dataframe_new(df_data, [], df_data_type)))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(df_data, [], df_data_type)))
         self.assertEqual(df_empty_types.format("string"),
-                         test.dataframe_to_str(test.dataframe_new(column_types=df_data_type)))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(column_types=df_data_type)))
 
         self.assertEqual(df_data_str.format("int64", "float64", "int64"),
-                         test.dataframe_to_str(test.dataframe_new(df_data, dtype_backend=no_default)))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(df_data, dtype_backend=no_default)))
         self.assertEqual(df_data_str.format("int64", "string", "int64"),
-                         test.dataframe_to_str(test.dataframe_new(df_data, [], df_data_type, dtype_backend=no_default)))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(df_data, [], df_data_type, dtype_backend=no_default)))
         self.assertEqual(df_empty_types.format("string"),
-                         test.dataframe_to_str(test.dataframe_new(column_types=df_data_type, dtype_backend=no_default)))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(column_types=df_data_type, dtype_backend=no_default)))
 
         self.assertEqual(df_data_str.format("Int64", "Float64", "Int64"),
-                         test.dataframe_to_str(test.dataframe_new(df_data, dtype_backend="numpy_nullable")))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(df_data, dtype_backend="numpy_nullable")))
         self.assertEqual(df_data_str.format("Int64", "string", "Int64"),
-                         test.dataframe_to_str(test.dataframe_new(df_data, [], df_data_type, dtype_backend="numpy_nullable")))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(df_data, [], df_data_type, dtype_backend="numpy_nullable")))
         self.assertEqual(df_empty_types.format("string"),
-                         test.dataframe_to_str(test.dataframe_new(column_types=df_data_type, dtype_backend="numpy_nullable")))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(column_types=df_data_type, dtype_backend="numpy_nullable")))
 
         self.assertEqual(df_data_str.format("int64[pyarrow]", "double[pyarrow]", "int64[pyarrow]"),
-                         test.dataframe_to_str(test.dataframe_new(df_data, dtype_backend="pyarrow")))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(df_data, dtype_backend="pyarrow")))
         self.assertEqual(df_data_str.format("int64[pyarrow]", "string[pyarrow]", "int64[pyarrow]"),
-                         test.dataframe_to_str(test.dataframe_new(df_data, [], df_data_type, dtype_backend="pyarrow")))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(df_data, [], df_data_type, dtype_backend="pyarrow")))
         self.assertEqual(df_empty_types.format("string"),
-                         test.dataframe_to_str(test.dataframe_new(column_types=df_data_type, dtype_backend="pyarrow")))
+                         test.dataframe_to_str_pd(test.dataframe_new_pd(column_types=df_data_type, dtype_backend="pyarrow")))
 
         self.assertEqual(True,
-                         isinstance(test.dataframe_to_str(test.dataframe_new(column_types=df_data_type, print_label="lots")), str))
+                         isinstance(test.dataframe_to_str_pd(test.dataframe_new_pd(column_types=df_data_type, print_label="lots")), str))
         self.assertEqual(True,
-                         isinstance(test.dataframe_to_str(test.dataframe_new(df_data_lots, print_label="lots")), str))
+                         isinstance(test.dataframe_to_str_pd(test.dataframe_new_pd(df_data_lots, print_label="lots")), str))
         self.assertEqual(True,
-                         isinstance(test.dataframe_to_str(test.dataframe_new(df_data_lots, print_label="lots"), False), list))
+                         isinstance(test.dataframe_to_str_pd(test.dataframe_new_pd(df_data_lots, print_label="lots"), False), list))
 
         self.assertEqual(df_data_lots_rows + 3,
-                         len(test.dataframe_to_str(test.dataframe_new(df_data_lots, print_label="lots"), False, 100, 100)))
+                         len(test.dataframe_to_str_pd(test.dataframe_new_pd(df_data_lots, print_label="lots"), False, 100, 100)))
         self.assertEqual(0 + 4,
-                         len(test.dataframe_to_str(test.dataframe_new(df_data_lots, print_label="lots"), False, 0, 0)))
+                         len(test.dataframe_to_str_pd(test.dataframe_new_pd(df_data_lots, print_label="lots"), False, 0, 0)))
         self.assertEqual(5 + 4,
-                         len(test.dataframe_to_str(test.dataframe_new(df_data_lots, print_label="lots"), False, 5, 0)))
+                         len(test.dataframe_to_str_pd(test.dataframe_new_pd(df_data_lots, print_label="lots"), False, 5, 0)))
         self.assertEqual(5 + 4,
-                         len(test.dataframe_to_str(test.dataframe_new(df_data_lots, print_label="lots"), False, 0, 5)))
+                         len(test.dataframe_to_str_pd(test.dataframe_new_pd(df_data_lots, print_label="lots"), False, 0, 5)))
         self.assertEqual(10 + 4,
-                         len(test.dataframe_to_str(test.dataframe_new(df_data_lots, print_label="lots"), False, 5, 5)))
+                         len(test.dataframe_to_str_pd(test.dataframe_new_pd(df_data_lots, print_label="lots"), False, 5, 5)))
 
         self.assertEqual(3,
-                         len((test.dataframe_new(df_data, column_types={"SOME UNKNOWN COLUMN": "float64"}))))
+                         len((test.dataframe_new_pd(df_data, column_types={"SOME UNKNOWN COLUMN": "float64"}))))
         self.assertEqual(3,
-                         len((test.dataframe_new(df_data, column_types={"C1": "SOME_UKNOWN_TYPE"}))))
+                         len((test.dataframe_new_pd(df_data, column_types={"C1": "SOME_UKNOWN_TYPE"}))))
         self.assertEqual(3,
-                         len((test.dataframe_new(df_data, column_types={column: "string" for column in df_data[0]}))))
+                         len((test.dataframe_new_pd(df_data, column_types={column: "string" for column in df_data[0]}))))
         self.assertEqual(3,
-                         len((test.dataframe_new(df_data, column_types={column: "SOME_UKNOWN_TYPE" for column in df_data[0]}))))
+                         len((test.dataframe_new_pd(df_data, column_types={column: "SOME_UKNOWN_TYPE" for column in df_data[0]}))))
 
     #
     def run_module(self, module_name, tests_asserts, enable_log=True, prepare_only=False, enable_rerun=True, enable_data_subset=False,

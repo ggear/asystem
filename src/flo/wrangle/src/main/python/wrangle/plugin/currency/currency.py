@@ -192,7 +192,7 @@ class Currency(library.Library):
                 self.sheet_write(rba_current_df[["Date"] + PAIRS], DRIVE_KEY,
                                  {'index': False, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
                 self.stdout_write(
-                    self.dataframe_to_lineprotocol(rba_current_df[PAIRS], global_tags={
+                    self.dataframe_to_lineprotocol_pd(rba_current_df[PAIRS], global_tags={
                         "type": "snapshot",
                         "period": "1d",
                         "unit": "$"
@@ -204,7 +204,7 @@ class Currency(library.Library):
                         columns_rename[column] = column.split(" ")[0]
                     rba_current_df[columns] = rba_current_df[columns].apply(pd.to_numeric)
                     self.stdout_write(
-                        self.dataframe_to_lineprotocol(rba_current_df[columns].rename(columns=columns_rename), global_tags={
+                        self.dataframe_to_lineprotocol_pd(rba_current_df[columns].rename(columns=columns_rename), global_tags={
                             "type": "delta",
                             "period": "{:0.0f}d".format(PERIODS[fx_period]),
                             "unit": "%"

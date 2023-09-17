@@ -102,7 +102,7 @@ class Interest(library.Library):
                 self.sheet_write(interest_current_df[interest_current_df['Date'] > '2015-01-01'].sort_index(ascending=False),
                                  DRIVE_KEY, {'index': False, 'sheet': 'Interest', 'start': 'A1', 'replace': True})
                 self.stdout_write(
-                    self.dataframe_to_lineprotocol(interest_current_df[LABELS], global_tags={
+                    self.dataframe_to_lineprotocol_pd(interest_current_df[LABELS], global_tags={
                         "type": "mean",
                         "period": "1mo",
                         "unit": "%"
@@ -113,7 +113,7 @@ class Interest(library.Library):
                     for column in columns:
                         columns_rename[column] = column.split(" ")[0]
                     self.stdout_write(
-                        self.dataframe_to_lineprotocol(interest_delta_df[columns].rename(columns=columns_rename), global_tags={
+                        self.dataframe_to_lineprotocol_pd(interest_delta_df[columns].rename(columns=columns_rename), global_tags={
                             "type": "mean",
                             "period": "{:0.0f}y".format(PERIODS[int_period] / 12),
                             "unit": "%"

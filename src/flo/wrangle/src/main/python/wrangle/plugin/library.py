@@ -30,6 +30,7 @@ import dropbox
 import influxdb
 import numpy as np
 import pandas as pd
+import polars as pl
 import requests
 import yfinance as yf
 from dateutil import parser
@@ -43,7 +44,9 @@ from pandas.tseries.offsets import BDay
 from requests import post
 from tabulate import tabulate
 
-PD_PRINT_TRUNC = 3
+PL_PRINT_ROWS = 6
+
+PD_PRINT_ROWS = 3
 PD_ENGINE_DEFAULT = None
 PD_BACKEND_DEFAULT = no_default
 
@@ -365,7 +368,7 @@ class Library(object, metaclass=ABCMeta):
                 try:
                     if not force and check and isfile(local_path):
                         if now.year == int(end.split('-')[0]) and now.month == int(end.split('-')[1]):
-                            data_df = self.dataframe_read(local_path, engine=engine, dtype_backend=dtype_backend)
+                            data_df = self.dataframe_read_pd(local_path, engine=engine, dtype_backend=dtype_backend)
                             if len(data_df) > 0:
                                 end_data = data_df.values[-1][0]
                                 end_data = datetime.strptime(end_data, '%Y-%m-%d').date() \
@@ -405,9 +408,9 @@ class Library(object, metaclass=ABCMeta):
                             raise Exception("No data returned for [{} - {} {}]".format(ticker, start, end_exclusive))
                     if not exists(dirname(local_path)):
                         os.makedirs(dirname(local_path))
-                    self.dataframe_write(data_df, local_path)
+                    self.dataframe_write_pd(data_df, local_path)
                     if len(data_df) > 0:
-                        modified = self.dataframe_read(local_path, engine=engine, dtype_backend=dtype_backend).values[-1][0]
+                        modified = self.dataframe_read_pd(local_path, engine=engine, dtype_backend=dtype_backend).values[-1][0]
                         modified = datetime.strptime(modified, '%Y-%m-%d').date() if isinstance(modified, str) else modified
                         modified_timestamp = int((modified + timedelta(hours=8) - datetime.utcfromtimestamp(0).date()).total_seconds())
                         try:
@@ -634,7 +637,7 @@ class Library(object, metaclass=ABCMeta):
         if not test(WRANGLE_DISABLE_FILE_DOWNLOAD) and test(WRANGLE_DISABLE_DATA_DELTA):
             if isfile(file_current):
                 os.remove(file_current)
-        data_df_current = self.dataframe_read(file_current, engine=engine, dtype_backend=dtype_backend, index_col=0) \
+        data_df_current = self.dataframe_read_pd(file_current, engine=engine, dtype_backend=dtype_backend, index_col=0) \
             if isfile(file_current) else pd.DataFrame()
         data_df_current.index = pd.to_datetime(data_df_current.index)
         data_df_current.index.name = 'Date'
@@ -652,8 +655,8 @@ class Library(object, metaclass=ABCMeta):
         data_df_update.index.name = 'Date'
         data_df_update.index = pd.to_datetime(data_df_update.index)
         data_df_update = data_df_update.sort_index()
-        self.dataframe_write(data_df_update, file_update)
-        data_df_update = self.dataframe_read(file_update, engine=engine, dtype_backend=dtype_backend, index_col=0)
+        self.dataframe_write_pd(data_df_update, file_update)
+        data_df_update = self.dataframe_read_pd(file_update, engine=engine, dtype_backend=dtype_backend, index_col=0)
         data_df_update.index = pd.to_datetime(data_df_update.index)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_COLUMNS, len(data_df_update.columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_UPDATE_ROWS, len(data_df_update))
@@ -661,7 +664,7 @@ class Library(object, metaclass=ABCMeta):
             shutil.move(file_current, file_previous)
         elif isfile(file_previous):
             os.remove(file_previous)
-        data_df_previous = self.dataframe_read(file_previous, engine=engine, dtype_backend=dtype_backend, index_col=0) \
+        data_df_previous = self.dataframe_read_pd(file_previous, engine=engine, dtype_backend=dtype_backend, index_col=0) \
             if isfile(file_previous) else pd.DataFrame()
         data_df_previous.index = pd.to_datetime(data_df_previous.index)
         for data_column in data_columns:
@@ -675,8 +678,8 @@ class Library(object, metaclass=ABCMeta):
         if aggregate_function is not None:
             data_df_current = aggregate_function(data_df_current)
         data_df_current = data_df_current.sort_index()
-        self.dataframe_write(data_df_current, file_current)
-        data_df_current = self.dataframe_read(file_current, engine=engine, dtype_backend=dtype_backend, index_col=0)
+        self.dataframe_write_pd(data_df_current, file_current)
+        data_df_current = self.dataframe_read_pd(file_current, engine=engine, dtype_backend=dtype_backend, index_col=0)
         data_df_current.index = pd.to_datetime(data_df_current.index)
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_COLUMNS, len(data_df_current.columns))
         self.add_counter(CTR_SRC_DATA, CTR_ACT_CURRENT_ROWS, len(data_df_current))
@@ -688,7 +691,7 @@ class Library(object, metaclass=ABCMeta):
         data_df_delta.index.name = 'Date'
         data_df_delta = data_df_delta[data_columns]
         data_df_delta = data_df_delta.sort_index()
-        self.dataframe_write(data_df_delta, file_delta)
+        self.dataframe_write_pd(data_df_delta, file_delta)
         if len(data_df_delta) == 0:
             data_df_delta = pd.DataFrame()
         self.add_counter(CTR_SRC_DATA, CTR_ACT_DELTA_COLUMNS, len(data_df_delta.columns))
@@ -728,14 +731,14 @@ class Library(object, metaclass=ABCMeta):
             self.add_counter(CTR_SRC_SOURCES, CTR_ACT_ERRORED)
 
     def sheet_read(self, file_cache, drive_key, sheet_name=None, sheet_data_start=1, sheet_load_secs=10, sheet_retry_max=5,
-                   column_types={}, write_cache=False, print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC,
+                   column_types={}, write_cache=False, print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS,
                    engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
         started_time = time.time()
         data_df = None
         drive_url = "https://docs.google.com/spreadsheets/d/" + drive_key
         file_path = abspath("{}/_{}.csv".format(self.input, file_cache))
         if not write_cache and isfile(file_path):
-            data_df = self.dataframe_read(file_path, column_types, print_label=file_cache, engine=engine, dtype_backend=dtype_backend)
+            data_df = self.dataframe_read_pd(file_path, column_types, print_label=file_cache, engine=engine, dtype_backend=dtype_backend)
         if data_df is None:
             retries = 0
             caught_exception = None
@@ -746,7 +749,7 @@ class Library(object, metaclass=ABCMeta):
                         spread = Spread(drive_url, sheet=0 if sheet_name is None else sheet_name)
                         spread_sheet_cells = spread._fix_merge_values(spread.sheet.get_all_values())[sheet_data_start - 1:]
                         self.print_log("DataFrame [{}] downloaded from [{}]".format(file_cache, drive_url), started=started_time)
-                        data_df = self.dataframe_new(
+                        data_df = self.dataframe_new_pd(
                             data=spread_sheet_cells[1:],
                             columns=spread_sheet_cells[:1][0] if len(spread_sheet_cells) > 0 else [],
                             column_types=column_types,
@@ -774,10 +777,10 @@ class Library(object, metaclass=ABCMeta):
                     " after retrying [{}] times over [{}] seconds".format(sheet_retry_max, sheet_retry_max * sheet_load_secs)),
                                exception=exception)
         if data_df is None:
-            data_df = self.dataframe_new(column_types=column_types)
+            data_df = self.dataframe_new_pd(column_types=column_types)
         else:
             if write_cache and len(data_df) > 0:
-                self.dataframe_write(data_df, file_path, write_index=False, print_label=file_cache)
+                self.dataframe_write_pd(data_df, file_path, write_index=False, print_label=file_cache)
         return data_df
 
     def sheet_write(self, data_df, drive_key, sheet_params={}):
@@ -794,12 +797,12 @@ class Library(object, metaclass=ABCMeta):
             self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
 
     def database_read(self, file_cache, flux_query, column_types={}, write_cache=False,
-                      print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC, engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
+                      print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS, engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT):
         started_time = time.time()
         data_df = None
         file_path = abspath("{}/_{}.csv".format(self.input, file_cache))
         if not write_cache and isfile(file_path):
-            data_df = self.dataframe_read(file_path, column_types, print_label=file_cache, engine=engine, dtype_backend=dtype_backend)
+            data_df = self.dataframe_read_pd(file_path, column_types, print_label=file_cache, engine=engine, dtype_backend=dtype_backend)
         if data_df is None:
             rows = []
             columns = []
@@ -831,10 +834,10 @@ class Library(object, metaclass=ABCMeta):
             query_log = ["DataFrame [{}] query [{}]:".format(file_cache, flux_query.replace(" ", "").replace("\n", ""))]
             query_log.extend([line.strip() for line in flux_query.split("\n")])
             self.print_log(query_log)
-            data_df = self.dataframe_new(data=rows, columns=columns, column_types=column_types, print_label=file_cache,
-                                         print_head=print_head, print_tail=print_tail, dtype_backend=dtype_backend)
+            data_df = self.dataframe_new_pd(data=rows, columns=columns, column_types=column_types, print_label=file_cache,
+                                            print_head=print_head, print_tail=print_tail, dtype_backend=dtype_backend)
         if write_cache and len(data_df) > 0:
-            self.dataframe_write(data_df, file_path, write_index=False, print_label=file_cache)
+            self.dataframe_write_pd(data_df, file_path, write_index=False, print_label=file_cache)
         return data_df
 
     def database_trunc(self):
@@ -868,31 +871,43 @@ class Library(object, metaclass=ABCMeta):
                 self.print_log("Measurement [{}] could not be truncated at [{}]"
                                .format(self.name.lower(), trunc_url), exception=exception)
 
-    # noinspection PyProtectedMember
-
-    def dataframe_write(self, data_df, local_path, write_index=True, print_label=None, print_head=PD_PRINT_TRUNC,
-                        print_tail=PD_PRINT_TRUNC):
+    def dataframe_write_pd(self, data_df, local_path, write_index=True, print_label=None, print_head=PD_PRINT_ROWS,
+                           print_tail=PD_PRINT_ROWS):
         started_time = time.time()
         data_df.to_csv(local_path, index=write_index, encoding='utf-8')
-        return self.dataframe_print(data_df, print_label=basename(local_path).split(".")[0].removeprefix("_").removeprefix("__") \
+        return self.dataframe_print_pd(data_df, print_label=basename(local_path).split(".")[0].removeprefix("_").removeprefix("__") \
             if print_label is None else print_label,
-                                    print_verb="written", print_suffix="to [{}]".format(local_path),
-                                    print_head=print_head, print_tail=print_tail, started=started_time)
+                                       print_verb="written", print_suffix="to [{}]".format(local_path),
+                                       print_head=print_head, print_tail=print_tail, started=started_time)
 
-    def dataframe_read(self, local_path, column_types={}, dropna_columns=False, fillna_str=False, print_label=None,
-                       print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC,
-                       engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT, **kwargs):
+    def dataframe_read_pd(self, local_path, column_types={}, dropna_columns=False, fillna_str=False, print_label=None,
+                          print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS,
+                          engine=PD_ENGINE_DEFAULT, dtype_backend=PD_BACKEND_DEFAULT, **kwargs):
         started_time = time.time()
         data_df = pd.read_csv(local_path, dtype="str", keep_default_na=False, engine=engine, dtype_backend=dtype_backend, **kwargs)
-        data_df = self.dataframe_convert_types(data_df, column_types=column_types,
-                                               dropna_columns=dropna_columns, fillna_str=fillna_str, dtype_backend=dtype_backend)
-        return self.dataframe_print(data_df, print_label=basename(local_path).split(".")[0].removeprefix("_").removeprefix("__") \
+        data_df = self.dataframe_convert_types_pd(data_df, column_types=column_types,
+                                                  dropna_columns=dropna_columns, fillna_str=fillna_str, dtype_backend=dtype_backend)
+        return self.dataframe_print_pd(data_df, print_label=basename(local_path).split(".")[0].removeprefix("_").removeprefix("__") \
             if print_label is None else print_label,
-                                    print_suffix="from [{}]".format(local_path), print_head=print_head,
-                                    print_tail=print_tail, started=started_time)
+                                       print_suffix="from [{}]".format(local_path), print_head=print_head,
+                                       print_tail=print_tail, started=started_time)
 
     def dataframe_new(self, data=[], columns=[], column_types={}, dropna_columns=False, fillna_str=False, print_label=None,
-                      print_suffix=None, print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC, dtype_backend=no_default, started=None):
+                      print_suffix=None, print_rows=PL_PRINT_ROWS, started=None):
+        started_time = time.time() if started is None else started
+
+        schema = {"col1": pl.Float32, "col2": pl.Int64}
+
+        data_df = pl.DataFrame(data)
+
+        if len(data) > 0:
+            self.dataframe_print(data_df, compact=(len(data) == 0), print_label=print_label, print_suffix=print_suffix,
+                                 print_rows=PL_PRINT_ROWS, started=started_time)
+
+        return data_df
+
+    def dataframe_new_pd(self, data=[], columns=[], column_types={}, dropna_columns=False, fillna_str=False, print_label=None,
+                         print_suffix=None, print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS, dtype_backend=no_default, started=None):
         started_time = time.time() if started is None else started
         column_names = OrderedDict()
         if len(data) == 0 or isinstance(data[0], list):
@@ -931,14 +946,14 @@ class Library(object, metaclass=ABCMeta):
                                .format("" if print_label is None else " [{}]".format(print_label), column_type_attempt))
             if data_df is not None or column_type is None:
                 break
-        data_df = self.dataframe_convert_types(data_df, column_types=column_types, dropna_columns=dropna_columns, fillna_str=fillna_str,
-                                               dtype_backend=dtype_backend)
+        data_df = self.dataframe_convert_types_pd(data_df, column_types=column_types, dropna_columns=dropna_columns,
+                                                  fillna_str=fillna_str, dtype_backend=dtype_backend)
         if len(data) > 0 or len(column_names) > 0:
-            self.dataframe_print(data_df, compact=(len(data) == 0), print_label=print_label, print_suffix=print_suffix,
-                                 print_head=print_head, print_tail=print_tail, started=started_time)
+            self.dataframe_print_pd(data_df, compact=(len(data) == 0), print_label=print_label, print_suffix=print_suffix,
+                                    print_head=print_head, print_tail=print_tail, started=started_time)
         return data_df
 
-    def dataframe_convert_types(self, data_df, column_types={}, dropna_columns=False, fillna_str=False, dtype_backend=no_default):
+    def dataframe_convert_types_pd(self, data_df, column_types={}, dropna_columns=False, fillna_str=False, dtype_backend=no_default):
         if len(data_df) > 0:
             data_df = data_df.apply(pd.to_numeric, errors='ignore')
             for column in data_df.select_dtypes(include=["object"]):
@@ -959,7 +974,7 @@ class Library(object, metaclass=ABCMeta):
                 data_df = data_df.convert_dtypes(dtype_backend=dtype_backend)
         return data_df
 
-    def dataframe_to_lineprotocol(self, data_df, global_tags=None, print_label=None):
+    def dataframe_to_lineprotocol_pd(self, data_df, global_tags=None, print_label=None):
         started_time = time.time()
         lines = []
         if not test(WRANGLE_DISABLE_DATA_LINEPROTOCOL):
@@ -983,19 +998,28 @@ class Library(object, metaclass=ABCMeta):
                 lines = influxdb.DataFrameClient()._convert_dataframe_to_lines(
                     data_df, self.name.lower(), tag_columns=[], global_tags=global_tags)
 
-                self.dataframe_print(data_df, print_label=print_label, print_verb="serialised",
-                                     print_suffix="to [{:,}] lines".format(len(lines)), started=started_time)
+                self.dataframe_print_pd(data_df, print_label=print_label, print_verb="serialised",
+                                        print_suffix="to [{:,}] lines".format(len(lines)), started=started_time)
                 self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_COLUMNS, len(data_df.columns))
                 self.add_counter(CTR_SRC_EGRESS, CTR_ACT_DATABASE_ROWS, len(data_df))
             except Exception as exception:
                 self.print_log("DataFrame {} serialisation failed"
                                .format("" if print_label is None else " [{}]".format(print_label)),
-                               data=self.dataframe_to_str(data_df, compact=False),
+                               data=self.dataframe_to_str_pd(data_df, compact=False),
                                exception=exception)
                 self.add_counter(CTR_SRC_EGRESS, CTR_ACT_ERRORED)
         return lines
 
-    def dataframe_to_str(self, data_df, compact=True, print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC):
+    def dataframe_to_str(self, data_df, compact=True, print_rows=PL_PRINT_ROWS):
+        with pl.Config(
+                tbl_cols=-1,
+                tbl_rows=print_rows,
+                set_tbl_hide_dataframe_shape=True,
+        ):
+            data_lines = data_df.__str__().split('\n')
+            return data_lines
+
+    def dataframe_to_str_pd(self, data_df, compact=True, print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS):
 
         def _column(_compact, _name, _type):
             return "{}{}({})".format(_name, "" if _compact else " ", _type)
@@ -1027,7 +1051,7 @@ class Library(object, metaclass=ABCMeta):
             return tabulate(data_rows, tablefmt="outline").split('\n')
 
     def dataframe_print(self, data_df, messages=None, compact=False, print_label=None, print_verb="loaded", print_suffix=None,
-                        print_head=PD_PRINT_TRUNC, print_tail=PD_PRINT_TRUNC, started=None):
+                        print_rows=PL_PRINT_ROWS, started=None):
         if test(WRANGLE_ENABLE_LOG):
             if messages is None:
                 messages = "DataFrame{} {} with [{:,}] columns and [{:,}] rows{}".format(
@@ -1037,7 +1061,21 @@ class Library(object, metaclass=ABCMeta):
                     len(data_df),
                     "" if print_suffix is None else " {}".format(print_suffix),
                 )
-            self.print_log(messages, self.dataframe_to_str(data_df, compact, print_head, print_tail), started=started)
+            self.print_log(messages, self.dataframe_to_str(data_df, compact, print_rows), started=started)
+        return data_df
+
+    def dataframe_print_pd(self, data_df, messages=None, compact=False, print_label=None, print_verb="loaded", print_suffix=None,
+                           print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS, started=None):
+        if test(WRANGLE_ENABLE_LOG):
+            if messages is None:
+                messages = "DataFrame{} {} with [{:,}] columns and [{:,}] rows{}".format(
+                    "" if print_label is None else " [{}]".format(print_label),
+                    print_verb,
+                    len(data_df.columns),
+                    len(data_df),
+                    "" if print_suffix is None else " {}".format(print_suffix),
+                )
+            self.print_log(messages, self.dataframe_to_str_pd(data_df, compact, print_head, print_tail), started=started)
         return data_df
 
     def file_list(self, file_dir, file_prefix):
@@ -1067,7 +1105,8 @@ class Library(object, metaclass=ABCMeta):
             for action in self.counters[source]:
                 values.append("{}={}".format("{}_{}".format(source, action).lower().replace(" ", "_"),
                                              self.counters[source][action]))
-        self.stdout_write("{},period=30m,type=metadata,unit=scalar {} {:.0f}".format(self.name.lower(), ",".join(values), timestamp))
+        self.stdout_write("{},period=30m,type=metadata,unit=scalar {} {:.0f}"
+                          .format(self.name.lower(), ",".join(values), timestamp))
 
     def __init__(self, name, input_drive):
         self.name = name
