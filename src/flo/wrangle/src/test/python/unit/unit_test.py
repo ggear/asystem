@@ -8,6 +8,7 @@ import unittest
 from collections import OrderedDict
 from os.path import *
 
+import polars as pl
 import pytest
 from mock import patch
 from pandas.api.extensions import no_default
@@ -359,18 +360,30 @@ class WrangleTest(unittest.TestCase):
     def test_library_dataframe(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
 
-        test.dataframe_print(test.dataframe_new())
+        test.dataframe_new()
 
-        test.dataframe_new(columns=["Column 1"])
+        test.dataframe_new(schema={"col1": pl.Float32, "col2": pl.Int64})
 
         test.dataframe_new(data={
             'Company': ['Ford', 'Toyota', 'Toyota', 'Honda', 'Toyota',
                         'Ford', 'Honda', 'Subaru', 'Ford', 'Subaru'],
             'Model': ['F-Series', 'RAV4', 'Camry', 'CR-V', 'Tacoma',
                       'Explorer', 'Accord', 'CrossTrek', 'Escape', 'Outback'],
-            'Sales': [58283, 32390, 25500, 18081, 21837, 19076, 11619, 15126,
+            'Sales': [58283.34535, 32390, 25500, 18081, 21837, 19076.6, 11619, 15126,
                       13272, None]
-        }, print_label="Polars_Test")
+        }, print_label="Compact", print_compact=True)
+
+
+        test.dataframe_new(data={
+            'Company': ['Ford', 'Toyota', 'Toyota', 'Honda', 'Toyota',
+                        'Ford', 'Honda', 'Subaru', 'Ford', 'Subaru'],
+            'Model': ['F-Series', 'RAV4', 'Camry', 'CR-V', 'Tacoma',
+                      'Explorer', 'Accord', 'CrossTrek', 'Escape', 'Outback'],
+            'Sales': [58283.34535, 32390, 25500, 18081, 21837, 19076.6, 11619, 15126,
+                      13272, None]
+        }, print_label="Non-Compact")
+
+        test.dataframe_new(data=[{"C1": 1, "C2": 1.1, "C3": "1"}, {"C1": 2, "C2": 2.2, "C3": "2"}, {"C1": 3, "C2": 3.3, "C3": "3"}])
 
     def test_library_dataframe_pd(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")

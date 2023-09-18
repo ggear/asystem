@@ -41,6 +41,7 @@ from googleapiclient.http import MediaIoBaseDownload
 from gspread_pandas import Spread
 from pandas.api.extensions import no_default
 from pandas.tseries.offsets import BDay
+from polars.datatypes import DataTypeClass
 from requests import post
 from tabulate import tabulate
 
@@ -892,18 +893,16 @@ class Library(object, metaclass=ABCMeta):
                                        print_suffix="from [{}]".format(local_path), print_head=print_head,
                                        print_tail=print_tail, started=started_time)
 
-    def dataframe_new(self, data=[], columns=[], column_types={}, dropna_columns=False, fillna_str=False, print_label=None,
-                      print_suffix=None, print_rows=PL_PRINT_ROWS, started=None):
+    def dataframe_new(self, data=[], schema={}, dropna_columns=False, fillna_str=False, print_label=None,
+                      print_suffix=None, print_compact=False, print_rows=PL_PRINT_ROWS, started=None):
         started_time = time.time() if started is None else started
-
-        schema = {"col1": pl.Float32, "col2": pl.Int64}
-
-        data_df = pl.DataFrame(data)
-
-        if len(data) > 0:
-            self.dataframe_print(data_df, compact=(len(data) == 0), print_label=print_label, print_suffix=print_suffix,
-                                 print_rows=PL_PRINT_ROWS, started=started_time)
-
+        data_df = pl.DataFrame(
+            data=data if len(data) > 0 else None,
+            schema=schema if len(schema) > 0 else None
+        )
+        if len(data) > 0 or len(schema) > 0:
+            self.dataframe_print(data_df, compact=(print_compact or len(data) == 0),
+                                 print_label=print_label, print_suffix=print_suffix, print_rows=print_rows, started=started_time)
         return data_df
 
     def dataframe_new_pd(self, data=[], columns=[], column_types={}, dropna_columns=False, fillna_str=False, print_label=None,
@@ -1011,13 +1010,22 @@ class Library(object, metaclass=ABCMeta):
         return lines
 
     def dataframe_to_str(self, data_df, compact=True, print_rows=PL_PRINT_ROWS):
-        with pl.Config(
-                tbl_cols=-1,
-                tbl_rows=print_rows,
-                set_tbl_hide_dataframe_shape=True,
-        ):
-            data_lines = data_df.__str__().split('\n')
-            return data_lines
+        if compact:
+            schema = []
+            for column in data_df.schema:
+                schema.append("{}: {}".format(column, DataTypeClass._string_repr(data_df.schema[column])))
+            return "[" + ", ".join(schema) + "]"
+        else:
+            with pl.Config(
+                    tbl_cols=-1,
+                    tbl_rows=print_rows,
+                    fmt_str_lengths=50,
+                    set_fmt_float="mixed",
+                    set_tbl_hide_dataframe_shape=True,
+                    tbl_formatting="UTF8_FULL_CONDENSED",
+            ):
+                data_lines = data_df.__str__().split('\n')
+                return data_lines
 
     def dataframe_to_str_pd(self, data_df, compact=True, print_head=PD_PRINT_ROWS, print_tail=PD_PRINT_ROWS):
 
