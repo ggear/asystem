@@ -360,30 +360,40 @@ class WrangleTest(unittest.TestCase):
     def test_library_dataframe(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
 
-        test.dataframe_new()
+        df_empty_str = "[{}]"
+        df_empty_type = {"C1": pl.Int16}
+        self.assertEqual(df_empty_str.format(""), test.dataframe_to_str(test.dataframe_new()))
+        self.assertEqual(df_empty_str.format(""), test.dataframe_to_str(test.dataframe_new([])))
+        self.assertEqual(df_empty_str.format(""), test.dataframe_to_str(test.dataframe_new([], {})))
+        self.assertEqual(df_empty_str.format("C1(i16)"), test.dataframe_to_str(test.dataframe_new([], df_empty_type)))
 
-        test.dataframe_new(schema={"col1": pl.Float32, "col2": pl.Int64})
+        df_data_str = "[C1({}), C2({}), C3({})]"
+        df_data_type = {"C1": pl.Int64, "C2": pl.Utf8, "C3": pl.Utf8}
+        df_data = [{"C1": 1, "C2": 1.1, "C3": "1"}, {"C1": 2, "C2": 2.2, "C3": "2"}, {"C1": None, "C2": None, "C3": None}]
+        self.assertEqual(df_data_str.format("i64", "f64", "str"),
+                         test.dataframe_to_str(test.dataframe_new(df_data)))
+        self.assertEqual(df_data_str.format("i64", "f64", "str"),
+                         test.dataframe_to_str(test.dataframe_new(df_data, {})))
+        self.assertEqual(df_data_str.format("i64", "str", "str"),
+                         test.dataframe_to_str(test.dataframe_new(df_data, df_data_type)))
+        self.assertEqual(3,
+                         len((test.dataframe_new(df_data, schema={column: pl.Utf8 for column in df_data[0]}))))
 
-        test.dataframe_new(data={
-            'Company': ['Ford', 'Toyota', 'Toyota', 'Honda', 'Toyota',
-                        'Ford', 'Honda', 'Subaru', 'Ford', 'Subaru'],
-            'Model': ['F-Series', 'RAV4', 'Camry', 'CR-V', 'Tacoma',
-                      'Explorer', 'Accord', 'CrossTrek', 'Escape', 'Outback'],
-            'Sales': [58283.34535, 32390, 25500, 18081, 21837, 19076.6, 11619, 15126,
-                      13272, None]
-        }, print_label="Compact", print_compact=True)
-
-
-        test.dataframe_new(data={
-            'Company': ['Ford', 'Toyota', 'Toyota', 'Honda', 'Toyota',
-                        'Ford', 'Honda', 'Subaru', 'Ford', 'Subaru'],
-            'Model': ['F-Series', 'RAV4', 'Camry', 'CR-V', 'Tacoma',
-                      'Explorer', 'Accord', 'CrossTrek', 'Escape', 'Outback'],
-            'Sales': [58283.34535, 32390, 25500, 18081, 21837, 19076.6, 11619, 15126,
-                      13272, None]
-        }, print_label="Non-Compact")
-
-        test.dataframe_new(data=[{"C1": 1, "C2": 1.1, "C3": "1"}, {"C1": 2, "C2": 2.2, "C3": "2"}, {"C1": 3, "C2": 3.3, "C3": "3"}])
+        df_lots_cols = 50
+        df_lots_rows = 100
+        df_lots = [{"C{}".format(c): v * v / 0.2 for c in range(1, df_lots_cols + 1)} for v in range(1, df_lots_rows + 1)]
+        self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots")), str))
+        self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(schema=df_data_type, print_label="lots")), str))
+        self.assertEqual(False, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots")), list))
+        self.assertEqual(True, isinstance(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False), list))
+        self.assertEqual(df_lots_rows + 6, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, -1)))
+        self.assertEqual(df_lots_rows + 6, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 100)))
+        self.assertEqual(5 + 7, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 5)))
+        self.assertEqual(0 + 7, len(test.dataframe_to_str(test.dataframe_new(df_lots, print_label="lots"), False, 0)))
+        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots))))
+        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={"SOME UNKNOWN COLUMN": pl.Utf8}))))
+        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_data[0]}))))
+        self.assertEqual(df_lots_rows, len((test.dataframe_new(df_lots, schema={column: pl.Utf8 for column in df_lots[0]}))))
 
     def test_library_dataframe_pd(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")

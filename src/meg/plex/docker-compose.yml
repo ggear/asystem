@@ -1,9 +1,9 @@
-# https://github.com/linuxserver/docker-plex/tags
+# https://hub.docker.com/r/linuxserver/plex/tags
 version: '3.7'
 services:
   plex:
     container_name: plex
-    image: plexinc/pms-docker:1.32.5.7349-8f4248874
+    image: linuxserver/plex:1.32.5
     init: true
     restart: ${SERVICE_RESTART}
     environment:

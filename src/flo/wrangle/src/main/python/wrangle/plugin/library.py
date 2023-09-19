@@ -1013,16 +1013,18 @@ class Library(object, metaclass=ABCMeta):
         if compact:
             schema = []
             for column in data_df.schema:
-                schema.append("{}: {}".format(column, DataTypeClass._string_repr(data_df.schema[column])))
+                schema.append("{}({})".format(column, DataTypeClass._string_repr(data_df.schema[column])))
             return "[" + ", ".join(schema) + "]"
         else:
             with pl.Config(
-                    tbl_cols=-1,
                     tbl_rows=print_rows,
+                    tbl_cols=-1,
                     fmt_str_lengths=50,
-                    set_fmt_float="mixed",
+                    set_tbl_width_chars=10000,
+                    set_fmt_float="full",
+                    set_ascii_tables=True,
+                    tbl_formatting="ASCII_FULL_CONDENSED",
                     set_tbl_hide_dataframe_shape=True,
-                    tbl_formatting="UTF8_FULL_CONDENSED",
             ):
                 data_lines = data_df.__str__().split('\n')
                 return data_lines
