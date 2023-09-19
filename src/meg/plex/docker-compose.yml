@@ -8,15 +8,15 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
-      - PUID=1000
-      - PGID=1000
+      - PUID=0
+      - PGID=0
       - VERSION=docker
       - PLEX_CLAIM=${PLEX_CLAIM}
     volumes:
-#      - ${SERVICE_DATA_DIR}/config:/config
-#      - ${SERVICE_DATA_DIR}/transcode:/transcode
-#      - /data/media/series:/media/series
-#      - /data/media/movies:/media/movies
+      - ${SERVICE_DATA_DIR}/config:/config
+      - ${SERVICE_DATA_DIR}/transcode:/transcode
+      - /data/media/series:/media/series
+      - /data/media/movies:/media/movies
     network_mode: host
     deploy:
       resources:
