@@ -57,6 +57,7 @@ PACKAGES=(
   locales
   python3
   python3-pip
+  tesseract-ocr
   libedgetpu1-std
 )
 apt-get update
