@@ -3,11 +3,14 @@ version: '3.7'
 services:
   plex:
     container_name: plex
-    image: linuxserver/plex:1.32.4
+    image: linuxserver/plex:1.32.5
     init: true
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
+      - PUID=1000
+      - PGID=1000
+      - VERSION=docker
       - PLEX_CLAIM=${PLEX_CLAIM}
     volumes:
       - ${SERVICE_DATA_DIR}/config:/config
