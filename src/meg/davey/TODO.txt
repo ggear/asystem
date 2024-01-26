@@ -1,0 +1,9 @@
+Hack Lifeguard for local API
+- https://security.stackexchange.com/questions/197028/how-to-eavesdrop-and-decrypt-the-https-communication-of-an-iot-device
+- https://wrongbaud.github.io/posts/jtag-hdd/
+
+Build a API bindings for Cloud API
+- https://mitmproxy.org
+- https://github.com/alufers/mitmproxy2swagger
+- https://github.com/openapi-generators/openapi-python-client
+

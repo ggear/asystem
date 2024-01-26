@@ -87,18 +87,28 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.lounge_air_purifier_pm25
-      name: Lounge
     - entity: sensor.dining_air_purifier_pm25
       name: Dining
+    - entity: sensor.lounge_air_purifier_pm25
+      name: Lounge
+    - entity: sensor.parents_air_purifier_pm25
+      name: Parents
+    - entity: sensor.kitchen_air_purifier_pm25
+      name: Kitchen
 ################################################################################
 - type: entities
   entities:
+    - entity: sensor.dining_air_purifier_pm25
+      name: Dining
+      icon: mdi:virus-outline
     - entity: sensor.lounge_air_purifier_pm25
       name: Lounge
       icon: mdi:virus-outline
-    - entity: sensor.dining_air_purifier_pm25
-      name: Dining
+    - entity: sensor.parents_air_purifier_pm25
+      name: Parents
+      icon: mdi:virus-outline
+    - entity: sensor.kitchen_air_purifier_pm25
+      name: Kitchen
       icon: mdi:virus-outline
 ################################################################################
 - type: custom:layout-break

@@ -30,7 +30,7 @@ ENV PIP_PACKAGES="configobj==5.0.6 \
                   paho-mqtt==1.6.1 \
                   pyephem==9.99 \
                   pymysql==1.0.2"
-RUN pip install --no-cache ${PIP_PACKAGES}
+RUN pip install --default-timeout=1000 --no-cache ${PIP_PACKAGES}
 
 # Disable pypy
 #WORKDIR /tmp

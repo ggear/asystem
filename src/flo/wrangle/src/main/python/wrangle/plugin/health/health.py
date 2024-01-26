@@ -154,8 +154,8 @@ class Health(library.Library):
 
                             try:
                                 sleep_history_df = pd.DataFrame()
-                                file_df = self.dataframe_read_pd(file_name, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND,
-                                                                 skipinitialspace=True)
+                                file_df = self.csv_read_pd(file_name, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND,
+                                                           skipinitialspace=True)
                                 file_df['Start'] = file_df['Fell asleep in'].replace('--', 0)
                                 file_df['Start'] = duration_decimalise(file_df, 'Start', 1)
                                 file_df['Start'] = pd.to_timedelta(file_df['Start'], 's')
@@ -203,7 +203,7 @@ class Health(library.Library):
                                         with open(file_name_rewritten, 'w') as file_rewrite:
                                             for file_line in file_original.readlines():
                                                 file_rewrite.write(file_line.replace(' \n', '\n'))
-                                file_df = self.dataframe_read_pd(file_name_rewritten, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
+                                file_df = self.csv_read_pd(file_name_rewritten, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
                                 file_df = file_df.dropna(how='all').dropna(axis=1, how='all')
                                 if 'Sleep Analysis [Asleep] (hours)' in file_df:
                                     del file_df['Sleep Analysis [Asleep] (hours)']
@@ -245,8 +245,8 @@ class Health(library.Library):
                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
                         elif basename(file_name).startswith("_Workout-") or basename(file_name).startswith("Workout-"):
                             try:
-                                file_df = self.dataframe_read_pd(file_name, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND,
-                                                                 skipinitialspace=True)
+                                file_df = self.csv_read_pd(file_name, engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND,
+                                                           skipinitialspace=True)
                                 file_df['Start'] = pd.to_datetime(file_df['Start'], format='%Y-%m-%d %H:%M')
                                 file_df['End'] = pd.to_datetime(file_df['End'], format='%Y-%m-%d %H:%M')
                                 if len(file_df['Duration']) > 0:
@@ -398,7 +398,6 @@ class Health(library.Library):
                             "period": "1d",
                             "unit": bucket[1]
                         }, print_label="health-{}".format("-".join(bucket)).lower()))
-                self.state_write()
         except Exception as exception:
             self.print_log("Unexpected error processing health data", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,

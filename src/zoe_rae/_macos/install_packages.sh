@@ -37,7 +37,7 @@ conda config --set channel_priority strict
 conda env list
 conda remove -y -n python3 --all
 conda create -y -n python3 python=3.11
-pip install \
+pip install --default-timeout=1000 \
   fabric \
   docker \
   requests \

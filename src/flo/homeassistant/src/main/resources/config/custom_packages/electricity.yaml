@@ -144,6 +144,17 @@ powercalc:
                       linear:
                         min_power: 2.5
                         max_power: 31.1
+                    - entity_id: binary_sensor.template_parents_air_purifier_proxy
+                      standby_power: 0.5
+                      linear:
+                        attribute: fan_speed
+                        calibrate:
+                          - 0 -> 0
+                          - 1 -> 1.7
+                          - 2 -> 3.6
+                          - 3 -> 8.1
+                          - 4 -> 16.6
+                          - 5 -> 21.9
                 #######################################################################
                 - create_group: Kitchen Fans
                   entities:
@@ -155,6 +166,17 @@ powercalc:
                     - entity_id: fan.kitchen_fan_plug
                       power_sensor_id: sensor.kitchen_fan_plug_energy_power
                       energy_sensor_id: sensor.kitchen_fan_plug_energy_total
+                    - entity_id: binary_sensor.template_kitchen_air_purifier_proxy
+                      standby_power: 0.5
+                      linear:
+                        attribute: fan_speed
+                        calibrate:
+                          - 0 -> 0
+                          - 1 -> 1.7
+                          - 2 -> 3.6
+                          - 3 -> 8.1
+                          - 4 -> 16.6
+                          - 5 -> 21.9
                 #######################################################################
                 - create_group: Lounge Fans
                   entities:
@@ -673,6 +695,13 @@ template:
         state: >-
           {{ states('switch.garden_pool_filter_plug') }}
       #################################################################################
+      - unique_id: dining_air_purifier_proxy
+        state: >-
+          {{ states('fan.dining_air_purifier') }}
+        attributes:
+          fan_speed: >-
+            {{ states('sensor.dining_air_purifier_fan_speed') | int(0) }}
+      #################################################################################
       - unique_id: lounge_air_purifier_proxy
         state: >-
           {{ states('fan.lounge_air_purifier') }}
@@ -680,12 +709,19 @@ template:
           fan_speed: >-
             {{ states('sensor.lounge_air_purifier_fan_speed') | int(0) }}
       #################################################################################
-      - unique_id: dining_air_purifier_proxy
+      - unique_id: parents_air_purifier_proxy
         state: >-
-          {{ states('fan.dining_air_purifier') }}
+          {{ states('fan.parents_air_purifier') }}
         attributes:
           fan_speed: >-
-            {{ states('sensor.dining_air_purifier_fan_speed') | int(0) }}
+            {{ states('sensor.parents_air_purifier_fan_speed') | int(0) }}
+      #################################################################################
+      - unique_id: kitchen_air_purifier_proxy
+        state: >-
+          {{ states('fan.kitchen_air_purifier') }}
+        attributes:
+          fan_speed: >-
+            {{ states('sensor.kitchen_air_purifier_fan_speed') | int(0) }}
       #################################################################################
       - unique_id: lounge_tv_plug_proxy
         state: >-

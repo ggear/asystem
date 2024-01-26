@@ -169,12 +169,20 @@
   friendly_name: 'Tree Spotlights Bulb 2'
   homeassistant:
     expire_after: 3600
+'0x9035eafffe82fef8':
+  friendly_name: 'Dining Air Purifier'
+  homeassistant:
+    expire_after: 3600
 '0x9035eafffe404425':
   friendly_name: 'Lounge Air Purifier'
   homeassistant:
     expire_after: 3600
-'0x9035eafffe82fef8':
-  friendly_name: 'Dining Air Purifier'
+'0x':
+  friendly_name: 'Parents Air Purifier'
+  homeassistant:
+    expire_after: 3600
+'0x9035eafffe27e819':
+  friendly_name: 'Kitchen Air Purifier'
   homeassistant:
     expire_after: 3600
 '0x00178801086168ac':

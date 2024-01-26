@@ -25,3 +25,7 @@ Each module is specified by at least one `host-label`, multiple hosts demarcated
 character and a globally unique `service-name` directory as per specification:
 
 `src/<host-label>[_<host-label>]*/<service-name>`
+
+## Release
+
+asystem-10.100.4300

@@ -178,7 +178,7 @@ def _pull(context):
         _print_footer("asystem", "pull main")
         _print_header("asystem", "pull dependencies")
         for requirement in glob.glob(join(DIR_ROOT_MODULE, "*/*/*/reqs_*.txt")):
-            _run_local(context, "pip install -r {}".format(requirement))
+            _run_local(context, "pip install --default-timeout=1000 -r {}".format(requirement))
         _run_local(context, "pip list --outdated")
         _print_footer("asystem", "pull dependencies")
     _generate(context, filter_changes=False, is_pull=True)

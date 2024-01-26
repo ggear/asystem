@@ -1,44 +1,22 @@
-#!/bin/sh
+#!/bin/bash
 
 ################################################################################
 # Samba
 ################################################################################
-mkdir -vp /data/media/audio
-if [ $(grep "/data/media/audio" /etc/samba/smb.conf | wc -l) -eq 0 ]; then
-  cat <<EOF >>/etc/samba/smb.conf
-[Media Audio]
+for INDEX in {1..3}; do
+  mkdir -vp /data/media/${INDEX}
+  if [ $(grep "/data/media/${INDEX}" /etc/samba/smb.conf | wc -l) -eq 0 ]; then
+    cat <<EOF >>/etc/samba/smb.conf
+[Media ${INDEX}]
   comment = Media Files
-  path = /data/media/audio
+  path = /data/media/${INDEX}
   browseable = yes
   read only = no
   guest ok = yes
 
 EOF
-fi
-mkdir -vp /data/media/movies
-if [ $(grep "/data/media/movies" /etc/samba/smb.conf | wc -l) -eq 0 ]; then
-  cat <<EOF >>/etc/samba/smb.conf
-[Media Movies]
-  comment = Media Files
-  path = /data/media/movies
-  browseable = yes
-  read only = no
-  guest ok = yes
-
-EOF
-fi
-mkdir -vp /data/media/series
-if [ $(grep "/data/media/series" /etc/samba/smb.conf | wc -l) -eq 0 ]; then
-  cat <<EOF >>/etc/samba/smb.conf
-[Media Series]
-  comment = Media Files
-  path = /data/media/series
-  browseable = yes
-  read only = no
-  guest ok = yes
-
-EOF
-fi
+  fi
+done
 systemctl restart smbd
 systemctl enable smbd
 systemctl restart nmbd

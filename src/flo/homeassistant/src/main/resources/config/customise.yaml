@@ -117,11 +117,17 @@ sensor.roof_wind_chill_temperature:
   friendly_name: 'Wind Chill'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
+sensor.dining_air_purifier_pm25:
+  friendly_name: 'Dining'
+  icon: 'mdi:virus-outline'
 sensor.lounge_air_purifier_pm25:
   friendly_name: 'Lounge'
   icon: 'mdi:virus-outline'
-sensor.dining_air_purifier_pm25:
-  friendly_name: 'Dining'
+sensor.parents_air_purifier_pm25:
+  friendly_name: 'Parents'
+  icon: 'mdi:virus-outline'
+sensor.kitchen_air_purifier_pm25:
+  friendly_name: 'Kitchen'
   icon: 'mdi:virus-outline'
 sensor.roof_humidity:
   friendly_name: 'Roof'
@@ -437,11 +443,17 @@ sensor.garden_pool_filter_plug_energy_power:
 sensor.garden_pool_filter_plug_energy_total:
   friendly_name: 'Total Energy'
   unit_of_measurement: 'kWh'
+fan.dining_air_purifier:
+  friendly_name: 'Dining'
+  icon: 'mdi:air-purifier'
 fan.lounge_air_purifier:
   friendly_name: 'Lounge'
   icon: 'mdi:air-purifier'
-fan.dining_air_purifier:
-  friendly_name: 'Dining'
+fan.parents_air_purifier:
+  friendly_name: 'Parents'
+  icon: 'mdi:air-purifier'
+fan.kitchen_air_purifier:
+  friendly_name: 'Kitchen'
   icon: 'mdi:air-purifier'
 sensor.home_power:
   friendly_name: 'Home Load'
@@ -2653,6 +2665,22 @@ sensor.template_garden_pool_filter_plug_proxy_energy_monthly:
 sensor.template_garden_pool_filter_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_dining_air_purifier_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_dining_air_purifier_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.template_lounge_air_purifier_proxy_power:
   friendly_name: 'Current Power'
 sensor.template_lounge_air_purifier_proxy_energy:
@@ -2669,20 +2697,36 @@ sensor.template_lounge_air_purifier_proxy_energy_monthly:
 sensor.template_lounge_air_purifier_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.template_dining_air_purifier_proxy_power:
+sensor.template_parents_air_purifier_proxy_power:
   friendly_name: 'Current Power'
-sensor.template_dining_air_purifier_proxy_energy:
+sensor.template_parents_air_purifier_proxy_energy:
   friendly_name: 'Total Energy'
-sensor.template_dining_air_purifier_proxy_energy_daily:
+sensor.template_parents_air_purifier_proxy_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.template_dining_air_purifier_proxy_energy_weekly:
+sensor.template_parents_air_purifier_proxy_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.template_dining_air_purifier_proxy_energy_monthly:
+sensor.template_parents_air_purifier_proxy_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.template_dining_air_purifier_proxy_energy_yearly:
+sensor.template_parents_air_purifier_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_air_purifier_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_kitchen_air_purifier_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_kitchen_air_purifier_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_air_purifier_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_air_purifier_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_air_purifier_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.all_standby_energy:

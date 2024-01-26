@@ -273,7 +273,7 @@ fi
 ################################################################################
 rm -rf /usr/local/bin/docker-compose
 pip uninstall --break-system-packages -y docker-compose
-pip install --break-system-packages --no-input docker-compose==1.29.2
+pip install --default-timeout=1000 --break-system-packages --no-input docker-compose==1.29.2
 docker-compose -v
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
@@ -289,6 +289,11 @@ fi
 ################################################################################
 # Devices
 ################################################################################
+cat <<EOF >/etc/udev/rules.d/98-usb-edgetpu.rules
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", MODE="0664", TAG+="uaccess"
+SUBSYSTEMS=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0664", TAG+="uaccess"
+EOF
+chmod -x /etc/udev/rules.d/98-usb-edgetpu.rules
 cat <<EOF >/etc/udev/rules.d/99-usb-serial.rules
 SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", SYMLINK+="ttyUSBTempProbe"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="0001", SYMLINK+="ttyUSBVantagePro2"

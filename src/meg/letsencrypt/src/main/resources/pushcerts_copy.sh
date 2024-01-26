@@ -12,7 +12,7 @@ scp -o "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@${NGINX_IP}:
 ssh -q -o "StrictHostKeyChecking=no" root@${NGINX_IP} "cd /var/lib/asystem/install/nginx/latest && docker-compose --compatibility restart"
 logger -t pushcerts "Loaded new nginx certificates on ${NGINX_IP}"
 
-scp -o "StrictHostKeyChecking=no" ./certificates/privkey.pem root@${UDMUTILITIES_IP}:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
-scp -o "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@${UDMUTILITIES_IP}:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
-ssh -q -o "StrictHostKeyChecking=no" root@${UDMUTILITIES_IP} "unifi-os restart"
+scp -O -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" ./certificates/privkey.pem root@${UDMUTILITIES_IP}:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
+scp -O -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" ./certificates/fullchain.pem root@${UDMUTILITIES_IP}:/mnt/data/unifi-os/unifi-core/config/unifi-core.crt
+ssh -q -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" root@${UDMUTILITIES_IP} "unifi-os restart"
 logger -t pushcerts "Loaded new unifi certificates on ${UDMUTILITIES_IP}"

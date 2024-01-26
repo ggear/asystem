@@ -14,9 +14,9 @@ import_files() {
     umount -fq /media/usbdrive
     mount /dev/sdb1 /media/usbdrive
     if [ -d /media/usbdrive/${1} ]; then
-      echo "Copying /media/usbdrive/${1} to /data/tmp/${1} ... "
-      rsync -avP /media/usbdrive/${1} /data/tmp
-      echo "Copy /media/usbdrive/${1} to /data/tmp/${1} complete"
+      echo "Copying /media/usbdrive/${1} to /data/media/3/tmp/${1} ... "
+      rsync -avP /media/usbdrive/${1} /data/media/3/tmp
+      echo "Copy /media/usbdrive/${1} to /data/media/3/tmp/${1} complete"
       echo "Metadata commands:"
       echo "umount -fq /media/usbdrive"
       echo "mount /dev/sdb1 /media/usbdrive"

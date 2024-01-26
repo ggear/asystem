@@ -225,14 +225,22 @@ switch.garden_pool_filter_plug:
   name: Garden Pool Filter
   aliases: ['Pool Filter']
   room: Garden
-fan.lounge_air_purifier:
-  name: Lounge Air Purifier
-  aliases: ['Air Purifier']
-  room: Lounge
 fan.dining_air_purifier:
   name: Dining Air Purifier
   aliases: ['Air Purifier']
   room: Dining
+fan.lounge_air_purifier:
+  name: Lounge Air Purifier
+  aliases: ['Air Purifier']
+  room: Lounge
+fan.parents_air_purifier:
+  name: Parents Air Purifier
+  aliases: ['Air Purifier']
+  room: Parents
+fan.kitchen_air_purifier:
+  name: Kitchen Air Purifier
+  aliases: ['Air Purifier']
+  room: Kitchen
 sensor.compensation_sensor_rack_top_temperature:
   name: Rack Temperature
   aliases: ['Temperature']

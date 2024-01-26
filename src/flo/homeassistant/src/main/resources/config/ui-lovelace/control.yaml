@@ -148,10 +148,16 @@
 - type: entities
   title: Air Purifiers
   entities:
+    - entity: fan.dining_air_purifier
+      name: Dining
+      icon: mdi:air-purifier
     - entity: fan.lounge_air_purifier
       name: Lounge
       icon: mdi:air-purifier
-    - entity: fan.dining_air_purifier
-      name: Dining
+    - entity: fan.parents_air_purifier
+      name: Parents
+      icon: mdi:air-purifier
+    - entity: fan.kitchen_air_purifier
+      name: Kitchen
       icon: mdi:air-purifier
 ################################################################################
