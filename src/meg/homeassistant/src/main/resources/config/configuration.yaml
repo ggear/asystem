@@ -11,6 +11,12 @@ homeassistant:
   country: 'AU'
   internal_url: !env_var HOMEASSISTANT_INTERNAL_URL
   external_url: !env_var HOMEASSISTANT_EXTERNAL_URL
+  auth_providers:
+    - type: homeassistant
+    - type: trusted_networks
+      trusted_networks:
+      - '127.0.0.1'
+      - '10.0.0.0/16'
   customize_domain:
     fan:
       assumed_state: false
@@ -21,12 +27,6 @@ homeassistant:
   customize: !include customise.yaml
   packages: !include_dir_named custom_packages
 #######################################################################################
-auth_providers:
-  - type: homeassistant
-  - type: trusted_networks
-    trusted_networks:
-    - '127.0.0.1'
-    - '10.0.0.0/16'
 #######################################################################################
 http:
   server_port: !env_var HOMEASSISTANT_HTTP_PORT
