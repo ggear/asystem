@@ -15,7 +15,7 @@ echo "--------------------------------------------------------------------------
 # Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'
 # Create API Long-Lived Access Tokens and store in '.env_all_key'
 # Install integrations manually (no option to do so programmatically):
-#   - MQTT (local push, no internet, yaml has details but is now unfortunately now deprecated)
+#   - MQTT (local push, no internet, yaml has details but is now unfortunately deprecated)
 #   - Big Ass Fans (local push, no internet after initial firmware upgrade, each fan is automatically discovered, individually added)
 #   - UniFi Protect (local push, no internet, requires Protect IP, user, password and Areas config - has not been yaml configured since at least Nov 2020)
 #   - Apple (local push, no internet, add tv/home-pod through UI with paring code prompts)
