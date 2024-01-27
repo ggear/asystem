@@ -29,7 +29,7 @@ compensation:
   #####################################################################################
   compensation_sensor_bertram_2_office_lounge_temperature:
     unique_id: compensation_sensor_bertram_2_office_lounge_temperature
-    source: sensor.bertram_2_office_lounge_temperature
+    source: sensor.lounge_temperature
     precision: 1
     data_points:
       - [ 8.7, 8.7 ]
@@ -45,7 +45,7 @@ compensation:
   #####################################################################################
   compensation_sensor_bertram_2_office_temperature:
     unique_id: compensation_sensor_bertram_2_office_temperature
-    source: sensor.bertram_2_office_temperature
+    source: sensor.office_temperature
     precision: 1
     data_points:
       - [ 9.1, 8.7 ]
@@ -53,7 +53,7 @@ compensation:
   #####################################################################################
   compensation_sensor_bertram_2_kitchen_temperature:
     unique_id: compensation_sensor_bertram_2_kitchen_temperature
-    source: sensor.bertram_2_kitchen_temperature
+    source: sensor.kitchen_temperature
     precision: 1
     data_points:
       - [ 9.2, 8.7 ]
@@ -61,7 +61,7 @@ compensation:
   #####################################################################################
   compensation_sensor_bertram_2_office_pantry_temperature:
     unique_id: compensation_sensor_bertram_2_office_pantry_temperature
-    source: sensor.bertram_2_office_pantry_temperature
+    source: sensor.pantry_temperature
     precision: 1
     data_points:
       - [ 8.5, 8.7 ]
@@ -69,7 +69,7 @@ compensation:
   #####################################################################################
   compensation_sensor_bertram_2_office_dining_temperature:
     unique_id: compensation_sensor_bertram_2_office_dining_temperature
-    source: sensor.bertram_2_office_dining_temperature
+    source: sensor.dining_temperature
     precision: 1
     data_points:
       - [ 8.7, 8.7 ]
@@ -109,7 +109,7 @@ compensation:
   #####################################################################################
   compensation_sensor_bertram_2_office_basement_temperature:
     unique_id: compensation_sensor_bertram_2_office_basement_temperature
-    source: sensor.bertram_2_office_basement_temperature
+    source: sensor.basement_temperature
     precision: 1
     data_points:
       - [ 8.7, 8.7 ]
