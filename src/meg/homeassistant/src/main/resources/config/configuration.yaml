@@ -46,6 +46,12 @@ recorder:
 #    entity_globs:
 #      - sensor.*
 #######################################################################################
+
+
+
+
+
+# TODO: Disable InfluxDB until bea is provisioned
 #influxdb:
 #  api_version: 2
 #  ssl: false
@@ -76,6 +82,12 @@ recorder:
 #      - '*_microphone_level'
 #      - 'adaptive_lighting_*'
 #  ignore_attributes: !include influxdb-ignores.yaml
+
+
+
+
+
+
   #####################################################################################
 mqtt:
 # The UI is now used to configure MQTT, perhaps return with a version 2022.2.9-
