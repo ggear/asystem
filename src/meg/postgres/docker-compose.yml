@@ -12,10 +12,10 @@ x-common: &common
     - POSTGRES_USER_HASS
     - POSTGRES_KEY_HASS
     - POSTGRES_DATABASE_HASS
-    - PGHOST=${POSTGRES_IP}
-    - PGPORT=${POSTGRES_PORT}
-    - PGUSER=${POSTGRES_USER}
-    - PGPASSWORD=${POSTGRES_KEY}
+#    - PGHOST=${POSTGRES_IP}
+#    - PGPORT=${POSTGRES_PORT}
+#    - PGUSER=${POSTGRES_USER}
+#    - PGPASSWORD=${POSTGRES_KEY}
     - PGDATA=/var/lib/postgresql/data/pgdata
   logging:
     driver: "json-file"
