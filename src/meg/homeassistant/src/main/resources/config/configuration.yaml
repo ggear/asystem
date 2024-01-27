@@ -21,6 +21,13 @@ homeassistant:
   customize: !include customise.yaml
   packages: !include_dir_named custom_packages
 #######################################################################################
+auth_providers:
+  - type: homeassistant
+  - type: trusted_networks
+    trusted_networks:
+    - '127.0.0.1'
+    - '10.0.0.0/16'
+#######################################################################################
 http:
   server_port: !env_var HOMEASSISTANT_HTTP_PORT
   use_x_forwarded_for: true
@@ -41,47 +48,47 @@ recorder:
   commit_interval: 120
   purge_keep_days: 5
   auto_purge: true
-# TODO: Disabled all sensors in favour of redirecting to Grafana for graphing?
-#  exclude:
-#    entity_globs:
-#      - sensor.*
-#######################################################################################
+  # TODO: Disabled all sensors in favour of redirecting to Grafana for graphing?
+  #  exclude:
+  #    entity_globs:
+  #      - sensor.*
+  #######################################################################################
 
 
 
 
 
-# TODO: Disable InfluxDB until bea is provisioned
-#influxdb:
-#  api_version: 2
-#  ssl: false
-#  host: !env_var INFLUXDB_IP
-#  port: !env_var INFLUXDB_HTTP_PORT
-#  token: !env_var INFLUXDB_TOKEN
-#  organization: !env_var INFLUXDB_ORG
-#  bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
-#  precision: 's'
-#  measurement_attr: 'domain__device_class'
-#  default_measurement: 'sensor'
-#  tags:
-#    source: 'hass'
-#    version: !env_var SERVICE_VERSION_COMPACT
-#  tags_attributes:
-#    - 'state_class'
-#    - 'friendly_name'
-#    - 'unit_of_measurement'
-#  exclude:
-#    domains:
-#      - 'zone'
-#      - 'scene'
-#      - 'select'
-#    entity_globs:
-#      - '*_bass'
-#      - '*_treble'
-#      - '*_sim_*'
-#      - '*_microphone_level'
-#      - 'adaptive_lighting_*'
-#  ignore_attributes: !include influxdb-ignores.yaml
+  # TODO: Disable InfluxDB until bea is provisioned
+  #influxdb:
+  #  api_version: 2
+  #  ssl: false
+  #  host: !env_var INFLUXDB_IP
+  #  port: !env_var INFLUXDB_HTTP_PORT
+  #  token: !env_var INFLUXDB_TOKEN
+  #  organization: !env_var INFLUXDB_ORG
+  #  bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
+  #  precision: 's'
+  #  measurement_attr: 'domain__device_class'
+  #  default_measurement: 'sensor'
+  #  tags:
+  #    source: 'hass'
+  #    version: !env_var SERVICE_VERSION_COMPACT
+  #  tags_attributes:
+  #    - 'state_class'
+  #    - 'friendly_name'
+  #    - 'unit_of_measurement'
+  #  exclude:
+  #    domains:
+  #      - 'zone'
+  #      - 'scene'
+  #      - 'select'
+  #    entity_globs:
+  #      - '*_bass'
+  #      - '*_treble'
+  #      - '*_sim_*'
+  #      - '*_microphone_level'
+  #      - 'adaptive_lighting_*'
+  #  ignore_attributes: !include influxdb-ignores.yaml
 
 
 
