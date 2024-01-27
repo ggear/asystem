@@ -7,8 +7,8 @@ x-common: &common
     - TZ=Australia/Perth
     - TIMESCALEDB_IP
     - TIMESCALEDB_PORT
-    - POSTGRES_USER=${TIMESCALEDB_USER}
-    - POSTGRES_PASSWORD=${TIMESCALEDB_KEY}
+    - PGUSER=${TIMESCALEDB_USER}
+    - PGPASSWORD=${TIMESCALEDB_KEY}
     - PGDATA=/var/lib/postgresql/data/pgdata
   logging:
     driver: "json-file"

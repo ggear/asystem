@@ -7,12 +7,13 @@ x-common: &common
     - TZ=Australia/Perth
     - POSTGRES_IP
     - POSTGRES_PORT
+    - POSTGRES_USER
+    - POSTGRES_KEY
     - POSTGRES_USER_HASS
     - POSTGRES_KEY_HASS
     - POSTGRES_DATABASE_HASS
-
-
-
+    - PGHOST=${POSTGRES_IP}
+    - PGPORT=${POSTGRES_PORT}
     - PGUSER=${POSTGRES_USER}
     - PGPASSWORD=${POSTGRES_KEY}
     - PGDATA=/var/lib/postgresql/data/pgdata
