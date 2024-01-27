@@ -46,36 +46,36 @@ recorder:
 #    entity_globs:
 #      - sensor.*
 #######################################################################################
-influxdb:
-  api_version: 2
-  ssl: false
-  host: !env_var INFLUXDB_IP
-  port: !env_var INFLUXDB_HTTP_PORT
-  token: !env_var INFLUXDB_TOKEN
-  organization: !env_var INFLUXDB_ORG
-  bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
-  precision: 's'
-  measurement_attr: 'domain__device_class'
-  default_measurement: 'sensor'
-  tags:
-    source: 'hass'
-    version: !env_var SERVICE_VERSION_COMPACT
-  tags_attributes:
-    - 'state_class'
-    - 'friendly_name'
-    - 'unit_of_measurement'
-  exclude:
-    domains:
-      - 'zone'
-      - 'scene'
-      - 'select'
-    entity_globs:
-      - '*_bass'
-      - '*_treble'
-      - '*_sim_*'
-      - '*_microphone_level'
-      - 'adaptive_lighting_*'
-  ignore_attributes: !include influxdb-ignores.yaml
+#influxdb:
+#  api_version: 2
+#  ssl: false
+#  host: !env_var INFLUXDB_IP
+#  port: !env_var INFLUXDB_HTTP_PORT
+#  token: !env_var INFLUXDB_TOKEN
+#  organization: !env_var INFLUXDB_ORG
+#  bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
+#  precision: 's'
+#  measurement_attr: 'domain__device_class'
+#  default_measurement: 'sensor'
+#  tags:
+#    source: 'hass'
+#    version: !env_var SERVICE_VERSION_COMPACT
+#  tags_attributes:
+#    - 'state_class'
+#    - 'friendly_name'
+#    - 'unit_of_measurement'
+#  exclude:
+#    domains:
+#      - 'zone'
+#      - 'scene'
+#      - 'select'
+#    entity_globs:
+#      - '*_bass'
+#      - '*_treble'
+#      - '*_sim_*'
+#      - '*_microphone_level'
+#      - 'adaptive_lighting_*'
+#  ignore_attributes: !include influxdb-ignores.yaml
   #####################################################################################
 mqtt:
 # The UI is now used to configure MQTT, perhaps return with a version 2022.2.9-

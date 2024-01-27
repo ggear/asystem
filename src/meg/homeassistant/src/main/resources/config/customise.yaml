@@ -449,12 +449,6 @@ fan.dining_air_purifier:
 fan.lounge_air_purifier:
   friendly_name: 'Lounge'
   icon: 'mdi:air-purifier'
-fan.parents_air_purifier:
-  friendly_name: 'Parents'
-  icon: 'mdi:air-purifier'
-fan.kitchen_air_purifier:
-  friendly_name: 'Kitchen'
-  icon: 'mdi:air-purifier'
 sensor.home_power:
   friendly_name: 'Home Load'
   icon: 'mdi:home-lightning-bolt'
