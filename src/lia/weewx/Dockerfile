@@ -17,7 +17,7 @@ RUN apt-get -y --no-install-recommends install gnupg2=2.2.27-2+deb11u2
 RUN apt-get -y --no-install-recommends install default-mysql-client=1.0.7
 RUN apt-get -y --no-install-recommends install apache2=2.4.56-1~deb11u2
 RUN apt-get -y --no-install-recommends install apache2-utils=2.4.56-1~deb11u2
-RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1+deb11u
+RUN apt-get -y --no-install-recommends install mosquitto-clients
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV PIP_PACKAGES="configobj==5.0.6 \
