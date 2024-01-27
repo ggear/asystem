@@ -18,6 +18,7 @@ echo "--------------------------------------------------------------------------
 #######################################################################################
 # Home Assistant
 #######################################################################################
+PGPASSWORD=${POSTGRES_KEY}
 if [ $(psql -h ${POSTGRES_IP} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "SELECT usename FROM pg_user WHERE usename = '"${POSTGRES_USER_HASS}"'" | grep ${POSTGRES_USER_HASS} | wc -l) -eq 0 ]; then
   psql -h ${POSTGRES_IP} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "CREATE USER ${POSTGRES_USER_HASS}"
   psql -h ${POSTGRES_IP} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "ALTER USER ${POSTGRES_USER_HASS} WITH PASSWORD '"${POSTGRES_KEY_HASS}"'"
