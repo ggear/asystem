@@ -687,7 +687,12 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
         _run_local(context, "dscacheutil -flushcache")
         for host in host_names_prod:
             host_ip = _run_local(context, "dig +short {}".format(host), hide='out').stdout.strip()
-            host_ip = "10.0.0.1" if host_ip == "127.0.1.1" else "10.0.2." + host_ip.split('.')[3]
+            if host_ip == "":
+                host_ip = "127.0.1.1"
+            elif host_ip == "127.0.1.1":
+                host_ip = "10.0.0.1"
+            else:
+                "10.0.2." + host_ip.split('.')[3]
             host_ips_prod.append(host_ip)
         host_ip_prod = ",".join(host_ips_prod)
         host_name_prod = ",".join(host_names_prod)

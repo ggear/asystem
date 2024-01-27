@@ -6,21 +6,21 @@
   ],
   "macmini-meg": [
     "letsencrypt",
+    "homeassistant",
+    "mariadb",
+    "vernemq",
     "unifipoller",
+    "postgres",
     "internet",
+    "nginx",
     "digitemp",
     "plex",
     "monitor"
   ],
   "macbook-flo": [
-    "homeassistant",
-    "mariadb",
-    "vernemq",
     "grafana",
     "influxdb",
     "wrangle",
-    "postgres",
-    "nginx",
     "monitor"
   ]
 }
