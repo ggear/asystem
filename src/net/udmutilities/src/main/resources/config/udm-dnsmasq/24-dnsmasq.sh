@@ -40,17 +40,21 @@ for CONF_SOURCE_FILE in $(ls \
     #    echo "3="$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w)
 
     echo "${CONF_BUILD}" >>"${CONF_BUILD_FILE}"
-    if [ $(echo -n "${CONF_CURRENT}" | wc -w) -gt 0 ] && [ -z "${CONF_IP}" ]; then
-      if [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w) -gt 0 ] ||
-        [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w) -gt 1 ]; then
-        echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP} ] config and lease out of sync, flushing lease"
-        sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
-        CONF_FLUSHED_LEASES="true"
+    if [ $(echo -n "${CONF_CURRENT}" | wc -w) -gt 0 ]; then
+      if [ ! -z "${CONF_IP}" ]; then
+        if [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w) -gt 0 ] ||
+          [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w) -gt 1 ]; then
+          echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP}] config and lease out of sync, flushing lease"
+          sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
+          CONF_FLUSHED_LEASES="true"
+        else
+          echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP}] config and lease in sync"
+        fi
       else
-        echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP} ] config and lease in sync"
+        echo "Host [${CONF_HOST} ${CONF_MAC}] config and lease in sync"
       fi
     else
-      echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP} ] config found but no lease"
+      echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP}] config found but no lease"
     fi
   done <${CONF_SOURCE_FILE}
 done
