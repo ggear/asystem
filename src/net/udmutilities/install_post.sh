@@ -12,8 +12,8 @@ add_on_boot_script() {
 
 cd ${SERVICE_INSTALL} || exit
 
-cp -rvf /data/asystem/install/udmutilities/latest/install_prep.sh /data/on_boot.d/20-asystem-install.sh
-chmod a+x /data/on_boot.d/20-asystem-install.sh
+cp -rvf /data/asystem/install/udmutilities/latest/install_prep.sh /data/on_boot.d/07-asystem-install.sh
+chmod a+x /data/on_boot.d/07-asystem-install.sh
 
 chmod a+x ./config/udm-utilities/on-boot-script/remote_install.sh
 if [ ! -d /data/on_boot.d ]; then
