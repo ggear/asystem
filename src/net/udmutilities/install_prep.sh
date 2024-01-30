@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 mkdir -p /var/lib/asystem
 mkdir -p /data/asystem/install
