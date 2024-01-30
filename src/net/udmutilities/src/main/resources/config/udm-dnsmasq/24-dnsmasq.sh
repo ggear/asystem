@@ -19,7 +19,7 @@ for CONF_SOURCE_FILE in $(ls \
   ${CONF_SOURCE_FILE_PREFIX}-*Controlled*-custom.conf \
   ${CONF_SOURCE_FILE_PREFIX}-*Isolated*-custom.conf \
   2>/dev/null); do
-  while read CONF_SOURCE_LINE; do
+  while read -r CONF_SOURCE_LINE; do
     CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f1 | cut -d'=' -f2 | awk '{print tolower($0)}')
     CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2)
     CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
@@ -29,16 +29,6 @@ for CONF_SOURCE_FILE in $(ls \
     fi
     CONF_BUILD=$(echo "dhcp-host=${CONF_MAC},${CONF_IP},${CONF_HOST}")
     CONF_CURRENT=$(grep ${CONF_MAC} ${CONF_CURRENT_FILE})
-
-    #    echo "CONF_MAC=$CONF_MAC"
-    #    echo "CONF_IP=$CONF_IP"
-    #    echo "CONF_HOST=$CONF_HOST"
-    #    echo "CONF_BUILD=$CONF_BUILD"
-    #    echo "CONF_CURRENT=$CONF_CURRENT"
-    #    echo "1="$(echo -n "${CONF_CURRENT}" | wc -w)
-    #    echo "2="$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w)
-    #    echo "3="$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w)
-
     echo "${CONF_BUILD}" >>"${CONF_BUILD_FILE}"
     if [ $(echo -n "${CONF_CURRENT}" | wc -w) -gt 0 ]; then
       if [ ! -z "${CONF_IP}" ]; then
