@@ -23,9 +23,8 @@ for CONF_SOURCE_FILE in $(ls \
     CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f1 | cut -d'=' -f2 | awk '{print tolower($0)}')
     CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2)
     CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
-    CONF_BUILD="dhcp-host=${CONF_MAC},${CONF_IP},${CONF_HOST}"
     CONF_CURRENT=$(grep "${CONF_MAC}" "${CONF_CURRENT_FILE}")
-    echo "${CONF_BUILD}" >>"${CONF_BUILD_FILE}"
+    echo "${CONF_SOURCE_LINE}" >>"${CONF_BUILD_FILE}"
     if [ $(echo -n "${CONF_CURRENT}" | wc -w) -gt 0 ]; then
       if [ -n "${CONF_IP}" ]; then
         if [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w) -gt 0 ] ||
