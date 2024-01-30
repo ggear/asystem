@@ -12,7 +12,7 @@ CONF_CUSTOM_FILES="dhcp.dhcpServers"*"custom.conf"
 
 rm -rf ${CONF_BUILD_DIR}
 cp -rvf ${CONF_CUSTOM_DIR} ${CONF_BUILD_DIR}
-rm -rf "${CONF_BUILD_DIR}/${CONF_CUSTOM_FILES}"
+rm -rf ${CONF_BUILD_DIR}/${CONF_CUSTOM_FILES}
 for CONF_SOURCE_FILE in $(ls \
   ${CONF_SOURCE_FILE_PREFIX}-*Default*-custom.conf \
   ${CONF_SOURCE_FILE_PREFIX}-*Unfettered*-custom.conf \
@@ -27,13 +27,23 @@ for CONF_SOURCE_FILE in $(ls \
       CONF_HOST=${CONF_IP}
       CONF_IP=""
     fi
-    CONF_BUILD="dhcp-host=${CONF_MAC},${CONF_IP},${CONF_HOST}"
-    CONF_CURRENT=$(grep "${CONF_MAC}" "${CONF_CURRENT_FILE}")
+    CONF_BUILD=$(echo "dhcp-host=${CONF_MAC},${CONF_IP},${CONF_HOST}")
+    CONF_CURRENT=$(grep ${CONF_MAC} ${CONF_CURRENT_FILE})
+
+    #    echo "CONF_MAC=$CONF_MAC"
+    #    echo "CONF_IP=$CONF_IP"
+    #    echo "CONF_HOST=$CONF_HOST"
+    #    echo "CONF_BUILD=$CONF_BUILD"
+    #    echo "CONF_CURRENT=$CONF_CURRENT"
+    #    echo "1="$(echo -n "${CONF_CURRENT}" | wc -w)
+    #    echo "2="$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w)
+    #    echo "3="$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w)
+
     echo "${CONF_BUILD}" >>"${CONF_BUILD_FILE}"
-    if [ "$(echo -n "${CONF_CURRENT}" | wc -w)" -gt 0 ]; then
-      if [ -n "${CONF_IP}" ]; then
-        if [ "$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w)" -gt 0 ] ||
-          [ "$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w)" -gt 1 ]; then
+    if [ $(echo -n "${CONF_CURRENT}" | wc -w) -gt 0 ]; then
+      if [ ! -z "${CONF_IP}" ]; then
+        if [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w) -gt 0 ] ||
+          [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w) -gt 1 ]; then
           echo "Host [${CONF_HOST}] with MAC [${CONF_MAC}] and IP [${CONF_IP}] config metadata and DHCP lease out of sync, flushing lease"
           sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
           CONF_FLUSHED_LEASES="true"
@@ -46,7 +56,7 @@ for CONF_SOURCE_FILE in $(ls \
     else
       echo "Host [${CONF_HOST}] with MAC [${CONF_MAC}] and IP [${CONF_IP}] config metadata found but no DHCP lease"
     fi
-  done <"${CONF_SOURCE_FILE}"
+  done <${CONF_SOURCE_FILE}
 done
 if [ -f "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" ]; then
   cat "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" >>${CONF_BUILD_FILE}
@@ -58,7 +68,7 @@ if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] ||
   if dnsmasq --conf-dir=${CONF_BUILD_DIR} --test; then
     cp -rvf ${CONF_BUILD_FILE} ${CONF_CUSTOM_FILE}
     echo "applied new dnsmasq config"
-    kill -9 "$(cat /run/dnsmasq.pid)" 2>/dev/null
+    kill -9 $(cat /run/dnsmasq.pid) 2>/dev/null
     echo "killed and restarted dnsmasq"
   else
     echo "new dnsmasq config failed to parse, leaving old config in place"
