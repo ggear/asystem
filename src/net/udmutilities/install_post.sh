@@ -20,26 +20,31 @@ if [ ! -d /data/on_boot.d ]; then
   ./config/udm-utilities/on-boot-script/remote_install.sh
 fi
 
+add_on_boot_script "10-unifios" "_unifios"
+#add_on_boot_script "11-users" "_users"
+#add_on_boot_script "12-links" "_links"
+
+#chmod a+x ./config/udm-dnsmasq/09-dnsmasq.sh
+#rm -rf /data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /data
+#cp -rvf ./config/udm-dnsmasq/09-dnsmasq.sh /data/on_boot.d
+#/data/on_boot.d/09-dnsmasq.sh
+
+#cp -rvf ./config/udm-cloudflare-ddns/13-cloudflare-ddns.sh /data/on_boot.d
+#chmod a+x /data/on_boot.d/13-cloudflare-ddns.sh
+#/data/on_boot.d/13-cloudflare-ddns.sh
+
+
+
+
+# INFO: Disable podman services since it has been depracted since udm-pro-3
 #chmod a+x ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh
 #if [ ! -f /data/on_boot.d/05-container-common.sh ]; then
 #  cp -rvf ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh /data/on_boot.d
 #  /data/on_boot.d/05-container-common.sh
 #fi
 #
-#add_on_boot_script "10-unifios" "_unifios"
-#add_on_boot_script "11-users" "_users"
-#add_on_boot_script "12-links" "_links"
-#
 #podman exec unifi-os systemctl enable udm-boot
 #podman exec unifi-os systemctl restart udm-boot
-#
-#chmod a+x ./config/udm-host-records/*.sh
-#rm -rf /data/udm-host-records && cp -rvf ./config/udm-host-records /data
-#
-#chmod a+x ./config/udm-dnsmasq/09-dnsmasq.sh
-#rm -rf /data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /data
-#cp -rvf ./config/udm-dnsmasq/09-dnsmasq.sh /data/on_boot.d
-#/data/on_boot.d/09-dnsmasq.sh
 #
 #cp -rvf ./config/udm-utilities/cni-plugins/05-install-cni-plugins.sh /data/on_boot.d
 #chmod a+x /data/on_boot.d/05-install-cni-plugins.sh
@@ -76,7 +81,3 @@ fi
 #chmod a+x /data/on_boot.d/10-dns.sh
 #/data/on_boot.d/10-dns.sh
 #podman exec -it pihole pihole -a -p ${PIHOLE_KEY}
-#
-#cp -rvf ./config/udm-cloudflare-ddns/13-cloudflare-ddns.sh /data/on_boot.d
-#chmod a+x /data/on_boot.d/13-cloudflare-ddns.sh
-#/data/on_boot.d/13-cloudflare-ddns.sh
