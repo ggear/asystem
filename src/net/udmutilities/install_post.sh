@@ -21,8 +21,8 @@ if [ ! -d /data/on_boot.d ]; then
 fi
 
 add_on_boot_script "10-unifios" "_unifios"
-#add_on_boot_script "11-users" "_users"
-#add_on_boot_script "12-links" "_links"
+add_on_boot_script "11-users" "_users"
+add_on_boot_script "12-links" "_links"
 
 #chmod a+x ./config/udm-dnsmasq/09-dnsmasq.sh
 #rm -rf /data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /data
