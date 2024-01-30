@@ -23,10 +23,9 @@ add_on_boot_script "10-unifios" "_unifios"
 add_on_boot_script "11-users" "_users"
 add_on_boot_script "12-links" "_links"
 
-#chmod a+x ./config/udm-dnsmasq/24-dnsmasq.sh
-#rm -rf /data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /data
-#cp -rvf ./config/udm-dnsmasq/24-dnsmasq.sh /data/on_boot.d
-#/data/on_boot.d/24-dnsmasq.sh
+chmod a+x ./config/udm-certificates/20-certifcates.sh
+cp -rvf ./config/udm-certificates/20-certifcates.sh /data/on_boot.d
+/data/on_boot.d/20-certifcates.sh
 
 #chmod a+x ./config/udm-dnsmasq/24-dnsmasq.sh
 #rm -rf /data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /data
