@@ -2,7 +2,7 @@
 # shellcheck disable=SC2045
 
 CONF_FLUSHED_LEASES="false"
-CONF_SOURCE_DIR="/data/udm-dnsmasq/dhcp.dhcpServers"
+CONF_SOURCE_FILE_PREFIX="/data/udm-dnsmasq/dhcp.dhcpServers"
 CONF_CURRENT_FILE="/data/udapi-config/dnsmasq.lease"
 CONF_BUILD_DIR="/tmp/dnsmasq.conf.d_tmp"
 CONF_BUILD_FILE="${CONF_BUILD_DIR}/dhcp.dhcpServers-custom.conf"
@@ -14,11 +14,11 @@ rm -rf ${CONF_BUILD_DIR}
 cp -rvf ${CONF_CUSTOM_DIR} ${CONF_BUILD_DIR}
 rm -rf ${CONF_BUILD_DIR}/${CONF_CUSTOM_FILES}
 for CONF_SOURCE_FILE in $(ls \
-  ${CONF_SOURCE_DIR}-*vlanX*-custom.conf \
-  ${CONF_SOURCE_DIR}-*Management*-custom.conf \
-  ${CONF_SOURCE_DIR}-*Unfettered*-custom.conf \
-  ${CONF_SOURCE_DIR}-*Controlled*-custom.conf \
-  ${CONF_SOURCE_DIR}-*Isolated*-custom.conf \
+  ${CONF_SOURCE_FILE_PREFIX}-*vlanX*-custom.conf \
+  ${CONF_SOURCE_FILE_PREFIX}-*Management*-custom.conf \
+  ${CONF_SOURCE_FILE_PREFIX}-*Unfettered*-custom.conf \
+  ${CONF_SOURCE_FILE_PREFIX}-*Controlled*-custom.conf \
+  ${CONF_SOURCE_FILE_PREFIX}-*Isolated*-custom.conf \
   2>/dev/null); do
   while read CONF_SOURCE_LINE; do
     CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f1 | awk '{print tolower($0)}')
@@ -35,8 +35,8 @@ for CONF_SOURCE_FILE in $(ls \
     fi
   done <${CONF_SOURCE_FILE}
 done
-if [ -f "${CONF_SOURCE_DIR}-aliases.conf" ]; then
-  cat "${CONF_SOURCE_DIR}-aliases.conf" >>${CONF_BUILD_FILE}
+if [ -f "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" ]; then
+  cat "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" >>${CONF_BUILD_FILE}
 fi
 echo "wrote '${CONF_BUILD_FILE}':" && cat ${CONF_BUILD_FILE} && echo "---"
 
@@ -53,6 +53,6 @@ else
   echo "no new dnsmasq config detected, leaving old config in place"
 fi
 
-killall -9 dhcp 2>/dev/null
-rm -f /run/cni/dhcp.sock
-/opt/cni/bin/dhcp daemon >/dev/null &
+#killall -9 dhcp 2>/dev/null
+#rm -f /run/cni/dhcp.sock
+#/opt/cni/bin/dhcp daemon >/dev/null &
