@@ -19,7 +19,7 @@ for CONF_SOURCE_FILE in $(ls \
   ${CONF_SOURCE_FILE_PREFIX}-*Controlled*-custom.conf \
   ${CONF_SOURCE_FILE_PREFIX}-*Isolated*-custom.conf \
   2>/dev/null); do
-  while read -r CONF_SOURCE_LINE; do
+  while read CONF_SOURCE_LINE; do
     CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f1 | cut -d'=' -f2 | awk '{print tolower($0)}')
     CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2)
     CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
