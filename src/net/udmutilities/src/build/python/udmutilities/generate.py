@@ -51,7 +51,8 @@ if __name__ == "__main__":
             'username': env["UNIFI_ADMIN_USER"],
             'password': env["UNIFI_ADMIN_KEY"]
         }, verify=False).raise_for_status()
-        unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
+        unifi_clients_response = unifi_session.get(
+            '{}/proxy/network/api/s/default/list/user'.format(UNIFI_CONTROLLER_URL), verify=False)
     except:
         unifi_server_up = False
     if not unifi_server_up or unifi_clients_response.status_code != 200:
@@ -60,7 +61,8 @@ if __name__ == "__main__":
         for unifi_client in unifi_clients_response.json()['data']:
             unifi_mac_name[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else (
                 unifi_client["hostname"] if "hostname" in unifi_client else "")
-        unifi_devices_response = unifi_session.get('{}/proxy/network/api/s/default/stat/device'.format(UNIFI_CONTROLLER_URL), verify=False)
+        unifi_devices_response = unifi_session.get(
+            '{}/proxy/network/api/s/default/stat/device'.format(UNIFI_CONTROLLER_URL), verify=False)
         if unifi_devices_response.status_code != 200:
             print("Build generate script [udmutilities] could not connect to UniFi controller")
         else:
@@ -80,9 +82,9 @@ if __name__ == "__main__":
         for metadata_dhcp_dict in metadata_dhcp_dicts:
             metadata_dhcp_dnsmasq[dnsmasq_conf_path].append("dhcp-host={},{}{}\n".format(
                 metadata_dhcp_dict["connection_mac"],
-                (metadata_dhcp_dict["connection_ip"] + ",") \
-                    if "connection_ip" in metadata_dhcp_dict and len(metadata_dhcp_dict["connection_ip"]) > 0 else "",
                 metadata_dhcp_dict["device_identifiers"],
+                ("," + metadata_dhcp_dict["connection_ip"]) \
+                    if "connection_ip" in metadata_dhcp_dict and len(metadata_dhcp_dict["connection_ip"]) > 0 else "",
             ))
             if "connection_ip" in metadata_dhcp_dict and len(metadata_dhcp_dict["connection_ip"]) > 0:
                 if metadata_dhcp_dict["device_identifiers"] not in metadata_dhcp_hosts:
@@ -99,12 +101,14 @@ if __name__ == "__main__":
                 name = metadata_dhcp_dnsmasq_line.split("=")[1].split(",")[-1].strip()
                 if mac in unifi_mac_name:
                     if unifi_mac_name[mac] != name and unifi_mac_name[mac] != "":
-                        print("Build generate script [udmutilities] dnsmasq config host [{}] doesn't match UniFi alias [{}]".format(
+                        print("Build generate script [udmutilities] dnsmasq config "
+                              "host [{}] doesn't match UniFi alias [{}]".format(
                             name,
                             unifi_mac_name[mac],
                         ), file=sys.stderr)
                     else:
-                        print("Build generate script [udmutilities] dnsmasq config host [{}] matches UniFi alias [{}]".format(
+                        print("Build generate script [udmutilities] dnsmasq config "
+                              "host [{}] matches UniFi alias [{}]".format(
                             name,
                             unifi_mac_name[mac],
                         ))

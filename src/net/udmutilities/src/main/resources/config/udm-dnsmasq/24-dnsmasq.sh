@@ -21,12 +21,8 @@ for CONF_SOURCE_FILE in $(ls \
   2>/dev/null); do
   while read -r CONF_SOURCE_LINE; do
     CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f1 | cut -d'=' -f2 | awk '{print tolower($0)}')
-    CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2)
-    CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
-    if [ -z "${CONF_HOST}" ]; then
-      CONF_HOST=${CONF_IP}
-      CONF_IP=""
-    fi
+    CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2)
+    CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
     CONF_BUILD="dhcp-host=${CONF_MAC},${CONF_IP},${CONF_HOST}"
     CONF_CURRENT=$(grep "${CONF_MAC}" "${CONF_CURRENT_FILE}")
     echo "${CONF_BUILD}" >>"${CONF_BUILD_FILE}"
