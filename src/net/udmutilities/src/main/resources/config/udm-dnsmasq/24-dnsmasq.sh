@@ -53,6 +53,7 @@ else
   echo "no new dnsmasq config detected, leaving old config in place"
 fi
 
+# TODO: Seems like new UDM Pro 3 does not use this dhcp server anymore, cant seem to see what it uses?
 #killall -9 dhcp 2>/dev/null
 #rm -f /run/cni/dhcp.sock
 #/opt/cni/bin/dhcp daemon >/dev/null &
