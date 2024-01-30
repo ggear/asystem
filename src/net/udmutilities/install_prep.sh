@@ -19,3 +19,4 @@ if [[ ! -L /home/asystem ]]; then
   fi
   ln -s /data/asystem/home/asystem /home/asystem
 fi
+rm -vrf /data/asystem/home/asystem/*
