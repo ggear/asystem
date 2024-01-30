@@ -23,30 +23,34 @@ for CONF_SOURCE_FILE in $(ls \
     CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f1 | cut -d'=' -f2 | awk '{print tolower($0)}')
     CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2)
     CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
+    if [ -z "${CONF_HOST}" ]; then
+      CONF_HOST=${CONF_IP}
+      CONF_IP=""
+    fi
     CONF_BUILD=$(echo "dhcp-host=${CONF_MAC},${CONF_IP},${CONF_HOST}")
     CONF_CURRENT=$(grep ${CONF_MAC} ${CONF_CURRENT_FILE})
 
-#    echo "CONF_MAC=$CONF_MAC"
-#    echo "CONF_IP=$CONF_IP"
-#    echo "CONF_HOST=$CONF_HOST"
-#    echo "CONF_BUILD=$CONF_BUILD"
-#    echo "CONF_CURRENT=$CONF_CURRENT"
-#    echo "1="$(echo -n "${CONF_CURRENT}" | wc -w)
-#    echo "2="$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w)
-#    echo "3="$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w)
+    #    echo "CONF_MAC=$CONF_MAC"
+    #    echo "CONF_IP=$CONF_IP"
+    #    echo "CONF_HOST=$CONF_HOST"
+    #    echo "CONF_BUILD=$CONF_BUILD"
+    #    echo "CONF_CURRENT=$CONF_CURRENT"
+    #    echo "1="$(echo -n "${CONF_CURRENT}" | wc -w)
+    #    echo "2="$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w)
+    #    echo "3="$(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w)
 
     echo "${CONF_BUILD}" >>"${CONF_BUILD_FILE}"
-    if [ $(echo -n "${CONF_CURRENT}" | wc -w) -gt 0 ]; then
+    if [ $(echo -n "${CONF_CURRENT}" | wc -w) -gt 0 ] && [ -z "${CONF_IP}" ]; then
       if [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w) -gt 0 ] ||
         [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w) -gt 1 ]; then
-        echo "Host [${CONF_HOST} ${CONF_IP} ${CONF_MAC}] config and lease out of sync, flushing lease"
+        echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP} ] config and lease out of sync, flushing lease"
         sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
         CONF_FLUSHED_LEASES="true"
       else
-        echo "Host [${CONF_HOST} ${CONF_IP} ${CONF_MAC}] config and lease in sync"
+        echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP} ] config and lease in sync"
       fi
     else
-      echo "Host [${CONF_HOST} ${CONF_IP} ${CONF_MAC}] config found but no lease"
+      echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP} ] config found but no lease"
     fi
   done <${CONF_SOURCE_FILE}
 done
