@@ -44,17 +44,17 @@ for CONF_SOURCE_FILE in $(ls \
       if [ ! -z "${CONF_IP}" ]; then
         if [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w) -gt 0 ] ||
           [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w) -gt 1 ]; then
-          echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP}] config and lease out of sync, flushing lease"
+          echo "Host [${CONF_HOST}] with MAC [${CONF_MAC}] and IP [${CONF_IP}] config metadata and DHCP lease out of sync, flushing lease"
           sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
           CONF_FLUSHED_LEASES="true"
         else
-          echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP}] config and lease in sync"
+          echo "Host [${CONF_HOST}] with MAC [${CONF_MAC}] and IP [${CONF_IP}] config metadata and DHCP lease in sync"
         fi
       else
-        echo "Host [${CONF_HOST} ${CONF_MAC}] config and lease in sync"
+        echo "Host [${CONF_HOST}] with MAC [${CONF_MAC}] config metadata and DHCP lease in sync"
       fi
     else
-      echo "Host [${CONF_HOST} ${CONF_MAC} ${CONF_IP}] config found but no lease"
+      echo "Host [${CONF_HOST}] with MAC [${CONF_MAC}] and IP [${CONF_IP}] config metadata found but no DHCP lease"
     fi
   done <${CONF_SOURCE_FILE}
 done
