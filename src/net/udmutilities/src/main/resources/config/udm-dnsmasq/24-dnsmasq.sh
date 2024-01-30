@@ -27,11 +27,11 @@ for CONF_SOURCE_FILE in $(ls \
       CONF_HOST=${CONF_IP}
       CONF_IP=""
     fi
-    CONF_BUILD=$(echo "dhcp-host=${CONF_MAC},${CONF_IP},${CONF_HOST}")
-    CONF_CURRENT=$(grep ${CONF_MAC} ${CONF_CURRENT_FILE})
+    CONF_BUILD="dhcp-host=${CONF_MAC},${CONF_IP},${CONF_HOST}"
+    CONF_CURRENT=$(grep "${CONF_MAC}" "${CONF_CURRENT_FILE}")
     echo "${CONF_BUILD}" >>"${CONF_BUILD_FILE}"
     if [ $(echo -n "${CONF_CURRENT}" | wc -w) -gt 0 ]; then
-      if [ ! -z "${CONF_IP}" ]; then
+      if [ -n "${CONF_IP}" ]; then
         if [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_IP}" | wc -w) -gt 0 ] ||
           [ $(echo -n "${CONF_CURRENT}" | grep -v "${CONF_HOST}" | wc -w) -gt 1 ]; then
           echo "Host [${CONF_HOST}] with MAC [${CONF_MAC}] and IP [${CONF_IP}] config metadata and DHCP lease out of sync, flushing lease"
@@ -46,7 +46,7 @@ for CONF_SOURCE_FILE in $(ls \
     else
       echo "Host [${CONF_HOST}] with MAC [${CONF_MAC}] and IP [${CONF_IP}] config metadata found but no DHCP lease"
     fi
-  done <${CONF_SOURCE_FILE}
+  done <"${CONF_SOURCE_FILE}"
 done
 if [ -f "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" ]; then
   cat "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" >>${CONF_BUILD_FILE}
