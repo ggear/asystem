@@ -3,38 +3,39 @@
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
-add_on_boot_script() {
-  [ ! -f "/data/on_boot.d/${1}.sh" ] &&
-    [ -d "/var/lib/asystem/install" ] &&
-    [ -f "/var/lib/asystem/install/${2}/latest/install.sh" ] &&
-    cp -rvf "/var/lib/asystem/install/${2}/latest/install.sh" "/data/on_boot.d/${1}.sh"
-}
-
 cd ${SERVICE_INSTALL} || exit
-
-cp -rvf /data/asystem/install/udmutilities/latest/install_prep.sh /data/on_boot.d/07-asystem-install.sh
-chmod a+x /data/on_boot.d/07-asystem-install.sh
 
 chmod a+x ./config/udm-utilities/on-boot-script/remote_install.sh
 if [ ! -d /data/on_boot.d ]; then
   ./config/udm-utilities/on-boot-script/remote_install.sh
 fi
 
+cp -rvf /data/asystem/install/udmutilities/latest/install_prep.sh /data/on_boot.d/07-asystem-install.sh
+chmod a+x /data/on_boot.d/07-asystem-install.sh
+
+add_on_boot_script() {
+  [ ! -f "/data/on_boot.d/${1}.sh" ] &&
+    [ -d "/var/lib/asystem/install" ] &&
+    [ -f "/var/lib/asystem/install/${2}/latest/install.sh" ] &&
+    cp -rvf "/var/lib/asystem/install/${2}/latest/install.sh" "/data/on_boot.d/${1}.sh"
+}
 add_on_boot_script "10-unifios" "_unifios"
 add_on_boot_script "11-users" "_users"
 add_on_boot_script "12-links" "_links"
 
-#chmod a+x ./config/udm-dnsmasq/09-dnsmasq.sh
+#chmod a+x ./config/udm-dnsmasq/24-dnsmasq.sh
 #rm -rf /data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /data
-#cp -rvf ./config/udm-dnsmasq/09-dnsmasq.sh /data/on_boot.d
-#/data/on_boot.d/09-dnsmasq.sh
+#cp -rvf ./config/udm-dnsmasq/24-dnsmasq.sh /data/on_boot.d
+#/data/on_boot.d/24-dnsmasq.sh
 
-#cp -rvf ./config/udm-cloudflare-ddns/13-cloudflare-ddns.sh /data/on_boot.d
-#chmod a+x /data/on_boot.d/13-cloudflare-ddns.sh
-#/data/on_boot.d/13-cloudflare-ddns.sh
+#chmod a+x ./config/udm-dnsmasq/24-dnsmasq.sh
+#rm -rf /data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /data
+#cp -rvf ./config/udm-dnsmasq/24-dnsmasq.sh /data/on_boot.d
+#/data/on_boot.d/24-dnsmasq.sh
 
-
-
+#cp -rvf ./config/udm-cloudflare-ddns/28-cloudflare-ddns.sh /data/on_boot.d
+#chmod a+x /data/on_boot.d/28-cloudflare-ddns.sh
+#/data/on_boot.d/28-cloudflare-ddns.sh
 
 # INFO: Disable podman services since it has been depracted since udm-pro-3
 #chmod a+x ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh
