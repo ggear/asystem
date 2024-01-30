@@ -16,7 +16,7 @@ rm -rf src/main/resources/config/udm-utilities
 mkdir -p src/main/resources/config/udm-utilities &&
   cp -rvf ../../../.deps/udmutilities/udm-utilities/on-boot-script src/main/resources/config/udm-utilities
 
-# INFO: Disable podman services since it has been depracted since udm-pro-3
+# INFO: Disable podman services since it has been deprecated since udm-pro-3
 #mkdir -p src/main/resources/config/udm-utilities &&
 #  cp -rvf ../../../.deps/udmutilities/udm-utilities/on-boot-script src/main/resources/config/udm-utilities &&
 #  cp -rvf ../../../.deps/udmutilities/udm-utilities/container-common src/main/resources/config/udm-utilities &&

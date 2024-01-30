@@ -36,7 +36,7 @@ cp -rvf ./config/udm-dnsmasq/24-dnsmasq.sh /data/on_boot.d
 #chmod a+x /data/on_boot.d/28-cloudflare-ddns.sh
 #/data/on_boot.d/28-cloudflare-ddns.sh
 
-# INFO: Disable podman services since it has been depracted since udm-pro-3
+# INFO: Disable podman services since it has been deprecated since udm-pro-3
 #chmod a+x ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh
 #if [ ! -f /data/on_boot.d/05-container-common.sh ]; then
 #  cp -rvf ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh /data/on_boot.d

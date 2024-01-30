@@ -115,7 +115,7 @@ if __name__ == "__main__":
                         ), file=sys.stderr)
         print("Build generate script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
 
-    # INFO: Disable podman services since it has been depracted since udm-pro-3
+    # INFO: Disable podman services since it has been deprecated since udm-pro-3
     # metadata_dhcp_ips = {}
     # hosts_conf_path = join(DIR_ROOT, "src/main/resources/config/udm-utilities/run-pihole/custom.list")
     # for metadata_dhcp_host in metadata_dhcp_hosts:
