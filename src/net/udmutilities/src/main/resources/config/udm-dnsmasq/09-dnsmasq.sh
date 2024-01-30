@@ -1,8 +1,8 @@
 #!/bin/sh
 
 CONF_FLUSHED_LEASES="false"
-CONF_SOURCE_DIR="/mnt/data/udm-dnsmasq/dhcp.dhcpServers"
-CONF_CURRENT_FILE="/mnt/data/udapi-config/dnsmasq.lease"
+CONF_SOURCE_DIR="/data/udm-dnsmasq/dhcp.dhcpServers"
+CONF_CURRENT_FILE="/data/udapi-config/dnsmasq.lease"
 CONF_BUILD_DIR="/tmp/dnsmasq.conf.d_tmp"
 CONF_BUILD_FILE="${CONF_BUILD_DIR}/dhcp.dhcpServers-custom.conf"
 CONF_CUSTOM_DIR="/run/dnsmasq.conf.d"

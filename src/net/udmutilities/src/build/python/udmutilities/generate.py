@@ -1,11 +1,11 @@
 import glob
 import os
 import re
+import sys
 from os.path import *
 
 import pandas as pd
 import requests
-import sys
 import urllib3
 
 urllib3.disable_warnings()
@@ -43,7 +43,7 @@ if __name__ == "__main__":
         raise Exception("Build generate script [udmutilities] found non-unique MAC addresses!")
     for dnsmasq_conf_path in glob.glob(join(dnsmasq_conf_root_path, "{}*".format(DNSMASQ_CONF_PREFIX))):
         os.remove(dnsmasq_conf_path)
-    unifi_clients = {}
+    unifi_mac_name = {}
     unifi_session = requests.Session()
     unifi_server_up = True
     try:
@@ -55,17 +55,17 @@ if __name__ == "__main__":
     except:
         unifi_server_up = False
     if not unifi_server_up or unifi_clients_response.status_code != 200:
-        print("Build generate script [udmutilities] could not connect to UniFi")
+        print("Build generate script [udmutilities] could not connect to UniFi controller")
     else:
         for unifi_client in unifi_clients_response.json()['data']:
-            unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else (
+            unifi_mac_name[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else (
                 unifi_client["hostname"] if "hostname" in unifi_client else "")
-        unifi_clients_response = unifi_session.get('{}/proxy/network/api/s/default/stat/device'.format(UNIFI_CONTROLLER_URL), verify=False)
-        if unifi_clients_response.status_code != 200:
-            print("Build generate script [udmutilities] could not connect to UniFi")
+        unifi_devices_response = unifi_session.get('{}/proxy/network/api/s/default/stat/device'.format(UNIFI_CONTROLLER_URL), verify=False)
+        if unifi_devices_response.status_code != 200:
+            print("Build generate script [udmutilities] could not connect to UniFi controller")
         else:
-            for unifi_client in unifi_clients_response.json()['data']:
-                unifi_clients[unifi_client["mac"]] = unifi_client["name"] if "name" in unifi_client else ""
+            for unifi_device in unifi_devices_response.json()['data']:
+                unifi_mac_name[unifi_device["mac"]] = unifi_device["name"] if "name" in unifi_device else ""
     metadata_dhcp_ips = {}
     metadata_dhcp_hosts = {}
     metadata_dhcp_dnsmasq = {}
@@ -100,16 +100,16 @@ if __name__ == "__main__":
                 dnsmasq_conf_file.write(metadata_dhcp_dnsmasq_line)
                 mac = metadata_dhcp_dnsmasq_line.split("=")[1].split(",")[0].strip()
                 name = metadata_dhcp_dnsmasq_line.split("=")[1].split(",")[-1].strip()
-                if mac in unifi_clients:
-                    if unifi_clients[mac] != name and unifi_clients[mac] != "":
+                if mac in unifi_mac_name:
+                    if unifi_mac_name[mac] != name and unifi_mac_name[mac] != "":
                         print("Build generate script [udmutilities] dnsmasq config host [{}] doesn't match UniFi alias [{}]".format(
                             name,
-                            unifi_clients[mac],
+                            unifi_mac_name[mac],
                         ), file=sys.stderr)
                     else:
                         print("Build generate script [udmutilities] dnsmasq config host [{}] matches UniFi alias [{}]".format(
                             name,
-                            unifi_clients[mac],
+                            unifi_mac_name[mac],
                         ))
                 else:
                     if not re.match(r"u??\-.*", name):
@@ -118,18 +118,19 @@ if __name__ == "__main__":
                         ), file=sys.stderr)
         print("Build generate script [udmutilities] dnsmasq config persisted to [{}]".format(dnsmasq_conf_path))
 
-    metadata_dhcp_ips = {}
-    hosts_conf_path = join(DIR_ROOT, "src/main/resources/config/udm-utilities/run-pihole/custom.list")
-    for metadata_dhcp_host in metadata_dhcp_hosts:
-        metadata_dhcp_hosts[metadata_dhcp_host].sort()
-        metadata_dhcp_ips[metadata_dhcp_hosts[metadata_dhcp_host][0]] = metadata_dhcp_host
-    with open(hosts_conf_path, "w") as hosts_conf_file:
-        for metadata_dhcp_ip in sorted(metadata_dhcp_ips):
-            hosts_conf_file.write("{} {}.janeandgraham.com {}\n".format(
-                metadata_dhcp_ip,
-                metadata_dhcp_ips[metadata_dhcp_ip],
-                metadata_dhcp_ips[metadata_dhcp_ip]
-            ))
+    # INFO: Disable pihole since upgrading to udm-pro-3 and the deprecation of podman
+    # metadata_dhcp_ips = {}
+    # hosts_conf_path = join(DIR_ROOT, "src/main/resources/config/udm-utilities/run-pihole/custom.list")
+    # for metadata_dhcp_host in metadata_dhcp_hosts:
+    #     metadata_dhcp_hosts[metadata_dhcp_host].sort()
+    #     metadata_dhcp_ips[metadata_dhcp_hosts[metadata_dhcp_host][0]] = metadata_dhcp_host
+    # with open(hosts_conf_path, "w") as hosts_conf_file:
+    #     for metadata_dhcp_ip in sorted(metadata_dhcp_ips):
+    #         hosts_conf_file.write("{} {}.janeandgraham.com {}\n".format(
+    #             metadata_dhcp_ip,
+    #             metadata_dhcp_ips[metadata_dhcp_ip],
+    #             metadata_dhcp_ips[metadata_dhcp_ip]
+    #         ))
 
     metadata_dhcpaliases_path = abspath(join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))
     with open(metadata_dhcpaliases_path, 'w') as metadata_hass_file:
