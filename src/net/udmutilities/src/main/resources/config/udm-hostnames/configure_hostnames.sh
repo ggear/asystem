@@ -7,8 +7,8 @@
 . ../../../../../.env
 
 rm -rf ./.udm_api_cookie.txt
-curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt --insecure -s -XPOST \
-  https://unifi.janeandgraham.com:443/api/auth/login \
+curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt -s -XPOST \
+  https://unifi.janeandgraham.com/api/auth/login \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
@@ -20,8 +20,8 @@ curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt --insecur
 # Works :)
 # https://github.com/Art-of-WiFi/UniFi-API-client/blob/v1.1.83/src/Client.php#L1397
 # return $this->fetch_results('/api/s/' . $this->site . '/list/user');
-curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt --insecure -s \
-  https://unifi.janeandgraham.com:443/proxy/network/api/s/default/stat/alluser \
+curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt -s \
+  https://unifi.janeandgraham.com/proxy/network/api/s/default/stat/alluser \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" |
   jq && echo ""
@@ -30,8 +30,8 @@ curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt --insecur
 # https://github.com/Art-of-WiFi/UniFi-API-client/blob/v1.1.83/src/Client.php#L448
 # $payload = ['name' => $name];
 # return $this->fetch_results_boolean('/api/s/' . $this->site . '/upd/user/' . trim($user_id), $payload);
-curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt --insecure -s \
-  https://unifi.janeandgraham.com:443/proxy/network/api/s/default/upd/user/65b5e9b49cda21068d5343fe \
+curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt -s \
+  https://unifi.janeandgraham.com/proxy/network/api/s/default/upd/user/65b5e9b49cda21068d5343fe \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
@@ -47,8 +47,8 @@ curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt --insecur
 #    'name' => $name,
 # ];
 # return $this->fetch_results('/api/s/' . $this->site . '/rest/user/' . trim($client_id), $payload);
-curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt --insecure -s -XPUT \
-  https://unifi.janeandgraham.com:443/proxy/network/api/s/default/rest/user/65b5e9b49cda21068d5343fe \
+curl --cookie ./.udm_api_cookie.txt --cookie-jar ./.udm_api_cookie.txt -s -XPUT \
+  https://unifi.janeandgraham.com/proxy/network/api/s/default/rest/user/65b5e9b49cda21068d5343fe \
   -H "Accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
