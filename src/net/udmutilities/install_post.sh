@@ -6,7 +6,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 add_on_boot_script() {
   [ ! -f "/data/on_boot.d/${1}.sh" ] &&
     [ -d "/var/lib/asystem/install" ] &&
-    [ -f "/var/lib/asystem/install/*udm-net*/${2}/latest/install.sh" ] &&
+    [ -f "/var/lib/asystem/install/${2}/latest/install.sh" ] &&
     cp -rvf "/var/lib/asystem/install/${2}/latest/install.sh" "/data/on_boot.d/${1}.sh"
 }
 

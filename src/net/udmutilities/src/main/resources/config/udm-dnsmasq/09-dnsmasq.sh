@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 CONF_FLUSHED_LEASES="false"
 CONF_SOURCE_DIR="/data/udm-dnsmasq/dhcp.dhcpServers"
