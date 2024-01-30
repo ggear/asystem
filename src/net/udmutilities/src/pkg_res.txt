@@ -1,3 +1,5 @@
 ../install.sh
 ../install_post.sh
+# main/resources/config/udm-utilities/cni-plugins/20-dns.conflist
+# main/resources/config/udm-utilities/dns-common/on_boot.d/10-dns.sh
 main/resources/config/udm-cloudflare-ddns/ddns-eth8-inadyn.conf
