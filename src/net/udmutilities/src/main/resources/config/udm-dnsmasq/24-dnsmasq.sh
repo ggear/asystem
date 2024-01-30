@@ -14,8 +14,7 @@ rm -rf ${CONF_BUILD_DIR}
 cp -rvf ${CONF_CUSTOM_DIR} ${CONF_BUILD_DIR}
 rm -rf ${CONF_BUILD_DIR}/${CONF_CUSTOM_FILES}
 for CONF_SOURCE_FILE in $(ls \
-  ${CONF_SOURCE_FILE_PREFIX}-*vlanX*-custom.conf \
-  ${CONF_SOURCE_FILE_PREFIX}-*Management*-custom.conf \
+  ${CONF_SOURCE_FILE_PREFIX}-*Default*-custom.conf \
   ${CONF_SOURCE_FILE_PREFIX}-*Unfettered*-custom.conf \
   ${CONF_SOURCE_FILE_PREFIX}-*Controlled*-custom.conf \
   ${CONF_SOURCE_FILE_PREFIX}-*Isolated*-custom.conf \
@@ -27,7 +26,8 @@ for CONF_SOURCE_FILE in $(ls \
     echo "${CONF_MAC},${CONF_IP},${CONF_HOST}" >>"${CONF_BUILD_FILE}"
     CONF_CURRENT=$(grep ${CONF_MAC} ${CONF_CURRENT_FILE})
     if [ $(echo -n ${CONF_CURRENT} | wc -w) -gt 0 ]; then
-      if [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_IP} | wc -w) -gt 0 ] || [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_HOST} | wc -w) -gt 1 ]; then
+      if [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_IP} | wc -w) -gt 0 ] ||
+        [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_HOST} | wc -w) -gt 1 ]; then
         echo "Detected change in new and current config, deleting lease for [$CONF_HOST]"
         sed -i /".* ${CONF_MAC} .*"/d ${CONF_CURRENT_FILE}
         CONF_FLUSHED_LEASES="true"
@@ -40,7 +40,8 @@ if [ -f "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" ]; then
 fi
 echo "wrote '${CONF_BUILD_FILE}':" && cat ${CONF_BUILD_FILE} && echo "---"
 
-if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] || ! diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE}; then
+if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] ||
+  ! diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE}; then
   if dnsmasq --conf-dir=${CONF_BUILD_DIR} --test; then
     cp -rvf ${CONF_BUILD_FILE} ${CONF_CUSTOM_FILE}
     echo "applied new dnsmasq config"
