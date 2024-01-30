@@ -20,11 +20,11 @@ for CONF_SOURCE_FILE in $(ls \
   ${CONF_SOURCE_FILE_PREFIX}-*Isolated*-custom.conf \
   2>/dev/null); do
   while read CONF_SOURCE_LINE; do
-    CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f1 | awk '{print tolower($0)}')
-    CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2)
-    CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3)
-    echo "${CONF_MAC},${CONF_IP},${CONF_HOST}" >>"${CONF_BUILD_FILE}"
-    CONF_CURRENT=$(grep ${CONF_MAC} ${CONF_CURRENT_FILE})
+    CONF_MAC=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f1 | cut -d'=' -f2 | awk '{print tolower($0)}') #dhcp-host=0c:4d:e9:d2:86:6c
+    CONF_IP=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f2) #10.0.3.21
+    CONF_HOST=$(echo "${CONF_SOURCE_LINE}" | cut -d',' -f3) #macmini-meg
+    echo "dhcp-host=${CONF_MAC},${CONF_IP},${CONF_HOST}" >>"${CONF_BUILD_FILE}" #dhcp-host=0c:4d:e9:d2:86:6c,10.0.3.21,macmini-meg
+    CONF_CURRENT=$(grep ${CONF_MAC} ${CONF_CURRENT_FILE}) #1706678809 0c:4d:e9:d2:86:6c 10.0.2.21 macmini-meg ff:e9:d2:86:6c:00:01:00:01:2c:2e:f1:45:0c:4d:e9:d2:86:6c
     if [ $(echo -n ${CONF_CURRENT} | wc -w) -gt 0 ]; then
       if [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_IP} | wc -w) -gt 0 ] ||
         [ $(echo -n ${CONF_CURRENT} | grep -v ${CONF_HOST} | wc -w) -gt 1 ]; then
