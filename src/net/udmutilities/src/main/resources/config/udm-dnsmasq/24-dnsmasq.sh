@@ -1,5 +1,5 @@
 #!/bin/bash
-# shellcheck disable=SC2045
+# shellcheck disable=SC2045 disable=SC2115
 
 CONF_FLUSHED_LEASES="false"
 CONF_SOURCE_FILE_PREFIX="/data/udm-dnsmasq/dhcp.dhcpServers"
@@ -8,7 +8,7 @@ CONF_BUILD_DIR="/tmp/dnsmasq.conf.d_tmp"
 CONF_BUILD_FILE="${CONF_BUILD_DIR}/dhcp.dhcpServers-custom.conf"
 CONF_CUSTOM_DIR="/run/dnsmasq.conf.d"
 CONF_CUSTOM_FILE="${CONF_CUSTOM_DIR}/dhcp.dhcpServers-custom.conf"
-CONF_CUSTOM_FILES="dhcp.dhcpServers"*"custom.conf"
+CONF_CUSTOM_FILES="dhcp.dhcpServers*custom.conf"
 
 rm -rf ${CONF_BUILD_DIR}
 cp -rvf ${CONF_CUSTOM_DIR} ${CONF_BUILD_DIR}
