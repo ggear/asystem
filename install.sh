@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 ###############################################################################
 #
 # Generic module install script, to be invoked by the fabric management script
