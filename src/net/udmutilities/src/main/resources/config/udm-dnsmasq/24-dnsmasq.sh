@@ -46,20 +46,21 @@ done
 if [ -f "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" ]; then
   cat "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" >>${CONF_BUILD_FILE}
 fi
-echo "wrote '${CONF_BUILD_FILE}':" && cat ${CONF_BUILD_FILE} && echo "---"
+echo "Wrote '${CONF_BUILD_FILE}':" && cat ${CONF_BUILD_FILE} && echo "---"
 
 if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] ||
   ! diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE}; then
   if dnsmasq --conf-dir=${CONF_BUILD_DIR} --test; then
+    echo "New config validated with changes:" && diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE} && echo "---"
     cp -rvf ${CONF_BUILD_FILE} ${CONF_CUSTOM_FILE}
-    echo "applied new dnsmasq config"
+    echo "Applied new dnsmasq config"
     kill -9 $(cat /run/dnsmasq.pid) 2>/dev/null
-    echo "killed and restarted dnsmasq"
+    echo "Killed and restarted dnsmasq"
   else
-    echo "new dnsmasq config failed to parse, leaving old config in place"
+    echo "New dnsmasq config failed to parse, leaving old config in place"
   fi
 else
-  echo "no new dnsmasq config detected, leaving old config in place"
+  echo "No new dnsmasq config detected, leaving old config in place"
 fi
 
 # INFO: Disable podman services since it has been deprecated since udm-pro-3
