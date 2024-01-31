@@ -86,7 +86,7 @@ echo ''
                         metadata_tasmota_dict["connection_ip"],
                     ))
                 tasmota_config_file.write(
-                    "\techo 'Current firmware ['\"$(curl -s http://{}/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()\"'] versus required [{}]'\n".format(
+                    "\techo 'Current firmware ['\"$(curl -s -m 5 http://{}/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()\"'] versus required [{}]'\n".format(
                         metadata_tasmota_dict["connection_ip"],
                         env["TASMOTA_FIRMWARE_VERSION"],
                     ))
@@ -97,7 +97,7 @@ echo ''
                         tasmota_device_path,
                     ))
                 tasmota_config_file.write(
-                    "\tdecode-config.py -s {} -i {}.json || true\n".format(
+                    "\tdecode-config.py -s {} -i {}.json\n".format(
                         metadata_tasmota_dict["connection_ip"],
                         tasmota_device_path,
                     ))
@@ -110,7 +110,7 @@ echo ''
                     metadata_tasmota_config_dict = json.loads(metadata_tasmota_dict["tasmota_device_config"])
                     for metadata_tasmota_config in metadata_tasmota_config_dict:
                         tasmota_config_file.write(
-                            "\tif [ \"$(curl -s http://{}/cm? --data-urlencode 'cmnd={}' | grep '{}' | wc -l)\" -ne 1 ]; then\n".format(
+                            "\tif [ \"$(curl -s -m 5 http://{}/cm? --data-urlencode 'cmnd={}' | grep '{}' | wc -l)\" -ne 1 ]; then\n".format(
                                 metadata_tasmota_dict["connection_ip"],
                                 metadata_tasmota_config,
                                 json.dumps({
@@ -118,7 +118,7 @@ echo ''
                                 }, separators=(',', ':')),
                             ))
                         tasmota_config_file.write(
-                            "\t\tprintf 'Config set [{}] to [{}] with response: ' && curl -s http://{}/cm? --data-urlencode 'cmnd={} {}'\n".format(
+                            "\t\tprintf 'Config set [{}] to [{}] with response: ' && curl -s -m 5 http://{}/cm? --data-urlencode 'cmnd={} {}'\n".format(
                                 metadata_tasmota_config,
                                 metadata_tasmota_config_dict[metadata_tasmota_config],
                                 metadata_tasmota_dict["connection_ip"],
@@ -132,7 +132,7 @@ echo ''
                                 metadata_tasmota_config_dict[metadata_tasmota_config],
                             ))
                     tasmota_config_file.write(
-                        "\tprintf 'Restarting [{}] with response: ' && curl -s http://{}/cm? --data-urlencode 'cmnd=Restart 1'\n".format(
+                        "\tprintf 'Restarting [{}] with response: ' && curl -s -m 5 http://{}/cm? --data-urlencode 'cmnd=Restart 1'\n".format(
                             metadata_tasmota_dict["unique_id"],
                             metadata_tasmota_dict["connection_ip"],
                         ))
