@@ -110,13 +110,34 @@
 # Ports -> Server and unused ports to be assigned Unfettered, Allow All
 # Ports -> Cameras and printer ports to be assigned Isolated, Block All
 
+# Settings -> Security -> Port Forwarding -> Name -> HTTP
+# Settings -> Security -> Port Forwarding -> From -> Any
+# Settings -> Security -> Port Forwarding -> Port -> 80
+# Settings -> Security -> Port Forwarding -> Forward IP -> 10.0.2.21
+# Settings -> Security -> Port Forwarding -> Forward Port -> 80
+# Settings -> Security -> Port Forwarding -> Protocol -> TCP
+# Settings -> Security -> Port Forwarding -> Logging -> True
 
+# Settings -> Security -> Port Forwarding -> Name -> HTTPS
+# Settings -> Security -> Port Forwarding -> From -> Any
+# Settings -> Security -> Port Forwarding -> Port -> 443
+# Settings -> Security -> Port Forwarding -> Forward IP -> 10.0.2.21
+# Settings -> Security -> Port Forwarding -> Forward Port -> 443
+# Settings -> Security -> Port Forwarding -> Protocol -> TCP
+# Settings -> Security -> Port Forwarding -> Logging -> True
 
+# Settings -> Security -> Port Forwarding -> Name -> BitTorrent
+# Settings -> Security -> Port Forwarding -> From -> Any
+# Settings -> Security -> Port Forwarding -> Port -> 58671
+# Settings -> Security -> Port Forwarding -> Forward IP -> 10.0.2.21
+# Settings -> Security -> Port Forwarding -> Forward Port -> 51413
+# Settings -> Security -> Port Forwarding -> Protocol -> Both
+# Settings -> Security -> Port Forwarding -> Logging -> True
 
-
-
-
-
+################################################################################
+# Not done
+################################################################################
+# Name UniFi and User devices
 
 # Traffic & Security -> Global Threat Management -> Detect & Block -> Detect & Block
 # Traffic & Security -> System Sensitivity -> Maximum Protection
@@ -124,27 +145,13 @@
 
 # Advanced Features -> Advanced Gateway Settings -> Multicast DNS -> True
 
+# Protect setup cameras, medium streaming
 
-
-# Advanced Features -> Advanced Gateway Settings -> Create New Port Forwarding Rule ->
-#    HTTP, Enabled, WAN, Any, 80, 10.0.4.11, 80, TCP, Logging enable
-#    HTTPS, Enabled, WAN, Any, 443, 10.0.4.11, 443, TCP, Logging enable
-#    BitTorrent, Enabled, WAN, Any, 58671, 10.0.4.13, 51413, All, Logging enable
+# Wireless coverage floorplan setup
 
 # Advanced Features -> Advanced Gateway Settings -> Dynamic DNS -> Create a Dummy entry
 
 # Classic UI -> Site -> Auto-optimize network -> False
 # Classic UI -> All Wireless Networks -> Block LAN to WLAN multicast and broadcast data -> False
 
-
-################################################################################
-# Shell (unifi-os shell) baseline
-################################################################################
-# curl -L https://raw.githubusercontent.com/boostchicken/udm-utilities/master/on-boot-script/packages/udm-boot_1.0.1-1_all.deb -o udm-boot_1.0.1-1_all.deb
-# dpkg -i udm-boot_1.0.1-1_all.deb
-
-
-
-# TODO: https://wiki.dd-wrt.com/wiki/index.php/Access_To_Modem_Configuration
-
-
+# Setup modem status page https://wiki.dd-wrt.com/wiki/index.php/Access_To_Modem_Configuration
