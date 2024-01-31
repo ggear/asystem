@@ -46,12 +46,12 @@ done
 if [ -f "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" ]; then
   cat "${CONF_SOURCE_FILE_PREFIX}-aliases.conf" >>${CONF_BUILD_FILE}
 fi
-echo "Wrote '${CONF_BUILD_FILE}':" && cat ${CONF_BUILD_FILE} && echo "---"
+echo "Wrote '${CONF_BUILD_FILE}':" && echo "---" && cat ${CONF_BUILD_FILE} && echo "---"
 
 if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] ||
   ! diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE}; then
   if dnsmasq --conf-dir=${CONF_BUILD_DIR} --test; then
-    sleep 1 && echo "New dnsmasq config validated with changes:" && diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE} && sleep 1 && echo "---"
+    sleep 1 && echo "New dnsmasq config validated with changes:" && echo "---" && diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE} && sleep 1 && echo "---"
     cp -rvf ${CONF_BUILD_FILE} ${CONF_CUSTOM_FILE}
     echo "Applied new dnsmasq config"
     kill -9 $(cat /run/dnsmasq.pid) 2>/dev/null
