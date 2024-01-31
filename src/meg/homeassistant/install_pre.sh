@@ -4,7 +4,7 @@ SERVICE_HOME=/home/asystem/homeassistant/latest
 SERVICE_INSTALL=/var/lib/asystem/install/homeassistant/latest
 
 if [ -f "${SERVICE_HOME}/ip_bans.yaml" ]; then
-  echo "New dnsmasq config validated with changes:" && echo "---" && cat "${SERVICE_HOME}/ip_bans.yaml" && echo "---"
+  echo "Flushing IP bans:" && echo "---" && cat "${SERVICE_HOME}/ip_bans.yaml" && echo "---"
   rm -rf "${SERVICE_HOME}/ip_bans.yaml"
 fi
 
