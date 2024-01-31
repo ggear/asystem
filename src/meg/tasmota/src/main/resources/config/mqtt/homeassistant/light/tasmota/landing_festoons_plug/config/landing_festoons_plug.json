@@ -16,7 +16,7 @@
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.108/?",
+    "configuration_url": "http://10.0.4.108/?",
     "identifiers": "sonoff-landing-festoons",
     "name": "Landing Festoons",
     "model": "THR316D / DS18x20",
@@ -30,7 +30,7 @@
       ],
       [
         "ip",
-        "10.0.6.108"
+        "10.0.4.108"
       ]
     ]
   }

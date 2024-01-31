@@ -16,7 +16,7 @@
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.102/?",
+    "configuration_url": "http://10.0.4.102/?",
     "identifiers": "sonoff-rack-outlet",
     "name": "Rack Outlet",
     "model": "POWR316D",
@@ -30,7 +30,7 @@
       ],
       [
         "ip",
-        "10.0.6.102"
+        "10.0.4.102"
       ]
     ]
   }

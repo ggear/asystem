@@ -16,7 +16,7 @@
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.103/?",
+    "configuration_url": "http://10.0.4.103/?",
     "identifiers": "sonoff-kitchen-bench-lights",
     "name": "Kitchen Bench Lights",
     "model": "BASICR2",
@@ -30,7 +30,7 @@
       ],
       [
         "ip",
-        "10.0.6.103"
+        "10.0.4.103"
       ]
     ]
   }

@@ -16,7 +16,7 @@
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.101/?",
+    "configuration_url": "http://10.0.4.101/?",
     "identifiers": "sonoff-rack-fans",
     "name": "Rack Fans",
     "model": "BASICR2",
@@ -30,7 +30,7 @@
       ],
       [
         "ip",
-        "10.0.6.101"
+        "10.0.4.101"
       ]
     ]
   }

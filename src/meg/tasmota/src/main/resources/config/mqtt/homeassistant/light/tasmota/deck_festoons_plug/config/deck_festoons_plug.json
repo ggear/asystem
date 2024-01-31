@@ -16,7 +16,7 @@
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.107/?",
+    "configuration_url": "http://10.0.4.107/?",
     "identifiers": "sonoff-deck-festoons",
     "name": "Deck Festoons",
     "model": "THR316D / SI7021",
@@ -30,7 +30,7 @@
       ],
       [
         "ip",
-        "10.0.6.107"
+        "10.0.4.107"
       ]
     ]
   }

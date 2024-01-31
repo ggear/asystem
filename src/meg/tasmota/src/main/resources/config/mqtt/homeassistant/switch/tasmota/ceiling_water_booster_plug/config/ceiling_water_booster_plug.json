@@ -16,7 +16,7 @@
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.100/?",
+    "configuration_url": "http://10.0.4.100/?",
     "identifiers": "sonoff-ceiling-water-booster",
     "name": "Ceiling Water Booster",
     "model": "POWR3",
@@ -30,7 +30,7 @@
       ],
       [
         "ip",
-        "10.0.6.100"
+        "10.0.4.100"
       ]
     ]
   }

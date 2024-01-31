@@ -16,7 +16,7 @@
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.105/?",
+    "configuration_url": "http://10.0.4.105/?",
     "identifiers": "sonoff-ceiling-network-switch",
     "name": "Ceiling Network Switch",
     "model": "POWR316D",
@@ -30,7 +30,7 @@
       ],
       [
         "ip",
-        "10.0.6.105"
+        "10.0.4.105"
       ]
     ]
   }

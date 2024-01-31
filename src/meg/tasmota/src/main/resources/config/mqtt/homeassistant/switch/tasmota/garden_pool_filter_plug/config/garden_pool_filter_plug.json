@@ -16,7 +16,7 @@
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.106/?",
+    "configuration_url": "http://10.0.4.106/?",
     "identifiers": "sonoff-garden-pool-filter",
     "name": "Garden Pool Filter",
     "model": "POWR3",
@@ -30,7 +30,7 @@
       ],
       [
         "ip",
-        "10.0.6.106"
+        "10.0.4.106"
       ]
     ]
   }

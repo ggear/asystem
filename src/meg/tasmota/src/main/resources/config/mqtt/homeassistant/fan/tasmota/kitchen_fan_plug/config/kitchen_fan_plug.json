@@ -16,7 +16,7 @@
   "qos": "1",
   "device": {
     "via_device": "Tasmota",
-    "configuration_url": "http://10.0.6.104/?",
+    "configuration_url": "http://10.0.4.104/?",
     "identifiers": "sonoff-kitchen-fan",
     "name": "Kitchen Fan",
     "model": "POWR316D",
@@ -30,7 +30,7 @@
       ],
       [
         "ip",
-        "10.0.6.104"
+        "10.0.4.104"
       ]
     ]
   }
