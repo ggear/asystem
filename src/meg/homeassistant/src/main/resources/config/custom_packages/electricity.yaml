@@ -426,17 +426,6 @@ powercalc:
                       power_sensor_id: sensor.study_outlet_plug_current_consumption
                       force_energy_sensor_creation: true
                 #######################################################################
-                - create_group: Office Outlet
-                  entities:
-                    - entity_id: binary_sensor.template_office_outlet_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.office_outlet_plug
-                      power_sensor_id: sensor.office_outlet_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
                 - create_group: Battery Charger
                   entities:
                     - entity_id: binary_sensor.template_study_battery_charger_plug_proxy
@@ -698,10 +687,6 @@ template:
       - unique_id: study_outlet_plug_proxy
         state: >-
           {{ states('switch.study_outlet_plug') }}
-      #################################################################################
-      - unique_id: office_outlet_plug_proxy
-        state: >-
-          {{ states('switch.office_outlet_plug') }}
       #################################################################################
       - unique_id: kitchen_dish_washer_plug_proxy
         state: >-

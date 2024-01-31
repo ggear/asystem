@@ -181,9 +181,6 @@
     - entity: switch.study_outlet_plug
       name: Study Outlet
       icon: mdi:power-plug-outline
-    - entity: switch.office_outlet_plug
-      name: Office Outlet
-      icon: mdi:power-plug-outline
     - entity: switch.kitchen_dish_washer_plug
       name: Dish Washer
       icon: mdi:dishwasher

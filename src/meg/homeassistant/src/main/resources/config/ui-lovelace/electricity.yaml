@@ -82,9 +82,6 @@
     - entity: sensor.study_outlet_power
       name: Study Outlet
       icon: mdi:home-lightning-bolt
-    - entity: sensor.office_outlet_power
-      name: Office Outlet
-      icon: mdi:home-lightning-bolt
     - entity: sensor.audio_visual_devices_power
       name: Audio/Visual Devices
       icon: mdi:home-lightning-bolt
@@ -174,9 +171,6 @@
       icon: mdi:battery-charging
     - entity: sensor.study_outlet_energy_daily
       name: Study Outlet
-      icon: mdi:battery-charging
-    - entity: sensor.office_outlet_energy_daily
-      name: Office Outlet
       icon: mdi:battery-charging
     - entity: sensor.audio_visual_devices_energy_daily
       name: Audio/Visual Devices
