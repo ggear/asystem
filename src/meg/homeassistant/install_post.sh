@@ -27,3 +27,5 @@ SERVICE_INSTALL=/var/lib/asystem/install/homeassistant/latest
 #   - Radio Browser
 #   - Shopping List
 #   - Meteorologisk institutt Weather
+
+# Ignore or the other integrations which are detected
