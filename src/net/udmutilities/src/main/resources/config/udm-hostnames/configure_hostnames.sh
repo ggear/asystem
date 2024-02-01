@@ -2,6 +2,7 @@
 
 # TODO: Does not work, so I have not generated and productionised to be run on release yet, maybe one day?
 # TODO: Reverse engineered API doc https://ubntwiki.com/products/software/unifi-controller/api
+# TODO: Maybe use PHP UniFi-API-client as per https://github.com/Art-of-WiFi/UniFi-API-client?
 # TODO: Maybe use ubios-udapi-client as per https://github.com/evaneaston/udm-host-records/tree/develop?
 
 . ../../../../../.env
