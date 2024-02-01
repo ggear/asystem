@@ -49,7 +49,7 @@ fi
 echo "Wrote '${CONF_BUILD_FILE}':" && echo "---" && cat ${CONF_BUILD_FILE} && echo "---"
 
 if [ ${CONF_FLUSHED_LEASES} == "true" ] || [ ! -f ${CONF_CUSTOM_FILE} ] ||
-  ! diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE}; then
+  ! diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE} >/dev/null 2>&1; then
   if dnsmasq --conf-dir=${CONF_BUILD_DIR} --test >/dev/null 2>&1; then
     echo "New dnsmasq config validated with changes:" && stdbuf -oL diff ${CONF_CUSTOM_FILE} ${CONF_BUILD_FILE} && echo "---"
     cp -rvf ${CONF_BUILD_FILE} ${CONF_CUSTOM_FILE}
