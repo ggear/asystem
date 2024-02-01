@@ -945,6 +945,8 @@ media_player.kitchen_five:
   friendly_name: 'Kitchen Five'
 media_player.parents_move:
   friendly_name: 'Parents Move'
+media_player.parents_homepod:
+  friendly_name: 'Parents HomePod'
 input_boolean.back_door_lock_security:
   friendly_name: 'Secure'
   icon: 'mdi:shield-home'
