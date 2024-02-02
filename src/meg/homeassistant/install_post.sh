@@ -7,6 +7,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/homeassistant/latest
 # Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'
 # Create user 'edwin' with password '$HOMEASSISTANT_KEY_EDWIN'
 # Create user 'ada' with password '$HOMEASSISTANT_KEY_ADA'
+# Create user 'google' with password '$HOMEASSISTANT_KEY_GOOGLE'
 # Create API Long-Lived Access Tokens and store in '.env_all_key'
 # Install integrations manually (no option to do so programmatically):
 #   - MQTT (local push, no internet, yaml has details but is now unfortunately deprecated)
@@ -29,3 +30,5 @@ SERVICE_INSTALL=/var/lib/asystem/install/homeassistant/latest
 #   - Meteorologisk institutt Weather
 
 # Ignore or the other integrations which are detected
+
+# Re-login to all clients, update graham and jane profiles to track phones

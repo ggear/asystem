@@ -11,13 +11,6 @@ homeassistant:
   country: 'AU'
   internal_url: !env_var HOMEASSISTANT_INTERNAL_URL
   external_url: !env_var HOMEASSISTANT_EXTERNAL_URL
-  auth_providers:
-    - type: homeassistant
-    - type: trusted_networks
-      trusted_networks:
-        - '127.0.0.1'
-        - '10.0.0.0/16'
-        - '172.0.0.0/8'
   customize_domain:
     fan:
       assumed_state: false
@@ -30,17 +23,19 @@ homeassistant:
 #######################################################################################
 #######################################################################################
 http:
+  server_host: '0.0.0.0'
   server_port: !env_var HOMEASSISTANT_HTTP_PORT
+  ip_ban_enabled: true
+  login_attempts_threshold: 3
+  use_x_frame_options: true
   use_x_forwarded_for: true
   trusted_proxies:
     - '127.0.0.1'
     - '10.0.0.0/16'
-    - '172.0.0.0/8'
+    - '192.168.0.0/16'
   cors_allowed_origins:
-    - 'https://janeandgraham.com'
     - 'https://home.janeandgraham.com'
-  ip_ban_enabled: true
-  login_attempts_threshold: 3
+    - 'https://homeassistant.janeandgraham.com'
 #######################################################################################
 tts:
   - platform: 'google_translate'
@@ -48,14 +43,8 @@ tts:
 recorder:
   db_url: !env_var HOMEASSISTANT_DB
   commit_interval: 120
-  purge_keep_days: 5
+  purge_keep_days: 7
   auto_purge: true
-  # TODO: Disabled all sensors in favour of redirecting to Grafana for graphing?
-  #  exclude:
-  #    entity_globs:
-  #      - sensor.*
-  #######################################################################################
-
 
 
 
