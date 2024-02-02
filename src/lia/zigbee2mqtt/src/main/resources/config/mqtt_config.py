@@ -21,7 +21,7 @@ if __name__ == "__main__":
     device_group = sys.argv[3]
     device_config = sys.argv[4]
     device_config_group = '{{ "group": "{}", "device": "{}" }}'.format(device_group, device_name)
-    mqtt_host = os.environ["VERNEMQ_IP"]
+    mqtt_host = os.environ["VERNEMQ_HOST"]
     mqtt_port = int(os.environ["VERNEMQ_PORT"])
 
 
