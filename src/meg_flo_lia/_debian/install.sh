@@ -256,15 +256,15 @@ avahi-browse _home-assistant._tcp -t -r
 ################################################################################
 systemctl mask systemd-timesyncd.service
 timedatectl set-timezone "Australia/Perth"
-sed -i 's/0.debian.pool.ntp.org/216.239.35.0/g' /etc/ntp.conf
-sed -i 's/1.debian.pool.ntp.org/216.239.35.4/g' /etc/ntp.conf
-sed -i 's/2.debian.pool.ntp.org/216.239.35.8/g' /etc/ntp.conf
-sed -i 's/3.debian.pool.ntp.org/216.239.35.12/g' /etc/ntp.conf
+sed -i 's/0.debian.pool.ntp.org/216.239.35.0/g' /etc/ntpsec/ntp.conf
+sed -i 's/1.debian.pool.ntp.org/216.239.35.4/g' /etc/ntpsec/ntp.conf
+sed -i 's/2.debian.pool.ntp.org/216.239.35.8/g' /etc/ntpsec/ntp.conf
+sed -i 's/3.debian.pool.ntp.org/216.239.35.12/g' /etc/ntpsec/ntp.conf
 mkdir -p /var/log/ntpsec
 chown ntpsec:ntpsec /var/log/ntpsec
 systemctl daemon-reload
-systemctl restart ntp.service
-systemctl status ntp.service
+systemctl restart ntpsec.service
+systemctl status ntpsec.service
 ntpq -p
 
 ################################################################################
@@ -289,6 +289,7 @@ pip install --default-timeout=1000 --break-system-packages --no-input docker-com
 docker-compose -v
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
+mkdir -p /etc/docker
 cat <<EOF >/etc/docker/daemon.json
 {
   "default-address-pools" : [

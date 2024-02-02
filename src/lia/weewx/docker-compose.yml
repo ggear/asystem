@@ -9,10 +9,10 @@ services:
       - TZ=Australia/Perth
       - WEEWX_UID=weewx
       - WEEWX_GID=dialout
-      - MARIADB_IP
+      - MARIADB_HOST
       - MARIADB_USER_WEEWX
       - MARIADB_DATABASE_WEEWX
-      - VERNEMQ_IP
+      - VERNEMQ_HOST
       - VERNEMQ_PORT
     ports:
       - ${WEEWX_HTTP_PORT}:80

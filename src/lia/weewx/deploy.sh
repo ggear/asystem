@@ -6,7 +6,7 @@ HOST="$(grep $(basename $(dirname ${ROOT_DIR})) ${ROOT_DIR}/../../../.hosts | tr
 
 export $(xargs <${ROOT_DIR}/.env)
 
-export VERNEMQ_IP=${VERNEMQ_IP_PROD}
+export VERNEMQ_HOST=${VERNEMQ_HOST_PROD}
 
 ${ROOT_DIR}/src/main/resources/config/mqtt.sh
 
