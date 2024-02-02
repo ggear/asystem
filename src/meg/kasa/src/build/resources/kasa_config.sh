@@ -93,13 +93,6 @@ if netcat -zw 1 10.0.4.82 9999 2>/dev/null; then
 else
 	echo '' && echo 'Skipping config for device [study_outlet_plug] at [http://10.0.4.82/?] given it is unresponsive'
 fi
-if netcat -zw 1 10.0.4.83 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [office_outlet_plug] at [10.0.4.83] ... '
-	kasa --host 10.0.4.83 --type plug alias 'Office Outlet Plug'
-	kasa --host 10.0.4.83 --type plug led 'True'
-else
-	echo '' && echo 'Skipping config for device [office_outlet_plug] at [http://10.0.4.83/?] given it is unresponsive'
-fi
 if netcat -zw 1 10.0.4.84 9999 2>/dev/null; then
 	echo '' && echo 'Processing config for device [old_roof_network_switch_plug] at [10.0.4.84] ... '
 	kasa --host 10.0.4.84 --type plug alias 'Old Roof Network Switch Plug'

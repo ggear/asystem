@@ -12,15 +12,15 @@ apt-get upgrade -y --without-new-pkgs
 apt-get install -y --allow-downgrades 'jq=1.6-2.1'
 apt-get install -y --allow-downgrades 'ntp=1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1+deb12u1'
 apt-get install -y --allow-downgrades 'usbutils=1:014-1'
-apt-get install -y --allow-downgrades 'dnsutils=1:9.18.16-1~deb12u1'
+apt-get install -y --allow-downgrades 'dnsutils=1:9.18.19-1~deb12u1'
 apt-get install -y --allow-downgrades 'ntpdate=1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1+deb12u1'
 apt-get install -y --allow-downgrades 'ntfs-3g=1:2022.10.3-1+b1'
 apt-get install -y --allow-downgrades 'acl=2.3.1-3'
-apt-get install -y --allow-downgrades 'unrar=1:6.2.6-1'
+apt-get install -y --allow-downgrades 'unrar=1:6.2.6-1+deb12u1'
 apt-get install -y --allow-downgrades 'rsync=3.2.7-1'
 apt-get install -y --allow-downgrades 'vim=2:9.0.1378-2'
 apt-get install -y --allow-downgrades 'rename=2.01-1'
-apt-get install -y --allow-downgrades 'curl=7.88.1-10+deb12u1'
+apt-get install -y --allow-downgrades 'curl=7.88.1-10+deb12u5'
 apt-get install -y --allow-downgrades 'screen=4.9.0-4'
 apt-get install -y --allow-downgrades 'fswatch=1.14.0+repack-13.1+b1'
 apt-get install -y --allow-downgrades 'util-linux=2.38.1-5+b1'
@@ -39,31 +39,43 @@ apt-get install -y --allow-downgrades 'ca-certificates=20230311'
 apt-get install -y --allow-downgrades 'gnupg-agent=2.2.40-1.1'
 apt-get install -y --allow-downgrades 'software-properties-common=0.99.30-4'
 apt-get install -y --allow-downgrades 'mkvtoolnix=74.0.0-1'
-apt-get install -y --allow-downgrades 'docker-ce=5:24.0.6-1~debian.12~bookworm'
-apt-get install -y --allow-downgrades 'docker-ce-cli=5:24.0.6-1~debian.12~bookworm'
-apt-get install -y --allow-downgrades 'containerd.io=1.6.24-1'
+apt-get install -y --allow-downgrades 'docker-ce=5:25.0.2-1~debian.12~bookworm'
+apt-get install -y --allow-downgrades 'docker-ce-cli=5:25.0.2-1~debian.12~bookworm'
+apt-get install -y --allow-downgrades 'containerd.io=1.6.28-1'
 apt-get install -y --allow-downgrades 'cifs-utils=2:7.0-2'
-apt-get install -y --allow-downgrades 'samba=2:4.17.10+dfsg-0+deb12u1'
-apt-get install -y --allow-downgrades 'cups=2.4.2-3+deb12u1'
-apt-get install -y --allow-downgrades 'smbclient=2:4.17.10+dfsg-0+deb12u1'
+apt-get install -y --allow-downgrades 'samba=2:4.17.12+dfsg-0+deb12u1'
+apt-get install -y --allow-downgrades 'cups=2.4.2-3+deb12u5'
+apt-get install -y --allow-downgrades 'smbclient=2:4.17.12+dfsg-0+deb12u1'
 apt-get install -y --allow-downgrades 'inotify-tools=3.22.6.0-4'
 apt-get install -y --allow-downgrades 'htop=3.2.2-2'
 apt-get install -y --allow-downgrades 'iotop=0.6-42-ga14256a-0.1+b2'
 apt-get install -y --allow-downgrades 'hdparm=9.65+ds-1'
 apt-get install -y --allow-downgrades 'stress-ng=0.15.06-2'
 apt-get install -y --allow-downgrades 'memtester=4.6.0-1'
-apt-get install -y --allow-downgrades 'linux-cpupower=6.1.52-1'
+apt-get install -y --allow-downgrades 'linux-cpupower=6.1.69-1'
 apt-get install -y --allow-downgrades 'firmware-linux-nonfree=20230210-5'
 apt-get install -y --allow-downgrades 'hwinfo=21.82-1'
 apt-get install -y --allow-downgrades 'lshw=02.19.git.2021.06.19.996aaad9c7-2+b1'
 apt-get install -y --allow-downgrades 'vlan=2.0.5'
-apt-get install -y --allow-downgrades 'ffmpeg=7:5.1.3-1'
+apt-get install -y --allow-downgrades 'ffmpeg=7:5.1.4-0+deb12u1'
 apt-get install -y --allow-downgrades 'powertop=2.14-1+b2'
-apt-get install -y --allow-downgrades 'locales=2.36-9+deb12u1'
+apt-get install -y --allow-downgrades 'locales=2.36-9+deb12u4'
 apt-get install -y --allow-downgrades 'python3=3.11.2-1+b1'
 apt-get install -y --allow-downgrades 'python3-pip=23.0.1+dfsg-1'
 apt-get install -y --allow-downgrades 'tesseract-ocr=5.3.0-2'
 apt-get install -y --allow-downgrades 'libedgetpu1-std=16.0'
+
+################################################################################
+# Grub config
+################################################################################
+if [ -f /etc/default/grub ] && [ $(grep "GRUB_TIMEOUT=10" /etc/default/grub | wc -l) -eq 0 ]; then
+  sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=10/' /etc/default/grub
+  update-grub
+fi
+if [ -f /etc/default/grub ] && [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq 0 ]; then
+  sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="cdgroup_enable=memory swapaccount=1"/' /etc/default/grub
+  update-grub
+fi
 
 ################################################################################
 # Packages purge
@@ -277,14 +289,16 @@ pip install --default-timeout=1000 --break-system-packages --no-input docker-com
 docker-compose -v
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
-if [ -f /etc/default/grub ] && [ $(grep "GRUB_TIMEOUT=10" /etc/default/grub | wc -l) -eq 0 ]; then
-  sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=10/' /etc/default/grub
-  update-grub
-fi
-if [ -f /etc/default/grub ] && [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq 0 ]; then
-  sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="cdgroup_enable=memory swapaccount=1"/' /etc/default/grub
-  update-grub
-fi
+cat <<EOF >/etc/docker/daemon.json
+{
+  "default-address-pools" : [
+    {
+      "base" : "192.168.0.0/16",
+      "size" : 24
+    }
+  ]
+}
+EOF
 
 ################################################################################
 # Devices
