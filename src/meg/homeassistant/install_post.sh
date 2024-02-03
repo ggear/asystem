@@ -31,4 +31,8 @@ SERVICE_INSTALL=/var/lib/asystem/install/homeassistant/latest
 
 # Ignore or the other integrations which are detected
 
-# Re-login to all clients, update graham and jane profiles to track phones
+# Re-login to all clients and setup tracking for graham and jane:
+#   - iphone-graham
+#   - iphone-jane
+#   - tablet-ada
+#   - tablet-tablet
