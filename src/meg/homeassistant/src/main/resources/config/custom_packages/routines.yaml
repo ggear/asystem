@@ -166,6 +166,7 @@ automation:
         target:
           entity_id:
             - switch.adaptive_lighting_sleep_mode_night
+      - delay: '00:00:05'
       - service: light.turn_off
         target:
           entity_id:
@@ -225,6 +226,7 @@ automation:
         target:
           entity_id:
             - switch.adaptive_lighting_sleep_mode_night
+      - delay: '00:00:05'
       - service: light.turn_on
         target:
           entity_id:
