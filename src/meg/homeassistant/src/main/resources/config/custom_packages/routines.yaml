@@ -186,6 +186,11 @@ automation:
           entity_id:
             - switch.ada_fan_light_return_to_auto
             - switch.edwin_fan_light_return_to_auto
+      - service: light.turn_on
+        target:
+          entity_id:
+            - light.ada_fan
+            - light.edwin_fan
       - service: fan.turn_off
         target:
           entity_id:
