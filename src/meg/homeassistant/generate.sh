@@ -19,7 +19,7 @@ for FILE in illuminance.yaml lovelace.yaml weather.yaml; do
     sed -i '' 's/gosford/gooseberry_hill/g' src/main/resources/config/www/custom_ui/bom-weather-card/${FILE}
 done
 
-VERSION=v2.1.1
+VERSION=v3.0.2
 pull_repo $(pwd) homeassistant bom-radar-card makin-things/bom-radar-card ${VERSION} ${1}
 rm -rf src/main/resources/config/www/custom_ui/bom-radar-card
 mkdir -p src/main/resources/config/www/custom_ui/bom-radar-card &&
@@ -39,19 +39,19 @@ rm -rf src/main/resources/config/www/custom_ui/apexcharts-card
 mkdir -p src/main/resources/config/www/custom_ui/apexcharts-card &&
   wget -q -O src/main/resources/config/www/custom_ui/apexcharts-card/apexcharts-card.js https://github.com/RomRider/apexcharts-card/releases/download/${VERSION}/apexcharts-card.js
 
-VERSION=v0.11.0
+VERSION=v0.12.0
 pull_repo $(pwd) homeassistant mini-graph-card kalkih/mini-graph-card ${VERSION} ${1}
 rm -rf src/main/resources/config/www/custom_ui/mini-graph-card
 mkdir -p src/main/resources/config/www/custom_ui/mini-graph-card &&
   wget -q -O src/main/resources/config/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js https://github.com/kalkih/mini-graph-card/releases/download/${VERSION}/mini-graph-card-bundle.js
 
-VERSION=3.3.4
+VERSION=3.4.0
 pull_repo $(pwd) homeassistant variables-component Wibias/hass-variables ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/variable
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/variables-component/custom_components/variable src/main/resources/config/custom_components
 
-VERSION=2.4.0
+VERSION=3.1.0
 pull_repo $(pwd) homeassistant sun2-component pnbruckner/ha-sun2 ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/sun2
 mkdir -p src/main/resources/config/custom_components &&
@@ -63,13 +63,13 @@ rm -rf src/main/resources/config/custom_components/average
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/average-component/custom_components/average src/main/resources/config/custom_components
 
-VERSION=1.2.0
+VERSION=1.3.0
 pull_repo $(pwd) homeassistant bureau_of_meteorology-component bremor/bureau_of_meteorology ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology src/main/resources/config/custom_components
 
-VERSION=1.19.1
+VERSION=1.20.0
 pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/adaptive_lighting
 mkdir -p src/main/resources/config/custom_components &&

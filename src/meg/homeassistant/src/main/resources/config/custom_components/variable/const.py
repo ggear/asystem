@@ -1,6 +1,6 @@
 from homeassistant.const import Platform
 
-PLAFORM_NAME = "Variables+History"
+PLATFORM_NAME = "Variables+History"
 DOMAIN = "variable"
 
 PLATFORMS: list[str] = [
@@ -20,9 +20,11 @@ CONF_ATTRIBUTES = "attributes"
 CONF_ENTITY_PLATFORM = "entity_platform"
 CONF_FORCE_UPDATE = "force_update"
 CONF_RESTORE = "restore"
+CONF_TZOFFSET = "tz_offset"
 CONF_VALUE = "value"
 CONF_VALUE_TYPE = "value_type"
 CONF_VARIABLE_ID = "variable_id"
+CONF_YAML_PRESENT = "yaml_present"
 CONF_YAML_VARIABLE = "yaml_variable"
 CONF_EXCLUDE_FROM_RECORDER = "exclude_from_recorder"
 CONF_UPDATED = "config_updated"
@@ -35,3 +37,7 @@ ATTR_SUGGESTED_UNIT_OF_MEASUREMENT = "suggested_unit_of_measurement"
 ATTR_REPLACE_ATTRIBUTES = "replace_attributes"
 ATTR_VALUE = "value"
 ATTR_VARIABLE = "variable"
+
+SERVICE_UPDATE_SENSOR = "update_sensor"
+SERVICE_UPDATE_BINARY_SENSOR = "update_binary_sensor"
+SERVICE_UPDATE_DEVICE_TRACKER = "update_device_tracker"

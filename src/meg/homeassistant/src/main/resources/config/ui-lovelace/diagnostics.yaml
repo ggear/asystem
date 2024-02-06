@@ -101,7 +101,7 @@
   title: Device Maintenance
   show_header_toggle: false
   entities:
-    - entity: button.synchronize_devices
+    - entity: button.google_assistant_synchronize_devices
       name: Google Device Syncronise
 ################################################################################
 - type: entities
