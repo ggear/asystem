@@ -16,7 +16,7 @@ for FILE in illuminance.yaml lovelace.yaml weather.yaml; do
   mkdir -p src/main/resources/config/www/custom_ui/bom-weather-card &&
     cp -rvf ../../../.deps/homeassistant/bom-weather-card/${FILE} src/main/resources/config/www/custom_ui/bom-weather-card &&
     sed -i '' 's/kariong/darlington_forecast/g' src/main/resources/config/www/custom_ui/bom-weather-card/${FILE} &&
-    sed -i '' 's/gosford/gooseberry_hill/g' src/main/resources/config/www/custom_ui/bom-weather-card/${FILE}
+    sed -i '' 's/gosford/darlington/g' src/main/resources/config/www/custom_ui/bom-weather-card/${FILE}
 done
 
 VERSION=v3.0.2

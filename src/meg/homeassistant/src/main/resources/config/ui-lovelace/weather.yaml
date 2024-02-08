@@ -4,7 +4,7 @@
 - type: custom:bom-weather-card
   title: BOM Weather
   entity_current_conditions: sensor.darlington_forecast_icon_descriptor_0
-  entity_temperature: sensor.gooseberry_hill_temp
+  entity_temperature: sensor.darlington_temp
   entity_forecast_high_temp_1: sensor.darlington_forecast_temp_max_1
   entity_forecast_high_temp_2: sensor.darlington_forecast_temp_max_2
   entity_forecast_high_temp_3: sensor.darlington_forecast_temp_max_3
@@ -32,8 +32,8 @@
   entity_wind_bearing: sensor.bom_today_wind_direction
   entity_wind_speed: sensor.bom_today_wind_speed
   entity_wind_gust: sensor.bom_today_wind_gusts
-  #           entity_wind_speed_kt: sensor.gooseberry_hill_wind_speed_knot
-  #           entity_wind_gust_kt: sensor.gooseberry_hill_gust_speed_knot
+  #           entity_wind_speed_kt: sensor.darlington_wind_speed_knot
+  #           entity_wind_gust_kt: sensor.darlington_gust_speed_knot
   entity_humidity: sensor.bom_today_humiditys
   ############################## IMPORTANT!!! BOM are NOT providing Pressure sensor for forecast.
   ############################## IF you use my entity_pressure sensor the card won't display

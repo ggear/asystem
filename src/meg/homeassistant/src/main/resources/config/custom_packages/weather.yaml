@@ -8,7 +8,7 @@
 #  longutude: 116.079391
 #  weather.name: Home
 #  customise additional sensors: all true
-#  obersvation_basename: gooseberry_hill
+#  observation_basename: darlington
 #  observations_monitored: [ 'temp', 'temp_feels_like', 'rain_since_9am', 'humidity', 'wind_speed_kilometre', 'wind_speed_knot', 'wind_direction', 'gust_speed_kilometre', 'gust_speed_knot' ]
 #  forecasts_basename: darlington_forecast
 #  forecasts_monitored: [ 'temp_max', 'temp_min', 'extended_text', 'icon_descriptor', 'mdi_icon', 'short_text', 'uv_category', 'uv_max_index', 'uv_start_time', 'uv_end_time', 'rain_amount_min', 'rain_amount_max', 'rain_amount_range', 'rain_chance', 'fire_danger' ]
@@ -50,31 +50,31 @@ sensor:
       # https://en.wikipedia.org/wiki/Beaufort_scale
       beaufort:
         value_template: >
-          {%- if states('sensor.gooseberry_hill_wind_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
+          {%- if states('sensor.darlington_wind_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
           0
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 118 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 118 -%}
           12
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 103 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 103 -%}
           11
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 89 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 89 -%}
           10
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 75 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 75 -%}
           9
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 62 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 62 -%}
           8
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 50 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 50 -%}
           7
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 39 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 39 -%}
           6
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 29 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 29 -%}
           5
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 20 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 20 -%}
           4
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 12 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 12 -%}
           3
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 6 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 6 -%}
           2
-          {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 2 -%}
+          {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 2 -%}
           1
           {%- else -%}
           0
@@ -86,9 +86,9 @@ sensor:
         unit_of_measurement: °C
         device_class: temperature
         value_template: >
-          {%- if states('sensor.gooseberry_hill_temp') not in ['unavailable', 'unknown', 'none', 'n/a'] and (states('sensor.gooseberry_hill_temp') | float > 27) and states('sensor.gooseberry_hill_humidity') not in ['unavailable', 'unknown', 'none', 'n/a'] and (states('sensor.gooseberry_hill_humidity') | float > 40) -%}
-          {% set T = states('sensor.gooseberry_hill_temp') | float %}
-          {% set R = states('sensor.gooseberry_hill_humidity') | float %}
+          {%- if states('sensor.darlington_temp') not in ['unavailable', 'unknown', 'none', 'n/a'] and (states('sensor.darlington_temp') | float > 27) and states('sensor.darlington_humidity') not in ['unavailable', 'unknown', 'none', 'n/a'] and (states('sensor.darlington_humidity') | float > 40) -%}
+          {% set T = states('sensor.darlington_temp') | float %}
+          {% set R = states('sensor.darlington_humidity') | float %}
           {% set c1 = -8.78469475556 %}
           {% set c2 = 1.61139411 %}
           {% set c3 = 2.33854883889 %}
@@ -282,34 +282,34 @@ sensor:
 
       bom_today_humidity:
         value_template: >
-          {%- if states('sensor.gooseberry_hill_humidity') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
+          {%- if states('sensor.darlington_humidity') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_humidity') }}
           {% else %}
-            {{ states('sensor.gooseberry_hill_humidity') }}
+            {{ states('sensor.darlington_humidity') }}
           {% endif %}
 
       bom_today_wind_direction:
         value_template: >
-          {%- if states('sensor.gooseberry_hill_wind_direction') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
+          {%- if states('sensor.darlington_wind_direction') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_wind_direction') }}
           {% else %}
-            {{ states('sensor.gooseberry_hill_wind_direction') }}
+            {{ states('sensor.darlington_wind_direction') }}
           {% endif %}
 
       bom_today_wind_speed:
         value_template: >
-          {%- if states('sensor.gooseberry_hill_wind_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
+          {%- if states('sensor.darlington_wind_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_wind_speed') }}
           {% else %}
-            {{ states('sensor.gooseberry_hill_wind_speed_kilometre') }}
+            {{ states('sensor.darlington_wind_speed_kilometre') }}
           {% endif %}
 
       bom_today_wind_speed_gust:
         value_template: >
-          {%- if states('sensor.gooseberry_hill_gust_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
+          {%- if states('sensor.darlington_gust_speed_kilometre') in ['unavailable', 'unknown', 'none', 'n/a'] -%}
             {{ states('sensor.bom_today_wind_speed_gust') }}
           {% else %}
-            {{ states('sensor.gooseberry_hill_gust_speed_kilometre') }}
+            {{ states('sensor.darlington_gust_speed_kilometre') }}
           {% endif %}
 
       bom_today_uv:
@@ -383,7 +383,7 @@ sensor:
   - platform: average
     name: today_temp_bom
     entities:
-      - sensor.gooseberry_hill_temp
+      - sensor.darlington_temp
     start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
     end: '{{ now() }}'
 
@@ -426,7 +426,7 @@ sensor:
   #  - platform: statistics
   #    name: today_temp_bom
   #    sampling_size: 150
-  #    entity_id: sensor.gooseberry_hill_temp
+  #    entity_id: sensor.darlington_temp
   #    max_age:
   #      hours: 24
 

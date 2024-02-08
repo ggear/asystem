@@ -1,7 +1,7 @@
 type: custom:bom-weather-card
 title: BOM Weather
 entity_current_conditions: sensor.darlington_forecast_icon_descriptor_0
-entity_temperature: sensor.gooseberry_hill_temp
+entity_temperature: sensor.darlington_temp
 entity_forecast_high_temp_1: sensor.darlington_forecast_temp_max_1
 entity_forecast_high_temp_2: sensor.darlington_forecast_temp_max_2
 entity_forecast_high_temp_3: sensor.darlington_forecast_temp_max_3
@@ -26,19 +26,19 @@ entity_sun: sun.sun
 #           entity_visibility: sensor.dark_sky_visibility
 entity_daytime_high: sensor.bom_today_max
 entity_daytime_low: sensor.bom_today_min
-entity_wind_bearing: sensor.gooseberry_hill_wind_direction
-entity_wind_speed: sensor.gooseberry_hill_wind_speed_kilometre
-entity_wind_gust: sensor.gooseberry_hill_gust_speed_kilometre
-#           entity_wind_speed_kt: sensor.gooseberry_hill_wind_speed_knot
-#           entity_wind_gust_kt: sensor.gooseberry_hill_gust_speed_knot
-entity_humidity: sensor.gooseberry_hill_humidity
+entity_wind_bearing: sensor.darlington_wind_direction
+entity_wind_speed: sensor.darlington_wind_speed_kilometre
+entity_wind_gust: sensor.darlington_gust_speed_kilometre
+#           entity_wind_speed_kt: sensor.darlington_wind_speed_knot
+#           entity_wind_gust_kt: sensor.darlington_gust_speed_knot
+entity_humidity: sensor.darlington_humidity
 ############################## IMPORTANT!!! BOM are NOT providing Pressure sensor for forecast.
 ############################## IF you use my entity_pressure sensor the card won't display
 # entity_pressure: sensor.nodemcu_lounge_bme280_seapressure
-entity_apparent_temp: sensor.gooseberry_hill_temp_feels_like
+entity_apparent_temp: sensor.darlington_temp_feels_like
 entity_daily_summary: sensor.darlington_forecast_extended_text_0
 entity_pop: sensor.darlington_forecast_rain_chance_0
-entity_pop_intensity: sensor.gooseberry_hill_rain_since_9am
+entity_pop_intensity: sensor.darlington_rain_since_9am
 entity_possible_today: sensor.darlington_forecast_rain_amount_range_0
 entity_pos_1: sensor.darlington_forecast_rain_amount_range_1
 entity_pos_2: sensor.darlington_forecast_rain_amount_range_2

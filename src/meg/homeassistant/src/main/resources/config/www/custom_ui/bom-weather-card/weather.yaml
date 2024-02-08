@@ -26,29 +26,29 @@ sensor:
 # https://en.wikipedia.org/wiki/Beaufort_scale
       beaufort:
         value_template: >
-            {%- if states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 118 -%}
+            {%- if states('sensor.darlington_wind_speed_kilometre') | float  >= 118 -%}
             12
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 103 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 103 -%}
             11
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 89 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 89 -%}
             10
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 75 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 75 -%}
             9
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 62 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 62 -%}
             8
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 50 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 50 -%}
             7
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 39 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 39 -%}
             6
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 29 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 29 -%}
             5
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 20 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 20 -%}
             4
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 12 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 12 -%}
             3
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 6 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 6 -%}
             2
-            {%- elif states('sensor.gooseberry_hill_wind_speed_kilometre') | float  >= 2 -%}
+            {%- elif states('sensor.darlington_wind_speed_kilometre') | float  >= 2 -%}
             1
             {%- else -%}
             0
@@ -60,9 +60,9 @@ sensor:
         unit_of_measurement: °C
         device_class: temperature
         value_template: >
-            {%- if states('sensor.gooseberry_hill_temp') | float > 27 and states('sensor.gooseberry_hill_humidity') | float > 40 -%}
-            {% set T = states('sensor.gooseberry_hill_temp') | float %}
-            {% set R = states('sensor.gooseberry_hill_humidity') | float %}
+            {%- if states('sensor.darlington_temp') | float > 27 and states('sensor.darlington_humidity') | float > 40 -%}
+            {% set T = states('sensor.darlington_temp') | float %}
+            {% set R = states('sensor.darlington_humidity') | float %}
             {% set c1 = -8.78469475556 %}
             {% set c2 = 1.61139411 %}
             {% set c3 = 2.33854883889 %}
@@ -191,7 +191,7 @@ sensor:
   - platform: average
     name: today_temp_bom
     entities:
-      - sensor.gooseberry_hill_temp
+      - sensor.darlington_temp
     start: '{{ now().replace(hour=0).replace(minute=0).replace(second=0) }}'
     end: '{{ now() }}'
 
@@ -199,7 +199,7 @@ sensor:
 #  - platform: statistics
 #    name: today_temp_bom
 #    sampling_size: 150
-#    entity_id: sensor.gooseberry_hill_temp
+#    entity_id: sensor.darlington_temp
 #    max_age:
 #      hours: 24
 
