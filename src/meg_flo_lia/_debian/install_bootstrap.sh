@@ -101,10 +101,21 @@ UUID=9B6D-5F3E                                   /boot/efi                 vfat 
 /dev/mapper/macmini--meg--vg-swap_1              none                      swap    sw                                    0       0
 /dev/mapper/macmini--meg--vg-data--tmp           /data/tmp                 ext4    noatime,commit=600,errors=remount-ro  0       2
 /dev/mapper/macmini--meg--vg-data--backup        /data/backup              ext4    noatime,commit=600,errors=remount-ro  0       2
-/dev/mapper/macmini--meg--vg-data--media--audio  /data/media/audio         ext4    noatime,commit=600,errors=remount-ro  0       2
-/dev/mapper/macmini--meg--vg-data--media--movies /data/media/movies        ext4    noatime,commit=600,errors=remount-ro  0       2
-UUID=100f5ef4-e75d-41f4-bcb9-aaa84c03209a        /data/media/series        ext4    noatime,commit=600,errors=remount-ro  0       2
+/dev/mapper/macmini--meg--vg-data--media--audio  /data/media/1             ext4    noatime,commit=600,errors=remount-ro  0       2
+/dev/mapper/macmini--meg--vg-data--media--movies /data/media/2             ext4    noatime,commit=600,errors=remount-ro  0       2
+UUID=100f5ef4-e75d-41f4-bcb9-aaa84c03209a        /data/media/3             ext4    noatime,commit=600,errors=remount-ro  0       2
 EOF
+df -h -t ext4
+#Filesystem                                        Size  Used Avail Use% Mounted on
+#/dev/mapper/macmini--meg--vg-home                 377G   19G  339G   6% /home
+#/dev/mapper/macmini--meg--vg-tmp                  1.8G   64K  1.7G   1% /tmp
+#/dev/mapper/macmini--meg--vg-var                   30G  8.6G   20G  31% /var
+#/dev/mapper/macmini--meg--vg-root                  23G  7.8G   14G  36% /
+#/dev/mapper/macmini--meg--vg-data--tmp            196G  151M  196G   1% /data/tmp
+#/dev/mapper/macmini--meg--vg-data--backup          98G  2.1G   96G   3% /data/backup
+#/dev/mapper/macmini--meg--vg-data--media--audio   108G  105G  3.6G  97% /data/media/1
+#/dev/mapper/macmini--meg--vg-data--media--movies  738G  738G   21M 100% /data/media/2
+#/dev/sda1                                         3.6T  3.6T  5.9G 100% /data/media/3
 
 ################################################################################
 # Network (Onboard)
