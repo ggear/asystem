@@ -114,10 +114,10 @@
   frame_count: 30
   frame_delay: 200
   restart_delay: 4000
-  center_latitude: -31.92
-  center_longitude: 116.08
-  marker_latitude: -31.92
-  marker_longitude: 116.08
+  center_latitude: -31.918381
+  center_longitude: 116.079391
+  marker_latitude: -31.918381
+  marker_longitude: 116.079391
   show_marker: true
   show_range: true
   show_scale: true

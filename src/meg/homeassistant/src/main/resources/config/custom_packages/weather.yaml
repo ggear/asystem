@@ -4,8 +4,8 @@
 
 # TODO: Currently not being picked up, could not be wired in config_flow or using wrong keys, think the former
 #bureau_of_meteorology:
-#  latitude: -31.9474
-#  longutude: 115.8648
+#  latitude: -31.918381
+#  longutude: 116.079391
 #  weather.name: Home
 #  customise additional sensors: all true
 #  obersvation_basename: gooseberry_hill

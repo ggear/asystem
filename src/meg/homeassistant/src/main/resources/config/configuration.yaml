@@ -3,9 +3,9 @@ default_config:
 #######################################################################################
 homeassistant:
   name: 'Home'
-  latitude: -31.92
-  longitude: 116.08
-  elevation: 430
+  latitude: -31.918381
+  longitude: 116.079391
+  elevation: 246
   unit_system: 'metric'
   currency: 'AUD'
   country: 'AU'
