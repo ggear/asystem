@@ -1,0 +1,28 @@
+{
+  "macmini-eva": [
+    "grafana",
+    "influxdb",
+    "wrangle",
+    "monitor"
+  ],
+  "raspbpi-lia": [
+    "zigbee2mqtt",
+    "weewx",
+    "monitor"
+  ],
+  "macmini-meg": [
+    "letsencrypt",
+    "homeassistant",
+    "mariadb",
+    "vernemq",
+    "postgres",
+    "nginx",
+    "plex",
+    "monitor"
+  ],
+  "macbook-rae": [
+    "unifipoller",
+    "internet",
+    "digitemp"
+  ]
+}

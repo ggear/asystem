@@ -1,6 +1,8 @@
 net=udm,arm64
 rae=macbook,arm64
 lia=raspbpi,arm64
+bea=macmini,x86_64
+eva=macmini,x86_64
 flo=macbook,x86_64
 meg=macmini,x86_64
 zoe=macmini,x86_64
