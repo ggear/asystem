@@ -29,6 +29,7 @@ PACKAGES=(
   net-tools
   ethtool
   lm-sensors
+  efivar
   apt-transport-https
   ca-certificates
   gnupg-agent
