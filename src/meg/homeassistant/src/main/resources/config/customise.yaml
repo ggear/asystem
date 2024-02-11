@@ -800,8 +800,8 @@ switch.laundry_vacuum_charger_plug:
 switch.ada_tablet_plug:
   friendly_name: 'Ada Tablet'
   icon: 'mdi:tablet'
-switch.server_flo_plug:
-  friendly_name: 'Server Flo'
+switch.server_eva_plug:
+  friendly_name: 'Server Eva'
   icon: 'mdi:server'
 switch.server_meg_plug:
   friendly_name: 'Server Meg'
@@ -1509,29 +1509,29 @@ sensor.ada_tablet_plug_energy_monthly:
 sensor.ada_tablet_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.server_flo_plug_current:
+sensor.server_eva_plug_current:
   friendly_name: 'Current Amperage'
-sensor.server_flo_plug_voltage:
+sensor.server_eva_plug_voltage:
   friendly_name: 'Current Voltage'
-sensor.server_flo_plug_current_consumption:
+sensor.server_eva_plug_current_consumption:
   friendly_name: 'Current Power'
-sensor.server_flo_plug_energy:
+sensor.server_eva_plug_energy:
   friendly_name: 'Total Energy'
-sensor.server_flo_plug_total_consumption:
+sensor.server_eva_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
-sensor.server_flo_plug_today_s_consumption:
+sensor.server_eva_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
   icon: 'mdi:counter'
-sensor.server_flo_plug_energy_daily:
+sensor.server_eva_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.server_flo_plug_energy_weekly:
+sensor.server_eva_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.server_flo_plug_energy_monthly:
+sensor.server_eva_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.server_flo_plug_energy_yearly:
+sensor.server_eva_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.server_meg_plug_current:
@@ -2854,20 +2854,20 @@ sensor.template_ada_tablet_plug_proxy_energy_monthly:
 sensor.template_ada_tablet_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.template_server_flo_plug_proxy_power:
+sensor.template_server_eva_plug_proxy_power:
   friendly_name: 'Current Power'
-sensor.template_server_flo_plug_proxy_energy:
+sensor.template_server_eva_plug_proxy_energy:
   friendly_name: 'Total Energy'
-sensor.template_server_flo_plug_proxy_energy_daily:
+sensor.template_server_eva_plug_proxy_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.template_server_flo_plug_proxy_energy_weekly:
+sensor.template_server_eva_plug_proxy_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.template_server_flo_plug_proxy_energy_monthly:
+sensor.template_server_eva_plug_proxy_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.template_server_flo_plug_proxy_energy_yearly:
+sensor.template_server_eva_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.template_server_meg_plug_proxy_power:
@@ -3766,18 +3766,18 @@ sensor.servers_energy_monthly:
   friendly_name: 'Servers Total Energy Monthly'
 sensor.servers_energy_yearly:
   friendly_name: 'Servers Total Energy Yearly'
-sensor.server_flo_power:
-  friendly_name: 'Server Flo Current Power'
-sensor.server_flo_energy:
-  friendly_name: 'Server Flo Total Energy'
-sensor.server_flo_energy_daily:
-  friendly_name: 'Server Flo Total Energy Daily'
-sensor.server_flo_energy_weekly:
-  friendly_name: 'Server Flo Total Energy Hept-Daily'
-sensor.server_flo_energy_monthly:
-  friendly_name: 'Server Flo Total Energy Monthly'
-sensor.server_flo_energy_yearly:
-  friendly_name: 'Server Flo Total Energy Yearly'
+sensor.server_eva_power:
+  friendly_name: 'Server Eva Current Power'
+sensor.server_eva_energy:
+  friendly_name: 'Server Eva Total Energy'
+sensor.server_eva_energy_daily:
+  friendly_name: 'Server Eva Total Energy Daily'
+sensor.server_eva_energy_weekly:
+  friendly_name: 'Server Eva Total Energy Hept-Daily'
+sensor.server_eva_energy_monthly:
+  friendly_name: 'Server Eva Total Energy Monthly'
+sensor.server_eva_energy_yearly:
+  friendly_name: 'Server Eva Total Energy Yearly'
 sensor.server_meg_power:
   friendly_name: 'Server Meg Current Power'
 sensor.server_meg_energy:

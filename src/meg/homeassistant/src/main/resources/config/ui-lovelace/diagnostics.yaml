@@ -208,8 +208,8 @@
     - entity: switch.ada_tablet_plug
       name: Ada Tablet
       icon: mdi:tablet
-    - entity: switch.server_flo_plug
-      name: Server Flo
+    - entity: switch.server_eva_plug
+      name: Server Eva
       icon: mdi:server
     - entity: switch.server_meg_plug
       name: Server Meg

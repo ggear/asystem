@@ -79,15 +79,15 @@ powercalc:
     - entity_id: media_player.lounge_arc
       name: Lounge Arc
     ###################################################################################
-    - create_group: Server Flo
+    - create_group: Server Eva
       entities:
-        - entity_id: binary_sensor.template_server_flo_plug_proxy
+        - entity_id: binary_sensor.template_server_eva_plug_proxy
           standby_power: 0.5
           unavailable_power: 0
           fixed:
             power: 0.9
-        - entity_id: switch.server_flo_plug
-          power_sensor_id: sensor.server_flo_plug_current_consumption
+        - entity_id: switch.server_eva_plug
+          power_sensor_id: sensor.server_eva_plug_current_consumption
           force_energy_sensor_creation: true
     ###################################################################################
     - create_group: Server Meg
@@ -724,9 +724,9 @@ template:
         state: >-
           {{ states('switch.ada_tablet_plug') }}
       #################################################################################
-      - unique_id: server_flo_plug_proxy
+      - unique_id: server_eva_plug_proxy
         state: >-
-          {{ states('switch.server_flo_plug') }}
+          {{ states('switch.server_eva_plug') }}
       #################################################################################
       - unique_id: server_meg_plug_proxy
         state: >-
