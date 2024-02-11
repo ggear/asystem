@@ -27,3 +27,9 @@ user_add 'root' 'root' '/' false
 user_add 'root' 'root' '/var/' false
 user_add 'graham' 'users' '/home/' true
 user_add 'graham' 'staff' '/Users/' true
+
+mkdir -p /home/asystem
+[ ! -L ${HOME}/home ] && ln -s /home/asystem ${HOME}/home || true
+
+mkdir -p /var/lib/asystem/install
+[ ! -L ${HOME}/install ] && ln -s /var/lib/asystem/install ${HOME}/install || true
