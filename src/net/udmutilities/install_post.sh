@@ -21,7 +21,6 @@ add_on_boot_script() {
 }
 add_on_boot_script "10-unifios" "_unifios"
 add_on_boot_script "11-users" "_users"
-add_on_boot_script "12-links" "_links"
 
 chmod a+x ./config/udm-certificates/20-certifcates.sh
 cp -rvf ./config/udm-certificates/20-certifcates.sh /data/on_boot.d
