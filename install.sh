@@ -37,7 +37,7 @@ touch .env
 chmod 600 .env
 [ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
 if [ -f "docker-compose.yml" ]; then
-  docker-compose --compatibility --no-ansi up --force-recreate -d
+  docker compose --compatibility --no-ansi up --force-recreate -d
   if [ $(docker ps | grep "${SERVICE_NAME}_bootstrap" | wc -l) -eq 1 ]; then
     docker logs "${SERVICE_NAME}_bootstrap" -f
   fi
