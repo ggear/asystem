@@ -3,7 +3,7 @@
 user_add() {
   if [ -d "${3}" ]; then
     if [ ${4} ]; then
-      [ $(grep "${1}" "/etc/passwd" | wc -l) -eq 0 ] && adduser --disabled-password --shell /bin/bash "${1}" 2>/dev/null
+      [ $(grep "${1}" "/etc/passwd" | wc -l) -eq 0 ] && adduser --disabled-password --shell /bin/bash --gecos "${1}" "${1}" 2>/dev/null
       [ -d "${3}${1}" ] && mkdir -p ${3}${1} && chmod 711 ${3} 2>/dev/null
     fi
     if [ -d "${3}${1}" ]; then
