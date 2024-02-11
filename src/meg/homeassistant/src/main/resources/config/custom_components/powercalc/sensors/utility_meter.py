@@ -21,6 +21,7 @@ from homeassistant.helpers.typing import StateType
 from custom_components.powercalc.const import (
     CONF_CREATE_UTILITY_METERS,
     CONF_ENERGY_SENSOR_PRECISION,
+    CONF_IGNORE_UNAVAILABLE_STATE,
     CONF_UTILITY_METER_OFFSET,
     CONF_UTILITY_METER_TARIFFS,
     CONF_UTILITY_METER_TYPES,
@@ -71,7 +72,7 @@ async def create_utility_meters(
                 unique_id=unique_id,
             )
             if existing_entity_id and hass.states.get(existing_entity_id):
-                continue
+                continue  # pragma: no cover
 
         # Create generic utility meter (no specific tariffs)
         if not tariffs or GENERAL_TARIFF in tariffs:
@@ -125,7 +126,7 @@ async def create_tariff_select(
     unique_id: str | None,
 ) -> TariffSelect:
     """Create tariff selection entity."""
-    _LOGGER.debug(f"Creating utility_meter tariff select: {name}")
+    _LOGGER.debug("Creating utility_meter tariff select: %s", name)
 
     select_component = cast(EntityComponent, hass.data[SELECT_DOMAIN])
     select_unique_id = None
@@ -162,7 +163,7 @@ async def create_utility_meter(
         if unique_id:
             unique_id = f"{unique_id}_{tariff}"
 
-    _LOGGER.debug(f"Creating utility_meter sensor: {name} (entity_id={entity_id})")
+    _LOGGER.debug("Creating utility_meter sensor: %s (entity_id=%s)", name, entity_id)
 
     params = {
         "source_entity": source_entity,
@@ -185,6 +186,8 @@ async def create_utility_meter(
         params["cron_pattern"] = None
     if "periodically_resetting" in signature.parameters:
         params["periodically_resetting"] = False
+    if "sensor_always_available" in signature.parameters:
+        params["sensor_always_available"] = sensor_config.get(CONF_IGNORE_UNAVAILABLE_STATE) or False
 
     utility_meter = VirtualUtilityMeter(**params)
     utility_meter.rounding_digits = sensor_config.get(CONF_ENERGY_SENSOR_PRECISION)  # type: ignore

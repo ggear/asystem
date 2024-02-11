@@ -43,32 +43,28 @@ async def autodiscover_model(
     if not entity_entry or not entity_entry.device_id:
         return None
 
-    if not await has_manufacturer_and_model_information(hass, entity_entry):
+    model_info = await get_model_information(hass, entity_entry)
+    if not model_info:
         _LOGGER.debug(
             "%s: Cannot autodiscover model, manufacturer or model unknown from device registry",
             entity_entry.entity_id,
         )
         return None
 
-    device_registry = dr.async_get(hass)
-    device_entry = device_registry.async_get(entity_entry.device_id)
-    if not device_entry:
-        return None
-
-    model_id = device_entry.model
-    manufacturer = device_entry.manufacturer
-    if manufacturer is None or model_id is None:
-        return None
-
-    if manufacturer in MANUFACTURER_ALIASES:
-        manufacturer = MANUFACTURER_ALIASES.get(manufacturer)
+    if model_info.manufacturer in MANUFACTURER_ALIASES:
+        model_info = ModelInfo(
+            str(MANUFACTURER_ALIASES.get(model_info.manufacturer)),
+            model_info.model,
+        )
 
     # Make sure we don't have a literal / in model_id,
     # so we don't get issues with sublut directory matching down the road
     # See github #658
-    model_id = str(model_id).replace("/", "#slash#")
-
-    model_info = ModelInfo(str(manufacturer), str(model_id))
+    if "/" in model_info.model:
+        model_info = ModelInfo(
+            model_info.manufacturer,
+            model_info.model.replace("/", "#slash#"),
+        )
 
     _LOGGER.debug(
         "%s: Auto discovered model (manufacturer=%s, model=%s)",
@@ -79,22 +75,29 @@ async def autodiscover_model(
     return model_info
 
 
-async def has_manufacturer_and_model_information(
+async def get_model_information(
     hass: HomeAssistant,
     entity_entry: er.RegistryEntry,
-) -> bool:
+) -> ModelInfo | None:
     """See if we have enough information in device registry to automatically setup the power sensor."""
     if entity_entry.device_id is None:
-        return False
+        return None
     device_registry = dr.async_get(hass)
     device_entry = device_registry.async_get(entity_entry.device_id)
-    if device_entry is None:
-        return False
+    if (
+        device_entry is None
+        or device_entry.manufacturer is None
+        or device_entry.model is None
+    ):
+        return None
 
-    if len(str(device_entry.manufacturer)) == 0 or len(str(device_entry.model)) == 0:
-        return False
+    manufacturer = str(device_entry.manufacturer)
+    model = str(device_entry.model)
 
-    return True
+    if len(manufacturer) == 0 or len(model) == 0:
+        return None
+
+    return ModelInfo(manufacturer, model)
 
 
 class DiscoveryManager:
@@ -106,6 +109,7 @@ class DiscoveryManager:
     def __init__(self, hass: HomeAssistant, ha_config: ConfigType) -> None:
         self.hass = hass
         self.ha_config = ha_config
+        self.power_profiles: dict[str, PowerProfile | None] = {}
         self.manually_configured_entities: list[str] | None = None
 
     async def start_discovery(self) -> None:
@@ -113,59 +117,86 @@ class DiscoveryManager:
         _LOGGER.debug("Start auto discovering entities")
         entity_registry = er.async_get(self.hass)
         for entity_entry in list(entity_registry.entities.values()):
-            if not self.should_process_entity(entity_entry):
-                continue
-
             model_info = await autodiscover_model(self.hass, entity_entry)
-            if not model_info or not model_info.manufacturer or not model_info.model:
+            if not model_info:
                 continue
-
+            power_profile = await self.get_power_profile(
+                entity_entry.entity_id, model_info,
+            )
             source_entity = await create_source_entity(
                 entity_entry.entity_id,
                 self.hass,
             )
-
-            if (
-                model_info.manufacturer == MANUFACTURER_WLED
-                and entity_entry.domain == LIGHT_DOMAIN
-                and not re.search(
-                    "master|segment",
-                    str(entity_entry.original_name),
-                    flags=re.IGNORECASE,
-                )
-            ):
-                self._init_entity_discovery(
-                    source_entity,
-                    power_profile=None,
-                    extra_discovery_data={
-                        CONF_MODE: CalculationStrategy.WLED,
-                        CONF_MANUFACTURER: model_info.manufacturer,
-                        CONF_MODEL: model_info.model,
-                    },
-                )
-                continue
-
-            try:
-                power_profile = await get_power_profile(
-                    self.hass,
-                    {},
-                    model_info=model_info,
-                )
-            except ModelNotSupportedError:
-                _LOGGER.debug(
-                    "%s: Model not found in library, skipping discovery",
-                    entity_entry.entity_id,
-                )
-                continue
-
-            if power_profile and not power_profile.is_entity_domain_supported(
-                source_entity,
-            ):
+            if not await self.is_entity_supported(entity_entry):
                 continue
 
             self._init_entity_discovery(source_entity, power_profile, {})
 
         _LOGGER.debug("Done auto discovering entities")
+
+    async def get_power_profile(
+        self, entity_id: str, model_info: ModelInfo,
+    ) -> PowerProfile | None:
+        if entity_id in self.power_profiles:
+            return self.power_profiles[entity_id]
+
+        try:
+            self.power_profiles[entity_id] = await get_power_profile(
+                self.hass,
+                {},
+                model_info=model_info,
+            )
+            return self.power_profiles[entity_id]
+        except ModelNotSupportedError:
+            _LOGGER.debug(
+                "%s: Model not found in library, skipping discovery",
+                entity_id,
+            )
+            return None
+
+    async def is_entity_supported(self, entity_entry: er.RegistryEntry) -> bool:
+        if not self.should_process_entity(entity_entry):
+            return False
+
+        model_info = await autodiscover_model(self.hass, entity_entry)
+        if not model_info or not model_info.manufacturer or not model_info.model:
+            return False
+
+        source_entity = await create_source_entity(
+            entity_entry.entity_id,
+            self.hass,
+        )
+
+        if (
+            model_info.manufacturer == MANUFACTURER_WLED
+            and entity_entry.domain == LIGHT_DOMAIN
+            and not re.search(
+                "master|segment",
+                str(entity_entry.original_name),
+                flags=re.IGNORECASE,
+            )
+        ):
+            self._init_entity_discovery(
+                source_entity,
+                power_profile=None,
+                extra_discovery_data={
+                    CONF_MODE: CalculationStrategy.WLED,
+                    CONF_MANUFACTURER: model_info.manufacturer,
+                    CONF_MODEL: model_info.model,
+                },
+            )
+            return False
+
+        power_profile = await self.get_power_profile(entity_entry.entity_id, model_info)
+        if not power_profile:
+            return False
+
+        if power_profile and not power_profile.is_entity_domain_supported(
+            source_entity,
+        ):
+            return False
+
+        return True
 
     def should_process_entity(self, entity_entry: er.RegistryEntry) -> bool:
         """Do some validations on the registry entry to see if it qualifies for discovery."""
@@ -207,7 +238,8 @@ class DiscoveryManager:
         ]
         if existing_entries:
             _LOGGER.debug(
-                f"{source_entity.entity_id}: Already setup with discovery, skipping new discovery",
+                "%s: Already setup with discovery, skipping new discovery",
+                source_entity.entity_id,
             )
             return
 
@@ -247,7 +279,7 @@ class DiscoveryManager:
         entities = []
 
         # Find entity ids in yaml config (Legacy)
-        if SENSOR_DOMAIN in self.ha_config:
+        if SENSOR_DOMAIN in self.ha_config:  # pragma: no cover
             sensor_config = self.ha_config.get(SENSOR_DOMAIN)
             platform_entries = [
                 item
@@ -283,13 +315,13 @@ class DiscoveryManager:
         found_entity_ids: list[str] = []
 
         for key, value in search_dict.items():
-            if key == "entity_id":
+            if key == CONF_ENTITY_ID:
                 found_entity_ids.append(value)
 
             elif isinstance(value, dict):
                 results = self._find_entity_ids_in_yaml_config(value)
                 for result in results:
-                    found_entity_ids.append(result)
+                    found_entity_ids.append(result)  # pragma: no cover
 
             elif isinstance(value, list):
                 for item in value:
