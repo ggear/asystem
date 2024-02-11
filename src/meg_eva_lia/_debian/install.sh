@@ -288,7 +288,7 @@ rm -rf /usr/local/bin/docker-compose
 pip3 uninstall --quiet --break-system-packages -y docker-compose
 pip3 install --default-timeout=1000 --break-system-packages --no-input pyyaml==5.3.1
 pip3 install --default-timeout=1000 --break-system-packages --no-input docker-compose==1.29.2
-docker-compose -v
+docker compose -v
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
 mkdir -p /etc/docker

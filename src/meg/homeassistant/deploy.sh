@@ -8,4 +8,4 @@ INSTALL=$(ssh root@${HOST} "find /var/lib/asystem/install/$(basename ${ROOT_DIR}
 
 ssh root@${HOST} "rm -rf ${HOME}/custom_components && rm -rf ${HOME}/custom_packages && rm -rf ${HOME}/ui-lovelace && rm -rf ${HOME}/www"
 scp -r ${ROOT_DIR}/src/main/resources/config/* root@${HOST}:${HOME}
-ssh root@${HOST} "cd ${INSTALL} && docker-compose --compatibility restart"
+ssh root@${HOST} "cd ${INSTALL} && docker compose --compatibility restart"

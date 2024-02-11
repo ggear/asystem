@@ -9,7 +9,7 @@ cd "${SERVICE_HOME}" || exit
 
 scp -o "StrictHostKeyChecking=no" ./certificates/privkey.pem root@${NGINX_IP}:/home/asystem/nginx/latest/.key.pem
 scp -o "StrictHostKeyChecking=no" ./certificates/fullchain.pem root@${NGINX_IP}:/home/asystem/nginx/latest/certificate.pem
-ssh -q -o "StrictHostKeyChecking=no" root@${NGINX_IP} "cd /var/lib/asystem/install/nginx/latest && docker-compose --compatibility restart"
+ssh -q -o "StrictHostKeyChecking=no" root@${NGINX_IP} "cd /var/lib/asystem/install/nginx/latest && docker compose --compatibility restart"
 logger -t pushcerts "Loaded new nginx certificates on ${NGINX_IP}"
 
 scp -O -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" ./certificates/privkey.pem root@${UDMUTILITIES_IP}:/mnt/data/unifi-os/unifi-core/config/unifi-core.key
