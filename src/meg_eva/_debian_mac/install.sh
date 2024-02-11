@@ -5,6 +5,8 @@
 ################################################################################
 apt-get update
 apt-get install -y --allow-downgrades 'mbpfan=2.3.0-1+b1'
+apt-get install -y --allow-downgrades 'libc6-i386=2.36-9+deb12u4'
+apt-get install -y --allow-downgrades 'intel-microcode=3.20231114.1~deb12u1'
 
 ################################################################################
 # Network
