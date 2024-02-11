@@ -143,11 +143,11 @@ else
 	echo '' && echo 'Skipping config for device [ada_tablet_plug] at [http://10.0.4.90/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.4.91 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [server_flo_plug] at [10.0.4.91] ... '
-	kasa --host 10.0.4.91 --type plug alias 'Server Flo Plug'
+	echo '' && echo 'Processing config for device [server_eva_plug] at [10.0.4.91] ... '
+	kasa --host 10.0.4.91 --type plug alias 'Server Eva Plug'
 	kasa --host 10.0.4.91 --type plug led 'True'
 else
-	echo '' && echo 'Skipping config for device [server_flo_plug] at [http://10.0.4.91/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [server_eva_plug] at [http://10.0.4.91/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.4.92 9999 2>/dev/null; then
 	echo '' && echo 'Processing config for device [server_meg_plug] at [10.0.4.92] ... '
