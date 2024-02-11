@@ -1,0 +1,34 @@
+version: '3.7'
+services:
+  wrangle:
+    container_name: wrangle
+    image: wrangle:${SERVICE_VERSION_ABSOLUTE}
+    init: true
+    restart: ${SERVICE_RESTART}
+    environment:
+      - TZ=Australia/Perth
+      - SERVICE_VERSION_COMPACT
+      - INFLUXDB_IP
+      - INFLUXDB_IP_PROD
+      - INFLUXDB_HTTP_PORT
+      - INFLUXDB_ORG
+      - INFLUXDB_BUCKET_DATA_PUBLIC
+      - INFLUXDB_BUCKET_DATA_PRIVATE
+      - INFLUXDB_TOKEN
+      - DROPBOX_TOKEN
+      - WRANGLE_ENABLE_LOG
+      - WRANGLE_DISABLE_DATA_DELTA
+      - WRANGLE_DISABLE_FILE_UPLOAD
+      - PYTHONPATH=/asystem
+    volumes:
+      - ${SERVICE_DATA_DIR}:/asystem/runtime
+      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
+    deploy:
+      resources:
+        limits:
+          memory: 2G

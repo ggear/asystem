@@ -107,6 +107,7 @@ class Weather(library.Library):
         try:
             weather_delta_df, weather_current_df, _ = self.state_cache(pd.DataFrame({"some_dummy_data": [1.0]}),
                                                                        engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
+            self.state_write()
         except Exception as exception:
             self.print_log("Unexpected error processing weather data", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,

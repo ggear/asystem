@@ -1,5 +1,5 @@
 # https://github.com/influxdata/telegraf/releases
-FROM telegraf:1.29.2 as image_base
+FROM telegraf:1.28.1 as image_base
        
 FROM image_base as image_package
 ARG PYTHON_VERSION
@@ -28,7 +28,7 @@ RUN ./configure --prefix=/usr/local
 RUN make
 RUN make install
 RUN /usr/local/bin/python3 --version
-RUN /usr/local/bin/python3 -m pip install --default-timeout=1000 --upgrade pip
+RUN /usr/local/bin/python3 -m pip install --upgrade pip
 RUN /usr/local/bin/pip3 --version
 RUN rm -rf /tmp/*
 
@@ -36,7 +36,7 @@ FROM image_install as image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem
-RUN cat /asystem/reqs_run.txt | xargs -n 1 /usr/local/bin/pip3 install --default-timeout=1000 && rm -rf /asystem/reqs_run.txt
+RUN cat /asystem/reqs_run.txt | xargs -n 1 /usr/local/bin/pip3 install && rm -rf /asystem/reqs_run.txt
 RUN mkdir -p /root/.config
 COPY src/main/resources/.gspread_pandas /root/.config/gspread_pandas
 COPY src/main/resources/.google_service_account.json /root

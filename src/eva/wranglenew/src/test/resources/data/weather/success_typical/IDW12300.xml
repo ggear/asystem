@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<product version="1.7" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.bom.gov.au/schema/v1.7/product.xsd">
+    <amoc>
+        <source>
+            <sender>Australian Government Bureau of Meteorology</sender>
+            <region>Western Australia</region>
+            <office>WARO</office>
+            <copyright>http://www.bom.gov.au/other/copyright.shtml</copyright>
+            <disclaimer>http://www.bom.gov.au/other/disclaimer.shtml</disclaimer>
+        </source>
+        <identifier>IDW12300</identifier>
+        <issue-time-utc>2021-04-29T20:58:57Z</issue-time-utc>
+        <issue-time-local tz="WST">2021-04-30T04:58:57+08:00</issue-time-local>
+        <sent-time>2021-04-29T20:58:57Z</sent-time>
+        <expiry-time>2021-04-30T20:58:57Z</expiry-time>
+        <validity-bgn-time-local tz="WST">2021-04-30T00:00:00+08:00</validity-bgn-time-local>
+        <validity-end-time-local tz="WST">2021-05-06T23:59:59+08:00</validity-end-time-local>
+        <next-routine-issue-time-utc>2021-04-30T08:20:00Z</next-routine-issue-time-utc>
+        <next-routine-issue-time-local tz="WST">2021-04-30T16:20:00+08:00</next-routine-issue-time-local>
+        <status>O</status>
+        <service>WSP</service>
+        <sub-service>FCT</sub-service>
+        <product-type>F</product-type>
+        <phase>NEW</phase>
+    </amoc>
+    <forecast>
+        <area aac="WA_FA001" description="Western Australia" type="region">
+            <forecast-period start-time-local="2021-04-30T04:58:57+08:00" end-time-local="2021-04-30T04:58:57+08:00" start-time-utc="2021-04-29T20:58:57Z" end-time-utc="2021-04-29T20:58:57Z">
+                <text type="warning_summary_footer">For latest warnings go to www.bom.gov.au, subscribe to RSS feeds, call 1300 659 210* or listen for warnings on relevant TV and radio broadcasts.</text>
+                <text type="product_footer">* Calls to 1300 numbers cost around 27.5c incl. GST, higher from mobiles or public phones.</text>
+            </forecast-period>
+        </area>
+        <area aac="WA_ME001" description="Perth" type="metropolitan" parent-aac="WA_FA001">
+            <forecast-period index="0" start-time-local="2021-04-30T00:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T16:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <text type="forecast">Partly cloudy. Slight (20%) chance of a morning shower, mainly near the coast. Winds southerly 15 to 20 km/h becoming light in the morning.</text>
+                <text type="fire_danger">
+                    <p>Perth Coastal Plain: Low-Moderate</p>
+                    <p>Perth Hills: Low-Moderate</p>
+                </text>
+                <text type="uv_alert">Sun protection 10:00am to 2:30pm, UV Index predicted to reach 5 [Moderate]</text>
+            </forecast-period>
+            <forecast-period index="1" start-time-local="2021-05-01T00:00:00+08:00" end-time-local="2021-05-02T00:00:00+08:00" start-time-utc="2021-04-30T16:00:00Z" end-time-utc="2021-05-01T16:00:00Z">
+                <text type="forecast">Mostly sunny. Light winds.</text>
+            </forecast-period>
+            <forecast-period index="2" start-time-local="2021-05-02T00:00:00+08:00" end-time-local="2021-05-03T00:00:00+08:00" start-time-utc="2021-05-01T16:00:00Z" end-time-utc="2021-05-02T16:00:00Z">
+                <text type="forecast">Mostly sunny. Light winds becoming southerly 15 to 20 km/h during the afternoon then becoming light during the evening.</text>
+            </forecast-period>
+            <forecast-period index="3" start-time-local="2021-05-03T00:00:00+08:00" end-time-local="2021-05-04T00:00:00+08:00" start-time-utc="2021-05-02T16:00:00Z" end-time-utc="2021-05-03T16:00:00Z">
+                <text type="forecast">Partly cloudy. Winds southeasterly 15 to 20 km/h tending easterly 15 to 25 km/h during the morning.</text>
+            </forecast-period>
+            <forecast-period index="4" start-time-local="2021-05-04T00:00:00+08:00" end-time-local="2021-05-05T00:00:00+08:00" start-time-utc="2021-05-03T16:00:00Z" end-time-utc="2021-05-04T16:00:00Z">
+                <text type="forecast">Partly cloudy. High (80%) chance of showers, most likely later in the day. The chance of a thunderstorm. Winds easterly 15 to 25 km/h tending northeasterly 15 to 20 km/h during the morning.</text>
+            </forecast-period>
+            <forecast-period index="5" start-time-local="2021-05-05T00:00:00+08:00" end-time-local="2021-05-06T00:00:00+08:00" start-time-utc="2021-05-04T16:00:00Z" end-time-utc="2021-05-05T16:00:00Z">
+                <text type="forecast">Partly cloudy. High (80%) chance of showers. Light winds becoming west to southwesterly 15 to 20 km/h during the day.</text>
+            </forecast-period>
+            <forecast-period index="6" start-time-local="2021-05-06T00:00:00+08:00" end-time-local="2021-05-07T00:00:00+08:00" start-time-utc="2021-05-05T16:00:00Z" end-time-utc="2021-05-06T16:00:00Z">
+                <text type="forecast">Partly cloudy. High (70%) chance of showers. Winds west to northwesterly 15 to 20 km/h tending west to southwesterly 15 to 25 km/h during the day.</text>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT053" description="Perth" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="forecast_icon_code">3</element>
+                <element type="precipitation_range">0 to 2 mm</element>
+                <element type="air_temperature_maximum" units="Celsius">20</element>
+                <text type="precis">Partly cloudy.</text>
+                <text type="probability_of_precipitation">20%</text>
+            </forecast-period>
+            <forecast-period index="1" start-time-local="2021-05-01T00:00:00+08:00" end-time-local="2021-05-02T00:00:00+08:00" start-time-utc="2021-04-30T16:00:00Z" end-time-utc="2021-05-01T16:00:00Z">
+                <element type="forecast_icon_code">3</element>
+                <element type="air_temperature_minimum" units="Celsius">8</element>
+                <element type="air_temperature_maximum" units="Celsius">22</element>
+                <text type="precis">Mostly sunny.</text>
+                <text type="probability_of_precipitation">0%</text>
+            </forecast-period>
+            <forecast-period index="2" start-time-local="2021-05-02T00:00:00+08:00" end-time-local="2021-05-03T00:00:00+08:00" start-time-utc="2021-05-01T16:00:00Z" end-time-utc="2021-05-02T16:00:00Z">
+                <element type="forecast_icon_code">3</element>
+                <element type="air_temperature_minimum" units="Celsius">8</element>
+                <element type="air_temperature_maximum" units="Celsius">23</element>
+                <text type="precis">Mostly sunny.</text>
+                <text type="probability_of_precipitation">0%</text>
+            </forecast-period>
+            <forecast-period index="3" start-time-local="2021-05-03T00:00:00+08:00" end-time-local="2021-05-04T00:00:00+08:00" start-time-utc="2021-05-02T16:00:00Z" end-time-utc="2021-05-03T16:00:00Z">
+                <element type="forecast_icon_code">3</element>
+                <element type="air_temperature_minimum" units="Celsius">9</element>
+                <element type="air_temperature_maximum" units="Celsius">23</element>
+                <text type="precis">Partly cloudy.</text>
+                <text type="probability_of_precipitation">5%</text>
+            </forecast-period>
+            <forecast-period index="4" start-time-local="2021-05-04T00:00:00+08:00" end-time-local="2021-05-05T00:00:00+08:00" start-time-utc="2021-05-03T16:00:00Z" end-time-utc="2021-05-04T16:00:00Z">
+                <element type="forecast_icon_code">11</element>
+                <element type="precipitation_range">4 to 15 mm</element>
+                <element type="air_temperature_minimum" units="Celsius">14</element>
+                <element type="air_temperature_maximum" units="Celsius">23</element>
+                <text type="precis">Showers.</text>
+                <text type="probability_of_precipitation">80%</text>
+            </forecast-period>
+            <forecast-period index="5" start-time-local="2021-05-05T00:00:00+08:00" end-time-local="2021-05-06T00:00:00+08:00" start-time-utc="2021-05-04T16:00:00Z" end-time-utc="2021-05-05T16:00:00Z">
+                <element type="forecast_icon_code">11</element>
+                <element type="precipitation_range">3 to 15 mm</element>
+                <element type="air_temperature_minimum" units="Celsius">12</element>
+                <element type="air_temperature_maximum" units="Celsius">22</element>
+                <text type="precis">Showers easing.</text>
+                <text type="probability_of_precipitation">80%</text>
+            </forecast-period>
+            <forecast-period index="6" start-time-local="2021-05-06T00:00:00+08:00" end-time-local="2021-05-07T00:00:00+08:00" start-time-utc="2021-05-05T16:00:00Z" end-time-utc="2021-05-06T16:00:00Z">
+                <element type="forecast_icon_code">11</element>
+                <element type="precipitation_range">2 to 10 mm</element>
+                <element type="air_temperature_minimum" units="Celsius">13</element>
+                <element type="air_temperature_maximum" units="Celsius">22</element>
+                <text type="precis">Shower or two.</text>
+                <text type="probability_of_precipitation">70%</text>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT030" description="Joondalup" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">20</element>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT058" description="Scarborough" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">20</element>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT028" description="Fremantle" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">20</element>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT055" description="Rockingham" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">20</element>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT044" description="Midland" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">21</element>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT032" description="Kalamunda" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">19</element>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT017" description="Armadale" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">19</element>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT060" description="Swanbourne" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">20</element>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT057" description="Rottnest Island" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">21</element>
+            </forecast-period>
+        </area>
+        <area aac="WA_PT012" description="Mandurah" type="location" parent-aac="WA_ME001">
+            <forecast-period index="0" start-time-local="2021-04-30T05:00:00+08:00" end-time-local="2021-05-01T00:00:00+08:00" start-time-utc="2021-04-29T21:00:00Z" end-time-utc="2021-04-30T16:00:00Z">
+                <element type="air_temperature_maximum" units="Celsius">20</element>
+            </forecast-period>
+        </area>
+    </forecast>
+</product>
