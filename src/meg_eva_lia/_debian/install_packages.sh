@@ -15,6 +15,7 @@ PACKAGES=(
   rsync
   vim
   rename
+  parted
   curl
   screen
   fswatch

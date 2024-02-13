@@ -1,1 +1,0 @@
-# telegraf python - work out how to use wrangle library, stop docker, rsync all home dirs daily, deleted removed files

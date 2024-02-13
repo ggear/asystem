@@ -20,6 +20,7 @@ apt-get install -y --allow-downgrades 'unrar=1:6.2.6-1+deb12u1'
 apt-get install -y --allow-downgrades 'rsync=3.2.7-1'
 apt-get install -y --allow-downgrades 'vim=2:9.0.1378-2'
 apt-get install -y --allow-downgrades 'rename=2.01-1'
+apt-get install -y --allow-downgrades 'parted=3.5-3'
 apt-get install -y --allow-downgrades 'curl=7.88.1-10+deb12u5'
 apt-get install -y --allow-downgrades 'screen=4.9.0-4'
 apt-get install -y --allow-downgrades 'fswatch=1.14.0+repack-13.1+b1'
@@ -288,7 +289,8 @@ rm -rf /usr/local/bin/docker-compose
 pip3 uninstall --quiet --break-system-packages -y docker-compose
 pip3 install --default-timeout=1000 --break-system-packages --no-input pyyaml==5.3.1
 pip3 install --default-timeout=1000 --break-system-packages --no-input docker-compose==1.29.2
-docker compose -v
+docker-compose -v
+docker compose version
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
 mkdir -p /etc/docker

@@ -3,8 +3,7 @@
 ################################################################################
 # Samba
 ################################################################################
-if [ $(grep "fruit" /etc/samba/smb.conf | wc -l) -eq 0 ]; then
-  cat <<EOF >/etc/samba/smb.conf
+cat <<EOF >/etc/samba/smb.conf
 [global]
   min protocol = SMB2
   server role = standalone server
@@ -31,8 +30,45 @@ if [ $(grep "fruit" /etc/samba/smb.conf | wc -l) -eq 0 ]; then
   fruit:posix_rename = yes
   fruit:veto_appledouble = no
   fruit:wipe_intentionally_left_blank_rfork = yes
+
 EOF
-fi
+for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+  SHARE_INDEX=$(echo ${SHARE_DIR} | awk 'BEGIN{FS=OFS="/"}{print $3}')
+  mkdir -p ${SHARE_DIR}/tmp
+  mkdir -p ${SHARE_DIR}/media/audio
+  mkdir -p ${SHARE_DIR}/media/series
+  mkdir -p ${SHARE_DIR}/media/movies
+  mkdir -p ${SHARE_DIR}/backup/service
+  mkdir -p ${SHARE_DIR}/backup/timemachine
+  rm -rf ${SHARE_DIR}/lost+found
+  cat <<EOF >>/etc/samba/smb.conf
+[share-${SHARE_INDEX}]
+  comment = Share-${SHARE_INDEX} Files
+  path = ${SHARE_DIR}
+  browseable = yes
+  read only = no
+  guest ok = yes
+
+EOF
+
+  # TODO: Disable Time Machine share until we want it again
+  #  cat <<EOF >>/etc/samba/smb.conf
+  #[time-machine-${SHARE_INDEX}]
+  #  comment = Time-Machine-${SHARE_INDEX} Files
+  #  path = ${SHARE_DIR}/backup/timemachine
+  #  browseable = yes
+  #  writable = yes
+  #  read only = no
+  #  guest ok = yes
+  #  fruit:aapl = yes
+  #  fruit:time machine = yes
+  #  fruit:time machine max size = "4 T"
+  #  vfs objects = fruit streams_xattr
+  #
+  #EOF
+
+done
+df -h -t ext4
 systemctl restart smbd
 systemctl enable smbd
 systemctl restart nmbd

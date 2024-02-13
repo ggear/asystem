@@ -15,7 +15,7 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}/config:/config
       - ${SERVICE_DATA_DIR}/transcode:/transcode
-      - /data/media:/data/media
+      - /share:/share
     network_mode: host
     deploy:
       resources:
