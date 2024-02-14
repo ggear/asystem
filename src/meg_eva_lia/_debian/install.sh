@@ -66,6 +66,7 @@ apt-get install -y --allow-downgrades 'python3=3.11.2-1+b1'
 apt-get install -y --allow-downgrades 'python3-pip=23.0.1+dfsg-1'
 apt-get install -y --allow-downgrades 'tesseract-ocr=5.3.0-2'
 apt-get install -y --allow-downgrades 'libedgetpu1-std=16.0'
+apt-get install -y --allow-downgrades 'exfatprogs=1.2.0-1+deb12u1'
 
 ################################################################################
 # Grub config

@@ -37,19 +37,22 @@ cat <<EOF >/etc/fstab
 # systemd generates mount units based on this file, see systemd.mount(5).
 # Please run 'systemctl daemon-reload' after making changes here.
 #
-# <file system>                               <mount point>       <type>  <options>                                                                                                  <dump>  <pass>
-UUID=9B6D-5F3E                                /boot/efi           vfat    umask=0077                                                                                                 0       1
-UUID=e296cb8a-0a02-413e-8e53-8bada21a610c     /boot               ext2    noatime,defaults                                                                                           0       2
-/dev/mapper/macmini--meg--vg-swap_1           none                swap    sw                                                                                                         0       0
-/dev/mapper/macmini--meg--vg-root             /                   ext4    noatime,commit=600,errors=remount-ro                                                                       0       1
-/dev/mapper/macmini--meg--vg-home             /home               ext4    noatime,commit=600,errors=remount-ro                                                                       0       2
-/dev/mapper/macmini--meg--vg-tmp              /tmp                ext4    noatime,commit=600,errors=remount-ro                                                                       0       2
-/dev/mapper/macmini--meg--vg-var              /var                ext4    noatime,commit=600,errors=remount-ro                                                                       0       2
-/dev/mapper/macmini--meg--vg-share--1         /share/1            ext4    noatime,commit=600,errors=remount-ro                                                                       0       2
-UUID=100f5ef4-e75d-41f4-bcb9-aaa84c03209a     /share/2            ext4    noatime,commit=600,errors=remount-ro                                                                       0       2
-//macmini-eva/share-3                         /share/3            cifs    user=share3,password=${SHARE_3_PASSWORD},user,nofail,x-systemd.automount                                                      0       0
-//macmini-eva/share-4                         /share/4            cifs    user=share4,password=${SHARE_4_PASSWORD},user,nofail,x-systemd.automount                                                      0       0
+# <file system>                               <mount point>       <type>  <options>                                                                                                                                        <dump>  <pass>
+UUID=9B6D-5F3E                                /boot/efi           vfat    umask=0077                                                                                                                                       0       1
+UUID=e296cb8a-0a02-413e-8e53-8bada21a610c     /boot               ext2    noatime,defaults                                                                                                                                 0       2
+/dev/mapper/macmini--meg--vg-swap_1           none                swap    sw                                                                                                                                               0       0
+/dev/mapper/macmini--meg--vg-root             /                   ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       1
+/dev/mapper/macmini--meg--vg-home             /home               ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+/dev/mapper/macmini--meg--vg-tmp              /tmp                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+/dev/mapper/macmini--meg--vg-var              /var                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+/dev/mapper/macmini--meg--vg-share--1         /share/1            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+UUID=100f5ef4-e75d-41f4-bcb9-aaa84c03209a     /share/2            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+//macmini-eva/share-3                         /share/3            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
+//macmini-eva/share-4                         /share/4            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 EOF
-for SHARE_DIR in $(grep /share /etc/fstab | awk 'BEGIN{FS=OFS=" "}{print $2}'); do mkdir -p ${SHARE_DIR}; done
+systemctl stop remote-fs.target
 systemctl daemon-reload
+for SHARE_DIR in $(grep /share /etc/fstab | awk 'BEGIN{FS=OFS=" "}{print $2}'); do mkdir -p ${SHARE_DIR}; done
+for SHARE_DIR in $(grep /share /etc/fstab | grep cifs | awk 'BEGIN{FS=OFS=" "}{print $2}'); do umount -f ${SHARE_DIR} >/dev/null 2>&1; done
 mount -a
+systemctl start remote-fs.target

@@ -61,6 +61,7 @@ PACKAGES=(
   python3-pip
   tesseract-ocr
   libedgetpu1-std
+  exfatprogs
 )
 apt-get update
 for PACKAGE in "${PACKAGES[@]}"; do

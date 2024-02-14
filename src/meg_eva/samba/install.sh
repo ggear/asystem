@@ -5,7 +5,10 @@
 ################################################################################
 cat <<EOF >/etc/samba/smb.conf
 [global]
-  min protocol = SMB2
+  server min protocol = SMB2
+  server max protocol = SMB3
+  client min protocol = SMB2
+  client max protocol = SMB3
   server role = standalone server
   workgroup = WORKGROUP
   log file = /var/log/samba/log.%m
@@ -45,9 +48,13 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
 [share-${SHARE_INDEX}]
   comment = Share-${SHARE_INDEX} Files
   path = ${SHARE_DIR}
+  public = yes
   browseable = yes
   read only = no
-  guest ok = yes
+  writeable = yes
+  create mask = 0640
+  directory mask = 0750
+  force user = graham
 
 EOF
 
@@ -56,10 +63,13 @@ EOF
   #[time-machine-${SHARE_INDEX}]
   #  comment = Time-Machine-${SHARE_INDEX} Files
   #  path = ${SHARE_DIR}/backup/timemachine
+  #  public = yes
   #  browseable = yes
-  #  writable = yes
   #  read only = no
-  #  guest ok = yes
+  #  writeable = yes
+  #  create mask = 0640
+  #  directory mask = 0750
+  #  force user = graham
   #  fruit:aapl = yes
   #  fruit:time machine = yes
   #  fruit:time machine max size = "4 T"
