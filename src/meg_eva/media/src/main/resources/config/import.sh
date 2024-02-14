@@ -3,17 +3,19 @@
 IMPORT_MEDIA_SHARE=/share/3/tmp
 
 if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
-  IMPORT_MEDIA_DEV=$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
-  mkdir -p /media/usbdrive
-  umount -fq /media/usbdrive
-  mount /dev/${IMPORT_MEDIA_DEV} /media/usbdrive
-  if [ -d /media/usbdrive ]; then
-    echo "Copying /media/usbdrive to ${IMPORT_MEDIA_SHARE} ... "
+  IMPORT_MEDIA_DEV="/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
+  if [ -f ${IMPORT_MEDIA_DEV} ]; then
+    echo "Starting copy of [/media/usbdrive] from [${IMPORT_MEDIA_DEV}] to [${IMPORT_MEDIA_SHARE}]"
+    mkdir -p /media/usbdrive
+    umount -fq /media/usbdrive
+    mount ${IMPORT_MEDIA_DEV} /media/usbdrive
+    rm -rf /media/usbdrive/.Trashes /media/usbdrive/.Spotlight-* /media/usbdrive/.fseventsd /media/usbdrive/\$RECYCLE.BIN /media/usbdrive/System\ Volume\ Information
     rsync -avP /media/usbdrive ${IMPORT_MEDIA_SHARE}
-    echo "Copy /media/usbdrive to ${IMPORT_MEDIA_SHARE} complete"
+    umount -fq /media/usbdrive
+    echo "Completed copy of [/media/usbdrive] from [${IMPORT_MEDIA_DEV}] to [${IMPORT_MEDIA_SHARE}]"
     echo "Metadata commands:"
     echo "umount -fq /media/usbdrive"
-    echo "mount /dev/${IMPORT_MEDIA_DEV} /media/usbdrive"
+    echo "mount ${IMPORT_MEDIA_DEV} /media/usbdrive"
     echo "pgsrip *.mkv"
     echo "rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv"
     echo "ffmpeg -f concat -i files.txt -c copy -aspect 16/9 output.mkv"
