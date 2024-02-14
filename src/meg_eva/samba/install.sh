@@ -88,3 +88,5 @@ systemctl restart smbd
 systemctl enable smbd
 systemctl restart nmbd
 systemctl enable nmbd
+
+echo "" && echo "" && du -hd 0 /share/* && echo "" && echo ""
