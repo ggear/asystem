@@ -4,7 +4,7 @@ FROM influxdb:2.7.1-alpine as image_base
 FROM image_base as image_package
 USER root
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
-RUN apk add --no-cache jq==1.6-r3
+RUN apk add --no-cache jq==1.6-r4
 RUN apk add --no-cache curl==8.4.0-r0
 RUN apk add --no-cache netcat-openbsd==1.219-r1
 
