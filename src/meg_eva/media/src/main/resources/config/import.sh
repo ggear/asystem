@@ -6,7 +6,7 @@ if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
   IMPORT_MEDIA_DEV=$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
   mkdir -p /media/usbdrive
   umount -fq /media/usbdrive
-  mount IMPORT_MEDIA_DEV /media/usbdrive
+  mount ${IMPORT_MEDIA_DEV} /media/usbdrive
   if [ -d /media/usbdrive ]; then
     echo "Copying /media/usbdrive to ${IMPORT_MEDIA_SHARE} ... "
     rsync -avP /media/usbdrive ${IMPORT_MEDIA_SHARE}
