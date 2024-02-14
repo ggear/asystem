@@ -3,12 +3,12 @@
 ################################################################################
 # Volumes LVM share
 ################################################################################
-SHARE_GUID="1"
+SHARE_GUID="4"
 SHARE_SIZE="1.3TB"
 if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
   vgdisplay
   if ! lvdisplay /dev/$(hostname)-vg/share-${SHARE_GUID} >/dev/null 2>&1; then
-    lvcreate -L 5G -n share-${SHARE_GUID} $(hostname)-vg
+    lvcreate -L ${SHARE_SIZE} -n share-${SHARE_GUID} $(hostname)-vg
     mkfs.ext4 -m 0 -T largefile4 /dev/$(hostname)-vg/share-${SHARE_GUID}
   fi
   lvdisplay /dev/$(hostname)-vg/share-${SHARE_GUID}
@@ -45,10 +45,11 @@ UUID=e296cb8a-0a02-413e-8e53-8bada21a610c     /boot               ext2    noatim
 /dev/mapper/macmini--meg--vg-home             /home               ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 /dev/mapper/macmini--meg--vg-tmp              /tmp                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 /dev/mapper/macmini--meg--vg-var              /var                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-/dev/mapper/macmini--meg--vg-share--1         /share/1            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-UUID=100f5ef4-e75d-41f4-bcb9-aaa84c03209a     /share/2            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+/dev/mapper/macmini--meg--vg-share--4         /share/4            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+UUID=100f5ef4-e75d-41f4-bcb9-aaa84c03209a     /share/5            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+//macmini-eva/share-1                         /share/1            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
+//macmini-eva/share-2                         /share/2            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 //macmini-eva/share-3                         /share/3            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-//macmini-eva/share-4                         /share/4            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 EOF
 systemctl stop remote-fs.target
 systemctl daemon-reload

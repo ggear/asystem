@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMPORT_MEDIA_SHARE=/share/4/tmp
+IMPORT_MEDIA_SHARE=/share/5/tmp
 
 echo -n "Normalising /data ... "
 for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do

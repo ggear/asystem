@@ -3,12 +3,31 @@
 ################################################################################
 # Volumes LVM share
 ################################################################################
-SHARE_GUID="3"
+SHARE_GUID="1"
+SHARE_SIZE="1GB"
+if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
+  vgdisplay
+  if ! lvdisplay /dev/$(hostname)-vg/share-${SHARE_GUID} >/dev/null 2>&1; then
+    lvcreate -L ${SHARE_SIZE} -n share-${SHARE_GUID} $(hostname)-vg
+    mkfs.ext4 -m 0 -T largefile4 /dev/$(hostname)-vg/share-${SHARE_GUID}
+  fi
+  lvdisplay /dev/$(hostname)-vg/share-${SHARE_GUID}
+  lvextend -L ${SHARE_SIZE} /dev/$(hostname)-vg/share-${SHARE_GUID}
+  resize2fs /dev/$(hostname)-vg/share-${SHARE_GUID}
+  tune2fs -m 0 /dev/$(hostname)-vg/share-${SHARE_GUID}
+  tune2fs -l /dev/$(hostname)-vg/share-${SHARE_GUID} | grep 'Block size:'
+  tune2fs -l /dev/$(hostname)-vg/share-${SHARE_GUID} | grep 'Block count:'
+  tune2fs -l /dev/$(hostname)-vg/share-${SHARE_GUID} | grep 'Reserved block count:'
+  lvdisplay /dev/$(hostname)-vg/share-${SHARE_GUID}
+fi
+vgdisplay | grep 'Free  PE / Size'
+lvdisplay | grep 'LV Size'
+SHARE_GUID="2"
 SHARE_SIZE="3TB"
 if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
   vgdisplay
   if ! lvdisplay /dev/$(hostname)-vg/share-${SHARE_GUID} >/dev/null 2>&1; then
-    lvcreate -L 5G -n share-${SHARE_GUID} $(hostname)-vg
+    lvcreate -L ${SHARE_SIZE} -n share-${SHARE_GUID} $(hostname)-vg
     mkfs.ext4 -m 0 -T largefile4 /dev/$(hostname)-vg/share-${SHARE_GUID}
   fi
   lvdisplay /dev/$(hostname)-vg/share-${SHARE_GUID}
@@ -45,10 +64,11 @@ UUID=0e18317e-205c-437c-a02f-dbb5efca26aa     /boot               ext2    noatim
 /dev/mapper/macmini--eva--vg-home             /home               ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 /dev/mapper/macmini--eva--vg-tmp              /tmp                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 /dev/mapper/macmini--eva--vg-var              /var                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-/dev/mapper/macmini--eva--vg-share--3         /share/3            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-UUID=4ae1477d-6e38-4b5f-8492-79f5072dcc8d     /share/4            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-//macmini-meg/share-1                         /share/1            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-//macmini-meg/share-2                         /share/2            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
+/dev/mapper/macmini--eva--vg-share--1         /share/1            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+/dev/mapper/macmini--eva--vg-share--2         /share/2            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+UUID=4ae1477d-6e38-4b5f-8492-79f5072dcc8d     /share/3            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+//macmini-meg/share-4                         /share/4            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
+//macmini-meg/share-5                         /share/5            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 EOF
 systemctl stop remote-fs.target
 systemctl daemon-reload
