@@ -78,7 +78,6 @@ EOF
   #EOF
 
 done
-df -h -t ext4
 systemctl restart smbd
 systemctl enable smbd
 systemctl restart nmbd
