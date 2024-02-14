@@ -9,8 +9,9 @@ if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
     mkdir -p /media/usbdrive
     umount -fq /media/usbdrive
     mount ${IMPORT_MEDIA_DEV} /media/usbdrive
+    find /media/usbdrive -name "\.*" -exec rm {} \;
     rm -rf /media/usbdrive/\.* /media/usbdrive/System* /media/usbdrive/\$RECYCLE.BIN
-    rsync -avP --inplace /media/usbdrive/* ${IMPORT_MEDIA_SHARE}
+    rsync -avP /media/usbdrive/* ${IMPORT_MEDIA_SHARE}
     umount -fq /media/usbdrive
     echo "Completed copy of [/media/usbdrive] from [${IMPORT_MEDIA_DEV}] to [${IMPORT_MEDIA_SHARE}]"
     echo "Metadata commands:"
