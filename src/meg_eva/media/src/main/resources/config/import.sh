@@ -14,6 +14,7 @@ if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
     rsync -avP /media/usbdrive/* ${IMPORT_MEDIA_SHARE}
     umount -fq /media/usbdrive
     echo "Completed copy of [/media/usbdrive] from [${IMPORT_MEDIA_DEV}] to [${IMPORT_MEDIA_SHARE}]"
+    echo ""
     echo "Metadata commands:"
     echo "umount -fq /media/usbdrive"
     echo "mount ${IMPORT_MEDIA_DEV} /media/usbdrive"
