@@ -52,9 +52,12 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
   browseable = yes
   read only = no
   writeable = yes
+  force user = graham
+  force group = users
   create mask = 0640
   directory mask = 0750
-  force user = graham
+  force create mode = 0640
+  force directory mode = 0750
 
 EOF
 
