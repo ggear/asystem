@@ -2,17 +2,18 @@
 
 IMPORT_MEDIA_SHARE=/share/3/tmp
 
-if [ -b /dev/sdb1 ] && [ -d ${IMPORT_MEDIA_SHARE} ]; then
+if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
+  IMPORT_MEDIA_DEV=$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
   mkdir -p /media/usbdrive
   umount -fq /media/usbdrive
-  mount /dev/sdb1 /media/usbdrive
+  mount IMPORT_MEDIA_DEV /media/usbdrive
   if [ -d /media/usbdrive ]; then
     echo "Copying /media/usbdrive to ${IMPORT_MEDIA_SHARE} ... "
     rsync -avP /media/usbdrive ${IMPORT_MEDIA_SHARE}
     echo "Copy /media/usbdrive to ${IMPORT_MEDIA_SHARE} complete"
     echo "Metadata commands:"
     echo "umount -fq /media/usbdrive"
-    echo "mount /dev/sdb1 /media/usbdrive"
+    echo "mount ${IMPORT_MEDIA_DEV} /media/usbdrive"
     echo "pgsrip *.mkv"
     echo "rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv"
     echo "ffmpeg -f concat -i files.txt -c copy -aspect 16/9 output.mkv"
