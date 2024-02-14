@@ -4,7 +4,7 @@ IMPORT_MEDIA_SHARE=/share/3/tmp
 
 if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
   IMPORT_MEDIA_DEV="/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
-  if [ -f ${IMPORT_MEDIA_DEV} ]; then
+  if [ -a ${IMPORT_MEDIA_DEV} ]; then
     echo "Starting copy of [/media/usbdrive] from [${IMPORT_MEDIA_DEV}] to [${IMPORT_MEDIA_SHARE}]"
     mkdir -p /media/usbdrive
     umount -fq /media/usbdrive
