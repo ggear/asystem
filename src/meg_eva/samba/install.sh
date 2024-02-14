@@ -70,9 +70,12 @@ EOF
   #  browseable = yes
   #  read only = no
   #  writeable = yes
+  #  force user = graham
+  #  force group = users
   #  create mask = 0640
   #  directory mask = 0750
-  #  force user = graham
+  #  force create mode = 0640
+  #  force directory mode = 0750
   #  fruit:aapl = yes
   #  fruit:time machine = yes
   #  fruit:time machine max size = "4 T"
