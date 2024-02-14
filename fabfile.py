@@ -601,9 +601,9 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
         grouped_modules = {}
         for module in working_modules:
             group_path = Path(join(DIR_ROOT_MODULE, module, ".group"))
-            group = group_path.read_text().strip() if group_path.exists() else "ZZZZZ"
-            if (FAB_SKIP_GROUP_BELOW not in os.environ or os.environ[FAB_SKIP_GROUP_BELOW] > group) and \
-                    (FAB_SKIP_GROUP_ABOVE not in os.environ or os.environ[FAB_SKIP_GROUP_ABOVE] < group):
+            group = int(group_path.read_text().strip()) if group_path.exists() else -1
+            if (FAB_SKIP_GROUP_BELOW not in os.environ or int(os.environ[FAB_SKIP_GROUP_BELOW]) > group) and \
+                    (FAB_SKIP_GROUP_ABOVE not in os.environ or int(os.environ[FAB_SKIP_GROUP_ABOVE]) < group):
                 if group not in grouped_modules:
                     grouped_modules[group] = [module]
                 else:
@@ -683,13 +683,7 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
                        "{}/{}/target/runtime-system".format(DIR_ROOT_MODULE, module), working_path), module)
     for dependency in _get_dependencies(context, module):
 
-
-
-
         # TODO: Drop HOST/IP and clean up, add HOST formed from service DNS entry, which I need to add too :)
-
-
-
 
         host_ips_prod = []
         host_names_prod = _get_hosts(dependency) if _name(module) != _name(dependency) or filter_host is None else [filter_host]
@@ -712,8 +706,6 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
         dependency_domain = "{}.internal.janeandgraham.com".format(dependency_service.lower())
         _run_local(context, "echo '' >> {}/.env".format(working_path))
 
-
-
         _run_local(context, "echo '{}_HOST={}' >> {}/.env"
                    .format(dependency_service, host_name_prod if is_release else host_name_dev, working_path), module)
         _run_local(context, "echo '{}_IP={}' >> {}/.env"
@@ -726,15 +718,6 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
                    .format(dependency_service, host_ip_prod, working_path), module)
         # _run_local(context, "echo '{}_HOST_PROD={}' >> {}/.env"
         #            .format(dependency_service, dependency_domain, working_path), module)
-
-
-
-
-
-
-
-
-
 
         for dependency_env_file in [".env_all", ".env_prod" if is_release else ".env_dev", ".env_all_key"]:
             dependency_env_dev = "{}/{}/{}".format(DIR_ROOT_MODULE, dependency, dependency_env_file)
