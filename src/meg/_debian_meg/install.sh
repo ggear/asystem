@@ -56,4 +56,4 @@ for SHARE_DIR in $(grep /share /etc/fstab | awk 'BEGIN{FS=OFS=" "}{print $2}'); 
 for SHARE_DIR in $(grep /share /etc/fstab | grep cifs | awk 'BEGIN{FS=OFS=" "}{print $2}'); do umount -f ${SHARE_DIR} >/dev/null 2>&1; done
 mount -a
 systemctl start remote-fs.target
-df -h / /var /tmp /home /share/*
+echo "" && echo "" && df -h / /var /tmp /home /share/* && echo "" && echo ""
