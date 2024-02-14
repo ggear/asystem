@@ -25,6 +25,10 @@ automation:
         data_template:
           level: info
           message: "Home Assistant has started!"
+      - service: switch.turn_on
+        target:
+          entity_id:
+            - switch.switch.adaptive_lighting_sleep_mode_night
   #####################################################################################
   - id: routine_home_movie_on
     alias: "Routine: Put home into Movie mode"
