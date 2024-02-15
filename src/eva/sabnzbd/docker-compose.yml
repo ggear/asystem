@@ -12,9 +12,9 @@ services:
       - PGID=0
     volumes:
       - ${SERVICE_DATA_DIR}:/config
-      - /share/3/tmp/usenet/enqueued:/downloads/enqueued
-      - /share/3/tmp/usenet/finished:/downloads/finished
-      - /share/3/tmp/usenet/incomplete:/downloads/incomplete
+      - ${SABNZBD_SHARE_DIR}/enqueued:/downloads/enqueued
+      - ${SABNZBD_SHARE_DIR}/finished:/downloads/finished
+      - ${SABNZBD_SHARE_DIR}/staging:/downloads/staging
     ports:
       - ${SABNZBD_HTTP_PORT}:8080
     deploy:
