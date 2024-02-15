@@ -1,1 +1,2 @@
 ../install.sh
+main/resources/config/sabnzbd.ini
