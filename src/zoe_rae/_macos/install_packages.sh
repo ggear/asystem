@@ -21,6 +21,7 @@ brew install \
   telnet \
   poppler \
   mosquitto \
+  mediainfo \
   pkg-config \
   docker-slim \
   hudochenkov/sshpass/sshpass
