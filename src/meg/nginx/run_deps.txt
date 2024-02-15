@@ -1,5 +1,6 @@
 plex
 weewx
+sabnzbd
 grafana
 vernemq
 influxdb
