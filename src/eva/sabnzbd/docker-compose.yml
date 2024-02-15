@@ -12,8 +12,9 @@ services:
       - PGID=100
     volumes:
       - ${SERVICE_DATA_DIR}:/config
-      - /share/3/tmp/usenet/downloads:/downloads/complete
-      - /share/3/tmp/usenet/downloads-incomplete:/downloads/incomplete
+      - /share/3/tmp/usenet/enqueued:/downloads/enqueued
+      - /share/3/tmp/usenet/finished:/downloads/finished
+      - /share/3/tmp/usenet/incomplete:/downloads/incomplete
     ports:
       - ${SABNZBD_HTTP_PORT}:8080
     deploy:
