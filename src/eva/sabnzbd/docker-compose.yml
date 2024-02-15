@@ -1,21 +1,19 @@
-# https://hub.docker.com/r/linuxserver/plex/tags
+# https://hub.docker.com/r/linuxserver/sabnzbd/tags
 version: '3.7'
 services:
-  plex:
-    container_name: plex
-    image: linuxserver/plex:1.40.0
+  sabnzbd:
+    container_name: sabnzbd
+    image: linuxserver/sabnzbd:4.2.2-ls148
     init: false
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
       - PUID=1000
       - PGID=100
-      - VERSION=docker
-      - PLEX_CLAIM=${PLEX_CLAIM}
     volumes:
       - ${SERVICE_DATA_DIR}/config:/config
-      - ${SERVICE_DATA_DIR}/transcode:/transcode
-      - /share:/share
+      - /share/3/tmp/usenet/downloads:/downloads
+      - /share/3/tmp/usenet/downloads-incomplete:/incomplete-downloads
     network_mode: host
     deploy:
       resources:
