@@ -8,8 +8,8 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
-      - PUID=1000
-      - PGID=100
+      - PUID=0
+      - PGID=0
     volumes:
       - ${SERVICE_DATA_DIR}:/config
       - /share/3/tmp/usenet/enqueued:/downloads/enqueued
