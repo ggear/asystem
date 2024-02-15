@@ -11,7 +11,7 @@ services:
       - PUID=1000
       - PGID=100
     volumes:
-      - ${SERVICE_DATA_DIR}/config:/config
+      - ${SERVICE_DATA_DIR}:/config
       - /share/3/tmp/usenet/downloads:/downloads/complete
       - /share/3/tmp/usenet/downloads-incomplete:/downloads/incomplete
     ports:
