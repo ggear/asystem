@@ -14,7 +14,8 @@ services:
       - ${SERVICE_DATA_DIR}/config:/config
       - /share/3/tmp/usenet/downloads:/downloads
       - /share/3/tmp/usenet/downloads-incomplete:/incomplete-downloads
-    network_mode: host
+    ports:
+      - ${SABNZBD_HTTP_PORT}:8080
     deploy:
       resources:
         limits:
