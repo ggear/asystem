@@ -1,6 +1,6 @@
 #!/bin/sh
 
-. ~/.env
+. ./.env
 
 for DIR in "enqueued" "finished" "staging"; do
   mkdir -p "${SABNZBD_SHARE_DIR}/$DIR"
