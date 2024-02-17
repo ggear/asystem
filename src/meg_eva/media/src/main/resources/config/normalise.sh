@@ -8,5 +8,6 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
   find ${SHARE_DIR} -type d -exec chown graham:users {} \;
   find ${SHARE_DIR} -type f -name nohup -exec rm -f {} \;
   find ${SHARE_DIR} -type f -name .DS_Store -exec rm -f {} \;
+  df -h ${SHARE_DIR}
   echo "done"
 done
