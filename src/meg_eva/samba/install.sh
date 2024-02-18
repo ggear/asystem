@@ -39,6 +39,7 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
   SHARE_INDEX=$(echo ${SHARE_DIR} | awk 'BEGIN{FS=OFS="/"}{print $3}')
   mkdir -p ${SHARE_DIR}/tmp
   mkdir -p ${SHARE_DIR}/media
+  mkdir -p ${SHARE_DIR}/backup/media
   mkdir -p ${SHARE_DIR}/backup/service
   mkdir -p ${SHARE_DIR}/backup/timemachine
   rm -rf ${SHARE_DIR}/lost+found
