@@ -10,4 +10,4 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
   find ${SHARE_DIR} -type f -name .DS_Store -exec rm -f {} \;
   echo "done"
 done
-echo "" && echo "" && df -h /share/* && echo "" && echo ""
+df -h /share/*
