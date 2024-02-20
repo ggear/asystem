@@ -25,7 +25,7 @@ UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
 
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
-    modules = load_modules()
+    modules = load_modules(load_disabled=False, load_infrastrcture=False)
     metadata_df = load_entity_metadata()
 
     metadata_dhcp_df = metadata_df[
@@ -133,12 +133,54 @@ if __name__ == "__main__":
     #             metadata_dhcp_ips[metadata_dhcp_ip]
     #         ))
 
+    # INFO: Possible host and domain naming schemes:
+    #
+    # home.janeandgraham.com
+    # homeassistant.janeandgraham.com
+    # homeassistant.local.janeandgraham.com
+    # homeassistant
+    # macmini-meg.local.janeandgraham.com
+    # macmini-meg.local
+    # macmini-meg
+    #
+    # home.janeandgraham.com
+    # homeassistant.janeandgraham.com
+    # homeassistant.lan.janeandgraham.com
+    # homeassistant
+    # macmini-meg.lan.janeandgraham.com
+    # macmini-meg.local
+    # macmini-meg
+    #
+    # home.wan.janeandgraham.com
+    # homeassistant.cdn.janeandgraham.com
+    # homeassistant.lan.janeandgraham.com
+    # homeassistant
+    # macmini-meg.lan.janeandgraham.com
+    # macmini-meg.local
+    # macmini-meg
+    #
+    # home.public.janeandgraham.com
+    # homeassistant.private.proxy.janeandgraham.com
+    # homeassistant.private.service.janeandgraham.com
+    # homeassistant
+    # macmini-meg.private.host.janeandgraham.com
+    # macmini-meg.local
+    # macmini-meg
+
     metadata_dhcpaliases_path = abspath(join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))
     with open(metadata_dhcpaliases_path, 'w') as metadata_hass_file:
         for name in modules:
+
+
+
             if "{}_HTTP_PORT".format(name.upper()) in modules[name][1]:
-                metadata_hass_file.write("cname={},{}.janeandgraham.com,{}\n".format(
-                    name,
+                metadata_hass_file.write("cname={}.janeandgraham.com,{}\n".format(
                     name,
                     modules["nginx"][0][0],
                 ))
+            metadata_hass_file.write("cname={},{}.local.janeandgraham.com,{}\n".format(
+                name,
+                name,
+                modules[name][0][0],
+            ))
+

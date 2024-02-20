@@ -1,17 +1,15 @@
 import datetime
+import time
 from collections import OrderedDict
+from datetime import datetime
 from os.path import *
 
-import pandas as pd
+import polars as pl
+import polars.selectors as cs
 
 from .. import library
-from ..library import PD_BACKEND_DEFAULT
-from ..library import PD_ENGINE_DEFAULT
 
-PANDAS_ENGINE = PD_ENGINE_DEFAULT
-PANDAS_BACKEND = PD_BACKEND_DEFAULT
-
-PAIRS = ['AUD/GBP', 'AUD/USD', 'AUD/SGD']
+PAIRS = ['AUD/USD', 'AUD/GBP', 'AUD/SGD']
 
 PERIODS = OrderedDict([
     ('1 Day Delta', 1),
@@ -20,22 +18,6 @@ PERIODS = OrderedDict([
     ('1 Year Delta', 365),
 ])
 COLUMNS = ["{} {}".format(pair, period).strip() for pair in PAIRS for period in ([""] + list(PERIODS.keys()))]
-
-ATO_START_MONTH = 5
-ATO_START_YEAR = 2016
-ATO_FINISH_YEAR = 2020
-ATO_XLS_HEADER_ROWS = [5, 3, 2, 1, 4, 0, 6]
-ATO_URL_SUFFIX = [
-    "{}_{}_daily_rates.xlsx",
-    "{}_{}_daily_input.xlsx",
-    "{}{}dailyinput.xlsx",
-    "{}-{}-daily-input.xlsx",
-    "{1}_{0}_daily_input.xlsx",
-    "{1}_{0}_Daily_%20input.xlsx",
-    "{}%20{}%20daily%20input.xlsx",
-    "{}%20{}%20daily%20input.xls.xlsx"
-]
-ATO_URL_PREFIX = "https://www.ato.gov.au/uploadedFiles/Content/TPALS/downloads/"
 
 RBA_YEARS = [
     "1983-1986",
@@ -60,85 +42,26 @@ DRIVE_KEY = "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
 class Currency(library.Library):
 
     def _run(self):
-        rba_df = pd.DataFrame()
-        rba_delta_df = pd.DataFrame()
+        rba_df = self.dataframe_new()
+        rba_delta_df = self.dataframe_new()
         if not library.test(library.WRANGLE_DISABLE_FILE_DOWNLOAD):
             new_data = False
-
-            # TODO: Disable ATO downloads since the ATO has removed them
-            # ato_df = pd.DataFrame()
-            # merged_df = pd.DataFrame()
-            # for year in range(ATO_START_YEAR, ATO_FINISH_YEAR):
-            #     for month in range(1 if year != ATO_START_YEAR else ATO_START_MONTH,
-            #                        13 if year < datetime.datetime.now().year else datetime.datetime.now().month):
-            #         month_string = datetime.date(2000, month, 1).strftime('%B')
-            #         year_month_file = join(self.input, "ato_fx_{}-{}.xls".format(year, str(month).zfill(2)))
-            #         year_month_file_downloaded = False
-            #         for url_suffix in ATO_URL_SUFFIX:
-            #             file_status = self.http_download((ATO_URL_PREFIX + url_suffix)
-            #                                              .format(month_string, year), year_month_file, check=False, ignore=True)
-            #             if file_status[0]:
-            #                 year_month_file_downloaded = True
-            #                 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
-            #                     new_data = True
-            #                     for header_rows in ATO_XLS_HEADER_ROWS:
-            #                         try:
-            #                             ato_df = pd.read_excel(year_month_file, skiprows=header_rows)
-            #                             if ato_df.columns[0] == 'Country':
-            #                                 ato_df = ato_df[ato_df['Country'].isin(['USA', 'UK', 'SINGAPORE'])]
-            #                                 for column in ato_df.columns:
-            #                                     if isinstance(column, str) and column != 'Country':
-            #                                         if column[0].isdigit():
-            #                                             match = re.compile("(.*)-(.*)").match(column)
-            #                                             ato_df.rename(columns={column: "{}-{}-{}".format(
-            #                                                 year,
-            #                                                 str(list(calendar.month_abbr).index(match.group(2))).zfill(2),
-            #                                                 match.group(1).zfill(2)
-            #                                             )}, inplace=True)
-            #                                         else:
-            #                                             ato_df.drop(column, axis=1, inplace=True)
-            #                                     elif isinstance(column, datetime.datetime):
-            #                                         ato_df.rename(columns=
-            #                                                       {column: column.strftime("{}-%m-%d".format(year))}, inplace=True)
-            #                                 ato_df = ato_df.melt('Country', var_name='Date', value_name='Rate'). \
-            #                                     pivot_table('Rate', ['Date'], 'Country', aggfunc='first').ffill().bfill().reset_index()
-            #                                 ato_df.rename(columns=
-            #                                               {'USA': 'AUD/USD', 'UK': 'AUD/GBP', 'SINGAPORE': 'AUD/SGD'}, inplace=True)
-            #                                 ato_df.index.name = None
-            #                                 ato_df.columns.name = None
-            #                                 ato_df['Source'] = 'ATO'
-            #                                 ato_df = ato_df[['Source', 'Date'] + PAIRS]
-            #                                 merged_df = pd.concat([merged_df, ato_df], axis=0, join='outer',
-            #                                                       ignore_index=True, verify_integrity=True, sort=True)
-            #                                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
-            #                                 break
-            #                         except Exception as exception:
-            #                             self.print_log("Unexpected error processing file [{}]"
-            #                                       .format(year_month_file), exception=exception)
-            #                 else:
-            #                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
-            #                 break
-            #         if not year_month_file_downloaded:
-            #             self.print_log("Error downloading file [{}]".format(basename(year_month_file)))
-            #             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-
+            started_time = time.time()
             for years in RBA_YEARS:
-                years_file = join(self.input, "rba_fx_{}.xls".format(years))
+                years_file = join(self.input, "RBA_FX_{}.xls".format(years))
                 file_status = self.http_download(RBA_URL.format(years), years_file, check='current' in years)
                 if file_status[0]:
                     if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
                         new_data = True
                         try:
-                            rba_itr_df = pd.read_excel(years_file, sheet_name=0, skiprows=10)
-                            if rba_itr_df.columns[0] == 'Series ID':
-                                rba_itr_df = rba_itr_df.filter(['Series ID', 'FXRUSD', 'FXRUKPS', 'FXRSD']). \
-                                    rename(columns={'Series ID': 'Date', 'FXRUSD': 'AUD/USD', 'FXRUKPS': 'AUD/GBP', 'FXRSD': 'AUD/SGD'})
-                                rba_itr_df['Date'] = rba_itr_df['Date'].dt.strftime("%Y-%m-%d").astype(str)
-                                rba_itr_df['Source'] = 'RBA'
-                                rba_itr_df = rba_itr_df[['Source', 'Date'] + PAIRS]
-                                rba_df = pd.concat([rba_df, rba_itr_df], axis=0, join='outer',
-                                                   ignore_index=True, verify_integrity=True, sort=True)
-                                self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
+                            rba_itr_df = self.excel_read(years_file, schema={"Series ID": pl.Date},
+                                                         skip_rows=10, na_values=["CLOSED", "Closed", " --"])
+                            rba_itr_df = rba_itr_df.select(["Series ID", "FXRUSD", "FXRUKPS", "FXRSD"])
+                            rba_itr_df.columns = ['Date'] + PAIRS
+                            rba_itr_df = rba_itr_df.with_columns(pl.lit("RBA").alias("Source"))
+                            rba_df = pl.concat([rba_df, rba_itr_df])
+                            self.dataframe_print(rba_df, print_label="RBA_FX", print_verb="concatenated")
+                            self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_PROCESSED)
                         except Exception as exception:
                             self.print_log("Unexpected error processing file [{}]".format(years_file), exception=exception)
                             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
@@ -146,29 +69,22 @@ class Currency(library.Library):
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-            if datetime.datetime.now().year > 2023:
+            if datetime.now().year > 2023:
                 self.print_log("Error processing RBA data, need to increment RBA_YEARS for new current file")
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, 1)
                 return
+            rba_df = rba_df.drop_nulls()
+            self.dataframe_print(rba_df, print_label="Currency", print_verb="collected", started=started_time)
             try:
                 if new_data:
-                    def extrapolate(data_df):
-                        data_df = data_df.drop_duplicates(subset='Date', keep="first").copy()
-                        data_df['Date'] = pd.to_datetime(data_df['Date'])
-                        data_df = data_df.set_index('Date').sort_index()
-                        for fx_pair in PAIRS:
-                            data_df = data_df[~data_df[fx_pair].isin(['Closed', 'CLOSED'])]
-                        data_df = data_df.reindex(pd.date_range(start=data_df.index[0], end=data_df.index[-1])).ffill().bfill()
-                        data_df = data_df[['Source'] + PAIRS]
-                        data_df.index.name = 'Date'
-                        return data_df
-
-                    # TODO: Evaluate whether ATO FX rates should be included or not
-                    # ato_rba_df = extrapolate(rba_df.append(ato_df, ignore_index=True, verify_integrity=True, sort=True))
-
-                    rba_df = extrapolate(rba_df)
-                    del rba_df['Source']
-                    rba_df = rba_df.reindex(columns=COLUMNS)
+                    started_time = time.time()
+                    rba_df = rba_df.unique(subset=['Date'], keep="first").drop("Source").drop_nulls().sort('Date').set_sorted('Date')
+                    self.dataframe_print(rba_df, print_label="Currency", print_verb="post unique", started=started_time)
+                    started_time = time.time()
+                    rba_df = rba_df.upsample(time_column='Date', every="1d").fill_nan(pl.lit(None)).sort('Date')
+                    rba_df = rba_df.with_columns(pl.all().forward_fill()).drop_nulls()
+                    rba_df = rba_df.with_columns(cs.float().round(4))
+                    self.dataframe_print(rba_df, print_label="Currency", print_verb="post up-sample", started=started_time)
             except Exception as exception:
                 self.print_log("Unexpected error processing currency dataframe", exception=exception)
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,
@@ -176,40 +92,39 @@ class Currency(library.Library):
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED) -
                                  self.get_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED))
         try:
-            def aggregate_function(data_df):
-                data_df = data_df.copy().apply(pd.to_numeric).round(4)
-                for pair in PAIRS:
-                    for period in PERIODS:
-                        data_df['{} {}'.format(pair, period)] = (data_df[pair].pct_change(PERIODS[period])) * 100
-                return data_df.fillna(0).apply(pd.to_numeric).round(4)
+            def _aggregate_function(_data_df):
+                _columns = ['Date']
+                for _pair in PAIRS:
+                    _columns.append(_pair)
+                    for _period in PERIODS:
+                        _column = '{} {}'.format(_pair, _period)
+                        _columns.append(_column)
+                        _data_df = _data_df.with_columns((pl.col(_pair).pct_change() * 100).alias(_column))
+                return _data_df.select(_columns).with_columns(cs.float().round(4)).fill_nan(0).fill_null(0)
 
-            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, aggregate_function,
-                                                               engine=PANDAS_ENGINE, dtype_backend=PANDAS_BACKEND)
+            rba_delta_df, rba_current_df, _ = self.state_cache(rba_df, _aggregate_function)
             if len(rba_delta_df):
-                rba_current_df.insert(0, "Date", rba_current_df.index.strftime('%Y-%m-%d'))
-                rba_current_df = rba_current_df[rba_current_df['Date'] > '2006-01-01'].sort_index(ascending=False)
-                rba_current_df = rba_current_df.set_index(pd.to_datetime(rba_current_df.index)).sort_index()
-                self.sheet_write(rba_current_df[["Date"] + PAIRS], DRIVE_KEY,
-                                 {'index': False, 'sheet': 'Currency', 'start': 'A1', 'replace': True})
+                rba_sheet_df = rba_current_df.select(['Date'] + PAIRS).filter(pl.col('Date') > pl.lit(datetime(2006, 1, 1)))
+                self.sheet_upload(rba_sheet_df, DRIVE_KEY, 'Currency')
+                started_time = time.time()
+                rba_pairs_df = rba_current_df.select(['Date'] + PAIRS)
                 self.stdout_write(
-                    self.dataframe_to_lineprotocol_pd(rba_current_df[PAIRS], global_tags={
+                    self.dataframe_to_lineprotocol(rba_pairs_df.drop_nulls(), tags={
                         "type": "snapshot",
                         "period": "1d",
                         "unit": "$"
-                    }, print_label="currency-1-day-snapshot"))
+                    }, print_label="Currency_1_Day_Snapshot"))
                 for fx_period in PERIODS:
-                    columns = ["{} {}".format(fx_pair, fx_period).strip() for fx_pair in PAIRS]
-                    columns_rename = {}
-                    for column in columns:
-                        columns_rename[column] = column.split(" ")[0]
-                    rba_current_df[columns] = rba_current_df[columns].apply(pd.to_numeric)
+                    rba_pctchnage_df = rba_current_df \
+                        .select(['Date'] + ["{} {}".format(fx_pair, fx_period).strip() for fx_pair in PAIRS])
+                    rba_pctchnage_df.columns = ['Date'] + PAIRS
                     self.stdout_write(
-                        self.dataframe_to_lineprotocol_pd(rba_current_df[columns].rename(columns=columns_rename), global_tags={
+                        self.dataframe_to_lineprotocol(rba_pctchnage_df.drop_nulls(), tags={
                             "type": "delta",
                             "period": "{:0.0f}d".format(PERIODS[fx_period]),
                             "unit": "%"
-                        }, print_label="currency-{}".format(fx_period).lower().replace(" ", "-")))
-                self.state_write()
+                        }, print_label="Currency_{}".format(fx_period).replace(" ", "_")))
+                self.print_log("LineProtocol [Currency] serialised", started=started_time)
         except Exception as exception:
             self.print_log("Unexpected error processing currency data", exception=exception)
             self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED,

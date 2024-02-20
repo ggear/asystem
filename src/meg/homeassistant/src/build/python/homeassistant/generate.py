@@ -3,12 +3,12 @@ import glob
 import json
 import os
 import shutil
+import sys
+import time
 from collections import OrderedDict
 from os.path import *
 
 import pandas as pd
-import sys
-import time
 from pathlib2 import Path
 from requests import get
 
@@ -37,15 +37,19 @@ def load_env(root_dir=None):
     return env_load
 
 
-def load_modules():
+def load_modules(load_disabled=True, load_infrastrcture=True):
     modules = {}
     host_labels_names = {line.split("=")[0]: line.split("=")[-1].split(",")
                          for line in Path(join(dirname(abspath(join(DIR_ROOT, "../.."))), ".hosts")).read_text().strip().split("\n")}
     for module in glob.glob(abspath(join(DIR_ROOT, "../../*/*"))):
-        env = load_env(module)
-        name = basename(module)
-        hosts = ["{}-{}".format(host_labels_names[host_label][0], host_label) for host_label in basename(dirname(module)).split("_")]
-        modules[name] = [hosts, env]
+        group_path = Path(join(module, ".group"))
+        if (load_disabled or (isfile(group_path) and group_path.read_text().strip().isdigit() and
+                              int(group_path.read_text().strip()) >= 0)) and \
+                (load_infrastrcture or not basename(module).startswith("_")):
+            env = load_env(module)
+            name = basename(module)
+            hosts = ["{}-{}".format(host_labels_names[host_label][0], host_label) for host_label in basename(dirname(module)).split("_")]
+            modules[name] = [hosts, env]
     return modules
 
 

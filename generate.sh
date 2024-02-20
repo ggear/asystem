@@ -19,16 +19,16 @@ function pull_repo() {
   elif [ "${6}" == "True" ]; then
     cd "${1}/../../../.deps/${2}/${3}"
     echo "Pulling latest ${2}/${3} version ${5} ..."
-    if [ $(git branch | grep HEAD | wc -l) -eq 1 ]; then
-      for BRANCH in development dev main master; do
-        if [ $(git branch | grep ${BRANCH} | wc -l) -eq 1 ]; then
-          git checkout ${BRANCH} 2>/dev/null
-        fi
-      done
-    fi
+    for BRANCH in development dev main master; do
+      if [ $(git branch | grep ${BRANCH} | wc -l) -eq 1 ]; then
+        git checkout ${BRANCH} 2>/dev/null
+        git branch --set-upstream-to origin/${BRANCH}
+      fi
+    done
     git remote set-url origin https://github.com/$(git remote get-url origin | sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')
+    echo "Remote set to ["$(git remote get-url origin)"]"
     until git pull --all; do
-      echo "Sleeping to avoid Github throttling ..."
+      echo "Git pull failed, sleeping to avoid Github throttling ..."
       sleep 90
     done
     git -c advice.detachedHead=false checkout "${5}" 2>/dev/null

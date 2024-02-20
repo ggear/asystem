@@ -1,5 +1,5 @@
 # https://github.com/timescale/timescaledb/releases
-FROM timescale/timescaledb:2.13.1-pg15 as image_base
+FROM timescale/timescaledb:2.14.1-pg15 as image_base
 
 FROM image_base as image_package
 RUN apk update

@@ -1,5 +1,6 @@
 {
   "macmini-eva": [
+    "sabnzbd",
     "grafana",
     "influxdb",
     "wrangle",
