@@ -682,9 +682,6 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
                .format("{}/{}/{}".format(DIR_HOME, service, _get_versions()[0]) if is_release else
                        "{}/{}/target/runtime-system".format(DIR_ROOT_MODULE, module), working_path), module)
     for dependency in _get_dependencies(context, module):
-
-        # TODO: Drop HOST/IP and clean up, add HOST formed from service DNS entry, which I need to add too :)
-
         host_ips_prod = []
         host_names_prod = _get_hosts(dependency) if _name(module) != _name(dependency) or filter_host is None else [filter_host]
         _run_local(context, "dscacheutil -flushcache")
@@ -700,25 +697,23 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
         host_ip_prod = ",".join(host_ips_prod)
         host_name_prod = ",".join(host_names_prod)
         host_name_dev = "host.docker.internal"
-        host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && ipconfig getifaddr en0 || ipconfig getifaddr en1",
-                                 hide='out').stdout.strip()
+        host_ip_dev = _run_local(context, "[[ $(ipconfig getifaddr en0) != \"\" ]] && " +
+                                 "ipconfig getifaddr en0 || ipconfig getifaddr en1", hide='out').stdout.strip()
         dependency_service = _get_service(dependency).upper()
-        dependency_domain = "{}.internal.janeandgraham.com".format(dependency_service.lower())
+        dependency_domain = "{}.local.janeandgraham.com".format(dependency_service.lower())
         _run_local(context, "echo '' >> {}/.env".format(working_path))
-
-        _run_local(context, "echo '{}_HOST={}' >> {}/.env"
-                   .format(dependency_service, host_name_prod if is_release else host_name_dev, working_path), module)
         _run_local(context, "echo '{}_IP={}' >> {}/.env"
                    .format(dependency_service, host_ip_prod if is_release else host_ip_dev, working_path), module)
-        # _run_local(context, "echo '{}_HOST={}' >> {}/.env"
-        #            .format(dependency_service, dependency_domain if is_release else host_name_dev, working_path), module)
-        _run_local(context, "echo '{}_HOST_PROD={}' >> {}/.env"
-                   .format(dependency_service, host_name_prod, working_path), module)
+        _run_local(context, "echo '{}_HOST={}' >> {}/.env"
+                   .format(dependency_service, host_name_prod if is_release else host_name_dev, working_path), module)
+        _run_local(context, "echo '{}_HOST_SERVICE={}' >> {}/.env"
+                   .format(dependency_service, dependency_domain if is_release else host_name_dev, working_path), module)
         _run_local(context, "echo '{}_IP_PROD={}' >> {}/.env"
                    .format(dependency_service, host_ip_prod, working_path), module)
-        # _run_local(context, "echo '{}_HOST_PROD={}' >> {}/.env"
-        #            .format(dependency_service, dependency_domain, working_path), module)
-
+        _run_local(context, "echo '{}_HOST_PROD={}' >> {}/.env"
+                   .format(dependency_service, host_name_prod, working_path), module)
+        _run_local(context, "echo '{}_HOST_PROD_SERVICE={}' >> {}/.env"
+                   .format(dependency_service, dependency_domain, working_path), module)
         for dependency_env_file in [".env_all", ".env_prod" if is_release else ".env_dev", ".env_all_key"]:
             dependency_env_dev = "{}/{}/{}".format(DIR_ROOT_MODULE, dependency, dependency_env_file)
             if isfile(dependency_env_dev):

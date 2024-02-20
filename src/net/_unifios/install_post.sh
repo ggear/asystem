@@ -54,7 +54,7 @@
 # Settings -> Networks -> Default -> IGMP Snooping -> False
 # Settings -> Networks -> Default -> Multicast DNS -> True
 # Settings -> Networks -> Default -> DHCP Range -> 10.0.1.150/10.0.1.254
-# Settings -> Networks -> Default -> Domain Name -> janeandgraham.com
+# Settings -> Networks -> Default -> Domain Name -> local.janeandgraham.com
 
 # Settings -> Networks -> New Virtual Network -> Network Name -> Unfettered
 # Settings -> Networks -> New Virtual Network -> Gateway IP/Subnet -> Auto-Scale Network -> False
@@ -64,7 +64,7 @@
 # Settings -> Networks -> New Virtual Network -> IGMP Snooping -> False
 # Settings -> Networks -> New Virtual Network -> Multicast DNS -> True
 # Settings -> Networks -> New Virtual Network -> DHCP Range -> 10.0.2.150/10.0.2.254
-# Settings -> Networks -> New Virtual Network -> Domain Name -> janeandgraham.com
+# Settings -> Networks -> New Virtual Network -> Domain Name -> local.janeandgraham.com
 
 # Settings -> Networks -> New Virtual Network -> Network Name -> Controlled
 # Settings -> Networks -> New Virtual Network -> Gateway IP/Subnet -> Auto-Scale Network -> False
@@ -74,7 +74,7 @@
 # Settings -> Networks -> New Virtual Network -> IGMP Snooping -> False
 # Settings -> Networks -> New Virtual Network -> Multicast DNS -> True
 # Settings -> Networks -> New Virtual Network -> DHCP Range -> 10.0.3.150/10.0.3.254
-# Settings -> Networks -> New Virtual Network -> Domain Name -> janeandgraham.com
+# Settings -> Networks -> New Virtual Network -> Domain Name -> local.janeandgraham.com
 
 # Settings -> Networks -> New Virtual Network -> Network Name -> Isolated
 # Settings -> Networks -> New Virtual Network -> Gateway IP/Subnet -> Auto-Scale Network -> False
@@ -84,7 +84,7 @@
 # Settings -> Networks -> New Virtual Network -> IGMP Snooping -> False
 # Settings -> Networks -> New Virtual Network -> Multicast DNS -> True
 # Settings -> Networks -> New Virtual Network -> DHCP Range -> 10.0.4.150/10.0.4.254
-# Settings -> Networks -> New Virtual Network -> Domain Name -> janeandgraham.com
+# Settings -> Networks -> New Virtual Network -> Domain Name -> local.janeandgraham.com
 
 # Settings -> WiFi -> BertAndErnie -> Network -> Controlled
 # Settings -> WiFi -> BertAndErnie -> WiFi Band -> 2.4Ghz / 5Ghz

@@ -177,6 +177,14 @@
   friendly_name: 'Lounge Air Purifier'
   homeassistant:
     expire_after: 3600
+'0x1c34f1fffe7f7e96':
+  friendly_name: 'Parents Air Purifier'
+  homeassistant:
+    expire_after: 3600
+'0x9035eafffe27e819':
+  friendly_name: 'Kitchen Air Purifier'
+  homeassistant:
+    expire_after: 3600
 '0x00178801086168ac':
   friendly_name: 'Deck Fans Outlet'
   homeassistant:
