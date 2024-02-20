@@ -154,4 +154,10 @@
     - entity: fan.lounge_air_purifier
       name: Lounge
       icon: mdi:air-purifier
+    - entity: fan.parents_air_purifier
+      name: Parents
+      icon: mdi:air-purifier
+    - entity: fan.kitchen_air_purifier
+      name: Kitchen
+      icon: mdi:air-purifier
 ################################################################################

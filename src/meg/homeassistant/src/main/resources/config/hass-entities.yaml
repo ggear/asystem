@@ -233,6 +233,14 @@ fan.lounge_air_purifier:
   name: Lounge Air Purifier
   aliases: ['Air Purifier']
   room: Lounge
+fan.parents_air_purifier:
+  name: Parents Air Purifier
+  aliases: ['Air Purifier']
+  room: Parents
+fan.kitchen_air_purifier:
+  name: Kitchen Air Purifier
+  aliases: ['Air Purifier']
+  room: Kitchen
 sensor.compensation_sensor_rack_top_temperature:
   name: Rack Temperature
   aliases: ['Temperature']
