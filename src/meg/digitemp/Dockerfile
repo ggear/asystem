@@ -8,9 +8,9 @@ RUN apt-get -y --no-install-recommends install build-essential=12.9
 RUN apt-get -y --no-install-recommends install libbz2-dev=1.0.8-5+b1
 RUN apt-get -y --no-install-recommends install libffi-dev=3.4.4-1
 RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.13.dfsg-1
-RUN apt-get -y --no-install-recommends install libssl-dev=3.0.9-1
+RUN apt-get -y --no-install-recommends install libssl-dev=3.0.11-1~deb12u2
 RUN apt-get -y --no-install-recommends install jq=1.6-2.1
-RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1.2
+RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1.2+deb12u1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 FROM image_package as image_install
