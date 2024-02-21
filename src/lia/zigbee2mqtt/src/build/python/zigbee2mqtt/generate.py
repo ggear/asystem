@@ -88,7 +88,7 @@ if __name__ == "__main__":
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
 ROOT_DIR=$(dirname $(readlink -f "$0"))
-while [ $(mosquitto_sub -h ${VERNEMQ_HOST} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
+while [ $(mosquitto_sub -h ${ZIGBEE2MQTT_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
         """.strip() + "\n")
         for metadata_config_dict in metadata_config_dicts:
             metadata_config_file.write("""
@@ -109,12 +109,12 @@ ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
 ROOT_DIR=$(dirname $(readlink -f "$0"))
-while [ $(mosquitto_sub -h ${VERNEMQ_HOST} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
+while [ $(mosquitto_sub -h ${ZIGBEE2MQTT_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
         """.strip() + "\n")
         for metadata_config_clean_dict in metadata_config_dicts:
             metadata_name = metadata_config_clean_dict["device_name"]
             metadata_config_clean_file.write("""
-        mosquitto_pub -h $VERNEMQ_HOST -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{}' && echo '[INFO] Device [{}] removed from all groups' && sleep 1
+        mosquitto_pub -h $ZIGBEE2MQTT_SERVICE -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{}' && echo '[INFO] Device [{}] removed from all groups' && sleep 1
                     """.format(
                 '{{ "device": "{}" }}'.format(metadata_name),
                 metadata_name,

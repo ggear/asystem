@@ -202,7 +202,7 @@ version = 4.1.1
         rapidfire = False
 
     [[MQTT]]
-        server_url = mqtt://$VERNEMQ_ACCESS_KEY:$VERNEMQ_SECRET_KEY@$VERNEMQ_HOST:$VERNEMQ_PORT
+        server_url = mqtt://$VERNEMQ_ACCESS_KEY:$VERNEMQ_SECRET_KEY@$VERNEMQ_SERVICE:$VERNEMQ_PORT
         topic = weewx
         qos = 1
         retain = true
@@ -651,7 +651,7 @@ version = 4.1.1
     [[MySQL]]
         driver = weedb.mysql
         # The host where the database is located
-        host = $MARIADB_HOST
+        host = $MARIADB_SERVICE
         # The user name for logging in to the host
         user = $MARIADB_USER_WEEWX
         # The password for the user name (quotes guard against parsing errors)
