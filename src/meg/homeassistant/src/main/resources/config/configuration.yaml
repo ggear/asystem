@@ -51,51 +51,40 @@ recorder:
   commit_interval: 120
   purge_keep_days: 7
   auto_purge: true
-
-
-
-
-  # TODO: Disable InfluxDB until bea is provisioned
-  #influxdb:
-  #  api_version: 2
-  #  ssl: false
-  #  host: !env_var INFLUXDB_IP
-  #  port: !env_var INFLUXDB_HTTP_PORT
-  #  token: !env_var INFLUXDB_TOKEN
-  #  organization: !env_var INFLUXDB_ORG
-  #  bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
-  #  precision: 's'
-  #  measurement_attr: 'domain__device_class'
-  #  default_measurement: 'sensor'
-  #  tags:
-  #    source: 'hass'
-  #    version: !env_var SERVICE_VERSION_COMPACT
-  #  tags_attributes:
-  #    - 'state_class'
-  #    - 'friendly_name'
-  #    - 'unit_of_measurement'
-  #  exclude:
-  #    domains:
-  #      - 'zone'
-  #      - 'scene'
-  #      - 'select'
-  #    entity_globs:
-  #      - '*_bass'
-  #      - '*_treble'
-  #      - '*_sim_*'
-  #      - '*_microphone_level'
-  #      - 'adaptive_lighting_*'
-  #  ignore_attributes: !include influxdb-ignores.yaml
-
-
-
-
-
-
+influxdb:
+  api_version: 2
+  ssl: false
+  host: !env_var INFLUXDB_SERVICE
+  port: !env_var INFLUXDB_HTTP_PORT
+  token: !env_var INFLUXDB_TOKEN
+  organization: !env_var INFLUXDB_ORG
+  bucket: !env_var INFLUXDB_BUCKET_HOME_PRIVATE
+  precision: 's'
+  measurement_attr: 'domain__device_class'
+  default_measurement: 'sensor'
+  tags:
+    source: 'hass'
+    version: !env_var SERVICE_VERSION_COMPACT
+  tags_attributes:
+    - 'state_class'
+    - 'friendly_name'
+    - 'unit_of_measurement'
+  exclude:
+    domains:
+      - 'zone'
+      - 'scene'
+      - 'select'
+    entity_globs:
+      - '*_bass'
+      - '*_treble'
+      - '*_sim_*'
+      - '*_microphone_level'
+      - 'adaptive_lighting_*'
+  ignore_attributes: !include influxdb-ignores.yaml
   #####################################################################################
 mqtt:
 # The UI is now used to configure MQTT, perhaps return with a version 2022.2.9-
-#  broker: !env_var VERNEMQ_IP
+#  broker: !env_var VERNEMQ_SERVICE
 #  port: !env_var VERNEMQ_PORT
 #  client_id: 'homeassistant'
 #  discovery: true
