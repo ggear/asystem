@@ -3,3 +3,4 @@
   token = "$INFLUXDB_TOKEN"
   org = "asystem"
   active = true
+
