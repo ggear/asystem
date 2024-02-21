@@ -119,7 +119,7 @@ http {
   }
       """.strip() + "\n\n")
         for name in modules:
-            host_key = "{}_SERVICE".format(name.upper())
+            ip_key = "{}_IP".format(name.upper())
             port_key = "{}_HTTP_PORT".format(name.upper())
             host_public_key = "{}_HOST_PUBLIC".format(name.upper())
             ws_context_key = "{}_HTTP_WS_CONTEXT".format(name.upper())
@@ -146,7 +146,7 @@ http {
                         name,
                         server_name,
                         name,
-                        host_key,
+                        ip_key,
                         modules[name][1][port_key],
                         modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
                         server_name,
