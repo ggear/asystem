@@ -8,7 +8,7 @@ if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
     echo "Starting copy of [/media/usbdrive] from [${IMPORT_MEDIA_DEV}] to [${IMPORT_MEDIA_SHARE}]"
     mkdir -p /media/usbdrive
     umount -fq /media/usbdrive
-    mount ${IMPORT_MEDIA_DEV} /media/usbdrive
+    mount -t exfat ${IMPORT_MEDIA_DEV} /media/usbdrive
     find /media/usbdrive -name "\.*" -exec rm {} \;
     rm -rf /media/usbdrive/\.* /media/usbdrive/System* /media/usbdrive/\$RECYCLE.BIN
     rsync -avP /media/usbdrive ${IMPORT_MEDIA_SHARE}
