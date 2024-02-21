@@ -6,7 +6,7 @@ HOSTS=$(echo $(basename $(dirname $(pwd))) | tr "_" "\n")
 
 export $(xargs <${ROOT_DIR}/.env)
 
-export VERNEMQ_IP=${VERNEMQ_IP_PROD}
+export VERNEMQ_SERVICE=${VERNEMQ_SERVICE_PROD}
 
 ${ROOT_DIR}/src/main/resources/config/mqtt.sh
 
