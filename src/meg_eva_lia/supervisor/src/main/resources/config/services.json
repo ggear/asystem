@@ -1,4 +1,7 @@
 {
+  "macmini-zoe": [
+    "unifipoller"
+  ],
   "macmini-eva": [
     "sabnzbd",
     "grafana",
@@ -17,13 +20,10 @@
     "mariadb",
     "vernemq",
     "postgres",
+    "internet",
     "nginx",
+    "digitemp",
     "plex",
     "monitor"
-  ],
-  "macbook-rae": [
-    "unifipoller",
-    "internet",
-    "digitemp"
   ]
 }

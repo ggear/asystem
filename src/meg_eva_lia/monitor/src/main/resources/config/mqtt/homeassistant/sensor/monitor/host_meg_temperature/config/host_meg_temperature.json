@@ -12,8 +12,8 @@
   "qos": "1",
   "device": {
     "via_device": "Monitor",
-    "identifiers": "telegraf-rack-lia-temperature",
-    "name": "Rack Lia Temperature",
+    "identifiers": "telegraf-rack-meg-temperature",
+    "name": "Rack Meg Temperature",
     "model": "Sensors",
     "manufacturer": "Telegraf",
     "sw_version": "ASYSTEM_VERSION",

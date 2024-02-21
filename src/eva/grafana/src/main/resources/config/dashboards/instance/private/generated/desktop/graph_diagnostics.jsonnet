@@ -45,7 +45,7 @@
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
 |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-|> filter(fn: (r) => r["entity_id"] == "compensation_sensor_rack_top_temperature" or r["entity_id"] == "compensation_sensor_rack_bottom_temperature" or r["entity_id"] == "compensation_sensor_host_flo_temperature" or r["entity_id"] == "compensation_sensor_host_meg_temperature")
+|> filter(fn: (r) => r["entity_id"] == "compensation_sensor_rack_top_temperature" or r["entity_id"] == "compensation_sensor_rack_bottom_temperature" or r["entity_id"] == "compensation_sensor_host_eva_temperature" or r["entity_id"] == "compensation_sensor_host_meg_temperature")
 |> filter(fn: (r) => r["_field"] == "value")
 |> keep(columns: ["_time", "_value", "friendly_name"])
 |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)
