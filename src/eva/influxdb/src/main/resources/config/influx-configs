@@ -1,0 +1,5 @@
+[remote]
+  url = "http://$INFLUXDB_SERVICE:$INFLUXDB_HTTP_PORT"
+  token = "$INFLUXDB_TOKEN"
+  org = "asystem"
+  active = true
