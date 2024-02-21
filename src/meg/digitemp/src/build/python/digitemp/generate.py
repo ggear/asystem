@@ -51,9 +51,9 @@ telegraf --once >/dev/null 2>&1 &&
         """.strip() + "\n")
         for metadata_digitemp_state_topic in metadata_digitemp_df["state_topic"].unique():
             metadata_digitemp_health_file.write("  " + """
-  [ $(mosquitto_sub -h ${{VERNEMQ_IP}} -p ${{VERNEMQ_PORT}} -t '{}' -W 1 2>/dev/null | jq -r .tags.run_code) -eq 0 ] &&
-  [ $(mosquitto_sub -h ${{VERNEMQ_IP}} -p ${{VERNEMQ_PORT}} -t '{}' -W 1 2>/dev/null | jq -r .fields.metrics_failed) -eq 0 ] &&
-  [ $(mosquitto_sub -h ${{VERNEMQ_IP}} -p ${{VERNEMQ_PORT}} -t '{}' -W 1 2>/dev/null | jq -r .fields.metrics_succeeded) -eq {} ]
+  [ $(mosquitto_sub -h ${{VERNEMQ_SERVICE}} -p ${{VERNEMQ_PORT}} -t '{}' -W 1 2>/dev/null | jq -r .tags.run_code) -eq 0 ] &&
+  [ $(mosquitto_sub -h ${{VERNEMQ_SERVICE}} -p ${{VERNEMQ_PORT}} -t '{}' -W 1 2>/dev/null | jq -r .fields.metrics_failed) -eq 0 ] &&
+  [ $(mosquitto_sub -h ${{VERNEMQ_SERVICE}} -p ${{VERNEMQ_PORT}} -t '{}' -W 1 2>/dev/null | jq -r .fields.metrics_succeeded) -eq {} ]
             """.format(
                 metadata_digitemp_state_topic,
                 metadata_digitemp_state_topic,
