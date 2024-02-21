@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! mosquitto_sub -h ${VERNEMQ_IP} -p ${VERNEMQ_PORT} -t '#' -E >/dev/null 2>&1; do
+while ! mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_PORT} -t '#' -E >/dev/null 2>&1; do
   echo "Waiting for service to come up ..." && sleep 1
 done
 

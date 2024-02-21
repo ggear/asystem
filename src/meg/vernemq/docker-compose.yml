@@ -4,7 +4,7 @@ x-common: &common
   user: root
   environment:
     - TZ=Australia/Perth
-    - VERNEMQ_IP
+    - VERNEMQ_SERVICE
     - VERNEMQ_PORT
     - DOCKER_VERNEMQ_ACCEPT_EULA=yes
     - DOCKER_VERNEMQ_ALLOW_ANONYMOUS=on

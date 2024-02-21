@@ -5,7 +5,7 @@
     "friendlyname": [
         "Kitchen"
     ],
-    "mqtt_host": "10.0.2.21",
+    "mqtt_host": "vernemq.local.janeandgraham.com",
     "mqtt_port": "32404",
     "mqtt_client": "DVES_%06X",
     "mqtt_grptopic": "tasmotas",

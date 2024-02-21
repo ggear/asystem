@@ -9,8 +9,8 @@ services:
       - TZ=Australia/Perth
       - CLOUDFLARE_TOKEN
       - LETSENCRYPT_STAGING
-      - NGINX_IP
-      - UDMUTILITIES_IP
+      - NGINX_SERVICE
+      - UDMUTILITIES_SERVICE
     restart: ${SERVICE_RESTART}
     volumes:
       - ${SERVICE_DATA_DIR}/letsencrypt:/etc/letsencrypt

@@ -5,7 +5,7 @@ x-common: &common
   user: root
   environment:
     - TZ=Australia/Perth
-    - MARIADB_IP
+    - MARIADB_SERVICE
     - MARIADB_PORT
     - MARIADB_ROOT_PASSWORD=${MARIADB_KEY}
     - MARIADB_DATABASE=${MARIADB_DATABASE_WEEWX}
