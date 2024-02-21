@@ -5,7 +5,7 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - INFLUXD_CONFIG_PATH=/var/lib/influxdb2/config.yml
-    - INFLUXDB_IP
+    - INFLUXDB_SERVICE
     - INFLUXDB_HTTP_PORT
     - INFLUXDB_ORG
     - INFLUXDB_BUCKET_HOME_PUBLIC

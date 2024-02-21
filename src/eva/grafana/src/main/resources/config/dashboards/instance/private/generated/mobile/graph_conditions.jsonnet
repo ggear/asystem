@@ -158,7 +158,7 @@ from(bucket: "home_private")
                   ).addTarget(influxdb.target(query='
 from(bucket: "home_private")
 |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
-|> filter(fn: (r) => r["entity_id"] == "dining_air_purifier_pm25" or r["entity_id"] == "lounge_air_purifier_pm25")
+|> filter(fn: (r) => r["entity_id"] == "dining_air_purifier_pm25" or r["entity_id"] == "lounge_air_purifier_pm25" or r["entity_id"] == "parents_air_purifier_pm25" or r["entity_id"] == "kitchen_air_purifier_pm25")
 |> filter(fn: (r) => r["_field"] == "value")
 |> keep(columns: ["_time", "_value", "friendly_name"])
 |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)

@@ -447,7 +447,7 @@ class Library(object, metaclass=ABCMeta):
             rows = []
             columns = []
             query_url = "http://{}:{}/api/v2/query?org={}".format(
-                os.environ["INFLUXDB_IP_PROD"],
+                os.environ["INFLUXDB_SERVICE_PROD"],
                 os.environ["INFLUXDB_HTTP_PORT"],
                 os.environ["INFLUXDB_ORG"],
             )
@@ -491,7 +491,7 @@ class Library(object, metaclass=ABCMeta):
         started_time = time.time()
         for bucket in [os.environ["INFLUXDB_BUCKET_DATA_PUBLIC"], os.environ["INFLUXDB_BUCKET_DATA_PRIVATE"]]:
             trunc_url = "http://{}:{}/api/v2/delete?org={}&bucket={}".format(
-                os.environ["INFLUXDB_IP"],
+                os.environ["INFLUXDB_SERVICE"],
                 os.environ["INFLUXDB_HTTP_PORT"],
                 os.environ["INFLUXDB_ORG"],
                 bucket,

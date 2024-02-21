@@ -706,13 +706,13 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
                    .format(dependency_service, host_ip_prod if is_release else host_ip_dev, working_path), module)
         _run_local(context, "echo '{}_HOST={}' >> {}/.env"
                    .format(dependency_service, host_name_prod if is_release else host_name_dev, working_path), module)
-        _run_local(context, "echo '{}_HOST_SERVICE={}' >> {}/.env"
+        _run_local(context, "echo '{}_SERVICE={}' >> {}/.env"
                    .format(dependency_service, dependency_domain if is_release else host_name_dev, working_path), module)
         _run_local(context, "echo '{}_IP_PROD={}' >> {}/.env"
                    .format(dependency_service, host_ip_prod, working_path), module)
         _run_local(context, "echo '{}_HOST_PROD={}' >> {}/.env"
                    .format(dependency_service, host_name_prod, working_path), module)
-        _run_local(context, "echo '{}_HOST_PROD_SERVICE={}' >> {}/.env"
+        _run_local(context, "echo '{}_SERVICE_PROD={}' >> {}/.env"
                    .format(dependency_service, dependency_domain, working_path), module)
         for dependency_env_file in [".env_all", ".env_prod" if is_release else ".env_dev", ".env_all_key"]:
             dependency_env_dev = "{}/{}/{}".format(DIR_ROOT_MODULE, dependency, dependency_env_file)

@@ -8,8 +8,8 @@ services:
     environment:
       - TZ=Australia/Perth
       - SERVICE_VERSION_COMPACT
-      - INFLUXDB_IP
-      - INFLUXDB_IP_PROD
+      - INFLUXDB_SERVICE
+      - INFLUXDB_SERVICE_PROD
       - INFLUXDB_HTTP_PORT
       - INFLUXDB_ORG
       - INFLUXDB_BUCKET_DATA_PUBLIC
