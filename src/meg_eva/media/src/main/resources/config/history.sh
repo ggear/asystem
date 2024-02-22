@@ -5,8 +5,8 @@ umount -fq /media/usbdrive
 [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ] && mount $(echo "/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')) /media/usbdrive
 
 # Renaming
-rename -v 's/(.*)s([0-9][0-9])e([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv
-rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/\$1s\$2e\$3.mkv/' *.mkv
+rename -v 's/(.*)s([0-9][0-9])e([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' *.mkv
+rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' *.mkv
 
 # Media metadata
 find . -type f -exec echo mediainfo {} \; -exec echo -- \; -exec mediainfo {} \; | less

@@ -228,19 +228,19 @@ switch.garden_pool_filter_plug:
 fan.dining_air_purifier:
   name: Dining Air Purifier
   aliases: ['Air Purifier']
-  room: Dining
+  room: Zombie
 fan.lounge_air_purifier:
   name: Lounge Air Purifier
   aliases: ['Air Purifier']
-  room: Lounge
+  room: Zombie
 fan.parents_air_purifier:
   name: Parents Air Purifier
   aliases: ['Air Purifier']
-  room: Parents
+  room: Zombie
 fan.kitchen_air_purifier:
   name: Kitchen Air Purifier
   aliases: ['Air Purifier']
-  room: Kitchen
+  room: Zombie
 sensor.compensation_sensor_rack_top_temperature:
   name: Rack Temperature
   aliases: ['Temperature']
