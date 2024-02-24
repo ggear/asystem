@@ -7,9 +7,11 @@ local graph_containers = import 'graph_containers.jsonnet';
 local graph_equity = import 'graph_equity.jsonnet';
 local graph_health = import 'graph_health.jsonnet';
 local graph_network = import 'graph_network.jsonnet';
+local graph_rain = import 'graph_rain.jsonnet';
 local graph_diagnostics = import 'graph_diagnostics.jsonnet';
 local graph_water = import 'graph_water.jsonnet';
 local graph_conditions = import 'graph_conditions.jsonnet';
+local graph_control = import 'graph_control.jsonnet';
 local graph_electricity = import 'graph_electricity.jsonnet';
 local graph_currency = import 'graph_currency.jsonnet';
 local graph_interest = import 'graph_interest.jsonnet';
@@ -154,6 +156,28 @@ local graph_interest = import 'graph_interest.jsonnet';
                   .addPanels(graph_network.graphs()),
 
 
+            rain_dashboard:
+                  dashboard.new(
+                        schemaVersion=30,
+                        title='Rain',
+//ASM                   uid='rain-mobile',
+//AST                   uid='rain-tablet',
+//ASD                   uid='rain-desktop',
+//ASM                   editable=false,
+//AST                   editable=false,
+//ASD                   editable=true,
+//ASM                   hideControls=true,
+//AST                   hideControls=true,
+//ASD                   hideControls=false,
+                        graphTooltip='shared_tooltip',
+//ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
+//ASD                   tags=['private', 'desktop'],
+                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                  )
+                  .addPanels(graph_rain.graphs()),
+
+
             diagnostics_dashboard:
                   dashboard.new(
                         schemaVersion=30,
@@ -218,6 +242,28 @@ local graph_interest = import 'graph_interest.jsonnet';
                         time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_conditions.graphs()),
+
+
+            control_dashboard:
+                  dashboard.new(
+                        schemaVersion=30,
+                        title='Control',
+//ASM                   uid='control-mobile',
+//AST                   uid='control-tablet',
+//ASD                   uid='control-desktop',
+//ASM                   editable=false,
+//AST                   editable=false,
+//ASD                   editable=true,
+//ASM                   hideControls=true,
+//AST                   hideControls=true,
+//ASD                   hideControls=false,
+                        graphTooltip='shared_tooltip',
+//ASM                   tags=['private', 'mobile'],
+//AST                   tags=['private', 'tablet'],
+//ASD                   tags=['private', 'desktop'],
+                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                  )
+                  .addPanels(graph_control.graphs()),
 
 
             electricity_dashboard:

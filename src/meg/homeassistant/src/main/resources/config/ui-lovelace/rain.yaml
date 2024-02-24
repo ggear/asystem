@@ -1,8 +1,8 @@
-#######################################################################################
+################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
 - type: custom:mini-graph-card
-  name: Rain Rate
+  name: Rain
   icon: mdi:weather-pouring
   font_size_header: 19
   aggregate_func: max
@@ -30,28 +30,13 @@
     - entity: sensor.roof_hourly_rain
       name: Hourly
       icon: mdi:weather-pouring
-################################################################################
-- type: custom:mini-graph-card
-  name: Rain
-  icon: mdi:weather-pouring
-  font_size_header: 19
-  aggregate_func: max
-  hours_to_show: 24
-  points_per_hour: 6
-  line_width: 2
-  tap_action: none
-  show_state: true
-  show_indicator: true
-  show:
-    extrema: true
-    fill: false
-  entities:
     - entity: sensor.roof_daily_rain
       name: Daily
-################################################################################
-- type: entities
-  entities:
-    - entity: sensor.roof_daily_rain
-      name: Daily
+      icon: mdi:weather-pouring
+    - entity: sensor.roof_monthly_rain
+      name: Monthly
+      icon: mdi:weather-pouring
+    - entity: sensor.roof_yearly_rain
+      name: Yearly
       icon: mdi:weather-pouring
 ################################################################################

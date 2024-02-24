@@ -7,9 +7,11 @@ local graph_containers = import 'graph_containers.jsonnet';
 local graph_equity = import 'graph_equity.jsonnet';
 local graph_health = import 'graph_health.jsonnet';
 local graph_network = import 'graph_network.jsonnet';
+local graph_rain = import 'graph_rain.jsonnet';
 local graph_diagnostics = import 'graph_diagnostics.jsonnet';
 local graph_water = import 'graph_water.jsonnet';
 local graph_conditions = import 'graph_conditions.jsonnet';
+local graph_control = import 'graph_control.jsonnet';
 local graph_electricity = import 'graph_electricity.jsonnet';
 local graph_currency = import 'graph_currency.jsonnet';
 local graph_interest = import 'graph_interest.jsonnet';
@@ -104,6 +106,20 @@ local graph_interest = import 'graph_interest.jsonnet';
                   .addPanels(graph_network.graphs()),
 
 
+            rain_dashboard:
+                  dashboard.new(
+                        schemaVersion=30,
+                        title='Rain',
+                        uid='rain-tablet',
+                        editable=false,
+                        hideControls=true,
+                        graphTooltip='shared_tooltip',
+                        tags=['private', 'tablet'],
+                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                  )
+                  .addPanels(graph_rain.graphs()),
+
+
             diagnostics_dashboard:
                   dashboard.new(
                         schemaVersion=30,
@@ -144,6 +160,20 @@ local graph_interest = import 'graph_interest.jsonnet';
                         time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
                   )
                   .addPanels(graph_conditions.graphs()),
+
+
+            control_dashboard:
+                  dashboard.new(
+                        schemaVersion=30,
+                        title='Control',
+                        uid='control-tablet',
+                        editable=false,
+                        hideControls=true,
+                        graphTooltip='shared_tooltip',
+                        tags=['private', 'tablet'],
+                        time_from='now-7d', refresh='', timepicker=timepicker.new(refresh_intervals=['1m'], time_options=['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])
+                  )
+                  .addPanels(graph_control.graphs()),
 
 
             electricity_dashboard:

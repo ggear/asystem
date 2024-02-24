@@ -1,6 +1,6 @@
-#######################################################################################
+################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
-#######################################################################################
+################################################################################
 sensor.roof_temperature:
   friendly_name: 'Roof'
   icon: 'mdi:thermometer'
@@ -21,17 +21,17 @@ sensor.edwin_temperature:
 sensor.compensation_sensor_edwin_temperature:
   friendly_name: 'Edwin'
   icon: 'mdi:thermometer'
-sensor.office_office_office_lounge_temperature:
-  friendly_name: 'Lounge'
-  icon: 'mdi:thermometer'
-sensor.compensation_sensor_office_office_office_lounge_temperature:
-  friendly_name: 'Lounge'
-  icon: 'mdi:thermometer'
 sensor.parents_temperature:
   friendly_name: 'Parents'
   icon: 'mdi:thermometer'
 sensor.compensation_sensor_parents_temperature:
   friendly_name: 'Parents'
+  icon: 'mdi:thermometer'
+sensor.office_office_office_lounge_temperature:
+  friendly_name: 'Lounge'
+  icon: 'mdi:thermometer'
+sensor.compensation_sensor_office_office_office_lounge_temperature:
+  friendly_name: 'Lounge'
   icon: 'mdi:thermometer'
 sensor.office_temperature:
   friendly_name: 'Office'
@@ -426,14 +426,6 @@ light.landing_festoons_plug:
 light.tree_spotlights:
   friendly_name: 'Tree Spotlights'
   icon: 'mdi:lightbulb-group'
-sensor.landing_festoons_plug_temperature:
-  friendly_name: 'Hot Water Temperature'
-  icon: 'mdi:thermometer-water'
-  unit_of_measurement: '°C'
-sensor.compensation_sensor_landing_festoons_plug_temperature:
-  friendly_name: 'Hot Water Temperature'
-  icon: 'mdi:thermometer-water'
-  unit_of_measurement: '°C'
 switch.bathroom_rails_plug:
   friendly_name: 'Towel Rails'
   icon: 'mdi:radiator'
@@ -455,6 +447,14 @@ sensor.garden_pool_filter_plug_energy_power:
 sensor.garden_pool_filter_plug_energy_total:
   friendly_name: 'Total Energy'
   unit_of_measurement: 'kWh'
+sensor.landing_festoons_plug_temperature:
+  friendly_name: 'Hot Water Temperature'
+  icon: 'mdi:thermometer-water'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_landing_festoons_plug_temperature:
+  friendly_name: 'Hot Water Temperature'
+  icon: 'mdi:thermometer-water'
+  unit_of_measurement: '°C'
 sensor.home_power:
   friendly_name: 'Home Load'
   icon: 'mdi:home-lightning-bolt'

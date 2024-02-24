@@ -27,14 +27,6 @@ compensation:
       - [ 9, 8.7 ]
       - [ 18.1, 18 ]
   #####################################################################################
-  compensation_sensor_office_office_office_lounge_temperature:
-    unique_id: compensation_sensor_office_office_office_lounge_temperature
-    source: sensor.office_office_office_lounge_temperature
-    precision: 1
-    data_points:
-      - [ 8.7, 8.7 ]
-      - [ 18, 18 ]
-  #####################################################################################
   compensation_sensor_parents_temperature:
     unique_id: compensation_sensor_parents_temperature
     source: sensor.parents_temperature
@@ -42,6 +34,14 @@ compensation:
     data_points:
       - [ 8.7, 8.7 ]
       - [ 17.8, 18 ]
+  #####################################################################################
+  compensation_sensor_office_office_office_lounge_temperature:
+    unique_id: compensation_sensor_office_office_office_lounge_temperature
+    source: sensor.office_office_office_lounge_temperature
+    precision: 1
+    data_points:
+      - [ 8.7, 8.7 ]
+      - [ 18, 18 ]
   #####################################################################################
   compensation_sensor_office_temperature:
     unique_id: compensation_sensor_office_temperature

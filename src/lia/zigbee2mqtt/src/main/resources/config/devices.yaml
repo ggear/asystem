@@ -1,6 +1,22 @@
 #######################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 #######################################################################################
+'0x9035eafffe82fef8':
+  friendly_name: 'Dining Air Purifier'
+  homeassistant:
+    expire_after: 3600
+'0x9035eafffe404425':
+  friendly_name: 'Lounge Air Purifier'
+  homeassistant:
+    expire_after: 3600
+'0x1c34f1fffe7f7e96':
+  friendly_name: 'Parents Air Purifier'
+  homeassistant:
+    expire_after: 3600
+'0x9035eafffe27e819':
+  friendly_name: 'Kitchen Air Purifier'
+  homeassistant:
+    expire_after: 3600
 '0x0017880103433075':
   friendly_name: 'Ada Lamp Bulb 1'
   homeassistant:
@@ -167,22 +183,6 @@
     expire_after: 3600
 '0x0017880109c40c33':
   friendly_name: 'Tree Spotlights Bulb 2'
-  homeassistant:
-    expire_after: 3600
-'0x9035eafffe82fef8':
-  friendly_name: 'Dining Air Purifier'
-  homeassistant:
-    expire_after: 3600
-'0x9035eafffe404425':
-  friendly_name: 'Lounge Air Purifier'
-  homeassistant:
-    expire_after: 3600
-'0x1c34f1fffe7f7e96':
-  friendly_name: 'Parents Air Purifier'
-  homeassistant:
-    expire_after: 3600
-'0x9035eafffe27e819':
-  friendly_name: 'Kitchen Air Purifier'
   homeassistant:
     expire_after: 3600
 '0x00178801086168ac':

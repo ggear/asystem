@@ -319,9 +319,9 @@ if __name__ == "__main__":
     metadata_customise_path = abspath(join(DIR_ROOT, "src/main/resources/config/customise.yaml"))
     with open(metadata_customise_path, 'w') as metadata_customise_file:
         metadata_customise_file.write("""
-#######################################################################################
+################################################################################
 # WARNING: This file is written to by the build process, any manual edits will be lost!
-#######################################################################################
+################################################################################
         """.strip() + "\n")
         for metadata_customise_dict in metadata_customise_dicts:
             metadata_customise_file.write("""
@@ -1606,8 +1606,8 @@ automation:
         metadata_lovelace_path = abspath(join(DIR_ROOT, "src/main/resources/config/ui-lovelace", group.lower() + ".yaml"))
         with open(metadata_lovelace_path, 'w') as metadata_lovelace_file:
             metadata_lovelace_file.write("""
-#######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+################################################################################
+# WARNING: This file is written to by the build process, any manual edits will be lost!            
             """.strip() + "\n")
             for domain in metadata_lovelace_group_domain_dicts[group]:
                 metadata_lovelace_graph_dicts = []

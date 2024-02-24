@@ -13,14 +13,14 @@ sensor.compensation_sensor_edwin_temperature:
   name: Edwin Temperature
   aliases: ['Edwins Temperature', 'Temperature', 's Temperature']
   room: Edwin
-sensor.compensation_sensor_office_office_office_lounge_temperature:
-  name: Lounge Temperature
-  aliases: ['Temperature']
-  room: Lounge
 sensor.compensation_sensor_parents_temperature:
   name: Parents Temperature
   aliases: ['Temperature']
   room: Parents
+sensor.compensation_sensor_office_office_office_lounge_temperature:
+  name: Lounge Temperature
+  aliases: ['Temperature']
+  room: Lounge
 sensor.compensation_sensor_office_temperature:
   name: Office Temperature
   aliases: ['Temperature']
@@ -225,10 +225,6 @@ light.tree_spotlights:
   name: Tree Spotlights
   aliases: ['Spotlights']
   room: Tree
-sensor.compensation_sensor_landing_festoons_plug_temperature:
-  name: Ceiling Temperature
-  aliases: ['Temperature']
-  room: Ceiling
 switch.bathroom_rails_plug:
   name: Bathroom Towel Rails
   aliases: ['Towel Rails']
@@ -241,6 +237,10 @@ switch.garden_pool_filter_plug:
   name: Garden Pool Filter
   aliases: ['Pool Filter']
   room: Garden
+sensor.compensation_sensor_landing_festoons_plug_temperature:
+  name: Ceiling Temperature
+  aliases: ['Temperature']
+  room: Ceiling
 sensor.compensation_sensor_rack_top_temperature:
   name: Rack Temperature
   aliases: ['Temperature']
