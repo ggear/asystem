@@ -2,15 +2,23 @@
 
 # Mounting
 umount -fq /media/usbdrive
-[ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ] && mount $(echo "/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')) /media/usbdrive
+[ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ] && mount -t exfat $(echo "/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{RAR_FILES=ORAR_FILES=" "}{print $1}')) /media/usbdrive
 
 # Renaming
-rename -v 's/(.*)s([0-9][0-9])e([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' *.mkv
-rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' *.mkv
+rename -v 's/(.*)s([0-9][0-9])e([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
+rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
+
+# Extract RAR files
+ROOT_DIR=$PWD
+for RAR_FILE in $(find . -name ./*.rar -exec echo {} \;); do
+  cd $(dirname $RAR_FILE)
+  unrar x $(basename $RAR_FILE)
+  cd $ROOT_DIR
+done
 
 # Media metadata
 find . -type f -exec echo mediainfo {} \; -exec echo -- \; -exec mediainfo {} \; | less
-find . -type f -exec echo mediainfo {} \; -exec echo -- \; -exec mediainfo '--Output=Audio;[%Language/String%, ][%BitRate/String%, ][%SamplingRate/String%, ][%BitDepth/String%, ][%Channel(s)/String%, ]%Format%\n' {} \;
+find . -type f -exec echo mediainfo {} \; -exec echo -- \; -exec mediainfo '--Output=Audio;[%Language/String%, ][%BitRate/String%, ][%SamplingRate/String%, ][%BitDepth/String%, ][%Channel(s)/String%, ]%RAR_FILEormat%\n' {} \;
 
 # Media streams
 find . -type f -exec echo ffprobe -i {} \; -exec ffprobe -i {} \; 2>&1 | less
@@ -24,11 +32,11 @@ find . -type f -exec echo ffprobe -i {} \; -exec sh -c 'ffprobe -i "{}" 2>&1 | g
 #  Stream #0:2(eng): Audio: ac3, 48000 Hz, 5.1(side), fltp, 448 kb/s
 #  Stream #0:3(ita): Subtitle: dvd_subtitle, 720x576
 #  Stream #0:4(eng): Subtitle: dvd_subtitle, 720x576
-ffmpeg -y -i *.mkv -c:v copy -c:a copy -map 0:0 -map 0:2 New.mkv     # Global indexing
-ffmpeg -y -i *.mkv -c:v copy -c:a copy -map 0:v:0 -map 0:a:1 New.mkv # Type indexing
+ffmpeg -y -i ./*.mkv -c:v copy -c:a copy -map 0:0 -map 0:2 New.mkv     # Global indexing
+ffmpeg -y -i ./*.mkv -c:v copy -c:a copy -map 0:v:0 -map 0:a:1 New.mkv # Type indexing
 
 # Convert PGS subtitles to SRT
-pgsrip *.mkv
+pgsrip ./*.mkv
 
 ffmpeg -i "input.mov" -vcodec hevc_videotoolbox -b:v 500k -n "output.mov"
 ffmpeg -i "input.mov" -vcodec h264_videotoolbox -b:v 500k -n "output.mov"
