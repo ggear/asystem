@@ -57,10 +57,6 @@ sensor.compensation_sensor_office_office_office_basement_temperature:
   name: Basement Temperature
   aliases: ['Temperature']
   room: Basement
-sensor.compensation_sensor_landing_festoons_plug_temperature:
-  name: Ceiling Temperature
-  aliases: ['Temperature']
-  room: Ceiling
 input_boolean.home_security:
   name: Home Secure
   aliases: ['Home Secure Mode', 'Secure', 'Secure Mode']
@@ -101,6 +97,22 @@ fan.deck_fan:
   name: Deck Fans
   aliases: ['Deck Fan', 'Fans', 'Fan']
   room: Deck
+fan.dining_air_purifier:
+  name: Dining Air Purifier
+  aliases: ['Air Purifier']
+  room: Zombie
+fan.lounge_air_purifier:
+  name: Lounge Air Purifier
+  aliases: ['Air Purifier']
+  room: Zombie
+fan.parents_air_purifier:
+  name: Parents Air Purifier
+  aliases: ['Air Purifier']
+  room: Zombie
+fan.kitchen_air_purifier:
+  name: Kitchen Air Purifier
+  aliases: ['Air Purifier']
+  room: Zombie
 light.ada_fan:
   name: Ada Main Light
   aliases: ['Adas Main Light', 'Main Light', 's Main Light']
@@ -213,6 +225,10 @@ light.tree_spotlights:
   name: Tree Spotlights
   aliases: ['Spotlights']
   room: Tree
+sensor.compensation_sensor_landing_festoons_plug_temperature:
+  name: Ceiling Temperature
+  aliases: ['Temperature']
+  room: Ceiling
 switch.bathroom_rails_plug:
   name: Bathroom Towel Rails
   aliases: ['Towel Rails']
@@ -225,22 +241,6 @@ switch.garden_pool_filter_plug:
   name: Garden Pool Filter
   aliases: ['Pool Filter']
   room: Garden
-fan.dining_air_purifier:
-  name: Dining Air Purifier
-  aliases: ['Air Purifier']
-  room: Zombie
-fan.lounge_air_purifier:
-  name: Lounge Air Purifier
-  aliases: ['Air Purifier']
-  room: Zombie
-fan.parents_air_purifier:
-  name: Parents Air Purifier
-  aliases: ['Air Purifier']
-  room: Zombie
-fan.kitchen_air_purifier:
-  name: Kitchen Air Purifier
-  aliases: ['Air Purifier']
-  room: Zombie
 sensor.compensation_sensor_rack_top_temperature:
   name: Rack Temperature
   aliases: ['Temperature']

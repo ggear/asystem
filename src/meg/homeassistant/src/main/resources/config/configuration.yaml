@@ -118,7 +118,7 @@ lovelace:
       type: 'module'
     - url: '/local/custom_ui/layout-card/layout-card.js?v=2.4.4'
       type: 'module'
-    - url: '/local/custom_ui/bom-radar-card/bom-radar-card.js?v=v3.0.3'
+    - url: '/local/custom_ui/bom-radar-card/bom-radar-card.js?v=v3.0.2'
       type: 'module'
     - url: '/local/custom_ui/apexcharts-card/apexcharts-card.js?v=v2.0.4'
       type: 'module'

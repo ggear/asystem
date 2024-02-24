@@ -2,7 +2,7 @@
 # WARNING: This file is written to by the build process, any manual edits will be lost!
 ################################################################################
 - type: custom:mini-graph-card
-  name: Rain
+  name: Rain Rate
   icon: mdi:weather-pouring
   font_size_header: 19
   aggregate_func: max
@@ -30,19 +30,10 @@
     - entity: sensor.roof_hourly_rain
       name: Hourly
       icon: mdi:weather-pouring
-    - entity: sensor.roof_daily_rain
-      name: Daily
-      icon: mdi:weather-pouring
-    - entity: sensor.roof_monthly_rain
-      name: Monthly
-      icon: mdi:weather-pouring
-    - entity: sensor.roof_yearly_rain
-      name: Yearly
-      icon: mdi:weather-pouring
 ################################################################################
 - type: custom:mini-graph-card
-  name: Heating & Cooling
-  icon: mdi:thermometer-water
+  name: Rain
+  icon: mdi:weather-pouring
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 24
@@ -55,12 +46,12 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.compensation_sensor_landing_festoons_plug_temperature
-      name: Hot Water Temperature
+    - entity: sensor.roof_daily_rain
+      name: Daily
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.compensation_sensor_landing_festoons_plug_temperature
-      name: Hot Water Temperature
-      icon: mdi:thermometer-water
+    - entity: sensor.roof_daily_rain
+      name: Daily
+      icon: mdi:weather-pouring
 ################################################################################

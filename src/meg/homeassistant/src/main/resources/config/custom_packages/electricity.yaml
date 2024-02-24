@@ -656,34 +656,6 @@ template:
         state: >-
           {{ states('fan.kitchen_fan_plug') }}
       #################################################################################
-      - unique_id: old_deck_festoons_plug_proxy
-        state: >-
-          {{ states('switch.old_deck_festoons_plug') }}
-      #################################################################################
-      - unique_id: deck_festoons_plug_proxy
-        state: >-
-          {{ states('light.deck_festoons_plug') }}
-      #################################################################################
-      - unique_id: old_landing_festoons_plug_proxy
-        state: >-
-          {{ states('switch.old_landing_festoons_plug') }}
-      #################################################################################
-      - unique_id: landing_festoons_plug_proxy
-        state: >-
-          {{ states('light.landing_festoons_plug') }}
-      #################################################################################
-      - unique_id: bathroom_rails_plug_proxy
-        state: >-
-          {{ states('switch.bathroom_rails_plug') }}
-      #################################################################################
-      - unique_id: ceiling_water_booster_plug_proxy
-        state: >-
-          {{ states('switch.ceiling_water_booster_plug') }}
-      #################################################################################
-      - unique_id: garden_pool_filter_plug_proxy
-        state: >-
-          {{ states('switch.garden_pool_filter_plug') }}
-      #################################################################################
       - unique_id: dining_air_purifier_proxy
         state: >-
           {{ states('fan.dining_air_purifier') }}
@@ -711,6 +683,34 @@ template:
         attributes:
           fan_speed: >-
             {{ states('sensor.kitchen_air_purifier_fan_speed') | int(0) }}
+      #################################################################################
+      - unique_id: old_deck_festoons_plug_proxy
+        state: >-
+          {{ states('switch.old_deck_festoons_plug') }}
+      #################################################################################
+      - unique_id: deck_festoons_plug_proxy
+        state: >-
+          {{ states('light.deck_festoons_plug') }}
+      #################################################################################
+      - unique_id: old_landing_festoons_plug_proxy
+        state: >-
+          {{ states('switch.old_landing_festoons_plug') }}
+      #################################################################################
+      - unique_id: landing_festoons_plug_proxy
+        state: >-
+          {{ states('light.landing_festoons_plug') }}
+      #################################################################################
+      - unique_id: bathroom_rails_plug_proxy
+        state: >-
+          {{ states('switch.bathroom_rails_plug') }}
+      #################################################################################
+      - unique_id: ceiling_water_booster_plug_proxy
+        state: >-
+          {{ states('switch.ceiling_water_booster_plug') }}
+      #################################################################################
+      - unique_id: garden_pool_filter_plug_proxy
+        state: >-
+          {{ states('switch.garden_pool_filter_plug') }}
       #################################################################################
       - unique_id: lounge_tv_plug_proxy
         state: >-

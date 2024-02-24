@@ -276,14 +276,6 @@ sensor.roof_storm_rain:
   friendly_name: 'Storm'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'cm'
-sensor.landing_festoons_plug_temperature:
-  friendly_name: 'Hot Water Temperature'
-  icon: 'mdi:thermometer-water'
-  unit_of_measurement: '°C'
-sensor.compensation_sensor_landing_festoons_plug_temperature:
-  friendly_name: 'Hot Water Temperature'
-  icon: 'mdi:thermometer-water'
-  unit_of_measurement: '°C'
 input_boolean.home_security:
   friendly_name: 'Secure'
   icon: 'mdi:shield-home'
@@ -329,6 +321,18 @@ fan.deck_east_fan:
 fan.deck_west_fan:
   friendly_name: 'Deck West'
   icon: 'mdi:fan'
+fan.dining_air_purifier:
+  friendly_name: 'Dining'
+  icon: 'mdi:air-purifier'
+fan.lounge_air_purifier:
+  friendly_name: 'Lounge'
+  icon: 'mdi:air-purifier'
+fan.parents_air_purifier:
+  friendly_name: 'Parents'
+  icon: 'mdi:air-purifier'
+fan.kitchen_air_purifier:
+  friendly_name: 'Kitchen'
+  icon: 'mdi:air-purifier'
 light.ada_fan:
   friendly_name: 'Ada Main'
   icon: 'mdi:lightbulb-group'
@@ -422,6 +426,14 @@ light.landing_festoons_plug:
 light.tree_spotlights:
   friendly_name: 'Tree Spotlights'
   icon: 'mdi:lightbulb-group'
+sensor.landing_festoons_plug_temperature:
+  friendly_name: 'Hot Water Temperature'
+  icon: 'mdi:thermometer-water'
+  unit_of_measurement: '°C'
+sensor.compensation_sensor_landing_festoons_plug_temperature:
+  friendly_name: 'Hot Water Temperature'
+  icon: 'mdi:thermometer-water'
+  unit_of_measurement: '°C'
 switch.bathroom_rails_plug:
   friendly_name: 'Towel Rails'
   icon: 'mdi:radiator'
@@ -443,18 +455,6 @@ sensor.garden_pool_filter_plug_energy_power:
 sensor.garden_pool_filter_plug_energy_total:
   friendly_name: 'Total Energy'
   unit_of_measurement: 'kWh'
-fan.dining_air_purifier:
-  friendly_name: 'Dining'
-  icon: 'mdi:air-purifier'
-fan.lounge_air_purifier:
-  friendly_name: 'Lounge'
-  icon: 'mdi:air-purifier'
-fan.parents_air_purifier:
-  friendly_name: 'Parents'
-  icon: 'mdi:air-purifier'
-fan.kitchen_air_purifier:
-  friendly_name: 'Kitchen'
-  icon: 'mdi:air-purifier'
 sensor.home_power:
   friendly_name: 'Home Load'
   icon: 'mdi:home-lightning-bolt'
@@ -1799,6 +1799,70 @@ sensor.deck_west_fan_energy_monthly:
 sensor.deck_west_fan_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_dining_air_purifier_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_dining_air_purifier_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_dining_air_purifier_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_lounge_air_purifier_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_lounge_air_purifier_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_lounge_air_purifier_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_lounge_air_purifier_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_lounge_air_purifier_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_lounge_air_purifier_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_parents_air_purifier_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_parents_air_purifier_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_parents_air_purifier_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_parents_air_purifier_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_parents_air_purifier_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_parents_air_purifier_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_air_purifier_proxy_power:
+  friendly_name: 'Current Power'
+sensor.template_kitchen_air_purifier_proxy_energy:
+  friendly_name: 'Total Energy'
+sensor.template_kitchen_air_purifier_proxy_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_air_purifier_proxy_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.template_kitchen_air_purifier_proxy_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.template_kitchen_air_purifier_proxy_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.ada_main_fan_light_power:
   friendly_name: 'Current Power (Light)'
 sensor.ada_main_fan_light_energy:
@@ -2631,70 +2695,6 @@ sensor.template_garden_pool_filter_plug_proxy_energy_monthly:
 sensor.template_garden_pool_filter_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.template_dining_air_purifier_proxy_power:
-  friendly_name: 'Current Power'
-sensor.template_dining_air_purifier_proxy_energy:
-  friendly_name: 'Total Energy'
-sensor.template_dining_air_purifier_proxy_energy_daily:
-  friendly_name: 'Total Energy Daily'
-  icon: 'mdi:counter'
-sensor.template_dining_air_purifier_proxy_energy_weekly:
-  friendly_name: 'Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.template_dining_air_purifier_proxy_energy_monthly:
-  friendly_name: 'Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.template_dining_air_purifier_proxy_energy_yearly:
-  friendly_name: 'Total Energy Yearly'
-  icon: 'mdi:counter'
-sensor.template_lounge_air_purifier_proxy_power:
-  friendly_name: 'Current Power'
-sensor.template_lounge_air_purifier_proxy_energy:
-  friendly_name: 'Total Energy'
-sensor.template_lounge_air_purifier_proxy_energy_daily:
-  friendly_name: 'Total Energy Daily'
-  icon: 'mdi:counter'
-sensor.template_lounge_air_purifier_proxy_energy_weekly:
-  friendly_name: 'Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.template_lounge_air_purifier_proxy_energy_monthly:
-  friendly_name: 'Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.template_lounge_air_purifier_proxy_energy_yearly:
-  friendly_name: 'Total Energy Yearly'
-  icon: 'mdi:counter'
-sensor.template_parents_air_purifier_proxy_power:
-  friendly_name: 'Current Power'
-sensor.template_parents_air_purifier_proxy_energy:
-  friendly_name: 'Total Energy'
-sensor.template_parents_air_purifier_proxy_energy_daily:
-  friendly_name: 'Total Energy Daily'
-  icon: 'mdi:counter'
-sensor.template_parents_air_purifier_proxy_energy_weekly:
-  friendly_name: 'Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.template_parents_air_purifier_proxy_energy_monthly:
-  friendly_name: 'Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.template_parents_air_purifier_proxy_energy_yearly:
-  friendly_name: 'Total Energy Yearly'
-  icon: 'mdi:counter'
-sensor.template_kitchen_air_purifier_proxy_power:
-  friendly_name: 'Current Power'
-sensor.template_kitchen_air_purifier_proxy_energy:
-  friendly_name: 'Total Energy'
-sensor.template_kitchen_air_purifier_proxy_energy_daily:
-  friendly_name: 'Total Energy Daily'
-  icon: 'mdi:counter'
-sensor.template_kitchen_air_purifier_proxy_energy_weekly:
-  friendly_name: 'Total Energy Hept-Daily'
-  icon: 'mdi:counter'
-sensor.template_kitchen_air_purifier_proxy_energy_monthly:
-  friendly_name: 'Total Energy Monthly'
-  icon: 'mdi:counter'
-sensor.template_kitchen_air_purifier_proxy_energy_yearly:
-  friendly_name: 'Total Energy Yearly'
-  icon: 'mdi:counter'
 sensor.all_standby_energy:
   friendly_name: 'Total Energy'
 sensor.all_standby_energy_weekly:
@@ -3378,6 +3378,18 @@ sensor.deck_fans_energy_monthly:
   friendly_name: 'Deck Fans Total Energy Monthly'
 sensor.deck_fans_energy_yearly:
   friendly_name: 'Deck Fans Total Energy Yearly'
+sensor.dining_fans_power:
+  friendly_name: 'Dining Fans Current Power'
+sensor.dining_fans_energy:
+  friendly_name: 'Dining Fans Total Energy'
+sensor.dining_fans_energy_daily:
+  friendly_name: 'Dining Fans Total Energy Daily'
+sensor.dining_fans_energy_weekly:
+  friendly_name: 'Dining Fans Total Energy Hept-Daily'
+sensor.dining_fans_energy_monthly:
+  friendly_name: 'Dining Fans Total Energy Monthly'
+sensor.dining_fans_energy_yearly:
+  friendly_name: 'Dining Fans Total Energy Yearly'
 sensor.lights_energy:
   friendly_name: 'Lights Total Energy'
 sensor.lights_energy_weekly:
@@ -3634,18 +3646,6 @@ sensor.pool_filter_energy_monthly:
   friendly_name: 'Pool Filter Total Energy Monthly'
 sensor.pool_filter_energy_yearly:
   friendly_name: 'Pool Filter Total Energy Yearly'
-sensor.dining_fans_power:
-  friendly_name: 'Dining Fans Current Power'
-sensor.dining_fans_energy:
-  friendly_name: 'Dining Fans Total Energy'
-sensor.dining_fans_energy_daily:
-  friendly_name: 'Dining Fans Total Energy Daily'
-sensor.dining_fans_energy_weekly:
-  friendly_name: 'Dining Fans Total Energy Hept-Daily'
-sensor.dining_fans_energy_monthly:
-  friendly_name: 'Dining Fans Total Energy Monthly'
-sensor.dining_fans_energy_yearly:
-  friendly_name: 'Dining Fans Total Energy Yearly'
 sensor.audio_visual_devices_energy:
   friendly_name: 'Audio Visual Devices Total Energy'
 sensor.audio_visual_devices_energy_weekly:

@@ -107,7 +107,63 @@
   slot_r3: sun_following
   slot_r4: uv_summary
   slot_r5: fire_summary
-
+################################################################################
+- type: custom:mini-graph-card
+  name: Rain
+  icon: mdi:weather-pouring
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - entity: sensor.roof_daily_rain
+      name: Daily
+################################################################################
+- type: entities
+  entities:
+    - entity: sensor.roof_daily_rain
+      name: Daily
+      icon: mdi:weather-pouring
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: custom:mini-graph-card
+  name: Rain Rate
+  icon: mdi:weather-pouring
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - entity: sensor.roof_rain_rate
+      name: Rate
+################################################################################
+- type: entities
+  entities:
+    - entity: sensor.roof_rain_rate
+      name: Rate
+      icon: mdi:weather-pouring
+################################################################################
+- type: entities
+  entities:
+    - entity: sensor.roof_hourly_rain
+      name: Hourly
+      icon: mdi:weather-pouring
+################################################################################
 - type: 'custom:bom-radar-card'
   data_source: 'RainViewer-Original'
   map_style: 'light'
@@ -127,3 +183,4 @@
   show_radar_coverage: false
   show_radar_location: true
   zoom_level: 6
+################################################################################

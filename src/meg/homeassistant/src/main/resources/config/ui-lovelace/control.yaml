@@ -42,6 +42,22 @@
       name: Deck
       icon: mdi:fan
 ################################################################################
+- type: entities
+  title: Air Purifiers
+  entities:
+    - entity: fan.dining_air_purifier
+      name: Dining
+      icon: mdi:air-purifier
+    - entity: fan.lounge_air_purifier
+      name: Lounge
+      icon: mdi:air-purifier
+    - entity: fan.parents_air_purifier
+      name: Parents
+      icon: mdi:air-purifier
+    - entity: fan.kitchen_air_purifier
+      name: Kitchen
+      icon: mdi:air-purifier
+################################################################################
 - type: custom:layout-break
 ################################################################################
 - type: entities
@@ -131,9 +147,31 @@
 ################################################################################
 - type: custom:layout-break
 ################################################################################
+- type: custom:mini-graph-card
+  name: Heating & Cooling
+  icon: mdi:thermometer-water
+  font_size_header: 19
+  aggregate_func: max
+  hours_to_show: 24
+  points_per_hour: 6
+  line_width: 2
+  tap_action: none
+  show_state: true
+  show_indicator: true
+  show:
+    extrema: true
+    fill: false
+  entities:
+    - entity: sensor.compensation_sensor_landing_festoons_plug_temperature
+      name: Hot Water Temperature
+################################################################################
 - type: entities
-  title: Heating & Cooling
-  show_header_toggle: false
+  entities:
+    - entity: sensor.compensation_sensor_landing_festoons_plug_temperature
+      name: Hot Water Temperature
+      icon: mdi:thermometer-water
+################################################################################
+- type: entities
   entities:
     - entity: switch.bathroom_rails_plug
       name: Towel Rails
@@ -144,20 +182,4 @@
     - entity: switch.garden_pool_filter_plug
       name: Pool Filter
       icon: mdi:pool
-################################################################################
-- type: entities
-  title: Air Purifiers
-  entities:
-    - entity: fan.dining_air_purifier
-      name: Dining
-      icon: mdi:air-purifier
-    - entity: fan.lounge_air_purifier
-      name: Lounge
-      icon: mdi:air-purifier
-    - entity: fan.parents_air_purifier
-      name: Parents
-      icon: mdi:air-purifier
-    - entity: fan.kitchen_air_purifier
-      name: Kitchen
-      icon: mdi:air-purifier
 ################################################################################

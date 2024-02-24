@@ -18,14 +18,6 @@ views:
       max_cols: 10
     cards: !include ui-lovelace/conditions.yaml
   #######################################################################################
-  - title: Water
-    path: water
-    type: custom:vertical-layout
-    layout:
-      width: 300
-      max_cols: 10
-    cards: !include ui-lovelace/water.yaml
-  #######################################################################################
   - title: Control
     path: control
     type: custom:vertical-layout
