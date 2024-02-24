@@ -7,7 +7,7 @@
   "icon": "mdi:weather-pouring",
   "force_update": "false",
   "state_topic": "weewx/roof_storm_rain",
-  "value_template": "{{ (value | float(0) | round(2)) if (value is defined and value | float(-1) >= 0) else (states('sensor.roof_storm_rain') | float(None)) }}",
+  "value_template": "{{ (('%0.2f' | format(value | float * 100 | int / 100)) if (value is defined and value | float(-1) >= 0) else ('%0.2f' | format(states('sensor.roof_storm_rain') | float * 100 | int / 100))) | float }}",
   "qos": "1",
   "device": {
     "via_device": "WeeWX",

@@ -110,7 +110,7 @@
 
 - type: 'custom:bom-radar-card'
   data_source: 'RainViewer-Original'
-  map_style: 'voyager'
+  map_style: 'dark'
   frame_count: 30
   frame_delay: 200
   restart_delay: 4000
