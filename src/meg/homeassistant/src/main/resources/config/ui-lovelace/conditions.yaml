@@ -227,8 +227,6 @@
       name: Dining
       icon: mdi:molecule-co2
 ################################################################################
-- type: custom:layout-break
-################################################################################
 - type: custom:mini-graph-card
   name: Noise
   icon: mdi:volume-high
