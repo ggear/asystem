@@ -111,8 +111,6 @@
       name: Kitchen
       icon: mdi:virus-outline
 ################################################################################
-- type: custom:layout-break
-################################################################################
 - type: custom:mini-graph-card
   name: Humidity
   icon: mdi:water-percent

@@ -47,8 +47,6 @@
     - entity: sensor.template_weatherstation_coms_signal_quality_percentage
       name: Davis Console
 ################################################################################
-- type: custom:layout-break
-################################################################################
 - type: entities
   title: Service Availability
   entities:
@@ -238,8 +236,6 @@
     - entity: switch.edwin_wardrobe_outlet
       name: Edwin Wardobe Outlet
       icon: mdi:power-plug-outline
-################################################################################
-- type: custom:layout-break
 ################################################################################
 - type: entities
   title: Reset Adaptive Lighting

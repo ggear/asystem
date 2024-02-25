@@ -108,8 +108,6 @@
   slot_r4: uv_summary
   slot_r5: fire_summary
 ################################################################################
-- type: custom:layout-break
-################################################################################
 - type: custom:mini-graph-card
   name: Temperature
   icon: mdi:thermometer
@@ -189,8 +187,6 @@
     - entity: sensor.roof_yearly_rain
       name: Yearly
       icon: mdi:weather-pouring
-################################################################################
-- type: custom:layout-break
 ################################################################################
 - type: 'custom:bom-radar-card'
   data_source: 'RainViewer-Original'

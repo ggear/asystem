@@ -23,36 +23,6 @@
     - entity: binary_sensor.template_front_door_sensor_contact_last
       name: Door
 ################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
-  title: Ada's Room
-  entities:
-    - entity: binary_sensor.uvc_ada_motion
-      name: Motion
-################################################################################
-- type: picture-entity
-  entity: camera.uvc_ada_medium
-  show_name: false
-  show_state: false
-  camera_view: live
-################################################################################
-- type: custom:layout-break
-################################################################################
-- type: entities
-  title: Edwin's Room
-  entities:
-    - entity: binary_sensor.uvc_edwin_motion
-      name: Motion
-################################################################################
-- type: picture-entity
-  entity: camera.uvc_edwin_medium
-  show_name: false
-  show_state: false
-  camera_view: live
-################################################################################
-- type: custom:layout-break
-################################################################################
 - type: entities
   title: House Occupancy
   entities:
@@ -68,4 +38,32 @@
       name: Deck East
     - entity: binary_sensor.deck_west_fan_occupancy
       name: Deck West
+################################################################################
+- type: custom:layout-break
+################################################################################
+- type: entities
+  title: Ada's Room
+  entities:
+    - entity: binary_sensor.uvc_ada_motion
+      name: Motion
+################################################################################
+- type: picture-entity
+  entity: camera.uvc_ada_medium
+  show_name: false
+  show_state: false
+  camera_view: live
+################################################################################
+- type: entities
+  title: Edwin's Room
+  entities:
+    - entity: binary_sensor.uvc_edwin_motion
+      name: Motion
+################################################################################
+- type: picture-entity
+  entity: camera.uvc_edwin_medium
+  show_name: false
+  show_state: false
+  camera_view: live
+################################################################################
+- type: custom:layout-break
 ################################################################################
