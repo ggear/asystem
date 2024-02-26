@@ -27,20 +27,15 @@ serial:
   port: /dev/ttyACM0
 advanced:
 
+  # INFO: Only required for fresh installations
+  #  pan_id: GENERATE
+  #  ext_pan_id: GENERATE
+  #  network_key: GENERATE
 
-  pan_id: GENERATE
-  ext_pan_id: GENERATE
-  network_key: GENERATE
-
-  channel: 11
-
-  # INFO: Recommended to resovle some Conbee II device connection issues
+  # INFO: Recommended to resolve some Conbee II device connection issues
   #  adapter_delay: 200
 
+  channel: 11
   last_seen: ISO_8601_local
   legacy_availability_payload: false
-
-
-  # TODO: Re-enable once zigbee network has been healed
   log_level: error
-#  log_level: debug
