@@ -5,7 +5,7 @@ x-common: &common
   user: root
   environment:
     - TZ=Australia/Perth
-#    - DEBUG=zigbee-herdsman*
+    - DEBUG=zigbee-herdsman*
     - ZIGBEE2MQTT_SERVICE
     - ZIGBEE2MQTT_HTTP_PORT
     - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=$ZIGBEE2MQTT_HTTP_PORT
