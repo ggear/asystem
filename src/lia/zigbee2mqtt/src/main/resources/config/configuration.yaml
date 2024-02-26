@@ -36,5 +36,5 @@ advanced:
 
 
   # TODO: Re-enable once zigbee network has been healed
-  log_level: error
-#  log_level: debug
+#  log_level: error
+  log_level: debug
