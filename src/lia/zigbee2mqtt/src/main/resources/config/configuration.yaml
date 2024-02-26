@@ -28,13 +28,13 @@ serial:
 advanced:
   channel: 11
 
-# INFO: Recommended to resovle some Conbee II device connection issues
-#  adapter_delay: 200
+  # INFO: Recommended to resovle some Conbee II device connection issues
+  #  adapter_delay: 200
 
   last_seen: ISO_8601_local
   legacy_availability_payload: false
 
 
-# TODO: Re-enable once zigbee network has been healed
-#  log_level: error
-  log_level: debug
+  # TODO: Re-enable once zigbee network has been healed
+  log_level: error
+#  log_level: debug
