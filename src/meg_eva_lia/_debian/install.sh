@@ -314,13 +314,23 @@ SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", MODE="0664
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0664", TAG+="uaccess"
 EOF
 chmod -x /etc/udev/rules.d/98-usb-edgetpu.rules
+lsusb
+for DEV in $(find /dev -name ttyUSB?); do
+  udevadm info ${DEV} | grep "P: "
+  udevadm info -a -n ${DEV} | grep {idVendor} | head -1
+  udevadm info -a -n ${DEV} | grep {idProduct} | head -1
+  udevadm info -a -n ${DEV} | grep {serial} | head -1
+  udevadm info -a -n ${DEV} | grep {product} | head -1
+done
 cat <<EOF >/etc/udev/rules.d/99-usb-serial.rules
 SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", SYMLINK+="ttyUSBTempProbe"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="0001", SYMLINK+="ttyUSBVantagePro2"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="1cf1", ATTRS{idProduct}=="0030", ATTRS{serial}=="DE2418477", SYMLINK+="ttyUSBConbeeII"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{serial}=="0001", ATTRS{product}=="Sonoff Zigbee 3.0 USB Dongle Plus", SYMLINK+="ttyUSBZB3DongleP"
 EOF
 chmod -x /etc/udev/rules.d/99-usb-serial.rules
 udevadm control --reload-rules && udevadm trigger && sleep 2
+ls -la /dev/ttyUSB*
 
 ################################################################################
 # Digitemp
