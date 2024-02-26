@@ -44,5 +44,3 @@ ${ROOT_DIR}/mqtt_config.py '0x2c1165fffe168c7e' 'Ensuite Sconces Bulb 1' 'Ensuit
 ${ROOT_DIR}/mqtt_config.py '0x2c1165fffea5cd4b' 'Ensuite Sconces Bulb 2' 'Ensuite Sconces' '{ "power_on_behavior":"on", "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x2c1165fffea89f5f' 'Ensuite Sconces Bulb 3' 'Ensuite Sconces' '{ "power_on_behavior":"on", "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x00178801040ede93' 'Wardrobe Main Bulb 1' 'Wardrobe Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":254, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
-${ROOT_DIR}/mqtt_config.py '0x00178801097ed42c' 'Tree Spotlights Bulb 1' 'Tree Spotlights' ''
-${ROOT_DIR}/mqtt_config.py '0x0017880109c40c33' 'Tree Spotlights Bulb 2' 'Tree Spotlights' ''
