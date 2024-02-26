@@ -28,9 +28,9 @@ serial:
 advanced:
 
   # INFO: Only required for fresh installations
-  #  pan_id: GENERATE
-  #  ext_pan_id: GENERATE
-  #  network_key: GENERATE
+  pan_id: GENERATE
+  ext_pan_id: GENERATE
+  network_key: GENERATE
 
   # INFO: Recommended to resolve some Conbee II device connection issues
   #  adapter_delay: 200
@@ -38,4 +38,4 @@ advanced:
   channel: 11
   last_seen: ISO_8601_local
   legacy_availability_payload: false
-  log_level: error
+  log_level: info
