@@ -26,6 +26,12 @@ groups: groups.yaml
 serial:
   port: /dev/ttyACM0
 advanced:
+
+
+  pan_id: GENERATE
+  ext_pan_id: GENERATE
+  network_key: GENERATE
+
   channel: 11
 
   # INFO: Recommended to resovle some Conbee II device connection issues
@@ -36,5 +42,5 @@ advanced:
 
 
   # TODO: Re-enable once zigbee network has been healed
-#  log_level: error
-  log_level: debug
+  log_level: error
+#  log_level: debug
