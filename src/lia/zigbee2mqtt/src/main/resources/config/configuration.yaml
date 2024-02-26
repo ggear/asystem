@@ -26,8 +26,6 @@ groups: groups.yaml
 serial:
   port: /dev/ttyACM0
 advanced:
-
-  # INFO: Only required for fresh installations
   pan_id: $ZIGBEE2MQTT_PAN_ID
   ext_pan_id: $ZIGBEE2MQTT_EXT_PAN_ID
   network_key: $ZIGBEE2MQTT_NETWORK_KEY
