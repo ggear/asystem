@@ -16,7 +16,8 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-/app/data/mqtt_config.sh
+# TODO: Re-enable once zigbee network has been healed
+#/app/data/mqtt_config.sh
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
