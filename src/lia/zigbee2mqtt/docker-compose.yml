@@ -5,7 +5,12 @@ x-common: &common
   user: root
   environment:
     - TZ=Australia/Perth
-#    - DEBUG=zigbee-herdsman*
+
+
+    # TODO: Re-enable once zigbee network has been healed
+    - DEBUG=zigbee-herdsman*
+
+
     - ZIGBEE2MQTT_SERVICE
     - ZIGBEE2MQTT_HTTP_PORT
     - ZIGBEE2MQTT_CONFIG_FRONTEND_PORT=$ZIGBEE2MQTT_HTTP_PORT

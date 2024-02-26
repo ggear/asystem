@@ -33,4 +33,8 @@ advanced:
 
   last_seen: ISO_8601_local
   legacy_availability_payload: false
-  log_level: error
+
+
+# TODO: Re-enable once zigbee network has been healed
+#  log_level: error
+  log_level: debug
