@@ -27,7 +27,10 @@ serial:
   port: /dev/ttyACM0
 advanced:
   channel: 11
-  adapter_delay: 200
+
+# INFO: Recommended to resovle some Conbee II device connection issues
+#  adapter_delay: 200
+
   last_seen: ISO_8601_local
   legacy_availability_payload: false
   log_level: error
