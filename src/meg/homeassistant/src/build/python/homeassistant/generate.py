@@ -1248,7 +1248,7 @@ template:
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{{{ ((states('sensor.{}') | float(0)) / 255 * 100) | int(0) }}}}
+          {{{{ min(value | float(0) / 100 * 100, 100) | int(0) }}}}
               """.format(
                 metadata_diagnostic_dict["unique_id"].replace("template_", ""),
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("_percentage", ""),

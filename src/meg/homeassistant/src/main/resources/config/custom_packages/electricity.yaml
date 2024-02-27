@@ -354,11 +354,6 @@ powercalc:
                       standby_power: 0
                       fixed:
                         power: 31
-                #######################################################################
-                - create_group: Tree Lights
-                  entities:
-                    - entity_id: light.tree_spotlights_bulb_1
-                    - entity_id: light.tree_spotlights_bulb_2
             ###########################################################################
             - create_group: Audio Visual Devices
               entities:
