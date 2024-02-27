@@ -36,42 +36,42 @@ template:
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{ min(value | float(0) / 100 * 100, 100) | int(0) }}
+          {{ min(states('sensor.driveway_repeater_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
       #################################################################################
       - unique_id: landing_repeater_linkquality_percentage
         device_class: signal_strength
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{ min(value | float(0) / 100 * 100, 100) | int(0) }}
+          {{ min(states('sensor.landing_repeater_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
       #################################################################################
       - unique_id: garden_repeater_linkquality_percentage
         device_class: signal_strength
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{ min(value | float(0) / 100 * 100, 100) | int(0) }}
+          {{ min(states('sensor.garden_repeater_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
       #################################################################################
       - unique_id: kitchen_fan_outlet_linkquality_percentage
         device_class: signal_strength
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{ min(value | float(0) / 100 * 100, 100) | int(0) }}
+          {{ min(states('sensor.kitchen_fan_outlet_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
       #################################################################################
       - unique_id: deck_fans_outlet_linkquality_percentage
         device_class: signal_strength
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{ min(value | float(0) / 100 * 100, 100) | int(0) }}
+          {{ min(states('sensor.deck_fans_outlet_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
       #################################################################################
       - unique_id: edwin_wardrobe_outlet_linkquality_percentage
         device_class: signal_strength
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{ min(value | float(0) / 100 * 100, 100) | int(0) }}
+          {{ min(states('sensor.edwin_wardrobe_outlet_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
 #######################################################################################
 input_boolean:
   #####################################################################################
