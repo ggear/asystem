@@ -3,13 +3,42 @@
 ################################################################################
 # raspbpi-lia: Raspberry Pi 3   Early 2016  (Model B)  ARMv8 Cortex A53       1xQuadx1.2GHz  1GB  RAM  120GB SSD              https://www.raspberrypi.com/products/raspberry-pi-3-model-b
 # macmini-nel: Mac Mini         Mid   2011  (5,2)      Intel i5 Sandy Bridge  1xDualx2.5GHz  8GB  RAM  500GB SSD & 1.8TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-mid-2011-specs.html
-# macmini-mae: Mac Mini         Mid   2011  (5,3)      Intel i7 Sandy Bridge  1xQuadx2.0GHz  8GB  RAM  450GB SSD & 3.6TB SSD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i7-2.0-mid-2011-server-specs.html
+# macmini-mae: Mac Mini         Mid   2011  (5,3)      Intel i7 Sandy Bridge  1xQuadx2.0GHz  8GB  RAM  450GB SSD & 1.0TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i7-2.0-mid-2011-server-specs.html
 # macmini-liz: Mac Mini         Late  2012  (6,1)      Intel i5 Ivy Bridge    1xDualx2.5GHz  8GB  RAM  480GB SSD & 1.8TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.5-late-2012-specs.html
 # macbook-flo: MacBook Pro      Late  2013  (11,3)     Intel i7 Haswell       1xQuadx2.3GHz  16GB RAM  EMPTY SSD              https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-core-i7-2.3-15-dual-graphics-late-2013-retina-display-specs.html
-# macmini-bea: Mac Mini         Late  2014  (7,1)      Intel i5 Haswell       1xDualx2.8GHz  16GB RAM  4.0TB SSD & 3.6TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.8-late-2014-specs.html
+# macmini-bea: Mac Mini         Late  2014  (7,1)      Intel i5 Haswell       1xDualx2.8GHz  16GB RAM  3.6TB SSD & 3.6TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.8-late-2014-specs.html
 # macmini-meg: Mac Mini         Late  2014  (7,1)      Intel i5 Haswell       1xDualx2.8GHz  8GB  RAM  1.8TB SSD & 3.6TB HDD  https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i5-2.8-late-2014-specs.html
 # macmini-zoe: Mac Mini         Late  2018  (8,1)      Intel i7 Coffee Lake   1xHexax3.2GHz  32GB RAM  932GB SSD              https://everymac.com/systems/apple/mac_mini/specs/mac-mini-core-i7-3.2-late-2018-specs.html
 # macbook-rae: MacBook Pro      Late  2021  (18,1)     Apple M1 Pro           1xDecax3.2GHz  32GB RAM  926GB SSD              https://everymac.com/systems/apple/macbook_pro/specs/macbook-pro-m1-pro-10-core-cpu-16-core-gpu-16-2021-specs.html
+
+################################################################################
+# Budget SAN
+################################################################################
+
+# Have at least one primary (perhaps three, primary, backup, media) RAIDed externally attached storage that can be connected to any node
+# Primary provides a home mounted in place of LVM partition, likewise backup/media
+# That way we don't need a distributed file system or NAS/SAN for failover, although Ceph without K8s or Rancher if K3s could be interesting, but heavy
+# Probably need to restructure /shares to breakout backup and media
+# Maybe use intenal SSD for /home/asystem/local/stateful and /home/asystem/share/backup/asystem/stateful for release and scheduled backups (extend to 3?) and /home/asystem/local/stateless for release backups
+# Have restore.sh script that can move from a backup to
+# How to rack and stack? Build a satnd in place of Macbook Pro? Use a Mac Mini chasis?
+
+# 1x1TB 2.5 SATA HDD inventory, sustained 2x1 Gbps read/write speed, USB 3
+# 2x1.8TB 2.5 SATA HDD inventory, sustained 2x1 Gbps read/write speed, USB 3
+# 3x450GB 2.5 SATA SDD inventory, sustained 2x3.5 Gbps read/write speed, Thunderbolt 3
+# 2x1TB PVMe SSD (2x$100), sustained 30 Gbps, Thunderbolt 3
+
+# Mac Mini 2014 has Thunderbolt 2 (20 Gbps) or USB 3 (5 Gbps), 2018 has Thunderbolt 3 (40 Gbps) or USB 3.1 (10 Gbps) all of which would bottleneck on HDD, so use USB
+# Hardware RAID ($164) - https://www.amazon.com.au/StarTech-com-10Gbps-External-Enclosure-Drives/dp/B013TPIHNY
+# JBoD and Software-RAID, dedicated USB port exceeds bandwidth of SATA SSDs (2x$16) - https://www.amazon.com.au/Sabrent-2-5-Inch-Enclosure-Optimized-EC-UM30/dp/B00MQ97QGE
+# Hardware RAID, fast'ish, powered, Thunderbolt 2, too expensive and locks into old tech ($519) - https://www.macfixit.com.au/collections/thunderbolt-raid-storage/products/owc-mercury-elite-pro-dual-usb-3-1-gen-1-thunderbolt-2-raid-storage-enclosure-with-cables
+# Hardware RAID, fast, powered, Thunderbolt 3 ($604) - https://www.macfixit.com.au/collections/thunderbolt-raid-storage/products/owc-gemini-thunderbolt-3-dock-and-dual-drive-raid-solution
+# Hardware RAID, fast, powered, Thunderbolt 3, power usage? ($800 net of $200 SSDs) - https://www.macfixit.com.au/collections/thunderbolt-raid-storage/products/2-0tb-2-x-1tb-owc-mercury-pro-u-2-dual-high-performance-thunderbolt-nvme-ssd-array
+
+# Test with fastest/largest SSD I have, just a JBOD backup via USB 3 -> backup
+# Price up cheap software raid/JBOD myself out of existing equipment, if less than $200 to get all 5 drives up, do it -> backup/media 5TB storage
+# Longer term get a $1k spend on a fast, pre-built storage array -> primary, maybe when 2018 Mac Mini is deployed and SSD backup disk size exceeded
+
 
 ################################################################################
 # Replacement requirements
@@ -61,3 +90,6 @@
 # https://www.scorptec.com.au/product/hard-drives-&-ssds/ssd-2.5-&-pci-express/94488-ct4000mx500ssd1
 
 Total ($1244):
+
+
+
