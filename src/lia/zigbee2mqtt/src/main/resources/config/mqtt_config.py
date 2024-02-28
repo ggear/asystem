@@ -81,7 +81,7 @@ if __name__ == "__main__":
         lock.acquire(timeout=1)
         client.loop_stop()
         client.disconnect()
-        return [] if userdata["messages"] is None else json.loads(userdata["messages"].payload)
+        return {} if userdata["messages"] is None else json.loads(userdata["messages"].payload)
 
 
     def _device_available():
