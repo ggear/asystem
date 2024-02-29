@@ -21,16 +21,18 @@
 # Probably need to restructure /shares to breakout backup and media
 # Maybe use intenal SSD for /home/asystem/local/stateful and /home/asystem/share/backup/asystem/stateful for release and scheduled backups (extend to 3?) and /home/asystem/local/stateless for release backups
 # Have restore.sh script that can move from a backup to
+# Use ZFS, perhaps replace LVM /home partition? Benefits over RAID?
 # How to rack and stack? Build a satnd in place of Macbook Pro? Use a Mac Mini chasis?
+# Maybe get video/keyboard switching too?
 
 # 1x1TB 2.5 SATA HDD inventory, sustained 2x1 Gbps read/write speed, USB 3
 # 2x1.8TB 2.5 SATA HDD inventory, sustained 2x1 Gbps read/write speed, USB 3
 # 3x450GB 2.5 SATA SDD inventory, sustained 2x3.5 Gbps read/write speed, Thunderbolt 3
-# 2x1TB PVMe SSD (2x$100), sustained 30 Gbps, Thunderbolt 3
+# 2x1TB NVMe SSD (2x$100), sustained 30 Gbps, Thunderbolt 3
 
 # Mac Mini 2014 has Thunderbolt 2 (20 Gbps) or USB 3 (5 Gbps), 2018 has Thunderbolt 3 (40 Gbps) or USB 3.1 (10 Gbps) all of which would bottleneck on HDD, so use USB
 # Hardware RAID ($164) - https://www.amazon.com.au/StarTech-com-10Gbps-External-Enclosure-Drives/dp/B013TPIHNY
-# JBoD and Software-RAID, dedicated USB port exceeds bandwidth of SATA SSDs (2x$16) - https://www.amazon.com.au/Sabrent-2-5-Inch-Enclosure-Optimized-EC-UM30/dp/B00MQ97QGE
+# JBoD and Software-RAID, dedicated USB 3 port exceeds bandwidth of SATA SSDs (2x$16), TRIM support, lights? - https://www.amazon.com.au/UGREEN-Enclosure-External-Adapter-Housing/dp/B07D2BHVBD, https://www.amazon.com.au/Sabrent-2-5-Inch-Enclosure-Optimized-EC-UM30/dp/B00MQ97QGE, https://www.amazon.com.au/ORICO-Enclosure-USB-External-Tool-Free/dp/B0BM9FYM4Z
 # Hardware RAID, fast'ish, powered, Thunderbolt 2, too expensive and locks into old tech ($519) - https://www.macfixit.com.au/collections/thunderbolt-raid-storage/products/owc-mercury-elite-pro-dual-usb-3-1-gen-1-thunderbolt-2-raid-storage-enclosure-with-cables
 # Hardware RAID, fast, powered, Thunderbolt 3 ($604) - https://www.macfixit.com.au/collections/thunderbolt-raid-storage/products/owc-gemini-thunderbolt-3-dock-and-dual-drive-raid-solution
 # Hardware RAID, fast, powered, Thunderbolt 3, power usage? ($800 net of $200 SSDs) - https://www.macfixit.com.au/collections/thunderbolt-raid-storage/products/2-0tb-2-x-1tb-owc-mercury-pro-u-2-dual-high-performance-thunderbolt-nvme-ssd-array
@@ -38,6 +40,7 @@
 # Test with fastest/largest SSD I have, just a JBOD backup via USB 3 -> backup
 # Price up cheap software raid/JBOD myself out of existing equipment, if less than $200 to get all 5 drives up, do it -> backup/media 5TB storage
 # Longer term get a $1k spend on a fast, pre-built storage array -> primary, maybe when 2018 Mac Mini is deployed and SSD backup disk size exceeded
+# Or build own single NVMe powered (or hub) and use that, no RAID, or build two and add software RAID
 
 
 ################################################################################
