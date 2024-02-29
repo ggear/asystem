@@ -23,7 +23,7 @@
 # Have restore.sh script that can move from a backup to
 # Use ZFS, perhaps replace LVM /home partition? Benefits over RAID?
 # How to rack and stack? Build a satnd in place of Macbook Pro? Use a Mac Mini chasis?
-# Maybe get video/keyboard switching too?
+# Maybe get video/keyboard switching too? hard, can only get USB bus extenders for reasonable price, lets just plug in and out of docking station, maybe make my own mechnical one? https://electronics.stackexchange.com/questions/481602/pass-through-thunderbolt-kvm-switch https://www.amazon.com.au/gp/product/B083JKDNRJ
 
 # 1x1TB 2.5 SATA HDD inventory, sustained 2x1 Gbps read/write speed, USB 3
 # 2x1.8TB 2.5 SATA HDD inventory, sustained 2x1 Gbps read/write speed, USB 3
