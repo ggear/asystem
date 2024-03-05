@@ -1,4 +1,4 @@
 #!/bin/bash
 
-python3 /config/scripts/rename.py /downloads/finished
+python3 /config/scripts/rename.py /downloads
 /config/scripts/normalise.sh /downloads/finished

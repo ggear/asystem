@@ -11,10 +11,9 @@ def rename(file_path_root):
         return 200
     file_path_root = Path(file_path_root)
     file_path_roots_to_delete = []
-    for file_source in ["usbdrive", "usenet/finished"]:
+    for file_source in ["usbdrive", "usenet/finished", "finished"]:
         file_path_source = Path(os.path.join(file_path_root, file_source))
         file_path_processed = Path(file_path_source, "__RENAMED")
-        os.makedirs(file_path_processed, exist_ok=True)
         for file_type in ["mkv", "mp4", "avi", "m2ts"]:
             for file_path in Path(os.path.join(file_path_root, file_source)).rglob("*." + file_type):
                 file_to_be_renamed = False
