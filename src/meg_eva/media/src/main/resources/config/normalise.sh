@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SHARE_DIR=${1}
-if [ -d "${SHARE_DIR}" ]; then
+if [ ! -d "${SHARE_DIR}" ]; then
   echo "Usage: ${0} <share-dir>"
   exit 1
 fi
