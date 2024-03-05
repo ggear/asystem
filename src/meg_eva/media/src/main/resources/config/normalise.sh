@@ -6,10 +6,15 @@ if [ ! -d "${SHARE_DIR}" ]; then
   exit 1
 fi
 echo -n "Normalising ${SHARE_DIR} ... "
-setfacl -bR ${SHARE_DIR}
-find ${SHARE_DIR} -type f -exec chmod 640 {} \;
-find ${SHARE_DIR} -type d -exec chmod 750 {} \;
-find ${SHARE_DIR} -exec chown graham:users {} \;
-find ${SHARE_DIR} -type f -name nohup -exec rm -f {} \;
-find ${SHARE_DIR} -type f -name .DS_Store -exec rm -f {} \;
+if grep -c graham /etc/passwd && grep -c users /etc/group; then
+  setfacl -bR ${SHARE_DIR}
+  find ${SHARE_DIR} -type f -exec chmod 640 {} \;
+  find ${SHARE_DIR} -type d -exec chmod 750 {} \;
+  find ${SHARE_DIR} -exec chown graham:users {} \;
+  find ${SHARE_DIR} -type f -name nohup -exec rm -f {} \;
+  find ${SHARE_DIR} -type f -name .DS_Store -exec rm -f {} \;
+else
+  find ${SHARE_DIR} -type f -exec chmod 666 {} \;
+  find ${SHARE_DIR} -type d -exec chmod 777 {} \;
+fi
 echo "done"
