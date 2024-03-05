@@ -3,7 +3,7 @@ version: '3.7'
 services:
   sabnzbd:
     container_name: sabnzbd
-    image: linuxserver/sabnzbd:4.2.2-ls148
+    image: linuxserver/sabnzbd:4.2.2
     init: false
     restart: ${SERVICE_RESTART}
     environment:
