@@ -10,8 +10,10 @@ profiles:
       auth_token: ${CLOUDFLARE_TOKEN}
 certificates:
   - domains:
-      - janeandgraham.com
+      - "janeandgraham.com"
       - "*.janeandgraham.com"
       - "*.local.janeandgraham.com"
     profile: cloudflare_profile
-    deploy_hook: '/bin/bash -c "[[ -f /etc/letsencrypt/live/janeandgraham.com/privkey.pem ]] && touch /etc/letsencrypt/live/janeandgraham.com/privkey.pem"'
+
+# INFO: Disable push certs in favour of manual deploy
+#    deploy_hook: '/bin/bash -c "[[ -f /etc/letsencrypt/live/janeandgraham.com/privkey.pem ]] && touch /etc/letsencrypt/live/janeandgraham.com/privkey.pem"'
