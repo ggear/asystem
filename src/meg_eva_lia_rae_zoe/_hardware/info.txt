@@ -27,9 +27,10 @@
 
 # 1x1TB 2.5 SATA HDD inventory, sustained 2x1 Gbps read/write speed, USB 3
 # 2x1.8TB 2.5 SATA HDD inventory, sustained 2x1 Gbps read/write speed, USB 3
-# 3x450GB 2.5 SATA SDD inventory, sustained 2x3.5 Gbps read/write speed, Thunderbolt 3
+# 3x450GB 2.5 SATA SDD inventory, sustained 2x3.5 Gbps read/write speed, USB 3.1 / Thunderbolt 3
 # 2x1TB NVMe SSD (2x$100), sustained 30 Gbps, Thunderbolt 3
 
+# Lenovo Dock has 5xUSB 3.1 Gen2 (10 Gbps)
 # Mac Mini 2014 has Thunderbolt 2 (20 Gbps) or USB 3 (5 Gbps), 2018 has Thunderbolt 3 (40 Gbps) or USB 3.1 (10 Gbps) all of which would bottleneck on HDD, so use USB
 # Hardware RAID ($164) - https://www.amazon.com.au/StarTech-com-10Gbps-External-Enclosure-Drives/dp/B013TPIHNY
 # JBoD and Software-RAID, dedicated USB 3 port exceeds bandwidth of SATA SSDs (2x$16), TRIM support, lights? - https://www.amazon.com.au/UGREEN-Enclosure-External-Adapter-Housing/dp/B07D2BHVBD, https://www.amazon.com.au/Sabrent-2-5-Inch-Enclosure-Optimized-EC-UM30/dp/B00MQ97QGE, https://www.amazon.com.au/ORICO-Enclosure-USB-External-Tool-Free/dp/B0BM9FYM4Z
