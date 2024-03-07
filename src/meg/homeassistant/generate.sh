@@ -27,7 +27,7 @@ mkdir -p src/main/resources/config/www/custom_ui/bom-radar-card &&
   sed -i '' 's/\/local\/community/\/local\/custom_ui/g' src/main/resources/config/www/custom_ui/bom-radar-card/bom-radar-card.js &&
   wget -q -O src/main/resources/config/www/custom_ui/bom-radar-card/leaflet.js.map https://unpkg.com/leaflet@1.9.2/dist/leaflet.js.map
 
-VERSION=2.4.4
+VERSION=v2.4.5
 pull_repo $(pwd) homeassistant lovelace-layout-card thomasloven/lovelace-layout-card ${VERSION} ${1}
 rm -rf src/main/resources/config/www/custom_ui/layout-card
 mkdir -p src/main/resources/config/www/custom_ui/layout-card &&
@@ -51,7 +51,7 @@ rm -rf src/main/resources/config/custom_components/variable
 mkdir -p src/main/resources/config/custom_components &&
   cp -rvf ../../../.deps/homeassistant/variables-component/custom_components/variable src/main/resources/config/custom_components
 
-VERSION=3.1.1
+VERSION=3.2.0
 pull_repo $(pwd) homeassistant sun2-component pnbruckner/ha-sun2 ${VERSION} ${1}
 rm -rf src/main/resources/config/custom_components/sun2
 mkdir -p src/main/resources/config/custom_components &&

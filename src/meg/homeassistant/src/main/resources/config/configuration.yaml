@@ -28,9 +28,9 @@ http:
 
 
   # TODO: Disable IP banning until I can find out where the rogue logins are coming from
-  ip_ban_enabled: false
-  #  ip_ban_enabled: true
-  #  login_attempts_threshold: 3
+  #ip_ban_enabled: false
+  ip_ban_enabled: true
+  login_attempts_threshold: 3
 
 
   use_x_frame_options: true

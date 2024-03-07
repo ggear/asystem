@@ -31,7 +31,7 @@
             [
 
                   graph.new(
-                        title='Rain Rate',
+                        title='Rain',
                         datasource='InfluxDB_V2',
                         fill=0,
                         format='short',

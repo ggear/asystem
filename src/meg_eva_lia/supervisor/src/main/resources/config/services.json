@@ -3,6 +3,7 @@
     "unifipoller"
   ],
   "macmini-eva": [
+    "letsencrypt",
     "sabnzbd",
     "grafana",
     "influxdb",
@@ -15,7 +16,6 @@
     "monitor"
   ],
   "macmini-meg": [
-    "letsencrypt",
     "homeassistant",
     "mariadb",
     "vernemq",

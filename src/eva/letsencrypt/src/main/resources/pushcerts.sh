@@ -13,8 +13,12 @@ while :; do
       cp -rvfpL letsencrypt/live/janeandgraham.com/* certificates &&
         cat ./certificates/fullchain.pem ./certificates/privkey.pem >./certificates/fullchain_privkey.pem &&
         logger -t pushcerts "Cached new certificates"
-      ${SERVICE_INSTALL}/pushcerts_copy.sh &&
-        logger -t pushcerts "Pushed new certificates"
+
+      # TODO: Implement, udm-pro cant connect back to hosts?
+      # ssh -q -o "StrictHostKeyChecking=no" root@${NGINX_SERVICE} "/var/lib/asystem/install/nginx/latest/config/certs.sh push $(hostname) ${NGINX_SERVICE}"
+      # ssh -q -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" root@${UDMUTILITIES_SERVICE} "/var/lib/asystem/install/udmutilities/latest/config/certs.sh push $(hostname) ${UDMUTILITIES_SERVICE}"
+
+      logger -t pushcerts "Pushed new certificates"
     fi
   fi
 done
