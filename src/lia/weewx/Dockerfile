@@ -6,7 +6,11 @@ ENV WEEWX_HOME="/home/weewx"
 FROM image_base as image_package
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
-RUN apt-get -y --no-install-recommends install build-essential
+RUN rm /var/lib/dpkg/info/libc-bin.*
+RUN apt-get clean
+RUN apt-get update
+RUN apt-get install libc-bin
+RUN apt-get -y --no-install-recommends install build-essential=12.9
 RUN apt-get -y --no-install-recommends install lbzip2=2.5-2.1
 RUN apt-get -y --no-install-recommends install libjpeg-dev=1:2.0.6-4
 RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.11.dfsg-2+deb11u2
