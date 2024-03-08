@@ -12,4 +12,4 @@ ${ROOT_DIR}/src/main/resources/config/mqtt.sh
 
 printf "Entity Metadata publish script [weewx] sleeping before publishing data topics ... " && sleep 2 && printf "done\n\nEntity Metadata publish script [weewx] publishing data topics:\n"
 
-ssh root@${HOST} "docker exec weewx /home/weewx/bin/wee_reports --config /data/weewx.conf"
+ssh root@${HOST} "docker exec weewx /home/weewx/bin/weectl report run --config /data/weewx.conf"
