@@ -6,4 +6,4 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
   /root/install/media/latest/config/normalise.sh ${SHARE_DIR}
 done
 echo "" && find /share -type f -path *__RENAMED* ! -name .DS_Store
-echo "" && df -h /share/* && echo ""
+echo "" && df -h $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}' | tr '\n' ' ') && echo ""
