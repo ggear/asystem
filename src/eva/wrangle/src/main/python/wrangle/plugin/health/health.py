@@ -213,7 +213,7 @@ class Health(library.Library):
                                     del file_df['Sleep Analysis [In Bed] (hours)']
                                 if 'Sleep Analysis [In Bed] (hr)' in file_df:
                                     del file_df['Sleep Analysis [In Bed] (hr)']
-                                file_df = file_df.rename(columns={
+                                file_df = file_df._rename(columns={
                                     'Apple Stand Time (min)': 'Stand Duration (min)',
                                     'Apple Stand Hour (count)': 'Stand Sessions (count)',
                                     'Active Energy (kJ)': 'Energy Active Burned (kJ)',
@@ -393,7 +393,7 @@ class Health(library.Library):
                         else:
                             data_bucket_df[column] = pd.to_numeric(data_bucket_df[column])
                     self.stdout_write(
-                        self.dataframe_to_lineprotocol_pd(data_bucket_df.rename(columns=buckets[bucket][1]), global_tags={
+                        self.dataframe_to_lineprotocol_pd(data_bucket_df._rename(columns=buckets[bucket][1]), global_tags={
                             "type": bucket[0],
                             "period": "1d",
                             "unit": bucket[1]

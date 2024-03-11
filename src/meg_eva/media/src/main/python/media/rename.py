@@ -5,10 +5,11 @@ import sys
 from pathlib import Path
 
 
-def rename(file_path_root):
+def _rename(file_path_root):
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
-        return 200
+        return -1
+    files_renamed = 0
     file_path_root = Path(file_path_root)
     file_path_roots_to_delete = []
     for file_source in ["usbdrive", "usenet/finished", "finished"]:
@@ -109,13 +110,14 @@ def rename(file_path_root):
                         file_path_new.as_posix().replace(file_path_root.as_posix(), ""))
                     )
                     shutil.move(file_path, file_path_new)
+                    files_renamed += 1
     for file_path_root_to_delete in file_path_roots_to_delete:
         shutil.rmtree(file_path_root_to_delete, ignore_errors=True)
-    return 0
+    return files_renamed
 
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: {} <media-tmp-dir>".format(sys.argv[0]))
-        sys.exit(100)
-    sys.exit(rename(Path(sys.argv[1]).absolute()))
+        sys.exit(1)
+    sys.exit(2 if _rename(Path(sys.argv[1]).absolute()) < 0 else 0)
