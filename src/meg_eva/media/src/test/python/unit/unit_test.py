@@ -21,7 +21,7 @@ class InternetTest(unittest.TestCase):
         self._test(2, 1)
 
     def test_rename_3(self):
-        self._test(3, 3)
+        self._test(3, 5)
 
     def _test(self, index, files_renamed):
         dir_test = join(DIR_ROOT, "target/runtime-unit/share_tmp_example_{}".format(index))

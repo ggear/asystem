@@ -32,10 +32,16 @@ def _rename(file_path_root):
                         file_path_root_source = file_path_root_source.parent
                     if file_path_root_source.name not in ["series", "movies", "finished"]:
                         file_path_roots_to_delete.append(file_path_root_source)
+                    file_series_search_groups = None
                     file_series_search = re.search("(.*)[sS]([0-9]?[0-9]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
-                    if file_series_search is not None:
-                        file_category = "series"
+                    if file_series_search is None:
+                        file_series_search = re.search("(.*)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
+                        if file_series_search is not None:
+                            file_series_search_groups = [file_series_search.groups()[0], "01"] + list(file_series_search.groups()[1:])
+                    else:
                         file_series_search_groups = file_series_search.groups()
+                    if file_series_search_groups is not None:
+                        file_category = "series"
                         file_dir_new = (file_series_search_groups[0]
                                         .replace('.', ' ').strip().replace(' ', '-'))
                         file_year_search = re.search("(20[0-9][0-9])", file_dir_new)
