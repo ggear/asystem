@@ -31,7 +31,7 @@ def rename(file_path_root):
                         file_path_root_source = file_path_root_source.parent
                     if file_path_root_source.name not in ["series", "movies", "finished"]:
                         file_path_roots_to_delete.append(file_path_root_source)
-                    file_series_search = re.search("(.*)[sS]([0-9][0-9])[eE]([0-9][0-9])\..*\." + file_type, file_name)
+                    file_series_search = re.search("(.*)[sS]([0-9]?[0-9]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
                     if file_series_search is not None:
                         file_category = "series"
                         file_series_search_groups = file_series_search.groups()
@@ -39,10 +39,11 @@ def rename(file_path_root):
                                         .replace('.', ' ').strip().replace(' ', '-'))
                         file_year_search = re.search("(20[0-9][0-9])", file_dir_new)
                         if file_year_search is not None:
-                            file_dir_new = (file_dir_new.replace(file_year_search.groups()[0], "")
-                                            .replace('-', ' ').strip().replace(' ', '-'))
+                            file_dir_new = file_dir_new.replace(file_year_search.groups()[0], "") \
+                                .replace('-', ' ').strip().replace(' ', '-')
+                        file_dir_new = file_dir_new.replace('-', ' ').strip()
                         file_name_new = "{}-S{}E{}.{}".format(
-                            file_dir_new,
+                            file_dir_new.replace(' ', '-'),
                             file_series_search_groups[1],
                             file_series_search_groups[2],
                             file_type
@@ -50,7 +51,7 @@ def rename(file_path_root):
                         file_path_new = "{}/{}/{}/Season {}/{}".format(
                             file_path_processed,
                             file_category,
-                            file_dir_new.replace('-', ' '),
+                            file_dir_new,
                             int(file_series_search_groups[1]),
                             file_name_new
                         )
