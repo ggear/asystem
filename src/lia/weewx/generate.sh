@@ -4,8 +4,10 @@
 
 VERSION=v5.0.2
 pull_repo $(pwd) weewx weewx-core weewx/weewx ${VERSION} ${1}
-rm -rf src/build/resources/*.deb &&
-  wget -q -O src/build/resources/weewx-${VERSION}.deb http://weewx.com/downloads/released_versions/python3-weewx_$(echo ${VERSION} | sed 's/^v//g')-1_all.deb
+(cd ../../../.deps/weewx/weewx-core && make pypi-package) &&
+  mkdir -p src/build/resources &&
+  rm -rf src/build/resources/weewx-*.tar.gz &&
+  cp -nv ../../../.deps/weewx/weewx-core/dist/weewx-*.tar.gz src/build/resources
 
 VERSION=ggear-skins_seasons
 pull_repo $(pwd) weewx weewx-core-skins ggear/weewx ${VERSION} ${1}
