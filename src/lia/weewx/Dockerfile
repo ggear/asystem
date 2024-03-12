@@ -7,13 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE=1
 FROM image_base as image_package
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
+RUN apt-get -y --no-install-recommends install wget
 RUN apt-get -y --no-install-recommends install build-essential=12.9
 RUN apt-get -y --no-install-recommends install lbzip2=2.5-2.3
 RUN apt-get -y --no-install-recommends install libjpeg-dev=1:2.1.5-2
 RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.13.dfsg-1
 RUN apt-get -y --no-install-recommends install tar=1.34+dfsg-1.2+deb12u1
-RUN apt-get -y --no-install-recommends install wget
-RUN apt-get -y --no-install-recommends install rsyslog=8.2302.0-1
 RUN apt-get -y --no-install-recommends install gnupg2=2.2.40-1.1
 RUN apt-get -y --no-install-recommends install default-mysql-client=1.1.0
 RUN apt-get -y --no-install-recommends install apache2=2.4.57-2
@@ -23,7 +22,6 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 FROM image_package as image_install
 WORKDIR /tmp
-RUN sed -i '/imklog/s/^/#/' /etc/rsyslog.conf
 RUN mkdir -p /data/html && touch /data/html/index.html
 RUN rm -rf /var/www/html && ln -s /data/html /var/www/html
 COPY src/main/resources/apache2.conf /etc/apache2
