@@ -44,8 +44,8 @@ COPY src/build/resources/weewx-*.tar.gz /tmp
 RUN mkdir -p /tmp/weewx
 RUN tar --extract --gunzip --directory /tmp/weewx --strip-components=1 --file weewx-*.tar.gz
 WORKDIR /tmp/weewx
-RUN poetry build
-RUN poetry install
+RUN poetry build -vv
+RUN poetry install -vv
 WORKDIR /tmp/weewx/dist
 RUN pip install weewx-*.whl
 RUN rm -rf ${WEEWX_HOME}
