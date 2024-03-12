@@ -12,7 +12,7 @@ RUN apt-get -y --no-install-recommends install lbzip2=2.5-2.3
 RUN apt-get -y --no-install-recommends install libjpeg-dev=1:2.1.5-2
 RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.13.dfsg-1
 RUN apt-get -y --no-install-recommends install tar=1.34+dfsg-1.2+deb12u1
-RUN apt-get -y --no-install-recommends install wget=1.21.3-1+b2
+RUN apt-get -y --no-install-recommends install wget
 RUN apt-get -y --no-install-recommends install rsyslog=8.2302.0-1
 RUN apt-get -y --no-install-recommends install gnupg2=2.2.40-1.1
 RUN apt-get -y --no-install-recommends install default-mysql-client=1.1.0
@@ -55,9 +55,6 @@ RUN pip install weewx-*.whl
 RUN rm -rf ${WEEWX_HOME}
 RUN mkdir -p $(dirname ${WEEWX_HOME})
 RUN ln -s $(pip show weewx | grep Location | sed 's/Location: //')/weewx_data ${WEEWX_HOME}
-RUN mkdir -p ${WEEWX_HOME}/log
-RUN touch ${WEEWX_HOME}/log/weewxd.log
-RUN ln -sf /dev/stdout ${WEEWX_HOME}/log/weewxd.log
 RUN mkdir -p /etc/weewx
 RUN rm -rf /etc/weewx/weewx.conf*
 COPY target/package/main/resources/config/weewx.conf /etc/weewx
