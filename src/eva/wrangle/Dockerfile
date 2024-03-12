@@ -1,9 +1,11 @@
 # https://github.com/influxdata/telegraf/releases
 FROM telegraf:1.29.2 as image_base
-       
+
+
 FROM image_base as image_package
 ARG PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
 RUN apt-get -y --no-install-recommends install build-essential=12.9
@@ -19,6 +21,7 @@ RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 FROM image_package as image_install
 ARG PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 RUN mkdir -p /tmp
 WORKDIR /tmp
 RUN wget https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz

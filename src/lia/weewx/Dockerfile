@@ -7,7 +7,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 FROM image_base as image_package
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
-RUN apt-get -y --no-install-recommends install wget
 RUN apt-get -y --no-install-recommends install build-essential=12.9
 RUN apt-get -y --no-install-recommends install lbzip2=2.5-2.3
 RUN apt-get -y --no-install-recommends install libjpeg-dev=1:2.1.5-2
@@ -25,7 +24,6 @@ WORKDIR /tmp
 RUN mkdir -p /data/html && touch /data/html/index.html
 RUN rm -rf /var/www/html && ln -s /data/html /var/www/html
 COPY src/main/resources/apache2.conf /etc/apache2
-
 ENV PIP_PACKAGES="\
   poetry==1.8.2 \
   paho-mqtt==1.6.1 \
@@ -56,14 +54,12 @@ RUN ln -s $(pip show weewx | grep Location | sed 's/Location: //')/weewx_data ${
 RUN mkdir -p /etc/weewx
 RUN rm -rf /etc/weewx/weewx.conf*
 COPY target/package/main/resources/config/weewx.conf /etc/weewx
-RUN wget -O /tmp/weewx-mqtt.zip https://github.com/matthewwall/weewx-mqtt/archive/master.zip
+COPY src/build/resources/weewx-mqtt.zip /tmp
 RUN weectl extension install -y /tmp/weewx-mqtt.zip
 RUN rm -rf /tmp/* /etc/weewx/weewx.conf*
 
-
 FROM image_install as image_runtime
 WORKDIR ${WEEWX_HOME}
-
 
 COPY src/main/resources/entrypoint.sh /
 

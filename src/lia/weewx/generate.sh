@@ -6,8 +6,14 @@ VERSION=v5.0.2
 pull_repo $(pwd) weewx weewx-core weewx/weewx ${VERSION} ${1}
 (cd ../../../.deps/weewx/weewx-core && make pypi-package) &&
   mkdir -p src/build/resources &&
-  rm -rf src/build/resources/weewx-*.tar.gz &&
   cp -nv ../../../.deps/weewx/weewx-core/dist/weewx-*.tar.gz src/build/resources
+
+VERSION=ggear-weewx-mqtt
+pull_repo $(pwd) weewx weewx-mqtt ggear/weewx-mqtt ${VERSION} ${1}
+(cd ../../../.deps/weewx && zip -x "weewx-mqtt/.git*" -r weewx-mqtt.zip weewx-mqtt) &&
+  mkdir -p src/build/resources &&
+  cp -nv ../../../.deps/weewx/weewx-mqtt.zip src/build/resources &&
+  rm -rf ../../../.deps/weewx/weewx-mqtt.zip
 
 VERSION=ggear-skins_seasons
 pull_repo $(pwd) weewx weewx-core-skins ggear/weewx ${VERSION} ${1}

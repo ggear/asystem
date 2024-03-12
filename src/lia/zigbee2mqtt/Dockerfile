@@ -10,6 +10,7 @@ FROM image_package as image_install
 # NOTE: Overide python version given we are limitted by the zigbee2mqtt image
 ENV PYTHON_VERSION=3.11.8-r0
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 RUN apk add --update --no-cache python3=$PYTHON_VERSION
 RUN python3 -m ensurepip
 RUN pip3 install --no-cache --upgrade pip setuptools
