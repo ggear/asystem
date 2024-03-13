@@ -10,6 +10,7 @@ apt-get upgrade -y --without-new-pkgs
 # Packages install (from update script)
 ################################################################################
 apt-get install -y --allow-downgrades 'jq=1.6-2.1'
+apt-get install -y --allow-downgrades 'xq=1.0.0-2+b5'
 apt-get install -y --allow-downgrades 'ntp=1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1+deb12u1'
 apt-get install -y --allow-downgrades 'usbutils=1:014-1+deb12u1'
 apt-get install -y --allow-downgrades 'dnsutils=1:9.18.19-1~deb12u1'
