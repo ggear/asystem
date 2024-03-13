@@ -1,9 +1,9 @@
-# https://hub.docker.com/r/linuxserver/sabnzbd/tags
+# https://sabnzbd.org/downloads#
 version: '3.7'
 services:
   sabnzbd:
     container_name: sabnzbd
-    image: linuxserver/sabnzbd:4.2.2
+    image: linuxserver/sabnzbd:4.2.3
     init: false
     restart: ${SERVICE_RESTART}
     environment:
