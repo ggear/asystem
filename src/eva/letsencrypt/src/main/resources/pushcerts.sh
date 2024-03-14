@@ -17,7 +17,7 @@ while :; do
       # TODO: Implement, udm-net ssh from fails?
       # TODO: Build.py to write out hosts file to drive certifcates.sh invocations
       # ssh -q -o "StrictHostKeyChecking=no" root@${NGINX_SERVICE} "/var/lib/asystem/install/nginx/latest/config/certificates.sh push $(hostname) ${NGINX_SERVICE}"
-      # ssh -q -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" root@${UDMUTILITIES_SERVICE} "/var/lib/asystem/install/udmutilities/latest/config/certificates.sh push $(hostname) ${UDMUTILITIES_SERVICE}"
+      # ssh -q -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" root@${UDMUTILITIES_SERVICE} "/var/lib/asystem/install/udmutilities/latest/config/udm-certificates/certificates.sh push $(hostname) ${UDMUTILITIES_SERVICE}"
 
       logger -t pushcerts "Pushed new certificates"
     fi
