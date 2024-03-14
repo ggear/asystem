@@ -33,11 +33,12 @@ if __name__ == "__main__":
                 module_tokens = certificates_path_tokens[1].split("/")
                 if len(module_tokens) > 1:
                     hosts_file.write("""
-{}-{} {}-{}
+{}-{} {}-{} {}
                     """.format(
                         hosts_lookup[host_pull][0],
                         host_pull,
                         hosts_lookup[module_tokens[0]][0],
                         module_tokens[0],
+                        module_tokens[1],
                     ).strip() + "\n")
     print("Build generate script [letsencrypt] entity metadata persisted to [{}]".format(hosts_path))
