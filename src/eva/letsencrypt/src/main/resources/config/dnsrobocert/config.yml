@@ -14,6 +14,4 @@ certificates:
       - "*.janeandgraham.com"
       - "*.local.janeandgraham.com"
     profile: cloudflare_profile
-
-# INFO: Disable push certs in favour of manual deploy
-#    deploy_hook: '/bin/bash -c "[[ -f /etc/letsencrypt/live/janeandgraham.com/privkey.pem ]] && touch /etc/letsencrypt/live/janeandgraham.com/privkey.pem"'
+    deploy_hook: '/bin/bash -c "[[ -f /etc/letsencrypt/live/janeandgraham.com/privkey.pem ]] && touch /etc/letsencrypt/live/janeandgraham.com/privkey.pem"'

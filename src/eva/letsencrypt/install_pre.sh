@@ -5,10 +5,9 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 
 cd ${SERVICE_INSTALL} || exit
 
-# INFO: Disable push certs in favour of manual deploy
-#chmod +x "./pushcerts.sh"
-#chmod +x "./pushcerts_copy.sh"
-#cp -rvfp "./pushcerts.service" /etc/systemd/system
-#systemctl daemon-reload
-#systemctl enable pushcerts.service
-#systemctl restart pushcerts.service
+chmod +x "./pushcerts.sh"
+chmod +x "./pushcerts_copy.sh"
+cp -rvfp "./pushcerts.service" /etc/systemd/system
+systemctl daemon-reload
+systemctl enable pushcerts.service
+systemctl restart pushcerts.service
