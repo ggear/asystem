@@ -15,6 +15,7 @@ while :; do
         logger -t pushcerts "Cached new certificates"
 
       # TODO: Implement, udm-pro cant connect back to hosts?
+      # TODO: Write out from build.py with detected services based on find certifcates.sh
       # ssh -q -o "StrictHostKeyChecking=no" root@${NGINX_SERVICE} "/var/lib/asystem/install/nginx/latest/config/certificates.sh push $(hostname) ${NGINX_SERVICE}"
       # ssh -q -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" root@${UDMUTILITIES_SERVICE} "/var/lib/asystem/install/udmutilities/latest/config/certificates.sh push $(hostname) ${UDMUTILITIES_SERVICE}"
 
