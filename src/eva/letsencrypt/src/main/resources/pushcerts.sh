@@ -14,10 +14,13 @@ while :; do
         cat ./certificates/fullchain.pem ./certificates/privkey.pem >./certificates/fullchain_privkey.pem &&
         logger -t pushcerts "Cached new certificates"
 
-      # TODO: Implement, udm-net ssh from fails?
-      # TODO: Build.py to write out hosts file to drive certifcates.sh invocations
+      # TODO: Read from "/var/lib/asystem/install/nginx/latest/config/pushcerts-hosts.txt" and invoke pull/push, make sure paths are updated to /certificates/ from janeandgraham
       # ssh -q -o "StrictHostKeyChecking=no" root@${NGINX_SERVICE} "/var/lib/asystem/install/nginx/latest/config/certificates.sh push $(hostname) ${NGINX_SERVICE}"
-      # ssh -q -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" root@${UDMUTILITIES_SERVICE} "/var/lib/asystem/install/udmutilities/latest/config/udm-certificates/certificates.sh push $(hostname) ${UDMUTILITIES_SERVICE}"
+      # ssh -q -o "StrictHostKeyChecking=no" root@${UDMUTILITIES_SERVICE} "/var/lib/asystem/install/udmutilities/latest/config/udm-certificates/certificates.sh push $(hostname) ${UDMUTILITIES_SERVICE}"
+
+      while read HOSTS; do
+        echo "${HOSTS}"
+      done </var/lib/asystem/install/letsencrypt/latest/pushcerts-hosts.txt
 
       logger -t pushcerts "Pushed new certificates"
     fi

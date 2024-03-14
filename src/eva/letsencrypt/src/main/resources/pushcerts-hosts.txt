@@ -1,0 +1,2 @@
+macmini-eva udm-net
+macmini-eva macmini-meg
