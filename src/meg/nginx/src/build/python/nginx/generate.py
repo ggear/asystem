@@ -1,11 +1,9 @@
 import glob
-import os
 import sys
 from os.path import *
 
 import pandas as pd
 import urllib3
-from os.path import *
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
@@ -17,10 +15,13 @@ for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
 
 from homeassistant.generate import load_env
 from homeassistant.generate import load_modules
+from homeassistant.generate import write_certificates
 
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
     modules = load_modules()
+
+    write_certificates("nginx", join(DIR_ROOT, "src/main/resources/config"))
 
     conf_path = abspath(join(DIR_ROOT, "src/main/resources/config/nginx.conf"))
     with open(conf_path, 'w') as conf_file:

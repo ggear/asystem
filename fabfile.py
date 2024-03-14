@@ -207,15 +207,15 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         _write_env(context, module, join(DIR_ROOT_MODULE, module, "target/release") if is_release else join(DIR_ROOT_MODULE, module),
                    filter_host=filter_host, is_release=is_release)
         _print_footer(module, "generate env", host=filter_host)
+    for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
+        _print_header(module, "generate python script", host=filter_host)
+        _run_local(context, "python {}/{}/src/build/python/{}/generate.py".format(DIR_ROOT_MODULE, module, _name(module)), DIR_ROOT)
+        _print_footer(module, "generate python script", host=filter_host)
     for module in _get_modules(context, "generate.sh", filter_changes=False):
         _print_header(module, "generate shell script", host=filter_host)
         module_generate_stdout[module] = \
             _run_local(context, "{}/{}/generate.sh {}".format(DIR_ROOT_MODULE, module, is_pull), join(DIR_ROOT_MODULE, module)).stdout
         _print_footer(module, "generate shell script", host=filter_host)
-    for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
-        _print_header(module, "generate python script", host=filter_host)
-        _run_local(context, "python {}/{}/src/build/python/{}/generate.py".format(DIR_ROOT_MODULE, module, _name(module)), DIR_ROOT)
-        _print_footer(module, "generate python script", host=filter_host)
     if is_pull:
         for module in module_generate_stdout:
             for line in module_generate_stdout[module].splitlines():

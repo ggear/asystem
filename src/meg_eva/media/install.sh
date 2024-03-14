@@ -14,3 +14,6 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
     done
   done
 done
+
+rm -rf /usr/bin/asystem-media
+ln -s /var/lib/asystem/install/media/latest/config/all.sh /usr/bin/asystem-media

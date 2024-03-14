@@ -19,14 +19,17 @@ for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
 from homeassistant.generate import load_env
 from homeassistant.generate import load_modules
 from homeassistant.generate import load_entity_metadata
+from homeassistant.generate import write_certificates
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
-UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
+UNIFI_CONTROLLER_URL = "https://unifi.local.janeandgraham.com:443"
 
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
     modules = load_modules(load_disabled=False, load_infrastrcture=False)
     metadata_df = load_entity_metadata()
+
+    write_certificates("udmutilities", join(DIR_ROOT, "src/main/resources/config/udm-certificates"))
 
     metadata_dhcp_df = metadata_df[
         (metadata_df["index"] > 0) &

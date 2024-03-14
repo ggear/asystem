@@ -31,7 +31,7 @@ if __name__ == "__main__":
         (metadata_df["device_manufacturer"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ].sort_values("connection_ip")
-    write_entity_metadata("tasmota", DIR_ROOT, metadata_tasmota_df,
+    write_entity_metadata("tasmota", join(DIR_ROOT, "src/main/resources/config/mqtt"), metadata_tasmota_df,
                           "homeassistant/+/tasmota/#", "tasmota/#")
 
     metadata_tasmota_dicts = [row.dropna().to_dict() for index, row in metadata_tasmota_df.iterrows()]

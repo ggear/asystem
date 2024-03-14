@@ -2,6 +2,8 @@
 
 . ../../../generate.sh
 
+ROOT_DIR=$(dirname $(readlink -f "$0"))
+
 VERSION=main
 pull_repo $(pwd) grafana grafonnet grafana/grafonnet ${VERSION} ${1}
 

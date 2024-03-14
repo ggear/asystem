@@ -3,6 +3,7 @@ import glob
 import json
 import os
 import shutil
+import stat
 import sys
 import time
 from collections import OrderedDict
@@ -63,14 +64,52 @@ def load_entity_metadata():
     return metadata_df
 
 
-def write_entity_metadata(module_name, module_root_dir, metadata_df, topics_discovery, topics_data):
+def write_certificates(module_name, certificate_dir):
+    os.makedirs(certificate_dir, exist_ok=True)
+
+    certificate_dir_sub = "/"
+    if len(certificate_dir.split("/config")) > 1:
+        certificate_dir_sub = certificate_dir.split("/config")[1] + "/"
+
+    certificate_path = abspath(join(certificate_dir, "certificates.sh"))
+    with open(certificate_path, 'w') as certificate_file:
+        certificate_file.write("""
+#!/bin/bash
+
+ROOT_DIR=$(dirname $(readlink -f "$0"))
+
+if [ -z "$1" ] || [ "$1" = "pull" ]; then
+  scp -qpr "root@$2:/home/asystem/letsencrypt/latest/letsencrypt/live/janeandgraham.com/privkey.pem" "$ROOT_DIR/.key.pem"
+  scp -qpr "root@$2:/home/asystem/letsencrypt/latest/letsencrypt/live/janeandgraham.com/fullchain.pem" "$ROOT_DIR/certificate.pem"
+  echo "$2:/home/asystem/letsencrypt/latest/letsencrypt/live/janeandgraham.com -> localhost:$ROOT_DIR"
+elif [ "$1" = "push" ]; then
+  for DIR in "/home/asystem/{}/latest{}" "/var/lib/asystem/install/{}/latest/config{}"; do
+    scp -qpr "$ROOT_DIR/.key.pem" "root@$3:$DIR"
+    scp -qpr "$ROOT_DIR/certificate.pem" "root@$3:$DIR"
+    echo "localhost:$ROOT_DIR -> $3:$DIR"
+  done
+  echo "Certificates pushed, restarting service on [$3] ... "
+  ssh "root@$3" "/var/lib/asystem/install/{}/latest/install.sh"
+fi
+        """.format(
+            module_name,
+            certificate_dir_sub,
+            module_name,
+            certificate_dir_sub,
+            module_name,
+        ).strip())
+    os.chmod(certificate_path, os.stat(certificate_path).st_mode | stat.S_IEXEC)
+    print("Build generate script [{}] certificate script persisted to [{}]"
+          .format(module_name, certificate_path))
+
+
+def write_entity_metadata(module_name, metadata_dir, metadata_df, topics_discovery, topics_data):
     if len(metadata_df) > 0:
         metadata_df = metadata_df.copy()
         metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
         metadata_columns_rename = {column: column.replace("device_", "") for column in metadata_columns}
-        metadata_publish_dir_root = join(module_root_dir, "src/main/resources/config/mqtt")
-        if exists(metadata_publish_dir_root):
-            shutil.rmtree(metadata_publish_dir_root)
+        if exists(metadata_dir):
+            shutil.rmtree(metadata_dir)
         for _, row in metadata_df.iterrows():
             metadata_dict = row[[
                 "unique_id",
@@ -98,7 +137,7 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df, topics_disc
             metadata_dict["device"] = row[metadata_columns]._rename(metadata_columns_rename).dropna().to_dict()
             if "connections" in metadata_dict["device"]:
                 metadata_dict["device"]["connections"] = json.loads(metadata_dict["device"]["connections"])
-            metadata_publish_dir = abspath(join(metadata_publish_dir_root, row['discovery_topic']))
+            metadata_publish_dir = abspath(join(metadata_dir, row['discovery_topic']))
             os.makedirs(metadata_publish_dir)
             metadata_publish_str = json.dumps(metadata_dict, ensure_ascii=False, indent=2) + "\n"
             metadata_publish_path = abspath(join(metadata_publish_dir, metadata_unique_id + ".json"))
@@ -107,7 +146,7 @@ def write_entity_metadata(module_name, module_root_dir, metadata_df, topics_disc
                 print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
                       .format(module_name, metadata_unique_id, metadata_publish_path))
 
-        metadata_publish_script_path = abspath(metadata_publish_dir_root + ".sh")
+        metadata_publish_script_path = abspath(metadata_dir + ".sh")
         with open(metadata_publish_script_path, 'w') as metadata_publish_script_file:
             metadata_publish_script_file.write("""
 #!/bin/bash

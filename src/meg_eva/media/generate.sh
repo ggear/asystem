@@ -1,3 +1,5 @@
 #!/bin/bash
 
-cp -rvf ./src/main/python/media/rename.py ./src/main/resources/config
+ROOT_DIR=$(dirname $(readlink -f "$0"))
+
+cp -rvf ${ROOT_DIR}/src/main/python/media/rename.py ${ROOT_DIR}/src/main/resources/config

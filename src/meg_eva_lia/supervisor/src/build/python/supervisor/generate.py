@@ -29,7 +29,7 @@ if __name__ == "__main__":
         (metadata_df["discovery_topic"].str.len() > 0) &
         (metadata_df["state_topic"].str.len() > 0)
         ]
-    write_entity_metadata("supervisor", DIR_ROOT, metadata_supervisor_df,
+    write_entity_metadata("supervisor", join(DIR_ROOT, "src/main/resources/config/mqtt"), metadata_supervisor_df,
                           "homeassistant/+/supervisor/#", "asystem/supervisor/#")
 
     metadata_supervisor_path = abspath(join(DIR_ROOT, "src/main/resources/config/services.json"))
