@@ -7,9 +7,9 @@ if [ "$#" -ne 3 ]; then
   exit 1
 fi
 if [ "$1" = "pull" ]; then
-  scp -q -o "StrictHostKeyChecking=no" -pr "root@$2:/home/asystem/letsencrypt/latest/letsencrypt/live/janeandgraham.com/privkey.pem" "$ROOT_DIR/.key.pem"
-  scp -q -o "StrictHostKeyChecking=no" -pr "root@$2:/home/asystem/letsencrypt/latest/letsencrypt/live/janeandgraham.com/fullchain.pem" "$ROOT_DIR/certificate.pem"
-  echo "$2:/home/asystem/letsencrypt/latest/letsencrypt/live/janeandgraham.com -> localhost:$ROOT_DIR"
+  scp -q -o "StrictHostKeyChecking=no" -pr "root@$2:/home/asystem/letsencrypt/latest/certificates/privkey.pem" "$ROOT_DIR/.key.pem"
+  scp -q -o "StrictHostKeyChecking=no" -pr "root@$2:/home/asystem/letsencrypt/latest/certificates/fullchain.pem" "$ROOT_DIR/certificate.pem"
+  echo "$2:/home/asystem/letsencrypt/latest/certificates -> localhost:$ROOT_DIR"
 elif [ "$1" = "push" ]; then
   for DIR in "/home/asystem/udmutilities/latest/udm-certificates/" "/var/lib/asystem/install/udmutilities/latest/config/udm-certificates/"; do
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/.key.pem" "root@$3:$DIR"
