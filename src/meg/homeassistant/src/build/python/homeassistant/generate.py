@@ -93,7 +93,7 @@ elif [ "$1" = "push" ]; then
     echo "localhost:$ROOT_DIR -> $3:$DIR"
   done
   echo "Certificates pushed, restarting service on [$3] ... "
-  ssh -q -o "StrictHostKeyChecking=no" -o "HostKeyAlgorithms=+ssh-rsa" -o "PubkeyAcceptedAlgorithms=+ssh-rsa" "root@$3" "/var/lib/asystem/install/{}/latest/install.sh"
+  ssh -q -o "StrictHostKeyChecking=no" "root@$3" "/var/lib/asystem/install/{}/latest/install.sh"
 fi
 exit 0
         """.format(
