@@ -15,7 +15,7 @@ scp -r ${ROOT_DIR}/src/main/resources/config/groups.yaml root@${HOST}:${HOME}
 ssh root@${HOST} "cd ${INSTALL} && docker compose --compatibility restart"
 if [ $? -eq 0 ]; then
 
-  # NOTE: Uncomment to flush all device state
+  # INFO: Uncomment to flush all device state
   # ${ROOT_DIR}/src/main/resources/config/mqtt_config_clean.sh
 
   ${ROOT_DIR}/src/main/resources/config/mqtt_config.sh
