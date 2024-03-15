@@ -95,7 +95,7 @@ elif [ "$1" = "push" ]; then
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/certificate.pem" "root@$3:$DIR"
     echo "localhost:$ROOT_DIR -> $3:$DIR"
   done
-  echo "Pushing certificates done, restarting service on [$3] ... "
+  echo "Restarting service on [$3] ... "
   ssh -q -o "StrictHostKeyChecking=no" "root@$3" "/var/lib/asystem/install/{}/latest/install.sh"
   echo "Pushing certificates ... done"
 fi
