@@ -1,2 +1,0 @@
-macmini-eva udm-net udmutilities
-macmini-eva macmini-meg nginx
