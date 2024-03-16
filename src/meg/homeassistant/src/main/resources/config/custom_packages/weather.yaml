@@ -431,7 +431,7 @@ sensor:
   #      hours: 24
 
   # INFO: YAML config removed in 2024.3.1
-  #  - platform: sun2
+  #  - platform: sun2w
   #    monitored_conditions:
   #      - solar_midnight
   #      - astronomical_dawn
