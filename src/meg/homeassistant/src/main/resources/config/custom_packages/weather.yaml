@@ -430,30 +430,31 @@ sensor:
   #    max_age:
   #      hours: 24
 
-  - platform: sun2
-    monitored_conditions:
-      - solar_midnight
-      - astronomical_dawn
-      - nautical_dawn
-      - dawn
-      - sunrise
-      - solar_noon
-      - sunset
-      - dusk
-      - nautical_dusk
-      - astronomical_dusk
-      - daylight
-      - civil_daylight
-      - nautical_daylight
-      - astronomical_daylight
-      - night
-      - civil_night
-      - nautical_night
-      - astronomical_night
-      - elevation
-      - min_elevation
-      - max_elevation
-    entity_namespace: solar
+  # INFO: YAML config removed in 2024.3.1
+  #  - platform: sun2
+  #    monitored_conditions:
+  #      - solar_midnight
+  #      - astronomical_dawn
+  #      - nautical_dawn
+  #      - dawn
+  #      - sunrise
+  #      - solar_noon
+  #      - sunset
+  #      - dusk
+  #      - nautical_dusk
+  #      - astronomical_dusk
+  #      - daylight
+  #      - civil_daylight
+  #      - nautical_daylight
+  #      - astronomical_daylight
+  #      - night
+  #      - civil_night
+  #      - nautical_night
+  #      - astronomical_night
+  #      - elevation
+  #      - min_elevation
+  #      - max_elevation
+  #    entity_namespace: solar
 
   - platform: template
     sensors:
@@ -506,12 +507,15 @@ sensor:
           {{ illuminance }}
 
 binary_sensor:
-  - platform: sun2
-    monitored_conditions:
-      - elevation
-      - elevation:
-          above: 25
-          name: Sun Above 25
+
+# INFO: YAML config removed in 2024.3.1
+#  - platform: sun2
+#    monitored_conditions:
+#      - elevation
+#      - elevation:
+#          above: 25
+#          name: Sun Above 25
+
 #  - platform: workday
 #    country: AU
 #    province: WA
