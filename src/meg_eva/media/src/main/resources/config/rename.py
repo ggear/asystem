@@ -35,7 +35,7 @@ def _rename(file_path_root):
                     file_series_search_groups = None
                     file_series_search = re.search("(.*)[sS]([0-9]?[0-9]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
                     if file_series_search is None:
-                        file_series_search = re.search("(.*)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
+                        file_series_search = re.search("(.*[^a-zA-Z0-9 ]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
                         if file_series_search is not None:
                             file_series_search_groups = [file_series_search.groups()[0], "01"] + list(file_series_search.groups()[1:])
                     else:
