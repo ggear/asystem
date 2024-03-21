@@ -18,7 +18,7 @@ PERIODS = OrderedDict([
 ])
 COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + list(PERIODS.keys()))]
 
-RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xls"
+RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xlsx"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xls"
 
 DRIVE_KEY = "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
@@ -50,7 +50,7 @@ class Interest(library.Library):
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-            retail_df = retail_df.fill_nan(pl.lit(None)).drop_nulls()
+            retail_df = retail_df if len(retail_df) == 0 else retail_df.fill_nan(pl.lit(None)).drop_nulls()
             self.dataframe_print(retail_df, print_label="Retail", print_verb="collected", started=started_time)
             started_time = time.time()
             inflation_df = self.dataframe_new()
@@ -71,7 +71,7 @@ class Interest(library.Library):
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
             else:
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-            inflation_df = inflation_df.fill_nan(pl.lit(None)).drop_nulls()
+            inflation_df = inflation_df if len(inflation_df) == 0 else inflation_df.fill_nan(pl.lit(None)).drop_nulls()
             self.dataframe_print(inflation_df, print_label="Inflation", print_verb="collected", started=started_time)
             try:
                 if new_data:

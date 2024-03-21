@@ -39,6 +39,9 @@ find . -type f -exec ffmpeg -y -i {} -c:v copy -c:a copy -map 0:v:0 -map 0:a:1 {
 # Convert PGS subtitles to SRT
 pgsrip ./*.mkv
 
+# Copy between shares
+rsync -avhPr /share/3/media/kids /share/2/media
+
 # TODO: Update all for find and cull to only useful commands
 ffmpeg -i "input.mov" -vcodec hevc_videotoolbox -b:v 500k -n "output.mov"
 ffmpeg -i "input.mov" -vcodec h264_videotoolbox -b:v 500k -n "output.mov"

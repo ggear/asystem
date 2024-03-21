@@ -69,11 +69,11 @@ class Currency(library.Library):
                         self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_SKIPPED)
                 else:
                     self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED)
-            if datetime.now().year > 2023:
+            if datetime.now().year > 2027:
                 self.print_log("Error processing RBA data, need to increment RBA_YEARS for new current file")
                 self.add_counter(library.CTR_SRC_FILES, library.CTR_ACT_ERRORED, 1)
                 return
-            rba_df = rba_df.drop_nulls()
+            rba_df = rba_df if len(rba_df) == 0 else rba_df.drop_nulls()
             self.dataframe_print(rba_df, print_label="Currency", print_verb="collected", started=started_time)
             try:
                 if new_data:
