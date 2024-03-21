@@ -6,4 +6,4 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
   /root/install/media/latest/config/normalise.sh ${SHARE_DIR}
 done
 /root/install/media/latest/config/library.sh
-echo "Storage status:" && df -h $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}' | tr '\n' ' ')
+echo "Storage status ... done" && df -h $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}' | tr '\n' ' ')

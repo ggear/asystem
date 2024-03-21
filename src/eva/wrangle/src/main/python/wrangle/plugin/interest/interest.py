@@ -82,7 +82,7 @@ class Interest(library.Library):
                     interest_df = interest_df.upsample(time_column="Date", every="1mo").fill_nan(pl.lit(None)).sort("Date")
                     interest_df = interest_df.with_columns(pl.all().forward_fill()).drop_nulls()
                     interest_df = interest_df.with_columns(((pl.col("Bank") - pl.col("Inflation"))).alias("Net"))
-                    interest_df = interest_df.with_columns(cs.float().round(2))
+                    interest_df = interest_df.with_columns(cs.float().round(2)).drop("Date_right")
                     self.dataframe_print(interest_df, print_label="Interest", print_verb="post up-sample", started=started_time)
             except Exception as exception:
                 self.print_log("Unexpected error processing interest dataframe", exception=exception)

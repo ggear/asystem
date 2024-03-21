@@ -28,7 +28,7 @@ for key, value in list(library.load_profile(join(DIR_ROOT, ".env")).items()):
 class WrangleTest(unittest.TestCase):
 
     def test_adhoc(self):
-        self.run_module("equity", {"success_typical": ASSERT_RUN},
+        self.run_module("interest", {"success_typical": ASSERT_RUN},
                         disable_data_delta=False,
                         enable_data_subset=True,
                         disable_file_download=False,
