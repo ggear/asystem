@@ -12,7 +12,6 @@ if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
     mkdir -p /media/usbdrive
     umount -fq /media/usbdrive
     mount -t exfat ${IMPORT_MEDIA_DEV} /media/usbdrive
-    find /media/usbdrive -name "\.*" -exec rm {} \;
     rm -rf /media/usbdrive/\.* /media/usbdrive/System* /media/usbdrive/\$RECYCLE.BIN
     rsync -avP /media/usbdrive ${SHARE_DIR}
     umount -fq /media/usbdrive
