@@ -12,8 +12,8 @@ if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
     mkdir -p /media/usbdrive
     umount -fq /media/usbdrive
     mount -t exfat ${IMPORT_MEDIA_DEV} /media/usbdrive
-    rm -rf /media/usbdrive/\.* /media/usbdrive/System* /media/usbdrive/\$RECYCLE.BIN
     rsync -avP /media/usbdrive ${SHARE_DIR}
+    rm -rf ${SHARE_DIR}/usbdrive/..?* ${SHARE_DIR}/usbdrive/.[!.]* ${SHARE_DIR}/usbdrive/System* ${SHARE_DIR}/usbdrive/\$RECYCLE.BIN
     umount -fq /media/usbdrive
     echo "Completed copy of [/media/usbdrive] from [${IMPORT_MEDIA_DEV}] to [${SHARE_DIR}]"
   fi
