@@ -5,8 +5,8 @@ umount -fq /media/usbdrive
 [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ] && mount -t exfat $(echo "/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{RAR_FILES=ORAR_FILES=" "}{print $1}')) /media/usbdrive
 
 # Renaming
-rename -v 's/(.*)s([0-9][0-9])e([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
-rename -v 's/(.*)S([0-9][0-9])E([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
+rename -v 's/X/Y/' ./*.mkv
+rename -v 's/(.*)[sS]([0-9][0-9])[eE]([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
 
 # Extract RAR files
 ROOT_DIR=$PWD
