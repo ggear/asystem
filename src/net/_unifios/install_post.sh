@@ -1,5 +1,5 @@
 #!/bin/sh
-# https://community.ui.com/releases?q=dream+machines
+# https://ui.com/download/software/udm
 
 ################################################################################
 # Device provision
