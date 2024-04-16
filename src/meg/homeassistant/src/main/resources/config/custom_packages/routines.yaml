@@ -203,6 +203,18 @@ automation:
             - fan.parents_fan
             - fan.lounge_fan
             - fan.deck_fan
+  #####################################################################################
+  - id: routine_home_lights_off_weekday
+    alias: "Routine: Turn night lights off on week days"
+    mode: single
+    trigger:
+      - platform: time
+        at: "08:00:00"
+    condition:
+      condition: state
+      entity_id: binary_sensor.workday_sensor
+      state: "on"
+    action:
       - service: media_player.turn_off
         target:
           entity_id:
@@ -260,21 +272,12 @@ automation:
             - light.ada_lamp
             - light.edwin_fan
             - light.edwin_lamp
-
-
-
-
       - service: media_player.volume_set
         data:
           entity_id:
             - media_player.ada_home
             - media_player.edwin_home
           volume_level: '0.2'
-
-
-
-
-
   #####################################################################################
 
 
