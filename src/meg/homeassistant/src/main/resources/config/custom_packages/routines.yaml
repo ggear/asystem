@@ -260,6 +260,21 @@ automation:
             - light.ada_lamp
             - light.edwin_fan
             - light.edwin_lamp
+
+
+
+
+      - service: media_player.volume_set
+        data:
+          entity_id:
+            - media_player.ada_home
+            - media_player.edwin_home
+          volume_level: '0.2'
+
+
+
+
+
   #####################################################################################
 
 
