@@ -3,6 +3,7 @@
 For more details about this sensor, please refer to the documentation at
 https://github.com/Limych/ha-average/
 """
+
 from datetime import timedelta
 from typing import Final
 
@@ -11,7 +12,7 @@ from homeassistant.const import Platform
 
 NAME: Final = "Average Sensor"
 DOMAIN: Final = "average"
-VERSION: Final = "2.3.4"
+VERSION: Final = "2.3.5-alpha"
 ISSUE_URL: Final = "https://github.com/Limych/ha-average/issues"
 
 STARTUP_MESSAGE: Final = f"""
@@ -24,7 +25,7 @@ If you have ANY issues with this you need to open an issue here:
 -------------------------------------------------------------------
 """
 
-PLATFORMS = [
+PLATFORMS: Final = [
     Platform.SENSOR,
 ]
 

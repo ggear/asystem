@@ -14,7 +14,7 @@ import datetime
 import logging
 import math
 import numbers
-from typing import Any, Optional
+from typing import Any
 
 from _sha1 import sha1
 import voluptuous as vol
@@ -40,11 +40,18 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, State, callback, split_entity_id
+from homeassistant.core import (
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    State,
+    callback,
+    split_entity_id,
+)
 from homeassistant.exceptions import TemplateError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.config_validation import PLATFORM_SCHEMA
-from homeassistant.helpers.event import async_track_state_change
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.util import Throttle
 import homeassistant.util.dt as dt_util
 from homeassistant.util.unit_conversion import TemperatureConverter
@@ -152,7 +159,7 @@ class AverageSensor(SensorEntity):
     def __init__(
         self,
         hass: HomeAssistant,
-        unique_id: Optional[str],
+        unique_id: str | None,
         name: str,
         start,
         end,
@@ -215,7 +222,7 @@ class AverageSensor(SensorEntity):
         return self.available_sources > 0 and self._has_state(self._attr_native_value)
 
     @property
-    def extra_state_attributes(self) -> Optional[Mapping[str, Any]]:
+    def extra_state_attributes(self) -> Mapping[str, Any] | None:
         """Return entity specific state attributes."""
         state_attr = {
             attr: getattr(self, attr)
@@ -229,7 +236,9 @@ class AverageSensor(SensorEntity):
 
         # pylint: disable=unused-argument
         @callback
-        async def async_sensor_state_listener(entity, old_state, new_state):
+        async def async_sensor_state_listener(
+            event: Event[EventStateChangedData],
+        ) -> None:
             """Handle device state changes."""
             last_state = self._attr_native_value
             await self._async_update_state()
@@ -243,10 +252,10 @@ class AverageSensor(SensorEntity):
             if self._has_period:
                 self.async_schedule_update_ha_state(True)
             else:
-                async_track_state_change(
+                async_track_state_change_event(
                     self.hass, self.sources, async_sensor_state_listener
                 )
-                await async_sensor_state_listener(None, None, None)
+                await async_sensor_state_listener(Event("startup"))
 
         self.hass.bus.async_listen_once(EVENT_HOMEASSISTANT_START, async_sensor_startup)
 
@@ -260,7 +269,7 @@ class AverageSensor(SensorEntity):
             "",
         ]
 
-    def _get_temperature(self, state: State) -> Optional[float]:
+    def _get_temperature(self, state: State) -> float | None:
         """Get temperature value from entity."""
         ha_unit = self.hass.config.units.temperature_unit
         domain = split_entity_id(state.entity_id)[0]
@@ -287,7 +296,7 @@ class AverageSensor(SensorEntity):
 
         return temperature
 
-    def _get_state_value(self, state: State) -> Optional[float]:
+    def _get_state_value(self, state: State) -> float | None:
         """Return value of given entity state and count some sensor attributes."""
         state = self._get_temperature(state) if self._temperature_mode else state.state
         if not self._has_state(state):
@@ -497,7 +506,7 @@ class AverageSensor(SensorEntity):
                 )
 
                 if (
-                    entity_id not in history_list.keys()
+                    entity_id not in history_list
                     or history_list[entity_id] is None
                     or len(history_list[entity_id]) == 0
                 ):
