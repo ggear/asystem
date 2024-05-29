@@ -29,10 +29,6 @@ advanced:
   pan_id: $ZIGBEE2MQTT_PAN_ID
   ext_pan_id: $ZIGBEE2MQTT_EXT_PAN_ID
   network_key: $ZIGBEE2MQTT_NETWORK_KEY
-
-  # INFO: Recommended to resolve some Conbee II device connection issues
-  #  adapter_delay: 200
-
   channel: 11
   last_seen: ISO_8601_local
   legacy_availability_payload: false
