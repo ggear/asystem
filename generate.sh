@@ -22,7 +22,7 @@ function pull_repo() {
     for BRANCH in development dev main master; do
       if [ $(git branch | grep ${BRANCH} | wc -l) -eq 1 ]; then
         git checkout ${BRANCH} 2>/dev/null
-        git branch --set-upstream-to origin/${BRANCH}
+        git branch --set-upstream-to origin/${BRANCH} 2>/dev/null
       fi
     done
     git remote set-url origin https://github.com/$(git remote get-url origin | sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')

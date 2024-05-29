@@ -28,6 +28,7 @@ apt-get install -y --allow-downgrades 'fswatch=1.14.0+repack-13.1+b1'
 apt-get install -y --allow-downgrades 'util-linux=2.38.1-5+b1'
 apt-get install -y --allow-downgrades 'mediainfo=23.04-1'
 apt-get install -y --allow-downgrades 'digitemp=3.7.2-2'
+apt-get install -y --allow-downgrades 'tuptime=5.2.2'
 apt-get install -y --allow-downgrades 'bsdmainutils=12.1.8'
 apt-get install -y --allow-downgrades 'netselect-apt=0.3.ds1-30.1'
 apt-get install -y --allow-downgrades 'smartmontools=7.3-1+b1'
@@ -343,6 +344,11 @@ if [ -L /dev/ttyUSBTempProbe ]; then
 else
   rm -rf /etc/digitemp*
 fi
+
+################################################################################
+# Uptime
+################################################################################
+tuptime
 
 ################################################################################
 # Boot

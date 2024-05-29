@@ -23,6 +23,7 @@ PACKAGES=(
   util-linux
   mediainfo
   digitemp
+  tuptime
   bsdmainutils
   netselect-apt
   smartmontools
