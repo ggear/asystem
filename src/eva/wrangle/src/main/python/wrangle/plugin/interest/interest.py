@@ -19,7 +19,7 @@ PERIODS = OrderedDict([
 COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + list(PERIODS.keys()))]
 
 RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xlsx"
-INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xls"
+INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
 
 DRIVE_KEY = "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
 
@@ -33,7 +33,7 @@ class Interest(library.Library):
             new_data = False
             started_time = time.time()
             retail_df = self.dataframe_new()
-            retail_file = join(self.input, "Retail.xls")
+            retail_file = join(self.input, "Retail.xlsx")
             file_status = self.http_download(RETAIL_URL, retail_file)
             if file_status[0]:
                 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:
@@ -54,7 +54,7 @@ class Interest(library.Library):
             self.dataframe_print(retail_df, print_label="Retail", print_verb="collected", started=started_time)
             started_time = time.time()
             inflation_df = self.dataframe_new()
-            inflation_file = join(self.input, "Inflation.xls")
+            inflation_file = join(self.input, "Inflation.xlsx")
             file_status = self.http_download(INFLATION_URL, inflation_file)
             if file_status[0]:
                 if library.test(library.WRANGLE_DISABLE_DATA_DELTA) or file_status[1]:

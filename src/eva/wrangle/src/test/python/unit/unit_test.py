@@ -36,10 +36,7 @@ class WrangleTest(unittest.TestCase):
                         enable_rerun=False,
                         enable_log=True,
 
-
-
                         enable_data_cache=False,  # TODO: Delete
-
 
                         )
 
@@ -204,17 +201,17 @@ class WrangleTest(unittest.TestCase):
     def test_library_sheet(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")
 
-        nonexist_name = "nonexist"
-        nonexist_key = "!"
-        nonexist_str = "[]"
+        missing_name = "missing"
+        missing_key = "!"
+        missing_str = "[]"
         os.environ[library.WRANGLE_ENABLE_LOG] = "false"
         for data_df in [
-            test.sheet_download(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
-            test.sheet_download(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
-            test.sheet_download(nonexist_name, nonexist_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True, read_cache=False),
+            test.sheet_download(missing_name, missing_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(missing_name, missing_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=False),
+            test.sheet_download(missing_name, missing_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True),
+            test.sheet_download(missing_name, missing_key, sheet_load_secs=0, sheet_retry_max=1, write_cache=True, read_cache=False),
         ]:
-            self.assertEqual(nonexist_str, test.dataframe_to_str(data_df))
+            self.assertEqual(missing_str, test.dataframe_to_str(data_df))
             self.assertEqual(0, len(data_df))
 
         loading_name = "loading"
@@ -265,7 +262,7 @@ class WrangleTest(unittest.TestCase):
             "String": pl.Utf8,
             "String with NULL": pl.Utf8,
         }
-        test_type_numeric = {
+        test_type_number = {
             "Integer": pl.Int64,
             "Integer with NULL": pl.Int64,
             "Float": pl.Float64,
@@ -274,19 +271,18 @@ class WrangleTest(unittest.TestCase):
             "String with NULL": pl.Utf8,
         }
         test_str = "[Integer({}), Integer with NULL({}), Float({}), Float with NULL({}), String({}), String with NULL({})]"
-        test_str_utf = ["str" for _ in range(0, len(test_type_numeric))]
-        test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_numeric.values()]
+        test_str_utf = ["str" for _ in range(0, len(test_type_number))]
+        test_str_numeric = [test.dataframe_type_to_str(dtype) for dtype in test_type_number.values()]
         os.environ[library.WRANGLE_ENABLE_LOG] = "true"
         for data_df in [
             test.sheet_download(test_name + "-1", test_key, sheet_start_row=3, write_cache=True),
             test.sheet_download(test_name + "-1", test_key, sheet_start_row=3, write_cache=False),
             test.sheet_download(test_name + "-1", test_key, sheet_start_row=3, write_cache=True),
             test.sheet_download(test_name + "-1", test_key, sheet_start_row=3, write_cache=True, read_cache=False),
-            test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_numeric, write_cache=True),
-            test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_numeric, write_cache=False),
-            test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_numeric, write_cache=True),
-            test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_numeric, write_cache=True,
-                                read_cache=False),
+            test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_number, write_cache=True),
+            test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_number, write_cache=False),
+            test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_number, write_cache=True),
+            test.sheet_download(test_name + "-2", test_key, sheet_start_row=3, schema=test_type_number, write_cache=True, read_cache=False),
         ]:
             self.assertEqual(test_str.format(*test_str_numeric), test.dataframe_to_str(data_df))
             self.assertEqual(4, len(data_df))
@@ -312,8 +308,8 @@ class WrangleTest(unittest.TestCase):
             test.sheet_download(data_name + "-1", data_key, "Indexes", 2, write_cache=True),
             test.sheet_download(data_name + "-1", data_key, "Indexes", 2, write_cache=True, read_cache=False),
         ]:
-            self.assertEqual(data_str.format("f64"), test.dataframe_to_str(data_df))
-            self.assertEqual(19, len(data_df))
+            self.assertEqual(data_str.format("i64"), test.dataframe_to_str(data_df))
+            self.assertEqual(22, len(data_df))
         for data_df in [
             test.sheet_download(data_name + "-1", data_key, "Indexes", 2, schema=data_type, write_cache=True),
             test.sheet_download(data_name + "-1", data_key, "Indexes", 2, schema=data_type, write_cache=False),
@@ -321,7 +317,7 @@ class WrangleTest(unittest.TestCase):
             test.sheet_download(data_name + "-1", data_key, "Indexes", 2, schema=data_type, write_cache=True, read_cache=False),
         ]:
             self.assertEqual(data_str.format(*data_str_type), test.dataframe_to_str(data_df))
-            self.assertEqual(19, len(data_df))
+            self.assertEqual(22, len(data_df))
 
     def test_library_database(self):
         test = Test("Test", "SOME_NON_EXISTANT_GUID")

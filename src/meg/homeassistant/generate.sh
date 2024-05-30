@@ -53,7 +53,7 @@ rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/variable
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/homeassistant/variables-component/custom_components/variable ${ROOT_DIR}/src/main/resources/config/custom_components
 
-VERSION=3.2.1
+VERSION=3.3.1
 pull_repo $(pwd) homeassistant sun2-component pnbruckner/ha-sun2 ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/sun2
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
@@ -71,7 +71,7 @@ rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/bureau_of_meteoro
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology ${ROOT_DIR}/src/main/resources/config/custom_components
 
-VERSION=1.21.1
+VERSION=1.22.0
 pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/adaptive_lighting
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
