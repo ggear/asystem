@@ -14,8 +14,8 @@ RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.13.dfsg-1
 RUN apt-get -y --no-install-recommends install tar=1.34+dfsg-1.2+deb12u1
 RUN apt-get -y --no-install-recommends install gnupg2=2.2.40-1.1
 RUN apt-get -y --no-install-recommends install default-mysql-client=1.1.0
-RUN apt-get -y --no-install-recommends install apache2=2.4.57-2
-RUN apt-get -y --no-install-recommends install apache2-utils=2.4.57-2
+RUN apt-get -y --no-install-recommends install apache2=2.4.59-1~deb12u1
+RUN apt-get -y --no-install-recommends install apache2-utils=2.4.59-1~deb12u1
 RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1.2+deb12u1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
