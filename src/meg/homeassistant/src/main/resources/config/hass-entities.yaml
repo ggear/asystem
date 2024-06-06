@@ -73,6 +73,10 @@ input_boolean.home_reset:
   name: Home Reset
   aliases: ['Home Reset Mode', 'Reset', 'Reset Mode']
   room: Abode
+switch.kitchen_coffee_machine_plug:
+  name: Kitchen Coffee Machine
+  aliases: ['Coffee Machine']
+  room: Kitchen
 fan.ada_fan:
   name: Ada Fan
   aliases: ['Adas Fan', 'Fan', 's Fan']

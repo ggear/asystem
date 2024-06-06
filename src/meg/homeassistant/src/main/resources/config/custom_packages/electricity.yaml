@@ -115,6 +115,92 @@ powercalc:
     - create_group: Home
       entities:
         ###############################################################################
+        - create_group: Home Peak
+          entities:
+            ###########################################################################
+            - create_group: Whitegoods Discretionary
+              entities:
+                #######################################################################
+                - create_group: Coffee Machine
+                  entities:
+                    - entity_id: binary_sensor.template_kitchen_coffee_machine_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.kitchen_coffee_machine_plug
+                      power_sensor_id: sensor.kitchen_coffee_machine_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Dish Washer
+                  entities:
+                    - entity_id: binary_sensor.template_kitchen_dish_washer_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.kitchen_dish_washer_plug
+                      power_sensor_id: sensor.kitchen_dish_washer_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Clothes Dryer
+                  entities:
+                    - entity_id: binary_sensor.template_laundry_clothes_dryer_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.laundry_clothes_dryer_plug
+                      power_sensor_id: sensor.laundry_clothes_dryer_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Washing Machine
+                  entities:
+                    - entity_id: binary_sensor.template_laundry_washing_machine_plug_proxy
+                      standby_power: 0.5
+                      unavailable_power: 0
+                      fixed:
+                        power: 0.9
+                    - entity_id: switch.laundry_washing_machine_plug
+                      power_sensor_id: sensor.laundry_washing_machine_plug_current_consumption
+                      force_energy_sensor_creation: true
+            ###########################################################################
+            - create_group: Heating & Cooling
+              entities:
+                #######################################################################
+                - create_group: Towel Rails
+                  entities:
+                    - entity_id: binary_sensor.template_bathroom_rails_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.bathroom_rails_plug
+                      power_sensor_id: sensor.bathroom_rails_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
+                - create_group: Water Booster
+                  entities:
+                    - entity_id: binary_sensor.template_ceiling_water_booster_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.ceiling_water_booster_plug
+                      power_sensor_id: sensor.ceiling_water_booster_plug_energy_power
+                      energy_sensor_id: sensor.ceiling_water_booster_plug_energy_total
+                #######################################################################
+                - create_group: Pool Filter
+                  entities:
+                    - entity_id: binary_sensor.template_garden_pool_filter_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.garden_pool_filter_plug
+                      power_sensor_id: sensor.garden_pool_filter_plug_energy_power
+                      energy_sensor_id: sensor.garden_pool_filter_plug_energy_total
+        ###############################################################################
         - create_group: Home Base
           entities:
             ###########################################################################
@@ -552,96 +638,14 @@ powercalc:
                       standby_power: 0
                       fixed:
                         power: 0.4
-        ###############################################################################
-        - create_group: Home Peak
-          entities:
-            ###########################################################################
-            - create_group: Heating & Cooling
-              entities:
-                #######################################################################
-                - create_group: Towel Rails
-                  entities:
-                    - entity_id: binary_sensor.template_bathroom_rails_plug_proxy
-                      standby_power: 1.54
-                      unavailable_power: 0
-                      fixed:
-                        power: 2.19
-                    - entity_id: switch.bathroom_rails_plug
-                      power_sensor_id: sensor.bathroom_rails_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
-                - create_group: Water Booster
-                  entities:
-                    - entity_id: binary_sensor.template_ceiling_water_booster_plug_proxy
-                      standby_power: 1.54
-                      unavailable_power: 0
-                      fixed:
-                        power: 2.19
-                    - entity_id: switch.ceiling_water_booster_plug
-                      power_sensor_id: sensor.ceiling_water_booster_plug_energy_power
-                      energy_sensor_id: sensor.ceiling_water_booster_plug_energy_total
-                #######################################################################
-                - create_group: Pool Filter
-                  entities:
-                    - entity_id: binary_sensor.template_garden_pool_filter_plug_proxy
-                      standby_power: 1.54
-                      unavailable_power: 0
-                      fixed:
-                        power: 2.19
-                    - entity_id: switch.garden_pool_filter_plug
-                      power_sensor_id: sensor.garden_pool_filter_plug_energy_power
-                      energy_sensor_id: sensor.garden_pool_filter_plug_energy_total
-            ###########################################################################
-            - create_group: Whitegoods Discretionary
-              entities:
-                #######################################################################
-                - create_group: Dish Washer
-                  entities:
-                    - entity_id: binary_sensor.template_kitchen_dish_washer_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.kitchen_dish_washer_plug
-                      power_sensor_id: sensor.kitchen_dish_washer_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
-                - create_group: Clothes Dryer
-                  entities:
-                    - entity_id: binary_sensor.template_laundry_clothes_dryer_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.laundry_clothes_dryer_plug
-                      power_sensor_id: sensor.laundry_clothes_dryer_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
-                - create_group: Washing Machine
-                  entities:
-                    - entity_id: binary_sensor.template_laundry_washing_machine_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.laundry_washing_machine_plug
-                      power_sensor_id: sensor.laundry_washing_machine_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
-                - create_group: Coffee Machine
-                  entities:
-                    - entity_id: binary_sensor.template_kitchen_coffee_machine_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.kitchen_coffee_machine_plug
-                      power_sensor_id: sensor.kitchen_coffee_machine_plug_current_consumption
-                      force_energy_sensor_creation: true
   #####################################################################################
 template:
   #####################################################################################
   - binary_sensor:
+      #################################################################################
+      - unique_id: kitchen_coffee_machine_plug_proxy
+        state: >-
+          {{ states('switch.kitchen_coffee_machine_plug') }}
       #################################################################################
       - unique_id: old_kitchen_fan_plug_proxy
         state: >-
@@ -730,10 +734,6 @@ template:
       - unique_id: laundry_washing_machine_plug_proxy
         state: >-
           {{ states('switch.laundry_washing_machine_plug') }}
-      #################################################################################
-      - unique_id: kitchen_coffee_machine_plug_proxy
-        state: >-
-          {{ states('switch.kitchen_coffee_machine_plug') }}
       #################################################################################
       - unique_id: kitchen_fridge_plug_proxy
         state: >-

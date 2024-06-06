@@ -417,3 +417,35 @@ automation:
       - service: switch.turn_off
         entity_id: switch.bathroom_rails_plug
 #######################################################################################
+  - id: routine_coffee_machine_off
+    alias: "Coffee Machine: Turn off coffee machine"
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: switch.kitchen_coffee_machine_plug
+        from: 'off'
+        to: 'on'
+    condition: [ ]
+    action:
+      - delay: '00:15:00'
+      - service: switch.turn_off
+        target:
+          entity_id: switch.kitchen_coffee_machine_plug
+  #####################################################################################
+  - id: routine_coffee_machine_off_failsafe
+    alias: "Coffee Machine: Turn off coffee machine fail-safe"
+    mode: single
+    trigger:
+      platform: time_pattern
+      minutes: '/15'
+    condition:
+      and:
+        - condition: time
+          after: '13:00:00'
+          before: '06:00:00'
+        - condition: state
+          entity_id: switch.kitchen_coffee_machine_plug
+          state: 'on'
+    action:
+      - service: switch.turn_off
+        entity_id: switch.kitchen_coffee_machine_plug

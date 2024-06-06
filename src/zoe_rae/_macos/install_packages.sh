@@ -14,7 +14,6 @@ brew install \
   wget \
   watch \
   rename \
-  ffmpeg \
   netcat \
   rustup \
   exiftool \
@@ -23,7 +22,10 @@ brew install \
   poppler \
   rstudio \
   mosquitto \
+  mpv \
+  ffmpeg \
   mediainfo \
+  mkvtoolnix \
   pkg-config \
   docker-slim \
   hudochenkov/sshpass/sshpass

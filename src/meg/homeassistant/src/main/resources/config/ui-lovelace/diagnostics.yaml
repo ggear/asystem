@@ -188,9 +188,6 @@
     - entity: switch.laundry_washing_machine_plug
       name: Washing Machine
       icon: mdi:washing-machine
-    - entity: switch.kitchen_coffee_machine_plug
-      name: Coffee Machine
-      icon: mdi:coffee-maker
     - entity: switch.kitchen_fridge_plug
       name: Kitchen Fridge
       icon: mdi:fridge-outline

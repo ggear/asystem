@@ -19,6 +19,14 @@
       icon: mdi:refresh-circle
 ################################################################################
 - type: entities
+  title: Appliances
+  show_header_toggle: false
+  entities:
+    - entity: switch.kitchen_coffee_machine_plug
+      name: Coffee Machine
+      icon: mdi:coffee-maker
+################################################################################
+- type: entities
   title: Fans
   entities:
     - entity: fan.ada_fan

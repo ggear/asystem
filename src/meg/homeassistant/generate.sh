@@ -53,7 +53,7 @@ rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/variable
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/homeassistant/variables-component/custom_components/variable ${ROOT_DIR}/src/main/resources/config/custom_components
 
-VERSION=3.3.1
+VERSION=3.3.2
 pull_repo $(pwd) homeassistant sun2-component pnbruckner/ha-sun2 ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/sun2
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
