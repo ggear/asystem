@@ -265,7 +265,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                         ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
                     and not docker_image_metadata["skipped"]:
                 if not docker_image_metadata["version_current"].startswith("$GO_VERSION"):
-                    docker_image_tags_url = "https://hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size=100" \
+                    docker_image_tags_url = "https://hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size=150" \
                         .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
                     print("Getting docker image versions from [{}] ... ".format(docker_image_tags_url), end="", flush=True)
                     docker_image_tags_json = requests.get(docker_image_tags_url).json()

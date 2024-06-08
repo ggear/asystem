@@ -32,4 +32,4 @@ advanced:
   channel: 11
   last_seen: ISO_8601_local
   legacy_availability_payload: false
-  log_level: info
+  log_level: error

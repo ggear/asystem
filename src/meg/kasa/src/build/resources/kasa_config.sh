@@ -47,7 +47,7 @@ fi
 if netcat -zw 1 10.0.4.76 9999 2>/dev/null; then
 	echo '' && echo 'Processing config for device [kitchen_coffee_machine_plug] at [10.0.4.76] ... '
 	kasa --host 10.0.4.76 --type plug alias 'Kitchen Coffee Machine Plug'
-	kasa --host 10.0.4.76 --type plug led 'False'
+	kasa --host 10.0.4.76 --type plug led 'True'
 else
 	echo '' && echo 'Skipping config for device [kitchen_coffee_machine_plug] at [http://10.0.4.76/?] given it is unresponsive'
 fi

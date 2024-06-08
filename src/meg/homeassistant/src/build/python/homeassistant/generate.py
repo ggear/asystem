@@ -143,7 +143,7 @@ def write_entity_metadata(module_name, metadata_dir, metadata_df, topics_discove
             metadata_dict_clone = {"object_id": metadata_dict["unique_id"]}
             metadata_dict_clone.update(metadata_dict)
             metadata_dict = metadata_dict_clone
-            metadata_dict["device"] = row[metadata_columns]._rename(metadata_columns_rename).dropna().to_dict()
+            metadata_dict["device"] = row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
             if "connections" in metadata_dict["device"]:
                 metadata_dict["device"]["connections"] = json.loads(metadata_dict["device"]["connections"])
             metadata_publish_dir = abspath(join(metadata_dir, row['discovery_topic']))
