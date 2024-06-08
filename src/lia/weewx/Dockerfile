@@ -1,5 +1,5 @@
 # https://github.com/weewx/weewx/releases
-FROM python:3.12.3-bookworm as image_base
+FROM python:3.12.4-slim-bookworm as image_base
 
 ENV WEEWX_HOME="/home/weewx"
 ENV PYTHONDONTWRITEBYTECODE=1
