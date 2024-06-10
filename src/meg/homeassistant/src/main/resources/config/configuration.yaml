@@ -134,7 +134,7 @@ lovelace:
       require_admin: true
 #######################################################################################
 logger:
-  default: warn # critical/fatal/error/warning/warn/info/debug/notset
+  default: warn # critical/fatal/error/warn/info/debug
   logs:
     ###################################################################################
     # Info
