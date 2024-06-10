@@ -48,7 +48,7 @@
       name: Motion
 ################################################################################
 - type: picture-entity
-  entity: camera.uvc_ada_medium
+  entity: camera.uvc_ada_medium_resolution_channel
   show_name: false
   show_state: false
   camera_view: live
@@ -60,7 +60,7 @@
       name: Motion
 ################################################################################
 - type: picture-entity
-  entity: camera.uvc_edwin_medium
+  entity: camera.uvc_edwin_medium_resolution_channel
   show_name: false
   show_state: false
   camera_view: live
