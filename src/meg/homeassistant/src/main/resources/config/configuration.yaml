@@ -157,6 +157,7 @@ logger:
     homeassistant.components.compensation.sensor: error
     homeassistant.components.mqtt.light.schema_json: error
     homeassistant.util.loop: error
+    homeassistant.helpers.frame: error
     custom_components.tplink: error
     custom_components.average.sensor: error
     custom_components.powercalc.sensors.group: error
