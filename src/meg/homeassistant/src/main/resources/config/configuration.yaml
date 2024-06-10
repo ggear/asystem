@@ -136,9 +136,18 @@ lovelace:
 logger:
   default: warn # critical/fatal/error/warning/warn/info/debug/notset
   logs:
+    ###################################################################################
+    # Info
+    ###################################################################################
     homeassistant.components.recorder.migration: info
     homeassistant.components.system_log.external: info
+    ###################################################################################
+    # Warn
+    ###################################################################################
     homeassistant.core: warn
+    ###################################################################################
+    # Error
+    ###################################################################################
     homeassistant.const: error
     homeassistant.loader: error
     homeassistant.config_entries: error
@@ -151,8 +160,14 @@ logger:
     custom_components.tplink: error
     custom_components.average.sensor: error
     custom_components.powercalc.sensors.group: error
+    ###################################################################################
+    # Fatal
+    ###################################################################################
     custom_components.tplink.config_flow: fatal
     homeassistant.components.websocket_api.http.connection: fatal
+    ###################################################################################
+    # Debug
+    ###################################################################################
     #google_assistant: debug
     #homeassistant.components.mqtt: debug
     #homeassistant.components.webhook: debug
