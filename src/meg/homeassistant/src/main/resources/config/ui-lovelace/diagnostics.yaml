@@ -151,13 +151,13 @@
       name: Sonoff Front Door Sensor
     - entity: sensor.template_weatherstation_console_battery_percent_int
       name: Davis Console
-    - entity: sensor.office_office_office_pantry_battery_percent
+    - entity: sensor.office_pantry_battery
       name: Netatmo Pantry
-    - entity: sensor.office_office_office_lounge_battery_percent
+    - entity: sensor.office_lounge_battery
       name: Netatmo Lounge
-    - entity: sensor.office_office_office_dining_battery_percent
+    - entity: sensor.office_dining_battery
       name: Netatmo Dining
-    - entity: sensor.office_office_office_basement_battery_percent
+    - entity: sensor.office_basement_battery
       name: Netatmo Basement
     - entity: sensor.parents_move_battery
       name: Sonos Parents

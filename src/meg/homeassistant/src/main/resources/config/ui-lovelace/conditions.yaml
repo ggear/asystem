@@ -36,25 +36,31 @@
     - entity: sensor.compensation_sensor_edwin_temperature
       name: Edwin
       icon: mdi:thermometer
+################################################################################
+- type: entities
+  entities:
+    - entity: sensor.compensation_sensor_office_lounge_temperature
+      name: Lounge
+      icon: mdi:thermometer
+################################################################################
+- type: entities
+  entities:
     - entity: sensor.compensation_sensor_parents_temperature
       name: Parents
       icon: mdi:thermometer
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.compensation_sensor_office_office_office_lounge_temperature
-      name: Lounge
-      icon: mdi:thermometer
     - entity: sensor.compensation_sensor_office_temperature
       name: Office
       icon: mdi:thermometer
     - entity: sensor.compensation_sensor_kitchen_temperature
       name: Kitchen
       icon: mdi:thermometer
-    - entity: sensor.compensation_sensor_office_office_office_pantry_temperature
+    - entity: sensor.compensation_sensor_office_pantry_temperature
       name: Pantry
       icon: mdi:thermometer
-    - entity: sensor.compensation_sensor_office_office_office_dining_temperature
+    - entity: sensor.compensation_sensor_office_dining_temperature
       name: Dining
       icon: mdi:thermometer
     - entity: sensor.compensation_sensor_laundry_temperature
@@ -66,7 +72,7 @@
     - entity: sensor.compensation_sensor_deck_festoons_plug_temperature
       name: Ceiling
       icon: mdi:thermometer
-    - entity: sensor.compensation_sensor_office_office_office_basement_temperature
+    - entity: sensor.compensation_sensor_office_basement_temperature
       name: Basement
       icon: mdi:thermometer
 ################################################################################
@@ -132,7 +138,7 @@
       name: Ada
     - entity: sensor.edwin_humidity
       name: Edwin
-    - entity: sensor.office_office_office_lounge_humidity
+    - entity: sensor.office_lounge_humidity
       name: Lounge
 ################################################################################
 - type: entities
@@ -146,7 +152,7 @@
     - entity: sensor.edwin_humidity
       name: Edwin
       icon: mdi:water-percent
-    - entity: sensor.office_office_office_lounge_humidity
+    - entity: sensor.office_lounge_humidity
       name: Lounge
       icon: mdi:water-percent
 ################################################################################
@@ -161,10 +167,10 @@
     - entity: sensor.kitchen_humidity
       name: Kitchen
       icon: mdi:water-percent
-    - entity: sensor.office_office_office_pantry_humidity
+    - entity: sensor.office_pantry_humidity
       name: Pantry
       icon: mdi:water-percent
-    - entity: sensor.office_office_office_dining_humidity
+    - entity: sensor.office_dining_humidity
       name: Dining
       icon: mdi:water-percent
     - entity: sensor.laundry_humidity
@@ -173,7 +179,7 @@
     - entity: sensor.wardrobe_humidity
       name: Wardrobe
       icon: mdi:water-percent
-    - entity: sensor.office_office_office_basement_humidity
+    - entity: sensor.office_basement_humidity
       name: Basement
       icon: mdi:water-percent
 ################################################################################
@@ -181,7 +187,7 @@
 ################################################################################
 - type: custom:mini-graph-card
   name: Carbon Dioxide
-  icon: mdi:molecule-co2
+  icon: mdi:molecule-carbon_dioxide
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 24
@@ -194,38 +200,38 @@
     extrema: true
     fill: false
   entities:
-    - entity: sensor.edwin_co2
+    - entity: sensor.edwin_carbon_dioxide
       name: Edwin
-    - entity: sensor.office_co2
+    - entity: sensor.office_carbon_dioxide
       name: Office
-    - entity: sensor.office_office_office_lounge_co2
+    - entity: sensor.office_lounge_carbon_dioxide
       name: Lounge
-    - entity: sensor.kitchen_co2
+    - entity: sensor.kitchen_carbon_dioxide
       name: Kitchen
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.edwin_co2
+    - entity: sensor.edwin_carbon_dioxide
       name: Edwin
-      icon: mdi:molecule-co2
-    - entity: sensor.office_co2
+      icon: mdi:molecule-carbon_dioxide
+    - entity: sensor.office_carbon_dioxide
       name: Office
-      icon: mdi:molecule-co2
-    - entity: sensor.office_office_office_lounge_co2
+      icon: mdi:molecule-carbon_dioxide
+    - entity: sensor.office_lounge_carbon_dioxide
       name: Lounge
-      icon: mdi:molecule-co2
-    - entity: sensor.kitchen_co2
+      icon: mdi:molecule-carbon_dioxide
+    - entity: sensor.kitchen_carbon_dioxide
       name: Kitchen
-      icon: mdi:molecule-co2
+      icon: mdi:molecule-carbon_dioxide
 ################################################################################
 - type: entities
   entities:
-    - entity: sensor.office_office_office_pantry_co2
+    - entity: sensor.office_pantry_carbon_dioxide
       name: Pantry
-      icon: mdi:molecule-co2
-    - entity: sensor.office_office_office_dining_co2
+      icon: mdi:molecule-carbon_dioxide
+    - entity: sensor.office_dining_carbon_dioxide
       name: Dining
-      icon: mdi:molecule-co2
+      icon: mdi:molecule-carbon_dioxide
 ################################################################################
 - type: custom:mini-graph-card
   name: Noise

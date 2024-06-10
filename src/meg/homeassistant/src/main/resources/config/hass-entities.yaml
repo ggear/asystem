@@ -13,14 +13,14 @@ sensor.compensation_sensor_edwin_temperature:
   name: Edwin Temperature
   aliases: ['Edwins Temperature', 'Temperature', 's Temperature']
   room: Edwin
+sensor.compensation_sensor_office_lounge_temperature:
+  name: Lounge Temperature
+  aliases: ['Temperature']
+  room: Lounge
 sensor.compensation_sensor_parents_temperature:
   name: Parents Temperature
   aliases: ['Temperature']
   room: Parents
-sensor.compensation_sensor_office_office_office_lounge_temperature:
-  name: Lounge Temperature
-  aliases: ['Temperature']
-  room: Lounge
 sensor.compensation_sensor_office_temperature:
   name: Office Temperature
   aliases: ['Temperature']
@@ -29,11 +29,11 @@ sensor.compensation_sensor_kitchen_temperature:
   name: Kitchen Temperature
   aliases: ['Temperature']
   room: Kitchen
-sensor.compensation_sensor_office_office_office_pantry_temperature:
+sensor.compensation_sensor_office_pantry_temperature:
   name: Pantry Temperature
   aliases: ['Temperature']
   room: Pantry
-sensor.compensation_sensor_office_office_office_dining_temperature:
+sensor.compensation_sensor_office_dining_temperature:
   name: Dining Temperature
   aliases: ['Temperature']
   room: Dining
@@ -53,7 +53,7 @@ sensor.compensation_sensor_deck_festoons_plug_temperature:
   name: Ceiling Temperature
   aliases: ['Temperature']
   room: Ceiling
-sensor.compensation_sensor_office_office_office_basement_temperature:
+sensor.compensation_sensor_office_basement_temperature:
   name: Basement Temperature
   aliases: ['Temperature']
   room: Basement
