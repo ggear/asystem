@@ -136,39 +136,32 @@ lovelace:
 logger:
   default: warn # critical/fatal/error/warning/warn/info/debug/notset
   logs:
-    ###################################################################################
     homeassistant.components.recorder.migration: info
     homeassistant.components.system_log.external: info
-    ###################################################################################
     homeassistant.core: warn
-    ###################################################################################
+    homeassistant.const: error
     homeassistant.loader: error
-
-    # TODO: Disable warnings introduced in 2023.8.1 until zigbee2mqtt has been updated
-    homeassistant.components.mqtt.mixins: error
-
+    homeassistant.config_entries: error
+    homeassistant.components.sonos: error
+    homeassistant.components.sensor: error
     homeassistant.components.integration.sensor: error
     homeassistant.components.compensation.sensor: error
-    homeassistant.components.sonos: error
-    homeassistant.config_entries: error
-    homeassistant.components.sensor: error
+    homeassistant.components.mqtt.light.schema_json: error
     homeassistant.util.loop: error
     custom_components.tplink: error
     custom_components.average.sensor: error
     custom_components.powercalc.sensors.group: error
-    ###################################################################################
     homeassistant.components.websocket_api.http.connection: fatal
-    ###################################################################################
     #google_assistant: debug
+    #homeassistant.components.mqtt: debug
+    #homeassistant.components.webhook: debug
     #homeassistant.components.google_assistant: debug
     #homeassistant.components.google_assistant.http: debug
     #homeassistant.components.google_assistant.trait: debug
     #homeassistant.components.google_assistant.helpers: debug
     #homeassistant.components.google_assistant.smart_home: debug
     #homeassistant.components.google_assistant.report_state: debug
-    #homeassistant.components.mqtt: info
-    #homeassistant.components.webhook: debug
-    #custom_components.powercalc: info
-    #custom_components.adaptive_lighting: info
-    #custom_components.bureau_of_meteorology: info
+    #custom_components.powercalc: debug
+    #custom_components.adaptive_lighting: debug
+    #custom_components.bureau_of_meteorology: debug
   #####################################################################################
