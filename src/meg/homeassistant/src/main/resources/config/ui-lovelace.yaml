@@ -4,7 +4,8 @@ views:
   #######################################################################################
   - title: Weather
     path: default_view
-    type: custom:vertical-layout
+    type: custom:layout-card
+    layout_type: custom:vertical-layout
     layout:
       width: 300
       max_cols: 10
@@ -12,7 +13,8 @@ views:
   #######################################################################################
   - title: Conditions
     path: conditions
-    type: custom:vertical-layout
+    type: custom:layout-card
+    layout_type: custom:vertical-layout
     layout:
       width: 300
       max_cols: 10
@@ -20,7 +22,8 @@ views:
   #######################################################################################
   - title: Control
     path: control
-    type: custom:vertical-layout
+    type: custom:layout-card
+    layout_type: custom:vertical-layout
     layout:
       width: 300
       max_cols: 10
@@ -28,7 +31,8 @@ views:
   #######################################################################################
   - title: Media
     path: media
-    type: custom:vertical-layout
+    type: custom:layout-card
+    layout_type: custom:vertical-layout
     layout:
       width: 300
       max_cols: 10
@@ -36,7 +40,8 @@ views:
   #######################################################################################
   - title: Security
     path: security
-    type: custom:vertical-layout
+    type: custom:layout-card
+    layout_type: custom:vertical-layout
     layout:
       width: 300
       max_cols: 10
@@ -44,7 +49,8 @@ views:
   #######################################################################################
   - title: Electricity
     path: electricity
-    type: custom:vertical-layout
+    type: custom:layout-card
+    layout_type: custom:vertical-layout
     layout:
       width: 300
       max_cols: 10
@@ -52,7 +58,8 @@ views:
   #######################################################################################
   - title: Diagnostics
     path: diagnostics
-    type: custom:vertical-layout
+    type: custom:layout-card
+    layout_type: custom:vertical-layout
     layout:
       width: 300
       max_cols: 10
