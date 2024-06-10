@@ -152,6 +152,7 @@ logger:
     homeassistant.components.sonos: error
     homeassistant.config_entries: error
     homeassistant.components.sensor: error
+    homeassistant.util.loop: error
     custom_components.tplink: error
     custom_components.average.sensor: error
     custom_components.powercalc.sensors.group: error
