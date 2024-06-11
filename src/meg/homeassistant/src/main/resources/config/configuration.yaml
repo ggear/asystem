@@ -165,6 +165,7 @@ logger:
     ###################################################################################
     # Fatal
     ###################################################################################
+    pychromecast.socket_client: fatal
     custom_components.tplink.config_flow: fatal
     homeassistant.components.stream.stream.camera: fatal
     homeassistant.components.websocket_api.http.connection: fatal
