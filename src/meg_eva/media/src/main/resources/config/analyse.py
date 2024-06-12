@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 
-# build test data with tony file
+# build test data with dummy file
 # Analyse library on per share basis, all to do local shares only deltas, deploy to do refresh and do all
 # build an item metadata yaml file, pyyaml
 # build an item transcode script if necessary, write out transcode metadata file from logs (fps, time, host, command) - mobile version as well?

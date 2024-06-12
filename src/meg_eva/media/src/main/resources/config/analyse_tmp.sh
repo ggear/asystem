@@ -38,7 +38,7 @@ done
 # TODO: Check versions not queued up to be recreated, they seem to be with the process, maybe dont do at all and just re-encode out of plex band?
 
 
-echo "-" && find . -type f \( -iname \*.mp4 -o -iname \*.mkv \) -exec ls -lah {} \; -exec ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of default=noprint_wrappers=1:nokey=0 {} \; -exec ffprobe -v quiet -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=0 {} \; -exec echo "-" \;
+echo "-" && find . -type f \( -iname \*.mp4 -o -iname \*.mkv -o -iname \*.avi \) -exec ls -lah {} \; -exec ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of default=noprint_wrappers=1:nokey=0 {} \; -exec ffprobe -v quiet -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=0 {} \; -exec echo "-" \;
 
 # 10x on RAE on SSD, 8x on RAE on LAN, 4x on RAE/ZOE on WiFi,
 other-transcode ../Deadpool\ \(2016\).mkv --target 1080p=8000
