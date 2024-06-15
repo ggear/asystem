@@ -65,7 +65,7 @@ rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/average
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/homeassistant/average-component/custom_components/average ${ROOT_DIR}/src/main/resources/config/custom_components
 
-VERSION=1.3.0
+VERSION=1.3.2
 pull_repo $(pwd) homeassistant bureau_of_meteorology-component bremor/bureau_of_meteorology ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&

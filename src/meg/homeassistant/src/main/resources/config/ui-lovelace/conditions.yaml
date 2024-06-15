@@ -22,8 +22,8 @@
       name: Ada
     - entity: sensor.compensation_sensor_edwin_temperature
       name: Edwin
-    - entity: sensor.compensation_sensor_parents_temperature
-      name: Parents
+    - entity: sensor.compensation_sensor_office_lounge_temperature
+      name: Lounge
 ################################################################################
 - type: entities
   entities:
@@ -36,9 +36,6 @@
     - entity: sensor.compensation_sensor_edwin_temperature
       name: Edwin
       icon: mdi:thermometer
-################################################################################
-- type: entities
-  entities:
     - entity: sensor.compensation_sensor_office_lounge_temperature
       name: Lounge
       icon: mdi:thermometer
@@ -48,9 +45,6 @@
     - entity: sensor.compensation_sensor_parents_temperature
       name: Parents
       icon: mdi:thermometer
-################################################################################
-- type: entities
-  entities:
     - entity: sensor.compensation_sensor_office_temperature
       name: Office
       icon: mdi:thermometer

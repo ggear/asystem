@@ -19,6 +19,8 @@ done
 # Media metadata
 find . -type f -exec echo mediainfo {} \; -exec echo -- \; -exec mediainfo {} \; | less
 find . -type f -exec echo mediainfo {} \; -exec echo -- \; -exec mediainfo '--Output=Audio;[%Language/String%, ][%BitRate/String%, ][%SamplingRate/String%, ][%BitDepth/String%, ][%Channel(s)/String%, ]%RAR_FILEormat%\n' {} \;
+echo "-" && find . -type f \( -iname \*.mp4 -o -iname \*.mkv -o -iname \*.avi \) -exec ls -lah {} \; -exec ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of default=noprint_wrappers=1:nokey=0 {} \; -exec ffprobe -v quiet -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=0 {} \; -exec echo "-" \;
+
 
 # Media streams
 find . -type f -exec echo ffprobe -i {} \; -exec ffprobe -i {} \; 2>&1 | less
