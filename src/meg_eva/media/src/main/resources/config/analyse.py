@@ -23,6 +23,10 @@ def _analyse(file_path_root, verbose=False, refresh=False):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
     files_analysed = 0
+    if verbose:
+        print("Library analyse starting ... ")
+    else:
+        print("Library analyse ... ", end='')
     for file_dir_path, _, file_names in os.walk(file_path_root):
         for file_name in file_names:
             file_source_path = os.path.join(file_dir_path, file_name)
@@ -144,6 +148,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
             if verbose:
                 print("wrote metadata file cache")
             files_analysed += 1
+    print("{}done processing [{}] files".format("Library analyse " if verbose else "", files_analysed))
     return files_analysed
 
 
