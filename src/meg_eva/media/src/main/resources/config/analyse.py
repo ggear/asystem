@@ -24,9 +24,9 @@ def _analyse(file_path_root, verbose=False, refresh=False):
         return -1
     files_analysed = 0
     if verbose:
-        print("Library analyse starting ... ")
+        print("Analysing {} ... ".format(file_path_root))
     else:
-        print("Library analyse ... ", end='')
+        print("Analysing {} ... ".format(file_path_root), end='')
     for file_dir_path, _, file_names in os.walk(file_path_root):
         for file_name in file_names:
             file_source_path = os.path.join(file_dir_path, file_name)
@@ -148,7 +148,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
             if verbose:
                 print("wrote metadata file cache")
             files_analysed += 1
-    print("{}done processing [{}] files".format("Library analyse " if verbose else "", files_analysed))
+    print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     return files_analysed
 
 
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     argument_parser.add_argument("media_dir")
     arguments = argument_parser.parse_args()
     sys.exit(2 if _analyse(
-        Path(arguments.media_dir).absolute(),
+        Path(arguments.media_dir).absolute().as_posix(),
         arguments.verbose,
         arguments.refresh,
     ) < 0 else 0)
