@@ -26,7 +26,7 @@ class InternetTest(unittest.TestCase):
         shutil.rmtree(dir_test, ignore_errors=True)
         os.makedirs(abspath(join(dir_test, "..")), exist_ok=True)
         shutil.copytree(dir_test_src, dir_test)
-        self.assertEqual(analyse._analyse(dir_test), files_analysed)
+        self.assertEqual(analyse._analyse(dir_test, True), files_analysed)
 
     def test_rename_1(self):
         self._test_rename(1, 171)

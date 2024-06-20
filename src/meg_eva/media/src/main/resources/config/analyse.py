@@ -1,3 +1,4 @@
+import argparse
 import os
 import sys
 from collections import OrderedDict
@@ -17,7 +18,7 @@ import yaml
 # build a global replace script, dry run showing which items, execute actually doing the work
 
 
-def _analyse(file_path_root):
+def _analyse(file_path_root, verbose=False, refresh=False):
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
@@ -30,14 +31,17 @@ def _analyse(file_path_root):
             file_metadata_path = os.path.join(file_dir_path, "{}.yaml".format(os.path.splitext(file_name)[0]))
             file_library_scope = file_source_relative_dir_path_tokens[1]
             file_library_type = file_source_relative_dir_path_tokens[2]
-            print("{} ... ".format(os.path.join(file_source_relative_dir, file_name)), end='')
+            if verbose:
+                print("{} ... ".format(os.path.join(file_source_relative_dir, file_name)), end='')
             if file_library_type not in {"movies", "series"}:
-                print("ignoring library type [{}]".format(file_library_type))
+                if verbose:
+                    print("ignoring library type [{}]".format(file_library_type))
                 break;
             file_extension = os.path.splitext(file_name)[1]
             if file_extension not in {".mkv", ".mp4", ".avi"}:
                 if file_extension not in {".yaml"}:
-                    print("ignoring unknown file extension [{}]".format(file_extension))
+                    if verbose:
+                        print("ignoring unknown file extension [{}]".format(file_extension))
                 break;
             file_probe = ffmpeg.probe(file_source_path)
             file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2
@@ -125,25 +129,32 @@ def _analyse(file_path_root):
             with open(file_metadata_path, 'w') as file_metadata:
                 yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
 
-            # file_probe_filtered = {}
-            # with open(file_metadata_path, 'r') as file_metadata:
-            #     def unwrap_list_dicts(list_dicts):
-            #         if isinstance(list_dicts, list):
-            #             list_dicts_unwrapped = OrderedDict()
-            #             for list_dict in list_dicts:
-            #                 list_dicts_unwrapped[next(iter(list_dict))] = unwrap_list_dicts(next(iter(list_dict.values())))
-            #             return list_dicts_unwrapped
-            #         return list_dicts
-            #
-            #     file_probe_filtered = unwrap_list_dicts(yaml.safe_load(file_metadata))
+            file_probe_filtered = {}
+            with open(file_metadata_path, 'r') as file_metadata:
+                def unwrap_list_dicts(list_dicts):
+                    if isinstance(list_dicts, list):
+                        list_dicts_unwrapped = OrderedDict()
+                        for list_dict in list_dicts:
+                            list_dicts_unwrapped[next(iter(list_dict))] = unwrap_list_dicts(next(iter(list_dict.values())))
+                        return list_dicts_unwrapped
+                    return list_dicts
 
-            print("wrote metadata file cache")
+                file_probe_filtered = unwrap_list_dicts(yaml.safe_load(file_metadata))
+
+            if verbose:
+                print("wrote metadata file cache")
             files_analysed += 1
     return files_analysed
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: {} <media-dir>".format(sys.argv[0]))
-        sys.exit(1)
-    sys.exit(2 if _analyse(Path(sys.argv[1]).absolute()) < 0 else 0)
+    argument_parser = argparse.ArgumentParser()
+    argument_parser.add_argument("--verbose", default=False, action="store_true")
+    argument_parser.add_argument("--refresh", default=False, action="store_true")
+    argument_parser.add_argument("media-dir")
+    arguments = argument_parser.parse_args()
+    sys.exit(2 if _analyse(
+        Path(arguments["media-dir"]).absolute(),
+        arguments["verbose"],
+        arguments["refresh"]
+    ) < 0 else 0)
