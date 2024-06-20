@@ -160,6 +160,6 @@ if __name__ == "__main__":
     arguments = argument_parser.parse_args()
     sys.exit(2 if _analyse(
         Path(arguments.media_dir).absolute(),
-        arguments["verbose"],
-        arguments["refresh"]
+        arguments.verbose,
+        arguments.refresh,
     ) < 0 else 0)
