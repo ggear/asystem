@@ -151,10 +151,10 @@ if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
     argument_parser.add_argument("--verbose", default=False, action="store_true")
     argument_parser.add_argument("--refresh", default=False, action="store_true")
-    argument_parser.add_argument("media-dir")
+    argument_parser.add_argument("media_dir")
     arguments = argument_parser.parse_args()
     sys.exit(2 if _analyse(
-        Path(arguments["media-dir"]).absolute(),
+        Path(arguments.media_dir).absolute(),
         arguments["verbose"],
         arguments["refresh"]
     ) < 0 else 0)
