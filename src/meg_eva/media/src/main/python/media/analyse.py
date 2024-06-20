@@ -30,6 +30,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
             file_source_path = os.path.join(file_dir_path, file_name)
             file_source_relative_dir = "." + file_dir_path.replace(file_path_root, "")
             file_source_relative_dir_path_tokens = file_source_relative_dir.split(os.sep)
+            file_source_extension = os.path.splitext(file_name)[1]
             file_metadata_path = os.path.join(file_dir_path, "{}.yaml".format(os.path.splitext(file_name)[0]))
 
             # TODO: Make work if path more specific, walk up tree, unit test, add command line for specific file, switch on verbosity
@@ -38,18 +39,18 @@ def _analyse(file_path_root, verbose=False, refresh=False):
             file_library_type = file_source_relative_dir_path_tokens[2] \
                 if len(file_source_relative_dir_path_tokens) > 3 else ""
 
+            if file_source_extension in {".yaml"}:
+                continue;
             if verbose:
                 print("{} ... ".format(os.path.join(file_source_relative_dir, file_name)), end='')
             if file_library_type not in {"movies", "series"}:
                 if verbose:
                     print("ignoring library type [{}]".format(file_library_type))
-                break;
-            file_extension = os.path.splitext(file_name)[1]
-            if file_extension not in {".mkv", ".mp4", ".avi"}:
-                if file_extension not in {".yaml"}:
-                    if verbose:
-                        print("ignoring unknown file extension [{}]".format(file_extension))
-                break;
+                continue;
+            if file_source_extension not in {".mkv", ".mp4", ".avi"}:
+                if verbose:
+                    print("ignoring unknown file extension [{}]".format(file_source_extension))
+                continue;
             if refresh or not os.path.isfile(file_metadata_path):
                 file_probe = ffmpeg.probe(file_source_path)
                 file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2 \
@@ -166,7 +167,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                     print("wrote metadata file cache")
             else:
                 if verbose:
-                    print("skipping, metadata already cached")
+                    print("skipping, metadata file already cached")
             files_analysed += 1
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()

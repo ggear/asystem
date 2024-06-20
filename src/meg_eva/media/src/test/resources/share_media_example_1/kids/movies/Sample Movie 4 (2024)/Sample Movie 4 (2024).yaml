@@ -1,0 +1,23 @@
+- file_name: Sample Movie 4 (2024).avi
+- file_path: /Users/graham/Code/asystem/src/meg_eva/media/target/runtime-unit/share_media_example_1/kids/movies/Sample Movie 4 (2024)/Sample Movie 4 (2024).avi
+- library_scope: kids
+- library_type: movies
+- container_format: avi
+- duration_h: 0.002
+- size_gb: 0.0004
+- bit_rate_kbps: 478
+- video:
+  - 0:
+    - codec_type: video
+    - codec_name: MPEG4
+    - resolution: HD 720
+    - width: 1280
+    - height: 534
+- audio:
+  - 1:
+    - codec_type: audio
+    - codec_name: MP3
+    - language: ''
+    - channels: 2
+- subtitle: []
+- other: []
