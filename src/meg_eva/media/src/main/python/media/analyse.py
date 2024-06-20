@@ -24,6 +24,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
         return -1
     files_analysed = 0
     print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""))
+    sys.stdout.flush()
     for file_dir_path, _, file_names in os.walk(file_path_root):
         for file_name in file_names:
             file_source_path = os.path.join(file_dir_path, file_name)
@@ -164,6 +165,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                 print("wrote metadata file cache")
             files_analysed += 1
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
+    sys.stdout.flush()
     return files_analysed
 
 
