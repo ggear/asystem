@@ -16,9 +16,9 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 class InternetTest(unittest.TestCase):
 
     def test_analyse_1(self):
-        self._test_analyse(1, 0)
+        self._test_analyse(1, 26)
 
-    def _test_analyse(self, index, files_renamed):
+    def _test_analyse(self, index, files_analysed):
         dir_test = join(DIR_ROOT, "target/runtime-unit/share_media_example_{}".format(index))
         dir_test_src = join(DIR_ROOT, "src/test/resources/share_media_example_{}".format(index))
         print("")
@@ -26,8 +26,7 @@ class InternetTest(unittest.TestCase):
         shutil.rmtree(dir_test, ignore_errors=True)
         os.makedirs(abspath(join(dir_test, "..")), exist_ok=True)
         shutil.copytree(dir_test_src, dir_test)
-        self.assertEqual(analyse._analyse(dir_test), files_renamed)
-        self.assertEqual(analyse._analyse(dir_test), 0)
+        self.assertEqual(analyse._analyse(dir_test), files_analysed)
 
     def test_rename_1(self):
         self._test_rename(1, 171)
