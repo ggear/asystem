@@ -2,9 +2,11 @@ import argparse
 import os
 import sys
 from collections import OrderedDict
+from collections.abc import MutableMapping
 from pathlib import Path
 
 import ffmpeg
+import polars as pl
 import yaml
 
 
@@ -85,9 +87,16 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                             if "codec_type" in file_probe_stream else ""
                         if file_probe_stream_type not in file_probe_streams_filtered:
                             file_probe_stream_type = "other"
+
+
                         file_probe_streams_filtered[file_probe_stream_type].append({
                             file_probe_stream["index"]: file_probe_stream_filtered
                         })
+
+
+
+
+
                         file_probe_stream_filtered.append({"codec_type": file_probe_stream["codec_type"].lower() \
                             if "codec_type" in file_probe_stream else ""})
                         if file_probe_stream_type == "video":
@@ -147,24 +156,35 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
                     with open(file_metadata_path, 'w') as file_metadata:
                         yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
-
-                    file_probe_filtered = {}
-                    with open(file_metadata_path, 'r') as file_metadata:
-                        def unwrap_list_dicts(list_dicts):
-                            if isinstance(list_dicts, list):
-                                list_dicts_unwrapped = OrderedDict()
-                                for list_dict in list_dicts:
-                                    list_dicts_unwrapped[next(iter(list_dict))] = unwrap_list_dicts(next(iter(list_dict.values())))
-                                return list_dicts_unwrapped
-                            return list_dicts
-
-                        file_probe_filtered = unwrap_list_dicts(yaml.safe_load(file_metadata))
-
                 if verbose:
                     print("wrote metadata file cache")
             else:
                 if verbose:
                     print("skipping, metadata file already cached")
+
+            file_probe_filtered = {}
+            with open(file_metadata_path, 'r') as file_metadata:
+                def _unwrap(lists):
+                    if isinstance(lists, list):
+                        dicts = OrderedDict()
+                        for item in lists:
+                            dicts[next(iter(item))] = _unwrap(next(iter(item.values())))
+                        return dicts
+                    return lists
+
+                def _flatten(dicts, parent_key='', separator='_'):
+                    items = []
+                    for key, value in dicts.items():
+                        new_key = parent_key + separator + str(key) if parent_key else str(key)
+                        if isinstance(value, MutableMapping):
+                            items.extend(_flatten(value, new_key, separator=separator).items())
+                        else:
+                            items.append((new_key, value))
+                    return OrderedDict(items)
+
+                metadata_pl = pl.DataFrame(_flatten(_unwrap(yaml.safe_load(file_metadata))))
+                print(metadata_pl.columns)
+
             files_analysed += 1
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
