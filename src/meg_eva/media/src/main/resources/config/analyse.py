@@ -32,13 +32,10 @@ def _analyse(file_path_root, verbose=False, refresh=False):
             file_source_relative_dir_path_tokens = file_source_relative_dir.split(os.sep)
             file_source_extension = os.path.splitext(file_name)[1]
             file_metadata_path = os.path.join(file_dir_path, "{}.yaml".format(os.path.splitext(file_name)[0]))
-
-            # TODO: Make work if path more specific, walk up tree, unit test, add command line for specific file, switch on verbosity
             file_library_scope = file_source_relative_dir_path_tokens[1] \
                 if len(file_source_relative_dir_path_tokens) > 3 else ""
             file_library_type = file_source_relative_dir_path_tokens[2] \
                 if len(file_source_relative_dir_path_tokens) > 3 else ""
-
             if file_source_extension in {".yaml"}:
                 continue;
             if verbose:
@@ -178,10 +175,10 @@ if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
     argument_parser.add_argument("--verbose", default=False, action="store_true")
     argument_parser.add_argument("--refresh", default=False, action="store_true")
-    argument_parser.add_argument("media_dir")
+    argument_parser.add_argument("directory")
     arguments = argument_parser.parse_args()
     sys.exit(2 if _analyse(
-        Path(arguments.media_dir).absolute().as_posix(),
+        Path(arguments.directory).absolute().as_posix(),
         arguments.verbose,
         arguments.refresh,
     ) < 0 else 0)

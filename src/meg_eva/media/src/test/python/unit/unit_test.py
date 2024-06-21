@@ -47,8 +47,8 @@ class InternetTest(unittest.TestCase):
         shutil.rmtree(dir_test, ignore_errors=True)
         os.makedirs(abspath(join(dir_test, "..")), exist_ok=True)
         shutil.copytree(dir_test_src, dir_test)
-        self.assertEqual(rename._rename(dir_test), files_renamed)
-        self.assertEqual(rename._rename(dir_test), 0)
+        self.assertEqual(rename._rename(dir_test, True), files_renamed)
+        self.assertEqual(rename._rename(dir_test, True), 0)
 
 
 if __name__ == '__main__':

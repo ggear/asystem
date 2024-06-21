@@ -1,3 +1,4 @@
+import argparse
 import os
 import re
 import shutil
@@ -5,11 +6,13 @@ import sys
 from pathlib import Path
 
 
-def _rename(file_path_root):
+def _rename(file_path_root, verbose=False):
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
     files_renamed = 0
+    print("Renaming {} ... ".format(file_path_root), end=("\n" if verbose else ""))
+    sys.stdout.flush()
     file_path_root = Path(file_path_root)
     file_path_roots_to_delete = []
     for file_source in ["usbdrive", "usenet/finished", "finished"]:
@@ -112,19 +115,26 @@ def _rename(file_path_root):
                             file_type,
                         ))
                     os.makedirs(file_path_new.parent, exist_ok=True)
-                    print(".{} -> .{}".format(
-                        file_path.as_posix().replace(file_path_root.as_posix(), ""),
-                        file_path_new.as_posix().replace(file_path_root.as_posix(), ""))
-                    )
+                    if verbose:
+                        print(".{} -> .{}".format(
+                            file_path.as_posix().replace(file_path_root.as_posix(), ""),
+                            file_path_new.as_posix().replace(file_path_root.as_posix(), ""))
+                        )
                     shutil.move(file_path, file_path_new)
                     files_renamed += 1
     for file_path_root_to_delete in file_path_roots_to_delete:
         shutil.rmtree(file_path_root_to_delete, ignore_errors=True)
+    print("{}done".format("Renaming {} ".format(file_path_root) if verbose else ""))
+    sys.stdout.flush()
     return files_renamed
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: {} <media-tmp-dir>".format(sys.argv[0]))
-        sys.exit(1)
-    sys.exit(2 if _rename(Path(sys.argv[1]).absolute()) < 0 else 0)
+    argument_parser = argparse.ArgumentParser()
+    argument_parser.add_argument("--verbose", default=False, action="store_true")
+    argument_parser.add_argument("directory")
+    arguments = argument_parser.parse_args()
+    sys.exit(2 if _rename(
+        Path(arguments.directory).absolute().as_posix(),
+        arguments.verbose,
+    ) < 0 else 0)
