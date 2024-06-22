@@ -87,17 +87,13 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                             if "codec_type" in file_probe_stream else ""
                         if file_probe_stream_type not in file_probe_streams_filtered:
                             file_probe_stream_type = "other"
-
-
                         file_probe_streams_filtered[file_probe_stream_type].append({
-                            file_probe_stream["index"]: file_probe_stream_filtered
+                            str(len(file_probe_streams_filtered[file_probe_stream_type]) + 1): \
+                                file_probe_stream_filtered
                         })
-
-
-
-
-
-                        file_probe_stream_filtered.append({"codec_type": file_probe_stream["codec_type"].lower() \
+                        file_probe_stream_filtered.append({"index": file_probe_stream["index"] \
+                            if "index" in file_probe_stream else -1})
+                        file_probe_stream_filtered.append({"type": file_probe_stream["codec_type"].lower() \
                             if "codec_type" in file_probe_stream else ""})
                         if file_probe_stream_type == "video":
                             file_probe_stream_video_codec = file_probe_stream["codec_name"].upper() \
@@ -106,7 +102,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                                 file_probe_stream_video_codec = "AVC (H264)"
                             if "H265" in file_probe_stream_video_codec or "HEVC" in file_probe_stream_video_codec:
                                 file_probe_stream_video_codec = "HEVC (H265)"
-                            file_probe_stream_filtered.append({"codec_name": file_probe_stream_video_codec})
+                            file_probe_stream_filtered.append({"codec": file_probe_stream_video_codec})
                             file_probe_stream_video_field_order = ""
                             if "field_order" in file_probe_stream:
                                 if file_probe_stream["field_order"] == "progressive":
@@ -144,13 +140,13 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                             file_probe_stream_filtered.append({"width": file_probe_stream_video_width})
                             file_probe_stream_filtered.append({"height": file_probe_stream_video_height})
                         elif file_probe_stream_type == "audio":
-                            file_probe_stream_filtered.append({"codec_name": file_probe_stream["codec_name"].upper() \
+                            file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
                             file_probe_stream_filtered.append({"channels": file_probe_stream["channels"]})
                         elif file_probe_stream_type == "subtitle":
-                            file_probe_stream_filtered.append({"codec_name": file_probe_stream["codec_name"].upper() \
+                            file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
@@ -161,8 +157,6 @@ def _analyse(file_path_root, verbose=False, refresh=False):
             else:
                 if verbose:
                     print("skipping, metadata file already cached")
-
-            file_probe_filtered = {}
             with open(file_metadata_path, 'r') as file_metadata:
                 def _unwrap(lists):
                     if isinstance(lists, list):
@@ -183,8 +177,6 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                     return OrderedDict(items)
 
                 metadata_pl = pl.DataFrame(_flatten(_unwrap(yaml.safe_load(file_metadata))))
-                print(metadata_pl.columns)
-
             files_analysed += 1
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()

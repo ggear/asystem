@@ -32,7 +32,7 @@ if __name__ == "__main__":
         kasa_config_file.write("""
 #!/bin/sh
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
         """.strip() + "\n")
         for metadata_kasa_dict in metadata_kasa_dicts:

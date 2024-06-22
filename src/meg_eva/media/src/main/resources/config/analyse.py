@@ -1,10 +1,16 @@
+"""
+WARNING: This file is written by the build process, any manual edits will be lost!
+"""
+
 import argparse
 import os
 import sys
 from collections import OrderedDict
+from collections.abc import MutableMapping
 from pathlib import Path
 
 import ffmpeg
+import polars as pl
 import yaml
 
 
@@ -23,7 +29,8 @@ def _analyse(file_path_root, verbose=False, refresh=False):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
     files_analysed = 0
-    print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""))
+    print("Analysing {} ... ".format(file_path_root), end=("
+" if verbose else ""))
     sys.stdout.flush()
     for file_dir_path, _, file_names in os.walk(file_path_root):
         for file_name in file_names:
@@ -86,9 +93,12 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                         if file_probe_stream_type not in file_probe_streams_filtered:
                             file_probe_stream_type = "other"
                         file_probe_streams_filtered[file_probe_stream_type].append({
-                            file_probe_stream["index"]: file_probe_stream_filtered
+                            str(len(file_probe_streams_filtered[file_probe_stream_type]) + 1): \
+                                file_probe_stream_filtered
                         })
-                        file_probe_stream_filtered.append({"codec_type": file_probe_stream["codec_type"].lower() \
+                        file_probe_stream_filtered.append({"index": file_probe_stream["index"] \
+                            if "index" in file_probe_stream else -1})
+                        file_probe_stream_filtered.append({"type": file_probe_stream["codec_type"].lower() \
                             if "codec_type" in file_probe_stream else ""})
                         if file_probe_stream_type == "video":
                             file_probe_stream_video_codec = file_probe_stream["codec_name"].upper() \
@@ -97,7 +107,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                                 file_probe_stream_video_codec = "AVC (H264)"
                             if "H265" in file_probe_stream_video_codec or "HEVC" in file_probe_stream_video_codec:
                                 file_probe_stream_video_codec = "HEVC (H265)"
-                            file_probe_stream_filtered.append({"codec_name": file_probe_stream_video_codec})
+                            file_probe_stream_filtered.append({"codec": file_probe_stream_video_codec})
                             file_probe_stream_video_field_order = ""
                             if "field_order" in file_probe_stream:
                                 if file_probe_stream["field_order"] == "progressive":
@@ -135,36 +145,43 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                             file_probe_stream_filtered.append({"width": file_probe_stream_video_width})
                             file_probe_stream_filtered.append({"height": file_probe_stream_video_height})
                         elif file_probe_stream_type == "audio":
-                            file_probe_stream_filtered.append({"codec_name": file_probe_stream["codec_name"].upper() \
+                            file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
                             file_probe_stream_filtered.append({"channels": file_probe_stream["channels"]})
                         elif file_probe_stream_type == "subtitle":
-                            file_probe_stream_filtered.append({"codec_name": file_probe_stream["codec_name"].upper() \
+                            file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
                     with open(file_metadata_path, 'w') as file_metadata:
                         yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
-
-                    file_probe_filtered = {}
-                    with open(file_metadata_path, 'r') as file_metadata:
-                        def unwrap_list_dicts(list_dicts):
-                            if isinstance(list_dicts, list):
-                                list_dicts_unwrapped = OrderedDict()
-                                for list_dict in list_dicts:
-                                    list_dicts_unwrapped[next(iter(list_dict))] = unwrap_list_dicts(next(iter(list_dict.values())))
-                                return list_dicts_unwrapped
-                            return list_dicts
-
-                        file_probe_filtered = unwrap_list_dicts(yaml.safe_load(file_metadata))
-
                 if verbose:
                     print("wrote metadata file cache")
             else:
                 if verbose:
                     print("skipping, metadata file already cached")
+            with open(file_metadata_path, 'r') as file_metadata:
+                def _unwrap(lists):
+                    if isinstance(lists, list):
+                        dicts = OrderedDict()
+                        for item in lists:
+                            dicts[next(iter(item))] = _unwrap(next(iter(item.values())))
+                        return dicts
+                    return lists
+
+                def _flatten(dicts, parent_key='', separator='_'):
+                    items = []
+                    for key, value in dicts.items():
+                        new_key = parent_key + separator + str(key) if parent_key else str(key)
+                        if isinstance(value, MutableMapping):
+                            items.extend(_flatten(value, new_key, separator=separator).items())
+                        else:
+                            items.append((new_key, value))
+                    return OrderedDict(items)
+
+                metadata_pl = pl.DataFrame(_flatten(_unwrap(yaml.safe_load(file_metadata))))
             files_analysed += 1
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()

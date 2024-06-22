@@ -1,5 +1,5 @@
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 fan:
   - platform: group

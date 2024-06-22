@@ -1,6 +1,6 @@
 #!/bin/bash
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 echo ''
 if netcat -zw 1 10.0.4.100 80 2>/dev/null; then

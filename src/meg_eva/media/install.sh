@@ -5,6 +5,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 
 cd ${SERVICE_INSTALL} || exit
 
+. ./.env
 chmod +x config/*.sh
 
 for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
@@ -14,6 +15,8 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
     done
   done
 done
+
+pyenv install ${PYTHON_VERSION}
 
 rm -rf /usr/bin/asystem-media
 ln -s /var/lib/asystem/install/media/latest/config/all.sh /usr/bin/asystem-media

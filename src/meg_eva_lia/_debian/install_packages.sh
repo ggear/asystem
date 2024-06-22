@@ -64,6 +64,19 @@ PACKAGES=(
   tesseract-ocr
   libedgetpu1-std
   exfatprogs
+  build-essential
+  xz-utils
+  tk-dev
+  zlib1g-dev
+  libssl-dev
+  libbz2-dev
+  libreadline-dev
+  libsqlite3-dev
+  llvm
+  libncurses5-dev
+  libncursesw5-dev
+  libffi-dev
+  liblzma-dev
 )
 apt-get update
 for PACKAGE in "${PACKAGES[@]}"; do

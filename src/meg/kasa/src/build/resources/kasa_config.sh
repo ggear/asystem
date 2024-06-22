@@ -1,6 +1,6 @@
 #!/bin/sh
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 if netcat -zw 1 10.0.4.70 9999 2>/dev/null; then
 	echo '' && echo 'Processing config for device [lounge_sub_plug] at [10.0.4.70] ... '

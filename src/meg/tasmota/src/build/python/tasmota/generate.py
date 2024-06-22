@@ -43,7 +43,7 @@ if __name__ == "__main__":
         tasmota_config_file.write("""
 #!/bin/bash
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 echo ''
         """.strip() + "\n")

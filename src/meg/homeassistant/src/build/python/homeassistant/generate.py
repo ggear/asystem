@@ -368,7 +368,7 @@ if __name__ == "__main__":
     with open(metadata_customise_path, 'w') as metadata_customise_file:
         metadata_customise_file.write("""
 ################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 ################################################################################
         """.strip() + "\n")
         for metadata_customise_dict in metadata_customise_dicts:
@@ -408,7 +408,7 @@ if __name__ == "__main__":
     with open(metadata_compensation_path, 'w') as metadata_compensation_file:
         metadata_compensation_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 compensation:
         """.strip() + "\n")
@@ -466,7 +466,7 @@ compensation:
     with open(metadata_control_path, 'w') as metadata_control_file:
         metadata_control_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 fan:
   - platform: group
@@ -507,7 +507,7 @@ tplink:
         with open(metadata_alias_path, 'w') as metadata_alias_file:
             metadata_alias_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
             """.strip() + "\n")
             for metadata_alias_dict in metadata_alias_dicts:
@@ -554,7 +554,7 @@ tplink:
         with open(metadata_proxy_path, 'w') as metadata_proxy_file:
             metadata_proxy_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 template:
   #####################################################################################
@@ -595,7 +595,7 @@ template:
     with open(metadata_media_path, 'w') as metadata_media_file:
         metadata_media_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
         """.strip() + "\n")
         metadata_media_file.write("""
@@ -680,7 +680,7 @@ sonos:
         with open(metadata_security_path, 'w') as metadata_security_file:
             metadata_security_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 stream:
 #######################################################################################
@@ -1077,7 +1077,7 @@ automation:
     with open(metadata_lighting_path, 'w') as metadata_lighting_file:
         metadata_lighting_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 adaptive_lighting:
         """.strip() + "\n")
@@ -1256,7 +1256,7 @@ automation:
     with open(metadata_diagnostic_path, 'w') as metadata_diagnostic_file:
         metadata_diagnostic_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 compensation:
   #####################################################################################
@@ -1411,7 +1411,7 @@ automation:
         with open(metadata_electricity_path, 'w') as metadata_electricity_file:
             metadata_electricity_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 powercalc:
   force_update_frequency: 00:00:05
@@ -1585,7 +1585,7 @@ template:
     with open(metadata_action_path, 'w') as metadata_action_file:
         metadata_action_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 ios:
   #####################################################################################
@@ -1655,7 +1655,7 @@ automation:
         with open(metadata_lovelace_path, 'w') as metadata_lovelace_file:
             metadata_lovelace_file.write("""
 ################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!            
+# WARNING: This file is written by the build process, any manual edits will be lost!            
             """.strip() + "\n")
             for domain in metadata_lovelace_group_domain_dicts[group]:
                 metadata_lovelace_graph_dicts = []

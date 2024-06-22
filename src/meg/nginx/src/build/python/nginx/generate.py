@@ -27,7 +27,7 @@ if __name__ == "__main__":
     with open(conf_path, 'w') as conf_file:
         conf_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 user nginx;
 worker_processes 1;

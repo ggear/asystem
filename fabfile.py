@@ -663,9 +663,9 @@ def _get_dependencies(context, module):
 def _write_env(context, module, working_path=".", filter_host=None, is_release=False):
     service = _get_service(module)
     _run_local(context, "mkdir -p {}".format(working_path), module)
-    _run_local(context, "echo 'PYTHON_VERSION=$PYTHON_VERSION\n' > {}/.env"
+    _run_local(context, "echo 'GO_VERSION=$GO_VERSION' > {}/.env"
                .format(working_path), module)
-    _run_local(context, "echo 'GO_VERSION=$GO_VERSION\n' > {}/.env"
+    _run_local(context, "echo 'PYTHON_VERSION=$PYTHON_VERSION\n' >> {}/.env"
                .format(working_path), module)
     _run_local(context, "echo 'SERVICE_NAME={}' >> {}/.env"
                .format(service, working_path), module)

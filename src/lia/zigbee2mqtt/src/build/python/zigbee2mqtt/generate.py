@@ -46,7 +46,7 @@ if __name__ == "__main__":
     with open(metadata_groups_path, 'w') as metadata_groups_file:
         metadata_groups_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
         """.strip() + "\n")
         for metadata_groups_id in metadata_groups_dict:
@@ -85,7 +85,7 @@ if __name__ == "__main__":
         metadata_config_file.write("""
 #!/bin/sh
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
@@ -106,7 +106,7 @@ ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
         metadata_config_clean_file.write("""
 #!/bin/sh
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
@@ -133,7 +133,7 @@ while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/brid
     with open(metadata_devices_path, 'w') as metadata_devices_file:
         metadata_devices_file.write("""
 #######################################################################################
-# WARNING: This file is written to by the build process, any manual edits will be lost!
+# WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
             """.strip() + "\n")
         for metadata_devices_dict in metadata_devices_dicts:
