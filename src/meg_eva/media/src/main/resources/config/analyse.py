@@ -2,6 +2,7 @@
 WARNING: This file is written by the build process, any manual edits will be lost!
 """
 
+
 import argparse
 import os
 import sys
@@ -29,8 +30,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
     files_analysed = 0
-    print("Analysing {} ... ".format(file_path_root), end=("
-" if verbose else ""))
+    print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""))
     sys.stdout.flush()
     for file_dir_path, _, file_names in os.walk(file_path_root):
         for file_name in file_names:
