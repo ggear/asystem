@@ -16,7 +16,10 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
   done
 done
 
-#pyenv install ${PYTHON_VERSION}
+if [ ! -d /root/.pyenv/versions/${PYTHON_VERSION}/bin ]; then
+  pyenv install ${PYTHON_VERSION}
+  /root/.pyenv/versions/${PYTHON_VERSION}/bin/pip install -r config/.python_reqs.txt
+fi
 
 rm -rf /usr/bin/asystem-media
 ln -s /var/lib/asystem/install/media/latest/config/all.sh /usr/bin/asystem-media
