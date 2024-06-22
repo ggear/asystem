@@ -1,8 +1,8 @@
 #!/bin/bash
 
-SHARE_DIRS=$(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}')
 INSTALL_DIR="/root/install/media/latest/config"
 PYTHON_DIR="/root/.pyenv/versions/${PYTHON_VERSION}/bin"
+SHARE_DIRS=$(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}')
 
 ${INSTALL_DIR}/import.sh /share/2/tmp
 for SHARE_DIR in ${SHARE_DIRS}; do ${INSTALL_DIR}/normalise.sh ${SHARE_DIR}; done
