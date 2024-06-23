@@ -21,5 +21,8 @@ if [ ! -d /root/.pyenv/versions/${PYTHON_VERSION}/bin ]; then
 fi
 /root/.pyenv/versions/${PYTHON_VERSION}/bin/pip install -r config/.reqs.txt
 
+mkdir -p /root/.config
+cp -rvf src/main/resources/.gspread_pandas /root/.config/gspread_pandas
+
 rm -rf /usr/bin/asystem-media
 ln -s /var/lib/asystem/install/media/latest/config/all.sh /usr/bin/asystem-media
