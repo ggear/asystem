@@ -20,11 +20,12 @@ import yaml
 # build a global replace script, dry run showing which items, execute actually doing the work
 
 
-def _analyse(file_path_root, verbose=False, refresh=False):
+def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
     files_analysed = 0
+    metatdata_list = []
     print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""))
     sys.stdout.flush()
     for file_dir_path, _, file_names in os.walk(file_path_root):
@@ -32,13 +33,13 @@ def _analyse(file_path_root, verbose=False, refresh=False):
             file_source_path = os.path.join(file_dir_path, file_name)
             file_source_relative_dir = "." + file_dir_path.replace(file_path_root, "")
             file_source_relative_dir_path_tokens = file_source_relative_dir.split(os.sep)
-            file_source_extension = os.path.splitext(file_name)[1]
+            file_source_extension = os.path.splitext(file_name)[1].replace(".", "")
             file_metadata_path = os.path.join(file_dir_path, "{}.yaml".format(os.path.splitext(file_name)[0]))
             file_library_scope = file_source_relative_dir_path_tokens[1] \
                 if len(file_source_relative_dir_path_tokens) > 3 else ""
             file_library_type = file_source_relative_dir_path_tokens[2] \
                 if len(file_source_relative_dir_path_tokens) > 3 else ""
-            if file_source_extension in {".yaml"}:
+            if file_source_extension in {"yaml"}:
                 continue;
             if verbose:
                 print("{} ... ".format(os.path.join(file_source_relative_dir, file_name)), end='')
@@ -46,7 +47,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                 if verbose:
                     print("ignoring library type [{}]".format(file_library_type))
                 continue;
-            if file_source_extension not in {".mkv", ".mp4", ".avi"}:
+            if file_source_extension not in {"mkv", "mp4", "avi", "m2ts"}:
                 if verbose:
                     print("ignoring unknown file extension [{}]".format(file_source_extension))
                 continue;
@@ -61,6 +62,7 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                         if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
                     {"file_path": file_probe["format"]["filename"] \
                         if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
+                    {"file_extension": file_source_extension},
                     {"library_scope": file_library_scope},
                     {"library_type": file_library_type},
                     {"container_format": file_probe["format"]["format_name"].lower() \
@@ -176,8 +178,36 @@ def _analyse(file_path_root, verbose=False, refresh=False):
                             items.append((new_key, value))
                     return OrderedDict(items)
 
-                metadata_pl = pl.DataFrame(_flatten(_unwrap(yaml.safe_load(file_metadata))))
+                metatdata_list.append(_flatten(_unwrap(yaml.safe_load(file_metadata))))
             files_analysed += 1
+    metadata_pl = pl.DataFrame(metatdata_list)
+    metadata_columns = []
+    metadata_columns_streams = ("video", "audio", "subtitle", "other")
+    for metadata_column in metadata_pl.columns:
+        if not metadata_column.startswith(metadata_columns_streams):
+            metadata_columns.append(metadata_column)
+    for metadata_column_stream in metadata_columns_streams:
+        for metadata_column in metadata_pl.columns:
+            if metadata_column.startswith(metadata_column_stream):
+                metadata_columns.append(metadata_column)
+    metadata_pl = metadata_pl.select(metadata_columns)
+
+
+
+    # with pl.Config(
+    #         tbl_rows=-1,
+    #         tbl_cols=-1,
+    #         fmt_str_lengths=20,
+    #         set_tbl_width_chars=30000,
+    #         set_fmt_float="full",
+    #         set_ascii_tables=True,
+    #         tbl_formatting="ASCII_FULL_CONDENSED",
+    #         set_tbl_hide_dataframe_shape=True,
+    # ):
+    #     print("")
+    #     print(metadata_pl)
+    #     print("")
+
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
     return files_analysed
