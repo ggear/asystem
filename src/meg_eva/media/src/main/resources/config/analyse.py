@@ -155,10 +155,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         for file_probe_video in file_probe_videos.values():
                             if (
                                     file_extension == "avi" and file_probe_video[2]["codec"] in {"MPEG4", "MJPEG"} or \
-                                    file_extension == "m2ts" and file_probe_video[2]["codec"] in {"AVC", "HVEC", "MPEG2VIDEO"} or \
-                                    file_extension == "mkv" and file_probe_video[2]["codec"] in {"AVC", "HVEC", "MPEG2VIDEO", "MPEG4"} or \
+                                    file_extension == "m2ts" and file_probe_video[2]["codec"] in {"AVC", "HEVC", "MPEG2VIDEO"} or \
+                                    file_extension == "mkv" and file_probe_video[2]["codec"] in {"AVC", "HEVC", "MPEG2VIDEO", "MPEG4"} or \
                                     file_extension == "mov" and file_probe_video[2]["codec"] in {"AVC", "MPEG4"} or \
-                                    file_extension == "mp4" and file_probe_video[2]["codec"] in {"AVC", "HVEC"} or \
+                                    file_extension == "mp4" and file_probe_video[2]["codec"] in {"AVC", "HEVC"} or \
                                     file_extension == "wmv" and file_probe_video[2]["codec"] in {"WMV3", "VC1"}
                             ):
                                 file_probe_plex_direct_play_video = True
