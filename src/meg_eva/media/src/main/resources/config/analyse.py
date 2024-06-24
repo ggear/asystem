@@ -143,7 +143,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
                         if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
 
-                    # TODO: Provide greater coverage, non-eng audio/subtitles, multiple video etc
+                    # TODO: Provide greater coverage, non-eng audio/subtitles, multiple video, grade based on number of subtitles/audio/video etc
                     for file_probe_subtitles in file_probe_streams_filtered["subtitle"]:
                         for file_probe_subtitle in file_probe_subtitles.values():
                             if (
@@ -165,12 +165,18 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     for file_probe_audios in file_probe_streams_filtered["audio"]:
                         for file_probe_audio in file_probe_audios.values():
                             if (
-                                    file_extension == "avi" and file_probe_audio[2]["codec"] in {"AAC", "AC3", "DTS", "MP3", "PCM"} or \
-                                    file_extension == "m2ts" and file_probe_audio[2]["codec"] in {"AAC", "AC3", "DTS", "MP3", "PCM"} or \
-                                    file_extension == "mkv" and file_probe_audio[2]["codec"] in {"AAC", "AC3", "DTS", "MP3", "PCM"} or \
-                                    file_extension == "mov" and file_probe_audio[2]["codec"] in {"AAC", "AC3", "DTS"} or \
-                                    file_extension == "mp4" and file_probe_audio[2]["codec"] in {"AAC", "AC3", "DTS", "MP3"} or \
-                                    file_extension == "wmv" and file_probe_audio[2]["codec"] in {"AC3", "DTS", "WMAPRO", "WMAV2"}
+                                    file_extension == "avi" and \
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS", "MP3", "PCM"} or \
+                                    file_extension == "m2ts" and \
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS", "MP3", "PCM"} or \
+                                    file_extension == "mkv" and \
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS", "MP3", "PCM"} or \
+                                    file_extension == "mov" and \
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS"} or \
+                                    file_extension == "mp4" and \
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS", "MP3"} or \
+                                    file_extension == "wmv" and \
+                                    file_probe_audio[2]["codec"] in {"AC3", "DTS", "WMAPRO", "WMAV2"}
                             ):
                                 file_probe_plex_direct_play_audio = True
                     if file_probe_plex_direct_play_video and file_probe_plex_direct_play_audio:
