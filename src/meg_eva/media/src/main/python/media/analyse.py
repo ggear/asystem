@@ -172,7 +172,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                                     file_extension == "mp4" and \
                                     file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS", "MP3"} or \
                                     file_extension == "wmv" and \
-                                    file_probe_audio[2]["codec"] in {"AC3", "DTS", "WMAPRO", "WMAV2"}
+                                    file_probe_audio[2]["codec"] in {"EAC3", "AC3", "DTS", "WMAPRO", "WMAV2"}
                             ):
                                 file_probe_plex_direct_play_audio = True
                     if file_probe_plex_direct_play_video and file_probe_plex_direct_play_audio:
