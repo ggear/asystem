@@ -208,27 +208,27 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
     metadata_updated_pl = metadata_cache_pl
     metadata_updated_pd = metadata_updated_pl.to_pandas()
     metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
-    # if len(metadata_updated_pd) > 0:
-    #     metadata_spread.df_to_sheet(metadata_updated_pd, replace=True, index=True,
-    #                                 add_filter=True, freeze_index=True, freeze_headers=True)
+    if len(metadata_updated_pd) > 0:
+        metadata_spread.df_to_sheet(metadata_updated_pd, replace=True, index=True,
+                                    add_filter=True, freeze_index=True, freeze_headers=True)
 
-    with pl.Config(
-            tbl_rows=-1,
-            tbl_cols=-1,
-            fmt_str_lengths=20,
-            set_tbl_width_chars=30000,
-            set_fmt_float="full",
-            set_ascii_tables=True,
-            tbl_formatting="ASCII_FULL_CONDENSED",
-            set_tbl_hide_dataframe_shape=True,
-    ):
-        print("")
-        print(metadata_cache_pl)
-        print("")
-        print(metadata_original_pl)
-        print("")
-        print(metadata_updated_pl)
-        print("")
+    # with pl.Config(
+    #         tbl_rows=-1,
+    #         tbl_cols=-1,
+    #         fmt_str_lengths=20,
+    #         set_tbl_width_chars=30000,
+    #         set_fmt_float="full",
+    #         set_ascii_tables=True,
+    #         tbl_formatting="ASCII_FULL_CONDENSED",
+    #         set_tbl_hide_dataframe_shape=True,
+    # ):
+    #     print("")
+    #     print(metadata_cache_pl)
+    #     print("")
+    #     print(metadata_original_pl)
+    #     print("")
+    #     print(metadata_updated_pl)
+    #     print("")
 
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
