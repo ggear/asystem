@@ -40,17 +40,17 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             file_source_relative_dir_path_tokens = file_source_relative_dir.split(os.sep)
             file_source_extension = os.path.splitext(file_name)[1].replace(".", "")
             file_metadata_path = os.path.join(file_dir_path, "{}.yaml".format(os.path.splitext(file_name)[0]))
-            file_library_scope = file_source_relative_dir_path_tokens[1] \
+            file_media_scope = file_source_relative_dir_path_tokens[1] \
                 if len(file_source_relative_dir_path_tokens) > 3 else ""
-            file_library_type = file_source_relative_dir_path_tokens[2] \
+            file_media_type = file_source_relative_dir_path_tokens[2] \
                 if len(file_source_relative_dir_path_tokens) > 3 else ""
             if file_source_extension in {"yaml"}:
                 continue;
             if verbose:
                 print("{} ... ".format(os.path.join(file_source_relative_dir, file_name)), end='')
-            if file_library_type not in {"movies", "series"}:
+            if file_media_type not in {"movies", "series"}:
                 if verbose:
-                    print("ignoring library type [{}]".format(file_library_type))
+                    print("ignoring library type [{}]".format(file_media_type))
                 continue;
             if file_source_extension not in {"mkv", "mp4", "avi", "m2ts"}:
                 if verbose:
@@ -58,25 +58,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                 continue;
             if refresh or not os.path.isfile(file_metadata_path):
                 file_probe = ffmpeg.probe(file_source_path)
-                file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2 \
-                    if ("format" in file_probe and "duration" in file_probe["format"]) else -1
-                file_probe_size_gb = int(file_probe["format"]["size"]) / 10 ** 9 \
-                    if ("format" in file_probe and "size" in file_probe["format"]) else -1
-                file_probe_filtered = [
-                    {"file_name": os.path.basename(file_probe["format"]["filename"]) \
-                        if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
-                    {"file_path": os.path.dirname(file_probe["format"]["filename"]) \
-                        if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
-                    {"file_extension": file_source_extension},
-                    {"container_format": file_probe["format"]["format_name"].lower() \
-                        if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
-                    {"library_scope": file_library_scope},
-                    {"library_type": file_library_type},
-                    {"duration_h": round(file_probe_duration_h, 2 if file_probe_duration_h > 1 else 4)},
-                    {"size_gb": round(file_probe_size_gb, 2 if file_probe_duration_h > 1 else 4)},
-                    {"bit_rate_kbps": round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
-                        if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1},
-                ]
                 file_probe_streams_filtered = {
                     "video": [],
                     "audio": [],
@@ -153,7 +134,43 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
-                    file_probe_filtered.append({"stream_count": sum(map(len, file_probe_streams_filtered.values()))})
+
+                    file_target_quality = "Low"
+                    file_target_quality = "High"
+                    file_target_quality = ""
+
+                    file_probe_plex_mode = "Transcode"
+                    file_probe_plex_mode = "Direct Play"
+
+                    file_probe_transcode_priority = "1"
+                    file_probe_transcode_priority = "2"
+                    file_probe_transcode_priority = ""
+
+                    file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2 \
+                        if ("format" in file_probe and "duration" in file_probe["format"]) else -1
+                    file_probe_size_gb = int(file_probe["format"]["size"]) / 10 ** 9 \
+                        if ("format" in file_probe and "size" in file_probe["format"]) else -1
+                    file_probe_filtered = [
+                        {"file_name": os.path.basename(file_probe["format"]["filename"]) \
+                            if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
+                        {"media_directory": file_path_root},
+                        {"media_scope": file_media_scope},
+                        {"media_type": file_media_type},
+                        {"version_directory": os.path.dirname(file_probe["format"]["filename"]) \
+                            .replace(os.path.join(file_path_root, file_media_scope, file_media_type) + "/", "") \
+                            if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
+                        {"target_quality": file_target_quality},
+                        {"transcode_priority": file_probe_transcode_priority},
+                        {"plex_mode": file_probe_plex_mode},
+                        {"file_extension": file_source_extension},
+                        {"container_format": file_probe["format"]["format_name"].lower() \
+                            if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
+                        {"duration__hours)": round(file_probe_duration_h, 2 if file_probe_duration_h > 1 else 4)},
+                        {"size__GB": round(file_probe_size_gb, 2 if file_probe_duration_h > 1 else 4)},
+                        {"bit_rate__Kbps": round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
+                            if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1},
+                        {"stream_count": sum(map(len, file_probe_streams_filtered.values()))}
+                    ]
                     for file_probe_stream_type in file_probe_streams_filtered:
                         file_probe_filtered.append({"{}_count".format(file_probe_stream_type):
                                                         len(file_probe_streams_filtered[file_probe_stream_type])})
@@ -204,12 +221,15 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             if metadata_column.startswith(metadata_column_stream):
                 metadata_columns.append(metadata_column)
     metadata_cache_pl = metadata_cache_pl.select(metadata_columns) \
-        .rename(lambda column: column.replace("_", " ").title())
-
+        .rename(lambda column: \
+                    (column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") \
+                        if len(column.split("__")) == 2 else column.replace("_", " ").title())
     metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid)
     metadata_original_pl = pl.DataFrame(
         metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())[0:])
+
     metadata_updated_pl = metadata_cache_pl
+
     if len(metadata_updated_pl) > 0:
         metadata_updated_pd = metadata_updated_pl.to_pandas()
         metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
