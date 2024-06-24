@@ -166,17 +166,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         for file_probe_audio in file_probe_audios.values():
                             if (
                                     file_extension == "avi" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS", "MP3", "PCM"} or \
-                                    file_extension == "m2ts" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS", "MP3", "PCM"} or \
-                                    file_extension == "mkv" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS", "MP3", "PCM"} or \
-                                    file_extension == "mov" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS"} or \
-                                    file_extension == "mp4" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "DTS", "MP3"} or \
-                                    file_extension == "wmv" and \
-                                    file_probe_audio[2]["codec"] in {"EAC3", "AC3", "DTS", "WMAPRO", "WMAV2"}
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "m2ts" and \
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "mkv" and \
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "mov" and \
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3"} or file_extension == "mp4" and \
+                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3"} or file_extension == "wmv" and \
+                                    file_probe_audio[2]["codec"] in {"EAC3", "AC3", "WMAPRO", "WMAV2"}
                             ):
                                 file_probe_plex_direct_play_audio = True
                     if file_probe_plex_direct_play_video and file_probe_plex_direct_play_audio:
