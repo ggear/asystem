@@ -20,7 +20,7 @@ from gspread_pandas import Spread
 # build an item metadata yaml file, pyyaml and ffmpeg-python
 # build an item transcode script if necessary, write out transcode metadata file from logs (fps, time, host, command) - mobile version as well?
 # build an item replace script if necessary
-# build a global xlsx, update but allow manual editing, share-dir, library, name, size, resolution (720p, 1080p, 4k), bitrate (4k, 8k, 14k), audio codec, video codec, eng audio streams, non-eng audio streams, eng subtitles, non-eng subtitles, direct play possible, required to convert, versions ready to replace
+# build a global xlsx, update but allow manual editing, direct play possible, target quality, required to convert, versions ready to replace
 # build a global transcode script, ordered by priority, script takes in number of items to process
 # build a global replace script, dry run showing which items, execute actually doing the work
 
@@ -65,7 +65,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                 file_probe_filtered = [
                     {"file_name": os.path.basename(file_probe["format"]["filename"]) \
                         if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
-                    {"file_path": file_probe["format"]["filename"] \
+                    {"file_path": os.path.dirname(file_probe["format"]["filename"]) \
                         if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
                     {"file_extension": file_source_extension},
                     {"container_format": file_probe["format"]["format_name"].lower() \
@@ -83,10 +83,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     "subtitle": [],
                     "other": [],
                 }
-                for file_probe_stream_type in file_probe_streams_filtered:
-                    file_probe_filtered.append({
-                        file_probe_stream_type: file_probe_streams_filtered[file_probe_stream_type]
-                    })
                 if "streams" in file_probe:
                     for file_probe_stream in file_probe["streams"]:
                         file_probe_stream_filtered = []
@@ -157,6 +153,18 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
+                    file_probe_filtered.append({"stream_count": sum(map(len, file_probe_streams_filtered.values()))})
+                    for file_probe_stream_type in file_probe_streams_filtered:
+                        file_probe_filtered.append({"{}_count".format(file_probe_stream_type):
+                                                        len(file_probe_streams_filtered[file_probe_stream_type])})
+                        if file_probe_stream_type in {"audio", "subtitle"}:
+                            language_english_count = 0
+                            for file_probe_streams in file_probe_streams_filtered[file_probe_stream_type]:
+                                if next(iter(file_probe_streams.values()))[3]["language"] == "eng":
+                                    language_english_count += 1
+                            file_probe_filtered.append({"{}_english_count".format(file_probe_stream_type): language_english_count})
+                        file_probe_filtered.append({file_probe_stream_type:
+                                                        file_probe_streams_filtered[file_probe_stream_type]})
                     with open(file_metadata_path, 'w') as file_metadata:
                         yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
                 if verbose:
@@ -203,27 +211,28 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())[0:])
     metadata_updated_pl = metadata_cache_pl
     metadata_updated_pd = metadata_updated_pl.to_pandas()
-    if len(metadata_updated_pd) > 0:
-        metadata_spread.df_to_sheet(metadata_updated_pd, replace=True, index=True,
-                                    add_filter=True, freeze_index=True, freeze_headers=True)
+    metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
+    # if len(metadata_updated_pd) > 0:
+    #     metadata_spread.df_to_sheet(metadata_updated_pd, replace=True, index=True,
+    #                                 add_filter=True, freeze_index=True, freeze_headers=True)
 
-    # with pl.Config(
-    #         tbl_rows=-1,
-    #         tbl_cols=-1,
-    #         fmt_str_lengths=20,
-    #         set_tbl_width_chars=30000,
-    #         set_fmt_float="full",
-    #         set_ascii_tables=True,
-    #         tbl_formatting="ASCII_FULL_CONDENSED",
-    #         set_tbl_hide_dataframe_shape=True,
-    # ):
-    #     print("")
-    #     print(metadata_cache_pl)
-    #     print("")
-    #     print(metadata_original_pl)
-    #     print("")
-    #     print(metadata_updated_pl)
-    #     print("")
+    with pl.Config(
+            tbl_rows=-1,
+            tbl_cols=-1,
+            fmt_str_lengths=20,
+            set_tbl_width_chars=30000,
+            set_fmt_float="full",
+            set_ascii_tables=True,
+            tbl_formatting="ASCII_FULL_CONDENSED",
+            set_tbl_hide_dataframe_shape=True,
+    ):
+        print("")
+        print(metadata_cache_pl)
+        print("")
+        print(metadata_original_pl)
+        print("")
+        print(metadata_updated_pl)
+        print("")
 
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
