@@ -203,8 +203,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())[0:])
     metadata_updated_pl = metadata_cache_pl
     metadata_updated_pd = metadata_updated_pl.to_pandas()
-    metadata_spread.df_to_sheet(metadata_updated_pd, replace=True, index=True,
-                                add_filter=True, freeze_index=True, freeze_headers=True)
+    if len(metadata_updated_pd) > 0:
+        metadata_spread.df_to_sheet(metadata_updated_pd, replace=True, index=True,
+                                    add_filter=True, freeze_index=True, freeze_headers=True)
 
     # with pl.Config(
     #         tbl_rows=-1,
