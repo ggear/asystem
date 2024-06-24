@@ -8,6 +8,7 @@ from pathlib import Path
 import ffmpeg
 import polars as pl
 import yaml
+from gspread_pandas import Spread
 
 
 # build test data with dummy file
@@ -63,10 +64,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     {"file_path": file_probe["format"]["filename"] \
                         if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
                     {"file_extension": file_source_extension},
-                    {"library_scope": file_library_scope},
-                    {"library_type": file_library_type},
                     {"container_format": file_probe["format"]["format_name"].lower() \
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
+                    {"library_scope": file_library_scope},
+                    {"library_type": file_library_type},
                     {"duration_h": round(file_probe_duration_h, 2 if file_probe_duration_h > 1 else 4)},
                     {"size_gb": round(file_probe_size_gb, 2 if file_probe_duration_h > 1 else 4)},
                     {"bit_rate_kbps": round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
@@ -180,19 +181,26 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
 
                 metatdata_list.append(_flatten(_unwrap(yaml.safe_load(file_metadata))))
             files_analysed += 1
-    metadata_pl = pl.DataFrame(metatdata_list)
+    metadata_cache_pl = pl.DataFrame(metatdata_list)
     metadata_columns = []
     metadata_columns_streams = ("video", "audio", "subtitle", "other")
-    for metadata_column in metadata_pl.columns:
+    for metadata_column in metadata_cache_pl.columns:
         if not metadata_column.startswith(metadata_columns_streams):
             metadata_columns.append(metadata_column)
     for metadata_column_stream in metadata_columns_streams:
-        for metadata_column in metadata_pl.columns:
+        for metadata_column in metadata_cache_pl.columns:
             if metadata_column.startswith(metadata_column_stream):
                 metadata_columns.append(metadata_column)
-    metadata_pl = metadata_pl.select(metadata_columns)
+    metadata_cache_pl = metadata_cache_pl.select(metadata_columns) \
+        .rename(lambda column: column.replace("_", " ").title())
 
-
+    metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid)
+    metadata_original_pl = pl.DataFrame(
+        metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())[0:])
+    metadata_updated_pl = metadata_cache_pl
+    metadata_updated_pd = metadata_updated_pl.to_pandas()
+    metadata_spread.df_to_sheet(metadata_updated_pd, replace=True, index=True,
+                                add_filter=True, freeze_index=True, freeze_headers=True)
 
     # with pl.Config(
     #         tbl_rows=-1,
@@ -205,7 +213,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
     #         set_tbl_hide_dataframe_shape=True,
     # ):
     #     print("")
-    #     print(metadata_pl)
+    #     print(metadata_cache_pl)
+    #     print("")
+    #     print(metadata_original_pl)
+    #     print("")
+    #     print(metadata_updated_pl)
     #     print("")
 
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
@@ -218,9 +230,11 @@ if __name__ == "__main__":
     argument_parser.add_argument("--verbose", default=False, action="store_true")
     argument_parser.add_argument("--refresh", default=False, action="store_true")
     argument_parser.add_argument("directory")
+    argument_parser.add_argument("sheetguid")
     arguments = argument_parser.parse_args()
     sys.exit(2 if _analyse(
         Path(arguments.directory).absolute().as_posix(),
+        arguments.sheetguid,
         arguments.verbose,
         arguments.refresh,
     ) < 0 else 0)
