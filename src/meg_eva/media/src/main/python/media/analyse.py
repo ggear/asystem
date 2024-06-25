@@ -8,6 +8,7 @@ from pathlib import Path
 import ffmpeg
 import polars as pl
 import yaml
+from ffmpeg._run import Error
 from gspread_pandas import Spread
 
 
@@ -53,7 +54,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     print("ignoring unknown file extension [{}]".format(file_extension))
                 continue;
             if refresh or not os.path.isfile(file_metadata_path):
-                file_probe = ffmpeg.probe(file_path)
+                try:
+                    file_probe = ffmpeg.probe(file_path)
+                except Error as error:
+                    if verbose:
+                        print("ignoring with ffmpeg probe error [{}]".format(error.stderr))
+                    continue;
                 file_probe_streams_filtered = {
                     "video": [],
                     "audio": [],
@@ -278,8 +284,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             [media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()]
         ))
     metadata_updated_pl = pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
-
-
 
     if len(metadata_updated_pl) > 0:
         metadata_updated_pd = metadata_updated_pl.to_pandas()
