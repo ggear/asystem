@@ -41,7 +41,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                 if len(file_relative_dir_tokens) > 3 else ""
             file_media_type = file_relative_dir_tokens[2] \
                 if len(file_relative_dir_tokens) > 3 else ""
-            if file_extension in {"yaml"}:
+            if file_extension in {"yaml", "srt", "jpg", ""}:
                 continue;
             if verbose:
                 print("{} ... ".format(os.path.join(file_relative_dir, file_name)), end='')
