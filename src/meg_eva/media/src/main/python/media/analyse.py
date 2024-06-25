@@ -130,7 +130,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
-
+                            file_probe_stream_filtered.append({"format": "Picture" \
+                                if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"})
                     file_probe_transcode_priority = ""
                     file_probe_plex_mode = "Transcode"
                     file_probe_plex_direct_play_video = False
