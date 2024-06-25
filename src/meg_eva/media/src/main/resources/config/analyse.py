@@ -282,6 +282,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             [media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()]
         ))
     metadata_updated_pl = pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
+
+
+
     if len(metadata_updated_pl) > 0:
         metadata_updated_pd = metadata_updated_pl.to_pandas()
         metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
