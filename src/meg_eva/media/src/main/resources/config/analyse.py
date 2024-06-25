@@ -70,7 +70,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                 try:
                     file_probe = ffmpeg.probe(file_path)
                 except Error as error:
-                    message = "ignoring with ffmpeg probe error:\n".format(error.stderr.read().decode())
+                    message = "ignoring with ffmpeg probe error:\n{}".format(str(error.stderr))
                     if verbose:
                         print(message)
                     else:
