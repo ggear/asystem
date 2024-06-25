@@ -75,8 +75,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                             str(len(file_probe_streams_filtered[file_probe_stream_type]) + 1): \
                                 file_probe_stream_filtered
                         })
-                        file_probe_stream_filtered.append({"index": file_probe_stream["index"] \
-                            if "index" in file_probe_stream else -1})
+                        file_probe_stream_filtered.append({"index": str(file_probe_stream["index"]) \
+                            if "index" in file_probe_stream else ""})
                         file_probe_stream_filtered.append({"type": file_probe_stream["codec_type"].lower() \
                             if "codec_type" in file_probe_stream else ""})
                         if file_probe_stream_type == "video":
@@ -98,37 +98,40 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                                 if "width" in file_probe_stream else -1
                             file_probe_stream_video_height = int(file_probe_stream["height"]) \
                                 if "height" in file_probe_stream else -1
-                            if file_probe_stream_video_width <= 640:
-                                file_probe_stream_video_resolution = "nHD 360" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 960:
-                                file_probe_stream_video_resolution = "qHD 540" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 1280:
-                                file_probe_stream_video_resolution = "HD 720" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 1600:
-                                file_probe_stream_video_resolution = "HD+ 900" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 1920:
-                                file_probe_stream_video_resolution = "FHD 1080" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 2560:
-                                file_probe_stream_video_resolution = "QHD 1440" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 3200:
-                                file_probe_stream_video_resolution = "QHD+ 1800" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 3840:
-                                file_probe_stream_video_resolution = "UHD 2160" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 5120:
-                                file_probe_stream_video_resolution = "UHD 2880" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 7680:
-                                file_probe_stream_video_resolution = "UHD 4320" + file_probe_stream_video_field_order
-                            elif file_probe_stream_video_width <= 15360:
-                                file_probe_stream_video_resolution = "UHD 8640" + file_probe_stream_video_field_order
+                            if file_probe_stream_video_width > 0:
+                                if file_probe_stream_video_width <= 640:
+                                    file_probe_stream_video_resolution = "nHD 360" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 960:
+                                    file_probe_stream_video_resolution = "qHD 540" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 1280:
+                                    file_probe_stream_video_resolution = "HD 720" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 1600:
+                                    file_probe_stream_video_resolution = "HD+ 900" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 1920:
+                                    file_probe_stream_video_resolution = "FHD 1080" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 2560:
+                                    file_probe_stream_video_resolution = "QHD 1440" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 3200:
+                                    file_probe_stream_video_resolution = "QHD+ 1800" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 3840:
+                                    file_probe_stream_video_resolution = "UHD 2160" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 5120:
+                                    file_probe_stream_video_resolution = "UHD 2880" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 7680:
+                                    file_probe_stream_video_resolution = "UHD 4320" + file_probe_stream_video_field_order
+                                elif file_probe_stream_video_width <= 15360:
+                                    file_probe_stream_video_resolution = "UHD 8640" + file_probe_stream_video_field_order
                             file_probe_stream_filtered.append({"resolution": file_probe_stream_video_resolution})
-                            file_probe_stream_filtered.append({"width": file_probe_stream_video_width})
-                            file_probe_stream_filtered.append({"height": file_probe_stream_video_height})
+                            file_probe_stream_filtered.append({"width": str(file_probe_stream_video_width) \
+                                if file_probe_stream_video_width > 0 else ""})
+                            file_probe_stream_filtered.append({"height": str(file_probe_stream_video_height) \
+                                if file_probe_stream_video_height > 0 else ""})
                         elif file_probe_stream_type == "audio":
                             file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
-                            file_probe_stream_filtered.append({"channels": file_probe_stream["channels"]})
+                            file_probe_stream_filtered.append({"channels": str(file_probe_stream["channels"])})
                         elif file_probe_stream_type == "subtitle":
                             file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
@@ -145,12 +148,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
 
                     # TODO: Provide greater coverage, non-eng audio/subtitles, multiple video, grade based on number of subtitles/audio/video etc
-                    for file_probe_subtitles in file_probe_streams_filtered["subtitle"]:
-                        for file_probe_subtitle in file_probe_subtitles.values():
-                            if (
-                                    "PGS" in file_probe_subtitle[2]["codec"]
-                            ):
-                                file_probe_messy_metadata = True
+                    # for file_probe_subtitles in file_probe_streams_filtered["subtitle"]:
+                    #     for file_probe_subtitle in file_probe_subtitles.values():
+                    #         if (
+                    #                 file_probe_subtitle[2]["format"] == "Picture"
+                    #         ):
+                    #             file_probe_messy_metadata = True
 
                     for file_probe_videos in file_probe_streams_filtered["video"]:
                         for file_probe_video in file_probe_videos.values():
@@ -204,20 +207,22 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         {"file_extension": file_extension},
                         {"container_format": file_probe["format"]["format_name"].lower() \
                             if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
-                        {"duration__hours)": round(file_probe_duration_h, 2 if file_probe_duration_h > 1 else 4)},
-                        {"size__GB": round(file_probe_size_gb, 2 if file_probe_duration_h > 1 else 4)},
-                        {"bit_rate__Kbps": file_probe_bit_rate},
-                        {"stream_count": sum(map(len, file_probe_streams_filtered.values()))}
+                        {"duration__hours": str(round(file_probe_duration_h, 2 if file_probe_duration_h > 1 else 4)) \
+                            if file_probe_duration_h > 0 else ""},
+                        {"size__GB": str(round(file_probe_size_gb, 2 if file_probe_duration_h > 1 else 4)) \
+                            if file_probe_size_gb > 0 else ""},
+                        {"bit_rate__Kbps": str(file_probe_bit_rate) if file_probe_bit_rate > 0 else ""},
+                        {"stream_count": str(sum(map(len, file_probe_streams_filtered.values())))}
                     ]
                     for file_probe_stream_type in file_probe_streams_filtered:
                         file_probe_filtered.append({"{}_count".format(file_probe_stream_type):
-                                                        len(file_probe_streams_filtered[file_probe_stream_type])})
+                                                        str(len(file_probe_streams_filtered[file_probe_stream_type]))})
                         if file_probe_stream_type in {"audio", "subtitle"}:
                             language_english_count = 0
                             for file_probe_streams in file_probe_streams_filtered[file_probe_stream_type]:
                                 if next(iter(file_probe_streams.values()))[3]["language"] == "eng":
                                     language_english_count += 1
-                            file_probe_filtered.append({"{}_english_count".format(file_probe_stream_type): language_english_count})
+                            file_probe_filtered.append({"{}_english_count".format(file_probe_stream_type): str(language_english_count)})
                         file_probe_filtered.append({file_probe_stream_type:
                                                         file_probe_streams_filtered[file_probe_stream_type]})
                     with open(file_metadata_path, 'w') as file_metadata:
@@ -261,18 +266,21 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
     metadata_cache_pl = metadata_cache_pl.select(metadata_columns) \
         .rename(lambda column: \
                     (column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") \
-                        if len(column.split("__")) == 2 else column.replace("_", " ").title())
-    metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid)
+                        if len(column.split("__")) == 2 else column.replace("_", " ").title()).sort("File Name")
+    metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid, sheet="Data")
+    metadata_original_list = metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())
     metadata_original_pl = pl.DataFrame(
-        metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())[0:])
-
-    # TODO: Merge, drop missing items from same 'media_dir' right-join
-    metadata_updated_pl = metadata_cache_pl
-
+        schema=metadata_original_list[0],
+        data=metadata_original_list[1:],
+        orient="row"
+    ).sort("File Name")
+    metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in(
+        [media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()]))
+    metadata_updated_pl = pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
     if len(metadata_updated_pl) > 0:
         metadata_updated_pd = metadata_updated_pl.to_pandas()
         metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
-        metadata_spread.df_to_sheet(metadata_updated_pd, replace=True, index=True,
+        metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=True, index=True,
                                     add_filter=True, freeze_index=True, freeze_headers=True)
 
     # with pl.Config(
