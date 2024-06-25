@@ -50,7 +50,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                 if verbose:
                     print(message)
                 else:
-                    print("warning: {}".format(message))
+                    print("warning: {} for file [{}]".format(message, file_path))
                     print("Analysing {} ... ".format(file_path_root), end="")
                 continue;
             if file_extension not in {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}:
@@ -58,7 +58,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                 if verbose:
                     print(message)
                 else:
-                    print("warning: {}".format(message))
+                    print("warning: {} for file [{}]".format(message, file_path))
                     print("Analysing {} ... ".format(file_path_root), end="")
                 continue;
             if refresh or not os.path.isfile(file_metadata_path):
@@ -69,7 +69,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     if verbose:
                         print(message)
                     else:
-                        print("warning: {}".format(message))
+                        print("warning: {} for file [{}]".format(message, file_path))
                         print("Analysing {} ... ".format(file_path_root), end="")
                     continue;
                 file_probe_streams_filtered = {
