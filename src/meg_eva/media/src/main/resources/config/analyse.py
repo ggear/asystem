@@ -299,10 +299,19 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
     else:
         metadata_original_pl = pl.DataFrame()
     if len(metadata_original_pl) > 0 and len(metadata_cache_pl) > 0:
-        metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in(
-            [media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()]
-        ))
-    metadata_updated_pl = _format_columns(pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal"))
+        metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in([
+            media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()
+        ]))
+    metadata_updated_pl = _format_columns(
+        pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
+    )
+    metadata_updated_pl = metadata_updated_pl.with_columns([
+        pl.when(pl.col(pl.Utf8).str.lengths() == 0)
+        .then(None).otherwise(pl.col(pl.Utf8)).keep_name()
+    ])
+    metadata_updated_pl = metadata_updated_pl[[
+        column.name for column in metadata_updated_pl if not (column.null_count() == metadata_updated_pl.height)
+    ]]
     if len(metadata_updated_pl) > 0:
         metadata_updated_pd = metadata_updated_pl.to_pandas()
         metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
