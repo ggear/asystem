@@ -269,9 +269,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         schema=metadata_original_list[0],
         data=metadata_original_list[1:],
         orient="row"
-    ).sort("File Name")
-    metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in(
-        [media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()]))
+    )
+    if len(metadata_original_pl) > 0:
+        metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in(
+            [media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()]
+        )).sort("File Name")
     metadata_updated_pl = pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
     if len(metadata_updated_pl) > 0:
         metadata_updated_pd = metadata_updated_pl.to_pandas()
