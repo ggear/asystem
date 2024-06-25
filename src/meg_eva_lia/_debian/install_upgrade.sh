@@ -29,7 +29,7 @@ curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | gpg --batch -
 # Upgrade system
 ################################################################################
 echo "" && cat /etc/debian_version && echo ""
-apt-get update
+apt-get update --allow-releaseinfo-change
 apt-get upgrade -y --without-new-pkgs
 apt-get -y full-upgrade
 apt-get -y --purge autoremove
