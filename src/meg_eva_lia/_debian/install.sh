@@ -373,24 +373,24 @@ tuptime
 ################################################################################
 # Boot
 ################################################################################
-BOOT_ERRORS=$(
-  journalctl -b | grep -i error |
-    grep -v "ACPI Error: Needed type" |
-    grep -v "ACPI Error: AE_AML_OPERAND_TYPE" |
-    grep -v "ACPI Error: Aborting method" |
-    grep -v "20200925" |
-    grep -v "remount-ro" | grep -v "smartd" |
-    grep -v "Clock Unsynchronized" |
-    grep -v "dockerd" | grep -v "containerd" |
-    grep -v "/usr/lib/gnupg/scdaemon" |
-    grep -v "Temporary failure in name resolution"
-)
-echo "################################################################################"
-if [ "${BOOT_ERRORS}" == "" ]; then
-  echo "No Boot errors, yay!"
-else
-  echo "Boot errors encountered, boo!"
-  echo "################################################################################"
-  echo "${BOOT_ERRORS}"
-fi
-echo "################################################################################" || [ "${BOOT_ERRORS}" == "" ]
+#BOOT_ERRORS=$(
+#  journalctl -b | grep -i error |
+#    grep -v "ACPI Error: Needed type" |
+#    grep -v "ACPI Error: AE_AML_OPERAND_TYPE" |
+#    grep -v "ACPI Error: Aborting method" |
+#    grep -v "20200925" |
+#    grep -v "remount-ro" | grep -v "smartd" |
+#    grep -v "Clock Unsynchronized" |
+#    grep -v "dockerd" | grep -v "containerd" |
+#    grep -v "/usr/lib/gnupg/scdaemon" |
+#    grep -v "Temporary failure in name resolution"
+#)
+#echo "################################################################################"
+#if [ "${BOOT_ERRORS}" == "" ]; then
+#  echo "No Boot errors, yay!"
+#else
+#  echo "Boot errors encountered, boo!"
+#  echo "################################################################################"
+#  echo "${BOOT_ERRORS}"
+#fi
+#echo "################################################################################" || [ "${BOOT_ERRORS}" == "" ]
