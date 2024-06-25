@@ -32,8 +32,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         return -1
     files_analysed = 0
     metatdata_list = []
-    print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""))
-    sys.stdout.flush()
+    print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
     for file_dir_path, _, file_names in os.walk(file_path_root):
         for file_name in file_names:
             file_path = os.path.join(file_dir_path, file_name)
@@ -48,7 +47,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             if file_extension in {"yaml", "srt", "jpg", "jpeg", "log"}:
                 continue;
             if verbose:
-                print("{} ... ".format(os.path.join(file_relative_dir, file_name)), end='')
+                print("{} ... ".format(os.path.join(file_relative_dir, file_name)), end='', flush=True)
             if file_media_type not in {"movies", "series"}:
                 if file_media_type not in {"audio"}:
                     message = "ignoring library type [{}]".format(file_media_type)
@@ -56,7 +55,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         print(message)
                     else:
                         print("warning: {} for file [{}]".format(message, file_path))
-                        print("Analysing {} ... ".format(file_path_root), end="")
+                        print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                 continue;
             if file_extension not in {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}:
                 message = "ignoring unknown file extension [{}]".format(file_extension)
@@ -64,18 +63,18 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     print(message)
                 else:
                     print("warning: {} for file [{}]".format(message, file_path))
-                    print("Analysing {} ... ".format(file_path_root), end="")
+                    print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                 continue;
             if refresh or not os.path.isfile(file_metadata_path):
                 try:
                     file_probe = ffmpeg.probe(file_path)
                 except Error as error:
-                    message = "ignoring with ffmpeg probe error"
+                    message = "ignoring file given ffmpeg probe error"
                     if verbose:
                         print(message)
                     else:
                         print("warning: {} for file [{}]".format(message, file_path))
-                        print("Analysing {} ... ".format(file_path_root), end="")
+                        print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                     continue;
                 file_probe_streams_filtered = {
                     "video": [],
@@ -272,36 +271,38 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
 
                 metatdata_list.append(_flatten(_unwrap(yaml.safe_load(file_metadata))))
             files_analysed += 1
-    metadata_cache_pl = pl.DataFrame(metatdata_list)
-    metadata_columns = []
-    metadata_columns_streams = ("video", "audio", "subtitle", "other")
-    for metadata_column in metadata_cache_pl.columns:
-        if not metadata_column.startswith(metadata_columns_streams):
-            metadata_columns.append(metadata_column)
-    for metadata_column_stream in metadata_columns_streams:
-        for metadata_column in metadata_cache_pl.columns:
-            if metadata_column.startswith(metadata_column_stream):
+
+    def _format_columns(metadata_pl):
+        metadata_columns = []
+        metadata_columns_streams = ("video", "audio", "subtitle", "other")
+        for metadata_column in metadata_pl.columns:
+            if not metadata_column.lower().startswith(metadata_columns_streams):
                 metadata_columns.append(metadata_column)
-    metadata_cache_pl = metadata_cache_pl.select(metadata_columns) \
-        .rename(lambda column: \
-                    (column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") \
-                        if len(column.split("__")) == 2 else column.replace("_", " ").title())
+        for metadata_column_stream in metadata_columns_streams:
+            for metadata_column in metadata_pl.columns:
+                if metadata_column.lower().startswith(metadata_column_stream):
+                    metadata_columns.append(metadata_column)
+        return metadata_pl.select(metadata_columns) \
+            .rename(lambda column: \
+                        ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") \
+                             if len(column.split("__")) == 2 else column.replace("_", " ").title()) if "_" in column else column)
+
+    metadata_cache_pl = _format_columns(pl.DataFrame(metatdata_list))
     metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid, sheet="Data")
     metadata_original_list = metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())
     if len(metadata_original_list) > 0:
-        metadata_original_pl = pl.DataFrame(
+        metadata_original_pl = _format_columns(pl.DataFrame(
             schema=metadata_original_list[0],
             data=metadata_original_list[1:],
             orient="row"
-        )
+        ))
     else:
         metadata_original_pl = pl.DataFrame()
     if len(metadata_original_pl) > 0 and len(metadata_cache_pl) > 0:
         metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in(
             [media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()]
         ))
-    metadata_updated_pl = pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
-
+    metadata_updated_pl = _format_columns(pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal"))
     if len(metadata_updated_pl) > 0:
         metadata_updated_pd = metadata_updated_pl.to_pandas()
         metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
