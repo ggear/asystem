@@ -277,7 +277,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         )
     else:
         metadata_original_pl = pl.DataFrame()
-    if len(metadata_original_pl) > 0:
+    if len(metadata_original_pl) > 0 and len(metadata_cache_pl) > 0:
         metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in(
             [media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()]
         ))
