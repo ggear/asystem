@@ -287,9 +287,12 @@ ntpq -p
 ################################################################################
 # Python
 ################################################################################
-rm -rf /root/.pyenv
-git clone https://github.com/pyenv/pyenv.git /root/.pyenv
+if [ -d /root/.pyenv ]; then
+  git clone https://github.com/pyenv/pyenv.git /root/.pyenv
+fi
 cd /root/.pyenv
+git checkout master
+git pull --all
 git checkout v2.4.3
 ./src/configure && make -C src
 if [ $(grep "pyenv" /root/.bashrc | wc -l) -eq 0 ]; then
