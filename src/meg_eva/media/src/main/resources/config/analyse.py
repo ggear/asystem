@@ -269,11 +269,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         if len(column.split("__")) == 2 else column.replace("_", " ").title()).sort("File Name")
     metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid, sheet="Data")
     metadata_original_list = metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())
-    metadata_original_pl = pl.DataFrame(
-        schema=metadata_original_list[0],
-        data=metadata_original_list[1:],
-        orient="row"
-    )
+    if len(metadata_original_list) > 0:
+        metadata_original_pl = pl.DataFrame(
+            schema=metadata_original_list[0],
+            data=metadata_original_list[1:],
+            orient="row"
+        )
+    else:
+        metadata_original_pl = pl.DataFrame()
     if len(metadata_original_pl) > 0:
         metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in(
             [media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()]
