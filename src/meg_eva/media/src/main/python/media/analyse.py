@@ -46,19 +46,31 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             if verbose:
                 print("{} ... ".format(os.path.join(file_relative_dir, file_name)), end='')
             if file_media_type not in {"movies", "series"}:
+                message = "ignoring library type [{}]".format(file_media_type)
                 if verbose:
-                    print("ignoring library type [{}]".format(file_media_type))
+                    print(message)
+                else:
+                    print("warning: {}".format(message))
+                    print("Analysing {} ... ".format(file_path_root), end="")
                 continue;
             if file_extension not in {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}:
+                message = "ignoring unknown file extension [{}]".format(file_extension)
                 if verbose:
-                    print("ignoring unknown file extension [{}]".format(file_extension))
+                    print(message)
+                else:
+                    print("warning: {}".format(message))
+                    print("Analysing {} ... ".format(file_path_root), end="")
                 continue;
             if refresh or not os.path.isfile(file_metadata_path):
                 try:
                     file_probe = ffmpeg.probe(file_path)
                 except Error as error:
+                    message = "ignoring with ffmpeg probe error [{}]".format(error.stderr)
                     if verbose:
-                        print("ignoring with ffmpeg probe error [{}]".format(error.stderr))
+                        print(message)
+                    else:
+                        print("warning: {}".format(message))
+                        print("Analysing {} ... ".format(file_path_root), end="")
                     continue;
                 file_probe_streams_filtered = {
                     "video": [],
