@@ -98,7 +98,7 @@ def _rename(file_path_root, verbose=False):
                             )
                             file_name_new = "{}.{}".format(file_name_new, file_type)
                 if file_to_be_renamed:
-                    file_path_new = Path(file_path_new)
+                    file_path_new = Path(' '.join(file_path_new.split()))
                     if len(file_path_new.name) > 100:
                         file_path_new = Path("{}/{}/{}.{}".format(
                             file_path_new.parent.parent,
