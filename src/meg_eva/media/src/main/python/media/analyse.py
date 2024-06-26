@@ -153,14 +153,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
                             file_probe_stream_filtered.append({"format": "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"})
+
+
+
                     file_probe_transcode_priority = ""
                     file_probe_plex_mode = "Transcode"
                     file_probe_plex_direct_play_video = False
                     file_probe_plex_direct_play_audio = False
                     file_probe_messy_metadata = False
-                    file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
-                        if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
-
                     # TODO: Provide greater coverage, non-eng audio/subtitles, multiple video, grade based on number of subtitles/audio/video etc
                     # for file_probe_subtitles in file_probe_streams_filtered["subtitle"]:
                     #     for file_probe_subtitle in file_probe_subtitles.values():
@@ -168,6 +168,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     #                 file_probe_subtitle[2]["format"] == "Picture"
                     #         ):
                     #             file_probe_messy_metadata = True
+
+
+
+
+                    file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
+                        if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
+
 
                     for file_probe_videos in file_probe_streams_filtered["video"]:
                         for file_probe_video in file_probe_videos.values():
