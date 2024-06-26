@@ -1,2 +1,2 @@
 ../install.sh
-main/resources/config/all.sh
+main/resources/config/bin/.env

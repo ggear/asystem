@@ -6,7 +6,6 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 cd ${SERVICE_INSTALL} || exit
 
 . ./.env
-chmod +x config/*.sh
 
 for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
   for SHARE_DIR_SCOPE in "kids" "parents" "docos" "comedy"; do
@@ -24,5 +23,8 @@ fi
 mkdir -p /root/.config
 cp -rvf /var/lib/asystem/install/media/latest/config/.gspread_pandas /root/.config/gspread_pandas
 
-rm -rf /usr/bin/asystem-media
-ln -s /var/lib/asystem/install/media/latest/config/all.sh /usr/bin/asystem-media
+chmod +x config/bin/*.sh config/bin/lib/*.sh
+for SCRIPT in /var/lib/asystem/install/media/latest/config/bin/*.sh; do
+  rm -rf /usr/bin/asystem-$(basename ${SCRIPT})
+  ln -s ${SCRIPT} /usr/bin/asystem-$(basename ${SCRIPT})
+done
