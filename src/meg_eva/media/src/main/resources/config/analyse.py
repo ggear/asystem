@@ -50,7 +50,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                 print("{} ... ".format(os.path.join(file_relative_dir, file_name)), end='', flush=True)
             if file_media_type not in {"movies", "series"}:
                 if file_media_type not in {"audio"}:
-                    message = "ignoring library type [{}]".format(file_media_type)
+                    message = "ignoring, library type [{}]".format(file_media_type)
                     if verbose:
                         print(message)
                     else:
@@ -58,7 +58,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                 continue;
             if file_extension not in {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}:
-                message = "ignoring unknown file extension [{}]".format(file_extension)
+                message = "ignoring, unknown file extension [{}]".format(file_extension)
                 if verbose:
                     print(message)
                 else:
@@ -69,7 +69,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                 try:
                     file_probe = ffmpeg.probe(file_path)
                 except Error as error:
-                    message = "ignoring file given ffmpeg probe error"
+                    message = "ignoring, ffmpeg probe error"
                     if verbose:
                         print(message)
                     else:
@@ -306,8 +306,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
     )
     metadata_updated_pl = metadata_updated_pl.with_columns([
-        pl.when(pl.col(pl.Utf8).str.lengths() == 0)
-        .then(None).otherwise(pl.col(pl.Utf8)).keep_name()
+        pl.when(pl.col(pl.Utf8).str.len_bytes() == 0)
+        .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
     ])
     metadata_updated_pl = metadata_updated_pl[[
         column.name for column in metadata_updated_pl if not (column.null_count() == metadata_updated_pl.height)
