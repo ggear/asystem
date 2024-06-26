@@ -315,7 +315,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
     if len(metadata_updated_pl) > 0:
         metadata_updated_pd = metadata_updated_pl.to_pandas()
         metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
-        metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=True, index=True,
+        metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True,
                                     add_filter=True, freeze_index=True, freeze_headers=True)
 
     # with pl.Config(
