@@ -46,30 +46,30 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                 print("{} ... ".format(os.path.join(file_relative_dir, file_name)), end='', flush=True)
             if file_media_type not in {"movies", "series"}:
                 if file_media_type not in {"audio"}:
-                    message = "ignoring, library type [{}]".format(file_media_type)
+                    message = "skipping file due to unknown library type [{}]".format(file_media_type)
                     if verbose:
                         print(message)
                     else:
-                        print("warning: {} for file [{}]".format(message, file_path))
+                        print("{} [{}]".format(message, file_path))
                         print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                 continue;
             if file_extension not in {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}:
-                message = "ignoring, unknown file extension [{}]".format(file_extension)
+                message = "skipping file due to unknown file extension [{}]".format(file_extension)
                 if verbose:
                     print(message)
                 else:
-                    print("warning: {} for file [{}]".format(message, file_path))
+                    print("{} [{}]".format(message, file_path))
                     print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                 continue;
             if refresh or not os.path.isfile(file_metadata_path):
                 try:
                     file_probe = ffmpeg.probe(file_path)
                 except Error as error:
-                    message = "ignoring, ffmpeg probe error"
+                    message = "skipping file due to ffmpeg probe error"
                     if verbose:
                         print(message)
                     else:
-                        print("warning: {} for file [{}]".format(message, file_path))
+                        print("{} [{}]".format(message, file_path))
                         print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                     continue;
                 file_probe_streams_filtered = {
@@ -245,7 +245,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     print("wrote metadata file cache")
             else:
                 if verbose:
-                    print("skipping, metadata file already cached")
+                    print("metadata file already cached")
             with open(file_metadata_path, 'r') as file_metadata:
                 def _unwrap(lists):
                     if isinstance(lists, list):
