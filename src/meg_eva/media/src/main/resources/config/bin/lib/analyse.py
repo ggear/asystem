@@ -4,6 +4,7 @@ WARNING: This file is written by the build process, any manual edits will be los
 
 import argparse
 import os
+import re
 import sys
 from collections import OrderedDict
 from collections.abc import MutableMapping
@@ -31,19 +32,20 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
     files_analysed = 0
-    metatdata_list = []
+    metadata_list = []
     print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
     for file_dir_path, _, file_names in os.walk(file_path_root):
         for file_name in file_names:
+            file_metadata_written = False
             file_path = os.path.join(file_dir_path, file_name)
             file_relative_dir = "." + file_dir_path.replace(file_path_root, "")
             file_relative_dir_tokens = file_relative_dir.split(os.sep)
             file_extension = os.path.splitext(file_name)[1].replace(".", "")
-            file_metadata_path = os.path.join(file_dir_path, "{}.yaml".format(os.path.splitext(file_name)[0]))
+            file_metadata_path = os.path.join(file_dir_path, ".{}_metadata.yaml".format(os.path.splitext(file_name)[0]))
             file_media_scope = file_relative_dir_tokens[1] \
-                if len(file_relative_dir_tokens) > 3 else ""
+                if len(file_relative_dir_tokens) > 1 else ""
             file_media_type = file_relative_dir_tokens[2] \
-                if len(file_relative_dir_tokens) > 3 else ""
+                if len(file_relative_dir_tokens) > 2 else ""
             if file_extension in {"yaml", "srt", "jpg", "jpeg", "log"}:
                 continue;
             if verbose:
@@ -65,6 +67,16 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     print("{} [{}]".format(message, file_path))
                     print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                 continue;
+            file_base_tokens = 5 if (
+                    file_media_type == "series" and
+                    len(file_relative_dir_tokens) > 4 and
+                    re.search("^Season [1-9]+[0-9]*", file_relative_dir_tokens[4]) is not None
+            ) else 4
+            file_version_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens:]) \
+                if len(file_relative_dir_tokens) > file_base_tokens else "."
+            file_base_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens - 1:]) \
+                .replace("/" + file_version_dir, "")
+            file_base_dir = file_base_dir if len(file_base_dir) > 0 else "."
             if refresh or not os.path.isfile(file_metadata_path):
                 try:
                     file_probe = ffmpeg.probe(file_path)
@@ -157,53 +169,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
                             file_probe_stream_filtered.append({"format": "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"})
-                    file_probe_transcode_priority = ""
-                    file_probe_plex_mode = "Transcode"
-                    file_probe_plex_direct_play_video = False
-                    file_probe_plex_direct_play_audio = False
-                    file_probe_messy_metadata = False
                     file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
                         if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
-
-                    # TODO: Provide greater coverage, non-eng audio/subtitles, multiple video, grade based on number of subtitles/audio/video etc
-                    # for file_probe_subtitles in file_probe_streams_filtered["subtitle"]:
-                    #     for file_probe_subtitle in file_probe_subtitles.values():
-                    #         if (
-                    #                 file_probe_subtitle[2]["format"] == "Picture"
-                    #         ):
-                    #             file_probe_messy_metadata = True
-
-                    for file_probe_videos in file_probe_streams_filtered["video"]:
-                        for file_probe_video in file_probe_videos.values():
-                            if (
-                                    file_extension == "avi" and file_probe_video[2]["codec"] in {"MPEG4", "MJPEG"} or \
-                                    file_extension == "m2ts" and file_probe_video[2]["codec"] in {"AVC", "HEVC", "MPEG2VIDEO"} or \
-                                    file_extension == "mkv" and file_probe_video[2]["codec"] in {"AVC", "HEVC", "MPEG2VIDEO", "MPEG4"} or \
-                                    file_extension == "mov" and file_probe_video[2]["codec"] in {"AVC", "MPEG4"} or \
-                                    file_extension == "mp4" and file_probe_video[2]["codec"] in {"AVC", "HEVC"} or \
-                                    file_extension == "wmv" and file_probe_video[2]["codec"] in {"WMV3", "VC1"}
-                            ):
-                                file_probe_plex_direct_play_video = True
-                    for file_probe_audios in file_probe_streams_filtered["audio"]:
-                        for file_probe_audio in file_probe_audios.values():
-                            if (
-                                    file_extension == "avi" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "m2ts" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "mkv" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "mov" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3"} or file_extension == "mp4" and \
-                                    file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3"} or file_extension == "wmv" and \
-                                    file_probe_audio[2]["codec"] in {"EAC3", "AC3", "WMAPRO", "WMAV2"}
-                            ):
-                                file_probe_plex_direct_play_audio = True
-                    if file_probe_plex_direct_play_video and file_probe_plex_direct_play_audio:
-                        file_probe_plex_mode = "Direct Play"
-                        if file_probe_bit_rate > 12000:
-                            file_probe_transcode_priority = "2"
-                        elif file_probe_messy_metadata:
-                            file_probe_transcode_priority = "3"
-                    else:
-                        file_probe_transcode_priority = "1"
                     file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2 \
                         if ("format" in file_probe and "duration" in file_probe["format"]) else -1
                     file_probe_size_gb = int(file_probe["format"]["size"]) / 10 ** 9 \
@@ -214,14 +181,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         {"media_directory": file_path_root},
                         {"media_scope": file_media_scope},
                         {"media_type": file_media_type},
-                        {"version_directory": os.path.dirname(file_probe["format"]["filename"]) \
-                            .replace(os.path.join(file_path_root, file_media_scope, file_media_type) + "/", "") \
-                            if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
-                        {"plex_mode": file_probe_plex_mode},
-                        {"plex_mode_video": "Direct Play" if file_probe_plex_direct_play_video else "Transcode"},
-                        {"plex_mode_audio": "Direct Play" if file_probe_plex_direct_play_audio else "Transcode"},
-                        {"metadata_state": "Messy" if file_probe_messy_metadata else "Clean"},
-                        {"transcode_priority": file_probe_transcode_priority},
+                        {"base_directory": file_base_dir},
+                        {"version_directory": file_version_dir},
                         {"file_extension": file_extension},
                         {"container_format": file_probe["format"]["format_name"].lower() \
                             if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
@@ -230,7 +191,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         {"size__GB": str(round(file_probe_size_gb, 2 if file_probe_duration_h > 1 else 4)) \
                             if file_probe_size_gb > 0 else ""},
                         {"bit_rate__Kbps": str(file_probe_bit_rate) if file_probe_bit_rate > 0 else ""},
-                        {"stream_count": str(sum(map(len, file_probe_streams_filtered.values())))}
+                        {"stream_count": str(sum(map(len, file_probe_streams_filtered.values())))},
                     ]
                     for file_probe_stream_type in file_probe_streams_filtered:
                         file_probe_filtered.append({"{}_count".format(file_probe_stream_type):
@@ -243,13 +204,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                             file_probe_filtered.append({"{}_english_count".format(file_probe_stream_type): str(language_english_count)})
                         file_probe_filtered.append({file_probe_stream_type:
                                                         file_probe_streams_filtered[file_probe_stream_type]})
-                    with open(file_metadata_path, 'w') as file_metadata:
-                        yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
-                if verbose:
-                    print("wrote metadata file cache")
-            else:
-                if verbose:
-                    print("metadata file already cached")
+                with open(file_metadata_path, 'w') as file_metadata:
+                    yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
+                file_metadata_written = True
             with open(file_metadata_path, 'r') as file_metadata:
                 def _unwrap(lists):
                     if isinstance(lists, list):
@@ -259,17 +216,31 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         return dicts
                     return lists
 
-                def _flatten(dicts, parent_key='', separator='_'):
+                def _flatten(dicts, parent_key=''):
                     items = []
                     for key, value in dicts.items():
-                        new_key = parent_key + separator + str(key) if parent_key else str(key)
+                        new_key = parent_key + '_' + str(key) if parent_key else str(key)
                         if isinstance(value, MutableMapping):
-                            items.extend(_flatten(value, new_key, separator=separator).items())
+                            items.extend(_flatten(value, new_key).items())
                         else:
                             items.append((new_key, value))
                     return OrderedDict(items)
 
-                metatdata_list.append(_flatten(_unwrap(yaml.safe_load(file_metadata))))
+                try:
+                    metadata_list.append(_flatten(_unwrap(yaml.safe_load(file_metadata))))
+                    if verbose:
+                        if file_metadata_written:
+                            print("wrote and loaded metadata file cache")
+                        else:
+                            print("loaded metadata file cache")
+                except Exception:
+                    message = "skipping file due to metadata cache load error"
+                    if verbose:
+                        print(message)
+                    else:
+                        print("{} [{}]".format(message, file_path))
+                        print("Analysing {} ... ".format(file_path_root), end="", flush=True)
+                    continue
             files_analysed += 1
 
     def _format_columns(metadata_pl):
@@ -286,8 +257,23 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             .rename(lambda column: \
                         ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") \
                              if len(column.split("__")) == 2 else column.replace("_", " ").title()) if "_" in column else column)
+    metadata_enriched_list = []
+    for metadata in metadata_list:
+        def _add(key, value):
+            metadata.update({key: value})
+            metadata.move_to_end(key, last=False)
 
-    metadata_cache_pl = _format_columns(pl.DataFrame(metatdata_list))
+        _add("versions_count", "1")
+        _add("transcode_priority", "1")
+        _add("metadata_state", "Clean")
+        _add("plex_subtitle", "Direct Play")
+        _add("plex_audio", "Direct Play")
+        _add("plex_video", "Direct Play")
+        _add("media_size", "Right")
+        _add("media_state", "Complete")
+        metadata.move_to_end("file_name", last=False)
+        metadata_enriched_list.append(dict(metadata))
+    metadata_cache_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
     metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid, sheet="Data")
     metadata_original_list = metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())
     if len(metadata_original_list) > 0:
@@ -305,9 +291,46 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
     metadata_updated_pl = _format_columns(
         pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
     )
+
+    # TODO: Fill in metadata_updated_pl
+    # metadata_versions_count = "1"
+    # metadata_transcode_priority = "1"
+    # metadata_metadata_state = "Clean|Messy|Invalid"
+    # metadata_plex_subtitle = "Direct Play"
+    # metadata_plex_audio = "Direct Play"
+    # metadata_plex_video = "Direct Play"
+    # metadata_media_size = "Large|Small|Right"
+    # metadata_media_state = "Complete|Incomplete|Corrupt"
+
+    file_probe_plex_direct_play_video = False
+    file_probe_plex_direct_play_audio = False
+    file_probe_messy_metadata = False
+    # for file_probe_videos in file_probe_streams_filtered["video"]:
+    #     for file_probe_video in file_probe_videos.values():
+    #         if (
+    #                 file_extension == "avi" and file_probe_video[2]["codec"] in {"MPEG4", "MJPEG"} or \
+    #                 file_extension == "m2ts" and file_probe_video[2]["codec"] in {"AVC", "HEVC", "MPEG2VIDEO"} or \
+    #                 file_extension == "mkv" and file_probe_video[2]["codec"] in {"AVC", "HEVC", "MPEG2VIDEO", "MPEG4"} or \
+    #                 file_extension == "mov" and file_probe_video[2]["codec"] in {"AVC", "MPEG4"} or \
+    #                 file_extension == "mp4" and file_probe_video[2]["codec"] in {"AVC", "HEVC"} or \
+    #                 file_extension == "wmv" and file_probe_video[2]["codec"] in {"WMV3", "VC1"}
+    #         ):
+    #             file_probe_plex_direct_play_video = True
+    # for file_probe_audios in file_probe_streams_filtered["audio"]:
+    #     for file_probe_audio in file_probe_audios.values():
+    #         if (
+    #                 file_extension == "avi" and \
+    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "m2ts" and \
+    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "mkv" and \
+    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "mov" and \
+    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3"} or file_extension == "mp4" and \
+    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3"} or file_extension == "wmv" and \
+    #                 file_probe_audio[2]["codec"] in {"EAC3", "AC3", "WMAPRO", "WMAV2"}
+    #         ):
+    #             file_probe_plex_direct_play_audio = True
+
     metadata_updated_pl = metadata_updated_pl.with_columns([
-        pl.when(pl.col(pl.Utf8).str.len_bytes() == 0)
-        .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
+        pl.when(pl.col(pl.Utf8).str.len_bytes() == 0).then(None).otherwise(pl.col(pl.Utf8)).name.keep()
     ])
     metadata_updated_pl = metadata_updated_pl[[
         column.name for column in metadata_updated_pl if not (column.null_count() == metadata_updated_pl.height)
@@ -318,6 +341,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True,
                                     add_filter=True, freeze_index=True, freeze_headers=True)
 
+    # TODO
     # with pl.Config(
     #         tbl_rows=-1,
     #         tbl_cols=-1,

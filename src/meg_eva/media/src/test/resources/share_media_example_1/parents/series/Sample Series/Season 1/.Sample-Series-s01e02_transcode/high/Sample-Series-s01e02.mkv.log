@@ -1,0 +1,162 @@
+ffmpeg started on 2024-06-27 at 10:38:58
+Report written to "_ffmpeg_16571_72446.mkv.log"
+Log level: 40
+Command line:
+ffmpeg -loglevel error -stats -i ../../Sample-Series-s01e01.mkv -map 0:0 -c:v libx265 -pix_fmt:v yuv420p10le -b:v 2000k -maxrate:v 10000k -bufsize:v 10000k -color_primaries:v bt2020 -color_trc:v smpte2084 -colorspace:v bt2020nc -metadata:s:v "title=" -disposition:v default -map 0:1 -c:a:0 copy -metadata:s:a:0 "title=" -disposition:a:0 default -sn -metadata:g "title=" -default_mode passthrough Sample-Series-s01e01.mkv
+ffmpeg version 7.0.1 Copyright (c) 2000-2024 the FFmpeg developers
+  built with Apple clang version 15.0.0 (clang-1500.3.9.4)
+  configuration: --prefix=/usr/local/Cellar/ffmpeg/7.0.1 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox
+  libavutil      59.  8.100 / 59.  8.100
+  libavcodec     61.  3.100 / 61.  3.100
+  libavformat    61.  1.100 / 61.  1.100
+  libavdevice    61.  1.100 / 61.  1.100
+  libavfilter    10.  1.100 / 10.  1.100
+  libswscale      8.  1.100 /  8.  1.100
+  libswresample   5.  1.100 /  5.  1.100
+  libpostproc    58.  1.100 / 58.  1.100
+[h264 @ 0x7f8199106240] Reinit context to 1280x544, pix_fmt: yuv420p
+Input #0, matroska,webm, from '../../Sample-Series-s01e01.mkv':
+  Metadata:
+    IMDB            : tt20256448
+    TMDB            : movie/832262
+    ENCODER         : Lavf61.1.100
+  Duration: 00:00:07.01, start: -0.005000, bitrate: 2425 kb/s
+  Chapters:
+    Chapter #0:0: start 0.000000, end 213.875000
+      Metadata:
+        title           : Chapter 11
+    Chapter #0:1: start 213.875000, end 488.917000
+      Metadata:
+        title           : Chapter 12
+    Chapter #0:2: start 488.917000, end 489.709000
+      Metadata:
+        title           : Chapter 13
+  Stream #0:0(eng): Video: h264 (High), yuv420p(tv, bt2020nc/bt2020/smpte2084, progressive), 1280x534, SAR 801:800 DAR 12:5, 24 fps, 24 tbr, 1k tbn (default)
+      Metadata:
+        ENCODER         : Lavc61.3.100 h264_videotoolbox
+        BPS             : 2302343
+        DURATION        : 00:00:05.999666666
+        NUMBER_OF_FRAMES: 144
+        NUMBER_OF_BYTES : 1726470
+        _STATISTICS_WRITING_APP: mkvpropedit v85.0 ('Shame For You') 64-bit
+        _STATISTICS_WRITING_DATE_UTC: 2024-06-12 03:50:20
+        _STATISTICS_TAGS: BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES
+      Side data:
+        DOVI configuration record: version: 1.0, profile: 8, level: 6, rpu flag: 1, el flag: 0, bl flag: 1, compatibility id: 1
+  Stream #0:1(eng): Audio: ac3, 48000 Hz, 5.1(side), fltp, 448 kb/s (default)
+      Metadata:
+        ENCODER         : Lavc61.3.100 ac3
+        BPS             : 448000
+        DURATION        : 00:00:07.008000000
+        NUMBER_OF_FRAMES: 219
+        NUMBER_OF_BYTES : 392448
+        _STATISTICS_WRITING_APP: mkvpropedit v85.0 ('Shame For You') 64-bit
+        _STATISTICS_WRITING_DATE_UTC: 2024-06-12 03:50:20
+        _STATISTICS_TAGS: BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES
+[out#0/matroska @ 0x7f8189805680] Adding streams from explicit maps...
+[vost#0:0/libx265 @ 0x7f8189806a40] Created video stream from input stream 0:0
+[aost#0:1/copy @ 0x7f818988d540] Created audio stream from input stream 0:1
+Stream mapping:
+  Stream #0:0 -> #0:0 (h264 (native) -> hevc (libx265))
+  Stream #0:1 -> #0:1 (copy)
+[vost#0:0/libx265 @ 0x7f8189806a40] Starting thread...
+[vf#0:0 @ 0x7f8189807680] Starting thread...
+[vist#0:0/h264 @ 0x7f8189805dc0] [dec:h264 @ 0x7f81898087c0] Starting thread...
+[in#0/matroska,webm @ 0x7f8199104480] Starting thread...
+Press [q] to stop, [?] for help
+[h264 @ 0x7f8189809d80] Reinit context to 1280x544, pix_fmt: yuv420p
+[graph 0 input from stream 0:0 @ 0x7f8198707980] w:1280 h:534 pixfmt:yuv420p tb:1/1000 fr:24/1 sar:801/800 csp:bt2020nc range:tv
+[auto_scale_0 @ 0x7f8198708f00] w:iw h:ih flags:'' interl:0
+[format @ 0x7f8198707f00] auto-inserting filter 'auto_scale_0' between the filter 'Parsed_null_0' and the filter 'format'
+[auto_scale_0 @ 0x7f8198708f00] w:1280 h:534 fmt:yuv420p csp:bt2020nc range:tv sar:801/800 -> w:1280 h:534 fmt:yuv420p10le csp:bt2020nc range:tv sar:801/800 flags:0x00000004
+[graph 0 input from stream 0:0 @ 0x7f8198707980] video frame properties congruent with link at pts_time: 1.005
+Output #0, matroska, to 'Sample-Series-s01e01.mkv':
+  Metadata:
+    IMDB            : tt20256448
+    TMDB            : movie/832262
+    encoder         : Lavf61.1.100
+  Chapters:
+    Chapter #0:0: start 0.005000, end 213.880000
+      Metadata:
+        title           : Chapter 11
+    Chapter #0:1: start 213.880000, end 488.922000
+      Metadata:
+        title           : Chapter 12
+    Chapter #0:2: start 488.922000, end 489.714000
+      Metadata:
+        title           : Chapter 13
+  Stream #0:0(eng): Video: hevc, yuv420p10le(tv, bt2020nc/bt2020/smpte2084, progressive), 1280x534 [SAR 801:800 DAR 12:5], q=2-31, 2000 kb/s, 24 fps, 1k tbn (default)
+      Metadata:
+        _STATISTICS_TAGS: BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES
+        BPS             : 2302343
+        DURATION        : 00:00:05.999666666
+        NUMBER_OF_FRAMES: 144
+        NUMBER_OF_BYTES : 1726470
+        _STATISTICS_WRITING_APP: mkvpropedit v85.0 ('Shame For You') 64-bit
+        _STATISTICS_WRITING_DATE_UTC: 2024-06-12 03:50:20
+        encoder         : Lavc61.3.100 libx265
+      Side data:
+        cpb: bitrate max/min/avg: 10000000/0/2000000 buffer size: 10000000 vbv_delay: N/A
+        DOVI configuration record: version: 1.0, profile: 8, level: 6, rpu flag: 1, el flag: 0, bl flag: 1, compatibility id: 1
+  Stream #0:1(eng): Audio: ac3 ([0] [0][0] / 0x2000), 48000 Hz, 5.1(side), fltp, 448 kb/s (default)
+      Metadata:
+        ENCODER         : Lavc61.3.100 ac3
+        BPS             : 448000
+        DURATION        : 00:00:07.008000000
+        NUMBER_OF_FRAMES: 219
+        NUMBER_OF_BYTES : 392448
+        _STATISTICS_WRITING_APP: mkvpropedit v85.0 ('Shame For You') 64-bit
+        _STATISTICS_WRITING_DATE_UTC: 2024-06-12 03:50:20
+        _STATISTICS_TAGS: BPS DURATION NUMBER_OF_FRAMES NUMBER_OF_BYTES
+[out#0/matroska @ 0x7f8189805680] Starting thread...
+[in#0/matroska,webm @ 0x7f8199104480] EOF while reading input
+[in#0/matroska,webm @ 0x7f8199104480] Terminating thread with return code 0 (success)
+[vist#0:0/h264 @ 0x7f8189805dc0] [dec:h264 @ 0x7f81898087c0] Decoder thread received EOF packet
+[vist#0:0/h264 @ 0x7f8189805dc0] [dec:h264 @ 0x7f81898087c0] Decoder returned EOF, finishing
+[vist#0:0/h264 @ 0x7f8189805dc0] [dec:h264 @ 0x7f81898087c0] Terminating thread with return code 0 (success)
+[vf#0:0 @ 0x7f8189807680] Filtergraph returned EOF, finishing
+[vf#0:0 @ 0x7f8189807680] All consumers returned EOF
+[vf#0:0 @ 0x7f8189807680] Terminating thread with return code 0 (success)
+[vost#0:0/libx265 @ 0x7f8189806a40] Encoder thread received EOF
+[vost#0:0/libx265 @ 0x7f8189806a40] Terminating thread with return code 0 (success)
+[out#0/matroska @ 0x7f8189805680] All streams finished
+[out#0/matroska @ 0x7f8189805680] Terminating thread with return code 0 (success)
+[AVIOContext @ 0x7f818988da40] Statistics: 1816396 bytes written, 3 seeks, 9 writeouts
+[out#0/matroska @ 0x7f8189805680] Output file #0 (Sample-Series-s01e01.mkv):
+[out#0/matroska @ 0x7f8189805680]   Output stream #0:0 (video): 144 frames encoded; 144 packets muxed (1413175 bytes); 
+[out#0/matroska @ 0x7f8189805680]   Output stream #0:1 (audio): 219 packets muxed (392448 bytes); 
+[out#0/matroska @ 0x7f8189805680]   Total: 363 packets (1805623 bytes) muxed
+[out#0/matroska @ 0x7f8189805680] video:1380KiB audio:383KiB subtitle:0KiB other streams:0KiB global headers:3KiB muxing overhead: 0.377598%
+[in#0/matroska,webm @ 0x7f8199104480] Input file #0 (../../Sample-Series-s01e01.mkv):
+[in#0/matroska,webm @ 0x7f8199104480]   Input stream #0:0 (video): 144 packets read (1726470 bytes); 144 frames decoded; 0 decode errors; 
+[in#0/matroska,webm @ 0x7f8199104480]   Input stream #0:1 (audio): 219 packets read (392448 bytes); 
+[in#0/matroska,webm @ 0x7f8199104480]   Total: 363 packets (2118918 bytes) demuxed
+[AVIOContext @ 0x7f8199104c80] Statistics: 2156447 bytes read, 2 seeks
+Stats:
+x265 [info]: HEVC encoder version 3.5+1-f0c1022b6
+x265 [info]: build info [Mac OS X][clang 15.0.0][64 bit] 10bit
+x265 [info]: using cpu capabilities: MMX2 SSE2Fast LZCNT SSSE3 SSE4.2 AVX FMA3 BMI2 AVX2
+x265 [info]: Main 10 profile, Level-3.1 (Main tier)
+x265 [info]: Thread pool created using 12 threads
+x265 [info]: Slices                              : 1
+x265 [info]: frame threads / pool features       : 3 / wpp(9 rows)
+x265 [warning]: Source height < 720p; disabling lookahead-slices
+x265 [info]: Coding QT: max CU size, min CU size : 64 / 8
+x265 [info]: Residual QT: max TU size, max depth : 32 / 1 inter / 1 intra
+x265 [info]: ME / range / subpel / merge         : hex / 57 / 2 / 3
+x265 [info]: Keyframe min / max / scenecut / bias  : 24 / 250 / 40 / 5.00 
+x265 [info]: Lookahead / bframes / badapt        : 20 / 4 / 2
+x265 [info]: b-pyramid / weightp / weightb       : 1 / 1 / 0
+x265 [info]: References / ref-limit  cu / depth  : 3 / off / on
+x265 [info]: AQ: mode / str / qg-size / cu-tree  : 2 / 1.0 / 32 / 1
+x265 [info]: Rate Control / qCompress            : ABR-2000 kbps / 0.60
+x265 [info]: VBV/HRD buffer / max-rate / init    : 10000 / 10000 / 0.750
+x265 [info]: tools: rd=3 psy-rd=2.00 early-skip rskip mode=1 signhide tmvp
+x265 [info]: tools: b-intra strong-intra-smoothing deblock sao
+frame=  144 fps= 45 q=18.4 Lsize=    1770KiB time=00:00:06.91 bitrate=2096.3kbits/s speed=2.16x    
+x265 [info]: frame I:      1, Avg QP:18.25  kb/s: 3817.54 
+x265 [info]: frame P:     35, Avg QP:10.74  kb/s: 6345.14 
+x265 [info]: frame B:    108, Avg QP:18.18  kb/s: 419.64  
+x265 [info]: Weighted P-Frames: Y:0.0% UV:0.0%
+
+encoded 144 frames in 3.18s (45.35 fps), 1883.47 kb/s, Avg QP:16.37
