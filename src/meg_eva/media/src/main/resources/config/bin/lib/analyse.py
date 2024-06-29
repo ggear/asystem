@@ -35,8 +35,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid, sheet="Data")
     if clean:
         print("Cleaning {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
-        metadata_spread.df_to_sheet(pd.DataFrame(), sheet="Data", replace=False, index=True,
-                                    add_filter=True, freeze_index=True, freeze_headers=True)
+        metadata_spread.df_to_sheet(pd.DataFrame(), sheet="Data", replace=True)
         print("{}done".format("Cleaning {} ".format(file_path_root) if verbose else ""))
         return 0
     files_analysed = 0
