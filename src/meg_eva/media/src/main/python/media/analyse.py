@@ -7,6 +7,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 import ffmpeg
+import pandas as pd
 import polars as pl
 import yaml
 from ffmpeg._run import Error
@@ -23,10 +24,17 @@ from gspread_pandas import Spread
 # build a global replace script, dry run showing which items, execute actually doing the work
 
 
-def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
+def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
+    metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid, sheet="Data")
+    if clean:
+        print("Cleaning {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
+        metadata_spread.df_to_sheet(pd.DataFrame(), sheet="Data", replace=False, index=True,
+                                    add_filter=True, freeze_index=True, freeze_headers=True)
+        print("{}done".format("Cleaning {} ".format(file_path_root) if verbose else ""))
+        return 0
     files_analysed = 0
     metadata_list = []
     print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
@@ -302,7 +310,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
     metadata_cache_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
-    metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid, sheet="Data")
     metadata_original_list = metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())
     if len(metadata_original_list) > 0:
         metadata_original_pl = _format_columns(pl.DataFrame(
@@ -460,6 +467,7 @@ if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
     argument_parser.add_argument("--verbose", default=False, action="store_true")
     argument_parser.add_argument("--refresh", default=False, action="store_true")
+    argument_parser.add_argument("--clean", default=False, action="store_true")
     argument_parser.add_argument("directory")
     argument_parser.add_argument("sheetguid")
     arguments = argument_parser.parse_args()
@@ -468,4 +476,5 @@ if __name__ == "__main__":
         arguments.sheetguid,
         arguments.verbose,
         arguments.refresh,
+        arguments.clean,
     ) < 0 else 0)

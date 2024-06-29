@@ -5,6 +5,7 @@ if [ ! -d "${SHARE_DIR}" ]; then
   echo "Usage: ${0} <media-tmp-dir>"
   exit 1
 fi
+
 if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
   IMPORT_MEDIA_DEV="/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
   if [ -a ${IMPORT_MEDIA_DEV} ]; then

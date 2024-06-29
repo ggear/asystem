@@ -5,6 +5,7 @@ if [ ! -d "${SHARE_DIR}" ]; then
   echo "Usage: ${0} <share-dir>"
   exit 1
 fi
+
 echo -n "Normalising ${SHARE_DIR} ... "
 if [ "$(grep -c graham /etc/passwd)" -gt 0 ] && [ "$(grep -c users /etc/group)" -gt 0 ]; then
   setfacl -bR "${SHARE_DIR}"
