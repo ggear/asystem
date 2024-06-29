@@ -7,7 +7,6 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 import ffmpeg
-import pandas as pd
 import polars as pl
 import yaml
 from ffmpeg._run import Error
@@ -87,6 +86,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             while not os.path.isfile(file_transcode_path) and file_transcode_dir != file_path_root:
                 file_transcode_dir = os.path.dirname(file_transcode_dir)
                 file_transcode_path = os.path.join(file_transcode_dir, "._transcode.yaml")
+            file_target_quality = "Medium"
+            file_native_language = "eng"
+            file_desired_language = "eng"
             if os.path.isfile(file_transcode_path):
                 with open(file_transcode_path, 'r') as file_transcode:
                     try:
@@ -95,6 +97,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_target_quality = metadata_transcode_dict["target_quality"]
                         if "native_language" in metadata_transcode_dict:
                             file_native_language = metadata_transcode_dict["native_language"]
+                        if "desired_language" in metadata_transcode_dict:
+                            desired_language = metadata_transcode_dict["desired_language"]
                     except Exception:
                         message = "skipping file due to transcode metadata cache [{}] load error".format(file_transcode)
                         if verbose:
@@ -103,9 +107,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             print("{} [{}]".format(message, file_path))
                             print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                         continue
-            else:
-                file_target_quality = "Medium"
-                file_native_language = "eng"
             if refresh or not os.path.isfile(file_metadata_path):
                 try:
                     file_probe = ffmpeg.probe(file_path)
@@ -189,13 +190,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_native_language})
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_desired_language})
                             file_probe_stream_filtered.append({"channels": str(file_probe_stream["channels"])})
                         elif file_probe_stream_type == "subtitle":
                             file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_native_language})
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_desired_language})
                             file_probe_stream_filtered.append({"format": "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"})
                     file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
@@ -205,12 +206,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     file_probe_size_gb = int(file_probe["format"]["size"]) / 10 ** 9 \
                         if ("format" in file_probe and "size" in file_probe["format"]) else -1
 
-
-
-
-
-
                     # TODO: Add what you need in the yaml, flattening out streams to high level flags ala Picture
+                    # TODO: kill eng_count's
                     # Video - sort by "width" desc
                     # Audio - sort group 1 by "native_language" in "language" and "AAC, AC3, EAC3, MP3" in "codec" sprted by "channels" and then remaining in group 2 by "channels"
                     # Subtitle - sort group 1 by "eng" in "language" "not pictuire" in "codec" and then remaining in group 2 by "index"
@@ -218,18 +215,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     #     for file_probe_video in file_probe_videos.values():
                     #         print(file_probe_video[2]["codec"])
 
-
-
-
-
-
-
-
                     file_probe_filtered = [
                         {"file_name": os.path.basename(file_probe["format"]["filename"]) \
                             if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
                         {"target_quality": file_target_quality},
                         {"native_language": file_native_language},
+                        {"desired_language": file_desired_language},
                         {"media_directory": file_path_root},
                         {"media_scope": file_media_scope},
                         {"media_type": file_media_type},
