@@ -40,8 +40,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             file_path = os.path.join(file_dir_path, file_name)
             file_relative_dir = "." + file_dir_path.replace(file_path_root, "")
             file_relative_dir_tokens = file_relative_dir.split(os.sep)
+            file_name_sans_extension = os.path.splitext(file_name)[0]
             file_extension = os.path.splitext(file_name)[1].replace(".", "")
-            file_metadata_path = os.path.join(file_dir_path, ".{}_metadata.yaml".format(os.path.splitext(file_name)[0]))
+            file_metadata_path = os.path.join(file_dir_path, ".{}_metadata.yaml".format(file_name_sans_extension))
             file_media_scope = file_relative_dir_tokens[1] \
                 if len(file_relative_dir_tokens) > 1 else ""
             file_media_type = file_relative_dir_tokens[2] \
@@ -77,6 +78,30 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             file_base_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens - 1:]) \
                 .replace("/" + file_version_dir, "")
             file_base_dir = file_base_dir if len(file_base_dir) > 0 else "."
+            file_transcode_dir = os.path.join(file_path_root, file_media_scope, file_media_type, file_base_dir)
+            file_transcode_path = os.path.join(file_transcode_dir, ".{}_transcode.yaml".format(file_name_sans_extension))
+            while not os.path.isfile(file_transcode_path) and file_transcode_dir != file_path_root:
+                file_transcode_dir = os.path.dirname(file_transcode_dir)
+                file_transcode_path = os.path.join(file_transcode_dir, "._transcode.yaml")
+            if os.path.isfile(file_transcode_path):
+                with open(file_transcode_path, 'r') as file_transcode:
+                    try:
+                        metadata_transcode_dict = _unwrap_lists(yaml.safe_load(file_transcode))
+                        if "target_quality" in metadata_transcode_dict:
+                            file_target_quality = metadata_transcode_dict["target_quality"]
+                        if "native_language" in metadata_transcode_dict:
+                            file_native_language = metadata_transcode_dict["native_language"]
+                    except Exception:
+                        message = "skipping file due to transcode metadata cache [{}] load error".format(file_transcode)
+                        if verbose:
+                            print(message)
+                        else:
+                            print("{} [{}]".format(message, file_path))
+                            print("Analysing {} ... ".format(file_path_root), end="", flush=True)
+                        continue
+            else:
+                file_target_quality = "Medium"
+                file_native_language = "eng"
             if refresh or not os.path.isfile(file_metadata_path):
                 try:
                     file_probe = ffmpeg.probe(file_path)
@@ -160,13 +185,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                             file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_native_language})
                             file_probe_stream_filtered.append({"channels": str(file_probe_stream["channels"])})
                         elif file_probe_stream_type == "subtitle":
                             file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""})
                             file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else ""})
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_native_language})
                             file_probe_stream_filtered.append({"format": "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"})
                     file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
@@ -175,14 +200,38 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                         if ("format" in file_probe and "duration" in file_probe["format"]) else -1
                     file_probe_size_gb = int(file_probe["format"]["size"]) / 10 ** 9 \
                         if ("format" in file_probe and "size" in file_probe["format"]) else -1
+
+
+
+
+
+
+                    # TODO: Add what you need in the yaml, flattening out streams to high level flags ala Picture
+                    # Video - sort by "width" desc
+                    # Audio - sort group 1 by "native_language" in "language" and "AAC, AC3, EAC3, MP3" in "codec" sprted by "channels" and then remaining in group 2 by "channels"
+                    # Subtitle - sort group 1 by "eng" in "language" "not pictuire" in "codec" and then remaining in group 2 by "index"
+                    # for file_probe_videos in file_probe_streams_filtered["video"]:
+                    #     for file_probe_video in file_probe_videos.values():
+                    #         print(file_probe_video[2]["codec"])
+
+
+
+
+
+
+
+
                     file_probe_filtered = [
                         {"file_name": os.path.basename(file_probe["format"]["filename"]) \
                             if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
+                        {"target_quality": file_target_quality},
+                        {"native_language": file_native_language},
                         {"media_directory": file_path_root},
                         {"media_scope": file_media_scope},
                         {"media_type": file_media_type},
                         {"base_directory": file_base_dir},
                         {"version_directory": file_version_dir},
+                        {"file_path": file_path},
                         {"file_extension": file_extension},
                         {"container_format": file_probe["format"]["format_name"].lower() \
                             if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
@@ -208,26 +257,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
                     yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
                 file_metadata_written = True
             with open(file_metadata_path, 'r') as file_metadata:
-                def _unwrap(lists):
-                    if isinstance(lists, list):
-                        dicts = OrderedDict()
-                        for item in lists:
-                            dicts[next(iter(item))] = _unwrap(next(iter(item.values())))
-                        return dicts
-                    return lists
-
-                def _flatten(dicts, parent_key=''):
-                    items = []
-                    for key, value in dicts.items():
-                        new_key = parent_key + '_' + str(key) if parent_key else str(key)
-                        if isinstance(value, MutableMapping):
-                            items.extend(_flatten(value, new_key).items())
-                        else:
-                            items.append((new_key, value))
-                    return OrderedDict(items)
-
                 try:
-                    metadata_list.append(_flatten(_unwrap(yaml.safe_load(file_metadata))))
+                    metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
                     if verbose:
                         if file_metadata_written:
                             print("wrote and loaded metadata file cache")
@@ -257,6 +288,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
             .rename(lambda column: \
                         ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") \
                              if len(column.split("__")) == 2 else column.replace("_", " ").title()) if "_" in column else column)
+
     metadata_enriched_list = []
     for metadata in metadata_list:
         def _add(key, value):
@@ -266,9 +298,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
         _add("versions_count", "1")
         _add("transcode_priority", "1")
         _add("metadata_state", "Clean")
-        _add("plex_subtitle", "Direct Play")
-        _add("plex_audio", "Direct Play")
-        _add("plex_video", "Direct Play")
+        _add("plex_subtitle", "")
+        _add("plex_audio", "")
+        _add("plex_video", "")
         _add("media_size", "Right")
         _add("media_state", "Complete")
         metadata.move_to_end("file_name", last=False)
@@ -302,44 +334,80 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
     # metadata_media_size = "Large|Small|Right"
     # metadata_media_state = "Complete|Incomplete|Corrupt"
 
-    file_probe_plex_direct_play_video = False
-    file_probe_plex_direct_play_audio = False
-    file_probe_messy_metadata = False
-    # for file_probe_videos in file_probe_streams_filtered["video"]:
-    #     for file_probe_video in file_probe_videos.values():
-    #         if (
-    #                 file_extension == "avi" and file_probe_video[2]["codec"] in {"MPEG4", "MJPEG"} or \
-    #                 file_extension == "m2ts" and file_probe_video[2]["codec"] in {"AVC", "HEVC", "MPEG2VIDEO"} or \
-    #                 file_extension == "mkv" and file_probe_video[2]["codec"] in {"AVC", "HEVC", "MPEG2VIDEO", "MPEG4"} or \
-    #                 file_extension == "mov" and file_probe_video[2]["codec"] in {"AVC", "MPEG4"} or \
-    #                 file_extension == "mp4" and file_probe_video[2]["codec"] in {"AVC", "HEVC"} or \
-    #                 file_extension == "wmv" and file_probe_video[2]["codec"] in {"WMV3", "VC1"}
-    #         ):
-    #             file_probe_plex_direct_play_video = True
-    # for file_probe_audios in file_probe_streams_filtered["audio"]:
-    #     for file_probe_audio in file_probe_audios.values():
-    #         if (
-    #                 file_extension == "avi" and \
-    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "m2ts" and \
-    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "mkv" and \
-    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3", "PCM"} or file_extension == "mov" and \
-    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3"} or file_extension == "mp4" and \
-    #                 file_probe_audio[2]["codec"] in {"AAC", "EAC3", "AC3", "MP3"} or file_extension == "wmv" and \
-    #                 file_probe_audio[2]["codec"] in {"EAC3", "AC3", "WMAPRO", "WMAV2"}
-    #         ):
-    #             file_probe_plex_direct_play_audio = True
-
-    metadata_updated_pl = metadata_updated_pl.with_columns([
-        pl.when(pl.col(pl.Utf8).str.len_bytes() == 0).then(None).otherwise(pl.col(pl.Utf8)).name.keep()
-    ])
-    metadata_updated_pl = metadata_updated_pl[[
-        column.name for column in metadata_updated_pl if not (column.null_count() == metadata_updated_pl.height)
-    ]]
-    if len(metadata_updated_pl) > 0:
-        metadata_updated_pd = metadata_updated_pl.to_pandas()
-        metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
-        metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True,
-                                    add_filter=True, freeze_index=True, freeze_headers=True)
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        (pl.when(
+            (pl.col("File Extension").str.to_lowercase() == "avi") & (
+                    (pl.col("Video 1 Codec") == "MPEG4") |
+                    (pl.col("Video 1 Codec") == "MJPEG")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "m2ts") & (
+                    (pl.col("Video 1 Codec") == "AVC") |
+                    (pl.col("Video 1 Codec") == "HEVC") |
+                    (pl.col("Video 1 Codec") == "MPEG2VIDEO")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "mkv") & (
+                    (pl.col("Video 1 Codec") == "AVC") |
+                    (pl.col("Video 1 Codec") == "HEVC") |
+                    (pl.col("Video 1 Codec") == "MPEG2VIDEO")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "mov") & (
+                    (pl.col("Video 1 Codec") == "AVC") |
+                    (pl.col("Video 1 Codec") == "HEVC") |
+                    (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                    (pl.col("Video 1 Codec") == "MPEG4") |
+                    (pl.col("Video 1 Codec") == "VC1") |
+                    (pl.col("Video 1 Codec") == "VP9")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "mp4") & (
+                    (pl.col("Video 1 Codec") == "AVC") |
+                    (pl.col("Video 1 Codec") == "MPEG4")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "wmv") & (
+                    (pl.col("Video 1 Codec") == "WMV3") |
+                    (pl.col("Video 1 Codec") == "VC1")
+            )
+        ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))).alias("Plex Video"))
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        (pl.when(
+            (pl.col("File Extension").str.to_lowercase() == "avi") & (
+                    (pl.col("Audio 1 Codec") == "AAC") |
+                    (pl.col("Audio 1 Codec") == "AC3") |
+                    (pl.col("Audio 1 Codec") == "EAC3") |
+                    (pl.col("Audio 1 Codec") == "MP3") |
+                    (pl.col("Audio 1 Codec") == "PCM")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "m2ts") & (
+                    (pl.col("Audio 1 Codec") == "AAC") |
+                    (pl.col("Audio 1 Codec") == "AC3") |
+                    (pl.col("Audio 1 Codec") == "EAC3") |
+                    (pl.col("Audio 1 Codec") == "MP2") |
+                    (pl.col("Audio 1 Codec") == "MP3") |
+                    (pl.col("Audio 1 Codec") == "PCM")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "mkv") & (
+                    (pl.col("Audio 1 Codec") == "AAC") |
+                    (pl.col("Audio 1 Codec") == "AC3") |
+                    (pl.col("Audio 1 Codec") == "EAC3") |
+                    (pl.col("Audio 1 Codec") == "MP3") |
+                    (pl.col("Audio 1 Codec") == "PCM")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "mov") & (
+                    (pl.col("Audio 1 Codec") == "AAC") |
+                    (pl.col("Audio 1 Codec") == "AC3") |
+                    (pl.col("Audio 1 Codec") == "EAC3")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "mp4") & (
+                    (pl.col("Audio 1 Codec") == "AAC") |
+                    (pl.col("Audio 1 Codec") == "AC3") |
+                    (pl.col("Audio 1 Codec") == "EAC3") |
+                    (pl.col("Audio 1 Codec") == "MP3")
+            ) |
+            (pl.col("File Extension").str.to_lowercase() == "wmv") & (
+                    (pl.col("Audio 1 Codec") == "AC3") |
+                    (pl.col("Audio 1 Codec") == "WMAPRO") |
+                    (pl.col("Audio 1 Codec") == "WMAV2")
+            )
+        ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))).alias("Plex Audio"))
 
     # TODO
     # with pl.Config(
@@ -353,16 +421,43 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False):
     #         set_tbl_hide_dataframe_shape=True,
     # ):
     #     print("")
-    #     print(metadata_cache_pl)
-    #     print("")
-    #     print(metadata_original_pl)
-    #     print("")
     #     print(metadata_updated_pl)
     #     print("")
 
+    metadata_updated_pl = metadata_updated_pl.with_columns([
+        pl.when(pl.col(pl.Utf8).str.len_bytes() == 0).then(None).otherwise(pl.col(pl.Utf8)).name.keep()
+    ])
+    metadata_updated_pl = metadata_updated_pl[[
+        column.name for column in metadata_updated_pl if not (column.null_count() == metadata_updated_pl.height)
+    ]]
+    if len(metadata_updated_pl) > 0:
+        metadata_updated_pd = metadata_updated_pl.to_pandas()
+        metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
+        metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True,
+                                    add_filter=True, freeze_index=True, freeze_headers=True)
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
     return files_analysed
+
+
+def _unwrap_lists(lists):
+    if isinstance(lists, list):
+        dicts = OrderedDict()
+        for item in lists:
+            dicts[next(iter(item))] = _unwrap_lists(next(iter(item.values())))
+        return dicts
+    return lists
+
+
+def _flatten_dicts(dicts, parent_key=''):
+    items = []
+    for key, value in dicts.items():
+        new_key = parent_key + '_' + str(key) if parent_key else str(key)
+        if isinstance(value, MutableMapping):
+            items.extend(_flatten_dicts(value, new_key).items())
+        else:
+            items.append((new_key, value))
+    return OrderedDict(items)
 
 
 if __name__ == "__main__":

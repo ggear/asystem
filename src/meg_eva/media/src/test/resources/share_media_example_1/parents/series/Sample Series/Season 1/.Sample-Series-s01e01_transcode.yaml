@@ -1,3 +1,2 @@
-- target_quality: High|Medium|Low
-- required_audio: eng|jp|
-- required_subtitles: eng|
+- target_quality: Medium
+- native_language: eng
