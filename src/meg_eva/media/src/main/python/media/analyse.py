@@ -203,14 +203,31 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_probe_size_gb = int(file_probe["format"]["size"]) / 10 ** 9 \
                     if ("format" in file_probe and "size" in file_probe["format"]) else -1
 
-                # TODO: Add what you need in the yaml, flattening out streams to high level flags ala Picture
-                # Video - sort by "width" desc
-                # Audio - sort group 1 by "native_language" in "language" and "AAC, AC3, EAC3, MP3" in "codec" sprted by "channels" and then remaining in group 2 by "channels"
-                # Subtitle - sort group 1 by "eng" in "language" "not pictuire" in "codec" and then remaining in group 2 by "index"
-                # for file_probe_videos in file_probe_streams_filtered["video"]:
-                #     for file_probe_video in file_probe_videos.values():
-                #         print(file_probe_video[2]["codec"])
-
+                file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
+                file_probe_streams_filtered_audios = []
+                file_probe_streams_filtered_audios_supplementary = []
+                for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
+                    if file_probe_streams_filtered_audio["codec"] in {"AAC", "AC3", "EAC3"} and \
+                            file_probe_streams_filtered_audio["language"] == file_target_language:
+                        file_probe_streams_filtered_audios.append(file_probe_streams_filtered_audio)
+                    else:
+                        file_probe_streams_filtered_audios_supplementary.append(file_probe_streams_filtered_audio)
+                file_probe_streams_filtered_audios.sort(key=lambda stream: int(stream["channels"]), reverse=True)
+                file_probe_streams_filtered_audios_supplementary.sort(key=lambda stream: int(stream["channels"]), reverse=True)
+                file_probe_streams_filtered_audios.extend(file_probe_streams_filtered_audios_supplementary)
+                file_probe_streams_filtered["audio"] = file_probe_streams_filtered_audios
+                file_probe_streams_filtered_subtitles = []
+                file_probe_streams_filtered_subtitles_supplementary = []
+                for file_probe_streams_filtered_subtitle in file_probe_streams_filtered["subtitle"]:
+                    if file_probe_streams_filtered_subtitle["format"] == "Text" and \
+                            file_probe_streams_filtered_subtitle["language"] == "eng":
+                        file_probe_streams_filtered_subtitles.append(file_probe_streams_filtered_subtitle)
+                    else:
+                        file_probe_streams_filtered_subtitles_supplementary.append(file_probe_streams_filtered_subtitle)
+                file_probe_streams_filtered_subtitles.sort(key=lambda stream: stream["index"], reverse=True)
+                file_probe_streams_filtered_subtitles_supplementary.sort(key=lambda stream: stream["index"], reverse=True)
+                file_probe_streams_filtered_subtitles.extend(file_probe_streams_filtered_subtitles_supplementary)
+                file_probe_streams_filtered["subtitle"] = file_probe_streams_filtered_subtitles
                 file_probe_filtered = [
                     {"file_name": os.path.basename(file_probe["format"]["filename"]) \
                         if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
