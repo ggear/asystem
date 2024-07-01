@@ -26,10 +26,10 @@ class InternetTest(unittest.TestCase):
         shutil.rmtree(dir_test, ignore_errors=True)
         os.makedirs(abspath(join(dir_test, "..")), exist_ok=True)
         shutil.copytree(dir_test_src, dir_test)
+        self.assertEqual(0, analyse._analyse(dir_test, sheet_guid, False, False, True))
 
-        self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, False))
         # TODO: Revert
-        # self.assertEqual(0, analyse._analyse(dir_test, sheet_guid, False, False, True))
+        self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, False))
         # self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, True))
         # self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, True, True))
         # self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, True))

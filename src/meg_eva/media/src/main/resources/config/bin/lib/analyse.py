@@ -130,19 +130,16 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 }
                 if "streams" in file_probe:
                     for file_probe_stream in file_probe["streams"]:
-                        file_probe_stream_filtered = []
+                        file_probe_stream_filtered = OrderedDict()
                         file_probe_stream_type = file_probe_stream["codec_type"].lower() \
                             if "codec_type" in file_probe_stream else ""
                         if file_probe_stream_type not in file_probe_streams_filtered:
                             file_probe_stream_type = "other"
-                        file_probe_streams_filtered[file_probe_stream_type].append({
-                            str(len(file_probe_streams_filtered[file_probe_stream_type]) + 1): \
-                                file_probe_stream_filtered
-                        })
-                        file_probe_stream_filtered.append({"index": str(file_probe_stream["index"]) \
-                            if "index" in file_probe_stream else ""})
-                        file_probe_stream_filtered.append({"type": file_probe_stream["codec_type"].lower() \
-                            if "codec_type" in file_probe_stream else ""})
+                        file_probe_streams_filtered[file_probe_stream_type].append(file_probe_stream_filtered)
+                        file_probe_stream_filtered["index"] = str(file_probe_stream["index"]) \
+                            if "index" in file_probe_stream else ""
+                        file_probe_stream_filtered["type"] = file_probe_stream["codec_type"].lower() \
+                            if "codec_type" in file_probe_stream else ""
                         if file_probe_stream_type == "video":
                             file_probe_stream_video_codec = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
@@ -150,7 +147,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                 file_probe_stream_video_codec = "AVC"
                             if "H265" in file_probe_stream_video_codec or "HEVC" in file_probe_stream_video_codec:
                                 file_probe_stream_video_codec = "HEVC"
-                            file_probe_stream_filtered.append({"codec": file_probe_stream_video_codec})
+                            file_probe_stream_filtered["codec"] = file_probe_stream_video_codec
                             file_probe_stream_video_field_order = ""
                             if "field_order" in file_probe_stream:
                                 if file_probe_stream["field_order"] == "progressive":
@@ -185,69 +182,79 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                     file_probe_stream_video_resolution = "UHD 4320" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 15360:
                                     file_probe_stream_video_resolution = "UHD 8640" + file_probe_stream_video_field_order
-                            file_probe_stream_filtered.append({"resolution": file_probe_stream_video_resolution})
-                            file_probe_stream_filtered.append({"width": str(file_probe_stream_video_width) \
-                                if file_probe_stream_video_width > 0 else ""})
-                            file_probe_stream_filtered.append({"height": str(file_probe_stream_video_height) \
-                                if file_probe_stream_video_height > 0 else ""})
+                            file_probe_stream_filtered["resolution"] = file_probe_stream_video_resolution
+                            file_probe_stream_filtered["width"] = str(file_probe_stream_video_width) \
+                                if file_probe_stream_video_width > 0 else ""
+                            file_probe_stream_filtered["height"] = str(file_probe_stream_video_height) \
+                                if file_probe_stream_video_height > 0 else ""
                         elif file_probe_stream_type == "audio":
-                            file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
-                                if "codec_name" in file_probe_stream else ""})
-                            file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_target_language})
-                            file_probe_stream_filtered.append({"channels": str(file_probe_stream["channels"])})
+                            file_probe_stream_filtered["codec"] = file_probe_stream["codec_name"].upper() \
+                                if "codec_name" in file_probe_stream else ""
+                            file_probe_stream_filtered["language"] = file_probe_stream["tags"]["language"].lower() \
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_target_language
+                            file_probe_stream_filtered["channels"] = str(file_probe_stream["channels"])
                         elif file_probe_stream_type == "subtitle":
-                            file_probe_stream_filtered.append({"codec": file_probe_stream["codec_name"].upper() \
-                                if "codec_name" in file_probe_stream else ""})
-                            file_probe_stream_filtered.append({"language": file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_target_language})
-                            file_probe_stream_filtered.append({"format": "Picture" \
-                                if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"})
-                    file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
-                        if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
-                    file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2 \
-                        if ("format" in file_probe and "duration" in file_probe["format"]) else -1
-                    file_probe_size_gb = int(file_probe["format"]["size"]) / 10 ** 9 \
-                        if ("format" in file_probe and "size" in file_probe["format"]) else -1
+                            file_probe_stream_filtered["codec"] = file_probe_stream["codec_name"].upper() \
+                                if "codec_name" in file_probe_stream else ""
+                            file_probe_stream_filtered["language"] = file_probe_stream["tags"]["language"].lower() \
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_target_language
+                            file_probe_stream_filtered["format"] = "Picture" \
+                                if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"
+                file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
+                    if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
+                file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2 \
+                    if ("format" in file_probe and "duration" in file_probe["format"]) else -1
+                file_probe_size_gb = int(file_probe["format"]["size"]) / 10 ** 9 \
+                    if ("format" in file_probe and "size" in file_probe["format"]) else -1
 
-                    # TODO: Add what you need in the yaml, flattening out streams to high level flags ala Picture
-                    # Video - sort by "width" desc
-                    # Audio - sort group 1 by "native_language" in "language" and "AAC, AC3, EAC3, MP3" in "codec" sprted by "channels" and then remaining in group 2 by "channels"
-                    # Subtitle - sort group 1 by "eng" in "language" "not pictuire" in "codec" and then remaining in group 2 by "index"
+                # TODO: Add what you need in the yaml, flattening out streams to high level flags ala Picture
+                # Video - sort by "width" desc
+                # Audio - sort group 1 by "native_language" in "language" and "AAC, AC3, EAC3, MP3" in "codec" sprted by "channels" and then remaining in group 2 by "channels"
+                # Subtitle - sort group 1 by "eng" in "language" "not pictuire" in "codec" and then remaining in group 2 by "index"
+                # for file_probe_videos in file_probe_streams_filtered["video"]:
+                #     for file_probe_video in file_probe_videos.values():
+                #         print(file_probe_video[2]["codec"])
 
-
-
-                    for file_probe_videos in file_probe_streams_filtered["video"]:
-                        for file_probe_video in file_probe_videos.values():
-                            print(file_probe_video[2]["codec"])
-
-                    file_probe_filtered = [
-                        {"file_name": os.path.basename(file_probe["format"]["filename"]) \
-                            if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
-                        {"target_quality": file_target_quality},
-                        {"target_language": file_target_language},
-                        {"native_language": file_native_language},
-                        {"media_directory": file_path_root},
-                        {"media_scope": file_media_scope},
-                        {"media_type": file_media_type},
-                        {"base_directory": file_base_dir},
-                        {"version_directory": file_version_dir},
-                        {"file_path": file_path},
-                        {"file_extension": file_extension},
-                        {"container_format": file_probe["format"]["format_name"].lower() \
-                            if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
-                        {"duration__hours": str(round(file_probe_duration_h, 2 if file_probe_duration_h > 1 else 4)) \
-                            if file_probe_duration_h > 0 else ""},
-                        {"size__GB": str(round(file_probe_size_gb, 2 if file_probe_duration_h > 1 else 4)) \
-                            if file_probe_size_gb > 0 else ""},
-                        {"bit_rate__Kbps": str(file_probe_bit_rate) if file_probe_bit_rate > 0 else ""},
-                        {"stream_count": str(sum(map(len, file_probe_streams_filtered.values())))},
-                    ]
-                    for file_probe_stream_type in file_probe_streams_filtered:
-                        file_probe_filtered.append({"{}_count".format(file_probe_stream_type):
-                                                        str(len(file_probe_streams_filtered[file_probe_stream_type]))})
-                        file_probe_filtered.append({file_probe_stream_type:
-                                                        file_probe_streams_filtered[file_probe_stream_type]})
+                file_probe_filtered = [
+                    {"file_name": os.path.basename(file_probe["format"]["filename"]) \
+                        if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
+                    {"target_quality": file_target_quality},
+                    {"target_language": file_target_language},
+                    {"native_language": file_native_language},
+                    {"media_directory": file_path_root},
+                    {"media_scope": file_media_scope},
+                    {"media_type": file_media_type},
+                    {"base_directory": file_base_dir},
+                    {"version_directory": file_version_dir},
+                    {"file_path": file_path},
+                    {"file_extension": file_extension},
+                    {"container_format": file_probe["format"]["format_name"].lower() \
+                        if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
+                    {"duration__hours": str(round(file_probe_duration_h, 2 if file_probe_duration_h > 1 else 4)) \
+                        if file_probe_duration_h > 0 else ""},
+                    {"size__GB": str(round(file_probe_size_gb, 2 if file_probe_duration_h > 1 else 4)) \
+                        if file_probe_size_gb > 0 else ""},
+                    {"bit_rate__Kbps": str(file_probe_bit_rate) if file_probe_bit_rate > 0 else ""},
+                    {"stream_count": str(sum(map(len, file_probe_streams_filtered.values())))},
+                ]
+                for file_probe_stream_type in file_probe_streams_filtered:
+                    file_probe_filtered.append({
+                        "{}_count".format(file_probe_stream_type):
+                            str(len(file_probe_streams_filtered[file_probe_stream_type]))
+                    })
+                    file_probe_streams_indexed = []
+                    file_probe_filtered.append({file_probe_stream_type: file_probe_streams_indexed})
+                    file_probe_stream_typed_count = 1
+                    for file_probe_stream_typed in file_probe_streams_filtered[file_probe_stream_type]:
+                        file_probe_stream_wrapped = []
+                        file_probe_streams_indexed.append({
+                            str(file_probe_stream_typed_count): file_probe_stream_wrapped
+                        })
+                        for file_probe_stream_type_key in file_probe_stream_typed:
+                            file_probe_stream_wrapped.append({
+                                file_probe_stream_type_key: file_probe_stream_typed[file_probe_stream_type_key]
+                            })
+                        file_probe_stream_typed_count += 1
                 with open(file_metadata_path, 'w') as file_metadata:
                     yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
                 file_metadata_written = True
