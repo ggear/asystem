@@ -12,7 +12,6 @@ import yaml
 from ffmpeg._run import Error
 from gspread_pandas import Spread
 
-
 # build test data with dummy file
 # Analyse library on per share basis, all to do local shares only deltas, deploy to do refresh and do all
 # build an item metadata yaml file, pyyaml and ffmpeg-python
@@ -21,6 +20,11 @@ from gspread_pandas import Spread
 # build a global xlsx, update but allow manual editing, direct play possible, target quality, required to convert, versions ready to replace
 # build a global transcode script, ordered by priority, script takes in number of items to process
 # build a global replace script, dry run showing which items, execute actually doing the work
+
+TARGET_SIZE_RANGE = 1 / 3
+TARGET_SIZE_HIGH_GB = 12
+TARGET_SIZE_MEDIUM_GB = 6
+TARGET_SIZE_LOW_GB = 3
 
 
 def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
@@ -94,11 +98,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     try:
                         metadata_transcode_dict = _unwrap_lists(yaml.safe_load(file_transcode))
                         if "target_quality" in metadata_transcode_dict:
-                            file_target_quality = metadata_transcode_dict["target_quality"]
+                            file_target_quality = metadata_transcode_dict["target_quality"].title()
                         if "native_language" in metadata_transcode_dict:
-                            file_native_language = metadata_transcode_dict["native_language"]
+                            file_native_language = metadata_transcode_dict["native_language"].lower()
                         if "target_language" in metadata_transcode_dict:
-                            file_target_language = metadata_transcode_dict["target_language"]
+                            file_target_language = metadata_transcode_dict["target_language"].lower()
                     except Exception:
                         message = "skipping file due to transcode metadata cache [{}] load error".format(file_transcode)
                         if verbose:
@@ -134,8 +138,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         file_probe_streams_filtered[file_probe_stream_type].append(file_probe_stream_filtered)
                         file_probe_stream_filtered["index"] = str(file_probe_stream["index"]) \
                             if "index" in file_probe_stream else ""
-                        file_probe_stream_filtered["type"] = file_probe_stream["codec_type"].lower() \
-                            if "codec_type" in file_probe_stream else ""
                         if file_probe_stream_type == "video":
                             file_probe_stream_video_codec = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
@@ -316,8 +318,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         _add("plex_subtitle", "")
         _add("plex_audio", "")
         _add("plex_video", "")
-        _add("media_size", "Right")
-        _add("media_state", "Complete")
+        _add("media_size", "")
+        _add("media_state", "")
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
     metadata_cache_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
@@ -342,86 +344,118 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     # metadata_versions_count = "1"
     # metadata_transcode_priority = "1"
     # metadata_metadata_state = "Clean|Messy|Invalid"
-    # metadata_plex_subtitle = "Direct Play"
-    # metadata_plex_audio = "Direct Play"
-    # metadata_plex_video = "Direct Play"
-    # metadata_media_size = "Large|Small|Right"
     # metadata_media_state = "Complete|Incomplete|Corrupt"
 
     metadata_updated_pl = metadata_updated_pl.with_columns(
-        (pl.when(
-            (pl.col("File Extension").str.to_lowercase() == "avi") & (
-                    (pl.col("Video 1 Codec") == "MPEG4") |
-                    (pl.col("Video 1 Codec") == "MJPEG")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "m2ts") & (
-                    (pl.col("Video 1 Codec") == "AVC") |
-                    (pl.col("Video 1 Codec") == "HEVC") |
-                    (pl.col("Video 1 Codec") == "MPEG2VIDEO")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "mkv") & (
-                    (pl.col("Video 1 Codec") == "AVC") |
-                    (pl.col("Video 1 Codec") == "HEVC") |
-                    (pl.col("Video 1 Codec") == "MPEG2VIDEO")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "mov") & (
-                    (pl.col("Video 1 Codec") == "AVC") |
-                    (pl.col("Video 1 Codec") == "HEVC") |
-                    (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
-                    (pl.col("Video 1 Codec") == "MPEG4") |
-                    (pl.col("Video 1 Codec") == "VC1") |
-                    (pl.col("Video 1 Codec") == "VP9")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "mp4") & (
-                    (pl.col("Video 1 Codec") == "AVC") |
-                    (pl.col("Video 1 Codec") == "MPEG4")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "wmv") & (
-                    (pl.col("Video 1 Codec") == "WMV3") |
-                    (pl.col("Video 1 Codec") == "VC1")
-            )
-        ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))).alias("Plex Video"))
+        (
+            pl.when(
+                ((pl.col("Target Quality") == "High") &
+                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_RANGE) * TARGET_SIZE_HIGH_GB))
+                 ) |
+                ((pl.col("Target Quality") == "Medium") &
+                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_RANGE) * TARGET_SIZE_MEDIUM_GB))
+                 ) |
+                ((pl.col("Target Quality") == "Low") &
+                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_RANGE) * TARGET_SIZE_LOW_GB))
+                 )
+            ).then(pl.lit("Large"))
+            .when(
+                ((pl.col("Target Quality") == "High") &
+                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_RANGE * TARGET_SIZE_HIGH_GB))
+                 ) |
+                ((pl.col("Target Quality") == "Medium") &
+                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_RANGE * TARGET_SIZE_MEDIUM_GB))
+                 ) |
+                ((pl.col("Target Quality") == "Low") &
+                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_RANGE * TARGET_SIZE_LOW_GB))
+                 )
+            ).then(pl.lit("Small"))
+            .otherwise(pl.lit("Right"))
+        ).alias("Media Size"))
     metadata_updated_pl = metadata_updated_pl.with_columns(
-        (pl.when(
-            (pl.col("File Extension").str.to_lowercase() == "avi") & (
-                    (pl.col("Audio 1 Codec") == "AAC") |
-                    (pl.col("Audio 1 Codec") == "AC3") |
-                    (pl.col("Audio 1 Codec") == "EAC3") |
-                    (pl.col("Audio 1 Codec") == "MP3") |
-                    (pl.col("Audio 1 Codec") == "PCM")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "m2ts") & (
-                    (pl.col("Audio 1 Codec") == "AAC") |
-                    (pl.col("Audio 1 Codec") == "AC3") |
-                    (pl.col("Audio 1 Codec") == "EAC3") |
-                    (pl.col("Audio 1 Codec") == "MP2") |
-                    (pl.col("Audio 1 Codec") == "MP3") |
-                    (pl.col("Audio 1 Codec") == "PCM")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "mkv") & (
-                    (pl.col("Audio 1 Codec") == "AAC") |
-                    (pl.col("Audio 1 Codec") == "AC3") |
-                    (pl.col("Audio 1 Codec") == "EAC3") |
-                    (pl.col("Audio 1 Codec") == "MP3") |
-                    (pl.col("Audio 1 Codec") == "PCM")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "mov") & (
-                    (pl.col("Audio 1 Codec") == "AAC") |
-                    (pl.col("Audio 1 Codec") == "AC3") |
-                    (pl.col("Audio 1 Codec") == "EAC3")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "mp4") & (
-                    (pl.col("Audio 1 Codec") == "AAC") |
-                    (pl.col("Audio 1 Codec") == "AC3") |
-                    (pl.col("Audio 1 Codec") == "EAC3") |
-                    (pl.col("Audio 1 Codec") == "MP3")
-            ) |
-            (pl.col("File Extension").str.to_lowercase() == "wmv") & (
-                    (pl.col("Audio 1 Codec") == "AC3") |
-                    (pl.col("Audio 1 Codec") == "WMAPRO") |
-                    (pl.col("Audio 1 Codec") == "WMAV2")
-            )
-        ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))).alias("Plex Audio"))
+        (
+            pl.when(
+                ((pl.col("File Extension").str.to_lowercase() == "avi") & (
+                        (pl.col("Video 1 Codec") == "MPEG4") |
+                        (pl.col("Video 1 Codec") == "MJPEG")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "m2ts") & (
+                        (pl.col("Video 1 Codec") == "AVC") |
+                        (pl.col("Video 1 Codec") == "HEVC") |
+                        (pl.col("Video 1 Codec") == "MPEG2VIDEO")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "mkv") & (
+                        (pl.col("Video 1 Codec") == "AVC") |
+                        (pl.col("Video 1 Codec") == "HEVC") |
+                        (pl.col("Video 1 Codec") == "MPEG2VIDEO")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "mov") & (
+                        (pl.col("Video 1 Codec") == "AVC") |
+                        (pl.col("Video 1 Codec") == "HEVC") |
+                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                        (pl.col("Video 1 Codec") == "MPEG4") |
+                        (pl.col("Video 1 Codec") == "VC1") |
+                        (pl.col("Video 1 Codec") == "VP9")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "mp4") & (
+                        (pl.col("Video 1 Codec") == "AVC") |
+                        (pl.col("Video 1 Codec") == "MPEG4")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "wmv") & (
+                        (pl.col("Video 1 Codec") == "WMV3") |
+                        (pl.col("Video 1 Codec") == "VC1")
+                ))
+            ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))
+        ).alias("Plex Video"))
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        (
+            pl.when(
+                ((pl.col("File Extension").str.to_lowercase() == "avi") & (
+                        (pl.col("Audio 1 Codec") == "AAC") |
+                        (pl.col("Audio 1 Codec") == "AC3") |
+                        (pl.col("Audio 1 Codec") == "EAC3") |
+                        (pl.col("Audio 1 Codec") == "MP3") |
+                        (pl.col("Audio 1 Codec") == "PCM")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "m2ts") & (
+                        (pl.col("Audio 1 Codec") == "AAC") |
+                        (pl.col("Audio 1 Codec") == "AC3") |
+                        (pl.col("Audio 1 Codec") == "EAC3") |
+                        (pl.col("Audio 1 Codec") == "MP2") |
+                        (pl.col("Audio 1 Codec") == "MP3") |
+                        (pl.col("Audio 1 Codec") == "PCM")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "mkv") & (
+                        (pl.col("Audio 1 Codec") == "AAC") |
+                        (pl.col("Audio 1 Codec") == "AC3") |
+                        (pl.col("Audio 1 Codec") == "EAC3") |
+                        (pl.col("Audio 1 Codec") == "MP3") |
+                        (pl.col("Audio 1 Codec") == "PCM")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "mov") & (
+                        (pl.col("Audio 1 Codec") == "AAC") |
+                        (pl.col("Audio 1 Codec") == "AC3") |
+                        (pl.col("Audio 1 Codec") == "EAC3")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "mp4") & (
+                        (pl.col("Audio 1 Codec") == "AAC") |
+                        (pl.col("Audio 1 Codec") == "AC3") |
+                        (pl.col("Audio 1 Codec") == "EAC3") |
+                        (pl.col("Audio 1 Codec") == "MP3")
+                )) |
+                ((pl.col("File Extension").str.to_lowercase() == "wmv") & (
+                        (pl.col("Audio 1 Codec") == "AC3") |
+                        (pl.col("Audio 1 Codec") == "WMAPRO") |
+                        (pl.col("Audio 1 Codec") == "WMAV2")
+                ))
+            ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))
+        ).alias("Plex Audio"))
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        (
+            pl.when(
+                (pl.col("Subtitle 1 Format") == "Text")
+            ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))
+        ).alias("Plex Subtitle"))
 
     # TODO
     # with pl.Config(
