@@ -243,6 +243,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     {"version_directory": file_version_dir},
                     {"version_qualifier": file_version_qualifier},
                     {"file_path": file_path},
+                    {"transcode_path": file_transcode_path},
                     {"file_extension": file_extension},
                     {"container_format": file_probe["format"]["format_name"].lower() \
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
@@ -429,51 +430,52 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
-                ((pl.col("File Extension").str.to_lowercase() == "avi") & (
-                        (pl.col("Audio 1 Codec") == "AAC") |
-                        (pl.col("Audio 1 Codec") == "AC3") |
-                        (pl.col("Audio 1 Codec") == "EAC3") |
-                        (pl.col("Audio 1 Codec") == "MP3") |
-                        (pl.col("Audio 1 Codec") == "PCM")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "m2ts") & (
-                        (pl.col("Audio 1 Codec") == "AAC") |
-                        (pl.col("Audio 1 Codec") == "AC3") |
-                        (pl.col("Audio 1 Codec") == "EAC3") |
-                        (pl.col("Audio 1 Codec") == "MP2") |
-                        (pl.col("Audio 1 Codec") == "MP3") |
-                        (pl.col("Audio 1 Codec") == "PCM")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "mkv") & (
-                        (pl.col("Audio 1 Codec") == "AAC") |
-                        (pl.col("Audio 1 Codec") == "AC3") |
-                        (pl.col("Audio 1 Codec") == "EAC3") |
-                        (pl.col("Audio 1 Codec") == "MP3") |
-                        (pl.col("Audio 1 Codec") == "PCM")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "mov") & (
-                        (pl.col("Audio 1 Codec") == "AAC") |
-                        (pl.col("Audio 1 Codec") == "AC3") |
-                        (pl.col("Audio 1 Codec") == "EAC3")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "mp4") & (
-                        (pl.col("Audio 1 Codec") == "AAC") |
-                        (pl.col("Audio 1 Codec") == "AC3") |
-                        (pl.col("Audio 1 Codec") == "EAC3") |
-                        (pl.col("Audio 1 Codec") == "MP3")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "wmv") & (
-                        (pl.col("Audio 1 Codec") == "AC3") |
-                        (pl.col("Audio 1 Codec") == "WMAPRO") |
-                        (pl.col("Audio 1 Codec") == "WMAV2")
-                ))
+                ((pl.col("Target Language") == pl.col("Audio 1 Language")) &
+                 (((pl.col("File Extension").str.to_lowercase() == "avi") & (
+                         (pl.col("Audio 1 Codec") == "AAC") |
+                         (pl.col("Audio 1 Codec") == "AC3") |
+                         (pl.col("Audio 1 Codec") == "EAC3") |
+                         (pl.col("Audio 1 Codec") == "MP3") |
+                         (pl.col("Audio 1 Codec") == "PCM")
+                 )) |
+                  ((pl.col("File Extension").str.to_lowercase() == "m2ts") & (
+                          (pl.col("Audio 1 Codec") == "AAC") |
+                          (pl.col("Audio 1 Codec") == "AC3") |
+                          (pl.col("Audio 1 Codec") == "EAC3") |
+                          (pl.col("Audio 1 Codec") == "MP2") |
+                          (pl.col("Audio 1 Codec") == "MP3") |
+                          (pl.col("Audio 1 Codec") == "PCM")
+                  )) |
+                  ((pl.col("File Extension").str.to_lowercase() == "mkv") & (
+                          (pl.col("Audio 1 Codec") == "AAC") |
+                          (pl.col("Audio 1 Codec") == "AC3") |
+                          (pl.col("Audio 1 Codec") == "EAC3") |
+                          (pl.col("Audio 1 Codec") == "MP3") |
+                          (pl.col("Audio 1 Codec") == "PCM")
+                  )) |
+                  ((pl.col("File Extension").str.to_lowercase() == "mov") & (
+                          (pl.col("Audio 1 Codec") == "AAC") |
+                          (pl.col("Audio 1 Codec") == "AC3") |
+                          (pl.col("Audio 1 Codec") == "EAC3")
+                  )) |
+                  ((pl.col("File Extension").str.to_lowercase() == "mp4") & (
+                          (pl.col("Audio 1 Codec") == "AAC") |
+                          (pl.col("Audio 1 Codec") == "AC3") |
+                          (pl.col("Audio 1 Codec") == "EAC3") |
+                          (pl.col("Audio 1 Codec") == "MP3")
+                  )) |
+                  ((pl.col("File Extension").str.to_lowercase() == "wmv") & (
+                          (pl.col("Audio 1 Codec") == "AC3") |
+                          (pl.col("Audio 1 Codec") == "WMAPRO") |
+                          (pl.col("Audio 1 Codec") == "WMAV2")
+                  ))))
             ).then(pl.lit("Direct Play"))
             .otherwise(pl.lit("Transcode"))
         ).alias("Plex Audio"))
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
-                (pl.col("Subtitle 1 Format") == "") |
+                (pl.col("Subtitle 1 Format").is_null()) |
                 (pl.col("Subtitle 1 Format") == "Text")
             ).then(pl.lit("Direct Play"))
             .otherwise(pl.lit("Transcode"))
