@@ -21,7 +21,7 @@ from gspread_pandas import Spread
 # build a global transcode script, ordered by priority, script takes in number of items to process
 # build a global replace script, dry run showing which items, execute actually doing the work
 
-TARGET_SIZE_RANGE = 1 / 3
+TARGET_SIZE_DELTA = 1 / 3
 TARGET_SIZE_HIGH_GB = 12
 TARGET_SIZE_MEDIUM_GB = 6
 TARGET_SIZE_LOW_GB = 3
@@ -82,9 +82,15 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             ) else 4
             file_version_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens:]) \
                 if len(file_relative_dir_tokens) > file_base_tokens else "."
-            file_base_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens - 1:]) \
-                .replace("/" + file_version_dir, "")
-            file_base_dir = file_base_dir if len(file_base_dir) > 0 else "."
+            file_version_qualifier = ""
+            if file_media_type == "series":
+                file_version_qualifier_match = re.search(".*[sS][0-9]?[0-9]+[eE]([0-9]?[0-9]+).*\.", file_name)
+                if file_version_qualifier_match is not None:
+                    file_version_qualifier = "Episode-{}".format(file_version_qualifier_match.groups()[0])
+                else:
+                    file_version_qualifier = file_name_sans_extension
+            file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
+                if len(file_relative_dir_tokens) > 3 else "."
             file_transcode_dir = os.path.join(file_path_root, file_media_scope, file_media_type, file_base_dir)
             file_transcode_path = os.path.join(file_transcode_dir, ".{}_transcode.yaml".format(file_name_sans_extension))
             while not os.path.isfile(file_transcode_path) and file_transcode_dir != file_path_root:
@@ -115,13 +121,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 try:
                     file_probe = ffmpeg.probe(file_path)
                 except Error as error:
-                    message = "skipping file due to ffmpeg probe error"
-                    if verbose:
-                        print(message)
-                    else:
-                        print("{} [{}]".format(message, file_path))
-                        print("Analysing {} ... ".format(file_path_root), end="", flush=True)
-                    continue;
+                    file_probe = {}
                 file_probe_streams_filtered = {
                     "video": [],
                     "audio": [],
@@ -202,9 +202,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
                 file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2 \
                     if ("format" in file_probe and "duration" in file_probe["format"]) else -1
-                file_probe_size_gb = int(file_probe["format"]["size"]) / 10 ** 9 \
-                    if ("format" in file_probe and "size" in file_probe["format"]) else -1
-
+                file_probe_size_b = int(file_probe["format"]["size"]) \
+                    if ("format" in file_probe and "size" in file_probe["format"]) else os.path.getsize(file_path)
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
@@ -231,8 +230,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_probe_streams_filtered_subtitles.extend(file_probe_streams_filtered_subtitles_supplementary)
                 file_probe_streams_filtered["subtitle"] = file_probe_streams_filtered_subtitles
                 file_probe_filtered = [
-                    {"file_name": os.path.basename(file_probe["format"]["filename"]) \
-                        if ("format" in file_probe and "filename" in file_probe["format"]) else ""},
+                    {"file_name": file_name},
                     {"target_quality": file_target_quality},
                     {"target_language": file_target_language},
                     {"native_language": file_native_language},
@@ -241,14 +239,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     {"media_type": file_media_type},
                     {"base_directory": file_base_dir},
                     {"version_directory": file_version_dir},
+                    {"version_qualifier": file_version_qualifier},
                     {"file_path": file_path},
                     {"file_extension": file_extension},
                     {"container_format": file_probe["format"]["format_name"].lower() \
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
                     {"duration__hours": str(round(file_probe_duration_h, 2 if file_probe_duration_h > 1 else 4)) \
                         if file_probe_duration_h > 0 else ""},
-                    {"size__GB": str(round(file_probe_size_gb, 2 if file_probe_duration_h > 1 else 4)) \
-                        if file_probe_size_gb > 0 else ""},
+                    {"size__GB": str(round(file_probe_size_b / 10 ** 9, 2 if file_probe_duration_h > 1 else 4))},
                     {"bit_rate__Kbps": str(file_probe_bit_rate) if file_probe_bit_rate > 0 else ""},
                     {"stream_count": str(sum(map(len, file_probe_streams_filtered.values())))},
                 ]
@@ -312,14 +310,15 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             metadata.update({key: value})
             metadata.move_to_end(key, last=False)
 
-        _add("versions_count", "1")
-        _add("transcode_priority", "1")
-        _add("metadata_state", "Clean")
+        _add("versions_count", "")
+        _add("transcode_priority", "")
+        _add("metadata_state", "")
         _add("plex_subtitle", "")
         _add("plex_audio", "")
         _add("plex_video", "")
-        _add("media_size", "")
-        _add("media_state", "")
+        _add("file_size", "")
+        _add("file_state", "")
+        _add("file_action", "")
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
     metadata_cache_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
@@ -339,39 +338,56 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = _format_columns(
         pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
     )
-
-    # TODO: Fill in metadata_updated_pl
-    # metadata_versions_count = "1"
-    # metadata_transcode_priority = "1"
-    # metadata_metadata_state = "Clean|Messy|Invalid"
-    # metadata_media_state = "Complete|Incomplete|Corrupt"
-
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        (
+            pl.when(
+                (pl.col("Container Format") == "")
+            ).then(pl.lit("Corrupt"))
+            .when(
+                (pl.col("Base Directory") == ".")
+            ).then(pl.lit("Corrupt"))
+            .when(
+                (pl.col("Video Count") == "0") |
+                (pl.col("Audio Count") == "0")
+            ).then(pl.lit("Incomplete"))
+            .when(
+                (pl.col("Target Language") == "eng") &
+                (pl.col("Audio 1 Language") != "eng")
+            ).then(pl.lit("Incomplete"))
+            .when(
+                (pl.col("Target Language") != "eng") &
+                ((pl.col("Subtitle 1 Language").is_null()) |
+                 (pl.col("Subtitle 1 Language") != "eng")
+                 )
+            ).then(pl.lit("Incomplete"))
+            .otherwise(pl.lit("Complete"))
+        ).alias("File State"))
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
                 ((pl.col("Target Quality") == "High") &
-                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_RANGE) * TARGET_SIZE_HIGH_GB))
+                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_HIGH_GB))
                  ) |
                 ((pl.col("Target Quality") == "Medium") &
-                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_RANGE) * TARGET_SIZE_MEDIUM_GB))
+                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_MEDIUM_GB))
                  ) |
                 ((pl.col("Target Quality") == "Low") &
-                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_RANGE) * TARGET_SIZE_LOW_GB))
+                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_LOW_GB))
                  )
             ).then(pl.lit("Large"))
             .when(
                 ((pl.col("Target Quality") == "High") &
-                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_RANGE * TARGET_SIZE_HIGH_GB))
+                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_HIGH_GB))
                  ) |
                 ((pl.col("Target Quality") == "Medium") &
-                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_RANGE * TARGET_SIZE_MEDIUM_GB))
+                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_MEDIUM_GB))
                  ) |
                 ((pl.col("Target Quality") == "Low") &
-                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_RANGE * TARGET_SIZE_LOW_GB))
+                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_LOW_GB))
                  )
             ).then(pl.lit("Small"))
             .otherwise(pl.lit("Right"))
-        ).alias("Media Size"))
+        ).alias("File Size"))
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
@@ -405,7 +421,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         (pl.col("Video 1 Codec") == "WMV3") |
                         (pl.col("Video 1 Codec") == "VC1")
                 ))
-            ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))
+            ).then(pl.lit("Direct Play"))
+            .otherwise(pl.lit("Transcode"))
         ).alias("Plex Video"))
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
@@ -448,14 +465,56 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         (pl.col("Audio 1 Codec") == "WMAPRO") |
                         (pl.col("Audio 1 Codec") == "WMAV2")
                 ))
-            ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))
+            ).then(pl.lit("Direct Play"))
+            .otherwise(pl.lit("Transcode"))
         ).alias("Plex Audio"))
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
+                (pl.col("Subtitle 1 Format") == "") |
                 (pl.col("Subtitle 1 Format") == "Text")
-            ).then(pl.lit("Direct Play")).otherwise(pl.lit("Transcode"))
+            ).then(pl.lit("Direct Play"))
+            .otherwise(pl.lit("Transcode"))
         ).alias("Plex Subtitle"))
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        (
+            pl.when(
+                (pl.col("Video Count").cast(pl.Int32) > 1)
+            ).then(pl.lit("Messy"))
+            .when(
+                (pl.col("Audio Count").cast(pl.Int32) > 1)
+            ).then(pl.lit("Messy"))
+            .when(
+                (pl.col("Subtitle Count").cast(pl.Int32) > 2)
+            ).then(pl.lit("Messy"))
+            .when(
+                (pl.col("Other Count").cast(pl.Int32) > 0)
+            ).then(pl.lit("Messy"))
+            .otherwise(pl.lit("Clean"))
+        ).alias("Metadata State"))
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        pl.concat_str([
+            pl.col("Media Directory"),
+            pl.col("Media Scope"),
+            pl.col("Media Type"),
+            pl.col("Base Directory"),
+            pl.col("Version Qualifier"),
+        ], separator="/",
+        ).alias("Base Path")
+    ).with_columns(
+        pl.col("Base Path").count().over("Base Path")
+        .alias("Versions Count")
+    ).drop("Base Path")
+
+    # TODO
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        (
+            pl.lit("1")
+        ).alias("Transcode Priority"))
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        (
+            pl.lit("Download|Transcode|Merge|None")
+        ).alias("File Action"))
 
     # TODO
     # with pl.Config(
