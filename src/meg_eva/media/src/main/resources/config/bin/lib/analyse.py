@@ -97,6 +97,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 if len(file_relative_dir_tokens) > 3 else "."
             file_transcode_dir = os.path.join(file_path_root, file_media_scope, file_media_type, file_base_dir)
             file_transcode_path = os.path.join(file_transcode_dir, ".{}_transcode.yaml".format(file_name_sans_extension))
+            file_transcode_path_root = file_transcode_path
             while not os.path.isfile(file_transcode_path) and file_transcode_dir != file_path_root:
                 file_transcode_dir = os.path.dirname(file_transcode_dir)
                 file_transcode_path = os.path.join(file_transcode_dir, "._transcode.yaml")
@@ -247,7 +248,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     {"version_directory": file_version_dir},
                     {"version_qualifier": file_version_qualifier},
                     {"file_path": file_path},
-                    {"transcode_path": file_transcode_path},
+                    {"transcode_path": file_transcode_path_root},
                     {"file_extension": file_extension},
                     {"container_format": file_probe["format"]["format_name"].lower() \
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
