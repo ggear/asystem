@@ -95,6 +95,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     file_version_qualifier = file_name_sans_extension
             file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
                 if len(file_relative_dir_tokens) > 3 else "."
+
+
+
+
+            # TODO: Merge all _transcodes! and put down after refresh
             file_transcode_dir = os.path.join(file_path_root, file_media_scope, file_media_type, file_base_dir)
             file_transcode_path = os.path.join(file_transcode_dir, "._transcode.yaml")
             file_transcode_path_root = file_transcode_path
@@ -124,6 +129,21 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         continue
             else:
                 file_transcode_path = ""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             if refresh or not os.path.isfile(file_metadata_path):
                 try:
                     file_probe = ffmpeg.probe(file_path)
