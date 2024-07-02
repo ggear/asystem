@@ -193,13 +193,15 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_probe_stream_filtered["codec"] = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
                             file_probe_stream_filtered["language"] = file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_target_language
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"] \
+                                    and file_probe_stream["tags"]["language"].lower() != "und") else file_target_language
                             file_probe_stream_filtered["channels"] = str(file_probe_stream["channels"])
                         elif file_probe_stream_type == "subtitle":
                             file_probe_stream_filtered["codec"] = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
                             file_probe_stream_filtered["language"] = file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]) else file_target_language
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"] \
+                                    and file_probe_stream["tags"]["language"].lower() != "und") else file_target_language
                             file_probe_stream_filtered["format"] = "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"
                 file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
