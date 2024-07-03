@@ -84,7 +84,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 if len(file_relative_dir_tokens) > file_base_tokens else "."
             file_version_qualifier = ""
             if file_media_type == "series":
-                file_version_qualifier_match = re.search(".*[sS][0-9]?[0-9]+[eE]([0-9]?[0-9]+).*\.", file_name)
+                file_version_qualifier_match = re.search(".*[sS][0-9]?[0-9]+([eE][0-9]?[0-9]+[-eE]*[0-9]*).*\.", file_name)
                 if file_version_qualifier_match is not None:
                     file_version_qualifier = "Episode-{}".format(file_version_qualifier_match.groups()[0])
                 else:
@@ -95,7 +95,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
 
 
 
-            # TODO: Merge all _transcodes! and put down after refresh
+            # TODO: Merge all _transcodes!
+            #  put down after refresh
+            #  make sure there is a default - add to install of media dirs
+            #  files ignores at scope/type levels
+            #  test that files picked up at all levels
             file_transcode_dir = os.path.join(file_path_root, file_media_scope, file_media_type, file_base_dir)
             file_transcode_path = os.path.join(file_transcode_dir, "._transcode.yaml")
             file_transcode_path_root = file_transcode_path
@@ -534,6 +538,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         .alias("Versions Count")
     ).drop("Base Path")
 
+
+
+
+
+
+
     # TODO
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
@@ -543,6 +553,17 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         (
             pl.lit("Download|Transcode|Merge|None")
         ).alias("File Action"))
+
+
+
+
+
+
+
+
+
+
+
 
     # TODO
     # with pl.Config(
