@@ -261,7 +261,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     {"version_directory": file_version_dir},
                     {"version_qualifier": file_version_qualifier},
                     {"file_path": " {} ".format(shlex.quote(file_path))},
-                    {"config_path": " {} ".format(shlex.quote(file_transcode_path))},
+                    {"config_path": " {} ".format(shlex.quote(file_transcode_path)) if len(file_transcode_path) > 0 else ""},
                     {"config_root_path": " {} ".format(shlex.quote(file_transcode_path_root))},
                     {"file_extension": file_extension},
                     {"container_format": file_probe["format"]["format_name"].lower() \
@@ -575,7 +575,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 (pl.col("File Size") == "Large") |
                 (pl.col("Metadata State") == "Messy")
             ).then(pl.lit("Reformat"))
-            .otherwise(None)
+            .otherwise(pl.lit("Nothing"))
         ).alias("File Action"))
 
     # TODO
