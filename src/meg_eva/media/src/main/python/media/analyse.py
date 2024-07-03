@@ -557,19 +557,23 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         (
             pl.when(
                 (pl.col("File State") == "Corrupt") |
-                (pl.col("File State") == "Incomplete") |
-                ((pl.col("File Size") == "Small") & (pl.col("Target Quality") != "Low"))
-            ).then(pl.lit("Fix"))
+                (pl.col("File State") == "Incomplete")
+            ).then(pl.lit("Download"))
             .when(
                 (pl.col("Versions Count").cast(pl.Int32) > 1)
             ).then(pl.lit("Merge"))
             .when(
                 (pl.col("Plex Video") == "Transcode") |
                 (pl.col("Plex Audio") == "Transcode") |
-                (pl.col("Plex Subtitle") == "Transcode") |
+                (pl.col("Plex Subtitle") == "Transcode")
+            ).then(pl.lit("Transcode"))
+            .when(
                 (pl.col("File Size") == "Large") |
                 (pl.col("Metadata State") == "Messy")
-            ).then(pl.lit("Transcode"))
+            ).then(pl.lit("Reformat"))
+            .when(
+                ((pl.col("File Size") == "Small") & (pl.col("Target Quality") != "Low"))
+            ).then(pl.lit("Upscale"))
             .otherwise(None)
         ).alias("File Action"))
 
