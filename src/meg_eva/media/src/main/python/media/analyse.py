@@ -412,6 +412,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
+                (pl.col("File State") == "Corrupt")
+            ).then(None)
+            .when(
                 ((pl.col("File Extension").str.to_lowercase() == "avi") & (
                         (pl.col("Video 1 Codec") == "MPEG4") |
                         (pl.col("Video 1 Codec") == "MJPEG")
@@ -448,6 +451,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
+                (pl.col("File State") == "Corrupt")
+            ).then(None)
+            .when(
                 ((pl.col("Target Language") == pl.col("Audio 1 Language")) &
                  (((pl.col("File Extension").str.to_lowercase() == "avi") & (
                          (pl.col("Audio 1 Codec") == "AAC") |
@@ -493,7 +499,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
+                (pl.col("File State") == "Corrupt")
+            ).then(None)
+            .when(
+                (pl.col("Subtitle Count").cast(pl.Int32) == 0) |
                 (pl.col("Subtitle 1 Format").is_null()) |
+                (pl.col("Subtitle 1 Format") == "") |
                 (pl.col("Subtitle 1 Format") == "Text")
             ).then(pl.lit("Direct Play"))
             .otherwise(pl.lit("Transcode"))
@@ -501,6 +512,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
+                (pl.col("File State") == "Corrupt")
+            ).then(None)
+            .when(
                 (pl.col("Video Count").cast(pl.Int32) > 1)
             ).then(pl.lit("Messy"))
             .when(
@@ -531,11 +545,31 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     # TODO
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
-            pl.lit("1")
+            pl.when(
+                (pl.col("File State") == "Corrupt")
+            ).then(None)
+            .otherwise(
+                pl.lit("1")
+            )
         ).alias("Transcode Priority"))
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
-            pl.lit("Download|Transcode|Merge|None")
+            pl.when(
+                (pl.col("File State") == "Corrupt") |
+                (pl.col("File State") == "Incomplete") |
+                ((pl.col("File Size") == "Small") & (pl.col("Target Quality") != "Low"))
+            ).then(pl.lit("Fix"))
+            .when(
+                (pl.col("Versions Count").cast(pl.Int32) > 1)
+            ).then(pl.lit("Merge"))
+            .when(
+                (pl.col("Plex Video") == "Transcode") |
+                (pl.col("Plex Audio") == "Transcode") |
+                (pl.col("Plex Subtitle") == "Transcode") |
+                (pl.col("File Size") == "Large") |
+                (pl.col("Metadata State") == "Messy")
+            ).then(pl.lit("Transcode"))
+            .otherwise(None)
         ).alias("File Action"))
 
     # TODO
