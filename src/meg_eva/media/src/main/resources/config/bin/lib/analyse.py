@@ -576,7 +576,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 (pl.col("Metadata State") == "Messy")
             ).then(pl.lit("Reformat"))
             .when(
-                ((pl.col("File Size") == "Small") & (pl.col("Target Quality") != "Low"))
+                (pl.col("File Size") == "Small") &
+                (pl.col("Target Quality") != "Low")
             ).then(pl.lit("Upscale"))
             .otherwise(None)
         ).alias("File Action"))
