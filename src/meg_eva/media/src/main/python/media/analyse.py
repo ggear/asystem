@@ -25,7 +25,7 @@ from gspread_pandas import Spread
 TARGET_SIZE_DELTA = 1 / 3
 TARGET_SIZE_HIGH_GB = 12
 TARGET_SIZE_MEDIUM_GB = 6
-TARGET_SIZE_LOW_GB = 3
+TARGET_SIZE_LOW_GB = 2
 
 
 def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
@@ -560,6 +560,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 (pl.col("File State") == "Incomplete")
             ).then(pl.lit("Download"))
             .when(
+                (pl.col("File Size") == "Small") &
+                (pl.col("Target Quality") != "Low")
+            ).then(pl.lit("Upscale"))
+            .when(
                 (pl.col("Versions Count").cast(pl.Int32) > 1)
             ).then(pl.lit("Merge"))
             .when(
@@ -571,10 +575,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 (pl.col("File Size") == "Large") |
                 (pl.col("Metadata State") == "Messy")
             ).then(pl.lit("Reformat"))
-            .when(
-                (pl.col("File Size") == "Small") &
-                (pl.col("Target Quality") != "Low")
-            ).then(pl.lit("Upscale"))
             .otherwise(None)
         ).alias("File Action"))
 
