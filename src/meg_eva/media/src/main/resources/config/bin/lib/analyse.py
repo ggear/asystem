@@ -5,6 +5,7 @@ WARNING: This file is written by the build process, any manual edits will be los
 import argparse
 import os
 import re
+import shlex
 import sys
 from collections import OrderedDict
 from collections.abc import MutableMapping
@@ -263,9 +264,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     {"base_directory": file_base_dir},
                     {"version_directory": file_version_dir},
                     {"version_qualifier": file_version_qualifier},
-                    {"file_path": file_path},
-                    {"config_path": file_transcode_path},
-                    {"config_root_path": file_transcode_path_root},
+                    {"file_path": " {} ".format(shlex.quote(file_path))},
+                    {"config_path": " {} ".format(shlex.quote(file_transcode_path))},
+                    {"config_root_path": " {} ".format(shlex.quote(file_transcode_path_root))},
                     {"file_extension": file_extension},
                     {"container_format": file_probe["format"]["format_name"].lower() \
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
