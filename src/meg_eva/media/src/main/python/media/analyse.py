@@ -84,7 +84,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 if len(file_relative_dir_tokens) > file_base_tokens else "."
             file_version_qualifier = ""
             if file_media_type == "series":
-                file_version_qualifier_match = re.search(".*[sS][0-9]?[0-9]+([eE][0-9]?[0-9]+[-eE]*[0-9]*).*\.", file_name)
+                file_version_qualifier_match = re.search(".*[sS][0-9]?[0-9]+([eE][0-9]?[0-9]+.*)\..*", file_name)
                 if file_version_qualifier_match is not None:
                     file_version_qualifier = "Episode-{}".format(file_version_qualifier_match.groups()[0])
                 else:
