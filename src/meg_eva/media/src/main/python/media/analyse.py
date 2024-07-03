@@ -92,9 +92,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
                 if len(file_relative_dir_tokens) > 3 else "."
 
-
-
-
             # TODO: Merge all _transcodes!
             #  put down after refresh
             #  make sure there is a default - add to install of media dirs
@@ -129,20 +126,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         continue
             else:
                 file_transcode_path = ""
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
             if refresh or not os.path.isfile(file_metadata_path):
                 try:
@@ -242,6 +225,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         file_probe_streams_filtered_audios.append(file_probe_streams_filtered_audio)
                     else:
                         file_probe_streams_filtered_audios_supplementary.append(file_probe_streams_filtered_audio)
+                if len(file_probe_streams_filtered_audios) == 0:
+                    file_probe_streams_filtered_audios_supplementary = []
+                    for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
+                        if file_probe_streams_filtered_audio["language"] == file_target_language:
+                            file_probe_streams_filtered_audios.append(file_probe_streams_filtered_audio)
+                        else:
+                            file_probe_streams_filtered_audios_supplementary.append(file_probe_streams_filtered_audio)
                 file_probe_streams_filtered_audios.sort(key=lambda stream: int(stream["channels"]), reverse=True)
                 file_probe_streams_filtered_audios_supplementary.sort(key=lambda stream: int(stream["channels"]), reverse=True)
                 file_probe_streams_filtered_audios.extend(file_probe_streams_filtered_audios_supplementary)
@@ -538,12 +528,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         .alias("Versions Count")
     ).drop("Base Path")
 
-
-
-
-
-
-
     # TODO
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
@@ -553,17 +537,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         (
             pl.lit("Download|Transcode|Merge|None")
         ).alias("File Action"))
-
-
-
-
-
-
-
-
-
-
-
 
     # TODO
     # with pl.Config(
