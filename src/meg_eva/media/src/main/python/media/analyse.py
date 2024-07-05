@@ -333,7 +333,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             metadata.move_to_end(key, last=False)
 
         _add("versions_count", "")
-        _add("transcode_priority", "")
+        _add("action_priority", "")
         _add("metadata_state", "")
         _add("plex_subtitle", "")
         _add("plex_audio", "")
@@ -549,20 +549,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         ], separator="/",
         ).alias("Base Path")
     ).with_columns(
-        pl.col("Base Path").count().over("Base Path")
+        (pl.col("Base Path").count().over("Base Path"))
         .alias("Versions Count")
     ).drop("Base Path")
-
-    # TODO
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        (
-            pl.when(
-                (pl.col("File State") == "Corrupt")
-            ).then(None)
-            .otherwise(
-                pl.lit("1")
-            )
-        ).alias("Transcode Priority"))
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
@@ -589,6 +578,18 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         ).alias("File Action"))
 
     # TODO
+    metadata_updated_pl = metadata_updated_pl.sort("File Size", descending=True).with_columns(
+        (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
+        .alias("Action Priority Base")
+    ).with_columns(
+        (pl.col("File Action").cum_count().over("Action Priority Base"))
+        .alias("Action Priority Count")
+    ).with_columns(
+        (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
+        .alias("Action Priority")
+    ).drop("Action Priority Base").drop("Action Priority Count")
+
+    # TODO
     # with pl.Config(
     #         tbl_rows=-1,
     #         tbl_cols=-1,
@@ -611,7 +612,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     ]]
     if len(metadata_updated_pl) > 0:
         metadata_updated_pd = metadata_updated_pl.to_pandas()
-        metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_index()
+        metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_values("Action Priority")
         metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True,
                                     add_filter=True, freeze_index=True, freeze_headers=True)
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
