@@ -583,7 +583,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = (metadata_updated_pl.with_columns(
         (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
         .alias("Action Priority Base")
-    ).sort("File Size", descending=True).with_columns(
+    ).sort("File Size", descending=True))
+    metadata_updated_pl = (metadata_updated_pl.with_columns(
         (pl.col("File Action").cum_count().over("Action Priority Base"))
         .alias("Action Priority Count")
     ).with_columns(
