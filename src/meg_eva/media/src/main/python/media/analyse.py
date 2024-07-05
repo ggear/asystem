@@ -579,14 +579,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = (metadata_updated_pl.with_columns(
         (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
         .alias("Action Priority Base")
-    ).sort("File Size (GB)", descending=True))
-    metadata_updated_pl = (metadata_updated_pl.with_columns(
-        (pl.col("File Action").cum_count().over("Action Priority Base"))
+    ).sort("File Size (GB)", descending=True)).with_columns(
+        (pl.col("File Action").cum_count().over("File Action"))
         .alias("Action Priority Count")
     ).with_columns(
         (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
         .alias("Action Priority")
-    ).drop("Action Priority Base").drop("Action Priority Count"))
+    ).drop("Action Priority Base").drop("Action Priority Count")
     metadata_updated_pl = metadata_updated_pl.with_columns([
         pl.when(pl.col(pl.Utf8).str.len_bytes() == 0).then(None).otherwise(pl.col(pl.Utf8)).name.keep()
     ])
