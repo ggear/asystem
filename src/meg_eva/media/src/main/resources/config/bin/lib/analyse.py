@@ -421,29 +421,39 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             ).then(None)
             .when(
                 ((pl.col("File Extension").str.to_lowercase() == "avi") & (
-                        (pl.col("Video 1 Codec") == "MPEG4") |
-                        (pl.col("Video 1 Codec") == "MJPEG")
+                        (pl.col("Video 1 Codec") == "AVC") |
+                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                        (pl.col("Video 1 Codec") == "MJPEG") |
+                        (pl.col("Video 1 Codec") == "MPEG4")
                 )) |
                 ((pl.col("File Extension").str.to_lowercase() == "m2ts") & (
                         (pl.col("Video 1 Codec") == "AVC") |
                         (pl.col("Video 1 Codec") == "HEVC") |
-                        (pl.col("Video 1 Codec") == "MPEG2VIDEO")
+                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                        (pl.col("Video 1 Codec") == "MJPEG") |
+                        (pl.col("Video 1 Codec") == "MPEG4")
                 )) |
                 ((pl.col("File Extension").str.to_lowercase() == "mkv") & (
                         (pl.col("Video 1 Codec") == "AVC") |
                         (pl.col("Video 1 Codec") == "HEVC") |
-                        (pl.col("Video 1 Codec") == "MPEG2VIDEO")
+                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                        (pl.col("Video 1 Codec") == "MJPEG") |
+                        (pl.col("Video 1 Codec") == "MPEG4")
                 )) |
                 ((pl.col("File Extension").str.to_lowercase() == "mov") & (
                         (pl.col("Video 1 Codec") == "AVC") |
                         (pl.col("Video 1 Codec") == "HEVC") |
                         (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                        (pl.col("Video 1 Codec") == "MJPEG") |
                         (pl.col("Video 1 Codec") == "MPEG4") |
                         (pl.col("Video 1 Codec") == "VC1") |
                         (pl.col("Video 1 Codec") == "VP9")
                 )) |
                 ((pl.col("File Extension").str.to_lowercase() == "mp4") & (
                         (pl.col("Video 1 Codec") == "AVC") |
+                        (pl.col("Video 1 Codec") == "HEVC") |
+                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                        (pl.col("Video 1 Codec") == "MJPEG") |
                         (pl.col("Video 1 Codec") == "MPEG4")
                 )) |
                 ((pl.col("File Extension").str.to_lowercase() == "wmv") & (
@@ -562,24 +572,24 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             pl.when(
                 (pl.col("File State") == "Corrupt") |
                 (pl.col("File State") == "Incomplete")
-            ).then(pl.lit("Download"))
+            ).then(pl.lit("1. Download"))
             .when(
                 (pl.col("File Size") == "Small") &
                 (pl.col("Target Quality") != "Low")
-            ).then(pl.lit("Upscale"))
-            .when(
-                (pl.col("Versions Count").cast(pl.Int32) > 1)
-            ).then(pl.lit("Merge"))
+            ).then(pl.lit("2. Upscale"))
             .when(
                 (pl.col("Plex Video") == "Transcode") |
                 (pl.col("Plex Audio") == "Transcode") |
                 (pl.col("Plex Subtitle") == "Transcode")
-            ).then(pl.lit("Transcode"))
+            ).then(pl.lit("3. Transcode"))
             .when(
                 (pl.col("File Size") == "Large") |
                 (pl.col("Metadata State") == "Messy")
-            ).then(pl.lit("Reformat"))
-            .otherwise(pl.lit("Nothing"))
+            ).then(pl.lit("4. Reformat"))
+            .when(
+                (pl.col("Versions Count").cast(pl.Int32) > 1)
+            ).then(pl.lit("5. Merge"))
+            .otherwise(pl.lit("6. Nothing"))
         ).alias("File Action"))
 
     # TODO
