@@ -268,7 +268,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
                     {"duration__hours": str(round(file_probe_duration_h, 2 if file_probe_duration_h > 1 else 4)) \
                         if file_probe_duration_h > 0 else ""},
-                    {"size__GB": str(round(file_probe_size_b / 10 ** 9, 2 if file_probe_duration_h > 1 else 4))},
+                    {"file_size__GB": str(round(file_probe_size_b / 10 ** 9, 2 if file_probe_duration_h > 1 else 4))},
                     {"bit_rate__Kbps": str(file_probe_bit_rate) if file_probe_bit_rate > 0 else ""},
                     {"stream_count": str(sum(map(len, file_probe_streams_filtered.values())))},
                 ]
@@ -388,24 +388,24 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         (
             pl.when(
                 ((pl.col("Target Quality") == "High") &
-                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_HIGH_GB))
+                 (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_HIGH_GB))
                  ) |
                 ((pl.col("Target Quality") == "Medium") &
-                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_MEDIUM_GB))
+                 (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_MEDIUM_GB))
                  ) |
                 ((pl.col("Target Quality") == "Low") &
-                 (pl.col("Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_LOW_GB))
+                 (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_LOW_GB))
                  )
             ).then(pl.lit("Large"))
             .when(
                 ((pl.col("Target Quality") == "High") &
-                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_HIGH_GB))
+                 (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_HIGH_GB))
                  ) |
                 ((pl.col("Target Quality") == "Medium") &
-                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_MEDIUM_GB))
+                 (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_MEDIUM_GB))
                  ) |
                 ((pl.col("Target Quality") == "Low") &
-                 (pl.col("Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_LOW_GB))
+                 (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_LOW_GB))
                  )
             ).then(pl.lit("Small"))
             .otherwise(pl.lit("Right"))
@@ -579,14 +579,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = (metadata_updated_pl.with_columns(
         (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
         .alias("Action Priority Base")
-    ).sort("File Size", descending=True))
-    metadata_updated_pl = (metadata_updated_pl.with_columns(
+    ).sort("File Size (GB)", descending=True)).with_columns(
         (pl.col("File Action").cum_count().over("Action Priority Base"))
         .alias("Action Priority Count")
     ).with_columns(
         (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
         .alias("Action Priority")
-    ).drop("Action Priority Base").drop("Action Priority Count"))
+    ).drop("Action Priority Base").drop("Action Priority Count")
     metadata_updated_pl = metadata_updated_pl.with_columns([
         pl.when(pl.col(pl.Utf8).str.len_bytes() == 0).then(None).otherwise(pl.col(pl.Utf8)).name.keep()
     ])
