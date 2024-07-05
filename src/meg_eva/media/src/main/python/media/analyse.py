@@ -576,34 +576,16 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             ).then(pl.lit("5. Merge"))
             .otherwise(pl.lit("6. Nothing"))
         ).alias("File Action"))
-
-    # TODO
-    metadata_updated_pl = metadata_updated_pl.sort("File Size", descending=True).with_columns(
+    metadata_updated_pl = (metadata_updated_pl.with_columns(
         (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
         .alias("Action Priority Base")
-    ).with_columns(
+    ).sort("File Size", descending=True).with_columns(
         (pl.col("File Action").cum_count().over("Action Priority Base"))
         .alias("Action Priority Count")
     ).with_columns(
         (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
         .alias("Action Priority")
-    ).drop("Action Priority Base").drop("Action Priority Count")
-
-    # TODO
-    # with pl.Config(
-    #         tbl_rows=-1,
-    #         tbl_cols=-1,
-    #         fmt_str_lengths=20,
-    #         set_tbl_width_chars=30000,
-    #         set_fmt_float="full",
-    #         set_ascii_tables=True,
-    #         tbl_formatting="ASCII_FULL_CONDENSED",
-    #         set_tbl_hide_dataframe_shape=True,
-    # ):
-    #     print("")
-    #     print(metadata_updated_pl)
-    #     print("")
-
+    ).drop("Action Priority Base").drop("Action Priority Count"))
     metadata_updated_pl = metadata_updated_pl.with_columns([
         pl.when(pl.col(pl.Utf8).str.len_bytes() == 0).then(None).otherwise(pl.col(pl.Utf8)).name.keep()
     ])
