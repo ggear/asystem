@@ -324,7 +324,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         return metadata_pl.select(metadata_columns) \
             .rename(lambda column: \
                         ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") \
-                             if len(column.split("__")) == 2 else column.replace("_", " ").title()) if "_" in column else column)
+                             if len(column.split("__")) == 2 else column.replace("_", " ").title()) \
+                            if "_" in column else column)
 
     metadata_enriched_list = []
     for metadata in metadata_list:
@@ -576,25 +577,59 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             ).then(pl.lit("5. Merge"))
             .otherwise(pl.lit("6. Nothing"))
         ).alias("File Action"))
-    metadata_updated_pl = metadata_updated_pl.select(
+
+
+
+
+
+
+
+
+    # metadata_updated_pl = metadata_updated_pl.select(
+    #     (pl.all().sort_by("File Size (GB)", descending=True).over("File Action"))
+    # ).with_row_index("Action Priority Count").with_columns(
+    #     (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
+    #     .alias("Action Priority Base")
+    # ).with_columns(
+    #     (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
+    #     .alias("Action Priority")
+    # ).drop("Action Priority Base").drop("Action Priority Count")
+
+
+
+
+    metadata_updated_pl = metadata_updated_pl.with_columns(
+        pl.col("File Size (GB)").cast(pl.Float32).keep_name()
+    ).select(
         (pl.all().sort_by("File Size (GB)", descending=True).over("File Action"))
-    ).with_row_index("Action Priority Count").with_columns(
+    ).with_columns(
         (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
         .alias("Action Priority Base")
+    ).with_columns(
+        (pl.col("File Action").cum_count().over("File Action"))
+        .alias("Action Priority Count")
     ).with_columns(
         (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
         .alias("Action Priority")
     ).drop("Action Priority Base").drop("Action Priority Count")
+
+
+
+
+
+
     metadata_updated_pl = metadata_updated_pl.with_columns([
-        pl.when(pl.col(pl.Utf8).str.len_bytes() == 0).then(None).otherwise(pl.col(pl.Utf8)).name.keep()
+        pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
+            .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
     ])
     metadata_updated_pl = metadata_updated_pl[[
-        column.name for column in metadata_updated_pl if not (column.null_count() == metadata_updated_pl.height)
+        column.name for column in metadata_updated_pl \
+        if not (column.null_count() == metadata_updated_pl.height)
     ]]
     if len(metadata_updated_pl) > 0:
-        metadata_updated_pd = metadata_updated_pl.to_pandas()
-        metadata_updated_pd = metadata_updated_pd.set_index("File Name").sort_values("Action Priority")
-        metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True,
+        metadata_updated_pd = metadata_updated_pl.to_pandas() \
+            .set_index("File Name").sort_values("Action Priority")
+        metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True, \
                                     add_filter=True, freeze_index=True, freeze_headers=True)
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
