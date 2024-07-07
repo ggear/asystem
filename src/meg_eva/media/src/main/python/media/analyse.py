@@ -1,7 +1,6 @@
 import argparse
 import os
 import re
-import shlex
 import sys
 from collections import OrderedDict
 from collections.abc import MutableMapping
@@ -46,11 +45,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         for file_name in file_names:
             file_metadata_written = False
             file_path = os.path.join(file_dir_path, file_name)
+            file_path_root_parent = os.path.dirname(file_path_root)
             file_relative_dir = "." + file_dir_path.replace(file_path_root, "")
             file_relative_dir_tokens = file_relative_dir.split(os.sep)
             file_name_sans_extension = os.path.splitext(file_name)[0]
             file_extension = os.path.splitext(file_name)[1].replace(".", "")
-            file_metadata_path = os.path.join(file_dir_path, ".{}_metadata.yaml".format(file_name_sans_extension))
+            file_metadata_path = os.path.join(file_dir_path, "._metadata_{}.yaml".format(file_name_sans_extension))
             file_media_scope = file_relative_dir_tokens[1] \
                 if len(file_relative_dir_tokens) > 1 else ""
             file_media_type = file_relative_dir_tokens[2] \
@@ -92,43 +92,38 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     file_version_qualifier = file_name_sans_extension
             file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
                 if len(file_relative_dir_tokens) > 3 else "."
-
-            # TODO: Merge all _transcodes!
-            #  put down after refresh
-            #  make sure there is a default - add to install of media dirs
-            #  files ignores at scope/type levels
-            #  test that files picked up at all levels
-            file_transcode_dir = os.path.join(file_path_root, file_media_scope, file_media_type, file_base_dir)
-            file_transcode_path = os.path.join(file_transcode_dir, "._transcode.yaml")
-            file_transcode_path_root = file_transcode_path
-            while not os.path.isfile(file_transcode_path) and file_transcode_dir != file_path_root:
-                file_transcode_dir = os.path.dirname(file_transcode_dir)
-                file_transcode_path = os.path.join(file_transcode_dir, "._transcode.yaml")
-            file_target_quality = "Medium"
-            file_target_language = "eng"
-            file_native_language = "eng"
-            if os.path.isfile(file_transcode_path):
-                with open(file_transcode_path, 'r') as file_transcode:
-                    try:
-                        metadata_transcode_dict = _unwrap_lists(yaml.safe_load(file_transcode))
-                        if "target_quality" in metadata_transcode_dict:
-                            file_target_quality = metadata_transcode_dict["target_quality"].title()
-                        if "native_language" in metadata_transcode_dict:
-                            file_native_language = metadata_transcode_dict["native_language"].lower()
-                        if "target_language" in metadata_transcode_dict:
-                            file_target_language = metadata_transcode_dict["target_language"].lower()
-                    except Exception:
-                        message = "skipping file due to transcode metadata cache [{}] load error".format(file_transcode)
-                        if verbose:
-                            print(message)
-                        else:
-                            print("{} [{}]".format(message, file_path))
-                            print("Analysing {} ... ".format(file_path_root), end="", flush=True)
-                        continue
-            else:
-                file_transcode_path = ""
-
             if refresh or not os.path.isfile(file_metadata_path):
+                file_defaults_dict = {
+                    "target_quality": "Medium",
+                    "target_language": "eng",
+                    "native_language": "eng",
+                }
+                file_defaults_paths = []
+                file_defaults_dir = os.path.join(file_path_root, file_media_scope, file_media_type, file_base_dir)
+                while file_defaults_dir != file_path_root_parent:
+                    file_defaults_path = os.path.join(file_defaults_dir, "._defaults.yaml")
+                    if os.path.isfile(file_defaults_path):
+                        file_defaults_paths.append(file_defaults_path)
+                    file_defaults_dir = os.path.dirname(file_defaults_dir)
+                for file_defaults_path in reversed(file_defaults_paths):
+                    if os.path.isfile(file_defaults_path):
+                        with open(file_defaults_path, 'r') as file_defaults:
+                            try:
+                                file_defaults_dict.update(_unwrap_lists(yaml.safe_load(file_defaults)))
+                            except Exception as e:
+                                message = "skipping file due to defaults metadata cache [{}] load error".format(file_defaults_path)
+                                if verbose:
+                                    print(message)
+                                else:
+                                    print("{} [{}]".format(message, file_path))
+                                    print("Analysing {} ... ".format(file_path_root), end="", flush=True)
+                                continue
+                if "target_quality" in file_defaults_dict:
+                    file_target_quality = file_defaults_dict["target_quality"].title()
+                if "native_language" in file_defaults_dict:
+                    file_native_language = file_defaults_dict["native_language"].lower()
+                if "target_language" in file_defaults_dict:
+                    file_target_language = file_defaults_dict["target_language"].lower()
                 try:
                     file_probe = ffmpeg.probe(file_path)
                 except Error as error:
@@ -260,9 +255,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     {"base_directory": file_base_dir},
                     {"version_directory": file_version_dir},
                     {"version_qualifier": file_version_qualifier},
-                    {"file_path": " {} ".format(shlex.quote(file_path))},
-                    {"config_path": " {} ".format(shlex.quote(file_transcode_path)) if len(file_transcode_path) > 0 else ""},
-                    {"config_root_path": " {} ".format(shlex.quote(file_transcode_path_root))},
+                    {"file_directory": " '{}' ".format(file_dir_path)},
                     {"file_extension": file_extension},
                     {"container_format": file_probe["format"]["format_name"].lower() \
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
@@ -577,29 +570,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             ).then(pl.lit("5. Merge"))
             .otherwise(pl.lit("6. Nothing"))
         ).alias("File Action"))
-
-
-
-
-
-
-
-
-    # metadata_updated_pl = metadata_updated_pl.select(
-    #     (pl.all().sort_by("File Size (GB)", descending=True).over("File Action"))
-    # ).with_row_index("Action Priority Count").with_columns(
-    #     (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
-    #     .alias("Action Priority Base")
-    # ).with_columns(
-    #     (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
-    #     .alias("Action Priority")
-    # ).drop("Action Priority Base").drop("Action Priority Count")
-
-
-
-
     metadata_updated_pl = metadata_updated_pl.with_columns(
-        pl.col("File Size (GB)").cast(pl.Float32).keep_name()
+        pl.col("File Size (GB)").cast(pl.Float32).name.keep()
     ).select(
         (pl.all().sort_by("File Size (GB)", descending=True).over("File Action"))
     ).with_columns(
@@ -612,12 +584,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
         .alias("Action Priority")
     ).drop("Action Priority Base").drop("Action Priority Count")
-
-
-
-
-
-
     metadata_updated_pl = metadata_updated_pl.with_columns([
         pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
             .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
@@ -637,6 +603,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
 
 
 def _unwrap_lists(lists):
+    if lists is None:
+        lists = []
     if isinstance(lists, list):
         dicts = OrderedDict()
         for item in lists:
@@ -647,6 +615,8 @@ def _unwrap_lists(lists):
 
 def _flatten_dicts(dicts, parent_key=''):
     items = []
+    if dicts is None:
+        dicts = {}
     for key, value in dicts.items():
         new_key = parent_key + '_' + str(key) if parent_key else str(key)
         if isinstance(value, MutableMapping):

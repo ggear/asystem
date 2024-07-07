@@ -9,10 +9,26 @@ cd ${SERVICE_INSTALL} || exit
 
 for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
   for SHARE_DIR_SCOPE in "kids" "parents" "docos" "comedy"; do
-    for SHARE_DIR_MEDIA in "audio" "movies" "series"; do
-      mkdir -p ${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_MEDIA}
+    for SHARE_DIR_TYPE in "audio" "movies" "series"; do
+      mkdir -p ${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}
     done
   done
+done
+
+for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+  for SHARE_DIR_SCOPE in "kids" "docos" "comedy"; do
+    for SHARE_DIR_TYPE in "movies" "series"; do
+      cat <<EOF >"${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}/._defaults.yaml"
+- target_quality: Low
+EOF
+    done
+  done
+  cat <<EOF >"${SHARE_DIR}/media/parents/movies/._defaults.yaml"
+- target_quality: High
+EOF
+  cat <<EOF >"${SHARE_DIR}/media/parents/series/._defaults.yaml"
+- target_quality: Medium
+EOF
 done
 
 if [ ! -d /root/.pyenv/versions/${PYTHON_VERSION}/bin ]; then
