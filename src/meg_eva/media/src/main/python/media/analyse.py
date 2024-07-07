@@ -549,6 +549,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = metadata_updated_pl.with_columns(
         (
             pl.when(
+                (pl.col("Versions Count").cast(pl.Int32) > 1)
+            ).then(pl.lit("5. Merge"))
+            .when(
                 (pl.col("File State") == "Corrupt") |
                 (pl.col("File State") == "Incomplete")
             ).then(pl.lit("1. Download"))
@@ -565,9 +568,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 (pl.col("File Size") == "Large") |
                 (pl.col("Metadata State") == "Messy")
             ).then(pl.lit("4. Reformat"))
-            .when(
-                (pl.col("Versions Count").cast(pl.Int32) > 1)
-            ).then(pl.lit("5. Merge"))
             .otherwise(pl.lit("6. Nothing"))
         ).alias("File Action"))
     metadata_updated_pl = metadata_updated_pl.with_columns(
