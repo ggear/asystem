@@ -7,6 +7,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 import ffmpeg
+import pandas as pd
 import polars as pl
 import yaml
 from ffmpeg._run import Error
@@ -35,7 +36,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     if clean:
         print("Cleaning {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
         metadata_spread.freeze(0, 0, sheet="Data")
-        metadata_spread.clear_sheet(0, 2, sheet="Data")
+
+        # TODO: Replace with empty sheet to stop pivot table being killed
+        metadata_spread.get_sheet_dims()
+        null_pd = pd.DataFrame(columns=["File Name", "File Action"]).set_index("File Name")
+        metadata_spread.df_to_sheet(null_pd, sheet="Data", replace=True, index=True)
+        # metadata_spread.clear_sheet(1, 2, sheet="Data")
+
         print("{}done".format("Cleaning {} ".format(file_path_root) if verbose else ""))
         return 0
     files_analysed = 0
@@ -348,13 +355,20 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         ))
     else:
         metadata_original_pl = pl.DataFrame()
-    if len(metadata_original_pl) > 0 and len(metadata_cache_pl) > 0:
-        metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in([
-            media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()
-        ]))
-    metadata_updated_pl = _format_columns(
-        pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
-    )
+    metadata_cache_pl = metadata_cache_pl if metadata_cache_pl.shape[0] > 0 else pl.DataFrame()
+    metadata_original_pl = metadata_original_pl if metadata_original_pl.shape[0] > 0 else pl.DataFrame()
+    if len(metadata_cache_pl) > 0:
+        if len(metadata_original_pl) > 0:
+            metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in([
+                media_directory[0] for media_directory in metadata_cache_pl.select("Media Directory").unique().rows()
+            ]))
+            metadata_updated_pl = _format_columns(
+                pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
+            )
+        else:
+            metadata_updated_pl = metadata_cache_pl
+    else:
+        metadata_updated_pl = pl.DataFrame()
     if len(metadata_updated_pl) > 0:
         metadata_updated_pl = metadata_updated_pl.with_columns(
             (
