@@ -35,7 +35,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     if clean:
         print("Cleaning {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
         metadata_spread.freeze(0, 0, sheet="Data")
-        metadata_spread.clear_sheet(sheet="Data")
+        metadata_spread.clear_sheet(0, 2, sheet="Data")
         print("{}done".format("Cleaning {} ".format(file_path_root) if verbose else ""))
         return 0
     files_analysed = 0
@@ -90,6 +90,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     file_version_qualifier = "Episode-{}".format(file_version_qualifier_match.groups()[0])
                 else:
                     file_version_qualifier = file_name_sans_extension
+            file_version_qualifier = file_version_qualifier.lower()
             file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
                 if len(file_relative_dir_tokens) > 3 else "."
             if refresh or not os.path.isfile(file_metadata_path):
@@ -354,247 +355,248 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     metadata_updated_pl = _format_columns(
         pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
     )
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        (
-            pl.when(
-                (pl.col("Container Format") == "")
-            ).then(pl.lit("Corrupt"))
-            .when(
-                (pl.col("Base Directory") == ".")
-            ).then(pl.lit("Corrupt"))
-            .when(
-                (pl.col("Video Count") == "0") |
-                (pl.col("Audio Count") == "0")
-            ).then(pl.lit("Incomplete"))
-            .when(
-                (pl.col("Target Language") == "eng") &
-                (pl.col("Audio 1 Language") != "eng")
-            ).then(pl.lit("Incomplete"))
-            .when(
-                (pl.col("Target Language") != "eng") &
-                ((pl.col("Subtitle 1 Language").is_null()) |
-                 (pl.col("Subtitle 1 Language") != "eng")
-                 )
-            ).then(pl.lit("Incomplete"))
-            .otherwise(pl.lit("Complete"))
-        ).alias("File State"))
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        (
-            pl.when(
-                ((pl.col("Target Quality") == "High") &
-                 (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_HIGH_GB))
-                 ) |
-                ((pl.col("Target Quality") == "Medium") &
-                 (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_MEDIUM_GB))
-                 ) |
-                ((pl.col("Target Quality") == "Low") &
-                 (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_LOW_GB))
-                 )
-            ).then(pl.lit("Large"))
-            .when(
-                ((pl.col("Target Quality") == "High") &
-                 (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_HIGH_GB))
-                 ) |
-                ((pl.col("Target Quality") == "Medium") &
-                 (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_MEDIUM_GB))
-                 ) |
-                ((pl.col("Target Quality") == "Low") &
-                 (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_LOW_GB))
-                 )
-            ).then(pl.lit("Small"))
-            .otherwise(pl.lit("Right"))
-        ).alias("File Size"))
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        (
-            pl.when(
-                (pl.col("File State") == "Corrupt")
-            ).then(None)
-            .when(
-                ((pl.col("File Extension").str.to_lowercase() == "avi") & (
-                        (pl.col("Video 1 Codec") == "AVC") |
-                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
-                        (pl.col("Video 1 Codec") == "MJPEG") |
-                        (pl.col("Video 1 Codec") == "MPEG4")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "m2ts") & (
-                        (pl.col("Video 1 Codec") == "AVC") |
-                        (pl.col("Video 1 Codec") == "HEVC") |
-                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
-                        (pl.col("Video 1 Codec") == "MJPEG") |
-                        (pl.col("Video 1 Codec") == "MPEG4")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "mkv") & (
-                        (pl.col("Video 1 Codec") == "AVC") |
-                        (pl.col("Video 1 Codec") == "HEVC") |
-                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
-                        (pl.col("Video 1 Codec") == "MJPEG") |
-                        (pl.col("Video 1 Codec") == "MPEG4")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "mov") & (
-                        (pl.col("Video 1 Codec") == "AVC") |
-                        (pl.col("Video 1 Codec") == "HEVC") |
-                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
-                        (pl.col("Video 1 Codec") == "MJPEG") |
-                        (pl.col("Video 1 Codec") == "MPEG4") |
-                        (pl.col("Video 1 Codec") == "VC1") |
-                        (pl.col("Video 1 Codec") == "VP9")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "mp4") & (
-                        (pl.col("Video 1 Codec") == "AVC") |
-                        (pl.col("Video 1 Codec") == "HEVC") |
-                        (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
-                        (pl.col("Video 1 Codec") == "MJPEG") |
-                        (pl.col("Video 1 Codec") == "MPEG4")
-                )) |
-                ((pl.col("File Extension").str.to_lowercase() == "wmv") & (
-                        (pl.col("Video 1 Codec") == "WMV3") |
-                        (pl.col("Video 1 Codec") == "VC1")
-                ))
-            ).then(pl.lit("Direct Play"))
-            .otherwise(pl.lit("Transcode"))
-        ).alias("Plex Video"))
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        (
-            pl.when(
-                (pl.col("File State") == "Corrupt")
-            ).then(None)
-            .when(
-                ((pl.col("Target Language") == pl.col("Audio 1 Language")) &
-                 (((pl.col("File Extension").str.to_lowercase() == "avi") & (
-                         (pl.col("Audio 1 Codec") == "AAC") |
-                         (pl.col("Audio 1 Codec") == "AC3") |
-                         (pl.col("Audio 1 Codec") == "EAC3") |
-                         (pl.col("Audio 1 Codec") == "MP3") |
-                         (pl.col("Audio 1 Codec") == "PCM")
-                 )) |
-                  ((pl.col("File Extension").str.to_lowercase() == "m2ts") & (
-                          (pl.col("Audio 1 Codec") == "AAC") |
-                          (pl.col("Audio 1 Codec") == "AC3") |
-                          (pl.col("Audio 1 Codec") == "EAC3") |
-                          (pl.col("Audio 1 Codec") == "MP2") |
-                          (pl.col("Audio 1 Codec") == "MP3") |
-                          (pl.col("Audio 1 Codec") == "PCM")
-                  )) |
-                  ((pl.col("File Extension").str.to_lowercase() == "mkv") & (
-                          (pl.col("Audio 1 Codec") == "AAC") |
-                          (pl.col("Audio 1 Codec") == "AC3") |
-                          (pl.col("Audio 1 Codec") == "EAC3") |
-                          (pl.col("Audio 1 Codec") == "MP3") |
-                          (pl.col("Audio 1 Codec") == "PCM")
-                  )) |
-                  ((pl.col("File Extension").str.to_lowercase() == "mov") & (
-                          (pl.col("Audio 1 Codec") == "AAC") |
-                          (pl.col("Audio 1 Codec") == "AC3") |
-                          (pl.col("Audio 1 Codec") == "EAC3")
-                  )) |
-                  ((pl.col("File Extension").str.to_lowercase() == "mp4") & (
-                          (pl.col("Audio 1 Codec") == "AAC") |
-                          (pl.col("Audio 1 Codec") == "AC3") |
-                          (pl.col("Audio 1 Codec") == "EAC3") |
-                          (pl.col("Audio 1 Codec") == "MP3")
-                  )) |
-                  ((pl.col("File Extension").str.to_lowercase() == "wmv") & (
-                          (pl.col("Audio 1 Codec") == "AC3") |
-                          (pl.col("Audio 1 Codec") == "WMAPRO") |
-                          (pl.col("Audio 1 Codec") == "WMAV2")
-                  ))))
-            ).then(pl.lit("Direct Play"))
-            .otherwise(pl.lit("Transcode"))
-        ).alias("Plex Audio"))
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        (
-            pl.when(
-                (pl.col("File State") == "Corrupt")
-            ).then(None)
-            .when(
-                (pl.col("Subtitle Count").cast(pl.Int32) == 0) |
-                (pl.col("Subtitle 1 Format").is_null()) |
-                (pl.col("Subtitle 1 Format") == "") |
-                (pl.col("Subtitle 1 Format") == "Text")
-            ).then(pl.lit("Direct Play"))
-            .otherwise(pl.lit("Transcode"))
-        ).alias("Plex Subtitle"))
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        (
-            pl.when(
-                (pl.col("File State") == "Corrupt")
-            ).then(None)
-            .when(
-                (pl.col("Video Count").cast(pl.Int32) > 1)
-            ).then(pl.lit("Messy"))
-            .when(
-                (pl.col("Audio Count").cast(pl.Int32) > 1)
-            ).then(pl.lit("Messy"))
-            .when(
-                (pl.col("Subtitle Count").cast(pl.Int32) > 2)
-            ).then(pl.lit("Messy"))
-            .when(
-                (pl.col("Other Count").cast(pl.Int32) > 0)
-            ).then(pl.lit("Messy"))
-            .otherwise(pl.lit("Clean"))
-        ).alias("Metadata State"))
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        pl.concat_str([
-            pl.col("Media Directory"),
-            pl.col("Media Scope"),
-            pl.col("Media Type"),
-            pl.col("Base Directory"),
-            pl.col("Version Qualifier"),
-        ], separator="/",
-        ).alias("Base Path")
-    ).with_columns(
-        (pl.col("Base Path").count().over("Base Path"))
-        .alias("Versions Count")
-    ).drop("Base Path")
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        (
-            pl.when(
-                (pl.col("Versions Count").cast(pl.Int32) > 1)
-            ).then(pl.lit("5. Merge"))
-            .when(
-                (pl.col("File State") == "Corrupt") |
-                (pl.col("File State") == "Incomplete")
-            ).then(pl.lit("1. Download"))
-            .when(
-                (pl.col("File Size") == "Small") &
-                (pl.col("Target Quality") != "Low")
-            ).then(pl.lit("2. Upscale"))
-            .when(
-                (pl.col("Plex Video") == "Transcode") |
-                (pl.col("Plex Audio") == "Transcode") |
-                (pl.col("Plex Subtitle") == "Transcode")
-            ).then(pl.lit("3. Transcode"))
-            .when(
-                (pl.col("File Size") == "Large") |
-                (pl.col("Metadata State") == "Messy")
-            ).then(pl.lit("4. Reformat"))
-            .otherwise(pl.lit("6. Nothing"))
-        ).alias("File Action"))
-    metadata_updated_pl = metadata_updated_pl.with_columns(
-        pl.col("File Size (GB)").cast(pl.Float32).name.keep()
-    ).select(
-        (pl.all().sort_by("File Size (GB)", descending=True).over("File Action"))
-    ).with_columns(
-        (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
-        .alias("Action Priority Base")
-    ).with_columns(
-        (pl.col("File Action").cum_count().over("File Action"))
-        .alias("Action Priority Count")
-    ).with_columns(
-        (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
-        .alias("Action Priority")
-    ).drop("Action Priority Base").drop("Action Priority Count")
-    metadata_updated_pl = metadata_updated_pl.with_columns([
-        pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
-            .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
-    ])
-    metadata_updated_pl = metadata_updated_pl[[
-        column.name for column in metadata_updated_pl \
-        if not (column.null_count() == metadata_updated_pl.height)
-    ]]
     if len(metadata_updated_pl) > 0:
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            (
+                pl.when(
+                    (pl.col("Container Format") == "")
+                ).then(pl.lit("Corrupt"))
+                .when(
+                    (pl.col("Base Directory") == ".")
+                ).then(pl.lit("Corrupt"))
+                .when(
+                    (pl.col("Video Count") == "0") |
+                    (pl.col("Audio Count") == "0")
+                ).then(pl.lit("Incomplete"))
+                .when(
+                    (pl.col("Target Language") == "eng") &
+                    (pl.col("Audio 1 Language") != "eng")
+                ).then(pl.lit("Incomplete"))
+                .when(
+                    (pl.col("Target Language") != "eng") &
+                    ((pl.col("Subtitle 1 Language").is_null()) |
+                     (pl.col("Subtitle 1 Language") != "eng")
+                     )
+                ).then(pl.lit("Incomplete"))
+                .otherwise(pl.lit("Complete"))
+            ).alias("File State"))
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            (
+                pl.when(
+                    ((pl.col("Target Quality") == "High") &
+                     (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_HIGH_GB))
+                     ) |
+                    ((pl.col("Target Quality") == "Medium") &
+                     (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_MEDIUM_GB))
+                     ) |
+                    ((pl.col("Target Quality") == "Low") &
+                     (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_LOW_GB))
+                     )
+                ).then(pl.lit("Large"))
+                .when(
+                    ((pl.col("Target Quality") == "High") &
+                     (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_HIGH_GB))
+                     ) |
+                    ((pl.col("Target Quality") == "Medium") &
+                     (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_MEDIUM_GB))
+                     ) |
+                    ((pl.col("Target Quality") == "Low") &
+                     (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_LOW_GB))
+                     )
+                ).then(pl.lit("Small"))
+                .otherwise(pl.lit("Right"))
+            ).alias("File Size"))
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            (
+                pl.when(
+                    (pl.col("File State") == "Corrupt")
+                ).then(None)
+                .when(
+                    ((pl.col("File Extension").str.to_lowercase() == "avi") & (
+                            (pl.col("Video 1 Codec") == "AVC") |
+                            (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                            (pl.col("Video 1 Codec") == "MJPEG") |
+                            (pl.col("Video 1 Codec") == "MPEG4")
+                    )) |
+                    ((pl.col("File Extension").str.to_lowercase() == "m2ts") & (
+                            (pl.col("Video 1 Codec") == "AVC") |
+                            (pl.col("Video 1 Codec") == "HEVC") |
+                            (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                            (pl.col("Video 1 Codec") == "MJPEG") |
+                            (pl.col("Video 1 Codec") == "MPEG4")
+                    )) |
+                    ((pl.col("File Extension").str.to_lowercase() == "mkv") & (
+                            (pl.col("Video 1 Codec") == "AVC") |
+                            (pl.col("Video 1 Codec") == "HEVC") |
+                            (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                            (pl.col("Video 1 Codec") == "MJPEG") |
+                            (pl.col("Video 1 Codec") == "MPEG4")
+                    )) |
+                    ((pl.col("File Extension").str.to_lowercase() == "mov") & (
+                            (pl.col("Video 1 Codec") == "AVC") |
+                            (pl.col("Video 1 Codec") == "HEVC") |
+                            (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                            (pl.col("Video 1 Codec") == "MJPEG") |
+                            (pl.col("Video 1 Codec") == "MPEG4") |
+                            (pl.col("Video 1 Codec") == "VC1") |
+                            (pl.col("Video 1 Codec") == "VP9")
+                    )) |
+                    ((pl.col("File Extension").str.to_lowercase() == "mp4") & (
+                            (pl.col("Video 1 Codec") == "AVC") |
+                            (pl.col("Video 1 Codec") == "HEVC") |
+                            (pl.col("Video 1 Codec") == "MPEG2VIDEO") |
+                            (pl.col("Video 1 Codec") == "MJPEG") |
+                            (pl.col("Video 1 Codec") == "MPEG4")
+                    )) |
+                    ((pl.col("File Extension").str.to_lowercase() == "wmv") & (
+                            (pl.col("Video 1 Codec") == "WMV3") |
+                            (pl.col("Video 1 Codec") == "VC1")
+                    ))
+                ).then(pl.lit("Direct Play"))
+                .otherwise(pl.lit("Transcode"))
+            ).alias("Plex Video"))
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            (
+                pl.when(
+                    (pl.col("File State") == "Corrupt")
+                ).then(None)
+                .when(
+                    ((pl.col("Target Language") == pl.col("Audio 1 Language")) &
+                     (((pl.col("File Extension").str.to_lowercase() == "avi") & (
+                             (pl.col("Audio 1 Codec") == "AAC") |
+                             (pl.col("Audio 1 Codec") == "AC3") |
+                             (pl.col("Audio 1 Codec") == "EAC3") |
+                             (pl.col("Audio 1 Codec") == "MP3") |
+                             (pl.col("Audio 1 Codec") == "PCM")
+                     )) |
+                      ((pl.col("File Extension").str.to_lowercase() == "m2ts") & (
+                              (pl.col("Audio 1 Codec") == "AAC") |
+                              (pl.col("Audio 1 Codec") == "AC3") |
+                              (pl.col("Audio 1 Codec") == "EAC3") |
+                              (pl.col("Audio 1 Codec") == "MP2") |
+                              (pl.col("Audio 1 Codec") == "MP3") |
+                              (pl.col("Audio 1 Codec") == "PCM")
+                      )) |
+                      ((pl.col("File Extension").str.to_lowercase() == "mkv") & (
+                              (pl.col("Audio 1 Codec") == "AAC") |
+                              (pl.col("Audio 1 Codec") == "AC3") |
+                              (pl.col("Audio 1 Codec") == "EAC3") |
+                              (pl.col("Audio 1 Codec") == "MP3") |
+                              (pl.col("Audio 1 Codec") == "PCM")
+                      )) |
+                      ((pl.col("File Extension").str.to_lowercase() == "mov") & (
+                              (pl.col("Audio 1 Codec") == "AAC") |
+                              (pl.col("Audio 1 Codec") == "AC3") |
+                              (pl.col("Audio 1 Codec") == "EAC3")
+                      )) |
+                      ((pl.col("File Extension").str.to_lowercase() == "mp4") & (
+                              (pl.col("Audio 1 Codec") == "AAC") |
+                              (pl.col("Audio 1 Codec") == "AC3") |
+                              (pl.col("Audio 1 Codec") == "EAC3") |
+                              (pl.col("Audio 1 Codec") == "MP3")
+                      )) |
+                      ((pl.col("File Extension").str.to_lowercase() == "wmv") & (
+                              (pl.col("Audio 1 Codec") == "AC3") |
+                              (pl.col("Audio 1 Codec") == "WMAPRO") |
+                              (pl.col("Audio 1 Codec") == "WMAV2")
+                      ))))
+                ).then(pl.lit("Direct Play"))
+                .otherwise(pl.lit("Transcode"))
+            ).alias("Plex Audio"))
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            (
+                pl.when(
+                    (pl.col("File State") == "Corrupt")
+                ).then(None)
+                .when(
+                    (pl.col("Subtitle Count").cast(pl.Int32) == 0) |
+                    (pl.col("Subtitle 1 Format").is_null()) |
+                    (pl.col("Subtitle 1 Format") == "") |
+                    (pl.col("Subtitle 1 Format") == "Text")
+                ).then(pl.lit("Direct Play"))
+                .otherwise(pl.lit("Transcode"))
+            ).alias("Plex Subtitle"))
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            (
+                pl.when(
+                    (pl.col("File State") == "Corrupt")
+                ).then(None)
+                .when(
+                    (pl.col("Video Count").cast(pl.Int32) > 1)
+                ).then(pl.lit("Messy"))
+                .when(
+                    (pl.col("Audio Count").cast(pl.Int32) > 1)
+                ).then(pl.lit("Messy"))
+                .when(
+                    (pl.col("Subtitle Count").cast(pl.Int32) > 2)
+                ).then(pl.lit("Messy"))
+                .when(
+                    (pl.col("Other Count").cast(pl.Int32) > 0)
+                ).then(pl.lit("Messy"))
+                .otherwise(pl.lit("Clean"))
+            ).alias("Metadata State"))
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            pl.concat_str([
+                pl.col("Media Directory"),
+                pl.col("Media Scope"),
+                pl.col("Media Type"),
+                pl.col("Base Directory"),
+                pl.col("Version Qualifier"),
+            ], separator="/",
+            ).alias("Base Path")
+        ).with_columns(
+            (pl.col("Base Path").count().over("Base Path"))
+            .alias("Versions Count")
+        ).drop("Base Path")
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            (
+                pl.when(
+                    (pl.col("Versions Count").cast(pl.Int32) > 1)
+                ).then(pl.lit("5. Merge"))
+                .when(
+                    (pl.col("File State") == "Corrupt") |
+                    (pl.col("File State") == "Incomplete")
+                ).then(pl.lit("1. Download"))
+                .when(
+                    (pl.col("File Size") == "Small") &
+                    (pl.col("Target Quality") != "Low")
+                ).then(pl.lit("2. Upscale"))
+                .when(
+                    (pl.col("Plex Video") == "Transcode") |
+                    (pl.col("Plex Audio") == "Transcode") |
+                    (pl.col("Plex Subtitle") == "Transcode")
+                ).then(pl.lit("3. Transcode"))
+                .when(
+                    (pl.col("File Size") == "Large") |
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit("4. Reformat"))
+                .otherwise(pl.lit("6. Nothing"))
+            ).alias("File Action"))
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            pl.col("File Size (GB)").cast(pl.Float32).name.keep()
+        ).select(
+            (pl.all().sort_by("File Size (GB)", descending=True).over("File Action"))
+        ).with_columns(
+            (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
+            .alias("Action Priority Base")
+        ).with_columns(
+            (pl.col("File Action").cum_count().over("File Action"))
+            .alias("Action Priority Count")
+        ).with_columns(
+            (pl.col("Action Priority Base") + pl.col("Action Priority Count"))
+            .alias("Action Priority")
+        ).drop("Action Priority Base").drop("Action Priority Count")
+        metadata_updated_pl = metadata_updated_pl.with_columns([
+            pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
+                .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
+        ])
+        metadata_updated_pl = metadata_updated_pl[[
+            column.name for column in metadata_updated_pl \
+            if not (column.null_count() == metadata_updated_pl.height)
+        ]]
         metadata_updated_pd = metadata_updated_pl.to_pandas() \
             .set_index("File Name").sort_values("Action Priority")
+        metadata_spread.freeze(0, 0, sheet="Data")
         metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True, \
                                     add_filter=True, freeze_index=True, freeze_headers=True)
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
