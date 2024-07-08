@@ -27,7 +27,7 @@ EOF
 - target_quality: Medium
 EOF
   cat <<EOF >"${SHARE_DIR}/media/parents/series/._defaults.yaml"
-- target_quality: Medium
+- target_quality: Low
 EOF
 done
 
