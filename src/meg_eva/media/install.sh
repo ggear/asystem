@@ -8,6 +8,7 @@ cd ${SERVICE_INSTALL} || exit
 . ./.env
 
 for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+  mkdir -p ${SHARE_DIR}/tmp/scripts
   for SHARE_DIR_SCOPE in "kids" "parents" "docos" "comedy"; do
     for SHARE_DIR_TYPE in "audio" "movies" "series"; do
       mkdir -p ${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}

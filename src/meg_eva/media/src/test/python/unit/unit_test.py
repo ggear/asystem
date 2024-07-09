@@ -16,7 +16,7 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 class InternetTest(unittest.TestCase):
 
     def test_analyse_1(self):
-        self._test_analyse(1, "1JHv8ytvcia-Nz2gvMcFfuOT_jDvTCO76BauY9gAWBQY", 58)
+        self._test_analyse(1, "1JHv8ytvcia-Nz2gvMcFfuOT_jDvTCO76BauY9gAWBQY", 54)
 
     def _test_analyse(self, index, sheet_guid, files_analysed):
         dir_test = join(DIR_ROOT, "target/runtime-unit/share_media_example_{}".format(index))
