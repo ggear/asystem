@@ -616,7 +616,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             if not (column.null_count() == metadata_updated_pl.height)
         ]]
 
-        # TODO: Write out file and global transcode/merge scripts
+        # TODO: Write out file and global merge scripts
         # TODO: Make a media-transcode/merge scripts to context determine all scripts under path or accross local shares if none - maybe make all other scripts do the same?
         metadata_transcode_pl = metadata_updated_pl.filter(
             pl.col("File Action").str.ends_with("Transcode"),
@@ -642,7 +642,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 pl.concat_str([
                     pl.col("File Directory"),
                     pl.lit("/._transcode_"),
-                    pl.col("File Stem").str.strip_prefix(" '").str.strip_suffix("' "),
+                    pl.col("File Stem"),
                 ]).alias("Script Directory"),
             ]
         ).with_columns(
@@ -651,6 +651,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.col("Script Directory"),
                     pl.lit("/transcode.sh"),
                 ]).alias("Script Path"),
+            ]
+        ).with_columns(
+            [
+                pl.concat_str([
+                    pl.lit("../.."),
+                    pl.col("Script Path").str.strip_prefix(file_path_root),
+                ]).alias("Script Relative Path"),
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
                     pl.lit("cd \"$(dirname \"${0}\")\"\n"),
@@ -667,16 +674,17 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("echo \"\"\n"),
                 ]).alias("Script Source"),
             ]
-        ).sort("Action Priority").select(["Script Path", "Script Directory", "Script Source"])
+        ).sort("Action Priority").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
         transcode_script_global = os.path.join(file_path_scripts, "transcode.sh")
         with open(transcode_script_global, 'w') as transcode_global_file:
             transcode_global_file.write("# !/bin/bash\n\n")
+            transcode_global_file.write("cd \"$(dirname \"${0}\")\"\n")
             transcode_global_file.write("echo \"\"\n")
             for transcode_script_local in metadata_transcode_pl.rows():
-                transcode_global_file.write("'{}'\n".format(transcode_script_local[0]))
-                os.makedirs(transcode_script_local[1], exist_ok=True)
+                transcode_global_file.write("'{}'\n".format(transcode_script_local[1]))
+                os.makedirs(transcode_script_local[2], exist_ok=True)
                 with open(transcode_script_local[0], 'w') as transcode_local_file:
-                    transcode_local_file.write(transcode_script_local[2])
+                    transcode_local_file.write(transcode_script_local[3])
                 os.chmod(transcode_script_local[0], 0o775)
         os.chmod(transcode_script_global, 0o775)
 
