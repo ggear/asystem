@@ -660,6 +660,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Relative Path"),
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
+                    pl.lit("sigterm_handler() {\n  echo \"Killing Transcode!!!!\"\n  exit 1\n}\n"),
+                    pl.lit("trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"),
                     pl.lit("cd \"$(dirname \"${0}\")\"\n"),
                     pl.lit("[[ -f '._transcode_"), pl.col("File Stem"), pl.lit(".mkv' ]] && exit 1\n"),
                     pl.lit("echo \"#######################################################################################\"\n"),
@@ -678,6 +680,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         transcode_script_global = os.path.join(file_path_scripts, "transcode.sh")
         with open(transcode_script_global, 'w') as transcode_global_file:
             transcode_global_file.write("# !/bin/bash\n\n")
+            transcode_global_file.write("sigterm_handler() {\n  exit 1\n}\n")
+            transcode_global_file.write("trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n")
             transcode_global_file.write("cd \"$(dirname \"${0}\")\"\n")
             transcode_global_file.write("echo \"\"\n")
             for transcode_script_local in metadata_transcode_pl.rows():
@@ -685,8 +689,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 os.makedirs(transcode_script_local[2], exist_ok=True)
                 with open(transcode_script_local[0], 'w') as transcode_local_file:
                     transcode_local_file.write(transcode_script_local[3])
-                os.chmod(transcode_script_local[0], 0o775)
-        os.chmod(transcode_script_global, 0o775)
+                os.chmod(transcode_script_local[0], 0o750)
+        os.chmod(transcode_script_global, 0o750)
 
         metadata_updated_pd = metadata_updated_pl.to_pandas() \
             .set_index("File Name").sort_values("Action Priority")
