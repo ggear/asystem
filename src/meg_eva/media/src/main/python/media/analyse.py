@@ -660,7 +660,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Relative Path"),
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
-                    pl.lit("sigterm_handler() {\n  echo \"Killing Transcode!!!!\"\n  exit 1\n}\n"),
+                    pl.lit("sigterm_handler() {\n  echo \"Killing Transcode!!!!\"\n  rm -f *.mkv*\n  exit 1\n}\n"),
                     pl.lit("trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"),
                     pl.lit("cd \"$(dirname \"${0}\")\"\n"),
                     pl.lit("[[ -f '._transcode_"), pl.col("File Stem"), pl.lit(".mkv' ]] && exit 1\n"),
