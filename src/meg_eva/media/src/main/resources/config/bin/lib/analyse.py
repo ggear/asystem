@@ -52,6 +52,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     file_path_scripts = os.path.join(file_path_root, "tmp", "scripts")
     if not os.path.isdir(file_path_scripts):
         os.makedirs(file_path_scripts, exist_ok=True)
+        _permissions(file_path_scripts, 0o750)
     files_analysed = 0
     metadata_list = []
     print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
@@ -698,16 +699,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             transcode_global_file.write("echo \"\"\n")
             for transcode_script_local in metadata_transcode_pl.rows():
                 transcode_global_file.write("'{}'\n".format(transcode_script_local[1]))
-                os.makedirs(transcode_script_local[2], mode=0o750, exist_ok=True)
-                try:
-                    os.chown(transcode_script_local[2], 1000, 100)
-                except PermissionError:
-                    pass
+                os.makedirs(transcode_script_local[2], exist_ok=True)
+                _permissions(transcode_script_local[2], 0o750)
                 with open(transcode_script_local[0], 'w') as transcode_local_file:
                     transcode_local_file.write(transcode_script_local[3])
-                os.chmod(transcode_script_local[0], mode=0o750)
-        os.chmod(transcode_script_global, 0o750)
-
+                _permissions(transcode_script_local[0], 0o750)
+        _permissions(transcode_script_global, 0o750)
         metadata_updated_pd = metadata_updated_pl.to_pandas() \
             .set_index("File Name").sort_values("Action Priority")
         metadata_spread.freeze(0, 0, sheet="Data")
@@ -716,6 +713,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
     return files_analysed
+
+
+def _permissions(path, mode):
+    os.chmod(path, mode)
+    try:
+        os.chown(path, 1000, 100)
+    except PermissionError:
+        pass
 
 
 def _unwrap_lists(lists):
