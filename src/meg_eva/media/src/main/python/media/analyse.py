@@ -48,7 +48,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     file_path_scripts = os.path.join(file_path_root, "tmp", "scripts")
     if not os.path.isdir(file_path_scripts):
         os.makedirs(file_path_scripts, exist_ok=True)
-        _permissions(file_path_scripts, 0o750)
+        _set_permissions(file_path_scripts, 0o750)
     files_analysed = 0
     metadata_list = []
     print("Analysing {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
@@ -304,6 +304,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         file_probe_stream_typed_count += 1
                 with open(file_metadata_path, 'w') as file_metadata:
                     yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
+                _set_permissions(file_metadata_path)
                 file_metadata_written = True
             with open(file_metadata_path, 'r') as file_metadata:
                 try:
@@ -696,11 +697,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             for transcode_script_local in metadata_transcode_pl.rows():
                 transcode_global_file.write("'{}'\n".format(transcode_script_local[1]))
                 os.makedirs(transcode_script_local[2], exist_ok=True)
-                _permissions(transcode_script_local[2], 0o750)
+                _set_permissions(transcode_script_local[2], 0o750)
                 with open(transcode_script_local[0], 'w') as transcode_local_file:
                     transcode_local_file.write(transcode_script_local[3])
-                _permissions(transcode_script_local[0], 0o750)
-        _permissions(transcode_script_global, 0o750)
+                _set_permissions(transcode_script_local[0], 0o750)
+        _set_permissions(transcode_script_global, 0o750)
         metadata_updated_pd = metadata_updated_pl.to_pandas() \
             .set_index("File Name").sort_values("Action Priority")
         metadata_spread.freeze(0, 0, sheet="Data")
@@ -711,7 +712,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     return files_analysed
 
 
-def _permissions(path, mode):
+def _set_permissions(path, mode=0o644):
     os.chmod(path, mode)
     try:
         os.chown(path, 1000, 100)
