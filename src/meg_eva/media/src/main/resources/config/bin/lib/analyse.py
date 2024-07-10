@@ -108,11 +108,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     file_version_qualifier = file_version_qualifier_match.groups()[0]
                 else:
                     file_version_qualifier = file_name_sans_extension
-                file_stem = "{}-{}".format(
+                file_stem = "{}_{}".format(
                     file_stem.title().replace(" ", "-"),
                     file_version_qualifier.lower()
                 )
-            file_version_qualifier = file_version_qualifier.lower()
+            file_version_qualifier = file_version_qualifier.lower().removesuffix("___transcode")
             if refresh or not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
                     "target_quality": "Medium",
@@ -655,8 +655,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Directory"),
                 pl.concat_str([
                     pl.col("File Stem"),
-                    pl.lit("_TRANSCODE_"),
-                    pl.col("Target Quality").str.to_uppercase(),
+                    pl.lit("___TRANSCODE"),
                     pl.lit(".mkv"),
                 ]).alias("Transcode File Name"),
             ]
@@ -686,8 +685,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("  --target "), pl.col("Script Target"), pl.lit(" \\\n"),
                     pl.lit("  --hevc\n"),
                     pl.lit("rm -rvf *.mkv.log\n"),
-                    pl.lit("mv -v '"), pl.col("File Stem"), pl.lit(".mkv' \\\n"),
-                    pl.lit("  '../"), pl.col("Transcode File Name"), pl.lit("'\n"),
+                    pl.lit("mv -v *.mkv '../"), pl.col("Transcode File Name"), pl.lit("'\n"),
                     pl.lit("echo \"\"\n"),
                 ]).alias("Script Source"),
             ]
@@ -715,8 +713,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_spread.freeze(0, 0, sheet="Data")
         metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True, \
                                     add_filter=True, freeze_index=True, freeze_headers=True)
-        print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
-        sys.stdout.flush()
+    print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
+    sys.stdout.flush()
     return files_analysed
 
 
