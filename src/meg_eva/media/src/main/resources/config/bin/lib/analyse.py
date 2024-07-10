@@ -676,7 +676,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
                     pl.lit("cd \"$(dirname \"${0}\")\"\n\n"),
-                    pl.lit(BASH_SIGTERM_HANDLER.format("  echo \"Killing Transcode!!!!\"\n  rm -f *.mkv*\n")),
+                    pl.lit(BASH_SIGTERM_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f *.mkv*\n")),
                     pl.lit("[[ -f '../"), pl.col("Transcode File Name"), pl.lit("' ]] && exit 1\n"),
                     pl.lit("echo \"#######################################################################################\"\n"),
                     pl.lit("echo \"Transcoding '"), pl.col("File Name"), pl.lit("' ... \"\n"),
