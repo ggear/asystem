@@ -26,6 +26,9 @@ TARGET_SIZE_HIGH_GB = 12
 TARGET_SIZE_MEDIUM_GB = 6
 TARGET_SIZE_LOW_GB = 2
 
+BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
+                       "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
+
 
 def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
     if not os.path.isdir(file_path_root):
@@ -362,13 +365,15 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         ))
     else:
         metadata_original_pl = pl.DataFrame()
+    metadata_cache_media_dirs = []
     metadata_cache_pl = metadata_cache_pl if metadata_cache_pl.shape[0] > 0 else pl.DataFrame()
     metadata_original_pl = metadata_original_pl if metadata_original_pl.shape[0] > 0 else pl.DataFrame()
-    metadata_cache_media_dirs = [media_directory[0] for media_directory in \
-                                 metadata_cache_pl.select("Media Directory").unique().rows()]
     if len(metadata_cache_pl) > 0:
+        metadata_cache_media_dirs = [media_directory[0] for media_directory in \
+                                     metadata_cache_pl.select("Media Directory").unique().rows()]
         if len(metadata_original_pl) > 0:
-            metadata_original_pl = metadata_original_pl.filter(~pl.col("Media Directory").is_in(metadata_cache_media_dirs))
+            metadata_original_pl = metadata_original_pl.filter(
+                ~pl.col("Media Directory").is_in(metadata_cache_media_dirs))
             metadata_updated_pl = _format_columns(
                 pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
             )
@@ -644,6 +649,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("/._transcode_"),
                     pl.col("File Stem"),
                 ]).alias("Script Directory"),
+                pl.concat_str([
+                    pl.col("File Stem"),
+                    pl.lit("_TRANSCODE_"),
+                    pl.col("Target Quality").str.to_uppercase(),
+                    pl.lit(".mkv"),
+                ]).alias("Transcode File Name"),
             ]
         ).with_columns(
             [
@@ -660,10 +671,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Relative Path"),
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
-                    pl.lit("sigterm_handler() {\n  echo \"Killing Transcode!!!!\"\n  rm -f *.mkv*\n  exit 1\n}\n"),
-                    pl.lit("trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"),
-                    pl.lit("cd \"$(dirname \"${0}\")\"\n"),
-                    pl.lit("[[ -f '._transcode_"), pl.col("File Stem"), pl.lit(".mkv' ]] && exit 1\n"),
+                    pl.lit("cd \"$(dirname \"${0}\")\"\n\n"),
+                    pl.lit(BASH_SIGTERM_HANDLER.format("  echo \"Killing Transcode!!!!\"\n  rm -f *.mkv*\n")),
+                    pl.lit("[[ -f '../"), pl.col("Transcode File Name"), pl.lit("' ]] && exit 1\n"),
                     pl.lit("echo \"#######################################################################################\"\n"),
                     pl.lit("echo \"Transcoding '"), pl.col("File Name"), pl.lit("' ... \"\n"),
                     pl.lit("echo \"#######################################################################################\"\n"),
@@ -672,7 +682,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("  --target "), pl.col("Script Target"), pl.lit(" \\\n"),
                     pl.lit("  --hevc\n"),
                     pl.lit("rm -rvf *.mkv.log\n"),
-                    pl.lit("mv -v '"), pl.col("File Stem"), pl.lit(".mkv' '._transcode_"), pl.col("File Stem"), pl.lit(".mkv'\n"),
+                    pl.lit("mv -v '"), pl.col("File Stem"), pl.lit(".mkv' \\\n"),
+                    pl.lit("  '../"), pl.col("Transcode File Name"), pl.lit("'\n"),
                     pl.lit("echo \"\"\n"),
                 ]).alias("Script Source"),
             ]
@@ -680,16 +691,19 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         transcode_script_global = os.path.join(file_path_scripts, "transcode.sh")
         with open(transcode_script_global, 'w') as transcode_global_file:
             transcode_global_file.write("# !/bin/bash\n\n")
-            transcode_global_file.write("sigterm_handler() {\n  exit 1\n}\n")
-            transcode_global_file.write("trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n")
-            transcode_global_file.write("cd \"$(dirname \"${0}\")\"\n")
+            transcode_global_file.write("cd \"$(dirname \"${0}\")\"\n\n")
+            transcode_global_file.write(BASH_SIGTERM_HANDLER.format(""))
             transcode_global_file.write("echo \"\"\n")
             for transcode_script_local in metadata_transcode_pl.rows():
                 transcode_global_file.write("'{}'\n".format(transcode_script_local[1]))
-                os.makedirs(transcode_script_local[2], exist_ok=True)
+                os.makedirs(transcode_script_local[2], mode=0o750, exist_ok=True)
+                try:
+                    os.chown(transcode_script_local[2], 1000, 100)
+                except PermissionError:
+                    pass
                 with open(transcode_script_local[0], 'w') as transcode_local_file:
                     transcode_local_file.write(transcode_script_local[3])
-                os.chmod(transcode_script_local[0], 0o750)
+                os.chmod(transcode_script_local[0], mode=0o750)
         os.chmod(transcode_script_global, 0o750)
 
         metadata_updated_pd = metadata_updated_pl.to_pandas() \
@@ -697,7 +711,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_spread.freeze(0, 0, sheet="Data")
         metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=False, index=True, \
                                     add_filter=True, freeze_index=True, freeze_headers=True)
-
         print("{}done".format("Analysing {} ".format(file_path_root) if verbose else ""))
         sys.stdout.flush()
     return files_analysed
