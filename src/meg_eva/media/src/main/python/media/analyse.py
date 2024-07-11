@@ -21,10 +21,16 @@ from gspread_pandas import Spread
 # build a global transcode script, ordered by priority, script takes in number of items to process
 # build a global replace script, dry run showing which items, execute actually doing the work
 
-TARGET_SIZE_DELTA = 1 / 3
-TARGET_SIZE_HIGH_GB = 12
-TARGET_SIZE_MEDIUM_GB = 6
 TARGET_SIZE_LOW_GB = 2
+TARGET_SIZE_MEDIUM_GB = 6
+TARGET_SIZE_HIGH_GB = 12
+TARGET_SIZE_DELTA = 1 / 3
+
+TARGET_BITRATE_VIDEO_LOW_KBPS = 4000
+TARGET_BITRATE_VIDEO_MEDIUM_KBPS = 8000
+TARGET_BITRATE_VIDEO_HIGH_KBPS = 14000
+
+TARGET_BITRATE_AUDIO_MEDIUM_KBPS = 448
 
 BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
                        "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
@@ -146,6 +152,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     file_probe = ffmpeg.probe(file_path)
                 except Error as error:
                     file_probe = {}
+                file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
+                    if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
+                file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2 \
+                    if ("format" in file_probe and "duration" in file_probe["format"]) else -1
+                file_probe_size_b = int(file_probe["format"]["size"]) \
+                    if ("format" in file_probe and "size" in file_probe["format"]) else os.path.getsize(file_path)
                 file_probe_streams_filtered = {
                     "video": [],
                     "audio": [],
@@ -176,39 +188,89 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                     file_probe_stream_video_field_order = "p"
                                 elif file_probe_stream["field_order"] == "interlaced":
                                     file_probe_stream_video_field_order = "i"
-                            file_probe_stream_video_resolution = ""
+                            file_probe_stream_video_res = ""
+                            file_probe_stream_video_res_min = ""
+                            file_probe_stream_video_res_max = ""
                             file_probe_stream_video_width = int(file_probe_stream["width"]) \
                                 if "width" in file_probe_stream else -1
                             file_probe_stream_video_height = int(file_probe_stream["height"]) \
                                 if "height" in file_probe_stream else -1
                             if file_probe_stream_video_width > 0:
                                 if file_probe_stream_video_width <= 640:
-                                    file_probe_stream_video_resolution = "nHD 360" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "720"
+                                    file_probe_stream_video_res_max = "720"
+                                    file_probe_stream_video_res = "nHD 360" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 960:
-                                    file_probe_stream_video_resolution = "qHD 540" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "720"
+                                    file_probe_stream_video_res_max = "720"
+                                    file_probe_stream_video_res = "qHD 540" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 1280:
-                                    file_probe_stream_video_resolution = "HD 720" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "720"
+                                    file_probe_stream_video_res_max = "720"
+                                    file_probe_stream_video_res = "HD 720" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 1600:
-                                    file_probe_stream_video_resolution = "HD+ 900" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "720"
+                                    file_probe_stream_video_res_max = "720"
+                                    file_probe_stream_video_res = "HD+ 900" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 1920:
-                                    file_probe_stream_video_resolution = "FHD 1080" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "1080"
+                                    file_probe_stream_video_res_max = "1080"
+                                    file_probe_stream_video_res = "FHD 1080" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 2560:
-                                    file_probe_stream_video_resolution = "QHD 1440" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "1080"
+                                    file_probe_stream_video_res_max = "1080"
+                                    file_probe_stream_video_res = "QHD 1440" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 3200:
-                                    file_probe_stream_video_resolution = "QHD+ 1800" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "1080"
+                                    file_probe_stream_video_res_max = "1080"
+                                    file_probe_stream_video_res = "QHD+ 1800" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 3840:
-                                    file_probe_stream_video_resolution = "UHD 2160" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "1080"
+                                    file_probe_stream_video_res_max = "2160"
+                                    file_probe_stream_video_res = "UHD 2160" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 5120:
-                                    file_probe_stream_video_resolution = "UHD 2880" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "1080"
+                                    file_probe_stream_video_res_max = "2160"
+                                    file_probe_stream_video_res = "UHD 2880" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 7680:
-                                    file_probe_stream_video_resolution = "UHD 4320" + file_probe_stream_video_field_order
+                                    file_probe_stream_video_res_min = "1080"
+                                    file_probe_stream_video_res_max = "2160"
+                                    file_probe_stream_video_res = "UHD 4320" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 15360:
-                                    file_probe_stream_video_resolution = "UHD 8640" + file_probe_stream_video_field_order
-                            file_probe_stream_filtered["resolution"] = file_probe_stream_video_resolution
+                                    file_probe_stream_video_res_min = "1080"
+                                    file_probe_stream_video_res_max = "2160"
+                                    file_probe_stream_video_res = "UHD 8640" + file_probe_stream_video_field_order
+                            file_probe_stream_filtered["res"] = file_probe_stream_video_res
+                            file_probe_stream_filtered["res_min"] = file_probe_stream_video_res_min
+                            file_probe_stream_filtered["res_max"] = file_probe_stream_video_res_max
                             file_probe_stream_filtered["width"] = str(file_probe_stream_video_width) \
                                 if file_probe_stream_video_width > 0 else ""
                             file_probe_stream_filtered["height"] = str(file_probe_stream_video_height) \
                                 if file_probe_stream_video_height > 0 else ""
+
+
+
+
+
+
+
+
+
+
+
+                            # TODO: Update after streams processed
+                            file_stream_bit_rate = round(int(file_probe_stream["bit_rate"]) / 10 ** 3) \
+                                if "bit_rate" in file_probe_stream else -1
+                            file_probe_stream_filtered["bit_rate__Kbps"] = str(file_stream_bit_rate) if file_stream_bit_rate > 0 else ""
+                            file_probe_stream_filtered["bit_rate_min__Kbps"] = TARGET_BITRATE_VIDEO_LOW_KBPS
+                            file_probe_stream_filtered["bit_rate_max__Kbps"] = TARGET_BITRATE_VIDEO_HIGH_KBPS
+
+
+
+
+
+
+
                         elif file_probe_stream_type == "audio":
                             file_probe_stream_filtered["codec"] = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
@@ -216,6 +278,22 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"] \
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_language
                             file_probe_stream_filtered["channels"] = str(file_probe_stream["channels"])
+
+
+
+
+
+
+                            # TODO: Update after streams processed
+                            file_stream_bit_rate = round(int(file_probe_stream["bit_rate"]) / 10 ** 3) \
+                                if "bit_rate" in file_probe_stream else -1
+                            file_probe_stream_filtered["bit_rate__Kbps"] = str(file_stream_bit_rate) if file_stream_bit_rate > 0 else ""
+
+
+
+
+
+
                         elif file_probe_stream_type == "subtitle":
                             file_probe_stream_filtered["codec"] = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
@@ -224,12 +302,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_language
                             file_probe_stream_filtered["format"] = "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"
-                file_probe_bit_rate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
-                    if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
-                file_probe_duration_h = float(file_probe["format"]["duration"]) / 60 ** 2 \
-                    if ("format" in file_probe and "duration" in file_probe["format"]) else -1
-                file_probe_size_b = int(file_probe["format"]["size"]) \
-                    if ("format" in file_probe and "size" in file_probe["format"]) else os.path.getsize(file_path)
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
@@ -630,12 +702,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             pl.col("Version Directory").str.ends_with("."),
             pl.col("Media Directory").is_in(metadata_cache_media_dirs),
         ).with_columns(
-            (pl \
-             .when(pl.col("Target Quality") == "High").then(pl.lit("2160p=14000"))
-             .when(pl.col("Target Quality") == "Medium").then(pl.lit("1080p=8000"))
-             .otherwise(pl.lit("1080p=4000"))
-             ).alias("Script Target")
-        ).with_columns(
             [
                 pl.concat_str([
                     pl.col("File Directory").str.strip_prefix(" '").str.strip_suffix("' "),
@@ -643,6 +709,19 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 pl.concat_str([
                     pl.col("File Stem").str.strip_prefix(" '").str.strip_suffix("' "),
                 ]).alias("File Stem"),
+                (
+                    pl.when(
+                        (pl.col("Target Quality") == "High")
+                    ).then(
+                        pl.concat_str([pl.col("Video 1 Res Max"), pl.lit("p="), pl.lit("14000")])
+                    ).when(
+                        (pl.col("Target Quality") == "Medium")
+                    ).then(
+                        pl.concat_str([pl.col("Video 1 Res Min"), pl.lit("p="), pl.lit("8000")])
+                    ).otherwise(
+                        pl.concat_str([pl.col("Video 1 Res Min"), pl.lit("p="), pl.lit("4000")])
+                    )
+                ).alias("Video Target Bitrate")
             ]
         ).with_columns(
             [
@@ -656,6 +735,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("___TRANSCODE"),
                     pl.lit(".mkv"),
                 ]).alias("Transcode File Name"),
+                pl.when(
+                    (pl.col("Video 1 Res Max") == "720")
+                ).then(
+                    pl.concat_str([pl.col("Video Target Bitrate"), pl.lit(" --720p")])
+                ).otherwise(
+                    pl.col("Video Target Bitrate")
+                ).alias("Video Target Bitrate")
             ]
         ).with_columns(
             [
@@ -680,7 +766,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("echo \"#######################################################################################\"\n"),
                     pl.lit("rm -rvf *.mkv*\n"),
                     pl.lit("other-transcode '../"), pl.col("File Name"), pl.lit("' \\\n"),
-                    pl.lit("  --target "), pl.col("Script Target"), pl.lit(" \\\n"),
+                    pl.lit("  --target "), pl.col("Video Target Bitrate"), pl.lit(" \\\n"),
                     pl.lit("  --hevc\n"),
                     pl.lit("rm -rvf *.mkv.log\n"),
                     pl.lit("mv -v *.mkv '../"), pl.col("Transcode File Name"), pl.lit("'\n"),
