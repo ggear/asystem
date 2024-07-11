@@ -262,8 +262,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_stream_bit_rate = round(int(file_probe_stream["bit_rate"]) / 10 ** 3) \
                                 if "bit_rate" in file_probe_stream else -1
                             file_probe_stream_filtered["bit_rate__Kbps"] = str(file_stream_bit_rate) if file_stream_bit_rate > 0 else ""
-                            file_probe_stream_filtered["bit_rate_min__Kbps"] = TARGET_BITRATE_VIDEO_LOW_KBPS
-                            file_probe_stream_filtered["bit_rate_max__Kbps"] = TARGET_BITRATE_VIDEO_HIGH_KBPS
+                            file_probe_stream_filtered["bit_rate_min__Kbps"] = str(TARGET_BITRATE_VIDEO_LOW_KBPS)
+                            file_probe_stream_filtered["bit_rate_max__Kbps"] = str(TARGET_BITRATE_VIDEO_HIGH_KBPS)
 
 
 
