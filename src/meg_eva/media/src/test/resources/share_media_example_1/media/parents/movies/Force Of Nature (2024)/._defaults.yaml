@@ -1,3 +1,3 @@
 - target_quality: Max
-- target_language: eng
-- native_language: eng
+- target_lang: eng
+- native_lang: eng

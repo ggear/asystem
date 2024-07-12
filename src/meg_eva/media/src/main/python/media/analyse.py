@@ -300,20 +300,27 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_probe_stream_filtered["format"] = "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
-                for file_stream_index, file_stream_video in enumerate(file_probe_streams_filtered["video"]):
-                    if file_stream_index == 0:
+                for file_stream_video_index, file_stream_video in enumerate(file_probe_streams_filtered["video"]):
+                    if file_stream_video_index == 0:
                         file_stream_video_bitrate = file_stream_video["bitrate_est__Kbps"]
                         if file_stream_video_bitrate < 0:
-                            file_stream_audio_bitrate = 0
-                            for file_stream_audio in file_probe_streams_filtered["audio"]:
-                                if file_stream_audio["bitrate__Kbps"] != "":
-                                    file_stream_audio_bitrate += int(file_stream_audio["bitrate__Kbps"])
-                            file_stream_video_bitrate = file_probe_bitrate - file_stream_audio_bitrate \
-                                if file_probe_bitrate > file_stream_audio_bitrate else 0
-                        file_stream_video["bitrate_est__Kbps"] = str(file_stream_video_bitrate)
-                        file_stream_video["bitrate_min__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MIN_KBPS))
-                        file_stream_video["bitrate_mid__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MID_KBPS))
-                        file_stream_video["bitrate_max__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MAX_KBPS))
+                            if file_probe_bitrate > 0:
+                                file_stream_audio_bitrate = 0
+                                for file_stream_audio in file_probe_streams_filtered["audio"]:
+                                    if file_stream_audio["bitrate__Kbps"] != "":
+                                        file_stream_audio_bitrate += int(file_stream_audio["bitrate__Kbps"])
+                                file_stream_video_bitrate = file_probe_bitrate - file_stream_audio_bitrate \
+                                    if file_probe_bitrate > file_stream_audio_bitrate else 0
+                        if file_stream_video_bitrate < 0:
+                            file_stream_video["bitrate_est__Kbps"] = ""
+                            file_stream_video["bitrate_min__Kbps"] = ""
+                            file_stream_video["bitrate_mid__Kbps"] = ""
+                            file_stream_video["bitrate_max__Kbps"] = ""
+                        else:
+                            file_stream_video["bitrate_est__Kbps"] = str(file_stream_video_bitrate)
+                            file_stream_video["bitrate_min__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MIN_KBPS))
+                            file_stream_video["bitrate_mid__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MID_KBPS))
+                            file_stream_video["bitrate_max__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MAX_KBPS))
                     else:
                         del file_stream_video["res_min"]
                         del file_stream_video["res_mid"]
