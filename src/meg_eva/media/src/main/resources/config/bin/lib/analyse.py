@@ -36,6 +36,7 @@ TARGET_BITRATE_VIDEO_MAX_KBPS = 14000
 
 BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
                        "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
+BASH_ECHO_HEADER = "echo \"#######################################################################################\"\n"
 
 
 def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
@@ -302,20 +303,29 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_lang
                             file_probe_stream_filtered["format"] = "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"
-                for file_stream_video in file_probe_streams_filtered["video"]:
-                    file_stream_video_bitrate = file_stream_video["bitrate_est__Kbps"]
-                    if file_stream_video_bitrate < 0:
-                        file_stream_audio_bitrate = 0
-                        for file_stream_audio in file_probe_streams_filtered["audio"]:
-                            if file_stream_audio["bitrate__Kbps"] != "":
-                                file_stream_audio_bitrate += int(file_stream_audio["bitrate__Kbps"])
-                        file_stream_video_bitrate = file_probe_bitrate - file_stream_audio_bitrate \
-                            if file_probe_bitrate > file_stream_audio_bitrate else 0
-                    file_stream_video["bitrate_est__Kbps"] = str(file_stream_video_bitrate)
-                    file_stream_video["bitrate_min__Kbps"] = min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MIN_KBPS)
-                    file_stream_video["bitrate_mid__Kbps"] = min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MID_KBPS)
-                    file_stream_video["bitrate_max__Kbps"] = min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MAX_KBPS)
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
+                for file_stream_index, file_stream_video in enumerate(file_probe_streams_filtered["video"]):
+                    if file_stream_index == 0:
+                        file_stream_video_bitrate = file_stream_video["bitrate_est__Kbps"]
+                        if file_stream_video_bitrate < 0:
+                            file_stream_audio_bitrate = 0
+                            for file_stream_audio in file_probe_streams_filtered["audio"]:
+                                if file_stream_audio["bitrate__Kbps"] != "":
+                                    file_stream_audio_bitrate += int(file_stream_audio["bitrate__Kbps"])
+                            file_stream_video_bitrate = file_probe_bitrate - file_stream_audio_bitrate \
+                                if file_probe_bitrate > file_stream_audio_bitrate else 0
+                        file_stream_video["bitrate_est__Kbps"] = str(file_stream_video_bitrate)
+                        file_stream_video["bitrate_min__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MIN_KBPS))
+                        file_stream_video["bitrate_mid__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MID_KBPS))
+                        file_stream_video["bitrate_max__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MAX_KBPS))
+                    else:
+                        del file_stream_video["res_min"]
+                        del file_stream_video["res_mid"]
+                        del file_stream_video["res_max"]
+                        del file_stream_video["bitrate_est__Kbps"]
+                        del file_stream_video["bitrate_min__Kbps"]
+                        del file_stream_video["bitrate_mid__Kbps"]
+                        del file_stream_video["bitrate_max__Kbps"]
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
                 for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
@@ -736,7 +746,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     ).otherwise(
                         pl.concat_str([pl.col("Video 1 Res Min"), pl.lit("="), pl.col("Video 1 Bitrate Min (Kbps)")])
                     )
-                ).alias("Transcode Target Bitrate")
+                ).alias("Transcode Target")
             ]
         ).with_columns(
             [
@@ -753,10 +763,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 pl.when(
                     (pl.col("Video 1 Res Max") == "720p")
                 ).then(
-                    pl.concat_str([pl.col("Transcode Target Bitrate"), pl.lit(" --720p")])
+                    pl.concat_str([pl.col("Transcode Target"), pl.lit(" --720p")])
                 ).otherwise(
-                    pl.col("Transcode Target Bitrate")
-                ).alias("Transcode Target Bitrate")
+                    pl.col("Transcode Target")
+                ).alias("Transcode Target")
             ]
         ).with_columns(
             [
@@ -776,12 +786,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("cd \"$(dirname \"${0}\")\"\n\n"),
                     pl.lit(BASH_SIGTERM_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f *.mkv*\n")),
                     pl.lit("[[ -f '../"), pl.col("Transcode File Name"), pl.lit("' ]] && exit 1\n"),
-                    pl.lit("echo \"#######################################################################################\"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Transcoding '"), pl.col("File Name"), pl.lit("' ... \"\n"),
-                    pl.lit("echo \"#######################################################################################\"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
                     pl.lit("rm -rvf *.mkv*\n"),
                     pl.lit("other-transcode '../"), pl.col("File Name"), pl.lit("' \\\n"),
-                    pl.lit("  --target "), pl.col("Transcode Target Bitrate"), pl.lit(" \\\n"),
+                    pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
                     pl.lit("  --hevc\n"),
                     pl.lit("rm -rvf *.mkv.log\n"),
                     pl.lit("mv -v *.mkv '../"), pl.col("Transcode File Name"), pl.lit("'\n"),
