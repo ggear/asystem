@@ -316,10 +316,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                 file_stream_video_bitrate = file_probe_bitrate - file_stream_audio_bitrate \
                                     if file_probe_bitrate > file_stream_audio_bitrate else 0
                         if file_stream_video_bitrate < 0:
-                            file_stream_video["bitrate_est__Kbps"] = ""
-                            file_stream_video["bitrate_min__Kbps"] = ""
-                            file_stream_video["bitrate_mid__Kbps"] = ""
-                            file_stream_video["bitrate_max__Kbps"] = ""
+                            file_stream_video["bitrate_est__Kbps"] = " "
+                            file_stream_video["bitrate_min__Kbps"] = " "
+                            file_stream_video["bitrate_mid__Kbps"] = " "
+                            file_stream_video["bitrate_max__Kbps"] = " "
                         else:
                             file_stream_video["bitrate_est__Kbps"] = str(file_stream_video_bitrate)
                             file_stream_video["bitrate_min__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MIN_KBPS))
