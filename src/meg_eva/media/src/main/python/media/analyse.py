@@ -26,9 +26,10 @@ TARGET_SIZE_MID_GB = 6
 TARGET_SIZE_MAX_GB = 12
 TARGET_SIZE_DELTA = 1 / 3
 
-TARGET_BITRATE_VIDEO_MIN_KBPS = 4000
-TARGET_BITRATE_VIDEO_MID_KBPS = 8000
-TARGET_BITRATE_VIDEO_MAX_KBPS = 14000
+# Reference: https://github.com/lisamelton/more-video-transcoding
+TARGET_BITRATE_VIDEO_MIN_KBPS = 2500
+TARGET_BITRATE_VIDEO_MID_KBPS = 5000
+TARGET_BITRATE_VIDEO_MAX_KBPS = 7500
 
 BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
                        "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
