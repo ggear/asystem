@@ -37,6 +37,9 @@ if [ ! -d /root/.pyenv/versions/${PYTHON_VERSION}/bin ]; then
 fi
 /root/.pyenv/versions/${PYTHON_VERSION}/bin/pip install -r config/.reqs.txt
 
+cp -rvf /var/lib/asystem/install/media/latest/config/bin/lib/other-transcode.rb /usr/local/bin/other-transcode
+chmod +x /usr/local/bin/other-transcode
+
 mkdir -p /root/.config
 cp -rvf /var/lib/asystem/install/media/latest/config/.gspread_pandas /root/.config/gspread_pandas
 

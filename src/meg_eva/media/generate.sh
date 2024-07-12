@@ -15,3 +15,5 @@ pull_repo $(pwd) media other_video_transcoding ggear/other_video_transcoding ${V
 rm -rf ${ROOT_DIR}/src/main/resources/config/bin/lib/other-transcode.rb
 mkdir -p ${ROOT_DIR}/src/main/resources/config/bin/lib &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/media/other_video_transcoding/other-transcode.rb ${ROOT_DIR}/src/main/resources/config/bin/lib
+cp -rvf ${ROOT_DIR}/src/main/resources/config/bin/lib/other-transcode.rb /usr/local/bin/other-transcode
+chmod +x /usr/local/bin/other-transcode

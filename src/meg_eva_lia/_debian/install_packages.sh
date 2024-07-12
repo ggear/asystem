@@ -65,6 +65,7 @@ PACKAGES=(
   libedgetpu1-std
   exfatprogs
   build-essential
+  ruby-full
   xz-utils
   tk-dev
   zlib1g-dev
