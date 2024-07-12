@@ -134,7 +134,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             try:
                                 file_defaults_dict.update(_unwrap_lists(yaml.safe_load(file_defaults)))
                             except Exception as e:
-                                message = "skipping file due to defaults metadata cache [{}] load error".format(file_defaults_path)
+                                message = "skipping file due to defaults metadata cache [{}] load error" \
+                                    .format(file_defaults_path)
                                 if verbose:
                                     print(message)
                                 else:
@@ -156,7 +157,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_probe_duration = float(file_probe["format"]["duration"]) / 60 ** 2 \
                     if ("format" in file_probe and "duration" in file_probe["format"]) else -1
                 file_probe_size = (int(file_probe["format"]["size"]) \
-                                       if ("format" in file_probe and "size" in file_probe["format"]) else os.path.getsize(
+                                       if ("format" in file_probe and "size" in file_probe["format"]) \
+                                       else os.path.getsize(
                     file_path)) / 10 ** 9
                 file_probe_streams_filtered = {
                     "video": [],
@@ -287,10 +289,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_probe_stream_filtered["lang"] = file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"] \
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_lang
-                            file_stream_channels = int(file_probe_stream["channels"]) if "channels" in file_probe_stream else 2
+                            file_stream_channels = int(file_probe_stream["channels"]) \
+                                if "channels" in file_probe_stream else 2
                             file_probe_stream_filtered["channels"] = str(file_stream_channels)
-                            file_probe_stream_filtered["bitrate__Kbps"] = str(round(int(file_probe_stream["bit_rate"]) / 10 ** 3)) \
-                                if "bit_rate" in file_probe_stream else ""
+                            file_probe_stream_filtered["bitrate__Kbps"] = \
+                                str(round(int(file_probe_stream["bit_rate"]) / 10 ** 3)) \
+                                    if "bit_rate" in file_probe_stream else ""
                         elif file_probe_stream_type == "subtitle":
                             file_probe_stream_filtered["codec"] = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
@@ -307,8 +311,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             if file_probe_bitrate > 0:
                                 file_stream_audio_bitrate = 0
                                 for file_stream_audio in file_probe_streams_filtered["audio"]:
-                                    if file_stream_audio["bitrate__Kbps"] != "":
-                                        file_stream_audio_bitrate += int(file_stream_audio["bitrate__Kbps"])
+                                    file_stream_audio_bitrate += int(file_stream_audio["bitrate__Kbps"]) \
+                                        if file_stream_audio["bitrate__Kbps"] != "" else 192
                                 file_stream_video_bitrate = file_probe_bitrate - file_stream_audio_bitrate \
                                     if file_probe_bitrate > file_stream_audio_bitrate else 0
                         if file_stream_video_bitrate < 0:
@@ -317,10 +321,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_stream_video["bitrate_mid__Kbps"] = " "
                             file_stream_video["bitrate_max__Kbps"] = " "
                         else:
-                            file_stream_video["bitrate_est__Kbps"] = str(file_stream_video_bitrate)
-                            file_stream_video["bitrate_min__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MIN_KBPS))
-                            file_stream_video["bitrate_mid__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MID_KBPS))
-                            file_stream_video["bitrate_max__Kbps"] = str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MAX_KBPS))
+                            file_stream_video["bitrate_est__Kbps"] = \
+                                str(file_stream_video_bitrate)
+                            file_stream_video["bitrate_min__Kbps"] = \
+                                str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MIN_KBPS))
+                            file_stream_video["bitrate_mid__Kbps"] = \
+                                str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MID_KBPS))
+                            file_stream_video["bitrate_max__Kbps"] = \
+                                str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MAX_KBPS))
                     else:
                         del file_stream_video["res_min"]
                         del file_stream_video["res_mid"]
