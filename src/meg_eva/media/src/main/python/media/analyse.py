@@ -100,6 +100,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             ) else 4
             file_version_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens:]) \
                 if len(file_relative_dir_tokens) > file_base_tokens else "."
+            if file_version_dir.startswith("._transcode_") or file_version_dir.endswith("/.inProgress"):
+                message = "skipping file currently transcoding"
+                if verbose:
+                    print(message)
+                else:
+                    print("{} [{}]".format(message, file_path))
+                    print("Analysing {} ... ".format(file_path_root), end="", flush=True)
+                continue
             file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
                 if len(file_relative_dir_tokens) > 3 else "."
             file_stem = file_base_dir.split("/")[0]
@@ -118,6 +126,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             file_version_qualifier = file_version_qualifier.lower().removesuffix("___transcode")
             if refresh or not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
+                    "transcribe_action": "Analyse",
                     "target_quality": "Mid",
                     "target_lang": "eng",
                     "native_lang": "eng",
@@ -143,6 +152,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                     print("{} [{}]".format(message, file_path))
                                     print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                                 continue
+                if "transcribe_action" in file_defaults_dict:
+                    file_transcribe_action = file_defaults_dict["transcribe_action"].title()
                 if "target_quality" in file_defaults_dict:
                     file_target_quality = file_defaults_dict["target_quality"].title()
                 if "native_lang" in file_defaults_dict:
@@ -371,6 +382,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_probe_streams_filtered["subtitle"] = file_probe_streams_filtered_subtitles
                 file_probe_filtered = [
                     {"file_name": file_name},
+                    {"transcribe_action": file_transcribe_action},
                     {"target_quality": file_target_quality},
                     {"target_lang": file_target_lang},
                     {"native_lang": file_native_lang},
@@ -686,6 +698,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_updated_pl = metadata_updated_pl.with_columns(
             (
                 pl.when(
+                    (pl.col("Version Directory") != ".") &
                     (pl.col("Version Count").cast(pl.Int32) > 1)
                 ).then(pl.lit("5. Merge"))
                 .when(
@@ -693,19 +706,25 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     (pl.col("File State") == "Incomplete")
                 ).then(pl.lit("1. Download"))
                 .when(
-                    (pl.col("File Size") == "Small") &
-                    (pl.col("Target Quality") != "Min")
+                    (pl.col("Transcribe Action") != "Ignore") & (
+                            (pl.col("File Size") == "Small") &
+                            (pl.col("Target Quality") != "Min")
+                    )
                 ).then(pl.lit("2. Upscale"))
                 .when(
-                    (pl.col("Plex Video") == "Transcode") |
-                    (pl.col("Plex Audio") == "Transcode") |
-                    (pl.col("Plex Subtitle") == "Transcode") |
-                    (pl.col("Duration (hours)").is_null()) |
-                    (pl.col("Bitrate (Kbps)").is_null())
+                    (pl.col("Transcribe Action") != "Ignore") & (
+                            (pl.col("Plex Video") == "Transcode") |
+                            (pl.col("Plex Audio") == "Transcode") |
+                            (pl.col("Plex Subtitle") == "Transcode") |
+                            (pl.col("Duration (hours)").is_null()) |
+                            (pl.col("Bitrate (Kbps)").is_null())
+                    )
                 ).then(pl.lit("3. Transcode"))
                 .when(
-                    (pl.col("File Size") == "Large") |
-                    (pl.col("Metadata State") == "Messy")
+                    (pl.col("Transcribe Action") != "Ignore") & (
+                            (pl.col("File Size") == "Large") |
+                            (pl.col("Metadata State") == "Messy")
+                    )
                 ).then(pl.lit("4. Reformat"))
                 .otherwise(pl.lit("6. Nothing"))
             ).alias("File Action"))
@@ -769,7 +788,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Directory"),
                 pl.concat_str([
                     pl.col("File Stem"),
-                    pl.lit("___TRANSCODE"),
+                    pl.lit("___TRANSCODE_"),
+                    pl.col("Target Quality").str.to_uppercase(),
                     pl.lit(".mkv"),
                 ]).alias("Transcode File Name"),
                 pl.when(
