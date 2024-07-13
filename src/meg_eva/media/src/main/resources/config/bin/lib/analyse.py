@@ -317,10 +317,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_probe_stream_filtered["lang"] = file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"] \
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_lang
-
-                            print("")
-                            print(file_probe_stream_filtered)
-
+                            file_probe_stream_filtered["forced"] = ("Yes" if file_probe_stream["disposition"]["forced"] == 1 else "No") \
+                                if ("disposition" in file_probe_stream and "forced" in file_probe_stream["disposition"]) else "No"
                             file_probe_stream_filtered["format"] = "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
