@@ -104,6 +104,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             ) else 4
             file_version_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens:]) \
                 if len(file_relative_dir_tokens) > file_base_tokens else "."
+            if file_version_dir.startswith("._transcode_") or file_version_dir.endswith("/.inProgress"):
+                message = "skipping file currently transcoding"
+                if verbose:
+                    print(message)
+                else:
+                    print("{} [{}]".format(message, file_path))
+                    print("Analysing {} ... ".format(file_path_root), end="", flush=True)
+                continue
             file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
                 if len(file_relative_dir_tokens) > 3 else "."
             file_stem = file_base_dir.split("/")[0]
@@ -309,6 +317,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_probe_stream_filtered["lang"] = file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"] \
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_lang
+
+                            print("")
+                            print(file_probe_stream_filtered)
+
                             file_probe_stream_filtered["format"] = "Picture" \
                                 if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
@@ -784,7 +796,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Directory"),
                 pl.concat_str([
                     pl.col("File Stem"),
-                    pl.lit("___TRANSCODE"),
+                    pl.lit("___TRANSCODE_"),
+                    pl.col("Target Quality").str.to_uppercase(),
                     pl.lit(".mkv"),
                 ]).alias("Transcode File Name"),
                 pl.when(

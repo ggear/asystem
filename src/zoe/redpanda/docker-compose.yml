@@ -3,7 +3,7 @@ version: '3.7'
 services:
   redpanda:
     container_name: redpanda
-    image: vectorized/redpanda:v24.1.7
+    image: vectorized/redpanda:v24.1.9
     init: true
     restart: ${SERVICE_RESTART}
     environment:
