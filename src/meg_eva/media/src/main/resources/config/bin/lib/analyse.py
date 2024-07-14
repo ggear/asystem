@@ -797,14 +797,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("___TRANSCODE_"),
                     pl.col("Target Quality").str.to_uppercase(),
                     pl.lit(".mkv"),
-                ]).alias("Transcode File Name"),
-                pl.when(
-                    (pl.col("Video 1 Res Max") == "720p")
-                ).then(
-                    pl.concat_str([pl.col("Transcode Target"), pl.lit(" --720p")])
-                ).otherwise(
-                    pl.col("Transcode Target")
-                ).alias("Transcode Target")
+                ]).alias("Transcode File Name")
             ]
         ).with_columns(
             [
@@ -830,7 +823,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("rm -rvf *.mkv*\n"),
                     pl.lit("other-transcode '../"), pl.col("File Name"), pl.lit("' \\\n"),
                     pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
-                    pl.lit("  --hevc\n"),
+                    pl.lit("  --hevc \\\n"),
+                    pl.lit("  --main-audio 1"), pl.lit(" \\\n"),
+                    pl.lit("  --add-audio eng\\\n"),
+                    pl.lit("  --eac3\\\n"),
+                    pl.lit("  --add-subtitle eng\n"),
                     pl.lit("rm -rvf *.mkv.log\n"),
                     pl.lit("mv -v *.mkv '../"), pl.col("Transcode File Name"), pl.lit("'\n"),
                     pl.lit("echo \"\"\n"),
