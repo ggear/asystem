@@ -86,7 +86,10 @@ if __name__ == "__main__":
 
     def _device_available():
         device_availability_dict = _mqtt_sub("zigbee/{}/availability".format(device_name))
-        return device_availability_dict is not None and device_availability_dict["state"] == "online"
+        return \
+                device_availability_dict is not None and \
+                "state" in device_availability_dict and \
+                device_availability_dict["state"] == "online"
 
 
     def _device_config():
