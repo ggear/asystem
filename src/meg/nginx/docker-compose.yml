@@ -1,5 +1,4 @@
 # https://nginx.org/en/CHANGES
-version: '3.7'
 services:
   nginx:
     container_name: nginx

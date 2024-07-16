@@ -1,5 +1,4 @@
 # https://forums.plex.tv/t/plex-media-server/30447/630
-version: '3.7'
 services:
   plex:
     container_name: plex

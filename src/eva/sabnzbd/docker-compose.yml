@@ -1,5 +1,4 @@
 # https://sabnzbd.org/downloads#
-version: '3.7'
 services:
   sabnzbd:
     container_name: sabnzbd

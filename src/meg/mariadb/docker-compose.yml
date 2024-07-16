@@ -1,4 +1,3 @@
-version: '3.7'
 x-common: &common
   image: mariadb:${SERVICE_VERSION_ABSOLUTE}
   init: true

@@ -1,5 +1,4 @@
 # https://github.com/redpanda-data/redpanda/releases
-version: '3.7'
 services:
   redpanda:
     container_name: redpanda

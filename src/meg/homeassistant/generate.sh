@@ -35,7 +35,7 @@ rm -rf ${ROOT_DIR}/src/main/resources/config/www/custom_ui/layout-card
 mkdir -p ${ROOT_DIR}/src/main/resources/config/www/custom_ui/layout-card &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/homeassistant/lovelace-layout-card/layout-card.js ${ROOT_DIR}/src/main/resources/config/www/custom_ui/layout-card
 
-VERSION=v2.0.4
+VERSION=v2.1.2
 pull_repo $(pwd) homeassistant apexcharts-card romrider/apexcharts-card ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/www/custom_ui/apexcharts-card
 mkdir -p ${ROOT_DIR}/src/main/resources/config/www/custom_ui/apexcharts-card &&
@@ -47,7 +47,7 @@ rm -rf ${ROOT_DIR}/src/main/resources/config/www/custom_ui/mini-graph-card
 mkdir -p ${ROOT_DIR}/src/main/resources/config/www/custom_ui/mini-graph-card &&
   wget -q -O ${ROOT_DIR}/src/main/resources/config/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js https://github.com/kalkih/mini-graph-card/releases/download/${VERSION}/mini-graph-card-bundle.js
 
-VERSION=3.4.3
+VERSION=3.4.6
 pull_repo $(pwd) homeassistant variables-component Wibias/hass-variables ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/variable
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
@@ -65,7 +65,7 @@ rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/average
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/homeassistant/average-component/custom_components/average ${ROOT_DIR}/src/main/resources/config/custom_components
 
-VERSION=1.3.0
+VERSION=1.3.2
 pull_repo $(pwd) homeassistant bureau_of_meteorology-component bremor/bureau_of_meteorology ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/bureau_of_meteorology
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&

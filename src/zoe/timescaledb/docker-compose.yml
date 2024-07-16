@@ -1,4 +1,3 @@
-version: '3.7'
 x-common: &common
   image: timescaledb:${SERVICE_VERSION_ABSOLUTE}
   init: true
