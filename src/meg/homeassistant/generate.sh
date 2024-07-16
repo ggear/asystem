@@ -72,7 +72,7 @@ mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting ${ROOT_DIR}/src/main/resources/config/custom_components
 
 VERSION=ggear-powercalc
-pull_repo $(pwd) homeassistant powercalc-component ggear/powercalc ${VERSION} ${1}
+pull_repo $(pwd) homeassistant powercalc-component ggear/homeassistant-powercalc ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/powercalc
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/homeassistant/powercalc-component/custom_components/powercalc ${ROOT_DIR}/src/main/resources/config/custom_components
