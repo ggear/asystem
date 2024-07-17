@@ -1,5 +1,5 @@
 # https://github.com/vernemq/vernemq/releases
-FROM vernemq/vernemq:1.13.0-alpine as image_base
+FROM vernemq/vernemq:2.0.1-alpine as image_base
 
 FROM image_base as image_package
 USER root
