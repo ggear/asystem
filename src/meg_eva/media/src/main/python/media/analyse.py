@@ -810,26 +810,31 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Relative Path"),
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
-                    pl.lit("cd \"$(dirname \"${0}\")\"\n\n"),
-                    pl.lit(BASH_SIGTERM_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f *.mkv*\n")),
-                    pl.lit("rm -rvf *.mkv*\n\n"),
-                    pl.lit("#other-transcode '../"), pl.col("Transcode File Name"), pl.lit("' \\\n"),
+                    pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
+                    pl.lit(BASH_SIGTERM_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit("rm -rvf \"${ROOT_DIR}\"/*.mkv*\n\n"),
+                    pl.lit("#other-transcode \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" \\\n"),
                     pl.lit("# --add-subtitle 1 \\\n"),
                     pl.lit("# --add-subtitle 2 \\\n"),
                     pl.lit("# --copy-video\n"),
-                    pl.lit("#rm -rvf *.mkv.log && mv -v *.mkv '../"), pl.col("Transcode File Name"), pl.lit("' && echo \"\"\n\n"),
-                    pl.lit("[[ -f '../"), pl.col("Transcode File Name"), pl.lit("' ]] && exit 1\n"),
+                    pl.lit("#rm -rvf \"${ROOT_DIR}\"/*.mkv.log\n"),
+                    pl.lit("#mv -v \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
+                    pl.lit("#echo \"\"\n\n"),
+                    pl.lit("[[ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]] && exit 1\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Transcoding '"), pl.col("File Name"), pl.lit("' ... \"\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("other-transcode '../"), pl.col("File Name"), pl.lit("' \\\n"),
+                    pl.lit("cd \"${ROOT_DIR}\"\n"),
+                    pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
                     pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
                     pl.lit("  --main-audio "), pl.col("Audio 1 Index"), pl.lit(" \\\n"),
                     pl.lit("  --add-audio eng \\\n"),
                     pl.lit("  --add-subtitle eng \\\n"),
                     pl.lit("  --eac3 \\\n"),
                     pl.lit("  --hevc \n"),
-                    pl.lit("rm -rvf *.mkv.log && mv -v *.mkv '../"), pl.col("Transcode File Name"), pl.lit("' && echo \"\"\n"),
+                    pl.lit("rm -rvf \"${ROOT_DIR}\"/*.mkv.log\n"),
+                    pl.lit("mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
+                    pl.lit("echo \"\"\n"),
                 ]).alias("Script Source"),
             ]
         ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
@@ -840,11 +845,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         transcode_script_global = os.path.join(file_path_scripts, "transcode.sh")
         with open(transcode_script_global, 'w') as transcode_global_file:
             transcode_global_file.write("# !/bin/bash\n\n")
-            transcode_global_file.write("cd \"$(dirname \"${0}\")\"\n\n")
+            transcode_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
             transcode_global_file.write(BASH_SIGTERM_HANDLER.format(""))
             transcode_global_file.write("echo \"\"\n")
             for transcode_script_local in metadata_transcode_pl.rows():
-                transcode_global_file.write("'{}'\n".format(transcode_script_local[1]))
+                transcode_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(transcode_script_local[1]))
                 os.makedirs(transcode_script_local[2], exist_ok=True)
                 _set_permissions(transcode_script_local[2], 0o750)
                 with open(transcode_script_local[0], 'w') as transcode_local_file:

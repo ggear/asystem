@@ -7,6 +7,7 @@ PACKAGES=(
   jq
   xq
   ntp
+  psmisc
   usbutils
   dnsutils
   ntpdate
