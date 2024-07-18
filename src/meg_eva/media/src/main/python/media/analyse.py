@@ -32,7 +32,7 @@ TARGET_BITRATE_VIDEO_MID_KBPS = 5000
 TARGET_BITRATE_VIDEO_MAX_KBPS = 7500
 
 BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
-                       "trap 'trap \" \" SIGINT; kill 0; wait; sigterm_handler' SIGINT\n\n"
+                       "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
 BASH_ECHO_HEADER = "echo \"#######################################################################################\"\n"
 
 
