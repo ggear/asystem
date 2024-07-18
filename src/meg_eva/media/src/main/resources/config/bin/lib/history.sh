@@ -4,11 +4,6 @@
 umount -fq /media/usbdrive
 [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ] && mount -t exfat $(echo "/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{RAR_FILES=ORAR_FILES=" "}{print $1}')) /media/usbdrive
 
-diskutil unmount ~/Desktop/share-4
-for i in {1..3}; do mkdir -p ~/Desktop/share-$i && mount_smbfs //GUEST:@macmini-eva/share-$i ~/Desktop/share-$i; done
-for i in {4..5}; do mkdir -p ~/Desktop/share-$i && mount_smbfs //GUEST:@macmini-meg/share-$i ~/Desktop/share-$i; done
-mkdir -p ~/Desktop/share-4 && mount_smbfs //GUEST:@macmini-meg/share-4 ~/Desktop/share-4
-
 # Renaming
 rename -v 's/X/Y/' ./*.mkv
 rename -v 's/(.*)[sS]([0-9][0-9])[eE]([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
@@ -26,7 +21,6 @@ find . -type f -exec echo mediainfo {} \; -exec echo -- \; -exec mediainfo {} \;
 find . -type f -exec echo mediainfo {} \; -exec echo -- \; -exec mediainfo '--Output=Audio;[%Language/String%, ][%BitRate/String%, ][%SamplingRate/String%, ][%BitDepth/String%, ][%Channel(s)/String%, ]%RAR_FILEormat%\n' {} \;
 echo "-" && find . -type f \( -iname \*.mp4 -o -iname \*.mkv -o -iname \*.avi \) -exec ls -lah {} \; -exec ffprobe -v quiet -select_streams v:0 -show_entries stream=width,height -of default=noprint_wrappers=1:nokey=0 {} \; -exec ffprobe -v quiet -select_streams v:0 -show_entries format=bit_rate -of default=noprint_wrappers=1:nokey=0 {} \; -exec echo "-" \;
 
-
 # Media streams
 find . -type f -exec echo ffprobe -i {} \; -exec ffprobe -i {} \; 2>&1 | less
 find . -type f -exec echo ffprobe -i {} \; -exec sh -c 'ffprobe -i "{}" 2>&1 | grep "Stream #"' \;
@@ -40,8 +34,8 @@ find . -type f -exec ffmpeg -y -i {} -c:v copy -c:a copy {}.mkv \;
 #  Stream #0:2(eng): Audio: ac3, 48000 Hz, 5.1(side), fltp, 448 kb/s
 #  Stream #0:3(ita): Subtitle: dvd_subtitle, 720x576
 #  Stream #0:4(eng): Subtitle: dvd_subtitle, 720x576
-find . -type f -exec ffmpeg -y -i {} -c:v copy -c:a copy -map 0:0 -map 0:2 {}.mkv \;       # Global indexing
-find . -type f -exec ffmpeg -y -i {} -c:v copy -c:a copy -map 0:v:0 -map 0:a:1 {}.mkv \;   # Type indexing
+find . -type f -exec ffmpeg -y -i {} -c:v copy -c:a copy -map 0:0 -map 0:2 {}.mkv \;     # Global indexing
+find . -type f -exec ffmpeg -y -i {} -c:v copy -c:a copy -map 0:v:0 -map 0:a:1 {}.mkv \; # Type indexing
 
 # Convert PGS subtitles to SRT
 pgsrip ./*.mkv
