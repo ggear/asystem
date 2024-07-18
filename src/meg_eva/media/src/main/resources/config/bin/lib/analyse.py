@@ -36,7 +36,7 @@ TARGET_BITRATE_VIDEO_MID_KBPS = 5000
 TARGET_BITRATE_VIDEO_MAX_KBPS = 7500
 
 BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
-                       "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
+                       "trap 'trap \" \" SIGINT; kill 0; wait; sigterm_handler' SIGINT\n\n"
 BASH_ECHO_HEADER = "echo \"#######################################################################################\"\n"
 
 
@@ -837,6 +837,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Source"),
             ]
         ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
+
+
+
+
         transcode_script_global = os.path.join(file_path_scripts, "transcode.sh")
         with open(transcode_script_global, 'w') as transcode_global_file:
             transcode_global_file.write("# !/bin/bash\n\n")
@@ -851,6 +855,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     transcode_local_file.write(transcode_script_local[3])
                 _set_permissions(transcode_script_local[0], 0o750)
         _set_permissions(transcode_script_global, 0o750)
+
+
+
+
         metadata_updated_pd = metadata_updated_pl.to_pandas()
         if "File Name" in metadata_updated_pd:
             metadata_updated_pd = metadata_updated_pd.set_index("File Name")

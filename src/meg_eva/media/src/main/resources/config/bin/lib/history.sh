@@ -4,6 +4,11 @@
 umount -fq /media/usbdrive
 [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ] && mount -t exfat $(echo "/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{RAR_FILES=ORAR_FILES=" "}{print $1}')) /media/usbdrive
 
+diskutil unmount ~/Desktop/share-4
+for i in {1..3}; do mkdir -p ~/Desktop/share-$i && mount_smbfs //GUEST:@macmini-eva/share-$i ~/Desktop/share-$i; done
+for i in {4..5}; do mkdir -p ~/Desktop/share-$i && mount_smbfs //GUEST:@macmini-meg/share-$i ~/Desktop/share-$i; done
+mkdir -p ~/Desktop/share-4 && mount_smbfs //GUEST:@macmini-meg/share-4 ~/Desktop/share-4
+
 # Renaming
 rename -v 's/X/Y/' ./*.mkv
 rename -v 's/(.*)[sS]([0-9][0-9])[eE]([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
