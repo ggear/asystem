@@ -4,7 +4,6 @@ ROOT_DIR=$(dirname $(readlink -f "$0"))
 
 . ${ROOT_DIR}/.env
 
-${ROOT_DIR}/media-import.sh
 ${ROOT_DIR}/media-normalise.sh
 ${ROOT_DIR}/media-rename.sh
 ${ROOT_DIR}/media-analyse.sh

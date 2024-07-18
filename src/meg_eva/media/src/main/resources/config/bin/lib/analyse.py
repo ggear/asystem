@@ -358,7 +358,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
                 for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
-                    if file_probe_streams_filtered_audio["lang"] == file_target_lang:
+                    if file_probe_streams_filtered_audio["codec"] in {"AAC", "AC3", "EAC3"} and \
+                            file_probe_streams_filtered_audio["lang"] == file_target_lang:
                         file_probe_streams_filtered_audios.append(file_probe_streams_filtered_audio)
                     else:
                         file_probe_streams_filtered_audios_supplementary.append(file_probe_streams_filtered_audio)
@@ -823,9 +824,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("other-transcode '../"), pl.col("File Name"), pl.lit("' \\\n"),
                     pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
                     pl.lit("  --hevc \\\n"),
-                    pl.lit("  --main-audio 1"), pl.lit(" \\\n"),
-                    pl.lit("  --add-audio eng\\\n"),
-                    pl.lit("  --eac3\\\n"),
+                    pl.lit("  --main-audio "), pl.col("Audio 1 Index"), pl.lit(" \\\n"),
+                    pl.lit("  --add-audio eng \\\n"),
+                    pl.lit("  --eac3 \\\n"),
                     pl.lit("  --add-subtitle eng\n"),
                     pl.lit("rm -rvf *.mkv.log\n"),
                     pl.lit("mv -v *.mkv '../"), pl.col("Transcode File Name"), pl.lit("'\n"),
