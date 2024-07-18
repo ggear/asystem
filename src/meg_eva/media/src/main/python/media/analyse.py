@@ -354,8 +354,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
                 for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
-                    if file_probe_streams_filtered_audio["codec"] in {"AAC", "AC3", "EAC3"} and \
-                            file_probe_streams_filtered_audio["lang"] == file_target_lang:
+                    if file_probe_streams_filtered_audio["lang"] == file_target_lang:
                         file_probe_streams_filtered_audios.append(file_probe_streams_filtered_audio)
                     else:
                         file_probe_streams_filtered_audios_supplementary.append(file_probe_streams_filtered_audio)
