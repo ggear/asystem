@@ -705,7 +705,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             (
                 pl.when(
                     (pl.col("Version Count").cast(pl.Int32) > 1)
-                ).then(pl.lit("5. Merge"))
+                ).then(pl.lit("2. Merge"))
                 .when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete")
@@ -715,7 +715,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             (pl.col("File Size") == "Small") &
                             (pl.col("Target Quality") != "Min")
                     )
-                ).then(pl.lit("2. Upscale"))
+                ).then(pl.lit("4. Upscale"))
                 .when(
                     (pl.col("Transcribe Action") != "Ignore") & (
                             (pl.col("Plex Video") == "Transcode") |
@@ -730,16 +730,23 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             (pl.col("File Size") == "Large") |
                             (pl.col("Metadata State") == "Messy")
                     )
-                ).then(pl.lit("4. Reformat"))
+                ).then(pl.lit("5. Reformat"))
                 .otherwise(pl.lit("6. Nothing"))
             ).alias("File Action"))
-
-
-
-        # TODO: Sort all non transcribe/reformat by name
-        metadata_updated_pl = metadata_updated_pl.with_columns(
-            pl.col("File Size (GB)").cast(pl.Float32).alias("Action Index Sort")
-        ).select(
+        metadata_updated_pl = pl.concat([
+            metadata_updated_pl.filter(
+                (pl.col("File Action").str.ends_with("Transcode")) |
+                (pl.col("File Action").str.ends_with("Reformat"))
+            ).with_columns(
+                pl.col("File Size (GB)").cast(pl.Float32).alias("Action Index Sort")
+            ),
+            metadata_updated_pl.filter(
+                (~pl.col("File Action").str.ends_with("Transcode")) &
+                (~pl.col("File Action").str.ends_with("Reformat"))
+            ).sort("File Name", descending=True).with_columns(
+                pl.col("File Name").cum_count().cast(pl.Float32).alias("Action Index Sort")
+            )
+        ]).select(
             (pl.all().sort_by("Action Index Sort", descending=True).over("File Action"))
         ).with_columns(
             (pl.col("File Action").str.split(by=".").list.get(0, null_on_oob=True).cast(pl.Int32) * 1000000)
@@ -752,8 +759,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
 
-
-
         metadata_updated_pl = metadata_updated_pl.with_columns([
             pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
                 .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
@@ -763,18 +768,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             if not (column.null_count() == metadata_updated_pl.height)
         ]]
 
-
-
-
-
-
-
         # TODO: Write out file and global merge/reformat scripts
         # TODO: Make a media-transcode/merge scripts to context determine all scripts under path or accross local shares if none - maybe make all other scripts do the same?
         metadata_transcode_pl = metadata_updated_pl.filter(
-            pl.col("File Action").str.ends_with("Transcode"),
-            pl.col("Version Directory").str.ends_with("."),
-            pl.col("Media Directory").is_in(metadata_cache_media_dirs),
+            (pl.col("File Action").str.ends_with("Transcode")) &
+            (pl.col("Version Directory").str.ends_with(".")) &
+            (pl.col("Media Directory").is_in(metadata_cache_media_dirs))
         ).with_columns(
             [
                 pl.concat_str([
@@ -854,10 +853,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Source"),
             ]
         ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
-
-
-
-
 
         transcode_script_global = os.path.join(file_path_scripts, "transcode.sh")
         with open(transcode_script_global, 'w') as transcode_global_file:
