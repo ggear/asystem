@@ -700,13 +700,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_updated_pl = metadata_updated_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("Version Directory") != ".") &
                     (pl.col("Version Count").cast(pl.Int32) > 1)
                 ).then(pl.lit("5. Merge"))
                 .when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete")
-                ).then(pl.lit("1. Download"))
+                ).then(pl.lit("1. Corrupt"))
                 .when(
                     (pl.col("Transcribe Action") != "Ignore") & (
                             (pl.col("File Size") == "Small") &
@@ -730,6 +729,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("4. Reformat"))
                 .otherwise(pl.lit("6. Nothing"))
             ).alias("File Action"))
+
+
+
+        # TODO: Sort all non transcribe/reformat by name
         metadata_updated_pl = metadata_updated_pl.with_columns(
             pl.col("File Size (GB)").cast(pl.Float32).alias("Action Index Sort")
         ).select(
@@ -744,6 +747,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
+
+
+
         metadata_updated_pl = metadata_updated_pl.with_columns([
             pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
                 .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
@@ -753,7 +759,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             if not (column.null_count() == metadata_updated_pl.height)
         ]]
 
-        # TODO: Write out file and global merge scripts
+
+
+
+
+
+
+        # TODO: Write out file and global merge/reformat scripts
         # TODO: Make a media-transcode/merge scripts to context determine all scripts under path or accross local shares if none - maybe make all other scripts do the same?
         metadata_transcode_pl = metadata_updated_pl.filter(
             pl.col("File Action").str.ends_with("Transcode"),
@@ -842,6 +854,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
 
 
 
+
         transcode_script_global = os.path.join(file_path_scripts, "transcode.sh")
         with open(transcode_script_global, 'w') as transcode_global_file:
             transcode_global_file.write("# !/bin/bash\n\n")
@@ -856,10 +869,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     transcode_local_file.write(transcode_script_local[3])
                 _set_permissions(transcode_script_local[0], 0o750)
         _set_permissions(transcode_script_global, 0o750)
-
-
-
-
         metadata_updated_pd = metadata_updated_pl.to_pandas()
         if "File Name" in metadata_updated_pd:
             metadata_updated_pd = metadata_updated_pd.set_index("File Name")
