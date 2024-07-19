@@ -32,7 +32,7 @@ function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.
 
 for SHARE in "macmini-eva/share-1" "macmini-eva/share-2" "macmini-eva/share-3" "macmini-meg/share-4" "macmini-meg/share-5"; do
   mkdir -p ~/Desktop/shares/\${SHARE} >/dev/null 2>&1
-  diskutil unmount ~/Desktop/shares/\${SHARE} >/dev/null 2>&1
+  diskutil unmount force ~/Desktop/shares/\${SHARE} >/dev/null 2>&1
   mount_smbfs //GUEST:@\${SHARE} ~/Desktop/shares/\${SHARE} >/dev/null 2>&1
 done
 
