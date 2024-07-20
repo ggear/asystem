@@ -4,4 +4,8 @@ ROOT_DIR=$(dirname $(readlink -f "$0"))
 
 . ${ROOT_DIR}/.env
 
-for SHARE_DIR in ${SHARE_DIRS}; do ${PYTHON_DIR}/python ${ROOT_DIR}/lib/analyse.py ${SHARE_DIR} "14W6B2404_e1JKftOvHE4moV5w6VP5aitHVpX3Qcgcl8"; done
+if [ ! -z "${SHARE_DIR}" ]; then
+  ${PYTHON_DIR}/python ${ROOT_DIR}/lib/analyse.py ${SHARE_DIR}
+else
+  for SHARE_DIRS_ITEM in ${SHARE_DIRS}; do ${PYTHON_DIR}/python ${ROOT_DIR}/lib/analyse.py ${SHARE_DIRS_ITEM}; done
+fi
