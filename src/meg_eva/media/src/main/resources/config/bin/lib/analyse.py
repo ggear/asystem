@@ -877,7 +877,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("  --main-audio "), pl.col("Audio 1 Index"), pl.lit(" \\\n"),
                     pl.lit("  --add-audio eng \\\n"),
                     pl.lit("  --add-subtitle eng \\\n"),
-                    pl.lit("  --eac3 \\\n"),
                     pl.lit("  --hevc \n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
