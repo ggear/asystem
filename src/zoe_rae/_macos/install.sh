@@ -38,12 +38,6 @@ for SHARE in macmini-eva,1 macmini-eva,2 macmini-eva,3 macmini-meg,4 macmini-meg
   mount_smbfs //GUEST:@\${1}/share-\${2} ~/Desktop/share/\${2} >/dev/null 2>&1
 done
 
-#for SHARE in "macmini-eva/share-1" "macmini-eva/share-2" "macmini-eva/share-3" "macmini-meg/share-4" "macmini-meg/share-5"; do
-#  mkdir -p ~/Desktop/shares/\${SHARE} >/dev/null 2>&1
-#  diskutil unmount force ~/Desktop/shares/\${SHARE} >/dev/null 2>&1
-#  mount_smbfs //GUEST:@\${SHARE} ~/Desktop/shares/\${SHARE} >/dev/null 2>&1
-#done
-
 export PATH=~/.cargo/bin:~/.conda/envs/python3/bin:/Library/Conda/anaconda3/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:${PATH}
 
 EOF
