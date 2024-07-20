@@ -475,6 +475,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         _add("plex_video", "")
         _add("file_size", "")
         _add("file_state", "")
+        _add("file_version", "")
         _add("file_action", "")
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
@@ -570,6 +571,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("Small"))
                 .otherwise(pl.lit("Right"))
             ).alias("File Size"))
+        metadata_updated_pl = metadata_updated_pl.with_columns(
+            (
+                pl.when(
+                    (pl.col("File Name").str.contains("___TRANSCODE")) |
+                    (~pl.col("Version Directory").str.ends_with("."))
+                ).then(pl.lit("Transcoded"))
+                .otherwise(pl.lit("Original"))
+            ).alias("File Version"))
         metadata_updated_pl = metadata_updated_pl.with_columns(
             (
                 pl.when(
@@ -782,8 +791,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         # TODO: Write out file and global merge/reformat scripts
         # TODO: Make a media-transcode/merge scripts to context determine all scripts under path or accross local shares if none - maybe make all other scripts do the same?
         metadata_transcode_pl = metadata_updated_pl.filter(
-            (pl.col("File Action").str.ends_with("Transcode")) &
-            (pl.col("Version Directory").str.ends_with(".")) &
+            (
+                    (pl.col("File Action").str.ends_with("Merge")) |
+                    (pl.col("File Action").str.ends_with("Transcode"))
+            ) &
+            (pl.col("File Version") != "Transcoded") &
             (pl.col("Media Directory").is_in(metadata_cache_media_dirs))
         ).with_columns(
             [
@@ -838,12 +850,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("# !/bin/bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_SIGTERM_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
-                    pl.lit("rm -rvf \"${ROOT_DIR}\"/*.mkv*\n\n"),
+                    pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit("#other-transcode \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" \\\n"),
                     pl.lit("# --add-subtitle 1 \\\n"),
                     pl.lit("# --add-subtitle 2 \\\n"),
                     pl.lit("# --copy-video\n"),
-                    pl.lit("#rm -rvf \"${ROOT_DIR}\"/*.mkv.log\n"),
+                    pl.lit("#rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("#mv -v \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
                     pl.lit("#echo ''\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
@@ -864,7 +876,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("  --eac3 \\\n"),
                     pl.lit("  --hevc \n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
-                    pl.lit("  rm -rvf \"${ROOT_DIR}\"/*.mkv.log\n"),
+                    pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
                     pl.lit("  if [ $? -eq 0 ]; then echo -n 'Completed: ' && date; else echo -n 'Failed (mv): ' && date; fi\n"),
                     pl.lit("else\n"),
