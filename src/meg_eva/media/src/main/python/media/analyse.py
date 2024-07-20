@@ -508,10 +508,25 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_updated_pl = metadata_updated_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("Container Format") == "")
-                ).then(pl.lit("Corrupt"))
-                .when(
-                    (pl.col("Base Directory") == ".")
+                    (pl.col("Base Directory").is_null()) |
+                    (pl.col("Base Directory") == ".") |
+                    (pl.col("Container Format").is_null()) |
+                    (pl.col("Container Format") == "") |
+                    (pl.col("Duration (hours)").is_null()) |
+                    (pl.col("Duration (hours)") == "") |
+                    (pl.col("File Size (GB)").is_null()) |
+                    (pl.col("File Size (GB)") == "") |
+                    (pl.col("Bitrate (Kbps)").is_null()) |
+                    (pl.col("Bitrate (Kbps)") == "") |
+                    (pl.col("Stream Count").is_null()) |
+                    (pl.col("Stream Count") == "") |
+                    (pl.col("Stream Count") == "0") |
+                    (pl.col("Video Count").is_null()) |
+                    (pl.col("Video Count") == "") |
+                    (pl.col("Video Count") == "0") |
+                    (pl.col("Audio Count").is_null()) |
+                    (pl.col("Audio Count") == "") |
+                    (pl.col("Audio Count") == "0")
                 ).then(pl.lit("Corrupt"))
                 .when(
                     (pl.col("Video Count") == "0") |
@@ -700,12 +715,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_updated_pl = metadata_updated_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("Version Count").cast(pl.Int32) > 1)
-                ).then(pl.lit("2. Merge"))
-                .when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete")
                 ).then(pl.lit("1. Corrupt"))
+                .when(
+                    (pl.col("Version Count").cast(pl.Int32) > 1)
+                ).then(pl.lit("2. Merge"))
                 .when(
                     (pl.col("Transcribe Action") != "Ignore") & (
                             (pl.col("File Size") == "Small") &

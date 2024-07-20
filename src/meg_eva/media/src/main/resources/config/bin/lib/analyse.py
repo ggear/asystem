@@ -37,7 +37,7 @@ TARGET_BITRATE_VIDEO_MAX_KBPS = 7500
 
 BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
                        "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
-BASH_ECHO_HEADER = "echo \"#######################################################################################\"\n"
+BASH_ECHO_HEADER = "echo '#######################################################################################'\n"
 
 
 def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
@@ -512,10 +512,25 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_updated_pl = metadata_updated_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("Container Format") == "")
-                ).then(pl.lit("Corrupt"))
-                .when(
-                    (pl.col("Base Directory") == ".")
+                    (pl.col("Base Directory").is_null()) |
+                    (pl.col("Base Directory") == ".") |
+                    (pl.col("Container Format").is_null()) |
+                    (pl.col("Container Format") == "") |
+                    (pl.col("Duration (hours)").is_null()) |
+                    (pl.col("Duration (hours)") == "") |
+                    (pl.col("File Size (GB)").is_null()) |
+                    (pl.col("File Size (GB)") == "") |
+                    (pl.col("Bitrate (Kbps)").is_null()) |
+                    (pl.col("Bitrate (Kbps)") == "") |
+                    (pl.col("Stream Count").is_null()) |
+                    (pl.col("Stream Count") == "") |
+                    (pl.col("Stream Count") == "0") |
+                    (pl.col("Video Count").is_null()) |
+                    (pl.col("Video Count") == "") |
+                    (pl.col("Video Count") == "0") |
+                    (pl.col("Audio Count").is_null()) |
+                    (pl.col("Audio Count") == "") |
+                    (pl.col("Audio Count") == "0")
                 ).then(pl.lit("Corrupt"))
                 .when(
                     (pl.col("Video Count") == "0") |
@@ -704,12 +719,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_updated_pl = metadata_updated_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("Version Count").cast(pl.Int32) > 1)
-                ).then(pl.lit("2. Merge"))
-                .when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete")
                 ).then(pl.lit("1. Corrupt"))
+                .when(
+                    (pl.col("Version Count").cast(pl.Int32) > 1)
+                ).then(pl.lit("2. Merge"))
                 .when(
                     (pl.col("Transcribe Action") != "Ignore") & (
                             (pl.col("File Size") == "Small") &
@@ -834,11 +849,16 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("# --copy-video\n"),
                     pl.lit("#rm -rvf \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("#mv -v \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
-                    pl.lit("#echo \"\"\n\n"),
-                    pl.lit("[[ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]] && exit 1\n"),
+                    pl.lit("#echo ''\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Transcoding '"), pl.col("File Name"), pl.lit("' ... \"\n"),
+                    pl.lit("echo 'Transcoding: "), pl.col("File Name"), pl.lit(" ... '\n"),
                     pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
+                    pl.lit("  echo '' && echo -n 'Skipped (file): ' && date && echo '' && exit 1\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("if [ $(df -k \"${ROOT_DIR}\" | tail -1 | awk '{print $4}') -lt 20000000 ]; then\n"),
+                    pl.lit("  echo '' && echo -n 'Skipped (space): ' && date && echo '' && exit 1\n"),
+                    pl.lit("fi\n"),
                     pl.lit("cd \"${ROOT_DIR}\"\n"),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
                     pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
@@ -847,9 +867,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("  --add-subtitle eng \\\n"),
                     pl.lit("  --eac3 \\\n"),
                     pl.lit("  --hevc \n"),
-                    pl.lit("rm -rvf \"${ROOT_DIR}\"/*.mkv.log\n"),
-                    pl.lit("mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
-                    pl.lit("echo \"\"\n"),
+                    pl.lit("if [ $? -eq 0 ]; then\n"),
+                    pl.lit("  rm -rvf \"${ROOT_DIR}\"/*.mkv.log\n"),
+                    pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
+                    pl.lit("  if [ $? -eq 0 ]; then echo -n 'Completed: ' && date; else echo -n 'Failed (mv): ' && date; fi\n"),
+                    pl.lit("else\n"),
+                    pl.lit("  echo -n 'Failed (other-transcode): ' && date\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("echo ''\n"),
                 ]).alias("Script Source"),
             ]
         ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
@@ -859,7 +884,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             transcode_global_file.write("# !/bin/bash\n\n")
             transcode_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
             transcode_global_file.write(BASH_SIGTERM_HANDLER.format(""))
-            transcode_global_file.write("echo \"\"\n")
+            transcode_global_file.write("echo ''\n")
             for transcode_script_local in metadata_transcode_pl.rows():
                 transcode_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(transcode_script_local[1]))
                 os.makedirs(transcode_script_local[2], exist_ok=True)
