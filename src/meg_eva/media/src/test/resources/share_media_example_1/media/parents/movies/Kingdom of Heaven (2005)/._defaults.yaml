@@ -1,4 +1,4 @@
-- transcribe_action: Ignore
+- transcode_action: Ignore
 - target_quality: Min
 - target_lang: eng
 - native_lang: ger

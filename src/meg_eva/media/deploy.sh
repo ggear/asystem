@@ -11,12 +11,13 @@ for SCRIPT in ${ROOT_DIR}/src/main/resources/config/bin/*.sh; do
   ln -vs ${SCRIPT} /usr/local/bin/asystem-$(basename ${SCRIPT} .sh)
 done
 
+HOSTS=$(echo $(basename $(dirname $(pwd))) | tr "_" "\n")
 HOST="$(grep $(echo "${HOSTS}" | head -1) ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-$(echo "${HOSTS}" | head -1)"
+
 echo "------------------------------------------------------------" && echo "Server [${HOST}] media clean starting"
 ssh -o StrictHostKeyChecking=no root@${HOST} "/root/install/media/latest/config/bin/media-clean.sh"
 echo "Server [${HOST}] media clean completed" && echo "------------------------------------------------------------"
 
-HOSTS=$(echo $(basename $(dirname $(pwd))) | tr "_" "\n")
 for HOST in ${HOSTS}; do
   HOST="$(grep ${HOST} ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-${HOST}"
   echo "------------------------------------------------------------" && echo "Server [${HOST}] media operations starting"

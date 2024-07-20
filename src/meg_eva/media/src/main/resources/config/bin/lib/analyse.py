@@ -130,7 +130,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             file_version_qualifier = file_version_qualifier.lower().removesuffix("___transcode")
             if refresh or not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
-                    "transcribe_action": "Analyse",
+                    "transcode_action": "Analyse",
                     "target_quality": "Mid",
                     "target_lang": "eng",
                     "native_lang": "eng",
@@ -156,8 +156,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                     print("{} [{}]".format(message, file_path))
                                     print("Analysing {} ... ".format(file_path_root), end="", flush=True)
                                 continue
-                if "transcribe_action" in file_defaults_dict:
-                    file_transcribe_action = file_defaults_dict["transcribe_action"].title()
+                if "transcode_action" in file_defaults_dict:
+                    file_transcode_action = file_defaults_dict["transcode_action"].title()
                 if "target_quality" in file_defaults_dict:
                     file_target_quality = file_defaults_dict["target_quality"].title()
                 if "native_lang" in file_defaults_dict:
@@ -388,7 +388,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_probe_streams_filtered["subtitle"] = file_probe_streams_filtered_subtitles
                 file_probe_filtered = [
                     {"file_name": file_name},
-                    {"transcribe_action": file_transcribe_action},
+                    {"transcode_action": file_transcode_action},
                     {"target_quality": file_target_quality},
                     {"target_lang": file_target_lang},
                     {"native_lang": file_native_lang},
@@ -735,13 +735,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     (pl.col("Version Count").cast(pl.Int32) > 1)
                 ).then(pl.lit("2. Merge"))
                 .when(
-                    (pl.col("Transcribe Action") != "Ignore") & (
+                    (pl.col("Transcode Action") != "Ignore") & (
                             (pl.col("File Size") == "Small") &
                             (pl.col("Target Quality") != "Min")
                     )
                 ).then(pl.lit("4. Upscale"))
                 .when(
-                    (pl.col("Transcribe Action") != "Ignore") & (
+                    (pl.col("Transcode Action") != "Ignore") & (
                             (pl.col("Plex Video") == "Transcode") |
                             (pl.col("Plex Audio") == "Transcode") |
                             (pl.col("Plex Subtitle") == "Transcode") |
@@ -750,7 +750,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     )
                 ).then(pl.lit("3. Transcode"))
                 .when(
-                    (pl.col("Transcribe Action") != "Ignore") & (
+                    (pl.col("Transcode Action") != "Ignore") & (
                             (pl.col("File Size") == "Large") |
                             (pl.col("Metadata State") == "Messy")
                     )
@@ -890,7 +890,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Source"),
             ]
         ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
-
         transcode_script_global = os.path.join(file_path_scripts, "transcode.sh")
         with open(transcode_script_global, 'w') as transcode_global_file:
             transcode_global_file.write("# !/bin/bash\n\n")
