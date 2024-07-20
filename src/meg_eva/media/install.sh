@@ -45,6 +45,6 @@ cp -rvf /var/lib/asystem/install/media/latest/config/.gspread_pandas /root/.conf
 
 chmod +x config/bin/*.sh config/bin/lib/*.sh
 for SCRIPT in /var/lib/asystem/install/media/latest/config/bin/*.sh; do
-  rm -rf /usr/bin/asystem-$(basename ${SCRIPT} .sh)
-  ln -vs ${SCRIPT} /usr/bin/asystem-$(basename ${SCRIPT} .sh)
+  rm -rf /usr/local/bin/asystem-$(basename ${SCRIPT} .sh)
+  ln -vs ${SCRIPT} /usr/local/bin/asystem-$(basename ${SCRIPT} .sh)
 done
