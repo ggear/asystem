@@ -745,7 +745,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     (pl.col("Transcode Action") != "Ignore") & (
                             (pl.col("Plex Video") == "Transcode") |
                             (pl.col("Plex Audio") == "Transcode") |
-                            (pl.col("Plex Subtitle") == "Transcode") |
                             (pl.col("Duration (hours)").is_null()) |
                             (pl.col("Bitrate (Kbps)").is_null())
                     )
