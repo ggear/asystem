@@ -46,10 +46,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         return -1
     metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid, sheet="Data")
     if clean:
-        print("Cleaning {} ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
+        print("Truncating sheet ... ", end=("\n" if verbose else ""), flush=True)
         metadata_spread.freeze(0, 0, sheet="Data")
         metadata_spread.clear_sheet(1, 2, sheet="Data")
-        print("{}done".format("Cleaning {} ".format(file_path_root) if verbose else ""))
+        print("{}done".format("Truncating sheet "))
         return 0
     file_path_media = os.path.join(file_path_root, "media")
     if not os.path.isdir(file_path_media):
