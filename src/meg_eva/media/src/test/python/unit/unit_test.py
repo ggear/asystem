@@ -19,8 +19,8 @@ class InternetTest(unittest.TestCase):
         self._test_analyse(1, "1JHv8ytvcia-Nz2gvMcFfuOT_jDvTCO76BauY9gAWBQY", 56)
 
     def _test_analyse(self, index, sheet_guid, files_analysed):
-        dir_test = join(DIR_ROOT, "target/runtime-unit/share_media_example_{}".format(index))
-        dir_test_src = join(DIR_ROOT, "src/test/resources/share_media_example_{}".format(index))
+        dir_test = join(DIR_ROOT, "target/runtime-unit/share_media_example_{}/share/10".format(index))
+        dir_test_src = join(DIR_ROOT, "src/test/resources/share_media_example_{}/share/10".format(index))
         print("")
         sys.stdout.flush()
         shutil.rmtree(dir_test, ignore_errors=True)

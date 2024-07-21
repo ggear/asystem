@@ -49,7 +49,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         print("Truncating sheet ... ", end=("\n" if verbose else ""), flush=True)
         metadata_spread.freeze(0, 0, sheet="Data")
         metadata_spread.clear_sheet(1, 2, sheet="Data")
-        print("{}done".format("Truncating sheet "))
+        print("{}done".format("Truncating sheet " if verbose else ""))
         return 0
     file_path_media = os.path.join(file_path_root, "media")
     if not os.path.isdir(file_path_media):
@@ -397,13 +397,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     {"target_quality": file_target_quality},
                     {"target_lang": file_target_lang},
                     {"native_lang": file_native_lang},
-                    {"media_directory": file_path_media},
+                    {"media_directory": _delocalise(file_path_media, file_path_root)},
                     {"media_scope": file_media_scope},
                     {"media_type": file_media_type},
                     {"base_directory": file_base_dir},
                     {"version_directory": file_version_dir},
                     {"version_qualifier": file_version_qualifier},
-                    {"file_directory": " '{}' ".format(file_dir_path)},
+                    {"file_directory": " '{}' ".format(_delocalise(file_dir_path, file_path_root))},
                     {"file_stem": " '{}' ".format(file_stem)},
                     {"file_extension": file_extension},
                     {"container_format": file_probe["format"]["format_name"].lower() \
@@ -893,20 +893,22 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Source"),
             ]
         ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
-        transcode_script_global = os.path.join(file_path_scripts, "transcode.sh")
-        with open(transcode_script_global, 'w') as transcode_global_file:
-            transcode_global_file.write("# !/bin/bash\n\n")
-            transcode_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
-            transcode_global_file.write(BASH_SIGTERM_HANDLER.format(""))
-            transcode_global_file.write("echo ''\n")
+        transcode_script_global_path = _localise(os.path.join(file_path_scripts, "transcode.sh"), file_path_root)
+        with open(transcode_script_global_path, 'w') as transcode_script_global_file:
+            transcode_script_global_file.write("# !/bin/bash\n\n")
+            transcode_script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
+            transcode_script_global_file.write(BASH_SIGTERM_HANDLER.format(""))
+            transcode_script_global_file.write("echo ''\n")
             for transcode_script_local in metadata_transcode_pl.rows():
-                transcode_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(transcode_script_local[1]))
-                os.makedirs(transcode_script_local[2], exist_ok=True)
-                _set_permissions(transcode_script_local[2], 0o750)
-                with open(transcode_script_local[0], 'w') as transcode_local_file:
-                    transcode_local_file.write(transcode_script_local[3])
-                _set_permissions(transcode_script_local[0], 0o750)
-        _set_permissions(transcode_script_global, 0o750)
+                transcode_script_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(transcode_script_local[1]))
+                transcode_script_local_dir = _localise(transcode_script_local[2], file_path_root)
+                os.makedirs(transcode_script_local_dir, exist_ok=True)
+                _set_permissions(transcode_script_local_dir, 0o750)
+                transcode_script_local_path = _localise(transcode_script_local[0], file_path_root)
+                with open(transcode_script_local_path, 'w') as transcode_script_local_file:
+                    transcode_script_local_file.write(transcode_script_local[3])
+                _set_permissions(transcode_script_local_path, 0o750)
+        _set_permissions(transcode_script_global_path, 0o750)
         metadata_updated_pd = metadata_updated_pl.to_pandas()
         if "File Name" in metadata_updated_pd:
             metadata_updated_pd = metadata_updated_pd.set_index("File Name")
@@ -920,31 +922,41 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
     return files_analysed
 
 
-def _set_permissions(path, mode=0o644):
-    os.chmod(path, mode)
+def _localise(_path, _local_path):
+    return _path if ("/share/" not in _path or not _path.startswith("/share/")) \
+        else "{}{}".format(_local_path.split("/share/")[0], _path)
+
+
+def _delocalise(_path, _local_path):
+    return _path if ("/share/" not in _path or _path.startswith("/share/")) \
+        else "{}{}".format("/share/", _path.split("/share/")[1])
+
+
+def _set_permissions(_path, _mode=0o644):
+    os.chmod(_path, _mode)
     try:
-        os.chown(path, 1000, 100)
+        os.chown(_path, 1000, 100)
     except PermissionError:
         pass
 
 
-def _unwrap_lists(lists):
-    if lists is None:
-        lists = []
-    if isinstance(lists, list):
+def _unwrap_lists(_lists):
+    if _lists is None:
+        _lists = []
+    if isinstance(_lists, list):
         dicts = OrderedDict()
-        for item in lists:
+        for item in _lists:
             dicts[next(iter(item))] = _unwrap_lists(next(iter(item.values())))
         return dicts
-    return lists
+    return _lists
 
 
-def _flatten_dicts(dicts, parent_key=''):
+def _flatten_dicts(_dicts, _parent_key=''):
     items = []
-    if dicts is None:
-        dicts = {}
-    for key, value in dicts.items():
-        new_key = parent_key + '_' + str(key) if parent_key else str(key)
+    if _dicts is None:
+        _dicts = {}
+    for key, value in _dicts.items():
+        new_key = _parent_key + '_' + str(key) if _parent_key else str(key)
         if isinstance(value, MutableMapping):
             items.extend(_flatten_dicts(value, new_key).items())
         else:
