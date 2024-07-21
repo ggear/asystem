@@ -304,6 +304,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_stream_channels = int(file_probe_stream["channels"]) \
                                 if "channels" in file_probe_stream else 2
                             file_probe_stream_filtered["channels"] = str(file_stream_channels)
+                            file_probe_stream_filtered["surround"] = "Atmos" if \
+                                "tags" in file_probe_stream and "title" in file_probe_stream["tags"] and \
+                                "atmos" in file_probe_stream["tags"]["title"].lower() \
+                                else "Standard"
                             file_probe_stream_filtered["bitrate__Kbps"] = \
                                 str(round(int(file_probe_stream["bit_rate"]) / 10 ** 3)) \
                                     if "bit_rate" in file_probe_stream else ""
@@ -315,8 +319,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_lang
                             file_probe_stream_filtered["forced"] = ("Yes" if file_probe_stream["disposition"]["forced"] == 1 else "No") \
                                 if ("disposition" in file_probe_stream and "forced" in file_probe_stream["disposition"]) else "No"
-                            file_probe_stream_filtered["format"] = "Picture" \
-                                if ("tags" in file_probe_stream and "width" in file_probe_stream["tags"]) else "Text"
+                            file_probe_stream_filtered["format"] = "Picture" if \
+                                (file_probe_stream_filtered["codec"] in {"VOB", "VOBSUB", "DVD_SUBTITLE"} or \
+                                 ("tags" in file_probe_stream and "width" in file_probe_stream["tags"])) else "Text"
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
                 for file_stream_video_index, file_stream_video in enumerate(file_probe_streams_filtered["video"]):
                     if file_stream_video_index == 0:
