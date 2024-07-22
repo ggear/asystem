@@ -4,4 +4,4 @@ ROOT_DIR=$(dirname $(readlink -f "$0"))
 
 . "${ROOT_DIR}/.env"
 
-"${ROOT_DIR}/lib/import.sh" /share/2/tmp
+[[ $(uname) == "Linux" ]] && "${ROOT_DIR}/lib/import.sh" /share/2

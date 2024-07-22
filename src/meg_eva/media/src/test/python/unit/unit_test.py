@@ -16,7 +16,7 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 class InternetTest(unittest.TestCase):
 
     def test_analyse_1(self):
-        self._test_analyse(1, "1JHv8ytvcia-Nz2gvMcFfuOT_jDvTCO76BauY9gAWBQY", 56)
+        self._test_analyse(1, "1JHv8ytvcia-Nz2gvMcFfuOT_jDvTCO76BauY9gAWBQY", 57)
 
     def _test_analyse(self, index, sheet_guid, files_analysed):
         dir_test = join(DIR_ROOT, "target/runtime-unit/share_media_example_{}/share/10".format(index))
@@ -28,11 +28,14 @@ class InternetTest(unittest.TestCase):
         shutil.copytree(dir_test_src, dir_test)
         self.assertEqual(0, analyse._analyse(dir_test, sheet_guid, False, False, True))
 
-        # TODO: Revert
-        self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, False))
-        # self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, True))
-        # self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, True, True))
-        # self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, True))
+        # TODO: Re-enable for full tests
+        # self.assertEqual(1, analyse._analyse(join(dir_test, "media/docos/movies/The Bad News Bears (1976)"), sheet_guid, True))
+        # self.assertEqual(1, analyse._analyse(join(dir_test, "media/parents/movies/Kingdom of Heaven (2005)"), sheet_guid, True))
+        # self.assertEqual(0, analyse._analyse(dir_test, sheet_guid, False, False, True))
+        # self.assertEqual(1, analyse._analyse(join(dir_test, "media/parents/movies/Kingdom of Heaven (2005)"), sheet_guid, True))
+        # self.assertEqual(1, analyse._analyse(join(dir_test, "media/docos/movies/The Bad News Bears (1976)"), sheet_guid, True))
+
+        self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, True))
 
     def test_rename_1(self):
         self._test_rename(1, 171)

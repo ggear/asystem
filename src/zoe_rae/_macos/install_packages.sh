@@ -9,6 +9,7 @@ brew install \
   r \
   pv \
   jq \
+  xq \
   grep \
   htop \
   wget \
