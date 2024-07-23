@@ -566,7 +566,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_merged_pl = metadata_local_pl
     else:
         if verbose:
-            print("{} + #local-dataframe -> #merged-dataframe ... ".format(sheet_url), end='', flush=True)
+            print("#local-dataframe + {} -> #merged-dataframe ... ".format(sheet_url), end='', flush=True)
         metadata_spread_data = Spread(sheet_url, sheet="Data")
         metadata_sheet_list = metadata_spread_data._fix_merge_values(metadata_spread_data.sheet.get_all_values())
         if len(metadata_sheet_list) > 0:
