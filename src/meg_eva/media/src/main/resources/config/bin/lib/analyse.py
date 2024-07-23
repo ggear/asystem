@@ -96,7 +96,7 @@ BASH_ECHO_HEADER = "echo '######################################################
 def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
     sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_guid
     if clean and file_path_root == "/share":
-        print("Truncating 'http://drive.google.com/sheet' ... ", end=("\n" if verbose else ""), flush=True)
+        print("Truncating 'http://docs.google.com/sheet' ... ", end=("\n" if verbose else ""), flush=True)
         for sheet in {"Data", "Summary"}:
             metadata_spread_data = Spread(sheet_url, sheet=sheet)
             metadata_spread_data.freeze(0, 0, sheet=sheet)
