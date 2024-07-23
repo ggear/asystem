@@ -2,7 +2,7 @@
 
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 
-. "${ROOT_DIR}/.env"
+. "${ROOT_DIR}/.env_media"
 
 SHARE_DIRS_LOCAL=${SHARE_DIRS}
 SHARE_DIRS_LOCAL_LABEL=/share

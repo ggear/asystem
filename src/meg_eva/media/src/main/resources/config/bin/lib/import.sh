@@ -1,6 +1,6 @@
 #!/bin/bash
 
-. "${ROOT_DIR}/../.env"
+. "${ROOT_DIR}/../.env_media"
 
 WORKING_DIR=${1}
 if [ ! -d "${WORKING_DIR}" ]; then
