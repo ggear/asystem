@@ -1006,7 +1006,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         finally:
             if not file_path_root_is_nested and transcode_script_global_file is not None:
                 transcode_script_global_file.close()
-        _set_permissions(transcode_script_global_path, 0o750)
+        if not file_path_root_is_nested:
+            _set_permissions(transcode_script_global_path, 0o750)
         if verbose:
             print("done", flush=True)
             print("#enriched-dataframe -> {}#Data ... ".format(sheet_url), end='', flush=True)
