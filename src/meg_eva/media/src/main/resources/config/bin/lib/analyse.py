@@ -16,15 +16,6 @@ import yaml
 from ffmpeg._run import Error
 from gspread_pandas import Spread
 
-# build test data with dummy file
-# Analyse library on per share basis, all to do local shares only deltas, deploy to do refresh and do all
-# build an item metadata yaml file, pyyaml and ffmpeg-python
-# build an item transcode script if necessary, write out transcode metadata file from logs (fps, time, host, command) - mobile version as well?
-# build an item replace script if necessary
-# build a global xlsx, update but allow manual editing, direct play possible, target quality, required to convert, versions ready to replace
-# build a global transcode script, ordered by priority, script takes in number of items to process
-# build a global replace script, dry run showing which items, execute actually doing the work
-
 TARGET_SIZE_MIN_GB = 2
 TARGET_SIZE_MID_GB = 6
 TARGET_SIZE_MAX_GB = 12
@@ -55,6 +46,7 @@ FIELDS_STRING = [
     "Media Type",
     "Base Directory",
     "Version Directory",
+    "Version Qualifier",
     "File Directory",
     "File Stem",
     "File Extension",
@@ -102,36 +94,42 @@ BASH_ECHO_HEADER = "echo '######################################################
 
 
 def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
+    sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_guid
+    if clean and file_path_root == "/share":
+        print("Truncating '{}#Data' ... ".format(sheet_url), end=("\n" if verbose else ""), flush=True)
+        metadata_spread_data = Spread(sheet_url, sheet="Data")
+        metadata_spread_data.freeze(0, 0, sheet="Data")
+        metadata_spread_data.clear_sheet(1, 2, sheet="Data")
+        print("{}done".format("Truncating sheet " if verbose else ""))
+        return 0
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
-    metadata_spread = Spread("https://docs.google.com/spreadsheets/d/" + sheet_guid, sheet="Data")
-    if clean:
-        print("Truncating sheet ... ", end=("\n" if verbose else ""), flush=True)
-        metadata_spread.freeze(0, 0, sheet="Data")
-        metadata_spread.clear_sheet(1, 2, sheet="Data")
-        print("{}done".format("Truncating sheet " if verbose else ""))
-        return 0
     file_path_root_re = re.search("(.*/share/[0-9]+)*", file_path_root)
-    if file_path_root_re is None:
+    if file_path_root_re is None or file_path_root_re.groups()[0] is None or file_path_root_re.groups()[0] == "":
         print("Error: path [{}] is not a share".format(file_path_root))
-        return -3
+        return -2
     file_path_root_parent = file_path_root_re.groups()[0]
+    file_path_root_is_nested = file_path_root != file_path_root_parent
     file_path_media = os.path.join(file_path_root_parent, "media")
     if not os.path.isdir(file_path_media):
         print("Error: path [{}] does not exist".format(file_path_media))
         return -3
+    if file_path_root_is_nested and not file_path_root.startswith(file_path_media):
+        print("Error: path [{}] not nested in media directory [{}]".format(file_path_root, file_path_media))
+        return -4
+    file_path_root_target = file_path_root if file_path_root_is_nested else file_path_media
+    file_path_root_target_relative = file_path_root_target.replace(file_path_media, ".")
     file_path_scripts = os.path.join(file_path_root_parent, "tmp", "scripts")
     if not os.path.isdir(file_path_scripts):
         os.makedirs(file_path_scripts, exist_ok=True)
         _set_permissions(file_path_scripts, 0o750)
     files_analysed = 0
     metadata_list = []
-    file_path_root_is_nested = file_path_root != file_path_root_parent
     print("Analysing '{}' ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
-    for file_dir_path, _, file_names in os.walk(file_path_root if file_path_root_is_nested else file_path_media):
+    for file_dir_path, _, file_names in os.walk(file_path_root_target):
         for file_name in file_names:
-            file_metadata_written = False
+            metadata_file_written = False
             file_path = os.path.join(file_dir_path, file_name)
             file_path_media_parent = os.path.dirname(file_path_media)
             file_relative_dir = "." + file_dir_path.replace(file_path_media, "")
@@ -150,7 +148,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             if file_media_type not in {"movies", "series"}:
                 message = "skipping file due to unknown library type [{}]".format(file_media_type)
                 if verbose:
-                    print(message)
+                    print(message, flush=True)
                 else:
                     print("{} [{}]".format(message, file_path))
                     print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
@@ -158,7 +156,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             if file_extension not in {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}:
                 message = "skipping file due to unknown file extension [{}]".format(file_extension)
                 if verbose:
-                    print(message)
+                    print(message, flush=True)
                 else:
                     print("{} [{}]".format(message, file_path))
                     print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
@@ -173,7 +171,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             if file_version_dir.startswith("._transcode_") or file_version_dir.endswith("/.inProgress"):
                 message = "skipping file currently transcoding"
                 if verbose:
-                    print(message)
+                    print(message, flush=True)
                 else:
                     print("{} [{}]".format(message, file_path))
                     print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
@@ -214,10 +212,10 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             try:
                                 file_defaults_dict.update(_unwrap_lists(yaml.safe_load(file_defaults)))
                             except Exception as e:
-                                message = "skipping file due to defaults metadata cache [{}] load error" \
+                                message = "skipping file due to defaults metadata file [{}] load error" \
                                     .format(file_defaults_path)
                                 if verbose:
-                                    print(message)
+                                    print(message, flush=True)
                                 else:
                                     print("{} [{}]".format(message, file_path))
                                     print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
@@ -501,19 +499,20 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 with open(file_metadata_path, 'w') as file_metadata:
                     yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
                 _set_permissions(file_metadata_path)
-                file_metadata_written = True
+                metadata_file_written = True
             with open(file_metadata_path, 'r') as file_metadata:
                 try:
-                    metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
-                    if verbose:
-                        if file_metadata_written:
-                            print("wrote and loaded metadata file cache")
-                        else:
-                            print("loaded metadata file cache")
+                    if not file_path_root_is_nested or metadata_file_written:
+                        metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
+                        if verbose:
+                            if metadata_file_written:
+                                print("wrote and loaded metadata file", flush=True)
+                            else:
+                                print("loaded metadata file", flush=True)
                 except Exception:
-                    message = "skipping file due to metadata cache load error"
+                    message = "skipping file due to metadata file load error"
                     if verbose:
-                        print(message)
+                        print(message, flush=True)
                     else:
                         print("{} [{}]".format(message, file_path))
                         print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
@@ -536,6 +535,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                              if len(column.split("__")) == 2 else column.replace("_", " ").title()) \
                             if "_" in column else column)
 
+    if verbose:
+        print("{}/*/._metadata_* -> #local-dataframe ... ".format(file_path_root_target_relative), end='', flush=True)
     metadata_enriched_list = []
     for metadata in metadata_list:
         def _add(key, value):
@@ -554,39 +555,48 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         _add("file_action", "")
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
-    metadata_cache_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
-    metadata_original_list = metadata_spread._fix_merge_values(metadata_spread.sheet.get_all_values())
-    if len(metadata_original_list) > 0:
-        metadata_original_pl = _format_columns(pl.DataFrame(
-            schema=metadata_original_list[0],
-            data=metadata_original_list[1:],
-            orient="row"
-        ))
+    metadata_local_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
+    metadata_local_media_dirs = []
+    if len(metadata_local_pl) > 0 and "Media Directory" in metadata_local_pl.schema:
+        metadata_local_media_dirs = [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
+    if verbose:
+        print("done", flush=True)
+    if file_path_root_is_nested:
+        metadata_merged_pl = metadata_local_pl
     else:
-        metadata_original_pl = pl.DataFrame()
-    metadata_cache_media_dirs = []
-    metadata_cache_pl = metadata_cache_pl if metadata_cache_pl.shape[0] > 0 else pl.DataFrame()
-    metadata_original_pl = metadata_original_pl if metadata_original_pl.shape[0] > 0 else pl.DataFrame()
-    if len(metadata_cache_pl) > 0:
-        metadata_cache_media_dirs = [_dir[0] for _dir in metadata_cache_pl.select("Media Directory").unique().rows()]
-        if len(metadata_original_pl) > 0:
-            if file_path_root_is_nested:
-                metadata_cache_dirs = [_dir[0] for _dir in metadata_cache_pl.select("File Directory").unique().rows()]
-                metadata_original_pl = metadata_original_pl.filter(
-                    ~pl.col("File Directory").is_in(metadata_cache_dirs))
-            else:
-                metadata_original_pl = metadata_original_pl.filter(
-                    ~pl.col("Media Directory").is_in(metadata_cache_media_dirs))
-            metadata_updated_pl = \
-                pl.concat([metadata_original_pl, metadata_cache_pl], how="diagonal")
+        if verbose:
+            print("{}#Data + #local-dataframe -> #merged-dataframe ... ".format(sheet_url), end='', flush=True)
+        metadata_spread_data = Spread(sheet_url, sheet="Data")
+        metadata_sheet_list = metadata_spread_data._fix_merge_values(metadata_spread_data.sheet.get_all_values())
+        if len(metadata_sheet_list) > 0:
+            metadata_sheet_pl = _format_columns(pl.DataFrame(
+                schema=metadata_sheet_list[0],
+                data=metadata_sheet_list[1:],
+                orient="row"
+            ))
         else:
-            metadata_updated_pl = metadata_cache_pl
-    else:
-        metadata_updated_pl = pl.DataFrame()
-    metadata_updated_pl = _format_columns(
-        _add_cols(_add_cols(metadata_updated_pl, FIELDS_INT, "0"), FIELDS_STRING))
-    if len(metadata_updated_pl) > 0:
-        metadata_updated_pl = metadata_updated_pl.with_columns(
+            metadata_sheet_pl = pl.DataFrame()
+        metadata_local_media_dirs = []
+        metadata_local_pl = metadata_local_pl if metadata_local_pl.shape[0] > 0 else pl.DataFrame()
+        metadata_sheet_pl = metadata_sheet_pl if metadata_sheet_pl.shape[0] > 0 else pl.DataFrame()
+        if len(metadata_local_pl) > 0:
+            if len(metadata_sheet_pl) > 0:
+                metadata_sheet_pl = metadata_sheet_pl.filter(
+                    ~pl.col("Media Directory").is_in(metadata_local_media_dirs))
+                metadata_merged_pl = \
+                    pl.concat([metadata_sheet_pl, metadata_local_pl], how="diagonal")
+            else:
+                metadata_merged_pl = metadata_local_pl
+        else:
+            metadata_merged_pl = pl.DataFrame()
+        if verbose:
+            print("done", flush=True)
+    if verbose:
+        print("#merged-dataframe -> #enriched-dataframe ... ", end='', flush=True)
+    metadata_merged_pl = _format_columns(
+        _add_cols(_add_cols(metadata_merged_pl, FIELDS_INT, "0"), FIELDS_STRING))
+    if len(metadata_merged_pl) > 0:
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     (pl.col("Base Directory").is_null()) |
@@ -627,7 +637,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("Incomplete"))
                 .otherwise(pl.lit("Complete"))
             ).alias("File State"))
-        metadata_updated_pl = metadata_updated_pl.filter(
+        metadata_merged_pl = metadata_merged_pl.filter(
             (~pl.col("File Size (GB)").is_null()) &
             (pl.col("File Size (GB)").str.len_bytes() > 0)
         ).with_columns(
@@ -656,7 +666,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("Small"))
                 .otherwise(pl.lit("Right"))
             ).alias("File Size"))
-        metadata_updated_pl = metadata_updated_pl.with_columns(
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     (pl.col("File Name").str.contains("___TRANSCODE")) |
@@ -664,7 +674,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("Transcoded"))
                 .otherwise(pl.lit("Original"))
             ).alias("File Version"))
-        metadata_updated_pl = metadata_updated_pl.with_columns(
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     (pl.col("File State") == "Corrupt")
@@ -713,7 +723,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("Direct Play"))
                 .otherwise(pl.lit("Transcode"))
             ).alias("Plex Video"))
-        metadata_updated_pl = metadata_updated_pl.with_columns(
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     (pl.col("File State") == "Corrupt")
@@ -761,7 +771,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("Direct Play"))
                 .otherwise(pl.lit("Transcode"))
             ).alias("Plex Audio"))
-        metadata_updated_pl = metadata_updated_pl.with_columns(
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     (pl.col("File State") == "Corrupt")
@@ -774,7 +784,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("Direct Play"))
                 .otherwise(pl.lit("Transcode"))
             ).alias("Plex Subtitle"))
-        metadata_updated_pl = metadata_updated_pl.with_columns(
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     (pl.col("File State") == "Corrupt")
@@ -793,7 +803,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("Messy"))
                 .otherwise(pl.lit("Clean"))
             ).alias("Metadata State"))
-        metadata_updated_pl = metadata_updated_pl.with_columns(
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             pl.concat_str([
                 pl.col("Media Directory"),
                 pl.col("Media Scope"),
@@ -806,7 +816,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             (pl.col("Base Path").count().over("Base Path"))
             .alias("Version Count")
         ).drop("Base Path")
-        metadata_updated_pl = metadata_updated_pl.with_columns(
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     (pl.col("File State") == "Corrupt") |
@@ -837,14 +847,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ).then(pl.lit("5. Reformat"))
                 .otherwise(pl.lit("6. Nothing"))
             ).alias("File Action"))
-        metadata_updated_pl = pl.concat([
-            metadata_updated_pl.filter(
+        metadata_merged_pl = pl.concat([
+            metadata_merged_pl.filter(
                 (pl.col("File Action").str.ends_with("Transcode")) |
                 (pl.col("File Action").str.ends_with("Reformat"))
             ).with_columns(
                 pl.col("File Size (GB)").cast(pl.Float32).alias("Action Index Sort")
             ),
-            metadata_updated_pl.filter(
+            metadata_merged_pl.filter(
                 (~pl.col("File Action").str.ends_with("Transcode")) &
                 (~pl.col("File Action").str.ends_with("Reformat"))
             ).sort("File Name", descending=True).with_columns(
@@ -862,24 +872,29 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
-        metadata_updated_pl = metadata_updated_pl.with_columns([
+        metadata_merged_pl = metadata_merged_pl.with_columns([
             pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
                 .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
         ])
-        metadata_updated_pl = metadata_updated_pl[[
-            column.name for column in metadata_updated_pl \
-            if not (column.null_count() == metadata_updated_pl.height)
+        metadata_merged_pl = metadata_merged_pl[[
+            column.name for column in metadata_merged_pl \
+            if not (column.null_count() == metadata_merged_pl.height)
         ]]
+    if verbose:
+        print("done", flush=True)
+    if len(metadata_merged_pl) > 0:
+        if verbose:
+            print("#enriched-dataframe -> {}/*.sh ... ".format(file_path_root_target_relative), end='', flush=True)
 
         # TODO: Write out file and global merge/reformat scripts
         # TODO: Make a media-transcode/merge scripts to context determine all scripts under path or accross local shares if none - maybe make all other scripts do the same?
-        metadata_transcode_pl = metadata_updated_pl.filter(
+        metadata_transcode_pl = metadata_merged_pl.filter(
             (
                     (pl.col("File Action").str.ends_with("Merge")) |
                     (pl.col("File Action").str.ends_with("Transcode"))
             ) &
             (pl.col("File Version") != "Transcoded") &
-            (pl.col("Media Directory").is_in(metadata_cache_media_dirs))
+            (pl.col("Media Directory").is_in(metadata_local_media_dirs))
         ).with_columns(
             [
                 pl.concat_str([
@@ -926,8 +941,8 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         ).with_columns(
             [
                 pl.concat_str([
-                    pl.lit("../.."),
-                    pl.col("Script Path").str.strip_prefix(file_path_root),
+                    pl.lit("../../../.."),
+                    pl.col("Script Path").str.strip_prefix(file_path_media),
                 ]).alias("Script Relative Path"),
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
@@ -945,7 +960,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     pl.lit("echo 'Transcoding: "), pl.col("File Name"), pl.lit(" ... '\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
-                    pl.lit("  echo '' && echo -n 'Skipped (file): ' && date && echo '' && exit 1\n"),
+                    pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("if [ $(df -k \"${ROOT_DIR}\" | tail -1 | awk '{print $4}') -lt 20000000 ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (space): ' && date && echo '' && exit 1\n"),
@@ -968,14 +983,19 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 ]).alias("Script Source"),
             ]
         ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
+        transcode_script_global_file = None
         transcode_script_global_path = _localise_path(os.path.join(file_path_scripts, "transcode.sh"), file_path_root)
-        with open(transcode_script_global_path, 'w') as transcode_script_global_file:
-            transcode_script_global_file.write("# !/bin/bash\n\n")
-            transcode_script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
-            transcode_script_global_file.write(BASH_SIGTERM_HANDLER.format(""))
-            transcode_script_global_file.write("echo ''\n")
+        try:
+            if not file_path_root_is_nested:
+                transcode_script_global_file = open(transcode_script_global_path, 'w')
+                transcode_script_global_file.write("# !/bin/bash\n\n")
+                transcode_script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
+                transcode_script_global_file.write(BASH_SIGTERM_HANDLER.format(""))
+                transcode_script_global_file.write("echo ''\n")
             for transcode_script_local in metadata_transcode_pl.rows():
-                transcode_script_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(transcode_script_local[1]))
+                if not file_path_root_is_nested:
+                    transcode_script_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(
+                        _localise_path(transcode_script_local[1], file_path_root)))
                 transcode_script_local_dir = _localise_path(transcode_script_local[2], file_path_root)
                 os.makedirs(transcode_script_local_dir, exist_ok=True)
                 _set_permissions(transcode_script_local_dir, 0o750)
@@ -983,15 +1003,25 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 with open(transcode_script_local_path, 'w') as transcode_script_local_file:
                     transcode_script_local_file.write(transcode_script_local[3])
                 _set_permissions(transcode_script_local_path, 0o750)
+        finally:
+            if not file_path_root_is_nested and transcode_script_global_file is not None:
+                transcode_script_global_file.close()
         _set_permissions(transcode_script_global_path, 0o750)
-        metadata_updated_pd = metadata_updated_pl.to_pandas()
-        if "File Name" in metadata_updated_pd:
-            metadata_updated_pd = metadata_updated_pd.set_index("File Name")
-        if "Action Index" in metadata_updated_pd:
-            metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
-        metadata_spread.freeze(0, 0, sheet="Data")
-        metadata_spread.df_to_sheet(metadata_updated_pd, sheet="Data", replace=True, index=True,
-                                    add_filter=True, freeze_index=True, freeze_headers=True)
+        if verbose:
+            print("done", flush=True)
+            print("#enriched-dataframe -> {}#Data ... ".format(sheet_url), end='', flush=True)
+        if not file_path_root_is_nested:
+            metadata_updated_pd = metadata_merged_pl.to_pandas()
+            if "File Name" in metadata_updated_pd:
+                metadata_updated_pd = metadata_updated_pd.set_index("File Name")
+            if "Action Index" in metadata_updated_pd:
+                metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
+            metadata_spread_data = Spread(sheet_url, sheet="Data")
+            metadata_spread_data.freeze(0, 0, sheet="Data")
+            metadata_spread_data.df_to_sheet(metadata_updated_pd, sheet="Data", replace=True, index=True,
+                                             add_filter=True, freeze_index=True, freeze_headers=True)
+            if verbose:
+                print("done", flush=True)
     print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
     return files_analysed

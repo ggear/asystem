@@ -23,17 +23,21 @@ class InternetTest(unittest.TestCase):
         dir_test_src = join(DIR_ROOT, "src/test/resources/share_media_example_{}/share/10".format(index))
         print("")
         sys.stdout.flush()
-        shutil.rmtree(dir_test, ignore_errors=True)
-        os.makedirs(abspath(join(dir_test, "..")), exist_ok=True)
-        shutil.copytree(dir_test_src, dir_test)
-        self.assertEqual(0, analyse._analyse(dir_test, sheet_guid, False, False, True))
+        shutil.rmtree(abspath(join(dir_test, "..")), ignore_errors=True)
+        os.makedirs(abspath(join(dir_test, "../..")), exist_ok=True)
+        shutil.copytree(abspath(join(dir_test_src, "..")), abspath(join(dir_test, "..")))
+        self.assertEqual(-1, analyse._analyse(join(dir_test, "some-non-existent-path"), sheet_guid, True))
+        self.assertEqual(-2, analyse._analyse("/tmp", sheet_guid, True))
+        self.assertEqual(-3, analyse._analyse(abspath(join(dir_test, "../19/tmp")), sheet_guid, True))
+        self.assertEqual(-4, analyse._analyse(join(dir_test, "tmp"), sheet_guid, True))
+        self.assertEqual(0, analyse._analyse("/share", sheet_guid, False, False, True))
 
         # TODO: Re-enable for full tests
         # self.assertEqual(1, analyse._analyse(join(dir_test, "media/docos/movies/The Bad News Bears (1976)"), sheet_guid, True))
         # self.assertEqual(1, analyse._analyse(join(dir_test, "media/parents/movies/Kingdom of Heaven (2005)"), sheet_guid, True))
-        # self.assertEqual(0, analyse._analyse(dir_test, sheet_guid, False, False, True))
-        # self.assertEqual(1, analyse._analyse(join(dir_test, "media/parents/movies/Kingdom of Heaven (2005)"), sheet_guid, True))
-        # self.assertEqual(1, analyse._analyse(join(dir_test, "media/docos/movies/The Bad News Bears (1976)"), sheet_guid, True))
+        # self.assertEqual(1, analyse._analyse(join(dir_test, "media", "comedy", "movies"), sheet_guid, True))
+        # self.assertEqual(1, analyse._analyse(join(dir_test, "media", "comedy"), sheet_guid, True))
+        # self.assertEqual(files_analysed, analyse._analyse(join(dir_test, "media"), sheet_guid, True))
 
         self.assertEqual(files_analysed, analyse._analyse(dir_test, sheet_guid, True))
 
