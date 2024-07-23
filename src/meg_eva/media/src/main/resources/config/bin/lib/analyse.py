@@ -96,10 +96,11 @@ BASH_ECHO_HEADER = "echo '######################################################
 def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
     sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_guid
     if clean and file_path_root == "/share":
-        print("Truncating '{}#Data' ... ".format(sheet_url), end=("\n" if verbose else ""), flush=True)
-        metadata_spread_data = Spread(sheet_url, sheet="Data")
-        metadata_spread_data.freeze(0, 0, sheet="Data")
-        metadata_spread_data.clear_sheet(1, 2, sheet="Data")
+        print("Truncating '{}' ... ".format(sheet_url), end=("\n" if verbose else ""), flush=True)
+        for sheet in {"Data", "Summary"}:
+            metadata_spread_data = Spread(sheet_url, sheet=sheet)
+            metadata_spread_data.freeze(0, 0, sheet=sheet)
+            metadata_spread_data.clear_sheet(sheet=sheet)
         print("{}done".format("Truncating sheet " if verbose else ""))
         return 0
     if not os.path.isdir(file_path_root):
@@ -565,7 +566,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         metadata_merged_pl = metadata_local_pl
     else:
         if verbose:
-            print("{}#Data + #local-dataframe -> #merged-dataframe ... ".format(sheet_url), end='', flush=True)
+            print("{} + #local-dataframe -> #merged-dataframe ... ".format(sheet_url), end='', flush=True)
         metadata_spread_data = Spread(sheet_url, sheet="Data")
         metadata_sheet_list = metadata_spread_data._fix_merge_values(metadata_spread_data.sheet.get_all_values())
         if len(metadata_sheet_list) > 0:
@@ -1013,7 +1014,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             print("done", flush=True)
         if not file_path_root_is_nested:
             if verbose:
-                print("#enriched-dataframe -> {}#Data ... ".format(sheet_url), end='', flush=True)
+                print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
             metadata_updated_pd = metadata_merged_pl.to_pandas()
             if "File Name" in metadata_updated_pd:
                 metadata_updated_pd = metadata_updated_pd.set_index("File Name")
