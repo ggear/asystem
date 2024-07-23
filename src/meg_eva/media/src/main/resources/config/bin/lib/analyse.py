@@ -1010,8 +1010,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             _set_permissions(transcode_script_global_path, 0o750)
         if verbose:
             print("done", flush=True)
-            print("#enriched-dataframe -> {}#Data ... ".format(sheet_url), end='', flush=True)
         if not file_path_root_is_nested:
+            if verbose:
+                print("#enriched-dataframe -> {}#Data ... ".format(sheet_url), end='', flush=True)
             metadata_updated_pd = metadata_merged_pl.to_pandas()
             if "File Name" in metadata_updated_pd:
                 metadata_updated_pd = metadata_updated_pd.set_index("File Name")
@@ -1019,8 +1020,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
             metadata_spread_data = Spread(sheet_url, sheet="Data")
             metadata_spread_data.freeze(0, 0, sheet="Data")
-            metadata_spread_data.df_to_sheet(metadata_updated_pd, sheet="Data", replace=True, index=True,
-                                             add_filter=True, freeze_index=True, freeze_headers=True)
+            metadata_spread_data.df_to_sheet(
+                metadata_updated_pd, sheet="Data", replace=True, index=True,
+                add_filter=True, freeze_index=True, freeze_headers=True)
             if verbose:
                 print("done", flush=True)
     print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""))
