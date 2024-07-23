@@ -886,6 +886,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         # TODO: Make a media-transcode/merge scripts to context determine all scripts under path or accross local shares if none - maybe make all other scripts do the same?
         metadata_transcode_pl = metadata_merged_pl.filter(
             (
+                    (file_path_root_is_nested) |
                     (pl.col("File Action").str.ends_with("Merge")) |
                     (pl.col("File Action").str.ends_with("Transcode"))
             ) &
