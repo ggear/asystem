@@ -11,7 +11,6 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 import ffmpeg
-import pandas as pd
 import polars as pl
 import yaml
 from ffmpeg._run import Error
@@ -1060,19 +1059,21 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         else:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
-            metadata_updated_pd = metadata_merged_pl.to_pandas().reset_index()
+            metadata_updated_pd = metadata_merged_pl.to_pandas()
 
+
+            # metadata_updated_pd = metadata_updated_pd.reset_index()
             # if "File Name" in metadata_updated_pd:
             #     metadata_updated_pd = metadata_updated_pd.set_index("File Name")
             # if "Action Index" in metadata_updated_pd:
             #     metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
 
-
             metadata_spread_data = Spread(sheet_url, sheet="Data")
-            metadata_spread_data.freeze(0, 0, sheet="Data")
-            metadata_spread_data.df_to_sheet(
-                metadata_updated_pd, sheet="Data", replace=True, index=False,
-                add_filter=True, freeze_index=True, freeze_headers=True)
+            metadata_spread_data.df_to_sheet(metadata_updated_pd,
+                                             sheet="Data", replace=True, index=False, add_filter=True)
+            if metadata_spread_data.get_sheet_dims()[0] > 1 and \
+                    metadata_spread_data.get_sheet_dims()[1] > 1:
+                metadata_spread_data.freeze(1, 1, sheet="Data")
             if verbose:
                 print("done", flush=True)
     print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""))
