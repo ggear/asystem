@@ -10,5 +10,4 @@ elif [ -n "${SHARE_DIR}" ]; then
   "${ROOT_DIR}/lib/clean.sh" "${SHARE_DIR}"
 else
   for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${ROOT_DIR}/lib/clean.sh" "${_SHARE_DIR}"; done
-  "${PYTHON_DIR}/python" "${ROOT_DIR}/lib/analyse.py" "/share" "14W6B2404_e1JKftOvHE4moV5w6VP5aitHVpX3Qcgcl8" --clean
 fi
