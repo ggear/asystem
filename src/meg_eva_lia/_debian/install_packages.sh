@@ -6,6 +6,7 @@
 PACKAGES=(
   jq
   xq
+  duf
   ntp
   psmisc
   usbutils
