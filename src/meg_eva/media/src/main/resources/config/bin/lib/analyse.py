@@ -11,6 +11,7 @@ from collections.abc import MutableMapping
 from pathlib import Path
 
 import ffmpeg
+import pandas as pd
 import polars as pl
 import yaml
 from ffmpeg._run import Error
@@ -1040,20 +1041,34 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 print(
                     metadata_merged_pl \
                         .select(metadata_merged_pl.columns[:9] + ["File Directory"])
-                        .with_columns(pl.col("File Directory").str.strip().name.keep())
+                        .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                 )
+
+                # # print(metadata_merged_pl.select(pl.col("^Audio.*$")))
+                #
+                # pd.set_option('display.max_columns', None)
+                # pd.set_option('display.max_rows', None)
+                # metadata_updated_pd = metadata_merged_pl.to_pandas()
+                # metadata_updated_pd = metadata_updated_pd.reset_index()
+                # # if "File Name" in metadata_updated_pd:
+                # #     metadata_updated_pd = metadata_updated_pd.set_index("File Name")
+                # # if "Action Index" in metadata_updated_pd:
+                # #     metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
+                # print(metadata_updated_pd["Audio 3 Index"])
+
+
         else:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
-            metadata_updated_pd = metadata_merged_pl.to_pandas()
-            if "File Name" in metadata_updated_pd:
-                metadata_updated_pd = metadata_updated_pd.set_index("File Name")
-            if "Action Index" in metadata_updated_pd:
-                metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
+            metadata_updated_pd = metadata_merged_pl.to_pandas().reset_index()
+            # if "File Name" in metadata_updated_pd:
+            #     metadata_updated_pd = metadata_updated_pd.set_index("File Name")
+            # if "Action Index" in metadata_updated_pd:
+            #     metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
             metadata_spread_data = Spread(sheet_url, sheet="Data")
             metadata_spread_data.freeze(0, 0, sheet="Data")
             metadata_spread_data.df_to_sheet(
-                metadata_updated_pd, sheet="Data", replace=True, index=True,
+                metadata_updated_pd, sheet="Data", replace=True, index=False,
                 add_filter=True, freeze_index=True, freeze_headers=True)
             if verbose:
                 print("done", flush=True)

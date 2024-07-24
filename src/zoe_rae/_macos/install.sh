@@ -13,6 +13,8 @@ printf '\e[?2004l'
 tput rmam
 # tput smam
 
+export PS1='\u@\h:\w\$ '
+
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
