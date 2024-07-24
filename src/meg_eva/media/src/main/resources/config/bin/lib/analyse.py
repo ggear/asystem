@@ -1061,7 +1061,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
             metadata_updated_pd = metadata_merged_pl.to_pandas()
 
-
             # metadata_updated_pd = metadata_updated_pd.reset_index()
             # if "File Name" in metadata_updated_pd:
             #     metadata_updated_pd = metadata_updated_pd.set_index("File Name")
