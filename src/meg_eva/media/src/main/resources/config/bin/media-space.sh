@@ -10,5 +10,4 @@ if [ -n "${SHARE_DIR_MEDIA}" ]; then
 elif [ -n "${SHARE_DIR}" ]; then
   SHARE_DIRS_SPACE="${SHARE_DIR}"
 fi
-[[ $(uname) == "Darwin" ]] && df -h ${SHARE_DIRS_SPACE}
-[[ $(uname) == "Linux" ]] && df -h --output=target,size,used,avail,pcent ${SHARE_DIRS_SPACE}
+$(echo $([[ $(uname) == "Darwin" ]] && echo "g")"df") -h --output=target,size,used,avail,pcent ${SHARE_DIRS_SPACE}
