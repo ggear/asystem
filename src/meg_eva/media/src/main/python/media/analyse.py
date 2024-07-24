@@ -1039,23 +1039,51 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                 )
 
-                # # print(metadata_merged_pl.select(pl.col("^Audio.*$")))
+
+                # metadata_updated_pd = metadata_merged_pl.to_pandas()
+                # # print(metadata_updated_pd.columns.tolist())
                 #
+                # metadata_updated_pd = metadata_updated_pd.set_index("File Name")
+                #
+                # metadata_updated_pd = metadata_updated_pd.reset_index()
+                # # print(metadata_updated_pd.columns.tolist())
+                #
+                # if "File Name" in metadata_updated_pd:
+                #     metadata_updated_pd = metadata_updated_pd.set_index("File Name")
+                # if "Action Index" in metadata_updated_pd:
+                #     metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
+                #
+                # import pandas as pd
                 # pd.set_option('display.max_columns', None)
                 # pd.set_option('display.max_rows', None)
-                # metadata_updated_pd = metadata_merged_pl.to_pandas()
-                # metadata_updated_pd = metadata_updated_pd.reset_index()
-                # # if "File Name" in metadata_updated_pd:
-                # #     metadata_updated_pd = metadata_updated_pd.set_index("File Name")
-                # # if "Action Index" in metadata_updated_pd:
-                # #     metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
+                # # print(metadata_updated_pd.columns.tolist())
                 # print(metadata_updated_pd["Audio 3 Index"])
+                # # print(metadata_updated_pd)
 
 
         else:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
             metadata_updated_pd = metadata_merged_pl.to_pandas()
+
+            # print(metadata_updated_pd.columns.tolist())
+
+            metadata_updated_pd = metadata_updated_pd.set_index("File Name")
+
+            metadata_updated_pd = metadata_updated_pd.reset_index()
+            # print(metadata_updated_pd.columns.tolist())
+
+            if "File Name" in metadata_updated_pd:
+                metadata_updated_pd = metadata_updated_pd.set_index("File Name")
+            if "Action Index" in metadata_updated_pd:
+                metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
+
+            import pandas as pd
+            pd.set_option('display.max_columns', None)
+            pd.set_option('display.max_rows', None)
+            # print(metadata_updated_pd.columns.tolist())
+            print(metadata_updated_pd["Audio 3 Index"])
+            # print(metadata_updated_pd)
 
             # metadata_updated_pd = metadata_updated_pd.reset_index()
             # if "File Name" in metadata_updated_pd:
