@@ -1071,9 +1071,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             metadata_updated_pd = metadata_merged_pl.to_pandas()
 
             # print(metadata_updated_pd.columns.tolist())
-
             metadata_updated_pd = metadata_updated_pd.set_index("File Name")
-
             metadata_updated_pd = metadata_updated_pd.reset_index()
             # print(metadata_updated_pd.columns.tolist())
 
@@ -1109,9 +1107,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
 
 
 def _add_cols(_data, _cols, _default=None):
-    for col in _cols:
-        if col not in _data.schema:
-            _data = _data.with_columns(pl.lit(_default).cast(pl.String).alias(col))
+    # for col in _cols:
+    #     if col not in _data.schema:
+    #         _data = _data.with_columns(pl.lit(_default).cast(pl.String).alias(col))
     return _data
 
 
