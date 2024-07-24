@@ -10,6 +10,7 @@ brew install \
   pv \
   jq \
   xq \
+  duf \
   grep \
   htop \
   wget \
@@ -36,7 +37,7 @@ brew cleanup
 ################################################################################
 # Install Python Packages
 ################################################################################
-wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-arm64.sh && chmod +x Miniconda3-latest-MacOSX-arm64.sh && ./Miniconda3-latest-MacOSX-arm64.sh -b -p /Library/Conda/anaconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-py312_24.5.0-0-MacOSX-arm64.sh && chmod +x Miniconda3-py312_24.5.0-0-MacOSX-arm64.sh && sudo ./Miniconda3-py312_24.5.0-0-MacOSX-arm64.sh -b -p /Library/Conda/anaconda3
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh && chmod +x Miniconda3-latest-MacOSX-x86_64.sh && ./Miniconda3-latest-MacOSX-x86_64.sh -b -p /Library/Conda/anaconda3
 conda config --add channels conda-forge
 conda config --set channel_priority strict

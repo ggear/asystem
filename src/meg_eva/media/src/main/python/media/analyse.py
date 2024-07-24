@@ -369,10 +369,12 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                             file_stream_channels = int(file_probe_stream["channels"]) \
                                 if "channels" in file_probe_stream else 2
                             file_probe_stream_filtered["channels"] = str(file_stream_channels)
-                            file_probe_stream_filtered["surround"] = "Atmos" if \
-                                "tags" in file_probe_stream and "title" in file_probe_stream["tags"] and \
-                                "atmos" in file_probe_stream["tags"]["title"].lower() \
-                                else "Standard"
+                            file_probe_stream_filtered["surround"] = "Atmos" if (
+                                    ("profile" in file_probe_stream and \
+                                     "atmos" in file_probe_stream["profile"].lower()) or
+                                    ("tags" in file_probe_stream and "title" in file_probe_stream["tags"] and \
+                                     "atmos" in file_probe_stream["tags"]["title"].lower())
+                            ) else "Standard"
                             file_probe_stream_filtered["bitrate__Kbps"] = \
                                 str(round(int(file_probe_stream["bit_rate"]) / 10 ** 3)) \
                                     if "bit_rate" in file_probe_stream else ""
@@ -421,6 +423,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         del file_stream_video["bitrate_min__Kbps"]
                         del file_stream_video["bitrate_mid__Kbps"]
                         del file_stream_video["bitrate_max__Kbps"]
+
+
+
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
                 for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
@@ -440,6 +445,14 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_probe_streams_filtered_audios_supplementary.sort(key=lambda stream: int(stream["channels"]), reverse=True)
                 file_probe_streams_filtered_audios.extend(file_probe_streams_filtered_audios_supplementary)
                 file_probe_streams_filtered["audio"] = file_probe_streams_filtered_audios
+
+
+
+
+
+
+
+
                 file_probe_streams_filtered_subtitles = []
                 file_probe_streams_filtered_subtitles_supplementary = []
                 for file_probe_streams_filtered_subtitle in file_probe_streams_filtered["subtitle"]:
@@ -991,16 +1004,17 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 transcode_script_global_file.write(BASH_SIGTERM_HANDLER.format(""))
                 transcode_script_global_file.write("echo ''\n")
             for transcode_script_local in metadata_transcode_pl.rows():
-                if not file_path_root_is_nested:
-                    transcode_script_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(
-                        _localise_path(transcode_script_local[1], file_path_root)))
-                transcode_script_local_dir = _localise_path(transcode_script_local[2], file_path_root)
-                os.makedirs(transcode_script_local_dir, exist_ok=True)
-                _set_permissions(transcode_script_local_dir, 0o750)
-                transcode_script_local_path = _localise_path(transcode_script_local[0], file_path_root)
-                with open(transcode_script_local_path, 'w') as transcode_script_local_file:
-                    transcode_script_local_file.write(transcode_script_local[3])
-                _set_permissions(transcode_script_local_path, 0o750)
+                if not any(map(lambda transcode_script_local_item: transcode_script_local_item is None, transcode_script_local)):
+                    if not file_path_root_is_nested:
+                        transcode_script_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(
+                            _localise_path(transcode_script_local[1], file_path_root)))
+                    transcode_script_local_dir = _localise_path(transcode_script_local[2], file_path_root)
+                    os.makedirs(transcode_script_local_dir, exist_ok=True)
+                    _set_permissions(transcode_script_local_dir, 0o750)
+                    transcode_script_local_path = _localise_path(transcode_script_local[0], file_path_root)
+                    with open(transcode_script_local_path, 'w') as transcode_script_local_file:
+                        transcode_script_local_file.write(transcode_script_local[3])
+                    _set_permissions(transcode_script_local_path, 0o750)
         finally:
             if not file_path_root_is_nested and transcode_script_global_file is not None:
                 transcode_script_global_file.close()
