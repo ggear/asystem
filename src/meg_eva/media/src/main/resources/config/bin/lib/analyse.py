@@ -1061,10 +1061,13 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
             metadata_updated_pd = metadata_merged_pl.to_pandas().reset_index()
+
             # if "File Name" in metadata_updated_pd:
             #     metadata_updated_pd = metadata_updated_pd.set_index("File Name")
             # if "Action Index" in metadata_updated_pd:
             #     metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
+
+
             metadata_spread_data = Spread(sheet_url, sheet="Data")
             metadata_spread_data.freeze(0, 0, sheet="Data")
             metadata_spread_data.df_to_sheet(
