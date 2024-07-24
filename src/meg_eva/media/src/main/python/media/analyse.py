@@ -193,6 +193,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_defaults_dict = {
                     "transcode_action": "Analyse",
                     "target_quality": "Mid",
+                    "target_channels": "2",
                     "target_lang": "eng",
                     "native_lang": "eng",
                 }
@@ -208,7 +209,16 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         with open(file_defaults_path, 'r') as file_defaults:
                             try:
                                 file_defaults_dict.update(_unwrap_lists(yaml.safe_load(file_defaults)))
-                            except Exception as e:
+                                file_defaults_dict["transcode_action"] = file_defaults_dict["transcode_action"].title()
+                                if file_defaults_dict["transcode_action"] not in {"Analyse", "Ignore"}:
+                                    raise Exception("Invalid transcode action: {}".format(file_defaults_dict["transcode_action"]))
+                                file_defaults_dict["target_quality"] = file_defaults_dict["target_quality"].title()
+                                if file_defaults_dict["target_quality"] not in {"Min", "Mid", "Max"}:
+                                    raise Exception("Invalid target quality: {}".format(file_defaults_dict["target_quality"]))
+                                file_defaults_dict["target_channels"] = str(int(file_defaults_dict["target_channels"]))
+                                file_defaults_dict["native_lang"] = file_defaults_dict["native_lang"].lower()
+                                file_defaults_dict["target_lang"] = file_defaults_dict["target_lang"].lower()
+                            except Exception:
                                 message = "skipping file due to defaults metadata file [{}] load error" \
                                     .format(file_defaults_path)
                                 if verbose:
@@ -217,14 +227,11 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                                     print("{} [{}]".format(message, file_path))
                                     print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
                                 continue
-                if "transcode_action" in file_defaults_dict:
-                    file_transcode_action = file_defaults_dict["transcode_action"].title()
-                if "target_quality" in file_defaults_dict:
-                    file_target_quality = file_defaults_dict["target_quality"].title()
-                if "native_lang" in file_defaults_dict:
-                    file_native_lang = file_defaults_dict["native_lang"].lower()
-                if "target_lang" in file_defaults_dict:
-                    file_target_lang = file_defaults_dict["target_lang"].lower()
+                file_transcode_action = file_defaults_dict["transcode_action"]
+                file_target_quality = file_defaults_dict["target_quality"]
+                file_target_channels = file_defaults_dict["target_channels"]
+                file_native_lang = file_defaults_dict["native_lang"]
+                file_target_lang = file_defaults_dict["target_lang"]
                 try:
                     file_probe = ffmpeg.probe(file_path)
                 except Error as error:
@@ -424,8 +431,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                         del file_stream_video["bitrate_mid__Kbps"]
                         del file_stream_video["bitrate_max__Kbps"]
 
-
-
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
                 for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
@@ -446,13 +451,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 file_probe_streams_filtered_audios.extend(file_probe_streams_filtered_audios_supplementary)
                 file_probe_streams_filtered["audio"] = file_probe_streams_filtered_audios
 
-
-
-
-
-
-
-
                 file_probe_streams_filtered_subtitles = []
                 file_probe_streams_filtered_subtitles_supplementary = []
                 for file_probe_streams_filtered_subtitle in file_probe_streams_filtered["subtitle"]:
@@ -469,6 +467,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     {"file_name": file_name},
                     {"transcode_action": file_transcode_action},
                     {"target_quality": file_target_quality},
+                    {"target_channels": file_target_channels},
                     {"target_lang": file_target_lang},
                     {"native_lang": file_native_lang},
                     {"media_directory": _delocalise_path(file_path_media, file_path_root)},
@@ -621,15 +620,16 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     (pl.col("Bitrate (Kbps)") == "") |
                     (pl.col("Stream Count").is_null()) |
                     (pl.col("Stream Count") == "") |
-                    (pl.col("Stream Count") == "0") |
                     (pl.col("Video Count").is_null()) |
                     (pl.col("Video Count") == "") |
-                    (pl.col("Video Count") == "0") |
                     (pl.col("Audio Count").is_null()) |
-                    (pl.col("Audio Count") == "") |
-                    (pl.col("Audio Count") == "0")
+                    (pl.col("Audio Count") == "")
                 ).then(pl.lit("Corrupt"))
                 .when(
+                    (pl.col("Transcode Action") == "Ignore")
+                ).then(pl.lit("Ignored"))
+                .when(
+                    (pl.col("Stream Count") == "0") |
                     (pl.col("Video Count") == "0") |
                     (pl.col("Audio Count") == "0")
                 ).then(pl.lit("Incomplete"))
@@ -831,7 +831,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                 pl.when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete")
-                ).then(pl.lit("1. Corrupt"))
+                ).then(pl.lit("1. Download"))
                 .when(
                     (pl.col("Version Count").cast(pl.Int32) > 1)
                 ).then(pl.lit("2. Merge"))
@@ -1022,7 +1022,23 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             _set_permissions(transcode_script_global_path, 0o750)
         if verbose:
             print("done", flush=True)
-        if not file_path_root_is_nested:
+        if file_path_root_is_nested:
+            with pl.Config(
+                    tbl_rows=-1,
+                    tbl_cols=-1,
+                    fmt_str_lengths=200,
+                    set_tbl_width_chars=30000,
+                    set_fmt_float="full",
+                    set_ascii_tables=False,
+                    tbl_formatting="UTF8_FULL_CONDENSED",
+                    set_tbl_hide_dataframe_shape=True,
+            ):
+                print(
+                    metadata_merged_pl \
+                        .select(metadata_merged_pl.columns[:9] + ["File Directory"])
+                        .with_columns(pl.col("File Directory").str.strip().name.keep())
+                )
+        else:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
             metadata_updated_pd = metadata_merged_pl.to_pandas()

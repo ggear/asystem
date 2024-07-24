@@ -26,6 +26,7 @@ EOF
   done
   cat <<EOF >"${SHARE_DIR}/media/parents/movies/._defaults.yaml"
 - target_quality: Mid
+- target_channels: '5'
 EOF
   cat <<EOF >"${SHARE_DIR}/media/parents/series/._defaults.yaml"
 - target_quality: Min
