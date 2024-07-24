@@ -1073,28 +1073,28 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
 
 
 
-            with pl.Config(
-                    tbl_rows=-1,
-                    tbl_cols=-1,
-                    fmt_str_lengths=200,
-                    set_tbl_width_chars=30000,
-                    set_fmt_float="full",
-                    set_ascii_tables=False,
-                    tbl_formatting="UTF8_FULL_CONDENSED",
-                    set_tbl_hide_dataframe_shape=True,
-            ):
-                print(metadata_merged_pl.select(metadata_merged_pl.columns[:9] + ["Audio 3 Index"]))
-            # print(metadata_updated_pd.columns.tolist())
-            # metadata_updated_pd = metadata_updated_pd.set_index("File Name")
-            # metadata_updated_pd = metadata_updated_pd.reset_index()
-            # print(metadata_updated_pd.columns.tolist())
-            import pandas as pd
-            pd.set_option('display.max_columns', None)
-            pd.set_option('display.max_rows', None)
-            # print(metadata_updated_pd.columns.tolist())
-            print(metadata_updated_pd["Audio 3 Index"])
-            # print(metadata_updated_pd)
-            # metadata_updated_pd = metadata_updated_pd.reset_index()
+            # with pl.Config(
+            #         tbl_rows=-1,
+            #         tbl_cols=-1,
+            #         fmt_str_lengths=200,
+            #         set_tbl_width_chars=30000,
+            #         set_fmt_float="full",
+            #         set_ascii_tables=False,
+            #         tbl_formatting="UTF8_FULL_CONDENSED",
+            #         set_tbl_hide_dataframe_shape=True,
+            # ):
+            #     print(metadata_merged_pl.select(metadata_merged_pl.columns[:9] + ["Audio 3 Index"]))
+            # # print(metadata_updated_pd.columns.tolist())
+            # # metadata_updated_pd = metadata_updated_pd.set_index("File Name")
+            # # metadata_updated_pd = metadata_updated_pd.reset_index()
+            # # print(metadata_updated_pd.columns.tolist())
+            # import pandas as pd
+            # pd.set_option('display.max_columns', None)
+            # pd.set_option('display.max_rows', None)
+            # # print(metadata_updated_pd.columns.tolist())
+            # print(metadata_updated_pd["Audio 3 Index"])
+            # # print(metadata_updated_pd)
+            # # metadata_updated_pd = metadata_updated_pd.reset_index()
 
 
 
