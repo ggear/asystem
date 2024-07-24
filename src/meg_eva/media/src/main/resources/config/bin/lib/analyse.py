@@ -1068,6 +1068,20 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
         else:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
+
+
+            with pl.Config(
+                    tbl_rows=-1,
+                    tbl_cols=-1,
+                    fmt_str_lengths=200,
+                    set_tbl_width_chars=30000,
+                    set_fmt_float="full",
+                    set_ascii_tables=False,
+                    tbl_formatting="UTF8_FULL_CONDENSED",
+                    set_tbl_hide_dataframe_shape=True,
+            ):
+                print(metadata_merged_pl.select(metadata_merged_pl.columns[:9] + ["File Directory"]))
+
             metadata_updated_pd = metadata_merged_pl.to_pandas()
 
             # print(metadata_updated_pd.columns.tolist())
@@ -1107,9 +1121,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
 
 
 def _add_cols(_data, _cols, _default=None):
-    # for col in _cols:
-    #     if col not in _data.schema:
-    #         _data = _data.with_columns(pl.lit(_default).cast(pl.String).alias(col))
+    for col in _cols:
+        if col not in _data.schema:
+            _data = _data.with_columns(pl.lit(_default).cast(pl.String).alias(col))
     return _data
 
 
