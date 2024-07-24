@@ -589,7 +589,6 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             ))
         else:
             metadata_sheet_pl = pl.DataFrame()
-        metadata_local_media_dirs = []
         metadata_local_pl = metadata_local_pl if metadata_local_pl.shape[0] > 0 else pl.DataFrame()
         metadata_sheet_pl = metadata_sheet_pl if metadata_sheet_pl.shape[0] > 0 else pl.DataFrame()
         if len(metadata_local_pl) > 0:
