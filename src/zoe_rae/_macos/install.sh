@@ -32,14 +32,6 @@ alias fab="fab -e"
 alias ssh-copy-id='sshcopyid_func'
 function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.ssh/authorized_keys' ;}
 
-for SHARE in macmini-eva,1 macmini-eva,2 macmini-eva,3 macmini-meg,4 macmini-meg,5; do
-  IFS=","
-  set -- \${SHARE}
-  mkdir -p ~/Desktop/share/\${2} >/dev/null 2>&1
-  diskutil unmount force ~/Desktop/share/\${2} >/dev/null 2>&1
-  mount_smbfs //GUEST:@\${1}/share-\${2} ~/Desktop/share/\${2} >/dev/null 2>&1
-done
-
 export PATH=~/.cargo/bin:~/.conda/envs/python3/bin:/Library/Conda/anaconda3/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:${PATH}
 
 EOF
