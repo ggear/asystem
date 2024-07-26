@@ -576,10 +576,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     metadata_local_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
     if verbose:
         print("done", flush=True)
-    metadata_local_media_dirs = []
     if "Media Directory" not in metadata_local_pl.schema:
         metadata_local_pl = pl.DataFrame()
-    if len(metadata_local_pl) > 0:
+    metadata_local_media_dirs = []
+    if metadata_local_pl.width > 0:
         metadata_local_media_dirs = [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
     if verbose:
         print("#local-dataframe partition '{}' ... done".format(metadata_local_media_dirs), flush=True)
@@ -598,15 +598,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             ))
         else:
             metadata_sheet_pl = pl.DataFrame()
-        if "Media Directory" not in metadata_sheet_pl.schema:
+        if metadata_sheet_pl.width > 0 and "Media Directory" not in metadata_sheet_pl.schema:
             _truncate_sheet()
             metadata_sheet_pl = pl.DataFrame()
-        if len(metadata_local_pl) > 0:
-            if len(metadata_sheet_pl) > 0:
+        if metadata_local_pl.width > 0:
+            if metadata_sheet_pl.width > 0:
                 metadata_sheet_pl = metadata_sheet_pl.filter(
                     ~pl.col("Media Directory").is_in(metadata_local_media_dirs))
                 metadata_merged_pl = \
-                    pl.concat([metadata_sheet_pl, metadata_local_pl], how="diagonal")
+                    pl.concat([metadata_sheet_pl, metadata_local_pl], how="diagonal_relaxed")
             else:
                 metadata_merged_pl = metadata_local_pl
         else:
@@ -617,7 +617,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         print("#merged-dataframe -> #enriched-dataframe ... ", end='', flush=True)
     metadata_merged_pl = _format_columns(
         _add_cols(_add_cols(metadata_merged_pl, FIELDS_INT, "0"), FIELDS_STRING))
-    if len(metadata_merged_pl) > 0:
+    if metadata_merged_pl.height > 0:
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
@@ -908,7 +908,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
     if verbose:
         print("done", flush=True)
-    if len(metadata_merged_pl) > 0:
+    if metadata_merged_pl.height > 0:
         if verbose:
             print("#enriched-dataframe -> {}/*.sh ... ".format(file_path_root_target_relative), end='', flush=True)
 
