@@ -10,4 +10,5 @@ if [ -n "${SHARE_DIR_MEDIA}" ]; then
 elif [ -n "${SHARE_DIR}" ]; then
   SHARE_DIRS_SPACE="${SHARE_DIR}"
 fi
-duf --output  mountpoint,size,used,avail,usage ${SHARE_DIRS_SPACE}
+echo "Space summary ... "
+duf -style ascii -output  mountpoint,size,used,avail,usage ${SHARE_DIRS_SPACE}

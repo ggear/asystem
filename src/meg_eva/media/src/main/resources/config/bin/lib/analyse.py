@@ -1025,72 +1025,28 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             _set_permissions(transcode_script_global_path, 0o750)
         if verbose:
             print("done", flush=True)
-        if file_path_root_is_nested:
             with pl.Config(
                     tbl_rows=-1,
                     tbl_cols=-1,
                     fmt_str_lengths=200,
                     set_tbl_width_chars=30000,
                     set_fmt_float="full",
-                    set_ascii_tables=False,
+                    set_ascii_tables=True,
                     tbl_formatting="UTF8_FULL_CONDENSED",
                     set_tbl_hide_dataframe_shape=True,
             ):
+                print("Metadata summary ... ")
                 print(
                     metadata_merged_pl \
                         .select(metadata_merged_pl.columns[:9] + ["File Directory"])
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                 )
-
-
-                # metadata_updated_pd = metadata_merged_pl.to_pandas()
-                # # print(metadata_updated_pd.columns.tolist())
-                #
-                # metadata_updated_pd = metadata_updated_pd.set_index("File Name")
-                #
-                # metadata_updated_pd = metadata_updated_pd.reset_index()
-                # # print(metadata_updated_pd.columns.tolist())
-                #
-                # if "File Name" in metadata_updated_pd:
-                #     metadata_updated_pd = metadata_updated_pd.set_index("File Name")
-                # if "Action Index" in metadata_updated_pd:
-                #     metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
-                #
-                # import pandas as pd
-                # pd.set_option('display.max_columns', None)
-                # pd.set_option('display.max_rows', None)
-                # # print(metadata_updated_pd.columns.tolist())
-                # print(metadata_updated_pd["Audio 3 Index"])
-                # # print(metadata_updated_pd)
-
-
-        else:
+        if not file_path_root_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
             metadata_updated_pd = metadata_merged_pl.to_pandas()
-            # if "File Name" in metadata_updated_pd:
-            #     metadata_updated_pd = metadata_updated_pd.set_index("File Name")
-            # if "Action Index" in metadata_updated_pd:
-            #     metadata_updated_pd = metadata_updated_pd.sort_values("Action Index")
 
-
-
-
-
-            # with pl.Config(
-            #         tbl_rows=-1,
-            #         tbl_cols=-1,
-            #         fmt_str_lengths=200,
-            #         set_tbl_width_chars=30000,
-            #         set_fmt_float="full",
-            #         set_ascii_tables=False,
-            #         tbl_formatting="UTF8_FULL_CONDENSED",
-            #         set_tbl_hide_dataframe_shape=True,
-            # ):
-            #     print(metadata_merged_pl.select(metadata_merged_pl.columns[:9] + ["Audio 3 Index"]))
-            # # print(metadata_updated_pd.columns.tolist())
-            # # metadata_updated_pd = metadata_updated_pd.set_index("File Name")
-            # # metadata_updated_pd = metadata_updated_pd.reset_index()
+            # TODO
             # # print(metadata_updated_pd.columns.tolist())
             # import pandas as pd
             # pd.set_option('display.max_columns', None)
@@ -1100,14 +1056,9 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             # # print(metadata_updated_pd)
             # # metadata_updated_pd = metadata_updated_pd.reset_index()
 
-
-
-
-
-
             metadata_spread_data = Spread(sheet_url, sheet="Data")
-            metadata_spread_data.df_to_sheet(metadata_updated_pd,
-                                             sheet="Data", replace=True, index=False, add_filter=True)
+            metadata_spread_data.df_to_sheet(metadata_updated_pd, sheet="Data",
+                                             replace=True, index=False, add_filter=True)
             if metadata_spread_data.get_sheet_dims()[0] > 1 and \
                     metadata_spread_data.get_sheet_dims()[1] > 1:
                 metadata_spread_data.freeze(1, 1, sheet="Data")
