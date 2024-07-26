@@ -97,16 +97,16 @@ BASH_ECHO_HEADER = "echo '######################################################
 
 def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     def _truncate_sheet():
-        print("Truncating 'http://docs.google.com/sheet' ... ", end=("\n" if verbose else ""), flush=True)
         for sheet in {"Data", "Summary"}:
             metadata_spread_data = Spread(sheet_url, sheet=sheet)
             metadata_spread_data.freeze(0, 0, sheet=sheet)
             metadata_spread_data.clear_sheet(sheet=sheet)
-        print("{}done".format("Truncating 'http://docs.google.com/sheet' " if verbose else ""))
 
     sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_guid
     if clean and file_path_root == "/share":
+        print("Truncating 'http://docs.google.com/sheet' ... ", end=("\n" if verbose else ""), flush=True)
         _truncate_sheet()
+        print("{}done".format("Truncating 'http://docs.google.com/sheet' " if verbose else ""))
         return 0
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
@@ -896,7 +896,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
 
-
         # TODO: Causing issues?
         # metadata_merged_pl = metadata_merged_pl.with_columns([
         #     pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
@@ -906,7 +905,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         #     column.name for column in metadata_merged_pl \
         #     if not (column.null_count() == metadata_merged_pl.height)
         # ]]
-
 
     if verbose:
         print("done", flush=True)
