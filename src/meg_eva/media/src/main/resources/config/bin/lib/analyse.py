@@ -574,7 +574,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     if verbose:
         print("done", flush=True)
     metadata_local_media_dirs = []
-    if len(metadata_local_pl) > 0 and "Media Directory" in metadata_local_pl.schema:
+    if "Media Directory" not in metadata_local_pl.schema:
+        metadata_local_pl = pl.DataFrame()
+    if len(metadata_local_pl) > 0:
         metadata_local_media_dirs = [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
     if verbose:
         print("#local-dataframe partition '{}' ... done".format(metadata_local_media_dirs), flush=True)
@@ -593,8 +595,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             ))
         else:
             metadata_sheet_pl = pl.DataFrame()
-        metadata_local_pl = metadata_local_pl if metadata_local_pl.shape[0] > 0 else pl.DataFrame()
-        metadata_sheet_pl = metadata_sheet_pl if metadata_sheet_pl.shape[0] > 0 else pl.DataFrame()
+        if "Media Directory" not in metadata_sheet_pl.schema:
+            metadata_sheet_pl = pl.DataFrame()
         if len(metadata_local_pl) > 0:
             if len(metadata_sheet_pl) > 0:
                 metadata_sheet_pl = metadata_sheet_pl.filter(
