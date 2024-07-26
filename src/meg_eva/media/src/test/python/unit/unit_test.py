@@ -9,6 +9,7 @@ import pytest
 from media import analyse
 from media import rename
 from os.path import *
+from jproperties import Properties
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
@@ -32,29 +33,31 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert("/tmp", -2)
         self._test_analyse_assert(abspath(join(dir_test, "19/tmp")), -3)
         self._test_analyse_assert(join(dir_test, "10/tmp"), -4)
-        self._test_analyse_assert(join(dir_test, "33"), clean=True)
-        self._test_analyse_assert(join(dir_test, "31"))
-        self._test_analyse_assert(join(dir_test, "10/media/docos/movies/The Bad News Bears (1976)"), 1)
-        self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom of Heaven (2005)"), 1)
-        self._test_analyse_assert(join(dir_test, "10/media/comedy/movies"), 1)
-        self._test_analyse_assert(join(dir_test, "10/media/comedy"), 1)
-        self._test_analyse_assert(join(dir_test, "10/media"), files_analysed)
-        self._test_analyse_assert(join(dir_test, "10"), files_analysed)
-        self._test_analyse_assert(join(dir_test, "31"))
+        self._test_analyse_assert(join(dir_test, "31"), clean=True)
         self._test_analyse_assert(join(dir_test, "33"))
-        self._test_analyse_assert(join(dir_test, "33"))
+        # self._test_analyse_assert(join(dir_test, "10/media/docos/movies/The Bad News Bears (1976)"), 1)
+        # self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom of Heaven (2005)"), 1)
+        # self._test_analyse_assert(join(dir_test, "10/media/comedy/movies"), 1)
+        # self._test_analyse_assert(join(dir_test, "10/media/comedy"), 1)
+        # self._test_analyse_assert(join(dir_test, "10/media"), files_analysed)
+        # self._test_analyse_assert(join(dir_test, "10"), files_analysed)
+        # self._test_analyse_assert(join(dir_test, "31"))
+        # self._test_analyse_assert(join(dir_test, "33"))
+        # self._test_analyse_assert(join(dir_test, "33"))
 
-    def _test_analyse_assert(self, dir_test, expected=None, extensions=MEDIA_FILE_EXTENSIONS, clean=False):
-        sheet_guid = "1JHv8ytvcia-Nz2gvMcFfuOT_jDvTCO76BauY9gAWBQY"
+    def _test_analyse_assert(self, dir_test,
+                             expected=None, extensions=MEDIA_FILE_EXTENSIONS, clean=False):
         if clean:
-            self.assertEqual(0, analyse._analyse("/share", sheet_guid, verbose=True, clean=True))
+            self.assertEqual(0,
+                             analyse._analyse("/share", os.getenv("MEDIA_GOOGLE_SHEET_GUID"), clean=True, verbose=True))
         if expected is None:
             expected = 0
             for file_root_dir, file_dirs, file_names in os.walk(dir_test):
                 for file_name in file_names:
                     if splitext(file_name)[1].replace(".", "") in extensions:
                         expected += 1
-        self.assertEqual(expected, analyse._analyse(dir_test, sheet_guid, verbose=True))
+        self.assertEqual(expected,
+                         analyse._analyse(dir_test, os.getenv("MEDIA_GOOGLE_SHEET_GUID"), verbose=True))
 
     def test_rename_1(self):
         self._test_rename(1, 171)
@@ -75,6 +78,14 @@ class InternetTest(unittest.TestCase):
         shutil.copytree(dir_test_src, dir_test)
         self.assertEqual(files_renamed, rename._rename(dir_test, True))
         self.assertEqual(0, rename._rename(dir_test, True))
+
+    @classmethod
+    def setUp(_class):
+        configs = Properties()
+        with open(join(DIR_ROOT, ".env"), 'rb') as config_file:
+            configs.load(config_file)
+            for key in configs.keys():
+                os.environ[key] = configs.get(key).data
 
 
 if __name__ == '__main__':

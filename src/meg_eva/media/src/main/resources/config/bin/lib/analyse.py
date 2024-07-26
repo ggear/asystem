@@ -95,7 +95,7 @@ BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
 BASH_ECHO_HEADER = "echo '#######################################################################################'\n"
 
 
-def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=False):
+def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_guid
     if clean and file_path_root == "/share":
         print("Truncating 'http://docs.google.com/sheet' ... ", end=("\n" if verbose else ""), flush=True)
@@ -103,7 +103,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
             metadata_spread_data = Spread(sheet_url, sheet=sheet)
             metadata_spread_data.freeze(0, 0, sheet=sheet)
             metadata_spread_data.clear_sheet(sheet=sheet)
-        print("{}done".format("Truncating sheet " if verbose else ""))
+        print("{}done".format("Truncating 'http://docs.google.com/sheet' " if verbose else ""))
         return 0
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
@@ -195,7 +195,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     file_version_qualifier.lower()
                 )
             file_version_qualifier = file_version_qualifier.lower().removesuffix("___transcode")
-            if refresh or not os.path.isfile(file_metadata_path):
+            if not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
                     "transcode_action": "Analyse",
                     "target_quality": "Mid",
@@ -1042,6 +1042,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     metadata_merged_pl \
                         .select(metadata_merged_pl.columns[:9] + ["File Directory"])
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
+                        .fill_null("")
                 )
         if not file_path_root_is_nested:
             if verbose:
@@ -1123,7 +1124,6 @@ def _flatten_dicts(_dicts, _parent_key=''):
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
     argument_parser.add_argument("--verbose", default=False, action="store_true")
-    argument_parser.add_argument("--refresh", default=False, action="store_true")
     argument_parser.add_argument("--clean", default=False, action="store_true")
     argument_parser.add_argument("directory")
     argument_parser.add_argument("sheetguid")
@@ -1131,7 +1131,6 @@ if __name__ == "__main__":
     sys.exit(2 if _analyse(
         Path(arguments.directory).absolute().as_posix(),
         arguments.sheetguid,
-        arguments.verbose,
-        arguments.refresh,
         arguments.clean,
+        arguments.verbose
     ) < 0 else 0)
