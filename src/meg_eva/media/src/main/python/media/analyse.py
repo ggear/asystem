@@ -567,11 +567,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
     metadata_local_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
+    if verbose:
+        print("done", flush=True)
     metadata_local_media_dirs = []
     if len(metadata_local_pl) > 0 and "Media Directory" in metadata_local_pl.schema:
         metadata_local_media_dirs = [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
     if verbose:
-        print("done", flush=True)
+        print("#local-dataframe partition '{}' ... done".format(metadata_local_media_dirs), flush=True)
     if file_path_root_is_nested:
         metadata_merged_pl = metadata_local_pl
     else:
@@ -883,14 +885,19 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
-        metadata_merged_pl = metadata_merged_pl.with_columns([
-            pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
-                .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
-        ])
-        metadata_merged_pl = metadata_merged_pl[[
-            column.name for column in metadata_merged_pl \
-            if not (column.null_count() == metadata_merged_pl.height)
-        ]]
+
+
+
+        # metadata_merged_pl = metadata_merged_pl.with_columns([
+        #     pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
+        #         .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
+        # ])
+        # metadata_merged_pl = metadata_merged_pl[[
+        #     column.name for column in metadata_merged_pl \
+        #     if not (column.null_count() == metadata_merged_pl.height)
+        # ]]
+
+
     if verbose:
         print("done", flush=True)
     if len(metadata_merged_pl) > 0:
