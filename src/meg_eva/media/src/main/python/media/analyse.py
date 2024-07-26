@@ -22,6 +22,8 @@ TARGET_BITRATE_VIDEO_MIN_KBPS = 2500
 TARGET_BITRATE_VIDEO_MID_KBPS = 5000
 TARGET_BITRATE_VIDEO_MAX_KBPS = 7500
 
+MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
+
 FIELDS_STRING = [
     "File Name",
     "File Action",
@@ -150,7 +152,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     print("{} [{}]".format(message, file_path))
                     print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
                 continue;
-            if file_extension not in {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}:
+            if file_extension not in MEDIA_FILE_EXTENSIONS:
                 message = "skipping file due to unknown file extension [{}]".format(file_extension)
                 if verbose:
                     print(message, flush=True)
@@ -1028,7 +1030,7 @@ def _analyse(file_path_root, sheet_guid, verbose=False, refresh=False, clean=Fal
                     set_tbl_width_chars=30000,
                     set_fmt_float="full",
                     set_ascii_tables=True,
-                    tbl_formatting="UTF8_FULL_CONDENSED",
+                    tbl_formatting="ASCII_FULL_CONDENSED",
                     set_tbl_hide_dataframe_shape=True,
             ):
                 print("Metadata summary ... ")
