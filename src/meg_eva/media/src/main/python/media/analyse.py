@@ -891,8 +891,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
-
-        # TODO: Causing issues?
         metadata_merged_pl = metadata_merged_pl.with_columns([
             pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
                 .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
@@ -901,7 +899,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             column.name for column in metadata_merged_pl \
             if not (column.null_count() == metadata_merged_pl.height)
         ]]
-
     if verbose:
         print("done", flush=True)
     if len(metadata_merged_pl) > 0:
