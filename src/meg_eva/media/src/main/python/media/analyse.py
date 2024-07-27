@@ -1048,6 +1048,27 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                         .fill_null("")
                 )
+
+
+
+        with pl.Config(
+                tbl_rows=-1,
+                tbl_cols=-1,
+                fmt_str_lengths=200,
+                set_tbl_width_chars=30000,
+                set_fmt_float="full",
+                set_ascii_tables=True,
+                tbl_formatting="ASCII_FULL_CONDENSED",
+                set_tbl_hide_dataframe_shape=True,
+        ):
+            test = metadata_merged_pl \
+                  .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
+                  .select("File Name", "^Audio.*$")
+            print(test)
+
+
+
+
         if not file_path_root_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
