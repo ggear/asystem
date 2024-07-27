@@ -584,8 +584,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
     # TODO
     print("")
+    print("Len Files=".format(len(metadata_enriched_list)))
     for e in metadata_enriched_list:
         if e["file_name"] == "Any Given Sunday (1999).mkv":
+            print("Len File=".format(len(e)))
             print("file_name:Any Given Sunday (1999).mkv")
             for p in e.keys():
                 if p.startswith("audio"):
