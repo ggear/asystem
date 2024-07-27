@@ -589,7 +589,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             for p in e.keys():
                 if p.startswith("audio"):
                     print(p +":" + e[p] + ":" + type(p).__name__+ ":" + type(e[p]).__name__)
-    metadata_enriched_list = [m]
+    # metadata_enriched_list = [m]
 
 
     # TODO: Remove
@@ -603,7 +603,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             tbl_formatting="ASCII_FULL_CONDENSED",
             set_tbl_hide_dataframe_shape=True,
     ):
-        test = pl.DataFrame(metadata_enriched_list) \
+        test = pl.DataFrame(metadata_enriched_list, infer_schema_length=None, nan_to_null=True) \
             .filter(pl.col("file_name") == "Any Given Sunday (1999).mkv") \
             .select("file_name", "^audio.*$")
         print(test)
