@@ -849,7 +849,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete")
-                ).then(pl.lit("1. Download"))
+                ).then(pl.lit("1. Delete"))
                 .when(
                     (pl.col("Version Count").cast(pl.Int32) > 1)
                 ).then(pl.lit("2. Merge"))
@@ -985,7 +985,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("echo 'Transcoding: "), pl.col("File Name"), pl.lit(" ... '\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
-                    pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 1\n"),
+                    pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("if [ $(df -k \"${ROOT_DIR}\" | tail -1 | awk '{print $4}') -lt 20000000 ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (space): ' && date && echo '' && exit 1\n"),
@@ -1000,11 +1000,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("if [ $? -eq 0 ]; then\n"),
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
-                    pl.lit("  if [ $? -eq 0 ]; then echo -n 'Completed: ' && date; else echo -n 'Failed (mv): ' && date; fi\n"),
+                    pl.lit("  if [ $? -eq 0 ]; then echo -n 'Completed: ' && date && exit 0; else echo -n 'Failed (mv): ' && date && exit 3; fi\n"),
                     pl.lit("else\n"),
-                    pl.lit("  echo -n 'Failed (other-transcode): ' && date\n"),
+                    pl.lit("  echo -n 'Failed (other-transcode): ' && date && exit 2\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo ''\n"),
+                    pl.lit("echo '' && exit -1\n"),
                 ]).alias("Script Source"),
             ]
         ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
