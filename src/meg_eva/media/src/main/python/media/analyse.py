@@ -573,20 +573,30 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         _add_field("file_action", "")
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
+
+
+
+
+
+    # TODO
+    print("")
+    for e in metadata_enriched_list:
+        if e["file_name"] == "Any Given Sunday (1999).mkv":
+            print_str = "file_name:Any Given Sunday (1999).mkv"
+            for p in e.keys():
+                if p.startswith("audio"):
+                    print_str = print_str + " " + p +":" + e[p]
+            print(print_str)
+
+
+
+
+
     metadata_local_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
-    if verbose:
-        print("done", flush=True)
-    if "Media Directory" not in metadata_local_pl.schema:
-        metadata_local_pl = pl.DataFrame()
-    metadata_local_media_dirs = []
-    if metadata_local_pl.width > 0:
-        metadata_local_media_dirs = [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
-    if verbose:
-        print("#local-dataframe partition '{}' ... done".format(metadata_local_media_dirs), flush=True)
 
 
 
-
+    # TODO: Remove
     with pl.Config(
             tbl_rows=-1,
             tbl_cols=-1,
@@ -601,9 +611,21 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
             .select("File Name", "^Audio.*$")
         print(test)
+    return 0
 
 
 
+
+
+    if verbose:
+        print("done", flush=True)
+    if "Media Directory" not in metadata_local_pl.schema:
+        metadata_local_pl = pl.DataFrame()
+    metadata_local_media_dirs = []
+    if metadata_local_pl.width > 0:
+        metadata_local_media_dirs = [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
+    if verbose:
+        print("#local-dataframe partition '{}' ... done".format(metadata_local_media_dirs), flush=True)
     if file_path_root_is_nested:
         metadata_merged_pl = metadata_local_pl
     else:
