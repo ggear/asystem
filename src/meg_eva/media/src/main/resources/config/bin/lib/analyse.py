@@ -586,11 +586,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     print("")
     for e in metadata_enriched_list:
         if e["file_name"] == "Any Given Sunday (1999).mkv":
-            print_str = "file_name:Any Given Sunday (1999).mkv"
+            print("file_name:Any Given Sunday (1999).mkv")
             for p in e.keys():
                 if p.startswith("audio"):
-                    print_str = print_str + " " + p +":" + e[p]
-            print(print_str)
+                    print(p +":" + e[p])
 
 
 
