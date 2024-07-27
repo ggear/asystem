@@ -556,6 +556,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     if verbose:
         print("{}/*/._metadata_* -> #local-dataframe ... ".format(file_path_root_target_relative), end='', flush=True)
     metadata_enriched_list = []
+    metadata_enriched_schema = {}
     for metadata in metadata_list:
         def _add_field(key, value):
             metadata.update({key: value})
@@ -573,8 +574,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         _add_field("file_action", "")
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
+        metadata_enriched_schema.update(metadata)
+    metadata_enriched_schema = {_col: pl.String for _col in metadata_enriched_schema}
     metadata_local_pl = _format_columns(
-        pl.DataFrame(metadata_enriched_list, infer_schema_length=None, nan_to_null=True))
+        pl.DataFrame(metadata_enriched_list, metadata_enriched_schema, nan_to_null=True))
     if verbose:
         print("done", flush=True)
     if "Media Directory" not in metadata_local_pl.schema:
@@ -593,10 +596,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_sheet_list = metadata_spread_data._fix_merge_values(metadata_spread_data.sheet.get_all_values())
         if len(metadata_sheet_list) > 0:
             metadata_sheet_pl = _format_columns(pl.DataFrame(
-                schema=metadata_sheet_list[0],
                 data=metadata_sheet_list[1:],
+                schema={_col: pl.String for _col in metadata_sheet_list[0]},
                 orient="row",
-                infer_schema_length=None,
                 nan_to_null=True,
             ))
         else:
