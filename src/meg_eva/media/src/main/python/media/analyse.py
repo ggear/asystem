@@ -605,8 +605,40 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             if metadata_sheet_pl.width > 0:
                 metadata_sheet_pl = metadata_sheet_pl.filter(
                     ~pl.col("Media Directory").is_in(metadata_local_media_dirs))
+
+                with pl.Config(
+                        tbl_rows=-1,
+                        tbl_cols=-1,
+                        fmt_str_lengths=200,
+                        set_tbl_width_chars=30000,
+                        set_fmt_float="full",
+                        set_ascii_tables=True,
+                        tbl_formatting="ASCII_FULL_CONDENSED",
+                        set_tbl_hide_dataframe_shape=True,
+                ):
+                    test = metadata_local_pl \
+                        .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
+                        .select("File Name", "^Audio.*$")
+                    print(test)
+
                 metadata_merged_pl = \
                     pl.concat([metadata_sheet_pl, metadata_local_pl], how="diagonal_relaxed")
+
+                with pl.Config(
+                        tbl_rows=-1,
+                        tbl_cols=-1,
+                        fmt_str_lengths=200,
+                        set_tbl_width_chars=30000,
+                        set_fmt_float="full",
+                        set_ascii_tables=True,
+                        tbl_formatting="ASCII_FULL_CONDENSED",
+                        set_tbl_hide_dataframe_shape=True,
+                ):
+                    test = metadata_merged_pl \
+                        .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
+                        .select("File Name", "^Audio.*$")
+                    print(test)
+
             else:
                 metadata_merged_pl = metadata_local_pl
         else:
@@ -615,51 +647,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             print("done", flush=True)
     if verbose:
         print("#merged-dataframe -> #enriched-dataframe ... ", end='', flush=True)
-
-
-
-
-    with pl.Config(
-            tbl_rows=-1,
-            tbl_cols=-1,
-            fmt_str_lengths=200,
-            set_tbl_width_chars=30000,
-            set_fmt_float="full",
-            set_ascii_tables=True,
-            tbl_formatting="ASCII_FULL_CONDENSED",
-            set_tbl_hide_dataframe_shape=True,
-    ):
-        test = metadata_merged_pl \
-              .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
-              .select("File Name", "^Audio.*$")
-        print(test)
-
-
-
-
-
     metadata_merged_pl = _format_columns(
         _add_cols(_add_cols(metadata_merged_pl, FIELDS_INT, "0"), FIELDS_STRING))
-
-
-
-    with pl.Config(
-            tbl_rows=-1,
-            tbl_cols=-1,
-            fmt_str_lengths=200,
-            set_tbl_width_chars=30000,
-            set_fmt_float="full",
-            set_ascii_tables=True,
-            tbl_formatting="ASCII_FULL_CONDENSED",
-            set_tbl_hide_dataframe_shape=True,
-    ):
-        test = metadata_merged_pl \
-              .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
-              .select("File Name", "^Audio.*$")
-        print(test)
-
-
-
     if metadata_merged_pl.height > 0:
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
@@ -1072,25 +1061,25 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 transcode_script_global_file.close()
         if not file_path_root_is_nested:
             _set_permissions(transcode_script_global_path, 0o750)
-        if verbose:
-            print("done", flush=True)
-            with pl.Config(
-                    tbl_rows=-1,
-                    tbl_cols=-1,
-                    fmt_str_lengths=200,
-                    set_tbl_width_chars=30000,
-                    set_fmt_float="full",
-                    set_ascii_tables=True,
-                    tbl_formatting="ASCII_FULL_CONDENSED",
-                    set_tbl_hide_dataframe_shape=True,
-            ):
-                print("Metadata summary ... ")
-                print(
-                    metadata_merged_pl \
-                        .select(metadata_merged_pl.columns[:9] + ["File Directory"])
-                        .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
-                        .fill_null("")
-                )
+        # if verbose:
+        #     print("done", flush=True)
+        #     with pl.Config(
+        #             tbl_rows=-1,
+        #             tbl_cols=-1,
+        #             fmt_str_lengths=200,
+        #             set_tbl_width_chars=30000,
+        #             set_fmt_float="full",
+        #             set_ascii_tables=True,
+        #             tbl_formatting="ASCII_FULL_CONDENSED",
+        #             set_tbl_hide_dataframe_shape=True,
+        #     ):
+        #         print("Metadata summary ... ")
+        #         print(
+        #             metadata_merged_pl \
+        #                 .select(metadata_merged_pl.columns[:9] + ["File Directory"])
+        #                 .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
+        #                 .fill_null("")
+        #         )
         if not file_path_root_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
