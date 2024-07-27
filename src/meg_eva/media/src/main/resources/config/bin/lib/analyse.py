@@ -587,6 +587,27 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_local_media_dirs = [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
     if verbose:
         print("#local-dataframe partition '{}' ... done".format(metadata_local_media_dirs), flush=True)
+
+
+
+
+    with pl.Config(
+            tbl_rows=-1,
+            tbl_cols=-1,
+            fmt_str_lengths=200,
+            set_tbl_width_chars=30000,
+            set_fmt_float="full",
+            set_ascii_tables=True,
+            tbl_formatting="ASCII_FULL_CONDENSED",
+            set_tbl_hide_dataframe_shape=True,
+    ):
+        test = metadata_local_pl \
+            .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
+            .select("File Name", "^Audio.*$")
+        print(test)
+
+
+
     if file_path_root_is_nested:
         metadata_merged_pl = metadata_local_pl
     else:
@@ -609,40 +630,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             if metadata_sheet_pl.width > 0:
                 metadata_sheet_pl = metadata_sheet_pl.filter(
                     ~pl.col("Media Directory").is_in(metadata_local_media_dirs))
-
-                with pl.Config(
-                        tbl_rows=-1,
-                        tbl_cols=-1,
-                        fmt_str_lengths=200,
-                        set_tbl_width_chars=30000,
-                        set_fmt_float="full",
-                        set_ascii_tables=True,
-                        tbl_formatting="ASCII_FULL_CONDENSED",
-                        set_tbl_hide_dataframe_shape=True,
-                ):
-                    test = metadata_local_pl \
-                        .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
-                        .select("File Name", "^Audio.*$")
-                    print(test)
-
                 metadata_merged_pl = \
                     pl.concat([metadata_sheet_pl, metadata_local_pl], how="diagonal_relaxed")
-
-                with pl.Config(
-                        tbl_rows=-1,
-                        tbl_cols=-1,
-                        fmt_str_lengths=200,
-                        set_tbl_width_chars=30000,
-                        set_fmt_float="full",
-                        set_ascii_tables=True,
-                        tbl_formatting="ASCII_FULL_CONDENSED",
-                        set_tbl_hide_dataframe_shape=True,
-                ):
-                    test = metadata_merged_pl \
-                        .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
-                        .select("File Name", "^Audio.*$")
-                    print(test)
-
             else:
                 metadata_merged_pl = metadata_local_pl
         else:
