@@ -8,6 +8,7 @@ from pathlib import Path
 
 import ffmpeg
 import polars as pl
+import polars.selectors as cs
 import yaml
 from ffmpeg._run import Error
 from gspread_pandas import Spread
@@ -533,17 +534,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     continue
             files_analysed += 1
 
-    def _format_columns(metadata_pl):
+    def _format_columns(_data):
+        _data = _data.with_columns((~cs.string()).cast(pl.Utf8)) \
+            .with_columns([pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
+                          .then(None).otherwise(pl.col(pl.Utf8)).name.keep()])
         metadata_columns = []
         metadata_columns_streams = ("video", "audio", "subtitle", "other")
-        for metadata_column in metadata_pl.columns:
+        for metadata_column in _data.columns:
             if not metadata_column.lower().startswith(metadata_columns_streams):
                 metadata_columns.append(metadata_column)
         for metadata_column_stream in metadata_columns_streams:
-            for metadata_column in metadata_pl.columns:
+            for metadata_column in _data.columns:
                 if metadata_column.lower().startswith(metadata_column_stream):
                     metadata_columns.append(metadata_column)
-        return metadata_pl.select(metadata_columns) \
+        return _data.select(metadata_columns) \
             .rename(lambda column: \
                         ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") \
                              if len(column.split("__")) == 2 else column.replace("_", " ").title()) \
@@ -553,20 +557,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         print("{}/*/._metadata_* -> #local-dataframe ... ".format(file_path_root_target_relative), end='', flush=True)
     metadata_enriched_list = []
     for metadata in metadata_list:
-        def _add(key, value):
+        def _add_field(key, value):
             metadata.update({key: value})
             metadata.move_to_end(key, last=False)
 
-        _add("version_count", "")
-        _add("action_index", "")
-        _add("metadata_state", "")
-        _add("plex_subtitle", "")
-        _add("plex_audio", "")
-        _add("plex_video", "")
-        _add("file_size", "")
-        _add("file_state", "")
-        _add("file_version", "")
-        _add("file_action", "")
+        _add_field("version_count", "")
+        _add_field("action_index", "")
+        _add_field("metadata_state", "")
+        _add_field("plex_subtitle", "")
+        _add_field("plex_audio", "")
+        _add_field("plex_video", "")
+        _add_field("file_size", "")
+        _add_field("file_state", "")
+        _add_field("file_version", "")
+        _add_field("file_action", "")
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
     metadata_local_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
@@ -891,17 +895,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
-
-        # TODO: Causing issues?
-        # metadata_merged_pl = metadata_merged_pl.with_columns([
-        #     pl.when(pl.col(pl.Utf8).str.len_bytes() == 0) \
-        #         .then(None).otherwise(pl.col(pl.Utf8)).name.keep()
-        # ])
-        # metadata_merged_pl = metadata_merged_pl[[
-        #     column.name for column in metadata_merged_pl \
-        #     if not (column.null_count() == metadata_merged_pl.height)
-        # ]]
-
+        metadata_merged_pl = metadata_merged_pl[[
+            column.name for column in metadata_merged_pl \
+            if not (column.null_count() == metadata_merged_pl.height)
+        ]]
     if verbose:
         print("done", flush=True)
     if metadata_merged_pl.height > 0:
@@ -1051,6 +1048,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                         .fill_null("")
                 )
+
+                # TODO
+                print(
+                    metadata_merged_pl.filter(pl.col("File Name") == "Any Given Sunday (1999).mkv").select("File Name", "^Audio.*$")
+                )
+
         if not file_path_root_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
