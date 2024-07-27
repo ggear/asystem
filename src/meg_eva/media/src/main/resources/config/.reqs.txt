@@ -3,7 +3,7 @@ argparse==1.4.0
 ffmpeg-python==0.2.0
 
 pandas==2.2.2
-polars==0.20.30
+polars==1.2.1
 pyarrow==16.1.0
 gspread==5.12.4
 gspread-pandas==3.2.3
