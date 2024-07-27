@@ -587,11 +587,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     print("Len Files={}".format(len(metadata_enriched_list)))
     for e in metadata_enriched_list:
         if e["file_name"] == "Any Given Sunday (1999).mkv":
+            m = e
             print("Len File={}".format(len(e)))
             print("file_name:" + e["file_name"])
             for p in e.keys():
                 if p.startswith("audio"):
                     print(p +":" + e[p] + ":" + type(p).__name__+ ":" + type(e[p]).__name__)
+    metadata_enriched_list = [m]
 
 
     # TODO: Remove
