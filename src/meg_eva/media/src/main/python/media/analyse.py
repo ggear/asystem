@@ -615,8 +615,51 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             print("done", flush=True)
     if verbose:
         print("#merged-dataframe -> #enriched-dataframe ... ", end='', flush=True)
+
+
+
+
+    with pl.Config(
+            tbl_rows=-1,
+            tbl_cols=-1,
+            fmt_str_lengths=200,
+            set_tbl_width_chars=30000,
+            set_fmt_float="full",
+            set_ascii_tables=True,
+            tbl_formatting="ASCII_FULL_CONDENSED",
+            set_tbl_hide_dataframe_shape=True,
+    ):
+        test = metadata_merged_pl \
+              .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
+              .select("File Name", "^Audio.*$")
+        print(test)
+
+
+
+
+
     metadata_merged_pl = _format_columns(
         _add_cols(_add_cols(metadata_merged_pl, FIELDS_INT, "0"), FIELDS_STRING))
+
+
+
+    with pl.Config(
+            tbl_rows=-1,
+            tbl_cols=-1,
+            fmt_str_lengths=200,
+            set_tbl_width_chars=30000,
+            set_fmt_float="full",
+            set_ascii_tables=True,
+            tbl_formatting="ASCII_FULL_CONDENSED",
+            set_tbl_hide_dataframe_shape=True,
+    ):
+        test = metadata_merged_pl \
+              .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
+              .select("File Name", "^Audio.*$")
+        print(test)
+
+
+
     if metadata_merged_pl.height > 0:
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
@@ -901,30 +944,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ]]
     if verbose:
         print("done", flush=True)
-
-
-
-
-    with pl.Config(
-            tbl_rows=-1,
-            tbl_cols=-1,
-            fmt_str_lengths=200,
-            set_tbl_width_chars=30000,
-            set_fmt_float="full",
-            set_ascii_tables=True,
-            tbl_formatting="ASCII_FULL_CONDENSED",
-            set_tbl_hide_dataframe_shape=True,
-    ):
-        test = metadata_merged_pl \
-              .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
-              .select("File Name", "^Audio.*$")
-        print(test)
-
-
-
-
-
-
     if metadata_merged_pl.height > 0:
         if verbose:
             print("#enriched-dataframe -> {}/*.sh ... ".format(file_path_root_target_relative), end='', flush=True)
@@ -1080,25 +1099,25 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
 
             # TODO
-            with pl.Config(
-                    tbl_rows=-1,
-                    tbl_cols=-1,
-                    fmt_str_lengths=200,
-                    set_tbl_width_chars=30000,
-                    set_fmt_float="full",
-                    set_ascii_tables=True,
-                    tbl_formatting="ASCII_FULL_CONDENSED",
-                    set_tbl_hide_dataframe_shape=True,
-            ):
-                test = metadata_merged_pl \
-                      .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
-                      .select("File Name", "^Audio.*$")
-                print(test)
-            import pandas as pd
-            pd.set_option('display.width', None)
-            pd.set_option('display.max_columns', None)
-            pd.set_option('display.max_rows', None)
-            print(metadata_updated_pd[metadata_updated_pd["File Name"] == "Any Given Sunday (1999).mkv"][test.columns])
+            # with pl.Config(
+            #         tbl_rows=-1,
+            #         tbl_cols=-1,
+            #         fmt_str_lengths=200,
+            #         set_tbl_width_chars=30000,
+            #         set_fmt_float="full",
+            #         set_ascii_tables=True,
+            #         tbl_formatting="ASCII_FULL_CONDENSED",
+            #         set_tbl_hide_dataframe_shape=True,
+            # ):
+            #     test = metadata_merged_pl \
+            #           .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
+            #           .select("File Name", "^Audio.*$")
+            #     print(test)
+            # import pandas as pd
+            # pd.set_option('display.width', None)
+            # pd.set_option('display.max_columns', None)
+            # pd.set_option('display.max_rows', None)
+            # print(metadata_updated_pd[metadata_updated_pd["File Name"] == "Any Given Sunday (1999).mkv"][test.columns])
 
 
 
