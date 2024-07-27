@@ -105,9 +105,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
     sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_guid
     if clean and file_path_root == "/share":
-        print("Truncating 'http://docs.google.com/sheet' ... ", end=("\n" if verbose else ""), flush=True)
+        print("Truncating 'http://docs.google.com/sheet' ... ", end="", flush=True)
         _truncate_sheet()
-        print("{}done".format("Truncating 'http://docs.google.com/sheet' " if verbose else ""))
+        print("done")
         return 0
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
@@ -577,44 +577,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         _add_field("file_action", "")
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
-
-
-
-
-
-    # TODO
-    print("")
-    print("Len Files={}".format(len(metadata_enriched_list)))
-    for e in metadata_enriched_list:
-        if e["file_name"] == "Any Given Sunday (1999).mkv":
-            m = e
-            print("Len File={}".format(len(e)))
-            print("file_name:" + e["file_name"])
-            for p in e.keys():
-                if p.startswith("audio"):
-                    print(p +":" + e[p] + ":" + type(p).__name__+ ":" + type(e[p]).__name__)
-    # metadata_enriched_list = [m]
-
-
-    # TODO: Remove
-    with pl.Config(
-            tbl_rows=-1,
-            tbl_cols=-1,
-            fmt_str_lengths=200,
-            set_tbl_width_chars=30000,
-            set_fmt_float="full",
-            set_ascii_tables=True,
-            tbl_formatting="ASCII_FULL_CONDENSED",
-            set_tbl_hide_dataframe_shape=True,
-    ):
-        test = pl.DataFrame(metadata_enriched_list, infer_schema_length=None, nan_to_null=True) \
-            .filter(pl.col("file_name") == "Any Given Sunday (1999).mkv") \
-            .select("file_name", "^audio.*$")
-        print(test)
-    return 0
-
-
-    metadata_local_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
+    metadata_local_pl = _format_columns(
+        pl.DataFrame(metadata_enriched_list, infer_schema_length=None, nan_to_null=True))
     if verbose:
         print("done", flush=True)
     if "Media Directory" not in metadata_local_pl.schema:
@@ -635,7 +599,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             metadata_sheet_pl = _format_columns(pl.DataFrame(
                 schema=metadata_sheet_list[0],
                 data=metadata_sheet_list[1:],
-                orient="row"
+                orient="row",
+                infer_schema_length=None,
+                nan_to_null=True,
             ))
         else:
             metadata_sheet_pl = pl.DataFrame()
@@ -936,10 +902,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
-        metadata_merged_pl = metadata_merged_pl[[
+        metadata_merged_pl = metadata_merged_pl.select([
             column.name for column in metadata_merged_pl \
             if not (column.null_count() == metadata_merged_pl.height)
-        ]]
+        ])
     if verbose:
         print("done", flush=True)
     if metadata_merged_pl.height > 0:
@@ -1092,34 +1058,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         if not file_path_root_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
-            metadata_updated_pd = metadata_merged_pl.to_pandas()
-
-
-
-            # TODO
-            # with pl.Config(
-            #         tbl_rows=-1,
-            #         tbl_cols=-1,
-            #         fmt_str_lengths=200,
-            #         set_tbl_width_chars=30000,
-            #         set_fmt_float="full",
-            #         set_ascii_tables=True,
-            #         tbl_formatting="ASCII_FULL_CONDENSED",
-            #         set_tbl_hide_dataframe_shape=True,
-            # ):
-            #     test = metadata_merged_pl \
-            #           .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
-            #           .select("File Name", "^Audio.*$")
-            #     print(test)
-            # import pandas as pd
-            # pd.set_option('display.width', None)
-            # pd.set_option('display.max_columns', None)
-            # pd.set_option('display.max_rows', None)
-            # print(metadata_updated_pd[metadata_updated_pd["File Name"] == "Any Given Sunday (1999).mkv"][test.columns])
-
-
-
-
+            metadata_updated_pd = metadata_merged_pl.to_pandas(use_pyarrow_extension_array=True)
             metadata_spread_data = Spread(sheet_url, sheet="Data")
             metadata_spread_data.df_to_sheet(metadata_updated_pd, sheet="Data",
                                              replace=True, index=False, add_filter=True)
