@@ -1048,26 +1048,36 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                         .fill_null("")
                 )
-
-                # TODO
-                print(
-                    metadata_merged_pl.filter(pl.col("File Name") == "Any Given Sunday (1999).mkv").select("File Name", "^Audio.*$")
-                )
-
         if not file_path_root_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
             metadata_updated_pd = metadata_merged_pl.to_pandas()
 
+
+
             # TODO
-            # # print(metadata_updated_pd.columns.tolist())
-            # import pandas as pd
-            # pd.set_option('display.max_columns', None)
-            # pd.set_option('display.max_rows', None)
-            # # print(metadata_updated_pd.columns.tolist())
-            # print(metadata_updated_pd["Audio 3 Index"])
-            # # print(metadata_updated_pd)
-            # # metadata_updated_pd = metadata_updated_pd.reset_index()
+            with pl.Config(
+                    tbl_rows=-1,
+                    tbl_cols=-1,
+                    fmt_str_lengths=200,
+                    set_tbl_width_chars=30000,
+                    set_fmt_float="full",
+                    set_ascii_tables=True,
+                    tbl_formatting="ASCII_FULL_CONDENSED",
+                    set_tbl_hide_dataframe_shape=True,
+            ):
+                test = metadata_merged_pl \
+                      .filter(pl.col("File Name") == "Any Given Sunday (1999).mkv") \
+                      .select("File Name", "^Audio.*$")
+                print(test)
+            import pandas as pd
+            pd.set_option('display.width', None)
+            pd.set_option('display.max_columns', None)
+            pd.set_option('display.max_rows', None)
+            print(metadata_updated_pd[metadata_updated_pd["File Name"] == "Any Given Sunday (1999).mkv"][test.columns])
+
+
+
 
             metadata_spread_data = Spread(sheet_url, sheet="Data")
             metadata_spread_data.df_to_sheet(metadata_updated_pd, sheet="Data",
