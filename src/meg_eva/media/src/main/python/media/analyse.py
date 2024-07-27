@@ -603,7 +603,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             .filter(pl.col("file_name") == "Any Given Sunday (1999).mkv") \
             .select("file_name", "^audio.*$")
         print(test)
-
+    return 0
 
 
     metadata_local_pl = _format_columns(pl.DataFrame(metadata_enriched_list))
