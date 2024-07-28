@@ -1079,7 +1079,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 metadata_spread_data.freeze(1, 1, sheet="Data")
             Spread(sheet_url, sheet="Data") \
                 .df_to_sheet(metadata_summary_pl.to_pandas(use_pyarrow_extension_array=True),
-                             sheet="Summary", replace=True, index=False, add_filter=False)
+                             sheet="Summary", replace=True, index=False, add_filter=True)
             if verbose:
                 print("done", flush=True)
     print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""))
