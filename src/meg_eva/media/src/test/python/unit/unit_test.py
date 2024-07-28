@@ -21,26 +21,30 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_1(self):
         dir_test = self._test_analyse_dir(1)
-        self._test_analyse_assert(join(dir_test, "10/media/docos/movies/The Bad News Bears (1976)"), 1)
+        self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom of Heaven (2005)"), scripts=False)
 
     def test_analyse_2(self):
         dir_test = self._test_analyse_dir(1)
-        self._test_analyse_assert(join(dir_test, "some/non-existent/path"), -1)
-        self._test_analyse_assert("/tmp", -2)
-        self._test_analyse_assert(abspath(join(dir_test, "19/tmp")), -3)
-        self._test_analyse_assert(join(dir_test, "10/tmp"), -4)
+        self._test_analyse_assert(join(dir_test, "33"), scripts=False)
 
     def test_analyse_3(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "10/media/docos/movies/The Bad News Bears (1976)"), 1, clean=True)
         self._test_analyse_assert(join(dir_test, "31"))
         self._test_analyse_assert(join(dir_test, "33"))
-        self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom of Heaven (2005)"), 1)
-        self._test_analyse_assert(join(dir_test, "10/media/comedy/movies"), 1)
+        self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom of Heaven (2005)"))
+        self._test_analyse_assert(join(dir_test, "10/media/comedy/movies"))
         self._test_analyse_assert(join(dir_test, "10"), 60)
         self._test_analyse_assert(join(dir_test, "33"))
         self._test_analyse_assert(join(dir_test, "31"))
         self._test_analyse_assert(join(dir_test, "33"))
+
+    def test_analyse_4(self):
+        dir_test = self._test_analyse_dir(1)
+        self._test_analyse_assert(join(dir_test, "some/non-existent/path"), -1)
+        self._test_analyse_assert("/tmp", -2)
+        self._test_analyse_assert(abspath(join(dir_test, "19/tmp")), -3)
+        self._test_analyse_assert(join(dir_test, "10/tmp"), -4)
 
     def _test_analyse_dir(self, index):
         dir_test = join(DIR_ROOT, "target/runtime-unit/share_media_example_{}/share".format(index))

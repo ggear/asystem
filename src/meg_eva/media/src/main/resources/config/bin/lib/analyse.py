@@ -1004,7 +1004,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("if [ $? -eq 0 ]; then\n"),
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
-                    pl.lit("  if [ $? -eq 0 ]; then echo -n 'Completed: ' && date && exit 0; else echo -n 'Failed (mv): ' && date && exit 3; fi\n"),
+                    pl.lit(
+                        "  if [ $? -eq 0 ]; then echo -n 'Completed: ' && date && exit 0; else echo -n 'Failed (mv): ' && date && exit 3; fi\n"),
                     pl.lit("else\n"),
                     pl.lit("  echo -n 'Failed (other-transcode): ' && date && exit 2\n"),
                     pl.lit("fi\n"),
@@ -1040,6 +1041,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             _set_permissions(transcode_script_global_path, 0o750)
         if verbose:
             print("done", flush=True)
+        metadata_summary_pl = pl.concat([
+            metadata_merged_pl.group_by(["File Action"]).agg(pl.col("File Name").count().alias("File Count")),
+            metadata_merged_pl.group_by(["File Action", "Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
+        ], how="diagonal_relaxed") \
+            .sort(["File Action", "Media Type"], nulls_last=False)
+        metadata_summary_pl = pl.concat([
+            metadata_summary_pl,
+            metadata_summary_pl.filter(pl.col("Media Type").is_null()).select(pl.sum("File Count"))
+        ], how="diagonal_relaxed") \
+            .select(["File Action", "Media Type", "File Count"])
+        if verbose:
             with pl.Config(
                     tbl_rows=-1,
                     tbl_cols=-1,
@@ -1050,23 +1062,28 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     tbl_formatting="ASCII_FULL_CONDENSED",
                     set_tbl_hide_dataframe_shape=True,
             ):
-                print("Metadata summary ... ")
+                print("Metadata details ... ")
                 print(
                     metadata_merged_pl \
                         .select(metadata_merged_pl.columns[:9] + ["File Directory"])
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                         .fill_null("")
                 )
+                print("Metadata summary ... ")
+                print(metadata_summary_pl.fill_null(""))
         if not file_path_root_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
-            metadata_updated_pd = metadata_merged_pl.to_pandas(use_pyarrow_extension_array=True)
             metadata_spread_data = Spread(sheet_url, sheet="Data")
-            metadata_spread_data.df_to_sheet(metadata_updated_pd, sheet="Data",
-                                             replace=True, index=False, add_filter=True)
+            metadata_spread_data \
+                .df_to_sheet(metadata_merged_pl.to_pandas(use_pyarrow_extension_array=True),
+                             sheet="Data", replace=True, index=False, add_filter=True)
             if metadata_spread_data.get_sheet_dims()[0] > 1 and \
                     metadata_spread_data.get_sheet_dims()[1] > 1:
                 metadata_spread_data.freeze(1, 1, sheet="Data")
+            Spread(sheet_url, sheet="Data") \
+                .df_to_sheet(metadata_summary_pl.to_pandas(use_pyarrow_extension_array=True),
+                             sheet="Summary", replace=True, index=False, add_filter=False)
             if verbose:
                 print("done", flush=True)
     print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""))
