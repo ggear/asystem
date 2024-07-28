@@ -14,6 +14,7 @@ if [ $(uname) == "Darwin" ]; then
     mount_smbfs //GUEST:@${1}/share-${2} ~/Desktop/share/${2}
   done
 else
+  umount -fq /media/usbdrive
   mount -t exfat "/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}') /media/usbdrive
 fi
 echo "done"
