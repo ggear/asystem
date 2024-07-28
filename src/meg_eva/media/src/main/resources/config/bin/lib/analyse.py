@@ -665,6 +665,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Audio 1 Lang") != "eng")
                 ).then(pl.lit("Incomplete"))
                 .when(
+                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
+                ).then(pl.lit("Incomplete"))
+                .when(
                     (pl.col("Target Lang") != "eng") &
                     (
                             (pl.col("Subtitle Count") == "0") |
