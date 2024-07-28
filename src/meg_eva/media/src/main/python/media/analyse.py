@@ -454,9 +454,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             file_probe_streams_filtered_audios_supplementary.append(file_probe_streams_filtered_audio)
                 file_probe_streams_filtered_audios.sort(key=lambda stream: int(stream["channels"]), reverse=True)
                 file_probe_streams_filtered_audios_supplementary.sort(key=lambda stream: int(stream["channels"]), reverse=True)
+                if len(file_probe_streams_filtered_audios) > 0 and \
+                        file_probe_streams_filtered_audios[0]["channels"] < file_target_channels:
+                    if len(file_probe_streams_filtered_audios_supplementary) > 0 and \
+                            file_probe_streams_filtered_audios_supplementary[0]["channels"] >= file_target_channels:
+                        file_probe_streams_filtered_audios.insert(0,
+                                                                  file_probe_streams_filtered_audios_supplementary.pop(0))
                 file_probe_streams_filtered_audios.extend(file_probe_streams_filtered_audios_supplementary)
                 file_probe_streams_filtered["audio"] = file_probe_streams_filtered_audios
-
                 file_probe_streams_filtered_subtitles = []
                 file_probe_streams_filtered_subtitles_supplementary = []
                 for file_probe_streams_filtered_subtitle in file_probe_streams_filtered["subtitle"]:
