@@ -38,6 +38,7 @@ FIELDS_STRING = [
     "Action Index",
     "Transcode Action",
     "Target Quality",
+    "Target Channels"
     "Target Lang",
     "Native Lang",
     "Media Directory",
