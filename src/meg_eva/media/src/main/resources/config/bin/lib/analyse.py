@@ -2,6 +2,7 @@
 WARNING: This file is written by the build process, any manual edits will be lost!
 """
 
+import argparse
 import os
 import re
 import sys
@@ -1116,7 +1117,7 @@ if __name__ == "__main__":
     argument_parser.add_argument("sheetguid")
     arguments = argument_parser.parse_args()
     sys.exit(2 if _analyse(
-        Path(arguments.directory).absolute().as_posix(),
+        os.Path(arguments.directory).absolute().as_posix(),
         arguments.sheetguid,
         arguments.clean,
         arguments.verbose
