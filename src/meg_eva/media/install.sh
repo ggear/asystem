@@ -13,11 +13,11 @@ if [ $(ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -eq 0 ]; then
   cd ffmpeg
   git checkout n${MEDIA_FFMPEG_VERSION}
   ./configure --prefix=/usr
-#  make -j 8
-#  for BIN in "ffmpeg" "ffprobe"; do
-#    rm /usr/bin/${BIN}
-#    ln -s /usr/local/lib/ffmpeg/${BIN} /usr/bin/${BIN}
-#  done
+  make -j 8
+  for BIN in "ffmpeg" "ffprobe"; do
+    rm /usr/bin/${BIN}
+    ln -s /usr/local/lib/ffmpeg/${BIN} /usr/bin/${BIN}
+  done
 fi
 
 cd ${SERVICE_INSTALL} || exit
