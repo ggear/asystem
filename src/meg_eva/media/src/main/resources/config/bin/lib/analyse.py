@@ -8,6 +8,7 @@ import re
 import sys
 from collections import OrderedDict
 from collections.abc import MutableMapping
+from pathlib import Path
 
 import ffmpeg
 import polars as pl
@@ -87,7 +88,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             file_media_type = file_relative_dir_tokens[2] \
                 if len(file_relative_dir_tokens) > 2 else ""
             if file_media_type in {"audio"} or file_extension in {"yaml", "sh", "srt", "jpg", "jpeg", "log"}:
-                continue;
+                continue
             if verbose:
                 print("{} ... ".format(os.path.join(file_relative_dir, file_name)), end='', flush=True)
             if file_media_type not in {"movies", "series"}:
@@ -97,7 +98,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 else:
                     print("{} [{}]".format(message, file_path))
                     print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
-                continue;
+                continue
             if file_extension not in MEDIA_FILE_EXTENSIONS:
                 message = "skipping file due to unknown file extension [{}]".format(file_extension)
                 if verbose:
@@ -105,7 +106,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 else:
                     print("{} [{}]".format(message, file_path))
                     print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
-                continue;
+                continue
             file_base_tokens = 5 if (
                     file_media_type == "series" and
                     len(file_relative_dir_tokens) > 4 and
@@ -319,15 +320,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 if "codec_name" in file_probe_stream else ""
                             file_probe_stream_filtered["codec"] = file_stream_codec
                             file_probe_stream_filtered["lang"] = file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"] \
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_lang
                             file_stream_channels = int(file_probe_stream["channels"]) \
                                 if "channels" in file_probe_stream else 2
                             file_probe_stream_filtered["channels"] = str(file_stream_channels)
                             file_probe_stream_filtered["surround"] = "Atmos" if (
-                                    ("profile" in file_probe_stream and \
+                                    ("profile" in file_probe_stream and
                                      "atmos" in file_probe_stream["profile"].lower()) or
-                                    ("tags" in file_probe_stream and "title" in file_probe_stream["tags"] and \
+                                    ("tags" in file_probe_stream and "title" in file_probe_stream["tags"] and
                                      "atmos" in file_probe_stream["tags"]["title"].lower())
                             ) else "Standard"
                             file_probe_stream_filtered["bitrate__Kbps"] = \
@@ -337,12 +338,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             file_probe_stream_filtered["codec"] = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
                             file_probe_stream_filtered["lang"] = file_probe_stream["tags"]["language"].lower() \
-                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"] \
+                                if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_lang
                             file_probe_stream_filtered["forced"] = ("Yes" if file_probe_stream["disposition"]["forced"] == 1 else "No") \
                                 if ("disposition" in file_probe_stream and "forced" in file_probe_stream["disposition"]) else "No"
                             file_probe_stream_filtered["format"] = "Picture" if \
-                                (file_probe_stream_filtered["codec"] in {"VOB", "VOBSUB", "DVD_SUBTITLE"} or \
+                                (file_probe_stream_filtered["codec"] in {"VOB", "VOBSUB", "DVD_SUBTITLE"} or
                                  ("tags" in file_probe_stream and "width" in file_probe_stream["tags"])) else "Text"
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
                 for file_stream_video_index, file_stream_video in enumerate(file_probe_streams_filtered["video"]):
@@ -1117,7 +1118,7 @@ if __name__ == "__main__":
     argument_parser.add_argument("sheetguid")
     arguments = argument_parser.parse_args()
     sys.exit(2 if _analyse(
-        os.Path(arguments.directory).absolute().as_posix(),
+        Path(arguments.directory).absolute().as_posix(),
         arguments.sheetguid,
         arguments.clean,
         arguments.verbose
