@@ -12,7 +12,7 @@ ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l
 echo ""
 
 
-if [ $(ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -ne 1 ]; then
+if [ $(ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -eq 0 ]; then
   cd /usr/local/lib
   [[ -d "./ffmpeg" ]] && git clone git://git.videolan.org/ffmpeg.git
   cd ffmpeg
