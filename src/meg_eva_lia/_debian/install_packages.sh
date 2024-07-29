@@ -58,7 +58,6 @@ PACKAGES=(
   hwinfo
   lshw
   vlan
-  ffmpeg
   powertop
   locales
   python3
@@ -67,19 +66,33 @@ PACKAGES=(
   libedgetpu1-std
   exfatprogs
   build-essential
+  automake
+  autoconf
+  checkinstall
+  libtool
+  pkg-config
+  intltool
+  yasm
+  nasm
   ruby-full
   xz-utils
   tk-dev
   zlib1g-dev
+  llvm
   libssl-dev
   libbz2-dev
   libreadline-dev
   libsqlite3-dev
-  llvm
   libncurses5-dev
   libncursesw5-dev
   libffi-dev
   liblzma-dev
+  libxml2-dev
+  libgtk2.0-dev
+  libnotify-dev
+  libglib2.0-dev
+  libevent-dev
+  libcurl4-openssl-dev
 )
 apt-get update
 for PACKAGE in "${PACKAGES[@]}"; do

@@ -7,6 +7,21 @@ cd ${SERVICE_INSTALL} || exit
 
 . ./.env
 
+if [ $(ffprobe 2>/dev/null | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -ne 1 ]; then
+  cd /usr/local/lib
+  [[ -d "./ffmpeg" ]] && git clone git://git.videolan.org/ffmpeg.git
+  cd ffmpeg
+  git checkout n${MEDIA_FFMPEG_VERSION}
+  ./configure --prefix=/usr
+  make -j 8
+  for BIN in "ffmpeg" "ffprobe"; do
+    rm /usr/bin/${BIN}
+    ln -s /usr/local/lib/ffmpeg/${BIN} /usr/bin/${BIN}
+  done
+fi
+
+cd ${SERVICE_INSTALL} || exit
+
 for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
   mkdir -p ${SHARE_DIR}/tmp/scripts
   for SHARE_DIR_SCOPE in "kids" "parents" "docos" "comedy"; do
