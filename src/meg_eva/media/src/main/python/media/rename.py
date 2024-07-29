@@ -135,6 +135,6 @@ if __name__ == "__main__":
     argument_parser.add_argument("directory")
     arguments = argument_parser.parse_args()
     sys.exit(2 if _rename(
-        Path(arguments.directory).absolute().as_posix(),
+        os.Path(arguments.directory).absolute().as_posix(),
         arguments.verbose,
     ) < 0 else 0)
