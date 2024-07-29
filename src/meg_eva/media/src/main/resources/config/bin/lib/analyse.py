@@ -378,6 +378,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             file_probe_stream_filtered["bitrate_mid__Kbps"] = -1
                             file_probe_stream_filtered["bitrate_max__Kbps"] = -1
                         elif file_probe_stream_type == "audio":
+
+                            print(file_probe_stream)
+
+
                             file_stream_codec = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
                             file_probe_stream_filtered["codec"] = file_stream_codec
