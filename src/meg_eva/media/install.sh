@@ -8,7 +8,7 @@ cd ${SERVICE_INSTALL} || exit
 . ./.env
 
 echo ""
-ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}"
+ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l
 echo ""
 
 
