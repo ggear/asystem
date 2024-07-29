@@ -7,6 +7,11 @@ cd ${SERVICE_INSTALL} || exit
 
 . ./.env
 
+echo ""
+ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}"
+echo ""
+
+
 if [ $(ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -ne 1 ]; then
   cd /usr/local/lib
   [[ -d "./ffmpeg" ]] && git clone git://git.videolan.org/ffmpeg.git
