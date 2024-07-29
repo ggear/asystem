@@ -2,13 +2,11 @@
 WARNING: This file is written by the build process, any manual edits will be lost!
 """
 
-import argparse
 import os
 import re
 import sys
 from collections import OrderedDict
 from collections.abc import MutableMapping
-from pathlib import Path
 
 import ffmpeg
 import polars as pl
@@ -16,6 +14,7 @@ import polars.selectors as cs
 import yaml
 from ffmpeg._run import Error
 from gspread_pandas import Spread
+from polars.exceptions import ColumnNotFoundError
 
 TARGET_SIZE_MIN_GB = 2
 TARGET_SIZE_MID_GB = 6
@@ -28,69 +27,6 @@ TARGET_BITRATE_VIDEO_MID_KBPS = 5000
 TARGET_BITRATE_VIDEO_MAX_KBPS = 7500
 
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
-
-FIELDS_STRING = [
-    "File Name",
-    "File Action",
-    "File Version",
-    "File State",
-    "File Size",
-    "Plex Video",
-    "Plex Audio",
-    "Plex Subtitle",
-    "Metadata State",
-    "Action Index",
-    "Transcode Action",
-    "Target Quality",
-    "Target Channels"
-    "Target Lang",
-    "Native Lang",
-    "Media Directory",
-    "Media Scope",
-    "Media Type",
-    "Base Directory",
-    "Version Directory",
-    "Version Qualifier",
-    "File Directory",
-    "File Stem",
-    "File Extension",
-    "Container Format",
-    "Duration (hours)",
-    "File Size (GB)",
-    "Bitrate (Kbps)",
-    "Video 1 Index",
-    "Video 1 Codec",
-    "Video 1 Label",
-    "Video 1 Res",
-    "Video 1 Res Min",
-    "Video 1 Res Mid",
-    "Video 1 Res Max",
-    "Video 1 Width",
-    "Video 1 Height",
-    "Video 1 Bitrate Est (Kbps)",
-    "Video 1 Bitrate Min (Kbps)",
-    "Video 1 Bitrate Mid (Kbps)",
-    "Video 1 Bitrate Max (Kbps)",
-    "Audio 1 Index",
-    "Audio 1 Codec",
-    "Audio 1 Lang",
-    "Audio 1 Channels",
-    "Audio 1 Surround",
-    "Subtitle 1 Index",
-    "Subtitle 1 Codec",
-    "Subtitle 1 Lang",
-    "Subtitle 1 Forced",
-    "Subtitle 1 Format",
-]
-
-FIELDS_INT = [
-    "Version Count",
-    "Stream Count",
-    "Video Count",
-    "Audio Count",
-    "Subtitle Count",
-    "Other Count",
-]
 
 BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
                        "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
@@ -630,28 +566,59 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             print("done", flush=True)
     if verbose:
         print("#merged-dataframe -> #enriched-dataframe ... ", end='', flush=True)
-    metadata_merged_pl = _format_columns(
-        _add_cols(_add_cols(metadata_merged_pl, FIELDS_INT, "0"), FIELDS_STRING))
+
+    def _add_columns(_data, _columns, _default=None):
+        if metadata_merged_pl.width > 0:
+            for _column in _columns:
+                if _column not in _data.schema:
+                    _data = _data.with_columns(pl.lit(_default).cast(pl.String).alias(_column))
+        return _data
+
+    metadata_merged_pl = _format_columns(_add_columns(metadata_merged_pl, {
+        "Version Directory",
+        "Version Qualifier",
+        "Video 1 Index",
+        "Video 1 Codec",
+        "Audio 1 Index",
+        "Audio 1 Codec",
+        "Audio 1 Lang",
+        "Audio 1 Channels",
+        "Subtitle 1 Lang",
+        "Subtitle 1 Format",
+    }))
     if metadata_merged_pl.height > 0:
+        try:
+            metadata_merged_pl = metadata_merged_pl.with_columns(
+                (
+                    pl.when(
+                        (pl.col("File Name").is_null()) | (pl.col("File Name") == "") |
+                        (pl.col("File Directory").is_null()) | (pl.col("File Directory") == "") |
+                        (pl.col("File Stem").is_null()) | (pl.col("File Stem") == "") |
+                        (pl.col("File Extension").is_null()) | (pl.col("File Extension") == "") |
+                        (pl.col("Media Scope").is_null()) | (pl.col("Media Scope") == "") |
+                        (pl.col("Media Type").is_null()) | (pl.col("Media Type") == "") |
+                        (pl.col("Media Directory").is_null()) | (pl.col("Media Directory") == "") |
+                        (pl.col("Base Directory").is_null()) | (pl.col("Base Directory") == ".") |
+                        (pl.col("Container Format").is_null()) | (pl.col("Container Format") == "") |
+                        (pl.col("Duration (hours)").is_null()) | (pl.col("Duration (hours)") == "") |
+                        (pl.col("File Size (GB)").is_null()) | (pl.col("File Size (GB)") == "") |
+                        (pl.col("Bitrate (Kbps)").is_null()) | (pl.col("Bitrate (Kbps)") == "") |
+                        (pl.col("Transcode Action").is_null()) | (pl.col("Transcode Action") == "") |
+                        (pl.col("Target Quality").is_null()) | (pl.col("Target Quality") == "") |
+                        (pl.col("Target Channels").is_null()) | (pl.col("Target Channels") == "") |
+                        (pl.col("Target Lang").is_null()) | (pl.col("Target Lang") == "") |
+                        (pl.col("Native Lang").is_null()) | (pl.col("Native Lang") == "") |
+                        (pl.col("Stream Count").is_null()) | (pl.col("Stream Count") == "") |
+                        (pl.col("Video Count").is_null()) | (pl.col("Video Count") == "") |
+                        (pl.col("Audio Count").is_null()) | (pl.col("Audio Count") == "")
+                    ).then(pl.lit("Corrupt"))
+                ).alias("File State"))
+        except ColumnNotFoundError:
+            metadata_merged_pl = metadata_merged_pl.with_columns(pl.lit("Corrupt").alias("File State"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("Base Directory").is_null()) |
-                    (pl.col("Base Directory") == ".") |
-                    (pl.col("Container Format").is_null()) |
-                    (pl.col("Container Format") == "") |
-                    (pl.col("Duration (hours)").is_null()) |
-                    (pl.col("Duration (hours)") == "") |
-                    (pl.col("File Size (GB)").is_null()) |
-                    (pl.col("File Size (GB)") == "") |
-                    (pl.col("Bitrate (Kbps)").is_null()) |
-                    (pl.col("Bitrate (Kbps)") == "") |
-                    (pl.col("Stream Count").is_null()) |
-                    (pl.col("Stream Count") == "") |
-                    (pl.col("Video Count").is_null()) |
-                    (pl.col("Video Count") == "") |
-                    (pl.col("Audio Count").is_null()) |
-                    (pl.col("Audio Count") == "")
+                    (pl.col("File State") == "Corrupt")
                 ).then(pl.lit("Corrupt"))
                 .when(
                     (pl.col("Transcode Action") == "Ignore")
@@ -917,10 +884,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             column.name for column in metadata_merged_pl \
             if not (column.null_count() == metadata_merged_pl.height)
         ])
-    if verbose:
-        print("done", flush=True)
-    if metadata_merged_pl.height > 0:
         if verbose:
+            print("done", flush=True)
             print("#enriched-dataframe -> {}/*.sh ... ".format(file_path_root_target_relative), end='', flush=True)
 
         # TODO: Write out file and global merge/reformat scripts
@@ -932,7 +897,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Action").str.ends_with("Transcode"))
             ) &
             (pl.col("File Version") != "Transcoded") &
-            (pl.col("Media Directory").is_in(metadata_local_media_dirs))
+            (pl.col("Media Directory").is_in(metadata_local_media_dirs)) &
+            (pl.col("Video Count").cast(pl.Int32) > 0)
         ).with_columns(
             [
                 pl.concat_str([
@@ -1098,13 +1064,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
     return files_analysed
-
-
-def _add_cols(_data, _cols, _default=None):
-    for col in _cols:
-        if col not in _data.schema:
-            _data = _data.with_columns(pl.lit(_default).cast(pl.String).alias(col))
-    return _data
 
 
 def _localise_path(_path, _local_path):
