@@ -11,6 +11,8 @@ if [ $(ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -eq 0 ]; then
   cd /usr/local/lib
   [[ ! -d "./ffmpeg" ]] && git clone git://git.videolan.org/ffmpeg.git
   cd ffmpeg
+  git checkout master
+  git pull --all
   git checkout n${MEDIA_FFMPEG_VERSION}
   ./configure --prefix=/usr
   make -j 8
