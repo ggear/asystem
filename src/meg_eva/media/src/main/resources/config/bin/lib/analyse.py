@@ -36,16 +36,16 @@ BASH_ECHO_HEADER = "echo '######################################################
 
 
 def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
-    def _truncate_sheet():
+    def _truncate_sheet(_sheet_url):
         for sheet in {"Data", "Summary"}:
-            metadata_spread_data = Spread(sheet_url, sheet=sheet)
+            metadata_spread_data = Spread(_sheet_url, sheet=sheet)
             metadata_spread_data.freeze(0, 0, sheet=sheet)
             metadata_spread_data.clear_sheet(sheet=sheet)
 
     sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_guid
     if clean and file_path_root == "/share":
-        print("Truncating 'http://docs.google.com/sheet' ... ", end="", flush=True)
-        _truncate_sheet()
+        print("Truncating '{}' ... ".format(sheet_url), end="", flush=True)
+        _truncate_sheet(sheet_url)
         print("done")
         return 0
     if not os.path.isdir(file_path_root):
@@ -552,7 +552,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         else:
             metadata_sheet_pl = pl.DataFrame()
         if metadata_sheet_pl.width > 0 and "Media Directory" not in metadata_sheet_pl.schema:
-            _truncate_sheet()
+            _truncate_sheet(sheet_url)
             metadata_sheet_pl = pl.DataFrame()
         if metadata_local_pl.width > 0:
             if metadata_sheet_pl.width > 0:
@@ -1064,6 +1064,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             if verbose:
                 print("done", flush=True)
     print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""))
+    print("Uploading '{}' ... done".format(sheet_url))
     sys.stdout.flush()
     return files_analysed
 
