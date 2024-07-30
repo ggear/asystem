@@ -496,10 +496,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 if metadata_column.lower().startswith(metadata_column_stream):
                     metadata_columns.append(metadata_column)
         return _data.select(metadata_columns) \
-            .rename(lambda column: \
-                        ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")") \
-                             if len(column.split("__")) == 2 else column.replace("_", " ").title()) \
-                            if "_" in column else column)
+            .rename(lambda column:
+                    ((column.split("__")[0].replace("_", " ").title() + " (" + column.split("__")[1] + ")")
+                     if len(column.split("__")) == 2 else column.replace("_", " ").title()) \
+                        if "_" in column else column)
 
     if verbose:
         print("{}/*/._metadata_* -> #local-dataframe ... ".format(file_path_root_target_relative), end='', flush=True)
