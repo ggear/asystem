@@ -1226,7 +1226,7 @@ Requires `ffprobe`, `ffmpeg` and `mkvpropedit`.
         *get_subtitle_options(media_info, burn_subtitle),
         '-metadata:g', 'title=',
         *(@format == :mkv ? ['-default_mode', 'passthrough'] : ['-movflags', 'disable_chpl']),
-        output_path
+        'file:' + output_path
       ]
 
       command_line = escape_command(ffmpeg_command)

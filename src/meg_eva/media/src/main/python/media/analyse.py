@@ -26,9 +26,11 @@ TARGET_BITRATE_VIDEO_MAX_KBPS = 7500
 
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
 
-BASH_SIGTERM_HANDLER = "sigterm_handler() {{\n{}  exit 1\n}}\n" \
+BASH_SIGTERM_HANDLER = "ECHO=echo\n" \
+                       "[[ $(uname) == 'Darwin' ]] && ECHO=gecho\n\n" \
+                       "sigterm_handler() {{\n{}  exit 1\n}}\n" \
                        "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
-BASH_ECHO_HEADER = "echo '#######################################################################################'\n"
+BASH_ECHO_HEADER = "${ECHO} \"#######################################################################################\"\n"
 
 
 def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
@@ -420,14 +422,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     {"target_channels": file_target_channels},
                     {"target_lang": file_target_lang},
                     {"native_lang": file_native_lang},
-                    {"media_directory": _delocalise_path(file_path_media, file_path_root)},
+                    {"media_directory": _delocalise_path(file_path_media, file_path_root, True)},
                     {"media_scope": file_media_scope},
                     {"media_type": file_media_type},
                     {"base_directory": file_base_dir},
                     {"version_directory": file_version_dir},
                     {"version_qualifier": file_version_qualifier},
-                    {"file_directory": " '{}' ".format(_delocalise_path(file_dir_path, file_path_root))},
-                    {"file_stem": " '{}' ".format(file_stem)},
+                    {"file_directory": " '{}' ".format(_delocalise_path(file_dir_path, file_path_root, True, True))},
+                    {"file_stem": " '{}' ".format(_escape_path(file_stem, True))},
                     {"file_extension": file_extension},
                     {"container_format": file_probe["format"]["format_name"].lower() \
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
@@ -900,10 +902,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ).with_columns(
             [
                 pl.concat_str([
-                    pl.col("File Directory").str.strip_prefix(" '").str.strip_suffix("' "),
+                    pl.col("File Name") \
+                        .str.replace("$", "\\$", literal=True)
+                ]).alias("File Name"),
+                pl.concat_str([
+                    pl.col("File Directory") \
+                        .str.strip_prefix(" '") \
+                        .str.strip_suffix("' ") \
+                        .str.replace("'\\\\''", "'")
                 ]).alias("File Directory"),
                 pl.concat_str([
-                    pl.col("File Stem").str.strip_prefix(" '").str.strip_suffix("' "),
+                    pl.col("File Stem") \
+                        .str.strip_prefix(" '") \
+                        .str.strip_suffix("' ") \
+                        .str.replace("'\\\\''", "'")
                 ]).alias("File Stem"),
                 (
                     pl.when(
@@ -927,7 +939,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.col("File Stem"),
                 ]).alias("Script Directory"),
                 pl.concat_str([
-                    pl.col("File Stem"),
+                    pl.col("File Stem").str.replace("$", "\\$", literal=True),
                     pl.lit("___TRANSCODE_"),
                     pl.col("Target Quality").str.to_uppercase(),
                     pl.lit(".mkv"),
@@ -949,23 +961,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
-                    pl.lit(BASH_SIGTERM_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit(BASH_SIGTERM_HANDLER.format("  ${ECHO} 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
-                    pl.lit("#other-transcode \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" \\\n"),
-                    pl.lit("# --add-subtitle 1 \\\n"),
-                    pl.lit("# --add-subtitle 2 \\\n"),
-                    pl.lit("# --copy-video\n"),
-                    pl.lit("#rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
-                    pl.lit("#mv -v \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
-                    pl.lit("#echo ''\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo 'Transcoding: "), pl.col("File Name"), pl.lit(" ... '\n"),
+                    pl.lit("${ECHO} \"Transcoding: "), pl.col("File Name"), pl.lit(" ... \"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
-                    pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
+                    pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (pre-existing): ' && date && ${ECHO} '' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("if [ $(df -k \"${ROOT_DIR}\" | tail -1 | awk '{print $4}') -lt 20000000 ]; then\n"),
-                    pl.lit("  echo '' && echo -n 'Skipped (space): ' && date && echo '' && exit 1\n"),
+                    pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (space): ' && date && ${ECHO} '' && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("cd \"${ROOT_DIR}\"\n"),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
@@ -973,16 +978,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  --main-audio "), pl.col("Audio 1 Index"), pl.lit(" \\\n"),
                     pl.lit("  --add-audio eng \\\n"),
                     pl.lit("  --add-subtitle eng \\\n"),
-                    pl.lit("  --hevc \n"),
+                    pl.lit("  --hevc \\\n"),
+                    pl.lit("  2>&1 | fold -s -w 250\n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
-                    pl.lit(
-                        "  if [ $? -eq 0 ]; then echo -n 'Completed: ' && date && exit 0; else echo -n 'Failed (mv): ' && date && exit 3; fi\n"),
+                    pl.lit("  if [ $? -eq 0 ]; then\n"),
+                    pl.lit("    ${ECHO} -n 'Completed: ' && date && exit 0\n"),
+                    pl.lit("  else\n"),
+                    pl.lit("    ${ECHO} -n 'Failed (mv): ' && date && exit 3\n"),
+                    pl.lit("  fi\n"),
                     pl.lit("else\n"),
-                    pl.lit("  echo -n 'Failed (other-transcode): ' && date && exit 2\n"),
+                    pl.lit("  ${ECHO} -n 'Failed (other-transcode): ' && date && exit 2\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo '' && exit -1\n"),
+                    pl.lit("${ECHO} '' && exit -1\n"),
                 ]).alias("Script Source"),
             ]
         ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
@@ -994,7 +1003,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 transcode_script_global_file.write("# !/bin/bash\n\n")
                 transcode_script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
                 transcode_script_global_file.write(BASH_SIGTERM_HANDLER.format(""))
-                transcode_script_global_file.write("echo ''\n")
+                transcode_script_global_file.write("${ECHO} ''\n")
             for transcode_script_local in metadata_transcode_pl.rows():
                 if not any(map(lambda transcode_script_local_item: transcode_script_local_item is None, transcode_script_local)):
                     if not file_path_root_is_nested:
@@ -1060,19 +1069,24 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             if verbose:
                 print("done", flush=True)
     print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""))
-    print("Uploading '{}' ... done".format(sheet_url))
     sys.stdout.flush()
     return files_analysed
 
 
-def _localise_path(_path, _local_path):
-    return _path if ("/share/" not in _path or not _path.startswith("/share/")) \
+def _escape_path(_path, _quoted=False):
+    return _path.replace("'", "'\\''") if _quoted else _path.replace("'", "\\'")
+
+
+def _localise_path(_path, _local_path, _escape=False, _quoted=False):
+    _path = _path if ("/share/" not in _path or not _path.startswith("/share/")) \
         else "{}{}".format(_local_path.split("/share/")[0], _path)
+    return _escape_path(_path, _quoted) if _escape else _path
 
 
-def _delocalise_path(_path, _local_path):
-    return _path if ("/share/" not in _path or _path.startswith("/share/")) \
+def _delocalise_path(_path, _local_path, _escape=False, _quoted=False):
+    _path = _path if ("/share/" not in _path or _path.startswith("/share/")) \
         else "{}{}".format("/share/", _path.split("/share/")[1])
+    return _escape_path(_path, _quoted) if _escape else _path
 
 
 def _set_permissions(_path, _mode=0o644):
