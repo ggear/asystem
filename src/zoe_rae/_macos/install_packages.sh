@@ -24,6 +24,7 @@ brew install \
   poppler \
   rstudio \
   mosquitto \
+  coreutils \
   mpv \
   ffmpeg \
   mediainfo \
