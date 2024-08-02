@@ -135,7 +135,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     file_stem.title().replace(" ", "-"),
                     file_version_qualifier.lower()
                 )
-            file_version_qualifier = file_version_qualifier.lower().removesuffix("___transcode")
+            file_version_qualifier = file_version_qualifier.lower().removesuffix("__transcode")
             if not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
                     "transcode_action": "Analyse",
@@ -677,7 +677,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("File Name").str.contains("___TRANSCODE")) |
+                    (pl.col("File Name").str.contains("__TRANSCODE")) |
                     (~pl.col("Version Directory").str.ends_with("."))
                 ).then(pl.lit("Transcoded"))
                 .otherwise(pl.lit("Original"))
@@ -940,7 +940,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ]).alias("Script Directory"),
                 pl.concat_str([
                     pl.col("File Stem").str.replace("$", "\\$", literal=True),
-                    pl.lit("___TRANSCODE_"),
+                    pl.lit("__TRANSCODE_"),
                     pl.col("Target Quality").str.to_uppercase(),
                     pl.lit(".mkv"),
                 ]).alias("Transcode File Name")
