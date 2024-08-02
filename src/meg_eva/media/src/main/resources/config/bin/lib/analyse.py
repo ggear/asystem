@@ -980,7 +980,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
                     pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
                     pl.lit("  --main-audio "), pl.col("Audio 1 Index"), pl.lit(" \\\n"),
-                    pl.lit("  --add-audio eng \\\n"),
                     pl.lit("  --add-subtitle eng \\\n"),
                     pl.lit("  --hevc \n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
