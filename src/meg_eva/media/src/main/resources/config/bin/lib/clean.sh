@@ -15,5 +15,5 @@ find "${WORKING_DIR}" -name "merge.sh" -type f -delete
 find "${WORKING_DIR}" -name "reformat.sh" -type f -delete
 find "${WORKING_DIR}" -name "transcode.sh" -type f -delete
 find "${WORKING_DIR}" -name "._metadata_*.yaml" -type f -delete
-find "${WORKING_DIR}" -name "._transcode_*" -type d -exec rmdir "{}" \;
+find "${WORKING_DIR}" -name "._transcode_*" -type d -exec rmdir '{}' \;
 echo "done"
