@@ -979,7 +979,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  --add-audio eng \\\n"),
                     pl.lit("  --add-subtitle eng \\\n"),
                     pl.lit("  --hevc \\\n"),
-                    pl.lit("  2>&1 | fold -s -w 250\n"),
+                    pl.lit("  2>&1 | fold -s -w 200\n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
