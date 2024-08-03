@@ -955,10 +955,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         (pl.col("Native Lang") != "eng") &
                         (pl.col("Target Audio") != "All")
                     ).then(
-                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index"),
+                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index"), pl.lit(" "),
                                        pl.lit("--add-audio "), pl.col("Target Lang")])
                     ).otherwise(
-                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index"),
+                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index"), pl.lit(" "),
                                        pl.lit("--add-audio eng")])
                     )
                 ).alias("Transcode Audio")
@@ -975,7 +975,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("__TRANSCODE_"),
                     pl.col("Target Quality").str.to_uppercase(),
                     pl.lit(".mkv"),
-                ]).alias("Transcode File Name")
+                ]).alias("Transcode File Name"),
+                (
+                    pl.when(
+                        (pl.col("Audio 1 Surround") == "Atmos")
+                    ).then(
+                        pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --eac3")])
+                    ).otherwise(
+                        pl.concat_str([pl.col("Transcode Audio")])
+                    )
+                ).alias("Transcode Audio")
             ]
         ).with_columns(
             [
@@ -1010,7 +1019,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
                     pl.lit("  --add-subtitle eng \\\n"),
-                    pl.lit("  --hevc \n"),
+                    pl.lit("  --hevc\n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
