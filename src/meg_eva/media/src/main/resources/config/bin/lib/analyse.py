@@ -144,6 +144,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 file_defaults_dict = {
                     "transcode_action": "Analyse",
                     "target_quality": "Mid",
+                    "target_audio": "main",
                     "target_channels": "2",
                     "target_lang": "eng",
                     "native_lang": "eng",
@@ -166,6 +167,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 file_defaults_dict["target_quality"] = file_defaults_dict["target_quality"].title()
                                 if file_defaults_dict["target_quality"] not in {"Min", "Mid", "Max"}:
                                     raise Exception("Invalid target quality: {}".format(file_defaults_dict["target_quality"]))
+                                file_defaults_dict["target_audio"] = file_defaults_dict["target_audio"].title()
+                                if file_defaults_dict["target_audio"] not in {"All", "Main"}:
+                                    raise Exception("Invalid target audio: {}".format(file_defaults_dict["target_audio"]))
                                 file_defaults_dict["target_channels"] = str(int(file_defaults_dict["target_channels"]))
                                 file_defaults_dict["native_lang"] = file_defaults_dict["native_lang"].lower()
                                 file_defaults_dict["target_lang"] = file_defaults_dict["target_lang"].lower()
@@ -180,6 +184,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 continue
                 file_transcode_action = file_defaults_dict["transcode_action"]
                 file_target_quality = file_defaults_dict["target_quality"]
+                file_target_audio = file_defaults_dict["target_audio"]
                 file_target_channels = file_defaults_dict["target_channels"]
                 file_native_lang = file_defaults_dict["native_lang"]
                 file_target_lang = file_defaults_dict["target_lang"]
@@ -423,6 +428,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     {"file_name": file_name},
                     {"transcode_action": file_transcode_action},
                     {"target_quality": file_target_quality},
+                    {"target_audio": file_target_audio},
                     {"target_channels": file_target_channels},
                     {"target_lang": file_target_lang},
                     {"native_lang": file_native_lang},
@@ -925,15 +931,37 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.when(
                         (pl.col("Target Quality") == "Max")
                     ).then(
-                        pl.concat_str([pl.col("Video 1 Res Max"), pl.lit("="), pl.col("Video 1 Bitrate Max (Kbps)")])
+                        pl.concat_str([pl.col("Video 1 Res Max"), pl.lit("="),
+                                       pl.col("Video 1 Bitrate Max (Kbps)")])
                     ).when(
                         (pl.col("Target Quality") == "Mid")
                     ).then(
-                        pl.concat_str([pl.col("Video 1 Res Mid"), pl.lit("="), pl.col("Video 1 Bitrate Mid (Kbps)")])
+                        pl.concat_str([pl.col("Video 1 Res Mid"), pl.lit("="),
+                                       pl.col("Video 1 Bitrate Mid (Kbps)")])
                     ).otherwise(
-                        pl.concat_str([pl.col("Video 1 Res Min"), pl.lit("="), pl.col("Video 1 Bitrate Min (Kbps)")])
+                        pl.concat_str([pl.col("Video 1 Res Min"), pl.lit("="),
+                                       pl.col("Video 1 Bitrate Min (Kbps)")])
                     )
-                ).alias("Transcode Target")
+                ).alias("Transcode Target"),
+                (
+                    pl.when(
+                        (pl.col("Target Lang") == "eng") &
+                        (pl.col("Native Lang") == "eng") &
+                        (pl.col("Target Audio") != "All")
+                    ).then(
+                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index")])
+                    ).when(
+                        (pl.col("Target Lang") == "eng") &
+                        (pl.col("Native Lang") != "eng") &
+                        (pl.col("Target Audio") != "All")
+                    ).then(
+                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index"),
+                                       pl.lit("--add-audio "), pl.col("Target Lang")])
+                    ).otherwise(
+                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index"),
+                                       pl.lit("--add-audio eng")])
+                    )
+                ).alias("Transcode Audio")
             ]
         ).with_columns(
             [
@@ -977,15 +1005,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (space): ' && date && ${ECHO} '' && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("cd \"${ROOT_DIR}\"\n"),
+                    pl.lit("mediainfo \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
                     pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
-                    pl.lit("  --main-audio "), pl.col("Audio 1 Index"), pl.lit(" \\\n"),
+                    pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
                     pl.lit("  --add-subtitle eng \\\n"),
                     pl.lit("  --hevc \n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
                     pl.lit("  if [ $? -eq 0 ]; then\n"),
+                    pl.lit("    "), pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("    "), pl.lit("${ECHO} \"Transcoded: "), pl.col("File Name"), pl.lit(" ... \"\n"),
+                    pl.lit("    "), pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("    mediainfo \"../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
                     pl.lit("    ${ECHO} -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("  else\n"),
                     pl.lit("    ${ECHO} -n 'Failed (mv): ' && date && exit 3\n"),
