@@ -12,8 +12,8 @@ fi
 
 echo -n "Normalising '${WORKING_DIR}' ... "
 if [ $(uname) == "Linux" ]; then
-  setfacl -bR "${WORKING_DIR}"
-  find "${WORKING_DIR}" -exec chown graham:users {} \;
+  command -v setfacl &>/dev/null && setfacl -bR "${WORKING_DIR}"
+  id "graham" &>/dev/null && getent group "users" &>/dev/null && find "${WORKING_DIR}" -exec chown "graham:users" {} \;
   find "${WORKING_DIR}" -type d -exec chmod 750 {} \;
   find "${WORKING_DIR}" -type f -name "*.sh" -exec chmod 750 {} \;
   find "${WORKING_DIR}" -type f ! -name "*.sh" -exec chmod 640 {} \;
