@@ -949,17 +949,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         (pl.col("Native Lang") == "eng") &
                         (pl.col("Target Audio") != "All")
                     ).then(
-                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index")])
+                        pl.concat_str([pl.lit("--main-audio "), pl.col("Audio 1 Index")])
                     ).when(
                         (pl.col("Target Lang") == "eng") &
                         (pl.col("Native Lang") != "eng") &
                         (pl.col("Target Audio") != "All")
                     ).then(
-                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index"), pl.lit(" "),
-                                       pl.lit("--add-audio "), pl.col("Target Lang")])
+                        pl.concat_str([pl.lit("--main-audio "), pl.col("Audio 1 Index"),
+                                       pl.lit(" "), pl.lit("--add-audio "), pl.col("Target Lang")])
                     ).otherwise(
-                        pl.concat_str([pl.lit("--add-audio "), pl.col("Audio 1 Index"), pl.lit(" "),
-                                       pl.lit("--add-audio eng")])
+                        pl.concat_str([pl.lit("--main-audio "), pl.col("Audio 1 Index"),
+                                       pl.lit(" "), pl.lit("--add-audio eng")])
                     )
                 ).alias("Transcode Audio")
             ]
@@ -1005,7 +1005,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit(BASH_SIGTERM_HANDLER.format("  ${ECHO} 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("${ECHO} \"Transcoding: "), pl.col("File Name"), pl.lit(" ... \"\n"),
+                    pl.lit("${ECHO} \"Interrogating: "), pl.col("File Name"), pl.lit(" ... \"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
                     pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (pre-existing): ' && date && ${ECHO} '' && exit 0\n"),
@@ -1015,6 +1015,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("fi\n"),
                     pl.lit("cd \"${ROOT_DIR}\"\n"),
                     pl.lit("mediainfo \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("${ECHO} \"Transcoding: "), pl.col("File Name"), pl.lit(" ... \"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
                     pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
@@ -1097,8 +1100,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 )
                 print("Metadata summary ... ")
                 print(metadata_summary_pl.fill_null(""))
+    print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""), flush=True)
+    if metadata_merged_pl.height > 0:
         if not file_path_root_is_nested:
-            if verbose:
+            if not verbose:
+                print("Uploading '{}' ... ".format(sheet_url), end="", flush=True)
+            else:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
             metadata_spread_data = Spread(sheet_url, sheet="Data")
             metadata_spread_data \
@@ -1110,10 +1117,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             Spread(sheet_url, sheet="Data") \
                 .df_to_sheet(metadata_summary_pl.to_pandas(use_pyarrow_extension_array=True),
                              sheet="Summary", replace=True, index=False, add_filter=True)
-            if verbose:
-                print("done", flush=True)
-    print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""))
-    sys.stdout.flush()
+            print("done", flush=True)
     return files_analysed
 
 
