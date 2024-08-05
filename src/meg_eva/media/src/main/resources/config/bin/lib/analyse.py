@@ -931,18 +931,27 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.when(
                         (pl.col("Target Quality") == "Max")
                     ).then(
-                        pl.concat_str([pl.col("Video 1 Res Max"), pl.lit("="),
-                                       pl.col("Video 1 Bitrate Max (Kbps)")])
+                        pl.concat_str([
+                            pl.lit("--target "),
+                            pl.col("Video 1 Bitrate Max (Kbps)"),
+                            pl.lit(" --hevc"),
+                        ])
                     ).when(
                         (pl.col("Target Quality") == "Mid")
                     ).then(
-                        pl.concat_str([pl.col("Video 1 Res Mid"), pl.lit("="),
-                                       pl.col("Video 1 Bitrate Mid (Kbps)")])
+                        pl.concat_str([
+                            pl.lit("--target "),
+                            pl.col("Video 1 Bitrate Mid (Kbps)"),
+                            pl.lit(" --hevc"),
+                        ])
                     ).otherwise(
-                        pl.concat_str([pl.col("Video 1 Res Min"), pl.lit("="),
-                                       pl.col("Video 1 Bitrate Min (Kbps)")])
+                        pl.concat_str([
+                            pl.lit("--target "),
+                            pl.col("Video 1 Bitrate Min (Kbps)"),
+                            pl.lit(" --hevc"),
+                        ])
                     )
-                ).alias("Transcode Target"),
+                ).alias("Transcode Video"),
                 (
                     pl.when(
                         (pl.col("Target Lang") == "eng") &
@@ -955,13 +964,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         (pl.col("Native Lang") != "eng") &
                         (pl.col("Target Audio") != "All")
                     ).then(
-                        pl.concat_str([pl.lit("--main-audio "), pl.col("Audio 1 Index"),
-                                       pl.lit(" "), pl.lit("--add-audio "), pl.col("Target Lang")])
+                        pl.concat_str([
+                            pl.lit("--main-audio "), pl.col("Audio 1 Index"),
+                            pl.lit(" "), pl.lit("--add-audio "), pl.col("Target Lang")
+                        ])
                     ).otherwise(
-                        pl.concat_str([pl.lit("--main-audio "), pl.col("Audio 1 Index"),
-                                       pl.lit(" "), pl.lit("--add-audio eng")])
+                        pl.concat_str([
+                            pl.lit("--main-audio "), pl.col("Audio 1 Index"),
+                            pl.lit(" "), pl.lit("--add-audio eng")
+                        ])
                     )
-                ).alias("Transcode Audio")
+                ).alias("Transcode Audio"),
+                (
+                    pl.lit("--add-subtitle eng")
+                ).alias("Transcode Subtitle")
             ]
         ).with_columns(
             [
@@ -1019,10 +1035,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("${ECHO} \"Transcoding: "), pl.col("File Name"), pl.lit(" ... \"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
-                    pl.lit("  --target "), pl.col("Transcode Target"), pl.lit(" \\\n"),
+                    pl.lit("  "), pl.col("Transcode Video"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
-                    pl.lit("  --add-subtitle eng \\\n"),
-                    pl.lit("  --hevc\n"),
+                    pl.lit("  "), pl.col("Transcode Subtitle"), pl.lit("\n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
