@@ -18,15 +18,11 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-TARGET_SIZE_MIN_GB = 2
-TARGET_SIZE_MID_GB = 6
-TARGET_SIZE_MAX_GB = 12
-TARGET_SIZE_DELTA = 1 / 3
-
-# Reference: https://github.com/lisamelton/more-video-transcoding
-TARGET_BITRATE_VIDEO_MIN_KBPS = 3000
-TARGET_BITRATE_VIDEO_MID_KBPS = 6000
-TARGET_BITRATE_VIDEO_MAX_KBPS = 8000
+SIZE_BITRATE_CI = 1 / 3
+SIZE_MIN_THRESHOLD_GB = 3
+SIZE_BITRATE_MIN_KBPS = 3000
+SIZE_BITRATE_MID_KBPS = 6000
+SIZE_BITRATE_MAX_KBPS = 15000
 
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
 
@@ -373,11 +369,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             file_stream_video["bitrate_est__Kbps"] = \
                                 str(file_stream_video_bitrate)
                             file_stream_video["bitrate_min__Kbps"] = \
-                                str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MIN_KBPS))
+                                str(min(file_stream_video_bitrate, SIZE_BITRATE_MIN_KBPS))
                             file_stream_video["bitrate_mid__Kbps"] = \
-                                str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MID_KBPS))
+                                str(min(file_stream_video_bitrate, SIZE_BITRATE_MID_KBPS))
                             file_stream_video["bitrate_max__Kbps"] = \
-                                str(min(file_stream_video_bitrate, TARGET_BITRATE_VIDEO_MAX_KBPS))
+                                str(min(file_stream_video_bitrate, SIZE_BITRATE_MAX_KBPS))
                     else:
                         del file_stream_video["res_min"]
                         del file_stream_video["res_mid"]
@@ -657,30 +653,33 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             ).alias("File State"))
         metadata_merged_pl = metadata_merged_pl.filter(
             (~pl.col("File Size (GB)").is_null()) &
-            (pl.col("File Size (GB)").str.len_bytes() > 0)
+            (pl.col("File Size (GB)").str.len_bytes() > 0) &
+            (~pl.col("Bitrate (Kbps)").is_null()) &
+            (pl.col("Bitrate (Kbps)").str.len_bytes() > 0)
         ).with_columns(
             (
                 pl.when(
-                    ((pl.col("Target Quality") == "Max") &
-                     (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_MAX_GB))
-                     ) |
-                    ((pl.col("Target Quality") == "Mid") &
-                     (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_MID_GB))
-                     ) |
-                    ((pl.col("Target Quality") == "Min") &
-                     (pl.col("File Size (GB)").cast(pl.Float32) > ((1 + TARGET_SIZE_DELTA) * TARGET_SIZE_MIN_GB))
-                     )
+                    (pl.col("File Size (GB)").cast(pl.Float32) > SIZE_MIN_THRESHOLD_GB) &
+                    (((pl.col("Target Quality") == "Max") &
+                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS))
+                      ) |
+                     ((pl.col("Target Quality") == "Mid") &
+                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS))
+                      ) |
+                     ((pl.col("Target Quality") == "Min") &
+                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MIN_KBPS))
+                      ))
                 ).then(pl.lit("Large"))
                 .when(
-                    ((pl.col("Target Quality") == "Max") &
-                     (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_MAX_GB))
-                     ) |
-                    ((pl.col("Target Quality") == "Mid") &
-                     (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_MID_GB))
-                     ) |
-                    ((pl.col("Target Quality") == "Min") &
-                     (pl.col("File Size (GB)").cast(pl.Float32) < (TARGET_SIZE_DELTA * TARGET_SIZE_MIN_GB))
-                     )
+                    (((pl.col("Target Quality") == "Max") &
+                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) < (SIZE_BITRATE_CI * SIZE_BITRATE_MAX_KBPS))
+                      ) |
+                     ((pl.col("Target Quality") == "Mid") &
+                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) < (SIZE_BITRATE_CI * SIZE_BITRATE_MID_KBPS))
+                      ) |
+                     ((pl.col("Target Quality") == "Min") &
+                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) < (SIZE_BITRATE_CI * SIZE_BITRATE_MIN_KBPS))
+                      ))
                 ).then(pl.lit("Small"))
                 .otherwise(pl.lit("Right"))
             ).alias("File Size"))
