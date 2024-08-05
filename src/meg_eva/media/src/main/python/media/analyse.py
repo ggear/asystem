@@ -15,7 +15,7 @@ from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
 SIZE_BITRATE_CI = 1 / 3
-SIZE_MIN_THRESHOLD_GB = 1
+SIZE_MIN_THRESHOLD_GB = 2
 SIZE_BITRATE_MIN_KBPS = 3000
 SIZE_BITRATE_MID_KBPS = 6000
 SIZE_BITRATE_MAX_KBPS = 15000

@@ -115,18 +115,28 @@ def _rename(file_path_root, verbose=False):
                             file_type,
                         ))
                     os.makedirs(file_path_new.parent, exist_ok=True)
+                    _set_permissions(file_path_new.parent, 0o777)
                     if verbose:
                         print(".{} -> .{}".format(
                             file_path.as_posix().replace(file_path_root.as_posix(), ""),
                             file_path_new.as_posix().replace(file_path_root.as_posix(), ""))
                         )
                     shutil.move(file_path, file_path_new)
+                    _set_permissions(file_path_new, 0o777)
                     files_renamed += 1
     for file_path_root_to_delete in file_path_roots_to_delete:
         shutil.rmtree(file_path_root_to_delete, ignore_errors=True)
     print("{}done".format("Renaming {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
     return files_renamed
+
+
+def _set_permissions(_path, _mode=0o644):
+    os.chmod(_path, _mode)
+    try:
+        os.chown(_path, 1000, 100)
+    except PermissionError:
+        pass
 
 
 if __name__ == "__main__":
