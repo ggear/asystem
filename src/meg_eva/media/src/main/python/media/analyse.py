@@ -840,7 +840,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit("2. Merge"))
                 .when(
                     (pl.col("Transcode Action") != "Ignore") & (
-                            (pl.col("File Size") == "Small")
+                        (pl.col("File Size") == "Small")
                     )
                 ).then(pl.lit("4. Upscale"))
                 .when(
