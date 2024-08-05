@@ -22,10 +22,10 @@ SIZE_BITRATE_MAX_KBPS = 15000
 
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
 
-BASH_SIGTERM_HANDLER = "ECHO=echo\n" \
-                       "[[ $(uname) == 'Darwin' ]] && ECHO=gecho\n\n" \
-                       "sigterm_handler() {{\n{}  exit 1\n}}\n" \
-                       "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
+BASH_EXIT_HANDLER = "ECHO=echo\n" \
+                    "[[ $(uname) == 'Darwin' ]] && ECHO=gecho\n\n" \
+                    "sigterm_handler() {{\n{}  exit 1\n}}\n" \
+                    "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
 BASH_ECHO_HEADER = "${ECHO} \"#######################################################################################\"\n"
 
 
@@ -1012,10 +1012,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
-                    pl.lit(BASH_SIGTERM_HANDLER.format("  ${ECHO} 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit(BASH_EXIT_HANDLER.format("  ${ECHO} 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("${ECHO} \"Interrogating: "), pl.col("File Name"), pl.lit(" ... \"\n"),
+                    pl.lit("${ECHO} \"Transcoding: "), pl.col("File Name"), pl.lit(" ... \"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
                     pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (pre-existing): ' && date && ${ECHO} '' && exit 0\n"),
@@ -1024,10 +1024,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (space): ' && date && ${ECHO} '' && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("cd \"${ROOT_DIR}\"\n"),
-                    pl.lit("mediainfo \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
-                    pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("${ECHO} \"Transcoding: "), pl.col("File Name"), pl.lit(" ... \"\n"),
-                    pl.lit(BASH_ECHO_HEADER),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
                     pl.lit("  "), pl.col("Transcode Video"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
@@ -1036,10 +1032,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
                     pl.lit("  if [ $? -eq 0 ]; then\n"),
-                    pl.lit("    "), pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("    "), pl.lit("${ECHO} \"Transcoded: "), pl.col("File Name"), pl.lit(" ... \"\n"),
-                    pl.lit("    "), pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("    mediainfo \"../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
                     pl.lit("    ${ECHO} -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("  else\n"),
                     pl.lit("    ${ECHO} -n 'Failed (mv): ' && date && exit 3\n"),
@@ -1058,7 +1050,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 transcode_script_global_file = open(transcode_script_global_path, 'w')
                 transcode_script_global_file.write("# !/bin/bash\n\n")
                 transcode_script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
-                transcode_script_global_file.write(BASH_SIGTERM_HANDLER.format(""))
+                transcode_script_global_file.write(BASH_EXIT_HANDLER.format(""))
                 transcode_script_global_file.write("${ECHO} ''\n")
             for transcode_script_local in metadata_transcode_pl.rows():
                 if not any(map(lambda transcode_script_local_item: transcode_script_local_item is None, transcode_script_local)):
