@@ -16,9 +16,9 @@ from polars.exceptions import ColumnNotFoundError
 
 SIZE_BITRATE_CI = 1 / 3
 SIZE_MIN_THRESHOLD_GB = 2
-SIZE_BITRATE_MIN_KBPS = 3000
-SIZE_BITRATE_MID_KBPS = 6000
-SIZE_BITRATE_MAX_KBPS = 15000
+SIZE_BITRATE_MIN_KBPS = 2000
+SIZE_BITRATE_MID_KBPS = 4000
+SIZE_BITRATE_MAX_KBPS = 8000
 
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
 
@@ -668,13 +668,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit("Large"))
                 .when(
                     (((pl.col("Target Quality") == "Max") &
-                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) < (SIZE_BITRATE_CI * SIZE_BITRATE_MAX_KBPS))
+                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS))
                       ) |
                      ((pl.col("Target Quality") == "Mid") &
-                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) < (SIZE_BITRATE_CI * SIZE_BITRATE_MID_KBPS))
+                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS))
                       ) |
                      ((pl.col("Target Quality") == "Min") &
-                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) < (SIZE_BITRATE_CI * SIZE_BITRATE_MIN_KBPS))
+                      (pl.col("Bitrate (Kbps)").cast(pl.Float32) < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MIN_KBPS))
                       ))
                 ).then(pl.lit("Small"))
                 .otherwise(pl.lit("Right"))
