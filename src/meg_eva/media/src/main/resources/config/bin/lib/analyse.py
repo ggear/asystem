@@ -18,9 +18,9 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-SIZE_BITRATE_CI = 0.3
+SIZE_BITRATE_CI = 1.4
 SIZE_MIN_THRESHOLD_GB = 2
-SIZE_BITRATE_UHD_SCALE = 0.3
+SIZE_BITRATE_UHD_SCALE = 0.75
 SIZE_BITRATE_MIN_KBPS = 2000
 SIZE_BITRATE_MID_KBPS = 4000
 SIZE_BITRATE_MAX_KBPS = 8000
@@ -660,8 +660,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ).with_columns(
             (
                 pl.when(
-                    ((pl.col("Target Quality") == "Max") & (pl.col("Video 1 Label") == "UHD")) |
-                    ((pl.col("Target Quality") == "Mid") & (pl.col("Video 1 Label") == "UHD"))
+                    ((pl.col("Video 1 Label") == "UHD") & (pl.col("Target Quality") != "Min"))
                 ).then((pl.col("Bitrate (Kbps)").cast(pl.Float32) * SIZE_BITRATE_UHD_SCALE))
                 .otherwise(pl.col("Bitrate (Kbps)").cast(pl.Float32))
             ).alias("Bitrate Scaled")
