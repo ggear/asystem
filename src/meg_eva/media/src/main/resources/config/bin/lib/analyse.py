@@ -18,7 +18,7 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-SIZE_BITRATE_CI = 1 / 3
+SIZE_BITRATE_CI = 1 / 2
 SIZE_MIN_THRESHOLD_GB = 2
 SIZE_BITRATE_MIN_KBPS = 2000
 SIZE_BITRATE_MID_KBPS = 4000
