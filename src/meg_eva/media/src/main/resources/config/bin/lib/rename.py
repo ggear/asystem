@@ -130,6 +130,10 @@ def _rename(file_path_root, verbose=False):
                     files_renamed += 1
     for file_path_root_to_delete in file_path_roots_to_delete:
         shutil.rmtree(file_path_root_to_delete, ignore_errors=True)
+    for file_path_processed_dir, file_path_processed_dirs, file_path_processed_names in os.walk(file_path_processed):
+        _set_permissions(file_path_processed_dir, 0o777)
+        for filename in file_path_processed_names:
+            _set_permissions(os.path.join(file_path_processed_dir, filename), 0o777)
     print("{}done".format("Renaming {} ".format(file_path_root) if verbose else ""))
     sys.stdout.flush()
     return files_renamed
