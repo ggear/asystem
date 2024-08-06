@@ -952,23 +952,35 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).alias("Transcode Video"),
                 (
                     pl.when(
+                        (pl.col("Audio 1 Index") == "0")
+                    ).then(
+                        pl.lit("1")
+                    ).otherwise(
+                        pl.col("Audio 1 Index")
+                    )
+                ).alias("Transcode Audio Index"),
+            ]
+        ).with_columns(
+            [
+                (
+                    pl.when(
                         (pl.col("Target Lang") == "eng") &
                         (pl.col("Native Lang") == "eng") &
                         (pl.col("Target Audio") != "All")
                     ).then(
-                        pl.concat_str([pl.lit("--main-audio "), pl.col("Audio 1 Index")])
+                        pl.concat_str([pl.lit("--main-audio "), pl.col("Transcode Audio Index")])
                     ).when(
                         (pl.col("Target Lang") == "eng") &
                         (pl.col("Native Lang") != "eng") &
                         (pl.col("Target Audio") != "All")
                     ).then(
                         pl.concat_str([
-                            pl.lit("--main-audio "), pl.col("Audio 1 Index"),
+                            pl.lit("--main-audio "), pl.col("Transcode Audio Index"),
                             pl.lit(" "), pl.lit("--add-audio "), pl.col("Target Lang")
                         ])
                     ).otherwise(
                         pl.concat_str([
-                            pl.lit("--main-audio "), pl.col("Audio 1 Index"),
+                            pl.lit("--main-audio "), pl.col("Transcode Audio Index"),
                             pl.lit(" "), pl.lit("--add-audio eng")
                         ])
                     )
