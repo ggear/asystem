@@ -237,27 +237,27 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 if file_probe_stream_video_width <= 640:
                                     file_probe_stream_video_label = "nHD"
                                     file_probe_stream_video_res = "360" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "720p"
-                                    file_probe_stream_video_res_mid = "720p"
-                                    file_probe_stream_video_res_max = "720p"
+                                    file_probe_stream_video_res_min = "1080p"
+                                    file_probe_stream_video_res_mid = "1080p"
+                                    file_probe_stream_video_res_max = "1080p"
                                 elif file_probe_stream_video_width <= 960:
                                     file_probe_stream_video_label = "qHD"
                                     file_probe_stream_video_res = "540" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "720p"
-                                    file_probe_stream_video_res_mid = "720p"
-                                    file_probe_stream_video_res_max = "720p"
+                                    file_probe_stream_video_res_min = "1080p"
+                                    file_probe_stream_video_res_mid = "1080p"
+                                    file_probe_stream_video_res_max = "1080p"
                                 elif file_probe_stream_video_width <= 1280:
                                     file_probe_stream_video_label = "HD"
                                     file_probe_stream_video_res = "720" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "720p"
-                                    file_probe_stream_video_res_mid = "720p"
-                                    file_probe_stream_video_res_max = "720p"
+                                    file_probe_stream_video_res_min = "1080p"
+                                    file_probe_stream_video_res_mid = "1080p"
+                                    file_probe_stream_video_res_max = "1080p"
                                 elif file_probe_stream_video_width <= 1600:
                                     file_probe_stream_video_label = "HD+"
                                     file_probe_stream_video_res = "900" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "720p"
-                                    file_probe_stream_video_res_mid = "720p"
-                                    file_probe_stream_video_res_max = "720p"
+                                    file_probe_stream_video_res_min = "1080p"
+                                    file_probe_stream_video_res_mid = "1080p"
+                                    file_probe_stream_video_res_max = "1080p"
                                 elif file_probe_stream_video_width <= 1920:
                                     file_probe_stream_video_label = "FHD"
                                     file_probe_stream_video_res = "1080" + file_probe_stream_video_field_order
@@ -280,25 +280,25 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                     file_probe_stream_video_label = "UHD"
                                     file_probe_stream_video_res = "2160" + file_probe_stream_video_field_order
                                     file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
+                                    file_probe_stream_video_res_mid = "2160p"
                                     file_probe_stream_video_res_max = "2160p"
                                 elif file_probe_stream_video_width <= 5120:
                                     file_probe_stream_video_label = "UHD"
                                     file_probe_stream_video_res = "2880" + file_probe_stream_video_field_order
                                     file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
+                                    file_probe_stream_video_res_mid = "2160p"
                                     file_probe_stream_video_res_max = "2160p"
                                 elif file_probe_stream_video_width <= 7680:
                                     file_probe_stream_video_label = "UHD"
                                     file_probe_stream_video_res = "4320" + file_probe_stream_video_field_order
                                     file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
+                                    file_probe_stream_video_res_mid = "2160p"
                                     file_probe_stream_video_res_max = "2160p"
                                 elif file_probe_stream_video_width <= 15360:
                                     file_probe_stream_video_label = "UHD"
                                     file_probe_stream_video_res = "8640" + file_probe_stream_video_field_order
                                     file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
+                                    file_probe_stream_video_res_mid = "2160p"
                                     file_probe_stream_video_res_max = "2160p"
                             file_probe_stream_filtered["label"] = file_probe_stream_video_label
                             file_probe_stream_filtered["res"] = file_probe_stream_video_res
@@ -932,7 +932,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         pl.concat_str([
                             pl.lit("--target "),
                             pl.col("Video 1 Bitrate Max (Kbps)"),
-                            pl.lit(" --hevc"),
+                            pl.lit(" --hevc --"),
+                            pl.col("Video 1 Res Max"),
                         ])
                     ).when(
                         (pl.col("Target Quality") == "Mid")
@@ -940,13 +941,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         pl.concat_str([
                             pl.lit("--target "),
                             pl.col("Video 1 Bitrate Mid (Kbps)"),
-                            pl.lit(" --hevc"),
+                            pl.lit(" --hevc --"),
+                            pl.col("Video 1 Res Mid"),
                         ])
                     ).otherwise(
                         pl.concat_str([
                             pl.lit("--target "),
                             pl.col("Video 1 Bitrate Min (Kbps)"),
-                            pl.lit(" --hevc"),
+                            pl.lit(" --hevc --"),
+                            pl.col("Video 1 Res Min"),
                         ])
                     )
                 ).alias("Transcode Video"),
