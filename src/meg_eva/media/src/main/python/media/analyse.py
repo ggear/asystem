@@ -14,8 +14,8 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-SIZE_BITRATE_CI = 1.4
-SIZE_MIN_THRESHOLD_GB = 2
+SIZE_BITRATE_CI = 0.6
+SIZE_MIN_THRESHOLD_GB = 1
 SIZE_BITRATE_UHD_SCALE = 0.75
 SIZE_BITRATE_MIN_KBPS = 2000
 SIZE_BITRATE_MID_KBPS = 4000
@@ -466,13 +466,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 metadata_file_written = True
             with open(file_metadata_path, 'r') as file_metadata:
                 try:
-                    if not file_path_root_is_nested or metadata_file_written:
-                        metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
-                        if verbose:
-                            if metadata_file_written:
-                                print("wrote and loaded metadata file", flush=True)
-                            else:
-                                print("loaded metadata file", flush=True)
+                    metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
+                    if verbose:
+                        if metadata_file_written:
+                            print("wrote and loaded metadata file", flush=True)
+                        else:
+                            print("loaded metadata file", flush=True)
                 except Exception:
                     message = "skipping file due to metadata file load error"
                     if verbose:

@@ -1,0 +1,65 @@
+- file_name: Any Given Sunday (1999).mkv
+- transcode_action: Analyse
+- target_quality: Mid
+- target_audio: main
+- target_channels: '2'
+- target_lang: eng
+- native_lang: eng
+- media_directory: /share/38/media
+- media_scope: parents
+- media_type: movies
+- base_directory: Any Given Sunday (1999)
+- version_directory: .
+- version_qualifier: ''
+- file_directory: ' ''/share/38/media/parents/movies/Any Given Sunday (1999)'' '
+- file_stem: ' ''Any Given Sunday (1999)'' '
+- file_extension: mkv
+- container_format: matroska,webm
+- duration__hours: '0.0006'
+- file_size__GB: '0.0014'
+- bitrate__Kbps: '5604'
+- stream_count: '4'
+- video_count: '1'
+- video:
+  - '1':
+    - index: '0'
+    - codec: HEVC
+    - label: FHD
+    - res: 1080p
+    - res_min: 1080p
+    - res_mid: 1080p
+    - res_max: 1080p
+    - width: '1920'
+    - height: '804'
+    - bitrate__Kbps: ''
+    - bitrate_est__Kbps: '5028'
+    - bitrate_min__Kbps: '2000'
+    - bitrate_mid__Kbps: '4000'
+    - bitrate_max__Kbps: '5028'
+- audio_count: '3'
+- audio:
+  - '1':
+    - index: '1'
+    - codec: AC3
+    - lang: eng
+    - channels: '2'
+    - surround: Standard
+    - bitrate__Kbps: '192'
+  - '2':
+    - index: '2'
+    - codec: AC3
+    - lang: eng
+    - channels: '2'
+    - surround: Standard
+    - bitrate__Kbps: '192'
+  - '3':
+    - index: '3'
+    - codec: AAC
+    - lang: eng
+    - channels: '2'
+    - surround: Standard
+    - bitrate__Kbps: ''
+- subtitle_count: '0'
+- subtitle: []
+- other_count: '0'
+- other: []

@@ -37,11 +37,17 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_5(self):
         dir_test = self._test_analyse_dir(1)
+        # self._test_analyse_assert(join(dir_test, "38/media/kids"), scripts=False)
+        self._test_analyse_assert(join(dir_test, "38/media/parents"), scripts=False)
+        # self._test_analyse_assert(join(dir_test, "38/media"), scripts=False)
+
+    def test_analyse_6(self):
+        dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "39"), scripts=False, clean=True)
         self._test_analyse_assert(join(dir_test, "33"), scripts=False)
         self._test_analyse_assert(join(dir_test, "39"), scripts=False)
 
-    def test_analyse_6(self):
+    def test_analyse_7(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "10/media/docos/movies/The Bad News Bears (1976)"), 1, clean=True)
         self._test_analyse_assert(join(dir_test, "31"))
@@ -53,9 +59,10 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "33"))
         self._test_analyse_assert(join(dir_test, "31"))
         self._test_analyse_assert(join(dir_test, "33"))
+        self._test_analyse_assert(join(dir_test, "38"))
         self._test_analyse_assert(join(dir_test, "39"))
 
-    def test_analyse_7(self):
+    def test_analyse_8(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "some/non-existent/path"), -1)
         self._test_analyse_assert("/tmp", -2)
