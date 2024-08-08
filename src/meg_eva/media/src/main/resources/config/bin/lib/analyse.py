@@ -837,21 +837,19 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             ).alias("Metadata State"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
             pl.concat_str([
-                pl.col("Media Directory"),
-                pl.col("Media Scope"),
-                pl.col("Media Type"),
                 pl.col("Base Directory"),
-                pl.col("Version Qualifier"),
+                pl.col("File Stem"),
             ], separator="/",
             ).alias("Base Path")
         ).with_columns(
             (pl.col("Base Path").count().over("Base Path"))
             .alias("Version Count")
-        ).drop("Base Path")
+        )
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Version Directory") == ".") &
                     (~pl.col("File Directory").is_null()) & (pl.col("File Directory") != "") &
                     (~pl.col("Duration (hours)").is_null()) & (pl.col("Duration (hours)") != "") &
                     (~pl.struct("File Directory", "Duration (hours)").is_duplicated())
