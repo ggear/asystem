@@ -623,7 +623,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("File Name").str.to_lowercase().is_duplicated()) &
+                    (pl.col("File Stem").str.to_lowercase().is_duplicated()) &
                     (pl.col("Version Directory").str.ends_with("."))
                 ).then(pl.lit("Duplicate"))
                 .when(
