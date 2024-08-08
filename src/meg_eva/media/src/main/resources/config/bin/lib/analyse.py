@@ -473,15 +473,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 metadata_file_written = True
             with open(file_metadata_path, 'r') as file_metadata:
                 try:
-                    if not file_path_root_is_nested or metadata_file_written:
-                        metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
-                        if verbose:
-                            if metadata_file_written:
-                                print("wrote and loaded metadata file", flush=True)
-                            else:
-                                print("loaded metadata file", flush=True)
-                    else:
-                        print("skipping file due to metadata not being dirty", flush=True)
+                    metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
+                    if verbose:
+                        if metadata_file_written:
+                            print("wrote and loaded metadata file", flush=True)
+                        else:
+                            print("loaded metadata file", flush=True)
                 except Exception:
                     message = "skipping file due to metadata file load error"
                     if verbose:
@@ -630,7 +627,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("File Name").is_duplicated()) &
+                    (pl.col("File Name").str.to_lowercase().is_duplicated()) &
                     (pl.col("Version Directory").str.ends_with("."))
                 ).then(pl.lit("Duplicate"))
                 .when(
@@ -923,6 +920,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (
                     (file_path_root_is_nested) |
                     (pl.col("File Action").str.ends_with("Merge")) |
+                    (pl.col("File Action").str.ends_with("Reformat")) |
                     (pl.col("File Action").str.ends_with("Transcode"))
             ) &
             (pl.col("File Version") != "Transcoded") &
