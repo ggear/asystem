@@ -989,8 +989,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         pl.concat_str([
                             pl.lit("--target "),
                             pl.col("Video 1 Bitrate Max (Kbps)"),
-                            pl.lit(" --hevc --"),
-                            pl.col("Video 1 Res Max"),
+                            pl.lit(" --hevc"),
                         ])
                     ).when(
                         (pl.col("Target Quality") == "Mid")
@@ -998,8 +997,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         pl.concat_str([
                             pl.lit("--target "),
                             pl.col("Video 1 Bitrate Mid (Kbps)"),
-                            pl.lit(" --hevc --"),
-                            pl.col("Video 1 Res Mid"),
+                            pl.lit(" --hevc"),
                         ])
                     ).otherwise(
                         pl.concat_str([
