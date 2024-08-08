@@ -147,6 +147,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     "native_lang": "eng",
                 }
                 file_defaults_paths = []
+                file_defaults_load_failed = False
                 file_defaults_dir = os.path.join(file_path_media, file_media_scope, file_media_type, file_base_dir)
                 while file_defaults_dir != file_path_media_parent:
                     file_defaults_path = os.path.join(file_defaults_dir, "._defaults.yaml")
@@ -171,6 +172,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 file_defaults_dict["native_lang"] = file_defaults_dict["native_lang"].lower()
                                 file_defaults_dict["target_lang"] = file_defaults_dict["target_lang"].lower()
                             except Exception:
+                                file_defaults_load_failed = True
                                 message = "skipping file due to defaults metadata file [{}] load error" \
                                     .format(file_defaults_path)
                                 if verbose:
@@ -178,7 +180,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 else:
                                     print("{} [{}]".format(message, file_path))
                                     print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
-                                continue
+                if file_defaults_load_failed:
+                    continue
                 file_transcode_action = file_defaults_dict["transcode_action"]
                 file_target_quality = file_defaults_dict["target_quality"]
                 file_target_audio = file_defaults_dict["target_audio"]
@@ -470,12 +473,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 metadata_file_written = True
             with open(file_metadata_path, 'r') as file_metadata:
                 try:
-                    metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
-                    if verbose:
-                        if metadata_file_written:
-                            print("wrote and loaded metadata file", flush=True)
-                        else:
-                            print("loaded metadata file", flush=True)
+                    if not file_path_root_is_nested or metadata_file_written:
+                        metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
+                        if verbose:
+                            if metadata_file_written:
+                                print("wrote and loaded metadata file", flush=True)
+                            else:
+                                print("loaded metadata file", flush=True)
+                    else:
+                        print("skipping file due to metadata not being dirty", flush=True)
                 except Exception:
                     message = "skipping file due to metadata file load error"
                     if verbose:
@@ -624,6 +630,18 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
+                    (pl.col("File Name").is_duplicated()) &
+                    (pl.col("Version Directory").str.ends_with("."))
+                ).then(pl.lit("Duplicate"))
+                .when(
+                    (pl.col("File Name").str.contains("__TRANSCODE")) |
+                    (~pl.col("Version Directory").str.ends_with("."))
+                ).then(pl.lit("Transcoded"))
+                .otherwise(pl.lit("Original"))
+            ).alias("File Version"))
+        metadata_merged_pl = metadata_merged_pl.with_columns(
+            (
+                pl.when(
                     (pl.col("File State") == "Corrupt")
                 ).then(pl.lit("Corrupt"))
                 .when(
@@ -651,12 +669,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit("Incomplete"))
                 .otherwise(pl.lit("Complete"))
             ).alias("File State"))
-        metadata_merged_pl = metadata_merged_pl.filter(
-            (~pl.col("File Size (GB)").is_null()) &
-            (pl.col("File Size (GB)").str.len_bytes() > 0) &
-            (~pl.col("Bitrate (Kbps)").is_null()) &
-            (pl.col("Bitrate (Kbps)").str.len_bytes() > 0)
-        ).with_columns(
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     ((pl.col("Video 1 Label") == "UHD") & (pl.col("Target Quality") != "Min"))
@@ -679,10 +692,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit("Large"))
                 .when(
                     (((pl.col("Target Quality") == "Max") &
-                      (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS))
+                      ((pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS)) |
+                       (pl.col("Video 1 Width").cast(pl.Int32) >= 1920))
                       ) |
                      ((pl.col("Target Quality") == "Mid") &
-                      (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS))
+                      ((pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS)) |
+                       (pl.col("Video 1 Width").cast(pl.Int32) >= 1920))
                       ) |
                      ((pl.col("Target Quality") == "Min") &
                       (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MIN_KBPS))
@@ -691,14 +706,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 .otherwise(pl.lit("Right"))
             ).alias("File Size")) \
             .drop("Bitrate Scaled")
-        metadata_merged_pl = metadata_merged_pl.with_columns(
-            (
-                pl.when(
-                    (pl.col("File Name").str.contains("__TRANSCODE")) |
-                    (~pl.col("Version Directory").str.ends_with("."))
-                ).then(pl.lit("Transcoded"))
-                .otherwise(pl.lit("Original"))
-            ).alias("File Version"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
@@ -844,30 +851,38 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (~pl.col("File Directory").is_null()) & (pl.col("File Directory") != "") &
+                    (~pl.col("Duration (hours)").is_null()) & (pl.col("Duration (hours)") != "") &
+                    (~pl.struct("File Directory", "Duration (hours)").is_duplicated())
+                ).then(pl.lit("Corrupt"))
+                .otherwise(pl.col("File State"))
+            ).alias("File State"))
+        metadata_merged_pl = metadata_merged_pl.with_columns(
+            (
+                pl.when(
+                    (pl.col("Transcode Action") == "Ignore")
+                ).then(pl.lit("6. Nothing"))
+                .when(
                     (pl.col("File State") == "Corrupt") |
-                    (pl.col("File State") == "Incomplete")
+                    (pl.col("File State") == "Incomplete") |
+                    (pl.col("File Version") == "Duplicate")
                 ).then(pl.lit("1. Delete"))
                 .when(
                     (pl.col("Version Count").cast(pl.Int32) > 1)
                 ).then(pl.lit("2. Merge"))
                 .when(
-                    (pl.col("Transcode Action") != "Ignore") & (
-                        (pl.col("File Size") == "Small")
-                    )
+                    (pl.col("File Size") == "Small")
                 ).then(pl.lit("4. Upscale"))
                 .when(
-                    (pl.col("Transcode Action") != "Ignore") & (
-                            (pl.col("Plex Video") == "Transcode") |
-                            (pl.col("Plex Audio") == "Transcode") |
-                            (pl.col("Duration (hours)").is_null()) |
-                            (pl.col("Bitrate (Kbps)").is_null())
-                    )
+                    (pl.col("Plex Video") == "Transcode") |
+                    (pl.col("Plex Audio") == "Transcode") |
+                    (pl.col("Duration (hours)").is_null()) |
+                    (pl.col("Bitrate (Kbps)").is_null())
                 ).then(pl.lit("3. Transcode"))
                 .when(
-                    (pl.col("Transcode Action") != "Ignore") & (
-                            (pl.col("File Size") == "Large") |
-                            (pl.col("Metadata State") == "Messy")
-                    )
+                    (pl.col("File Size") == "Large") |
+                    (pl.col("Metadata State") == "Messy")
                 ).then(pl.lit("5. Reformat"))
                 .otherwise(pl.lit("6. Nothing"))
             ).alias("File Action"))

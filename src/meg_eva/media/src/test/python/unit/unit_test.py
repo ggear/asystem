@@ -37,8 +37,6 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_5(self):
         dir_test = self._test_analyse_dir(1)
-        self._test_analyse_assert(join(dir_test, "38/media/kids"), scripts=False)
-        self._test_analyse_assert(join(dir_test, "38/media/parents"), scripts=False)
         self._test_analyse_assert(join(dir_test, "38/media"), scripts=False)
 
     def test_analyse_6(self):
@@ -49,13 +47,10 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_7(self):
         dir_test = self._test_analyse_dir(1)
-        self._test_analyse_assert(join(dir_test, "10/media/docos/movies/The Bad News Bears (1976)"), 1, clean=True)
+        self._test_analyse_assert(join(dir_test, "10"), 54, clean=True)
         self._test_analyse_assert(join(dir_test, "31"))
         self._test_analyse_assert(join(dir_test, "39"))
         self._test_analyse_assert(join(dir_test, "33"))
-        self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom of Heaven (2005)"))
-        self._test_analyse_assert(join(dir_test, "10/media/comedy/movies"))
-        self._test_analyse_assert(join(dir_test, "10"), 60)
         self._test_analyse_assert(join(dir_test, "33"))
         self._test_analyse_assert(join(dir_test, "31"))
         self._test_analyse_assert(join(dir_test, "33"))
