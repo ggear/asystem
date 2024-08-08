@@ -38,7 +38,7 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_5(self):
         dir_test = self._test_analyse_dir(1)
-        self._test_analyse_assert(join(dir_test, "38/media"), scripts=False)
+        self._test_analyse_assert(join(dir_test, "38"), scripts=False)
 
     def test_analyse_6(self):
         dir_test = self._test_analyse_dir(1)

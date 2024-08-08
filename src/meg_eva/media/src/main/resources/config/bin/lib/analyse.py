@@ -627,15 +627,32 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("File Stem").str.to_lowercase().is_duplicated()) &
-                    (pl.col("Version Directory").str.ends_with("."))
-                ).then(pl.lit("Duplicate"))
-                .when(
                     (pl.col("File Name").str.contains("__TRANSCODE")) |
                     (~pl.col("Version Directory").str.ends_with("."))
                 ).then(pl.lit("Transcoded"))
                 .otherwise(pl.lit("Original"))
             ).alias("File Version"))
+        metadata_merged_pl = metadata_merged_pl.with_columns(
+            (
+                pl.when(
+                    (pl.col("File Version") == "Original") &
+                    (pl.col("File Stem").str.to_lowercase().is_duplicated())
+                ).then(pl.lit("Duplicate"))
+                .otherwise(pl.col("File Version"))
+            ).alias("File Version"))
+        metadata_merged_pl = metadata_merged_pl.with_columns(
+            (
+                pl.col("File Stem") \
+                    .str.to_lowercase() \
+                    .str.split("__transcode_").list.first() \
+                    .str.strip_prefix(" '") \
+                    .str.strip_suffix("' ")
+            ).alias("Base Path")
+        ).with_columns(
+            (
+                pl.col("Base Path").count().over("Base Path")
+            ).alias("Version Count")
+        ).drop("Base Path")
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
@@ -833,16 +850,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 .otherwise(pl.lit("Clean"))
             ).alias("Metadata State"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
-            pl.concat_str([
-                pl.col("Base Directory"),
-                pl.col("File Stem"),
-            ], separator="/",
-            ).alias("Base Path")
-        ).with_columns(
-            (pl.col("Base Path").count().over("Base Path"))
-            .alias("Version Count")
-        )
-        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
                     (pl.col("File Version") == "Transcoded") &
@@ -864,7 +871,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Version") == "Duplicate")
                 ).then(pl.lit("1. Delete"))
                 .when(
-                    (pl.col("Version Count").cast(pl.Int32) > 1)
+                    (pl.col("File Version") == "Transcode")
                 ).then(pl.lit("2. Merge"))
                 .when(
                     (pl.col("File Size") == "Small")
@@ -916,7 +923,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
         # TODO: Write out file and global merge/reformat scripts
         # TODO: Make a media-transcode/merge scripts to context determine all scripts under path or accross local shares if none - maybe make all other scripts do the same?
-        metadata_transcode_pl = metadata_merged_pl.filter(
+        metadata_scripts_pl = metadata_merged_pl.filter(
             (
                     (file_path_root_is_nested) |
                     (pl.col("File Action").str.ends_with("Merge")) |
@@ -944,6 +951,37 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         .str.strip_suffix("' ") \
                         .str.replace("'\\\\''", "'")
                 ]).alias("File Stem"),
+            ]
+        ).with_columns(
+            [
+                pl.concat_str([
+                    pl.col("File Directory"),
+                    pl.lit("/._transcode_"),
+                    pl.col("File Stem"),
+                ]).alias("Script Directory Transcode"),
+                pl.concat_str([
+                    pl.col("File Stem").str.replace("$", "\\$", literal=True),
+                    pl.lit("__TRANSCODE_"),
+                    pl.col("Target Quality").str.to_uppercase(),
+                    pl.lit(".mkv"),
+                ]).alias("Transcode File Name"),
+            ]
+        ).with_columns(
+            [
+                pl.concat_str([
+                    pl.col("Script Directory Transcode"),
+                    pl.lit("/transcode.sh"),
+                ]).alias("Script Path Transcode"),
+            ]
+        ).with_columns(
+            [
+                pl.concat_str([
+                    pl.lit("../../../.."),
+                    pl.col("Script Path Transcode").str.strip_prefix(file_path_media),
+                ]).alias("Script Path Relative Transcode"),
+            ]
+        ).with_columns(
+            [
                 (
                     pl.when(
                         (pl.col("Target Quality") == "Max")
@@ -1013,17 +1051,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             ]
         ).with_columns(
             [
-                pl.concat_str([
-                    pl.col("File Directory"),
-                    pl.lit("/._transcode_"),
-                    pl.col("File Stem"),
-                ]).alias("Script Directory"),
-                pl.concat_str([
-                    pl.col("File Stem").str.replace("$", "\\$", literal=True),
-                    pl.lit("__TRANSCODE_"),
-                    pl.col("Target Quality").str.to_uppercase(),
-                    pl.lit(".mkv"),
-                ]).alias("Transcode File Name"),
                 (
                     pl.when(
                         (pl.col("Audio 1 Surround") == "Atmos")
@@ -1036,17 +1063,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             ]
         ).with_columns(
             [
-                pl.concat_str([
-                    pl.col("Script Directory"),
-                    pl.lit("/transcode.sh"),
-                ]).alias("Script Path"),
-            ]
-        ).with_columns(
-            [
-                pl.concat_str([
-                    pl.lit("../../../.."),
-                    pl.col("Script Path").str.strip_prefix(file_path_media),
-                ]).alias("Script Relative Path"),
                 pl.concat_str([
                     pl.lit("# !/bin/bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
@@ -1078,35 +1094,51 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  ${ECHO} -n 'Failed (other-transcode): ' && date && exit 2\n"),
                     pl.lit("fi\n"),
                     pl.lit("${ECHO} '' && exit -1\n"),
-                ]).alias("Script Source"),
+                ]).alias("Script Source Transcode"),
             ]
-        ).sort("Action Index").select(["Script Path", "Script Relative Path", "Script Directory", "Script Source"])
-        transcode_script_global_file = None
-        transcode_script_global_path = _localise_path(os.path.join(file_path_scripts, "transcode.sh"), file_path_root)
-        try:
+        ).sort("Action Index")
+
+        def _write_scripts(_script_name, _script_local_rows):
+            script_global_file = None
+            script_global_path = _localise_path(os.path.join(file_path_scripts, _script_name), file_path_root)
+            try:
+                if not file_path_root_is_nested:
+                    script_global_file = open(script_global_path, 'w')
+                    script_global_file.write("# !/bin/bash\n\n")
+                    script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
+                    script_global_file.write(BASH_EXIT_HANDLER.format(""))
+                    script_global_file.write("${ECHO} ''\n")
+                for script_local_row in _script_local_rows:
+                    if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
+                        if not file_path_root_is_nested:
+                            script_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(
+                                _localise_path(script_local_row[1], file_path_root)))
+                        script_local_dir = _localise_path(script_local_row[2], file_path_root)
+                        os.makedirs(script_local_dir, exist_ok=True)
+                        _set_permissions(script_local_dir, 0o750)
+                        script_local_path = _localise_path(script_local_row[0], file_path_root)
+                        with open(script_local_path, 'w') as script_local_file:
+                            script_local_file.write(script_local_row[3])
+                        _set_permissions(script_local_path, 0o750)
+            finally:
+                if not file_path_root_is_nested and script_global_file is not None:
+                    script_global_file.close()
             if not file_path_root_is_nested:
-                transcode_script_global_file = open(transcode_script_global_path, 'w')
-                transcode_script_global_file.write("# !/bin/bash\n\n")
-                transcode_script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
-                transcode_script_global_file.write(BASH_EXIT_HANDLER.format(""))
-                transcode_script_global_file.write("${ECHO} ''\n")
-            for transcode_script_local in metadata_transcode_pl.rows():
-                if not any(map(lambda transcode_script_local_item: transcode_script_local_item is None, transcode_script_local)):
-                    if not file_path_root_is_nested:
-                        transcode_script_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(
-                            _localise_path(transcode_script_local[1], file_path_root)))
-                    transcode_script_local_dir = _localise_path(transcode_script_local[2], file_path_root)
-                    os.makedirs(transcode_script_local_dir, exist_ok=True)
-                    _set_permissions(transcode_script_local_dir, 0o750)
-                    transcode_script_local_path = _localise_path(transcode_script_local[0], file_path_root)
-                    with open(transcode_script_local_path, 'w') as transcode_script_local_file:
-                        transcode_script_local_file.write(transcode_script_local[3])
-                    _set_permissions(transcode_script_local_path, 0o750)
-        finally:
-            if not file_path_root_is_nested and transcode_script_global_file is not None:
-                transcode_script_global_file.close()
-        if not file_path_root_is_nested:
-            _set_permissions(transcode_script_global_path, 0o750)
+                _set_permissions(script_global_path, 0o750)
+
+        _write_scripts("transcode.sh",
+                       metadata_scripts_pl.filter(
+                           (file_path_root_is_nested) |
+                           (pl.col("File Action").str.ends_with("Transcode"))
+                       ).select(
+                           [
+                               "Script Path Transcode",
+                               "Script Path Relative Transcode",
+                               "Script Directory Transcode",
+                               "Script Source Transcode"
+                           ]
+                       ).rows())
+
         if verbose:
             print("done", flush=True)
         metadata_summary_pl = pl.concat([
