@@ -14,12 +14,13 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-SIZE_BITRATE_CI = 0.4
-SIZE_MIN_THRESHOLD_GB = 1.5
-SIZE_BITRATE_UHD_SCALE = 0.5
+SIZE_BITRATE_CI = 2 / 5
+SIZE_MIN_THRESHOLD_GB = 1
+SIZE_BITRATE_HVEC_SCALE = 2 / 3
 SIZE_BITRATE_MIN_KBPS = 2000
 SIZE_BITRATE_MID_KBPS = 4000
 SIZE_BITRATE_MAX_KBPS = 8000
+# Reference: https://github.com/lisamelton/other_video_transcoding/blob/master/other-transcode.rb#L1070
 
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
 
@@ -77,7 +78,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             file_relative_dir_tokens = file_relative_dir.split(os.sep)
             file_name_sans_extension = os.path.splitext(file_name)[0]
             file_extension = os.path.splitext(file_name)[1].replace(".", "")
-            file_metadata_path = os.path.join(file_dir_path, "._metadata_{}.yaml".format(file_name_sans_extension))
+            file_metadata_path = os.path.join(file_dir_path,
+                                              "._metadata_{}_{}.yaml".format(file_name_sans_extension, file_extension))
             file_media_scope = file_relative_dir_tokens[1] \
                 if len(file_relative_dir_tokens) > 1 else ""
             file_media_type = file_relative_dir_tokens[2] \
@@ -133,6 +135,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     file_version_qualifier.lower()
                 )
             file_version_qualifier = file_version_qualifier.lower().removesuffix("__transcode")
+
+
+            #TODO: Implement rename
+            
+
             if not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
                     "transcode_action": "Analyse",
@@ -450,6 +457,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         "{}_count".format(file_probe_stream_type):
                             str(len(file_probe_streams_filtered[file_probe_stream_type]))
                     })
+                    if file_probe_stream_type in {"audio", "subtitle"}:
+                        file_probe_filtered.append({
+                            "{}_non-eng_count".format(file_probe_stream_type):
+                                str(sum(audio["lang"] != "eng" for audio in \
+                                        file_probe_streams_filtered[file_probe_stream_type]))
+                        })
                     file_probe_streams_indexed = []
                     file_probe_filtered.append({file_probe_stream_type: file_probe_streams_indexed})
                     file_probe_stream_typed_count = 1
@@ -632,7 +645,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (
                 pl.when(
                     (pl.col("File Version") == "Original") &
-                    (pl.col("File Stem").str.to_lowercase().is_duplicated())
+                    (pl.struct(
+                        pl.col("Version Directory"),
+                        pl.col("File Name").str.to_lowercase().str.split(".").list.first()
+                    ).is_duplicated())
                 ).then(pl.lit("Duplicate"))
                 .otherwise(pl.col("File Version"))
             ).alias("File Version"))
@@ -649,6 +665,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.col("Base Path").count().over("Base Path")
             ).alias("Version Count")
         ).drop("Base Path")
+
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
@@ -682,36 +699,46 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    ((pl.col("Video 1 Label") == "UHD") & (pl.col("Target Quality") != "Min"))
-                ).then((pl.col("Bitrate (Kbps)").cast(pl.Float32) * SIZE_BITRATE_UHD_SCALE))
+                    ((pl.col("Video 1 Codec") != "HEVC"))
+                ).then((pl.col("Bitrate (Kbps)").cast(pl.Float32) * SIZE_BITRATE_HVEC_SCALE))
                 .otherwise(pl.col("Bitrate (Kbps)").cast(pl.Float32))
             ).alias("Bitrate Scaled")
         ).with_columns(
             (
                 pl.when(
                     (pl.col("File Size (GB)").cast(pl.Float32) > SIZE_MIN_THRESHOLD_GB) &
-                    (((pl.col("Target Quality") == "Max") &
-                      (pl.col("Bitrate Scaled") > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS))
-                      ) |
-                     ((pl.col("Target Quality") == "Mid") &
-                      (pl.col("Bitrate Scaled") > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS))
-                      ) |
-                     ((pl.col("Target Quality") == "Min") &
-                      (pl.col("Bitrate Scaled") > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MIN_KBPS))
-                      ))
+                    (
+                            (
+                                    (pl.col("Target Quality") == "Max") &
+                                    (pl.col("Bitrate Scaled") > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS))
+                            ) | (
+                                    (pl.col("Target Quality") == "Mid") &
+                                    (pl.col("Bitrate Scaled") > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS))
+                            ) | (
+                                    (pl.col("Target Quality") == "Min") &
+                                    (pl.col("Bitrate Scaled") > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MIN_KBPS))
+                            )
+                    )
                 ).then(pl.lit("Large"))
                 .when(
-                    (((pl.col("Target Quality") == "Max") &
-                      ((pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS)) |
-                       (pl.col("Video 1 Width").cast(pl.Int32) >= 1920))
-                      ) |
-                     ((pl.col("Target Quality") == "Mid") &
-                      ((pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS)) |
-                       (pl.col("Video 1 Width").cast(pl.Int32) >= 1920))
-                      ) |
-                     ((pl.col("Target Quality") == "Min") &
-                      (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MIN_KBPS))
-                      ))
+                    (
+                            (
+                                    (pl.col("Target Quality") == "Max") &
+                                    (
+                                            (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS)) |
+                                            (pl.col("Video 1 Width").cast(pl.Int32) < 1920)
+                                    )
+                            ) | (
+                                    (pl.col("Target Quality") == "Mid") &
+                                    (
+                                            (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS)) |
+                                            (pl.col("Video 1 Width").cast(pl.Int32) < 1920)
+                                    )
+                            ) | (
+                                    (pl.col("Target Quality") == "Min") &
+                                    (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MIN_KBPS))
+                            )
+                    )
                 ).then(pl.lit("Small"))
                 .otherwise(pl.lit("Right"))
             ).alias("File Size")) \
@@ -835,10 +862,21 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Video Count").cast(pl.Int32) > 1)
                 ).then(pl.lit("Messy"))
                 .when(
-                    (pl.col("Audio Count").cast(pl.Int32) > 1)
+                    (
+                            (pl.col("Target Lang") == "eng") &
+                            (pl.col("Native Lang") == "eng") &
+                            (pl.col("Audio Non-Eng Count").cast(pl.Int32) > 0)
+                    ) |
+                    (
+                            (
+                                    (pl.col("Target Lang") != "eng") |
+                                    (pl.col("Native Lang") != "eng")
+                            ) &
+                            (pl.col("Audio Non-Eng Count").cast(pl.Int32) > 1)
+                    )
                 ).then(pl.lit("Messy"))
                 .when(
-                    (pl.col("Subtitle Count").cast(pl.Int32) > 2)
+                    (pl.col("Subtitle Non-Eng Count").cast(pl.Int32) > 0)
                 ).then(pl.lit("Messy"))
                 .when(
                     (pl.col("Other Count").cast(pl.Int32) > 0)
@@ -852,7 +890,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Version Directory") == ".") &
                     (~pl.col("File Directory").is_null()) & (pl.col("File Directory") != "") &
                     (~pl.col("Duration (hours)").is_null()) & (pl.col("Duration (hours)") != "") &
-                    (~pl.struct("File Directory", "Duration (hours)").is_duplicated())
+                    (~pl.struct(
+                        pl.col("File Directory"),
+                        pl.col("Duration (hours)").cast(pl.Float32).round_sig_figs(2),
+                    ).is_duplicated())
                 ).then(pl.lit("Corrupt"))
                 .otherwise(pl.col("File State"))
             ).alias("File State"))
