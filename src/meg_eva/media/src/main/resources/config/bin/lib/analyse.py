@@ -139,6 +139,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     file_version_qualifier.lower()
                 )
             file_version_qualifier = file_version_qualifier.lower().removesuffix("__transcode")
+
+
+            #TODO: Implement rename
+            
+
             if not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
                     "transcode_action": "Analyse",
