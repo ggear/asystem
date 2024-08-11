@@ -14,51 +14,52 @@ import subprocess
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
-from media.analyse import MEDIA_FILE_EXTENSIONS
+from media.analyse import FILE_EXTENSIONS
 
 
 class InternetTest(unittest.TestCase):
 
-    def test_analyse_1(self):
+    def test_analyse_clean(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom of Heaven (2005)"), scripts=False)
 
-    def test_analyse_2(self):
+    def test_analyse_crazy_chars(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "31/media/parents/movies"))
         self._test_analyse_assert(join(dir_test, "31/media/parents/movies"))
 
-    def test_analyse_3(self):
+    def test_analyse_rename(self):
         dir_test = self._test_analyse_dir(1)
-        self._test_analyse_assert(join(dir_test, "33/media/parents/movies"))
+        self._test_analyse_assert(join(dir_test, "37/media"), scripts=False)
 
-    def test_analyse_4(self):
+    def test_analyse_duplicate(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "38/media"), scripts=False)
 
-    def test_analyse_5(self):
+    def test_analyse_sheet(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "33"), clean=True)
 
-    def test_analyse_6(self):
+    def test_analyse_empty(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "39"), scripts=False, clean=True)
         self._test_analyse_assert(join(dir_test, "33"), scripts=False)
         self._test_analyse_assert(join(dir_test, "39"), scripts=False)
 
-    def test_analyse_7(self):
+    def test_analyse_comprehensive(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "10"), 54, clean=True)
         self._test_analyse_assert(join(dir_test, "31"))
+        self._test_analyse_assert(join(dir_test, "33"))
         self._test_analyse_assert(join(dir_test, "39"))
-        self._test_analyse_assert(join(dir_test, "33"))
-        self._test_analyse_assert(join(dir_test, "33"))
-        self._test_analyse_assert(join(dir_test, "31"))
-        self._test_analyse_assert(join(dir_test, "33"))
-        self._test_analyse_assert(join(dir_test, "38"))
+        self._test_analyse_assert(join(dir_test, "33/media"))
+        self._test_analyse_assert(join(dir_test, "31/media"))
+        self._test_analyse_assert(join(dir_test, "33/media"))
+        self._test_analyse_assert(join(dir_test, "37/media"))
+        self._test_analyse_assert(join(dir_test, "38/media"))
         self._test_analyse_assert(join(dir_test, "39"))
 
-    def test_analyse_8(self):
+    def test_analyse_failures(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "some/non-existent/path"), -1)
         self._test_analyse_assert("/tmp", -2)
@@ -76,7 +77,7 @@ class InternetTest(unittest.TestCase):
         return dir_test
 
     def _test_analyse_assert(self, dir_test,
-                             expected=None, extensions=MEDIA_FILE_EXTENSIONS, clean=False, scripts=True):
+                             expected=None, extensions=FILE_EXTENSIONS, clean=False, scripts=True):
 
         def _file_count():
             file_count = 0
@@ -103,13 +104,13 @@ class InternetTest(unittest.TestCase):
                         self.assertEqual(0, subprocess.run([script_transcode], shell=True).returncode)
             self.assertGreaterEqual(_file_count(), file_count)
 
-    def test_rename_1(self):
+    def test_rename_comprehensive_1(self):
         self._test_rename(1, 171)
 
-    def test_rename_2(self):
+    def test_rename_comprehensive_2(self):
         self._test_rename(2, 1)
 
-    def test_rename_3(self):
+    def test_rename_comprehensive_3(self):
         self._test_rename(3, 7)
 
     def _test_rename(self, index, files_renamed):

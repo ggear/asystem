@@ -26,7 +26,8 @@ SIZE_BITRATE_MID_KBPS = 4000
 SIZE_BITRATE_MAX_KBPS = 8000
 # Reference: https://github.com/lisamelton/other_video_transcoding/blob/master/other-transcode.rb#L1070
 
-MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
+FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
+SERIES_REGEXP = ".*([sS][0-9]?[0-9]+[eE][0-9]?[-]*[0-9]+.*)\..*"
 
 BASH_EXIT_HANDLER = "ECHO=echo\n" \
                     "[[ $(uname) == 'Darwin' ]] && ECHO=gecho\n\n" \
@@ -36,6 +37,26 @@ BASH_ECHO_HEADER = "${ECHO} \"##################################################
 
 
 def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
+    def _print_message(_prefix=None, _message=None, _context=None,
+                       _header=True, _footer=True, _no_header_footer=False):
+        hanging_header = False
+        if _prefix is None:
+            hanging_header = True
+            _prefix = "Analysing '{}' ... ".format(file_path_root)
+        if not _no_header_footer and not _header:
+            print(_prefix, end="")
+        if _message is not None:
+            if verbose:
+                print(_message)
+            else:
+                if _context is not None:
+                    print("{} [{}]".format(_message, _context))
+                else:
+                    print(_message)
+        if not _no_header_footer and _footer:
+            print(_prefix, end=("\n" if verbose and hanging_header else ""))
+        sys.stdout.flush()
+
     def _truncate_sheet(_sheet_url):
         for sheet in {"Data", "Summary"}:
             metadata_spread_data = Spread(_sheet_url, sheet=sheet)
@@ -62,7 +83,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         print("Error: path [{}] does not exist".format(file_path_media))
         return -3
     if file_path_root_is_nested and not file_path_root.startswith(file_path_media):
-        print("Error: path [{}] not nested in media directory [{}]".format(file_path_root, file_path_media))
+        print("Error: path [{}] not nested in media directory [{}]" \
+              .format(file_path_root, file_path_media))
         return -4
     file_path_root_target = file_path_root if file_path_root_is_nested else file_path_media
     file_path_root_target_relative = file_path_root_target.replace(file_path_media, ".")
@@ -72,7 +94,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         _set_permissions(file_path_scripts, 0o750)
     files_analysed = 0
     metadata_list = []
-    print("Analysing '{}' ... ".format(file_path_root), end=("\n" if verbose else ""), flush=True)
+    _print_message()
     for file_dir_path, _, file_names in os.walk(file_path_root_target):
         for file_name in file_names:
             metadata_file_written = False
@@ -82,31 +104,26 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             file_relative_dir_tokens = file_relative_dir.split(os.sep)
             file_name_sans_extension = os.path.splitext(file_name)[0]
             file_extension = os.path.splitext(file_name)[1].replace(".", "")
-            file_metadata_path = os.path.join(file_dir_path,
-                                              "._metadata_{}_{}.yaml".format(file_name_sans_extension, file_extension))
+            file_metadata_path = os.path.join(
+                file_dir_path, "._metadata_{}_{}.yaml".format(
+                    file_name_sans_extension,
+                    file_extension,
+                ))
             file_media_scope = file_relative_dir_tokens[1] \
                 if len(file_relative_dir_tokens) > 1 else ""
             file_media_type = file_relative_dir_tokens[2] \
                 if len(file_relative_dir_tokens) > 2 else ""
             if file_media_type in {"audio"} or file_extension in {"yaml", "sh", "srt", "jpg", "jpeg", "log"}:
                 continue
-            if verbose:
-                print("{} ... ".format(os.path.join(file_relative_dir, file_name)), end='', flush=True)
+            _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)),
+                           _no_header_footer=not verbose)
             if file_media_type not in {"movies", "series"}:
-                message = "skipping file due to unknown library type [{}]".format(file_media_type)
-                if verbose:
-                    print(message, flush=True)
-                else:
-                    print("{} [{}]".format(message, file_path))
-                    print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
+                _print_message(_message="skipping file due to unknown library type [{}]".format(file_media_type),
+                               _context=file_path, _no_header_footer=True)
                 continue
-            if file_extension not in MEDIA_FILE_EXTENSIONS:
-                message = "skipping file due to unknown file extension [{}]".format(file_extension)
-                if verbose:
-                    print(message, flush=True)
-                else:
-                    print("{} [{}]".format(message, file_path))
-                    print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
+            if file_extension not in FILE_EXTENSIONS:
+                _print_message(_message="skipping file due to unknown file extension [{}]".format(file_extension),
+                               _context=file_path, _no_header_footer=True)
                 continue
             file_base_tokens = 5 if (
                     file_media_type == "series" and
@@ -116,33 +133,62 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             file_version_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens:]) \
                 if len(file_relative_dir_tokens) > file_base_tokens else "."
             if file_version_dir.startswith("._transcode_") or file_version_dir.endswith("/.inProgress"):
-                message = "skipping file currently transcoding"
-                if verbose:
-                    print(message, flush=True)
-                else:
-                    print("{} [{}]".format(message, file_path))
-                    print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
+                _print_message(_message="skipping file currently transcoding",
+                               _context=file_path, _no_header_footer=True)
                 continue
             file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
                 if len(file_relative_dir_tokens) > 3 else "."
-            file_stem = file_base_dir.split("/")[0]
+            file_base_dir_name = file_base_dir.split("/")[0]
+            file_stem = file_base_dir_name
             file_version_qualifier = ""
             if file_media_type == "series":
-                file_version_qualifier_match = re.search(
-                    ".*([sS][0-9]?[0-9]+[eE][0-9]?[-]*[0-9]+.*)\..*", file_name)
+                file_version_qualifier_match = re.search(SERIES_REGEXP, file_name)
                 if file_version_qualifier_match is not None:
                     file_version_qualifier = file_version_qualifier_match.groups()[0]
                 else:
                     file_version_qualifier = file_name_sans_extension
-                file_stem = "{}_{}".format(
-                    file_stem.title().replace(" ", "-"),
-                    file_version_qualifier.lower()
+                file_stem = "{} {}".format(
+                    file_stem.title(),
+                    file_version_qualifier.lower().title()
                 )
-            file_version_qualifier = file_version_qualifier.lower().removesuffix("__transcode")
+            file_version_qualifier = file_version_qualifier.lower()
 
+            # TODO: Warn on stem not matching dir
+            # TODO: Warn on not Season
+            # TODO: Warn on badly placed file
 
-            #TODO: Implement rename
-            
+            file_dir_rename = ""
+            file_name_rename = ""
+            file_dir_normalised = _normalise_name(file_base_dir_name)
+            file_name_normalised = "{}.{}".format(_normalise_name(file_stem), file_extension)
+            if "__TRANSCODE_" in file_name or file_version_dir.startswith("Plex Versions"):
+                file_dir_rename = ""
+                file_name_rename = ""
+            elif file_dir_normalised == "" or \
+                    (file_version_dir != "." and not file_version_dir.startswith("Plex Versions")) or \
+                    (file_media_type == "series" and "Season" not in file_base_dir and re.search(SERIES_REGEXP, file_name) is not None):
+                file_name_rename = ""
+                file_dir_rename = _normalise_name(file_name_sans_extension)
+                if file_media_type == "series":
+                    move_dir_message = "file requires moving directory"
+                else:
+                    move_dir_message = "file requires moving to directory [{}]".format(file_dir_rename)
+                _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                    if verbose else None, _message=move_dir_message, _context=file_path)
+            else:
+                if file_base_dir_name != file_dir_normalised:
+                    file_dir_rename = file_dir_normalised
+                    _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                        if verbose else None, _message="file requires moving to directory [{}]" \
+                                   .format(file_dir_rename), _context=file_path)
+                if file_media_type == "series":
+                    file_name_normalised = file_name_normalised.replace(
+                        "{} {}".format(file_dir_normalised, file_dir_normalised), file_dir_normalised)
+                if file_name != file_name_normalised:
+                    file_name_rename = file_name_normalised
+                    _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                        if verbose else None, _message="file requires renaming to [{}]" \
+                                   .format(file_name_rename), _context=file_path)
 
             if not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
@@ -180,13 +226,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 file_defaults_dict["target_lang"] = file_defaults_dict["target_lang"].lower()
                             except Exception:
                                 file_defaults_load_failed = True
-                                message = "skipping file due to defaults metadata file [{}] load error" \
-                                    .format(file_defaults_path)
-                                if verbose:
-                                    print(message, flush=True)
-                                else:
-                                    print("{} [{}]".format(message, file_path))
-                                    print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
+                                _print_message(_message="skipping file due to defaults metadata file [{}] load error" \
+                                               .format(file_defaults_path), _context=file_path, _no_header_footer=True)
                 if file_defaults_load_failed:
                     continue
                 file_transcode_action = file_defaults_dict["transcode_action"]
@@ -448,6 +489,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     {"file_directory": " '{}' ".format(_delocalise_path(file_dir_path, file_path_root, True, True))},
                     {"file_stem": " '{}' ".format(_escape_path(file_stem, True))},
                     {"file_extension": file_extension},
+                    {"rename_directory": "" if file_dir_rename == "" else " '{}' ".format(_escape_path(file_dir_rename, True))},
+                    {"rename_file": "" if file_name_rename == "" else " '{}' ".format(_escape_path(file_name_rename, True))},
                     {"container_format": file_probe["format"]["format_name"].lower() \
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
                     {"duration__hours": str(round(file_probe_duration, 2 if file_probe_duration > 1 else 4)) \
@@ -493,12 +536,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         else:
                             print("loaded metadata file", flush=True)
                 except Exception:
-                    message = "skipping file due to metadata file load error"
-                    if verbose:
-                        print(message, flush=True)
-                    else:
-                        print("{} [{}]".format(message, file_path))
-                        print("Analysing '{}' ... ".format(file_path_root), end="", flush=True)
+                    _print_message(_message="skipping file due to metadata file load error",
+                                   _context=file_path, _no_header_footer=True)
                     continue
             files_analysed += 1
 
@@ -640,8 +679,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("File Name").str.contains("__TRANSCODE")) |
-                    (~pl.col("Version Directory").str.ends_with("."))
+                    (pl.col("File Name").str.contains("__TRANSCODE_")) |
+                    (pl.col("Version Directory").str.starts_with("Plex Versions"))
                 ).then(pl.lit("Transcoded"))
                 .otherwise(pl.lit("Original"))
             ).alias("File Version"))
@@ -649,6 +688,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (
                 pl.when(
                     (pl.col("File Version") == "Original") &
+                    (~pl.col("File Stem").str.contains(".", literal=True)) &
                     (pl.struct(
                         pl.col("Version Directory"),
                         pl.col("File Name").str.to_lowercase().str.split(".").list.first()
@@ -905,29 +945,33 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (
                 pl.when(
                     (pl.col("Transcode Action") == "Ignore")
-                ).then(pl.lit("6. Nothing"))
+                ).then(pl.lit("7. Nothing"))
+                .when(
+                    (pl.col("Rename File") != "") |
+                    (pl.col("Rename Directory") != "")
+                ).then(pl.lit("2. Rename"))
                 .when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete") |
                     (pl.col("File Version") == "Duplicate")
                 ).then(pl.lit("1. Delete"))
                 .when(
-                    (pl.col("File Version") == "Transcode")
-                ).then(pl.lit("2. Merge"))
-                .when(
                     (pl.col("File Size") == "Small")
-                ).then(pl.lit("4. Upscale"))
+                ).then(pl.lit("5. Upscale"))
+                .when(
+                    (pl.col("File Version") == "Transcode")
+                ).then(pl.lit("3. Merge"))
                 .when(
                     (pl.col("Plex Video") == "Transcode") |
                     (pl.col("Plex Audio") == "Transcode") |
                     (pl.col("Duration (hours)").is_null()) |
                     (pl.col("Bitrate (Kbps)").is_null())
-                ).then(pl.lit("3. Transcode"))
+                ).then(pl.lit("4. Transcode"))
                 .when(
                     (pl.col("File Size") == "Large") |
                     (pl.col("Metadata State") == "Messy")
-                ).then(pl.lit("5. Reformat"))
-                .otherwise(pl.lit("6. Nothing"))
+                ).then(pl.lit("6. Reformat"))
+                .otherwise(pl.lit("7. Nothing"))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
             metadata_merged_pl.filter(
@@ -1210,7 +1254,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 )
                 print("Metadata summary ... ")
                 print(metadata_summary_pl.fill_null(""))
-    print("{}done".format("Analysing '{}' ".format(file_path_root) if verbose else ""), flush=True)
+    _print_message(_message="done", _header=not verbose, _footer=False)
     if metadata_merged_pl.height > 0:
         if not file_path_root_is_nested:
             if not verbose:
@@ -1229,6 +1273,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                              sheet="Summary", replace=True, index=False, add_filter=True)
             print("done", flush=True)
     return files_analysed
+
+
+def _normalise_name(_name):
+    _name = _name.replace(".", " ").replace("-", " ").replace("_", " ")
+    _name = re.sub(" +", " ", _name).strip().title()
+    return _name
 
 
 def _escape_path(_path, _quoted=False):
