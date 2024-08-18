@@ -9,7 +9,7 @@ import sys
 from collections import OrderedDict
 from collections.abc import MutableMapping
 from pathlib import Path
-
+import string
 import ffmpeg
 import polars as pl
 import polars.selectors as cs
@@ -158,8 +158,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 else:
                     file_version_qualifier = file_name_sans_extension
                 file_stem = "{} {}".format(
-                    file_stem.title(),
-                    file_version_qualifier.lower().title()
+                    string.capwords(file_stem),
+                    string.capwords(file_version_qualifier.lower())
                 )
             file_version_qualifier = file_version_qualifier.lower()
             file_dir_rename = ""
@@ -1237,7 +1237,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ).with_columns(
             [
                 pl.concat_str([
-                    pl.lit("# !/bin/bash\n\n"),
+                    pl.lit("#!/bin/bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  ${ECHO} 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
@@ -1272,7 +1272,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("${ECHO} '' && exit -1\n"),
                 ]).alias("Transcode Script Source"),
                 pl.concat_str([
-                    pl.lit("# !/bin/bash\n\n"),
+                    pl.lit("#!/bin/bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  ${ECHO} 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
@@ -1425,7 +1425,22 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
 def _normalise_name(_name):
     _name = _name.replace(".", " ").replace("-", " ").replace("_", " ")
-    _name = re.sub(" +", " ", _name).strip().title()
+    _name = string.capwords(re.sub(" +", " ", _name).strip())
+    for name_token in {
+        " i ",
+        " ii ",
+        " iii ",
+        " iv ",
+        " v ",
+        " vi ",
+        " vii ",
+        " viii ",
+        " ix ",
+        " x "
+    }:
+        _name = _name.replace(name_token.title(), name_token.upper())
+        _name = _name.replace(name_token.upper(), name_token.upper())
+        _name = _name.replace(name_token.lower(), name_token.upper())
     return _name
 
 
