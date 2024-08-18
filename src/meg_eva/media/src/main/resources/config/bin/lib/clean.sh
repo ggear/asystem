@@ -14,11 +14,11 @@ LOG="/tmp/asystem-media-clean.log"
 
 echo -n "Cleaning '${WORKING_DIR}' ... "
 rm -rf ${LOG}
-find "${WORKING_DIR}" -name "merge.sh" -type f -delete &>${LOG}
-find "${WORKING_DIR}" -name "reformat.sh" -type f -delete &>${LOG}
-find "${WORKING_DIR}" -name "transcode.sh" -type f -delete &>${LOG}
 find "${WORKING_DIR}" -name "._metadata_*.yaml" -type f -delete &>${LOG}
-find "${WORKING_DIR}" -name "._transcode_*" -type d -exec rm -rf '{}' + &>${LOG}
+for SCRIPT in "merge" "rename" "reformat" "transcode"; do
+  find "${WORKING_DIR}" -name "${SCRIPT}.sh" -type f -delete &>${LOG}
+  find "${WORKING_DIR}" -name "._${SCRIPT}_*" -type d -exec rm -rf '{}' + &>${LOG}
+done
 if [ $(cat ${LOG} | wc -l) -gt 0 ]; then
   echo "failed"
   cat ${LOG}

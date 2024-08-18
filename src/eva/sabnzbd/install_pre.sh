@@ -7,5 +7,5 @@ for DIR in "enqueued" "finished" "reencoding" "staging"; do
 done
 chown -R graham:users "${SABNZBD_SHARE_DIR}"
 mkdir -p /home/asystem/sabnzbd/latest/scripts
-cp -rvf /var/lib/asystem/install/media/latest/config/bin/lib/rename.py /home/asystem/sabnzbd/latest/scripts
+cp -rvf /var/lib/asystem/install/media/latest/config/bin/lib/ingress.py /home/asystem/sabnzbd/latest/scripts
 chmod +x /home/asystem/sabnzbd/latest/scripts/*.sh

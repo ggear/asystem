@@ -26,11 +26,18 @@ SIZE_BITRATE_MID_KBPS = 4000
 SIZE_BITRATE_MAX_KBPS = 8000
 # Reference: https://github.com/lisamelton/other_video_transcoding/blob/master/other-transcode.rb#L1070
 
-FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
-SERIES_REGEXP = ".*([sS][0-9]?[0-9]+[eE][0-9]?[-]*[0-9]+.*)\..*"
+MEDIA_SEASON_REGEXP = ".*/Season ([1-9]?[0-9]+).*"
+MEDIA_EPISODE_REGEXP = ".*([sS])([0-9]?[0-9]+)([eE])([0-9]?[-]*[0-9]+)(.*)\..*"
+MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
+MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode"}
+
+TOKEN_TRANSCODE = "__TRANSCODE"
+TOKEN_UNKNOWABLE = "__UNKNOWABLE"
 
 BASH_EXIT_HANDLER = "ECHO=echo\n" \
                     "[[ $(uname) == 'Darwin' ]] && ECHO=gecho\n\n" \
+                    "REALPATH=realpath\n" \
+                    "[[ $(uname) == 'Darwin' ]] && REALPATH=grealpath\n\n" \
                     "sigterm_handler() {{\n{}  exit 1\n}}\n" \
                     "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
 BASH_ECHO_HEADER = "${ECHO} \"#######################################################################################\"\n"
@@ -121,7 +128,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 _print_message(_message="skipping file due to unknown library type [{}]".format(file_media_type),
                                _context=file_path, _no_header_footer=True)
                 continue
-            if file_extension not in FILE_EXTENSIONS:
+            if file_extension not in MEDIA_FILE_EXTENSIONS:
                 _print_message(_message="skipping file due to unknown file extension [{}]".format(file_extension),
                                _context=file_path, _no_header_footer=True)
                 continue
@@ -138,13 +145,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 continue
             file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
                 if len(file_relative_dir_tokens) > 3 else "."
-            file_base_dir_name = file_base_dir.split("/")[0]
-            file_stem = file_base_dir_name
+            file_base_dir_parent = file_base_dir.split("/")[0]
+            file_stem = file_base_dir_parent
             file_version_qualifier = ""
+            file_season_match = None
+            file_episode_match = None
             if file_media_type == "series":
-                file_version_qualifier_match = re.search(SERIES_REGEXP, file_name)
-                if file_version_qualifier_match is not None:
-                    file_version_qualifier = file_version_qualifier_match.groups()[0]
+                file_season_match = re.search(MEDIA_SEASON_REGEXP, file_base_dir)
+                file_episode_match = re.search(MEDIA_EPISODE_REGEXP, file_name)
+                if file_episode_match is not None:
+                    file_version_qualifier = "".join(file_episode_match.groups())
                 else:
                     file_version_qualifier = file_name_sans_extension
                 file_stem = "{} {}".format(
@@ -152,44 +162,72 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     file_version_qualifier.lower().title()
                 )
             file_version_qualifier = file_version_qualifier.lower()
-
-            # TODO: Warn on stem not matching dir
-            # TODO: Warn on not Season
-            # TODO: Warn on badly placed file
-
             file_dir_rename = ""
             file_name_rename = ""
-            file_dir_normalised = _normalise_name(file_base_dir_name)
-            file_name_normalised = "{}.{}".format(_normalise_name(file_stem), file_extension)
-            if "__TRANSCODE_" in file_name or file_version_dir.startswith("Plex Versions"):
+            if TOKEN_TRANSCODE in file_name or file_version_dir.startswith("Plex Versions"):
                 file_dir_rename = ""
                 file_name_rename = ""
-            elif file_dir_normalised == "" or \
-                    (file_version_dir != "." and not file_version_dir.startswith("Plex Versions")) or \
-                    (file_media_type == "series" and "Season" not in file_base_dir and re.search(SERIES_REGEXP, file_name) is not None):
-                file_name_rename = ""
-                file_dir_rename = _normalise_name(file_name_sans_extension)
-                if file_media_type == "series":
-                    move_dir_message = "file requires moving directory"
-                else:
-                    move_dir_message = "file requires moving to directory [{}]".format(file_dir_rename)
-                _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
-                    if verbose else None, _message=move_dir_message, _context=file_path)
             else:
-                if file_base_dir_name != file_dir_normalised:
-                    file_dir_rename = file_dir_normalised
-                    _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
-                        if verbose else None, _message="file requires moving to directory [{}]" \
-                                   .format(file_dir_rename), _context=file_path)
+                file_name_normalised = "{}.{}".format(_normalise_name(file_stem), file_extension) \
+                    if _normalise_name(file_stem) != "" else ""
                 if file_media_type == "series":
-                    file_name_normalised = file_name_normalised.replace(
-                        "{} {}".format(file_dir_normalised, file_dir_normalised), file_dir_normalised)
-                if file_name != file_name_normalised:
-                    file_name_rename = file_name_normalised
-                    _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
-                        if verbose else None, _message="file requires renaming to [{}]" \
-                                   .format(file_name_rename), _context=file_path)
-
+                    file_dir_normalised = _normalise_name(file_base_dir)
+                    file_season_not_matching = file_season_match is not None and \
+                                               file_episode_match is not None and \
+                                               file_episode_match.groups()[1].lstrip("0") != file_season_match.groups()[0]
+                    if (file_version_dir != "." and not file_version_dir.startswith("Plex Versions")) or file_season_not_matching:
+                        file_name_rename = ""
+                        file_dir_rename = TOKEN_UNKNOWABLE
+                        _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                            if verbose else None, _message="file requires nested directory moving from [{}]" \
+                                       .format(file_relative_dir_tokens[-1] \
+                                                   if file_season_not_matching else file_version_dir), _context=file_path)
+                    else:
+                        file_name_normalised = file_name_normalised.replace(
+                            _normalise_name(file_base_dir) + " " + _normalise_name(file_base_dir), _normalise_name(file_base_dir))
+                        if file_base_dir != file_dir_normalised:
+                            if file_dir_normalised == "":
+                                file_dir_rename = TOKEN_UNKNOWABLE
+                                _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                    if verbose else None, _message="file requires directory moving to [{}]" \
+                                               .format(_normalise_name(file_name_sans_extension)), _context=file_path)
+                            else:
+                                file_dir_rename = _normalise_name(file_base_dir_parent)
+                                _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                    if verbose else None, _message="file requires directory renaming to [{}]" \
+                                               .format(file_dir_rename), _context=file_path)
+                        elif file_name != file_name_normalised:
+                            if file_name_normalised != "":
+                                file_name_rename = file_name_normalised
+                                _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                    if verbose else None, _message="file requires renaming to [{}]" \
+                                               .format(file_name_rename), _context=file_path)
+                else:
+                    file_dir_normalised = _normalise_name(file_base_dir_parent)
+                    if file_version_dir != "." and not file_version_dir.startswith("Plex Versions"):
+                        file_name_rename = ""
+                        file_dir_rename = TOKEN_UNKNOWABLE
+                        _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                            if verbose else None, _message="file requires nested directory moving from [{}]" \
+                                       .format(file_version_dir), _context=file_path)
+                    else:
+                        if file_base_dir_parent != file_dir_normalised:
+                            if file_dir_normalised == "":
+                                file_dir_rename = TOKEN_UNKNOWABLE
+                                _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                    if verbose else None, _message="file requires directory moving to [{}]" \
+                                               .format(_normalise_name(file_name_sans_extension)), _context=file_path)
+                            else:
+                                file_dir_rename = file_dir_normalised
+                                _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                    if verbose else None, _message="file requires directory renaming to [{}]" \
+                                               .format(file_dir_rename), _context=file_path)
+                        if file_name != file_name_normalised:
+                            if file_name_normalised != "":
+                                file_name_rename = file_name_normalised
+                                _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                    if verbose else None, _message="file requires renaming to [{}]" \
+                                               .format(file_name_rename), _context=file_path)
             if not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
                     "transcode_action": "Analyse",
@@ -272,6 +310,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             if "H265" in file_probe_stream_video_codec or "HEVC" in file_probe_stream_video_codec:
                                 file_probe_stream_video_codec = "HEVC"
                             file_probe_stream_filtered["codec"] = file_probe_stream_video_codec
+                            file_probe_stream_filtered["profile"] = file_probe_stream["profile"].title() \
+                                if "profile" in file_probe_stream else ""
                             file_probe_stream_video_field_order = "i"
                             if "field_order" in file_probe_stream:
                                 if file_probe_stream["field_order"] == "progressive":
@@ -489,8 +529,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     {"file_directory": " '{}' ".format(_delocalise_path(file_dir_path, file_path_root, True, True))},
                     {"file_stem": " '{}' ".format(_escape_path(file_stem, True))},
                     {"file_extension": file_extension},
-                    {"rename_directory": "" if file_dir_rename == "" else " '{}' ".format(_escape_path(file_dir_rename, True))},
-                    {"rename_file": "" if file_name_rename == "" else " '{}' ".format(_escape_path(file_name_rename, True))},
+                    {"rename_directory": " '{}' ".format(_escape_path(file_dir_rename, True))},
+                    {"rename_file": " '{}' ".format(_escape_path(file_name_rename, True))},
                     {"container_format": file_probe["format"]["format_name"].lower() \
                         if ("format" in file_probe and "format_name" in file_probe["format"]) else ""},
                     {"duration__hours": str(round(file_probe_duration, 2 if file_probe_duration > 1 else 4)) \
@@ -640,10 +680,18 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         "Version Qualifier",
         "Video 1 Index",
         "Video 1 Codec",
+        "Video 1 Width",
+        "Video 1 Res Min",
+        "Video 1 Res Mid",
+        "Video 1 Res Max",
+        "Video 1 Bitrate Min (Kbps)",
+        "Video 1 Bitrate Mid (Kbps)",
+        "Video 1 Bitrate Max (Kbps)",
         "Audio 1 Index",
         "Audio 1 Codec",
         "Audio 1 Lang",
         "Audio 1 Channels",
+        "Audio 1 Surround",
         "Subtitle 1 Lang",
         "Subtitle 1 Format",
     }))
@@ -679,7 +727,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("File Name").str.contains("__TRANSCODE_")) |
+                    (pl.col("File Name").str.contains(TOKEN_TRANSCODE)) |
                     (pl.col("Version Directory").str.starts_with("Plex Versions"))
                 ).then(pl.lit("Transcoded"))
                 .otherwise(pl.lit("Original"))
@@ -700,7 +748,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (
                 pl.col("File Stem") \
                     .str.to_lowercase() \
-                    .str.split("__transcode_").list.first() \
+                    .str.split(TOKEN_TRANSCODE.lower() + "_").list.first() \
                     .str.strip_prefix(" '") \
                     .str.strip_suffix("' ")
             ).alias("Base Path")
@@ -709,7 +757,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.col("Base Path").count().over("Base Path")
             ).alias("Version Count")
         ).drop("Base Path")
-
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
@@ -947,17 +994,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Transcode Action") == "Ignore")
                 ).then(pl.lit("7. Nothing"))
                 .when(
-                    (pl.col("Rename File") != "") |
-                    (pl.col("Rename Directory") != "")
+                    ((pl.col("Rename File") != "") & (pl.col("Rename File") != " '' ")) |
+                    ((pl.col("Rename Directory") != "") & (pl.col("Rename Directory") != " '' "))
                 ).then(pl.lit("2. Rename"))
                 .when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete") |
                     (pl.col("File Version") == "Duplicate")
                 ).then(pl.lit("1. Delete"))
-                .when(
-                    (pl.col("File Size") == "Small")
-                ).then(pl.lit("5. Upscale"))
                 .when(
                     (pl.col("File Version") == "Transcode")
                 ).then(pl.lit("3. Merge"))
@@ -971,6 +1015,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Size") == "Large") |
                     (pl.col("Metadata State") == "Messy")
                 ).then(pl.lit("6. Reformat"))
+                .when(
+                    (pl.col("File Size") == "Small")
+                ).then(pl.lit("5. Upscale"))
                 .otherwise(pl.lit("7. Nothing"))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
@@ -998,10 +1045,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
-        metadata_merged_pl = metadata_merged_pl.select([
-            column.name for column in metadata_merged_pl \
-            if not (column.null_count() == metadata_merged_pl.height)
-        ])
         if verbose:
             print("done", flush=True)
             print("#enriched-dataframe -> {}/*.sh ... ".format(file_path_root_target_relative), end='', flush=True)
@@ -1010,32 +1053,53 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         # TODO: Make a media-transcode/merge scripts to context determine all scripts under path or accross local shares if none - maybe make all other scripts do the same?
         metadata_scripts_pl = metadata_merged_pl.filter(
             (
-                    (file_path_root_is_nested) |
-                    (pl.col("File Action").str.ends_with("Merge")) |
-                    (pl.col("File Action").str.ends_with("Reformat")) |
-                    (pl.col("File Action").str.ends_with("Transcode"))
-            ) &
-            (pl.col("File Version") != "Transcoded") &
-            (pl.col("Media Directory").is_in(metadata_local_media_dirs)) &
-            (pl.col("Video Count").cast(pl.Int32) > 0)
+                    (
+                        (pl.col("File Action").str.ends_with("Merge"))
+                    ) | (
+                        (pl.col("File Action").str.ends_with("Rename"))
+                    ) | (
+                        (pl.col("File Action").str.ends_with("Reformat"))
+                    ) | (
+                            (pl.col("File Action").str.ends_with("Transcode")) &
+                            (pl.col("File State") != "Corrupt") &
+                            (pl.col("File Version") != "Transcoded")
+                    )
+            ) & (
+                (pl.col("Media Directory").is_in(metadata_local_media_dirs))
+            )
         ).with_columns(
             [
                 pl.concat_str([
                     pl.col("File Name") \
-                        .str.replace("$", "\\$", literal=True)
+                        .str.replace_all("\"", "\\\"")
+                        .str.replace_all("$", "\\$", literal=True)
                 ]).alias("File Name"),
                 pl.concat_str([
                     pl.col("File Directory") \
                         .str.strip_prefix(" '") \
                         .str.strip_suffix("' ") \
-                        .str.replace("'\\\\''", "'")
+                        .str.replace_all("'\\\\''", "'")
                 ]).alias("File Directory"),
                 pl.concat_str([
                     pl.col("File Stem") \
                         .str.strip_prefix(" '") \
                         .str.strip_suffix("' ") \
-                        .str.replace("'\\\\''", "'")
+                        .str.replace_all("'\\\\''", "'")
                 ]).alias("File Stem"),
+                pl.concat_str([
+                    pl.col("Rename File") \
+                        .str.strip_prefix(" '") \
+                        .str.strip_suffix("' ") \
+                        .str.replace_all("'\\\\''", "'")
+                        .str.replace_all("\"", "\\\"")
+                        .str.replace_all("$", "\\$", literal=True)
+                ]).alias("Rename File"),
+                pl.concat_str([
+                    pl.col("Rename Directory") \
+                        .str.strip_prefix(" '") \
+                        .str.strip_suffix("' ") \
+                        .str.replace_all("'\\\\''", "'")
+                ]).alias("Rename Directory"),
             ]
         ).with_columns(
             [
@@ -1043,10 +1107,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.col("File Directory"),
                     pl.lit("/._transcode_"),
                     pl.col("File Stem"),
-                ]).alias("Script Directory Transcode"),
+                ]).alias("Transcode Script Directory"),
                 pl.concat_str([
-                    pl.col("File Stem").str.replace("$", "\\$", literal=True),
-                    pl.lit("__TRANSCODE_"),
+                    pl.col("File Directory"),
+                    pl.lit("/._reformat_"),
+                    pl.col("File Stem"),
+                ]).alias("Reformat Script Directory"),
+                pl.concat_str([
+                    pl.col("File Directory"),
+                    pl.lit("/._rename_"),
+                    pl.col("File Stem"),
+                ]).alias("Rename Script Directory"),
+                pl.concat_str([
+                    pl.col("File Stem"),
+                    pl.lit(TOKEN_TRANSCODE + "_"),
                     pl.col("Target Quality").str.to_uppercase(),
                     pl.lit(".mkv"),
                 ]).alias("Transcode File Name"),
@@ -1054,16 +1128,32 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ).with_columns(
             [
                 pl.concat_str([
-                    pl.col("Script Directory Transcode"),
+                    pl.col("Transcode Script Directory"),
                     pl.lit("/transcode.sh"),
-                ]).alias("Script Path Transcode"),
+                ]).alias("Transcode Script File"),
+                pl.concat_str([
+                    pl.col("Reformat Script Directory"),
+                    pl.lit("/reformat.sh"),
+                ]).alias("Reformat Script File"),
+                pl.concat_str([
+                    pl.col("Rename Script Directory"),
+                    pl.lit("/rename.sh"),
+                ]).alias("Rename Script File"),
             ]
         ).with_columns(
             [
                 pl.concat_str([
                     pl.lit("../../../.."),
-                    pl.col("Script Path Transcode").str.strip_prefix(file_path_media),
-                ]).alias("Script Path Relative Transcode"),
+                    pl.col("Transcode Script File").str.strip_prefix(file_path_media),
+                ]).alias("Transcode Script File Relative"),
+                pl.concat_str([
+                    pl.lit("../../../.."),
+                    pl.col("Reformat Script File").str.strip_prefix(file_path_media),
+                ]).alias("Reformat Script File Relative"),
+                pl.concat_str([
+                    pl.lit("../../../.."),
+                    pl.col("Rename Script File").str.strip_prefix(file_path_media),
+                ]).alias("Rename Script File Relative"),
             ]
         ).with_columns(
             [
@@ -1161,6 +1251,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (space): ' && date && ${ECHO} '' && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("cd \"${ROOT_DIR}\"\n"),
+                    pl.lit("if [ ! -f \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" ]; then\n"),
+                    pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (missing): ' && date && ${ECHO} '' && exit 0\n"),
+                    pl.lit("fi\n"),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
                     pl.lit("  "), pl.col("Transcode Video"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
@@ -1177,7 +1270,52 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  ${ECHO} -n 'Failed (other-transcode): ' && date && exit 2\n"),
                     pl.lit("fi\n"),
                     pl.lit("${ECHO} '' && exit -1\n"),
-                ]).alias("Script Source Transcode"),
+                ]).alias("Transcode Script Source"),
+                pl.concat_str([
+                    pl.lit("# !/bin/bash\n\n"),
+                    pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  ${ECHO} 'Killing Rename!!!!'\n")),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("${ECHO} \"Renaming: "), pl.col("File Name"), pl.lit(" ... \"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("BASE_DIR=\""), pl.col("Base Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("BASE_DIR=(\"${BASE_DIR// /_____}\")\n"),
+                    pl.lit("BASE_DIR=(${BASE_DIR//\// })\n"),
+                    pl.lit("BASE_DIR=(\"${BASE_DIR//_____/ }\")\n"),
+                    pl.lit("RENAME_DIR=\""), pl.col("Media Directory"), pl.lit("/\"\\\n"),
+                    pl.lit("\""), pl.col("Media Scope"), pl.lit("/"), pl.col("Media Type"), pl.lit("\"\n"),
+                    pl.lit("RENAME_DIR=\"${ROOT_DIR%%${RENAME_DIR}*}${RENAME_DIR}\"\n"),
+                    pl.lit("if [ \""), pl.col("Rename Directory"), pl.lit("\" != \"\" ]; then\n"),
+                    pl.lit("  ${ECHO} 'Renaming of directory must be validated and executed manually:' && ${ECHO} ''\n"),
+                    pl.lit("  if [ \""), pl.col("Rename Directory"), pl.lit("\" != \"" + TOKEN_UNKNOWABLE + "\" ]; then\n"),
+                    pl.lit("    ${ECHO} cd \\\'\"${RENAME_DIR}\"\\\'\n"),
+                    pl.lit("    ${ECHO} [[ ! -d \\\''"), pl.col("Rename Directory"), pl.lit("'\\\' ]] \&\& \\\n"),
+                    pl.lit("       mv -v \\\'\"${BASE_DIR}\"\\\' \\\''"), pl.col("Rename Directory"), pl.lit("'\\\' \n"),
+                    pl.lit("  else\n"),
+                    pl.lit("    ${ECHO} cd \"$(${REALPATH} \"${ROOT_DIR}/../\")\"\n"),
+                    pl.lit("  fi\n"),
+                    pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (not-executed): ' && date\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("if [ \""), pl.col("Rename File"), pl.lit("\" != \"\" ]; then\n"),
+                    pl.lit("  ROOT_DIR_PARENT=\"$(${REALPATH} \"${ROOT_DIR}/../\")\"\n"),
+                    pl.lit("  FILE_ORIGINAL=\"${ROOT_DIR_PARENT}/"), pl.col("File Name"), pl.lit("\"\n"),
+                    pl.lit("  FILE_RENAMED=\"${ROOT_DIR_PARENT}/"), pl.col("Rename File"), pl.lit("\"\n"),
+                    pl.lit("  ${ECHO} '' && ${ECHO} \\\n"),
+                    pl.lit("     \"./$(${REALPATH} --relative-to=\"${ROOT_DIR}/../../../..\" \"${FILE_ORIGINAL}\") ->\" \\\n"),
+                    pl.lit("     \"./$(${REALPATH} --relative-to=\"${ROOT_DIR}/../../../..\" \"${FILE_RENAMED}\")\"\n"),
+                    pl.lit("  if [ ! -f \"${FILE_RENAMED}\" ]; then\n"),
+                    pl.lit("    mv \"${FILE_ORIGINAL}\" \"${FILE_RENAMED}\"\n"),
+                    pl.lit("    if [ $? -eq 0 ]; then\n"),
+                    pl.lit("      ${ECHO} '' && ${ECHO} -n 'Completed: ' && date && exit 0\n"),
+                    pl.lit("    else\n"),
+                    pl.lit("      ${ECHO} '' && ${ECHO} -n 'Failed (mv): ' && date && exit 1\n"),
+                    pl.lit("    fi\n"),
+                    pl.lit("  else\n"),
+                    pl.lit("    ${ECHO} '' && ${ECHO} -n 'Skipped (pre-existing): ' && date && exit 0\n"),
+                    pl.lit("  fi\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("${ECHO} '' && exit 0\n"),
+                ]).alias("Rename Script Source"),
             ]
         ).sort("Action Index")
 
@@ -1195,7 +1333,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
                         if not file_path_root_is_nested:
                             script_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(
-                                _localise_path(script_local_row[1], file_path_root)))
+                                _localise_path(script_local_row[1], file_path_root) \
+                                    .replace("$", "\$")
+                                    .replace("\"", "\\\"")
+                            ))
                         script_local_dir = _localise_path(script_local_row[2], file_path_root)
                         os.makedirs(script_local_dir, exist_ok=True)
                         _set_permissions(script_local_dir, 0o750)
@@ -1209,21 +1350,28 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             if not file_path_root_is_nested:
                 _set_permissions(script_global_path, 0o750)
 
-        _write_scripts("transcode.sh",
-                       metadata_scripts_pl.filter(
-                           (file_path_root_is_nested) |
-                           (pl.col("File Action").str.ends_with("Transcode"))
-                       ).select(
-                           [
-                               "Script Path Transcode",
-                               "Script Path Relative Transcode",
-                               "Script Directory Transcode",
-                               "Script Source Transcode"
-                           ]
-                       ).rows())
-
+        for script in MEDIA_FILE_SCRIPTS:
+            _write_scripts("{}.sh".format(script),
+                           metadata_scripts_pl.filter(
+                               (
+                                       (script == "reformat") &
+                                       (file_path_root_is_nested)
+                               ) |
+                               (pl.col("File Action").str.ends_with(script.title()))
+                           ).select(
+                               [
+                                   "{} Script File".format(script.title()),
+                                   "{} Script File Relative".format(script.title()),
+                                   "{} Script Directory".format(script.title()),
+                                   "{} Script Source".format(script.title() if script != "reformat" else "Transcode")
+                               ]
+                           ).rows())
         if verbose:
             print("done", flush=True)
+        metadata_merged_pl = metadata_merged_pl.select([
+            column.name for column in metadata_merged_pl \
+            if not (column.null_count() == metadata_merged_pl.height)
+        ])
         metadata_summary_pl = pl.concat([
             metadata_merged_pl.group_by(["File Action"]).agg(pl.col("File Name").count().alias("File Count")),
             metadata_merged_pl.group_by(["File Action", "Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
