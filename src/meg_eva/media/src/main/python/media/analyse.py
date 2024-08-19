@@ -24,7 +24,7 @@ SIZE_BITRATE_MAX_KBPS = 8000
 # Reference: https://github.com/lisamelton/other_video_transcoding/blob/master/other-transcode.rb#L1070
 
 MEDIA_SEASON_NUMBER_REGEXP = ".*/Season ([1-9]?[0-9]+).*"
-MEDIA_EPISODE_NUMBER_REGEXP = ".*([sS])([0-9]?[0-9]+)(.*)([eE])([0-9]?[-]*[0-9]+)(.*)"
+MEDIA_EPISODE_NUMBER_REGEXP = ".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
 MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + "\..*"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
 MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode"}
