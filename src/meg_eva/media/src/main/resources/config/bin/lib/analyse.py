@@ -5,11 +5,12 @@ WARNING: This file is written by the build process, any manual edits will be los
 import argparse
 import os
 import re
+import string
 import sys
 from collections import OrderedDict
 from collections.abc import MutableMapping
 from pathlib import Path
-import string
+
 import ffmpeg
 import polars as pl
 import polars.selectors as cs
@@ -26,8 +27,9 @@ SIZE_BITRATE_MID_KBPS = 4000
 SIZE_BITRATE_MAX_KBPS = 8000
 # Reference: https://github.com/lisamelton/other_video_transcoding/blob/master/other-transcode.rb#L1070
 
-MEDIA_SEASON_REGEXP = ".*/Season ([1-9]?[0-9]+).*"
-MEDIA_EPISODE_REGEXP = ".*([sS])([0-9]?[0-9]+)([eE])([0-9]?[-]*[0-9]+)(.*)\..*"
+MEDIA_SEASON_NUMBER_REGEXP = ".*/Season ([1-9]?[0-9]+).*"
+MEDIA_EPISODE_NUMBER_REGEXP = ".*([sS])([0-9]?[0-9]+)(.*)([eE])([0-9]?[-]*[0-9]+)(.*)"
+MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + "\..*"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
 MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode"}
 
@@ -151,16 +153,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             file_season_match = None
             file_episode_match = None
             if file_media_type == "series":
-                file_season_match = re.search(MEDIA_SEASON_REGEXP, file_base_dir)
-                file_episode_match = re.search(MEDIA_EPISODE_REGEXP, file_name)
+                file_season_match = re.search(MEDIA_SEASON_NUMBER_REGEXP, file_base_dir)
+                file_episode_match = re.search(MEDIA_EPISODE_NAME_REGEXP, file_name)
                 if file_episode_match is not None:
                     file_version_qualifier = "".join(file_episode_match.groups())
                 else:
                     file_version_qualifier = file_name_sans_extension
                 file_stem = "{} {}".format(
-                    string.capwords(file_stem),
-                    string.capwords(file_version_qualifier.lower())
-                )
+                    file_stem,
+                    file_version_qualifier.lower()
+                ).title()
             file_version_qualifier = file_version_qualifier.lower()
             file_dir_rename = ""
             file_name_rename = ""
@@ -1425,7 +1427,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
 def _normalise_name(_name):
     _name = _name.replace(".", " ").replace("-", " ").replace("_", " ").replace("/", " / ")
-    _name = string.capwords(re.sub(" +", " ", _name).strip()).replace(" / ", "/")
+    name_episode_match = re.search(MEDIA_EPISODE_NUMBER_REGEXP, _name)
+    if name_episode_match is not None:
+        _name = _name.replace("".join(name_episode_match.groups()), "__")
+    _name = string.capwords(re.sub(" +", " ", _name).strip()) \
+        .replace(" / ", "/")
     for name_token in {
         " i ",
         " ii ",
@@ -1441,6 +1447,9 @@ def _normalise_name(_name):
         _name = _name.replace(name_token.title(), name_token.upper())
         _name = _name.replace(name_token.upper(), name_token.upper())
         _name = _name.replace(name_token.lower(), name_token.upper())
+    if name_episode_match is not None:
+        _name = _name.replace("__", "S{}E{}".format(
+            name_episode_match.groups()[1], name_episode_match.groups()[4]))
     return _name
 
 
