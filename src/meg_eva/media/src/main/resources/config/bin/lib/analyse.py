@@ -1424,8 +1424,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
 
 def _normalise_name(_name):
-    _name = _name.replace(".", " ").replace("-", " ").replace("_", " ")
-    _name = string.capwords(re.sub(" +", " ", _name).strip())
+    _name = _name.replace(".", " ").replace("-", " ").replace("_", " ").replace("/", " / ")
+    _name = string.capwords(re.sub(" +", " ", _name).strip()).replace(" / ", "/")
     for name_token in {
         " i ",
         " ii ",
