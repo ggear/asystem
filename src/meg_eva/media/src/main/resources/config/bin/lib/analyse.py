@@ -1426,10 +1426,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
 
 def _normalise_name(_name):
-    _name = _name.replace(".", " ").replace("-", " ").replace("_", " ").replace("/", " / ")
+    _name = _name.replace("@", " ")
     name_episode_match = re.search(MEDIA_EPISODE_NUMBER_REGEXP, _name)
     if name_episode_match is not None:
-        _name = _name.replace("".join(name_episode_match.groups()), "__")
+        _name = _name.replace("".join(name_episode_match.groups()), "@@")
+    _name = _name.replace(".", " ").replace("-", " ").replace("_", " ").replace("/", " / ")
     _name = string.capwords(re.sub(" +", " ", _name).strip()) \
         .replace(" / ", "/")
     for name_token in {
@@ -1448,8 +1449,8 @@ def _normalise_name(_name):
         _name = _name.replace(name_token.upper(), name_token.upper())
         _name = _name.replace(name_token.lower(), name_token.upper())
     if name_episode_match is not None:
-        _name = _name.replace("__", "S{}E{}".format(
-            name_episode_match.groups()[1], name_episode_match.groups()[4]))
+        _name = _name.replace("@@", "S{}E{}{}".format(
+            name_episode_match.groups()[1], name_episode_match.groups()[4], name_episode_match.groups()[5]))
     return _name
 
 
