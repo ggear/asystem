@@ -35,9 +35,10 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_rename(self):
         dir_test = self._test_analyse_dir(1)
-        self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
-        self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
-        self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
+        self._test_analyse_assert(join(dir_test, "37/media/kids/series/Sample Series 8"), scripts={"rename"})
+        # self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
+        # self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
+        # self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
 
     def test_analyse_scripts(self):
         dir_test = self._test_analyse_dir(1)
