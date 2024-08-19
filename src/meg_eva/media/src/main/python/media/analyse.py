@@ -23,6 +23,7 @@ SIZE_BITRATE_MID_KBPS = 4000
 SIZE_BITRATE_MAX_KBPS = 8000
 # Reference: https://github.com/lisamelton/other_video_transcoding/blob/master/other-transcode.rb#L1070
 
+MEDIA_YEAR_NUMBER_REGEXP = "\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
 MEDIA_SEASON_NUMBER_REGEXP = ".*/Season ([1-9]?[0-9]+).*"
 MEDIA_EPISODE_NUMBER_REGEXP = ".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
 MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + "\..*"
@@ -202,12 +203,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                                .format(file_name_rename), _context=file_path)
                 else:
                     file_dir_normalised = _normalise_name(file_base_dir_parent)
-                    if file_version_dir != "." and not file_version_dir.startswith("Plex Versions"):
+                    file_year_match = re.findall(MEDIA_YEAR_NUMBER_REGEXP, file_dir_normalised)
+                    if file_version_dir != "." and not file_version_dir.startswith("Plex Versions") or len(file_year_match) != 1:
                         file_name_rename = ""
                         file_dir_rename = TOKEN_UNKNOWABLE
-                        _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
-                            if verbose else None, _message="file requires nested directory moving from [{}]" \
-                                       .format(file_version_dir), _context=file_path)
+                        if len(file_year_match) != 1:
+                            _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                if verbose else None, _message=(
+                                "file requires year adding to name [{}]" \
+                                    if len(file_year_match) == 0 else "file has ambiguous year in name [{}]") \
+                                           .format(file_base_dir_parent), _context=file_path)
+                        else:
+                            _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                if verbose else None, _message="file requires nested directory moving from [{}]" \
+                                           .format(file_version_dir), _context=file_path)
                     else:
                         if file_base_dir_parent != file_dir_normalised:
                             if file_dir_normalised == "":
@@ -737,7 +746,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (~pl.col("File Stem").str.contains(".", literal=True)) &
                     (pl.struct(
                         pl.col("Version Directory"),
-                        pl.col("File Name").str.to_lowercase().str.split(".").list.first()
+                        pl.col("File Name") \
+                            .str.replace_all(MEDIA_YEAR_NUMBER_REGEXP, "") \
+                            .str.to_lowercase() \
+                            .str.split(".").list.first() \
+                            .str.strip_chars()
                     ).is_duplicated())
                 ).then(pl.lit("Duplicate"))
                 .otherwise(pl.col("File Version"))
