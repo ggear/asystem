@@ -53,8 +53,8 @@ def _rename(file_path_root, verbose=False):
                                 .replace('-', ' ').strip().replace(' ', '-')
                         file_dir_new = file_dir_new.replace('-', ' ').strip()
                         file_dir_new = re.sub(r'[^a-zA-Z0-9 ]+', '', file_dir_new).strip()
-                        file_name_new = "{}-S{}E{}.{}".format(
-                            file_dir_new.replace(' ', '-'),
+                        file_name_new = "{} S{}E{}.{}".format(
+                            file_dir_new,
                             file_series_search_groups[1],
                             file_series_search_groups[2],
                             file_type
