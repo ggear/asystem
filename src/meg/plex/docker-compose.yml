@@ -2,7 +2,7 @@
 services:
   plex:
     container_name: plex
-    image: linuxserver/plex:1.40.4
+    image: linuxserver/plex:1.40.5
     init: false
     restart: ${SERVICE_RESTART}
     environment:
