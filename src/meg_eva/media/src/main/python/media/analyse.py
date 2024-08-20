@@ -700,6 +700,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         "Audio 1 Channels",
         "Audio 1 Surround",
         "Subtitle 1 Lang",
+        "Subtitle 1 Codec",
         "Subtitle 1 Format",
     }))
     if metadata_merged_pl.height > 0:
