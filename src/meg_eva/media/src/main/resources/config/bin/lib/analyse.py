@@ -1234,7 +1234,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     )
                 ).alias("Transcode Audio"),
                 (
-                    pl.lit("--add-subtitle eng")
+                    pl.when(
+                        (pl.col("Subtitle 1 Codec") != "MOV_TEXT")
+                    ).then(
+                        pl.lit(";")
+                    ).otherwise(
+                        pl.lit("--add-subtitle eng")
+                    )
                 ).alias("Transcode Subtitle")
             ]
         ).with_columns(

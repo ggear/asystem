@@ -1153,21 +1153,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             ]
         ).with_columns(
             [
-                pl.concat_str([
-                    pl.lit("../../../.."),
-                    pl.col("Transcode Script File").str.strip_prefix(file_path_media),
-                ]).alias("Transcode Script File Relative"),
-                pl.concat_str([
-                    pl.lit("../../../.."),
-                    pl.col("Reformat Script File").str.strip_prefix(file_path_media),
-                ]).alias("Reformat Script File Relative"),
-                pl.concat_str([
-                    pl.lit("../../../.."),
-                    pl.col("Rename Script File").str.strip_prefix(file_path_media),
-                ]).alias("Rename Script File Relative"),
-            ]
-        ).with_columns(
-            [
                 (
                     pl.when(
                         (pl.col("Target Quality") == "Max")
@@ -1230,7 +1215,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     )
                 ).alias("Transcode Audio"),
                 (
-                    pl.lit("--add-subtitle eng")
+                    pl.when(
+                        (pl.col("Subtitle 1 Codec") == "MOV_TEXT")
+                    ).then(
+                        pl.lit(";")
+                    ).otherwise(
+                        pl.lit("--add-subtitle eng")
+                    )
                 ).alias("Transcode Subtitle")
             ]
         ).with_columns(
@@ -1343,17 +1334,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 for script_local_row in _script_local_rows:
                     if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
                         if not file_path_root_is_nested:
-                            script_global_file.write("\"${{ROOT_DIR}}/{}\"\n".format(
-                                _localise_path(script_local_row[1], file_path_root) \
+                            script_global_file.write("\"{}\"\n".format(
+                                _localise_path(script_local_row[0], file_path_root) \
                                     .replace("$", "\$")
                                     .replace("\"", "\\\"")
                             ))
-                        script_local_dir = _localise_path(script_local_row[2], file_path_root)
+                        script_local_dir = _localise_path(script_local_row[1], file_path_root)
                         os.makedirs(script_local_dir, exist_ok=True)
                         _set_permissions(script_local_dir, 0o750)
                         script_local_path = _localise_path(script_local_row[0], file_path_root)
                         with open(script_local_path, 'w') as script_local_file:
-                            script_local_file.write(script_local_row[3])
+                            script_local_file.write(script_local_row[2])
                         _set_permissions(script_local_path, 0o750)
             finally:
                 if not file_path_root_is_nested and script_global_file is not None:
@@ -1372,7 +1363,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                            ).select(
                                [
                                    "{} Script File".format(script.title()),
-                                   "{} Script File Relative".format(script.title()),
                                    "{} Script Directory".format(script.title()),
                                    "{} Script Source".format(script.title() if script != "reformat" else "Transcode")
                                ]
