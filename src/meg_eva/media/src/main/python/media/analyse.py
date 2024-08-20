@@ -1064,21 +1064,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         # TODO: Write out file and global merge/reformat scripts
         # TODO: Make a media-transcode/merge scripts to context determine all scripts under path or accross local shares if none - maybe make all other scripts do the same?
         metadata_scripts_pl = metadata_merged_pl.filter(
-            (
-                    (
-                        (pl.col("File Action").str.ends_with("Merge"))
-                    ) | (
-                        (pl.col("File Action").str.ends_with("Rename"))
-                    ) | (
-                        (pl.col("File Action").str.ends_with("Reformat"))
-                    ) | (
-                            (pl.col("File Action").str.ends_with("Transcode")) &
-                            (pl.col("File State") != "Corrupt") &
-                            (pl.col("File Version") != "Transcoded")
-                    )
-            ) & (
-                (pl.col("Media Directory").is_in(metadata_local_media_dirs))
-            )
+            (pl.col("Media Directory").is_in(metadata_local_media_dirs))
         ).with_columns(
             [
                 pl.concat_str([
