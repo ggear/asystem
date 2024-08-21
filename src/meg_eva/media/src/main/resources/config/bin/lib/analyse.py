@@ -1352,7 +1352,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                            metadata_scripts_pl.filter(
                                (
                                        (script == "reformat") &
-                                       (file_path_root_is_nested)
+                                       (file_path_root_is_nested) &
+                                       (pl.col("File Version") == "Original")
                                ) |
                                (pl.col("File Action").str.ends_with(script.title()))
                            ).select(
