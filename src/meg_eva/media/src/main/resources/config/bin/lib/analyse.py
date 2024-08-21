@@ -28,7 +28,7 @@ SIZE_BITRATE_MAX_KBPS = 8000
 # Reference: https://github.com/lisamelton/other_video_transcoding/blob/master/other-transcode.rb#L1070
 
 MEDIA_YEAR_NUMBER_REGEXP = "\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
-MEDIA_SEASON_NUMBER_REGEXP = ".*/Season ([1-9]?[0-9]+).*"
+MEDIA_SEASON_NUMBER_REGEXP = "Season ([0-9]?[0-9]+)"
 MEDIA_EPISODE_NUMBER_REGEXP = ".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
 MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + "\..*"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
@@ -138,7 +138,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             file_base_tokens = 5 if (
                     file_media_type == "series" and
                     len(file_relative_dir_tokens) > 4 and
-                    re.search("^Season [1-9]+[0-9]*", file_relative_dir_tokens[4]) is not None
+                    re.search("^" + MEDIA_SEASON_NUMBER_REGEXP, file_relative_dir_tokens[4]) is not None
             ) else 4
             file_version_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens:]) \
                 if len(file_relative_dir_tokens) > file_base_tokens else "."
@@ -154,7 +154,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             file_season_match = None
             file_episode_match = None
             if file_media_type == "series":
-                file_season_match = re.search(MEDIA_SEASON_NUMBER_REGEXP, file_base_dir)
+                file_season_match = re.search("/" + MEDIA_SEASON_NUMBER_REGEXP, file_base_dir)
                 file_episode_match = re.search(MEDIA_EPISODE_NAME_REGEXP, file_name)
                 if file_episode_match is not None:
                     file_version_qualifier = "".join(file_episode_match.groups())
@@ -181,10 +181,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     if (file_version_dir != "." and not file_version_dir.startswith("Plex Versions")) or file_season_not_matching:
                         file_name_rename = ""
                         file_dir_rename = TOKEN_UNKNOWABLE
-                        _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
-                            if verbose else None, _message="file requires nested directory moving from [{}]" \
-                                       .format(file_relative_dir_tokens[-1] \
-                                                   if file_season_not_matching else file_version_dir), _context=file_path)
+                        if file_season_not_matching:
+                            _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                if verbose else None, _message="file requires season directory moving from [{}]" \
+                                           .format(file_relative_dir_tokens[-1]), _context=file_path)
+                        else:
+                            _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
+                                if verbose else None, _message="file requires nested directory moving from [{}]" \
+                                           .format(file_version_dir), _context=file_path)
                     else:
                         file_name_normalised = file_name_normalised.replace(
                             _normalise_name(file_base_dir) + " " + _normalise_name(file_base_dir), _normalise_name(file_base_dir))
