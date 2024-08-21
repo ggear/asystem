@@ -177,7 +177,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     file_dir_normalised = _normalise_name(file_base_dir)
                     file_season_not_matching = file_season_match is not None and \
                                                file_episode_match is not None and \
-                                               file_episode_match.groups()[1].lstrip("0") != file_season_match.groups()[0]
+                                               file_episode_match.groups()[1].lstrip("0") != file_season_match.groups()[0].lstrip("0")
                     if (file_version_dir != "." and not file_version_dir.startswith("Plex Versions")) or file_season_not_matching:
                         file_name_rename = ""
                         file_dir_rename = TOKEN_UNKNOWABLE
