@@ -100,10 +100,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         _set_permissions(file_path_scripts, 0o750)
     files_analysed = 0
     metadata_list = []
+    metadata_files_written = set()
     _print_message()
     for file_dir_path, _, file_names in os.walk(file_path_root_target):
         for file_name in file_names:
-            metadata_file_written = False
             file_path = os.path.join(file_dir_path, file_name)
             file_path_media_parent = os.path.dirname(file_path_media)
             file_relative_dir = "." + file_dir_path.replace(file_path_media, "")
@@ -577,13 +577,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 with open(file_metadata_path, 'w') as file_metadata:
                     yaml.dump(file_probe_filtered, file_metadata, width=float("inf"))
                 _set_permissions(file_metadata_path)
-                metadata_file_written = True
+                metadata_files_written.add(file_metadata_path)
             with open(file_metadata_path, 'r') as file_metadata:
                 try:
-                    metadata_list.append(_flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata))))
+                    metadata = _flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata)))
+                    metadata["metatdata_loaded"] = str(file_metadata_path in metadata_files_written)
+                    metadata_list.append(metadata)
                     if verbose:
-                        if metadata_file_written:
-                            print("wrote and loaded metadata file", flush=True)
+                        if file_metadata_path in metadata_files_written:
+                            print("wrote metadata file", flush=True)
                         else:
                             print("loaded metadata file", flush=True)
                 except Exception:
@@ -1382,15 +1384,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     tbl_formatting="ASCII_FULL_CONDENSED",
                     set_tbl_hide_dataframe_shape=True,
             ):
-                print("Metadata details ... ")
+                print("Metadata delta ... ")
                 print(
                     metadata_merged_pl \
+                        .filter((pl.col("Metatdata Loaded") == "True"))
                         .select(metadata_merged_pl.columns[:9] + ["File Directory"])
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                         .fill_null("")
                 )
                 print("Metadata summary ... ")
                 print(metadata_summary_pl.fill_null(""))
+    metadata_merged_pl = metadata_merged_pl.drop("Metatdata Loaded")
     _print_message(_message="done", _header=not verbose, _footer=False)
     if metadata_merged_pl.height > 0:
         if not file_path_root_is_nested:
