@@ -691,6 +691,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     metadata_merged_pl = _format_columns(_add_columns(metadata_merged_pl, {
         "Version Directory",
         "Version Qualifier",
+        "Metatdata Loaded",
         "Video 1 Index",
         "Video 1 Codec",
         "Video 1 Width",
