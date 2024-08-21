@@ -55,7 +55,7 @@ def _rename(file_path_root, verbose=False):
                         if file_year_search is not None:
                             file_dir_new = file_dir_new.replace(file_year_search.groups()[0], "") \
                                 .replace('-', ' ').strip().replace(' ', '-')
-                        file_dir_new = file_dir_new.replace('-', ' ').strip()
+                        file_dir_new = file_dir_new.replace('-', ' ').strip().title()
                         file_dir_new = re.sub(r'[^a-zA-Z0-9 ]+', '', file_dir_new).strip()
                         file_name_new = "{} S{}E{}.{}".format(
                             file_dir_new,
