@@ -142,7 +142,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             ) else 4
             file_version_dir = os.sep.join(file_relative_dir_tokens[file_base_tokens:]) \
                 if len(file_relative_dir_tokens) > file_base_tokens else "."
-            if file_version_dir.startswith("._transcode_") or file_version_dir.endswith("/.inProgress"):
+            if file_version_dir.startswith("._") or file_version_dir.endswith("/.inProgress"):
                 _print_message(_message="skipping file currently transcoding",
                                _context=file_path, _no_header_footer=verbose)
                 continue
@@ -178,7 +178,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     file_season_not_matching = file_season_match is not None and \
                                                file_episode_match is not None and \
                                                file_episode_match.groups()[1].lstrip("0") != file_season_match.groups()[0].lstrip("0")
-                    if (file_version_dir != "." and not file_version_dir.startswith("Plex Versions")) or file_season_not_matching:
+                    if (file_version_dir != "." and not file_version_dir.startswith("._") and file_version_dir.startswith("Plex Versions")) or file_season_not_matching:
                         file_name_rename = ""
                         file_dir_rename = TOKEN_UNKNOWABLE
                         if file_season_not_matching:
