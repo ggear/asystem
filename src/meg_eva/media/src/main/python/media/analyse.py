@@ -11,7 +11,6 @@ import ffmpeg
 import polars as pl
 import polars.selectors as cs
 import yaml
-from absl.logging import flush
 from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
