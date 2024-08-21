@@ -1396,12 +1396,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 )
                 print("Metadata summary ... ")
                 print(metadata_summary_pl.fill_null(""))
-
-
     if "Metatdata Loaded" in metadata_merged_pl.columns:
         metadata_merged_pl = metadata_merged_pl.drop("Metatdata Loaded")
-
-
     _print_message(_message="done", _header=not verbose, _footer=False)
     if metadata_merged_pl.height > 0:
         if not file_path_root_is_nested:

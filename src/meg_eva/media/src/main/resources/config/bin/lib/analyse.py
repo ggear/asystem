@@ -15,6 +15,7 @@ import ffmpeg
 import polars as pl
 import polars.selectors as cs
 import yaml
+from absl.logging import flush
 from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
@@ -129,11 +130,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                            _no_header_footer=not verbose)
             if file_media_type not in {"movies", "series"}:
                 _print_message(_message="skipping file due to unknown library type [{}]".format(file_media_type),
-                               _context=file_path, _no_header_footer=True)
+                               _context=file_path, _no_header_footer=verbose)
                 continue
             if file_extension not in MEDIA_FILE_EXTENSIONS:
                 _print_message(_message="skipping file due to unknown file extension [{}]".format(file_extension),
-                               _context=file_path, _no_header_footer=True)
+                               _context=file_path, _no_header_footer=verbose)
                 continue
             file_base_tokens = 5 if (
                     file_media_type == "series" and
@@ -144,7 +145,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 if len(file_relative_dir_tokens) > file_base_tokens else "."
             if file_version_dir.startswith("._transcode_") or file_version_dir.endswith("/.inProgress"):
                 _print_message(_message="skipping file currently transcoding",
-                               _context=file_path, _no_header_footer=True)
+                               _context=file_path, _no_header_footer=verbose)
                 continue
             file_base_dir = os.sep.join(file_relative_dir_tokens[3:]).replace("/" + file_version_dir, "") \
                 if len(file_relative_dir_tokens) > 3 else "."
@@ -594,7 +595,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             print("loaded metadata file", flush=True)
                 except Exception:
                     _print_message(_message="skipping file due to metadata file load error",
-                                   _context=file_path, _no_header_footer=True)
+                                   _context=file_path, _no_header_footer=verbose)
                     continue
             files_analysed += 1
 
@@ -1399,7 +1400,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 )
                 print("Metadata summary ... ")
                 print(metadata_summary_pl.fill_null(""))
-    metadata_merged_pl = metadata_merged_pl.drop("Metatdata Loaded")
+
+
+    if "Metatdata Loaded" in metadata_merged_pl.columns:
+        metadata_merged_pl = metadata_merged_pl.drop("Metatdata Loaded")
+
+
     _print_message(_message="done", _header=not verbose, _footer=False)
     if metadata_merged_pl.height > 0:
         if not file_path_root_is_nested:
