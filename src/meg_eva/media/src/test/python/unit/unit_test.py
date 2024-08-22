@@ -33,6 +33,11 @@ class InternetTest(unittest.TestCase):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "38/media"), scripts={})
 
+    def test_analyse_ignore(self):
+        dir_test = self._test_analyse_dir(1)
+        self._test_analyse_assert(join(dir_test, "35/media"))
+        self._test_analyse_assert(join(dir_test, "35/media"))
+
     def test_analyse_rename(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
@@ -56,7 +61,7 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "10"), scripts={"rename", "transcode"}, asserts=False, clean=True)
         self._test_analyse_assert(join(dir_test, "10/media"), scripts={"rename", "transcode"}, asserts=False)
         self._test_analyse_assert(join(dir_test, "10"), scripts={"rename", "transcode"}, asserts=False)
-        for INDEX in {"31", "33", "34", "37", "38", "39"}:
+        for INDEX in {"31", "33", "34", "35", "37", "38", "39"}:
             self._test_analyse_assert(join(dir_test, INDEX), scripts={"rename", "transcode"})
             self._test_analyse_assert(join(dir_test, "{}/media".format(INDEX)), scripts={"rename", "transcode"})
             self._test_analyse_assert(join(dir_test, INDEX), scripts={"rename", "transcode"})

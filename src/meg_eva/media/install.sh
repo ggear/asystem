@@ -8,13 +8,14 @@ cd ${SERVICE_INSTALL} || exit
 . ./.env
 
 if [ $(ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -eq 0 ]; then
+  apt update && apt install -y libx265-dev libx264-dev
   cd /usr/local/lib
   [[ ! -d "./ffmpeg" ]] && git clone git://git.videolan.org/ffmpeg.git
   cd ffmpeg
   git checkout master
   git pull --all
   git checkout n${MEDIA_FFMPEG_VERSION}
-  ./configure --prefix=/usr
+  ./configure --prefix=/usr --enable-gpl --enable-libx265 --enable-libx264
   make -j 8
   for BIN in "ffmpeg" "ffprobe"; do
     rm /usr/bin/${BIN}
