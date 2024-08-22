@@ -27,15 +27,14 @@ http:
   server_port: !env_var HOMEASSISTANT_HTTP_PORT
   ip_ban_enabled: true
   login_attempts_threshold: 5
-  use_x_frame_options: true
   use_x_forwarded_for: true
   trusted_proxies:
-    - '127.0.0.1'
     - '10.0.0.0/16'
     - '192.168.0.0/16'
   cors_allowed_origins:
     - 'https://home.janeandgraham.com'
     - 'https://homeassistant.janeandgraham.com'
+    - 'http://homeassistant.local.janeandgraham.com'
 #######################################################################################
 tts:
   - platform: 'google_translate'
