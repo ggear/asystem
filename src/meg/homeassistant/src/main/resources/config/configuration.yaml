@@ -25,14 +25,8 @@ homeassistant:
 http:
   server_host: '0.0.0.0'
   server_port: !env_var HOMEASSISTANT_HTTP_PORT
-
-
-  # TODO: Disable IP banning until I can find out where the rogue logins are coming from
-  #ip_ban_enabled: false
   ip_ban_enabled: true
-  login_attempts_threshold: 10
-
-
+  login_attempts_threshold: 5
   use_x_frame_options: true
   use_x_forwarded_for: true
   trusted_proxies:
