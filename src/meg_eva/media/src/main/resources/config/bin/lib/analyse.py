@@ -749,6 +749,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Name").str.contains(TOKEN_TRANSCODE)) |
                     (pl.col("Version Directory").str.starts_with("Plex Versions"))
                 ).then(pl.lit("Transcoded"))
+                .when(
+                    (pl.col("Transcode Action") == "Ignore")
+                ).then(pl.lit("Ignored"))
                 .otherwise(pl.lit("Original"))
             ).alias("File Version"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
@@ -785,9 +788,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.when(
                     (pl.col("File State") == "Corrupt")
                 ).then(pl.lit("Corrupt"))
-                .when(
-                    (pl.col("Transcode Action") == "Ignore")
-                ).then(pl.lit("Ignored"))
                 .when(
                     (pl.col("Stream Count") == "0") |
                     (pl.col("Video Count") == "0") |
@@ -1014,33 +1014,47 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("Transcode Action") == "Ignore")
-                ).then(pl.lit("7. Nothing"))
-                .when(
-                    ((pl.col("Rename File") != "") & (pl.col("Rename File") != " '' ")) |
-                    ((pl.col("Rename Directory") != "") & (pl.col("Rename Directory") != " '' "))
-                ).then(pl.lit("2. Rename"))
+                    (
+                            (pl.col("Rename File") != "") &
+                            (pl.col("Rename File") != " '' ")
+                    ) | (
+                            (pl.col("Rename Directory") != "") &
+                            (pl.col("Rename Directory") != " '' ")
+                    )
+                ).then(pl.lit("1. Rename"))
                 .when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete") |
                     (pl.col("File Version") == "Duplicate")
-                ).then(pl.lit("1. Delete"))
+                ).then(pl.lit("2. Delete"))
                 .when(
-                    (pl.col("File Version") == "Transcode")
+                    (pl.col("File Version") == "Transcoded")
                 ).then(pl.lit("3. Merge"))
                 .when(
-                    (pl.col("Plex Video") == "Transcode") |
-                    (pl.col("Plex Audio") == "Transcode") |
-                    (pl.col("Duration (hours)").is_null()) |
-                    (pl.col("Bitrate (Kbps)").is_null())
+                    (
+                        (pl.col("File Version") != "Ignored")
+                    ) & (
+                            (pl.col("Plex Video") == "Transcode") |
+                            (pl.col("Plex Audio") == "Transcode") |
+                            (pl.col("Duration (hours)").is_null()) |
+                            (pl.col("Bitrate (Kbps)").is_null())
+                    )
                 ).then(pl.lit("4. Transcode"))
                 .when(
-                    (pl.col("File Size") == "Large") |
-                    (pl.col("Metadata State") == "Messy")
-                ).then(pl.lit("6. Reformat"))
-                .when(
-                    (pl.col("File Size") == "Small")
+                    (
+                        (pl.col("File Version") != "Ignored")
+                    ) & (
+                        (pl.col("File Size") == "Small")
+                    )
                 ).then(pl.lit("5. Upscale"))
+                .when(
+                    (
+                        (pl.col("File Version") != "Ignored")
+                    ) & (
+                            (pl.col("File Size") == "Large") |
+                            (pl.col("Metadata State") == "Messy")
+                    )
+                ).then(pl.lit("6. Reformat"))
                 .otherwise(pl.lit("7. Nothing"))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
