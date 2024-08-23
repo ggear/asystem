@@ -33,6 +33,16 @@ MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode"}
 TOKEN_TRANSCODE = "__TRANSCODE"
 TOKEN_UNKNOWABLE = "__UNKNOWABLE"
 
+FILE_ACTIONS = [
+    "1. Rename",
+    "2. Delete",
+    "3. Merge",
+    "4. Transcode",
+    "5. Upscale",
+    "6. Reformat",
+    "7. Nothing",
+]
+
 BASH_EXIT_HANDLER = "ECHO=echo\n" \
                     "[[ $(uname) == 'Darwin' ]] && ECHO=gecho\n\n" \
                     "REALPATH=realpath\n" \
@@ -1017,15 +1027,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             (pl.col("Rename Directory") != "") &
                             (pl.col("Rename Directory") != " '' ")
                     )
-                ).then(pl.lit("1. Rename"))
+                ).then(pl.lit(FILE_ACTIONS[0]))
                 .when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete") |
                     (pl.col("File Version") == "Duplicate")
-                ).then(pl.lit("2. Delete"))
+                ).then(pl.lit(FILE_ACTIONS[1]))
                 .when(
                     (pl.col("File Version") == "Transcoded")
-                ).then(pl.lit("3. Merge"))
+                ).then(pl.lit(FILE_ACTIONS[2]))
                 .when(
                     (
                         (pl.col("File Version") != "Ignored")
@@ -1035,14 +1045,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             (pl.col("Duration (hours)").is_null()) |
                             (pl.col("Bitrate (Kbps)").is_null())
                     )
-                ).then(pl.lit("4. Transcode"))
+                ).then(pl.lit(FILE_ACTIONS[3]))
                 .when(
                     (
                         (pl.col("File Version") != "Ignored")
                     ) & (
                         (pl.col("File Size") == "Small")
                     )
-                ).then(pl.lit("5. Upscale"))
+                ).then(pl.lit(FILE_ACTIONS[4]))
                 .when(
                     (
                         (pl.col("File Version") != "Ignored")
@@ -1050,8 +1060,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             (pl.col("File Size") == "Large") |
                             (pl.col("Metadata State") == "Messy")
                     )
-                ).then(pl.lit("6. Reformat"))
-                .otherwise(pl.lit("7. Nothing"))
+                ).then(pl.lit(FILE_ACTIONS[5]))
+                .otherwise(pl.lit(FILE_ACTIONS[6]))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
             metadata_merged_pl.filter(
@@ -1378,14 +1388,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ])
         metadata_summary_pl = pl.concat([
             metadata_merged_pl.group_by(["File Action"]).agg(pl.col("File Name").count().alias("File Count")),
+            metadata_merged_pl.group_by(["Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
             metadata_merged_pl.group_by(["File Action", "Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
-        ], how="diagonal_relaxed") \
-            .sort(["File Action", "Media Type"], nulls_last=False)
+        ], how="diagonal_relaxed")
         metadata_summary_pl = pl.concat([
             metadata_summary_pl,
             metadata_summary_pl.filter(pl.col("Media Type").is_null()).select(pl.sum("File Count"))
         ], how="diagonal_relaxed") \
-            .select(["File Action", "Media Type", "File Count"])
+            .select(["File Action", "Media Type", "File Count"]) \
+            .sort(["File Action", "Media Type"], nulls_last=True)
         if verbose:
             with pl.Config(
                     tbl_rows=-1,
@@ -1423,6 +1434,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             if metadata_spread_data.get_sheet_dims()[0] > 1 and \
                     metadata_spread_data.get_sheet_dims()[1] > 1:
                 metadata_spread_data.freeze(1, 1, sheet="Data")
+            metadata_summary_pl = metadata_summary_pl.join(
+                pl.DataFrame([{
+                    "File Action": file_action,
+                    "Media Type": media_type,
+                    "File Count": 0
+                } for file_action in [None] + FILE_ACTIONS \
+                    for media_type in (None, "movies", "series")]
+                ), on=["File Action", "Media Type"], how="right", join_nulls=True) \
+                .select(["File Action", "Media Type", "File Count"]) \
+                .sort(["File Action", "Media Type"], nulls_last=True) \
+                .fill_null(0)
             Spread(sheet_url, sheet="Data") \
                 .df_to_sheet(metadata_summary_pl.to_pandas(use_pyarrow_extension_array=True),
                              sheet="Summary", replace=True, index=False, add_filter=True)
