@@ -1397,6 +1397,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ], how="diagonal_relaxed") \
             .select(["File Action", "Media Type", "File Count"]) \
             .sort(["File Action", "Media Type"], nulls_last=True)
+        metadata_summary_pl = metadata_summary_pl.join(
+            pl.DataFrame([{
+                "File Action": file_action,
+                "Media Type": media_type,
+                "File Count": 0
+            } for file_action in [None] + FILE_ACTIONS \
+                for media_type in (None, "movies", "series")]
+            ), on=["File Action", "Media Type"], how="right", join_nulls=True) \
+            .select(["File Action", "Media Type", "File Count"]) \
+            .sort(["File Action", "Media Type"], nulls_last=True) \
+            .fill_null(0)
         if verbose:
             with pl.Config(
                     tbl_rows=-1,
@@ -1434,17 +1445,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             if metadata_spread_data.get_sheet_dims()[0] > 1 and \
                     metadata_spread_data.get_sheet_dims()[1] > 1:
                 metadata_spread_data.freeze(1, 1, sheet="Data")
-            metadata_summary_pl = metadata_summary_pl.join(
-                pl.DataFrame([{
-                    "File Action": file_action,
-                    "Media Type": media_type,
-                    "File Count": 0
-                } for file_action in [None] + FILE_ACTIONS \
-                    for media_type in (None, "movies", "series")]
-                ), on=["File Action", "Media Type"], how="right", join_nulls=True) \
-                .select(["File Action", "Media Type", "File Count"]) \
-                .sort(["File Action", "Media Type"], nulls_last=True) \
-                .fill_null(0)
             Spread(sheet_url, sheet="Data") \
                 .df_to_sheet(metadata_summary_pl.to_pandas(use_pyarrow_extension_array=True),
                              sheet="Summary", replace=True, index=False, add_filter=True)
