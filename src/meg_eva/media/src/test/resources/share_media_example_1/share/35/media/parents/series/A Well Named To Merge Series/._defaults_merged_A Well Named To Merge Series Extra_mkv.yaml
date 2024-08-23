@@ -1,0 +1,6 @@
+native_lang: eng
+target_audio: main
+target_channels: '2'
+target_lang: eng
+target_quality: Mid
+transcode_action: Defer

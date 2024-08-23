@@ -168,12 +168,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 file_episode_match = re.search(MEDIA_EPISODE_NAME_REGEXP, file_name)
                 if file_episode_match is not None:
                     file_version_qualifier = "".join(file_episode_match.groups())
+                    file_stem = "{} {}".format(file_stem, file_version_qualifier).title()
                 else:
                     file_version_qualifier = file_name_sans_extension
-                file_stem = "{} {}".format(
-                    file_stem,
-                    file_version_qualifier.lower()
-                ).title()
+                    if file_name.startswith(file_base_dir_parent):
+                        file_stem = file_name_sans_extension.title()
+                    else:
+                        file_stem = "{} {}".format(file_stem, file_version_qualifier).title()
             file_version_qualifier = file_version_qualifier.lower()
             file_dir_rename = ""
             file_name_rename = ""
@@ -255,7 +256,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                                .format(file_name_rename), _context=file_path)
             if not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
-                    "transcode_action": "Analyse",
+                    "transcode_action": "Defer",
                     "target_quality": "Mid",
                     "target_audio": "main",
                     "target_channels": "2",
@@ -276,7 +277,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             try:
                                 file_defaults_dict.update(_unwrap_lists(yaml.safe_load(file_defaults)))
                                 file_defaults_dict["transcode_action"] = file_defaults_dict["transcode_action"].title()
-                                if file_defaults_dict["transcode_action"] not in {"Analyse", "Ignore"}:
+                                if file_defaults_dict["transcode_action"] not in {"Defer", "Ignore", "Merge"}:
                                     raise Exception("Invalid transcode action: {}".format(file_defaults_dict["transcode_action"]))
                                 file_defaults_dict["target_quality"] = file_defaults_dict["target_quality"].title()
                                 if file_defaults_dict["target_quality"] not in {"Min", "Mid", "Max"}:
@@ -293,6 +294,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                                .format(file_defaults_path), _context=file_path, _no_header_footer=True)
                 if file_defaults_load_failed:
                     continue
+                file_defaults_analysed_path = os.path.join(
+                    file_dir_path, "._defaults_analysed_{}_{}.yaml".format(
+                        file_name_sans_extension, file_extension))
+                with open(file_defaults_analysed_path, 'w') as file_defaults_analysed:
+                    yaml.dump(file_defaults_dict, file_defaults_analysed, width=float("inf"))
+                _set_permissions(file_defaults_analysed_path)
+                file_defaults_merged_path = os.path.join(
+                    file_dir_path, "._defaults_merged_{}_{}.yaml".format(
+                        file_name_sans_extension, file_extension))
+                if os.path.isfile(file_defaults_merged_path):
+                    file_defaults_dict["transcode_action"] = "Merge"
                 file_transcode_action = file_defaults_dict["transcode_action"]
                 file_target_quality = file_defaults_dict["target_quality"]
                 file_target_audio = file_defaults_dict["target_audio"]
@@ -760,6 +772,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Version Directory").str.starts_with("Plex Versions"))
                 ).then(pl.lit("Transcoded"))
                 .when(
+                    (pl.col("Transcode Action") == "Merge")
+                ).then(pl.lit("Merged"))
+                .when(
                     (pl.col("Transcode Action") == "Ignore")
                 ).then(pl.lit("Ignored"))
                 .otherwise(pl.lit("Original"))
@@ -1042,6 +1057,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit(FILE_ACTIONS[2]))
                 .when(
                     (
+                        (pl.col("File Version") != "Merged") &
                         (pl.col("File Version") != "Ignored")
                     ) & (
                             (pl.col("Plex Video") == "Transcode") |
@@ -1052,6 +1068,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit(FILE_ACTIONS[3]))
                 .when(
                     (
+                        (pl.col("File Version") != "Merged") &
                         (pl.col("File Version") != "Ignored")
                     ) & (
                         (pl.col("File Size") == "Small")
@@ -1059,6 +1076,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit(FILE_ACTIONS[4]))
                 .when(
                     (
+                        (pl.col("File Version") != "Merged") &
                         (pl.col("File Version") != "Ignored")
                     ) & (
                             (pl.col("File Size") == "Large") |
@@ -1416,14 +1434,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             with pl.Config(
                     tbl_rows=-1,
                     tbl_cols=-1,
+                    tbl_formatting="ASCII_FULL_CONDENSED",
                     fmt_str_lengths=200,
                     set_tbl_width_chars=30000,
                     set_fmt_float="full",
                     set_ascii_tables=True,
-                    tbl_formatting="ASCII_FULL_CONDENSED",
                     set_tbl_hide_dataframe_shape=True,
+                    set_tbl_hide_column_data_types=True,
             ):
-                print("Metadata delta ... ")
+                print("#metadata-delta ... ")
                 print(
                     metadata_merged_pl \
                         .filter((pl.col("Metatdata Loaded") == "True"))
@@ -1431,7 +1450,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                         .fill_null("")
                 )
-                print("Metadata summary ... ")
+                print("#metadata-summary ... ")
                 print(metadata_summary_pl.fill_null(""))
     if "Metatdata Loaded" in metadata_merged_pl.columns:
         metadata_merged_pl = metadata_merged_pl.drop("Metatdata Loaded")
