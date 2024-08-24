@@ -254,7 +254,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 file_defaults_dict = {
                     "transcode_action": "Defer",
                     "target_quality": "Mid",
-                    "target_audio": "main",
+                    "target_audio": "Main",
                     "target_channels": "2",
                     "target_lang": "eng",
                     "native_lang": "eng",
@@ -526,8 +526,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             file_probe_streams_filtered_audios.append(file_probe_streams_filtered_audio)
                         else:
                             file_probe_streams_filtered_audios_supplementary.append(file_probe_streams_filtered_audio)
-                file_probe_streams_filtered_audios.sort(key=lambda stream: int(stream["channels"]), reverse=True)
-                file_probe_streams_filtered_audios_supplementary.sort(key=lambda stream: int(stream["channels"]), reverse=True)
+                file_probe_streams_filtered_audios.sort(key=lambda stream: stream["channels"] + stream["surround"], reverse=True)
+                file_probe_streams_filtered_audios_supplementary.sort(key=lambda stream: stream["channels"] + stream["surround"], reverse=True)
                 if len(file_probe_streams_filtered_audios) > 0 and \
                         file_probe_streams_filtered_audios[0]["channels"] < file_target_channels:
                     if len(file_probe_streams_filtered_audios_supplementary) > 0 and \
