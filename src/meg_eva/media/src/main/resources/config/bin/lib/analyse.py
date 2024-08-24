@@ -347,8 +347,18 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             if "H265" in file_probe_stream_video_codec or "HEVC" in file_probe_stream_video_codec:
                                 file_probe_stream_video_codec = "HEVC"
                             file_probe_stream_filtered["codec"] = file_probe_stream_video_codec
+
+
+
+                            print("\n\n\n")
+                            print(file_probe_stream)
+                            print("\n\n\n")
+
                             file_probe_stream_filtered["profile"] = file_probe_stream["profile"].title() \
                                 if "profile" in file_probe_stream else ""
+
+
+
                             file_probe_stream_video_field_order = "i"
                             if "field_order" in file_probe_stream:
                                 if file_probe_stream["field_order"] == "progressive":

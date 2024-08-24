@@ -345,6 +345,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             file_probe_stream_filtered["codec"] = file_probe_stream_video_codec
                             file_probe_stream_filtered["profile"] = file_probe_stream["profile"].title() \
                                 if "profile" in file_probe_stream else ""
+                            file_probe_stream_filtered["colour"] = "HDR" \
+                                if ("color_primaries" in file_probe_stream and \
+                                    file_probe_stream["color_primaries"] == "bt2020") else "SDR"
                             file_probe_stream_video_field_order = "i"
                             if "field_order" in file_probe_stream:
                                 if file_probe_stream["field_order"] == "progressive":
@@ -1053,8 +1056,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit(FILE_ACTIONS[2]))
                 .when(
                     (
-                        (pl.col("File Version") != "Merged") &
-                        (pl.col("File Version") != "Ignored")
+                            (pl.col("File Version") != "Merged") &
+                            (pl.col("File Version") != "Ignored")
                     ) & (
                             (pl.col("Plex Video") == "Transcode") |
                             (pl.col("Plex Audio") == "Transcode") |
@@ -1064,16 +1067,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit(FILE_ACTIONS[3]))
                 .when(
                     (
-                        (pl.col("File Version") != "Merged") &
-                        (pl.col("File Version") != "Ignored")
+                            (pl.col("File Version") != "Merged") &
+                            (pl.col("File Version") != "Ignored")
                     ) & (
                         (pl.col("File Size") == "Small")
                     )
                 ).then(pl.lit(FILE_ACTIONS[4]))
                 .when(
                     (
-                        (pl.col("File Version") != "Merged") &
-                        (pl.col("File Version") != "Ignored")
+                            (pl.col("File Version") != "Merged") &
+                            (pl.col("File Version") != "Ignored")
                     ) & (
                             (pl.col("File Size") == "Large") |
                             (pl.col("Metadata State") == "Messy")
