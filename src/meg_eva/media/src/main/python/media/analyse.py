@@ -606,7 +606,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             with open(file_metadata_path, 'r') as file_metadata:
                 try:
                     metadata = _flatten_dicts(_unwrap_lists(yaml.safe_load(file_metadata)))
-                    metadata["metatdata_loaded"] = str(file_metadata_path in metadata_files_written)
+                    metadata["metadata_loaded"] = str(file_metadata_path in metadata_files_written)
                     metadata_list.append(metadata)
                     if verbose:
                         if file_metadata_path in metadata_files_written:
