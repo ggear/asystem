@@ -720,9 +720,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     metadata_merged_pl = _format_columns(_add_columns(metadata_merged_pl, {
         "Version Directory",
         "Version Qualifier",
-        "Metatdata Loaded",
+        "Metadata Loaded",
         "Video 1 Index",
         "Video 1 Codec",
+        "Video 1 Colour",
         "Video 1 Width",
         "Video 1 Res Min",
         "Video 1 Res Mid",
@@ -1195,6 +1196,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             [
                 (
                     pl.when(
+                        (pl.col("Video 1 Colour") == "HDR")
+                    ).then(
+                        pl.lit("--copy-video")
+                    ).when(
                         (pl.col("Target Quality") == "Max")
                     ).then(
                         pl.concat_str([
@@ -1448,15 +1453,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 print("#metadata-delta ... ")
                 print(
                     metadata_merged_pl \
-                        .filter((pl.col("Metatdata Loaded") == "True"))
+                        .filter((pl.col("Metadata Loaded") == "True"))
                         .select(metadata_merged_pl.columns[:9] + ["File Directory"])
                         .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                         .fill_null("")
                 )
                 print("#metadata-summary ... ")
                 print(metadata_summary_pl.fill_null(""))
-    if "Metatdata Loaded" in metadata_merged_pl.columns:
-        metadata_merged_pl = metadata_merged_pl.drop("Metatdata Loaded")
+    if "Metadata Loaded" in metadata_merged_pl.columns:
+        metadata_merged_pl = metadata_merged_pl.drop("Metadata Loaded")
     _print_message(_message="done", _header=not verbose, _footer=False)
     if metadata_merged_pl.height > 0:
         if not file_path_root_is_nested:
