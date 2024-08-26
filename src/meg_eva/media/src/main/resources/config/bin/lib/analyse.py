@@ -53,8 +53,8 @@ class FileAction(str, Enum):
     MERGE = "3. Merge"
     REFORMAT = "4. Reformat"
     TRANSCODE = "5. Transcode"
-    DOWNSCALE = "6. Downscale"
-    UPSCALE = "7. Upscale"
+    UPSCALE = "6. Upscale"
+    DOWNSCALE = "7. Downscale"
     NOTHING = "8. Nothing"
 
 
@@ -1066,6 +1066,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Version") == "Transcoded")
                 ).then(pl.lit(FileAction.MERGE.value))
                 .when(
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit(FileAction.REFORMAT.value))
+                .when(
                     (
                             (pl.col("File Version") != "Merged") &
                             (pl.col("File Version") != "Ignored")
@@ -1073,38 +1076,21 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             (pl.col("Plex Video") == "Transcode") |
                             (pl.col("Plex Audio") == "Transcode") |
                             (pl.col("Duration (hours)").is_null()) |
-                            (pl.col("Bitrate (Kbps)").is_null())
+                            (pl.col("Bitrate (Kbps)").is_null()) |
+                            ((pl.col("File Size") == "Large") & (pl.col("Video 1 Colour") == "SDR"))
                     )
                 ).then(pl.lit(FileAction.TRANSCODE.value))
                 .when(
-                    (
-                            (pl.col("File Version") != "Merged") &
-                            (pl.col("File Version") != "Ignored")
-                    ) & (
-                            (pl.col("Metadata State") == "Messy") |
-                            (
-                                    (pl.col("File Size") == "Large") &
-                                    (pl.col("Video 1 Colour") == "SDR")
-                            )
-                    )
-                ).then(pl.lit(FileAction.DOWNSCALE.value))
-                .when(
-                    (
-                            (pl.col("File Version") != "Merged") &
-                            (pl.col("File Version") != "Ignored")
-                    ) & (
-                        (pl.col("File Size") == "Small")
-                    )
+                    (pl.col("File Version") != "Merged") &
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("File Size") == "Small")
                 ).then(pl.lit(FileAction.UPSCALE.value))
                 .when(
-                    (
-                            (pl.col("File Version") != "Merged") &
-                            (pl.col("File Version") != "Ignored")
-                    ) & (
-                            (pl.col("File Size") == "Large") &
-                            (pl.col("Video 1 Colour") == "HDR")
-                    )
-                ).then(pl.lit(FileAction.REFORMAT.value))
+                    (pl.col("File Version") != "Merged") &
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("File Size") == "Large") &
+                    (pl.col("Video 1 Colour") != "SDR")
+                ).then(pl.lit(FileAction.DOWNSCALE.value))
                 .otherwise(pl.lit(FileAction.NOTHING.value))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
@@ -1319,8 +1305,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("if [ ! -f \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" ]; then\n"),
                     pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (missing): ' && date && ${ECHO} '' && exit 0\n"),
                     pl.lit("fi\n"),
+                    pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
+                    pl.lit("[[ $(hostname) == macmini* ]] && TRANSCODE_VIDEO='--copy-video'\n"),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
-                    pl.lit("  "), pl.col("Transcode Video"), pl.lit(" \\\n"),
+                    pl.lit("  ${TRANSCODE_VIDEO} \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Subtitle"), pl.lit("\n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
