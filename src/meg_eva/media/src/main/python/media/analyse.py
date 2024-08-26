@@ -5,6 +5,7 @@ import string
 import sys
 from collections import OrderedDict
 from collections.abc import MutableMapping
+from enum import Enum
 from pathlib import Path
 
 import ffmpeg
@@ -33,16 +34,6 @@ MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode"}
 TOKEN_TRANSCODE = "__TRANSCODE"
 TOKEN_UNKNOWABLE = "__UNKNOWABLE"
 
-FILE_ACTIONS = [
-    "1. Rename",
-    "2. Delete",
-    "3. Merge",
-    "4. Transcode",
-    "5. Upscale",
-    "6. Reformat",
-    "7. Nothing",
-]
-
 BASH_EXIT_HANDLER = "ECHO=echo\n" \
                     "[[ $(uname) == 'Darwin' ]] && ECHO=gecho\n\n" \
                     "REALPATH=realpath\n" \
@@ -50,6 +41,17 @@ BASH_EXIT_HANDLER = "ECHO=echo\n" \
                     "sigterm_handler() {{\n{}  exit 1\n}}\n" \
                     "trap 'trap \" \" SIGINT SIGTERM SIGHUP; kill 0; wait; sigterm_handler' SIGINT SIGTERM SIGHUP\n\n"
 BASH_ECHO_HEADER = "${ECHO} \"#######################################################################################\"\n"
+
+
+class FileAction(str, Enum):
+    RENAME = "1. Rename"
+    DELETE = "2. Delete"
+    MERGE = "3. Merge"
+    REFORMAT = "4. Reformat"
+    TRANSCODE = "5. Transcode"
+    UPSCALE = "6. Upscale"
+    DOWNSCALE = "7. Downscale"
+    NOTHING = "8. Nothing"
 
 
 def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
@@ -1050,15 +1052,18 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             (pl.col("Rename Directory") != "") &
                             (pl.col("Rename Directory") != " '' ")
                     )
-                ).then(pl.lit(FILE_ACTIONS[0]))
+                ).then(pl.lit(FileAction.RENAME.value))
                 .when(
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete") |
                     (pl.col("File Version") == "Duplicate")
-                ).then(pl.lit(FILE_ACTIONS[1]))
+                ).then(pl.lit(FileAction.DELETE.value))
                 .when(
                     (pl.col("File Version") == "Transcoded")
-                ).then(pl.lit(FILE_ACTIONS[2]))
+                ).then(pl.lit(FileAction.MERGE.value))
+                .when(
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit(FileAction.REFORMAT.value))
                 .when(
                     (
                             (pl.col("File Version") != "Merged") &
@@ -1067,38 +1072,33 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             (pl.col("Plex Video") == "Transcode") |
                             (pl.col("Plex Audio") == "Transcode") |
                             (pl.col("Duration (hours)").is_null()) |
-                            (pl.col("Bitrate (Kbps)").is_null())
+                            (pl.col("Bitrate (Kbps)").is_null()) |
+                            ((pl.col("File Size") == "Large") & (pl.col("Video 1 Colour") == "SDR"))
                     )
-                ).then(pl.lit(FILE_ACTIONS[3]))
+                ).then(pl.lit(FileAction.TRANSCODE.value))
                 .when(
-                    (
-                            (pl.col("File Version") != "Merged") &
-                            (pl.col("File Version") != "Ignored")
-                    ) & (
-                        (pl.col("File Size") == "Small")
-                    )
-                ).then(pl.lit(FILE_ACTIONS[4]))
+                    (pl.col("File Version") != "Merged") &
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("File Size") == "Small")
+                ).then(pl.lit(FileAction.UPSCALE.value))
                 .when(
-                    (
-                            (pl.col("File Version") != "Merged") &
-                            (pl.col("File Version") != "Ignored")
-                    ) & (
-                            (pl.col("File Size") == "Large") |
-                            (pl.col("Metadata State") == "Messy")
-                    )
-                ).then(pl.lit(FILE_ACTIONS[5]))
-                .otherwise(pl.lit(FILE_ACTIONS[6]))
+                    (pl.col("File Version") != "Merged") &
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("File Size") == "Large") &
+                    (pl.col("Video 1 Colour") != "SDR")
+                ).then(pl.lit(FileAction.DOWNSCALE.value))
+                .otherwise(pl.lit(FileAction.NOTHING.value))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
             metadata_merged_pl.filter(
-                (pl.col("File Action").str.ends_with("Transcode")) |
-                (pl.col("File Action").str.ends_with("Reformat"))
+                (pl.col("File Action") == "Transcode") |
+                (pl.col("File Action") == "Reformat")
             ).with_columns(
                 pl.col("File Size (GB)").cast(pl.Float32).alias("Action Index Sort")
             ),
             metadata_merged_pl.filter(
-                (~pl.col("File Action").str.ends_with("Transcode")) &
-                (~pl.col("File Action").str.ends_with("Reformat"))
+                (pl.col("File Action") != "Transcode") &
+                (pl.col("File Action") != "Reformat")
             ).sort("File Name", descending=True).with_columns(
                 pl.col("File Name").cum_count().cast(pl.Float32).alias("Action Index Sort")
             )
@@ -1301,8 +1301,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("if [ ! -f \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" ]; then\n"),
                     pl.lit("  ${ECHO} '' && ${ECHO} -n 'Skipped (missing): ' && date && ${ECHO} '' && exit 0\n"),
                     pl.lit("fi\n"),
+                    pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
+                    pl.lit("[[ $(hostname) == macmini* ]] && TRANSCODE_VIDEO='--copy-video'\n"),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
-                    pl.lit("  "), pl.col("Transcode Video"), pl.lit(" \\\n"),
+                    pl.lit("  ${TRANSCODE_VIDEO} \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Subtitle"), pl.lit("\n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
@@ -1402,7 +1404,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                        (file_path_root_is_nested) &
                                        (pl.col("File Version") == "Original")
                                ) |
-                               (pl.col("File Action").str.ends_with(script.title()))
+                               (pl.col("File Action") == script.title())
                            ).select(
                                [
                                    "{} Script File".format(script.title()),
@@ -1432,7 +1434,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 "File Action": file_action,
                 "Media Type": media_type,
                 "File Count": 0
-            } for file_action in [None] + FILE_ACTIONS \
+            } for file_action in [None] + [_file_action.value for _file_action in FileAction] \
                 for media_type in (None, "movies", "series")]
             ), on=["File Action", "Media Type"], how="right", join_nulls=True) \
             .select(["File Action", "Media Type", "File Count"]) \
