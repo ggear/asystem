@@ -1,8 +1,8 @@
 # https://github.com/influxdata/telegraf/releases
-FROM telegraf:1.30.3 as image_base
+FROM telegraf:1.30.3 AS image_base
 
 
-FROM image_base as image_package
+FROM image_base AS image_package
 ARG PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -18,7 +18,7 @@ RUN apt-get -y --no-install-recommends install poppler-utils=22.12.0-2+b1
 RUN apt-get -y --no-install-recommends install libpoppler-cpp-dev=22.12.0-2+b1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-FROM image_package as image_install
+FROM image_package AS image_install
 ARG PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -35,7 +35,7 @@ RUN /usr/local/bin/python3 -m pip install --default-timeout=1000 --upgrade pip
 RUN /usr/local/bin/pip3 --version
 RUN rm -rf /tmp/*
 
-FROM image_install as image_runtime
+FROM image_install AS image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem

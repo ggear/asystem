@@ -1,7 +1,7 @@
 # https://github.com/grafana/grafana/releases
-FROM grafana/grafana:10.0.5 as image_base
+FROM grafana/grafana:10.0.5 AS image_base
 
-FROM image_base as image_package
+FROM image_base AS image_package
 USER root
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apk add --no-cache jq==1.6-r4
@@ -12,7 +12,7 @@ RUN apk add --no-cache musl-dev==1.2.4-r2
 RUN apk add --no-cache gcc==12.2.1_git20220924-r10
 RUN apk add --no-cache go==1.20.11-r0
 
-FROM image_package as image_install
+FROM image_package AS image_install
 ARG GOLANG_VERSION=1.16.4
 ENV GOROOT /usr/local/go
 ENV GOPATH /go
@@ -23,7 +23,7 @@ RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin
 RUN rm go$GOLANG_VERSION.src.tar.gz
 RUN apk del go
 
-FROM image_install as image_runtime
+FROM image_install AS image_runtime
 RUN mkdir -p /bootstrap
 COPY src/main/resources/libraries /bootstrap
 WORKDIR /bootstrap/grizzly

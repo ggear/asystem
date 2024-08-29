@@ -1,11 +1,11 @@
 # https://mariadb.org/mariadb/all-releases
-FROM mariadb:11.1.2 as image_base
+FROM mariadb:11.1.2 AS image_base
 
-FROM image_base as image_package
+FROM image_base AS image_package
 
-FROM image_package as image_install
+FROM image_package AS image_install
 
-FROM image_install as image_runtime
+FROM image_install AS image_runtime
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["mariadbd"]

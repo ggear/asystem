@@ -1,7 +1,7 @@
 # https://github.com/influxdata/telegraf/releases
-FROM telegraf:1.28.1 as image_base
+FROM telegraf:1.28.1 AS image_base
 
-FROM image_base as image_package
+FROM image_base AS image_package
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
 RUN apt-get -y --no-install-recommends install build-essential=12.9
@@ -13,7 +13,7 @@ RUN apt-get -y --no-install-recommends install jq=1.6-2.1
 RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1.2+deb12u1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-FROM image_package as image_install
+FROM image_package AS image_install
 ARG PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -30,7 +30,7 @@ RUN /usr/local/bin/python3 -m pip install --default-timeout=1000 --upgrade pip
 RUN /usr/local/bin/pip3 --version
 RUN rm -rf /tmp/*
 
-FROM image_install as image_runtime
+FROM image_install AS image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/reqs_run.txt /asystem
