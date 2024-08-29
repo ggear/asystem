@@ -46,9 +46,9 @@ apt-get install -y --allow-downgrades 'ca-certificates=20230311'
 apt-get install -y --allow-downgrades 'gnupg-agent=2.2.40-1.1'
 apt-get install -y --allow-downgrades 'software-properties-common=0.99.30-4.1~deb12u1'
 apt-get install -y --allow-downgrades 'mkvtoolnix=74.0.0-1'
-apt-get install -y --allow-downgrades 'docker-ce=5:27.1.1-1~debian.12~bookworm'
-apt-get install -y --allow-downgrades 'docker-ce-cli=5:27.1.1-1~debian.12~bookworm'
-apt-get install -y --allow-downgrades 'containerd.io=1.7.19-1'
+apt-get install -y --allow-downgrades 'docker-ce=5:27.2.0-1~debian.12~bookworm'
+apt-get install -y --allow-downgrades 'docker-ce-cli=5:27.2.0-1~debian.12~bookworm'
+apt-get install -y --allow-downgrades 'containerd.io=1.7.21-1'
 apt-get install -y --allow-downgrades 'cifs-utils=2:7.0-2'
 apt-get install -y --allow-downgrades 'samba=2:4.17.12+dfsg-0+deb12u1'
 apt-get install -y --allow-downgrades 'cups=2.4.2-3+deb12u5'
@@ -139,6 +139,7 @@ export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
 alias ls='ls \$LS_OPTIONS'
+alias uptime=tuptime
 
 EOF
 
