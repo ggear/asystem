@@ -6,10 +6,10 @@ RUN apk update
 RUN apk add --no-cache tzdata
 RUN cp /usr/share/zoneinfo/Australia/Perth /etc/localtime
 RUN echo "Australia/Perth" >  /etc/timezone
-ENV TZ Australia/Perth
-ENV LANG en_AU.UTF-8
-ENV LANGUAGE en_AU.UTF-8
-ENV LC_ALL en_AU.UTF-8
+ENV TZ=Australia/Perth
+ENV LANG=en_AU.UTF-8
+ENV LANGUAGE=en_AU.UTF-8
+ENV LC_ALL=en_AU.UTF-8
 
 FROM image_package AS image_install
 

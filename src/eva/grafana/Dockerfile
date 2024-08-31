@@ -14,8 +14,8 @@ RUN apk add --no-cache go==1.20.11-r0
 
 FROM image_package AS image_install
 ARG GOLANG_VERSION=1.16.4
-ENV GOROOT /usr/local/go
-ENV GOPATH /go
+ENV GOROOT=/usr/local/go
+ENV GOPATH=/go
 ENV PATH=/usr/local/go/bin:$PATH
 RUN wget https://dl.google.com/go/go$GOLANG_VERSION.src.tar.gz && tar -C /usr/local -xzf go$GOLANG_VERSION.src.tar.gz
 RUN cd /usr/local/go/src && ./make.bash

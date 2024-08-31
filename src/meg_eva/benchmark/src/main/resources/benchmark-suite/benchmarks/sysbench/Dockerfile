@@ -11,8 +11,8 @@ RUN apt-get update \
         automake \
         libtool
 
-ENV FOLDER_NAME sysbench
-ENV VERSION 1.0
+ENV FOLDER_NAME=sysbench
+ENV VERSION=1.0
 
 WORKDIR /root
 ADD ${VERSION}.zip .
