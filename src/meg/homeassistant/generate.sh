@@ -47,7 +47,7 @@ rm -rf ${ROOT_DIR}/src/main/resources/config/www/custom_ui/mini-graph-card
 mkdir -p ${ROOT_DIR}/src/main/resources/config/www/custom_ui/mini-graph-card &&
   wget -q -O ${ROOT_DIR}/src/main/resources/config/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js https://github.com/kalkih/mini-graph-card/releases/download/${VERSION}/mini-graph-card-bundle.js
 
-VERSION=3.3.2
+VERSION=3.3.3
 pull_repo $(pwd) homeassistant sun2-component pnbruckner/ha-sun2 ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/sun2
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
@@ -65,7 +65,7 @@ rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/bureau_of_meteoro
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology ${ROOT_DIR}/src/main/resources/config/custom_components
 
-VERSION=1.22.0
+VERSION=1.23.0
 pull_repo $(pwd) homeassistant adaptive-lighting-component basnijholt/adaptive-lighting ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/custom_components/adaptive_lighting
 mkdir -p ${ROOT_DIR}/src/main/resources/config/custom_components &&
