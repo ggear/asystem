@@ -1,5 +1,5 @@
 # https://mariadb.org/mariadb/all-releases
-FROM mariadb:11.1.2 AS image_base
+FROM mariadb:11.5.2 AS image_base
 
 FROM image_base AS image_package
 
