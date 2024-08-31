@@ -252,8 +252,8 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
             docker_compose_path = join(DIR_ROOT_MODULE, module, "docker-compose.yml")
             if exists(docker_file_path):
                 docker_image_metadata = get_docker_image_metadata(docker_file_path, [
-                    r"FROM (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*) as image_base",
-                    r"FROM (?P<repository>.*):(?P<version_current>.*) as image_base",
+                    r"FROM (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*) AS image_base",
+                    r"FROM (?P<repository>.*):(?P<version_current>.*) AS image_base",
                 ])
             elif exists(docker_compose_path):
                 docker_image_metadata = get_docker_image_metadata(docker_compose_path, [
