@@ -1091,14 +1091,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
             metadata_merged_pl.filter(
-                (pl.col("File Action") == "Transcode") |
-                (pl.col("File Action") == "Reformat")
+                (pl.col("File Action") == FileAction.TRANSCODE.value) |
+                (pl.col("File Action") == FileAction.REFORMAT.value)
             ).with_columns(
                 pl.col("File Size (GB)").cast(pl.Float32).alias("Action Index Sort")
             ),
             metadata_merged_pl.filter(
-                (pl.col("File Action") != "Transcode") &
-                (pl.col("File Action") != "Reformat")
+                (pl.col("File Action") != FileAction.TRANSCODE.value) &
+                (pl.col("File Action") != FileAction.REFORMAT.value)
             ).sort("File Name", descending=True).with_columns(
                 pl.col("File Name").cum_count().cast(pl.Float32).alias("Action Index Sort")
             )
@@ -1404,7 +1404,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                        (file_path_root_is_nested) &
                                        (pl.col("File Version") == "Original")
                                ) |
-                               (pl.col("File Action") == script.title())
+                               (pl.col("File Action").str.ends_with(script.title()))
                            ).select(
                                [
                                    "{} Script File".format(script.title()),

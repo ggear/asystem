@@ -8,7 +8,6 @@ VERSION=v5.1.0
 pull_repo $(pwd) weewx weewx-core weewx/weewx ${VERSION} ${1}
 (cd ${ROOT_DIR}/../../../.deps/weewx/weewx-core && rm -rf dist/weewx-*.tar.gz && make pypi-package) &&
   mkdir -p ${ROOT_DIR}/src/build/resources &&
-  rm ${ROOT_DIR}/src/build/resources/weewx-*.tar.gz &&
   cp -nv ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx-*.tar.gz ${ROOT_DIR}/src/build/resources
 
 VERSION=ggear-weewx-mqtt
