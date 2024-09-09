@@ -52,6 +52,7 @@ EOF
 done
 
 if [ ! -d /root/.pyenv/versions/${PYTHON_VERSION}/bin ]; then
+  (cd ~/.pyenv && git checkout master && git pull --all)
   pyenv install ${PYTHON_VERSION}
 fi
 /root/.pyenv/versions/${PYTHON_VERSION}/bin/pip install -r config/.reqs.txt
