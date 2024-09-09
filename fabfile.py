@@ -177,8 +177,33 @@ def _pull(context):
     _print_footer("asystem", "pull main")
     if _run_local(context, "pwd", hide='out').stdout.strip().split('/')[-1] == "asystem":
         _print_header("asystem", "pull dependencies")
-        for requirement in glob.glob(join(DIR_ROOT_MODULE, "*/*/*/reqs_*.txt")):
-            _run_local(context, "pip install --default-timeout=1000 -r {}".format(requirement))
+        py_all_dict = {}
+        py_all_path = join(DIR_ROOT, "py_all.txt")
+        with open(py_all_path) as py_all_file:
+            for py_all_line in py_all_file:
+                if py_all_line.strip() != "" and not py_all_line.strip().startswith("#"):
+                    if "==" not in py_all_line:
+                        raise Exception("Error parsing line [{}] from python module file [{}], "
+                                        "not a comment nor a versioned python module".format(py_all_line.strip(), py_all_path))
+                    elif py_all_line.split("==")[0].strip() in py_all_dict:
+                        raise Exception("Error parsing line [{}] from python module file [{}], "
+                                        "duplicate python module".format(py_all_line.strip(), py_all_path))
+                    else:
+                        py_all_dict[py_all_line.split("==")[0].strip()] = py_all_line.split("==")[1].strip()
+        for py_mod_path in glob.glob(join(DIR_ROOT_MODULE, "*/*/*/py_*.txt")):
+            py_mod_versioned_path = join(py_mod_path.removesuffix(basename(py_mod_path)), "." + basename(py_mod_path))
+            with open(py_mod_versioned_path, "w") as py_mod_versioned_file:
+                with open(py_mod_path) as py_mod_file:
+                    for py_mod_line in py_mod_file:
+                        if py_mod_line.strip() != "" and not py_mod_line.strip().startswith("#"):
+                            if py_mod_line.strip() not in py_all_dict:
+                                raise Exception("Error parsing line [{}] from python module file [{}], "
+                                                "python module version not found in file [{}]" \
+                                                .format(py_mod_line.strip(), py_mod_path, py_all_path))
+                            else:
+                                py_mod_versioned_file.write(
+                                    "{}=={}\n".format(py_mod_line.strip(), py_all_dict[py_mod_line.strip()]))
+        _run_local(context, "pip install --default-timeout=1000 -r {}".format(py_all_path))
         _run_local(context, "pip list --outdated")
         _print_footer("asystem", "pull dependencies")
     _generate(context, filter_changes=False, is_pull=True)
@@ -627,7 +652,7 @@ def _ssh_pass(context, host):
                       .format(host), hide="err", warn=True).exited > 0 else ""
     if _run_local(context, "{}ssh -q -o ConnectTimeout=1 root@{} 'echo Connected to {}'".format(ssh_prefix, host, host), hide="err",
                   warn=True).exited > 0:
-        raise Exception("Error: Cannot connect via [{}ssh -q root@{}]".format(ssh_prefix, host))
+        raise Exception("Error connecting to server via [{}ssh -q root@{}]".format(ssh_prefix, host))
     return ssh_prefix
 
 
@@ -740,7 +765,7 @@ def _substitue_env(context, env_path, source_root, source_path, destination_root
 
 def _process_target(context, module, is_release=False):
     _run_local(context, "mkdir -p target/package && cp -rvfp src/* install* target/package", module, hide='err', warn=True)
-    package_resource_path = join(DIR_ROOT_MODULE, module, "src/pkg_res.txt")
+    package_resource_path = join(DIR_ROOT_MODULE, module, "src/resources.txt")
     if isfile(package_resource_path):
         with open(package_resource_path, "r") as package_resource_file:
             for package_resource in package_resource_file:

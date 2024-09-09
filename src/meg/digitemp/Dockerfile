@@ -33,8 +33,8 @@ RUN rm -rf /tmp/*
 FROM image_install AS image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
-COPY src/reqs_run.txt /asystem
-RUN cat /asystem/reqs_run.txt | xargs -n 1 /usr/local/bin/pip3 install --default-timeout=1000 && rm -rf /asystem/reqs_run.txt
+COPY src/.py_prod.txt /asystem
+RUN cat /asystem/.py_prod.txt | xargs -n 1 /usr/local/bin/pip3 install --default-timeout=1000 && rm -rf /asystem/reqs_run.txt
 COPY src/main/python/ /asystem/
 
 # TODO: Requires Docker 25.0.0+

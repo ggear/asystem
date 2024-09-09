@@ -1,0 +1,5 @@
+pytz
+dnspython
+speedtest-cli
+requests
+python-dateutil

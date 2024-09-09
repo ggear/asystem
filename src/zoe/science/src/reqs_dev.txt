@@ -1,3 +1,0 @@
-voila==0.5.5
-notebook==7.0.6
-jupyterlab==4.0.10

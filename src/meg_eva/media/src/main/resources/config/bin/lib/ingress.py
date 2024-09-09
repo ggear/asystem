@@ -40,9 +40,9 @@ def _rename(file_path_root, verbose=False):
                     if file_path_root_source.name not in ["series", "movies", "finished"]:
                         file_path_roots_to_delete.append(file_path_root_source)
                     file_series_search_groups = None
-                    file_series_search = re.search("(.*)[sS]([0-9]?[0-9]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
+                    file_series_search = re.search(r"(.*)[sS]([0-9]?[0-9]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
                     if file_series_search is None:
-                        file_series_search = re.search("(.*[^a-zA-Z0-9 ]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
+                        file_series_search = re.search(r"(.*[^a-zA-Z0-9 ]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
                         if file_series_search is not None:
                             file_series_search_groups = [file_series_search.groups()[0], "01"] + list(file_series_search.groups()[1:])
                     else:
@@ -51,7 +51,7 @@ def _rename(file_path_root, verbose=False):
                         file_category = "series"
                         file_dir_new = (file_series_search_groups[0]
                                         .replace('.', ' ').strip().replace(' ', '-'))
-                        file_year_search = re.search("(20[0-9][0-9])", file_dir_new)
+                        file_year_search = re.search(r"(20[0-9][0-9])", file_dir_new)
                         if file_year_search is not None:
                             file_dir_new = file_dir_new.replace(file_year_search.groups()[0], "") \
                                 .replace('-', ' ').strip().replace(' ', '-')
@@ -73,7 +73,7 @@ def _rename(file_path_root, verbose=False):
                     else:
                         file_category = "movies"
                         for file_metadata in file_parents:
-                            file_year_search_groups = re.findall("19[4-9][0-9]|20[0-9][0-9]", file_metadata)
+                            file_year_search_groups = re.findall(r"19[4-9][0-9]|20[0-9][0-9]", file_metadata)
                             if len(file_year_search_groups) > 0:
                                 file_name_new = file_metadata.split(file_year_search_groups[0])[0].replace('.', ' ').strip().title()
                                 file_name_new = re.sub(r'[^a-zA-Z0-9 ]+', '', file_name_new).strip()

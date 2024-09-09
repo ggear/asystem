@@ -24,10 +24,10 @@ SIZE_BITRATE_MID_KBPS = 4000
 SIZE_BITRATE_MAX_KBPS = 8000
 # Reference: https://github.com/lisamelton/other_video_transcoding/blob/master/other-transcode.rb#L1070
 
-MEDIA_YEAR_NUMBER_REGEXP = "\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
-MEDIA_SEASON_NUMBER_REGEXP = "Season ([0-9]?[0-9]+)"
-MEDIA_EPISODE_NUMBER_REGEXP = ".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
-MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + "\..*"
+MEDIA_YEAR_NUMBER_REGEXP = r"\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
+MEDIA_SEASON_NUMBER_REGEXP = r"Season ([0-9]?[0-9]+)"
+MEDIA_EPISODE_NUMBER_REGEXP = r".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
+MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
 MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode"}
 
@@ -256,7 +256,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 file_defaults_dict = {
                     "transcode_action": "Defer",
                     "target_quality": "Mid",
-                    "target_audio": "Main",
+                    "target_video": "",
+                    "target_audios": "",
+                    "target_subtitles": "",
                     "target_channels": "2",
                     "target_lang": "eng",
                     "native_lang": "eng",
@@ -280,16 +282,26 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 file_defaults_dict["target_quality"] = file_defaults_dict["target_quality"].title()
                                 if file_defaults_dict["target_quality"] not in {"Min", "Mid", "Max"}:
                                     raise Exception("Invalid target quality: {}".format(file_defaults_dict["target_quality"]))
-                                file_defaults_dict["target_audio"] = file_defaults_dict["target_audio"].title()
-                                if file_defaults_dict["target_audio"] not in {"All", "Main"}:
-                                    raise Exception("Invalid target audio: {}".format(file_defaults_dict["target_audio"]))
+                                file_defaults_dict["target_video"] = file_defaults_dict["target_video"]
+                                if file_defaults_dict["target_video"] != "" and \
+                                        not file_defaults_dict["target_video"].replace(" ", "").isnumeric():
+                                    raise Exception("Invalid target video: {}".format(file_defaults_dict["target_video"]))
+                                file_defaults_dict["target_audios"] = file_defaults_dict["target_audios"]
+                                if file_defaults_dict["target_audios"] != "" and \
+                                        not file_defaults_dict["target_audios"].replace(" ", "").isnumeric():
+                                    raise Exception("Invalid target audios: {}".format(file_defaults_dict["target_audios"]))
+                                file_defaults_dict["target_subtitles"] = file_defaults_dict["target_subtitles"]
+                                if file_defaults_dict["target_subtitles"] != "" and \
+                                        not file_defaults_dict["target_subtitles"].replace(" ", "").isnumeric():
+                                    raise Exception("Invalid target subtitles: {}".format(file_defaults_dict["target_subtitles"]))
                                 file_defaults_dict["target_channels"] = str(int(file_defaults_dict["target_channels"]))
                                 file_defaults_dict["native_lang"] = file_defaults_dict["native_lang"].lower()
                                 file_defaults_dict["target_lang"] = file_defaults_dict["target_lang"].lower()
-                            except Exception:
+                            except Exception as exception:
                                 file_defaults_load_failed = True
-                                _print_message(_message="skipping file due to defaults metadata file [{}] load error" \
-                                               .format(file_defaults_path), _context=file_path, _no_header_footer=True)
+                                _print_message(_message="skipping file due to defaults metadata file [{}] load error [{}]" \
+                                               .format(file_defaults_path, exception),
+                                               _context=file_path, _no_header_footer=True)
                 if file_defaults_load_failed:
                     continue
                 file_defaults_analysed_path = os.path.join(
@@ -305,7 +317,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     file_defaults_dict["transcode_action"] = "Merge"
                 file_transcode_action = file_defaults_dict["transcode_action"]
                 file_target_quality = file_defaults_dict["target_quality"]
-                file_target_audio = file_defaults_dict["target_audio"]
+                file_target_video = file_defaults_dict["target_video"]
+                file_target_audios = file_defaults_dict["target_audios"]
+                file_target_subtitles = file_defaults_dict["target_subtitles"]
                 file_target_channels = file_defaults_dict["target_channels"]
                 file_native_lang = file_defaults_dict["native_lang"]
                 file_target_lang = file_defaults_dict["target_lang"]
@@ -558,7 +572,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     {"file_name": file_name},
                     {"transcode_action": file_transcode_action},
                     {"target_quality": file_target_quality},
-                    {"target_audio": file_target_audio},
+                    {"target_video": file_target_video},
+                    {"target_audios": file_target_audios},
+                    {"target_subtitles": file_target_subtitles},
                     {"target_channels": file_target_channels},
                     {"target_lang": file_target_lang},
                     {"native_lang": file_native_lang},
@@ -619,8 +635,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             print("wrote metadata file", flush=True)
                         else:
                             print("loaded metadata file", flush=True)
-                except Exception:
-                    _print_message(_message="skipping file due to metadata file load error",
+                except Exception as exception:
+                    _print_message(_message="skipping file due to metadata file load error [{}]".format(exception),
                                    _context=file_path, _no_header_footer=verbose)
                     continue
             files_analysed += 1
@@ -1239,14 +1255,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 (
                     pl.when(
                         (pl.col("Target Lang") == "eng") &
-                        (pl.col("Native Lang") == "eng") &
-                        (pl.col("Target Audio") != "All")
+                        (pl.col("Native Lang") == "eng")
                     ).then(
                         pl.concat_str([pl.lit("--main-audio "), pl.col("Transcode Audio Index")])
                     ).when(
                         (pl.col("Target Lang") == "eng") &
-                        (pl.col("Native Lang") != "eng") &
-                        (pl.col("Target Audio") != "All")
+                        (pl.col("Native Lang") != "eng")
                     ).then(
                         pl.concat_str([
                             pl.lit("--main-audio "), pl.col("Transcode Audio Index"),
@@ -1329,7 +1343,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("BASE_DIR=\""), pl.col("Base Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("BASE_DIR=(\"${BASE_DIR// /_____}\")\n"),
-                    pl.lit("BASE_DIR=(${BASE_DIR//\// })\n"),
+                    pl.lit("BASE_DIR=(${BASE_DIR//\\// })\n"),
                     pl.lit("BASE_DIR=(\"${BASE_DIR//_____/ }\")\n"),
                     pl.lit("RENAME_DIR=\""), pl.col("Media Directory"), pl.lit("/\"\\\n"),
                     pl.lit("\""), pl.col("Media Scope"), pl.lit("/"), pl.col("Media Type"), pl.lit("\"\n"),
@@ -1338,7 +1352,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  ${ECHO} 'Renaming of directory must be validated and executed manually:' && ${ECHO} ''\n"),
                     pl.lit("  if [ \""), pl.col("Rename Directory"), pl.lit("\" != \"" + TOKEN_UNKNOWABLE + "\" ]; then\n"),
                     pl.lit("    ${ECHO} cd \\\'\"${RENAME_DIR}\"\\\'\n"),
-                    pl.lit("    ${ECHO} [[ ! -d \\\''"), pl.col("Rename Directory"), pl.lit("'\\\' ]] \&\& \\\n"),
+                    pl.lit("    ${ECHO} [[ ! -d \\\''"), pl.col("Rename Directory"), pl.lit("'\\\' ]] \\&\\& \\\n"),
                     pl.lit("       mv -v \\\'\"${BASE_DIR}\"\\\' \\\''"), pl.col("Rename Directory"), pl.lit("'\\\' \n"),
                     pl.lit("  else\n"),
                     pl.lit("    ${ECHO} cd \"$(${REALPATH} \"${ROOT_DIR}/../\")\"\n"),
@@ -1382,7 +1396,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
                         if not file_path_root_is_nested:
                             script_global_file.write("\"${{ROOT_DIR}}/../../../..{}\"\n".format(
-                                script_local_row[0].replace("$", "\$").replace("\"", "\\\"")))
+                                script_local_row[0].replace("$", "\\$").replace("\"", "\\\"")))
                         script_local_dir = _localise_path(script_local_row[1], file_path_root)
                         os.makedirs(script_local_dir, exist_ok=True)
                         _set_permissions(script_local_dir, 0o750)
