@@ -20,14 +20,18 @@ from media.analyse import MEDIA_FILE_SCRIPTS
 
 class InternetTest(unittest.TestCase):
 
-    def test_analyse_clean(self):
+    def test_analyse_simple(self):
         dir_test = self._test_analyse_dir(1)
         self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom Of Heaven (2005)"), scripts={})
 
     def test_analyse_crazy_chars(self):
         dir_test = self._test_analyse_dir(1)
-        self._test_analyse_assert(join(dir_test, "31/media/parents/movies"))
-        self._test_analyse_assert(join(dir_test, "31/media/parents/movies"))
+        self._test_analyse_assert(join(dir_test, "31/media"))
+        self._test_analyse_assert(join(dir_test, "31/media"))
+
+    def test_analyse_subtitles(self):
+        dir_test = self._test_analyse_dir(1)
+        self._test_analyse_assert(join(dir_test, "22/media"))
 
     def test_analyse_duplicate(self):
         dir_test = self._test_analyse_dir(1)
