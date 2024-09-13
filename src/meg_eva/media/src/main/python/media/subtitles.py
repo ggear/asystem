@@ -1,0 +1,16 @@
+import argparse
+import sys
+from pathlib import Path
+
+
+def _subtitles(file_path_root):
+    return 0
+
+
+if __name__ == "__main__":
+    argument_parser = argparse.ArgumentParser()
+    argument_parser.add_argument("directory")
+    arguments = argument_parser.parse_args()
+    sys.exit(1 if _subtitles(
+        Path(arguments.directory).absolute().as_posix(),
+    ) < 0 else 0)

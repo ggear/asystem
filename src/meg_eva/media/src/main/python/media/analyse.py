@@ -1583,7 +1583,7 @@ if __name__ == "__main__":
     argument_parser.add_argument("directory")
     argument_parser.add_argument("sheetguid")
     arguments = argument_parser.parse_args()
-    sys.exit(2 if _analyse(
+    sys.exit(1 if _analyse(
         Path(arguments.directory).absolute().as_posix(),
         arguments.sheetguid,
         arguments.clean,

@@ -21,47 +21,47 @@ from media.analyse import MEDIA_FILE_SCRIPTS
 class InternetTest(unittest.TestCase):
 
     def test_analyse_simple(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom Of Heaven (2005)"), scripts={})
 
     def test_analyse_crazy_chars(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "31/media"))
         self._test_analyse_assert(join(dir_test, "31/media"))
 
     def test_analyse_subtitles(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "22/media"))
 
     def test_analyse_duplicate(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "38/media"), scripts={})
 
     def test_analyse_ignore(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "35/media"))
         self._test_analyse_assert(join(dir_test, "35/media"))
 
     def test_analyse_rename(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
         self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
         self._test_analyse_assert(join(dir_test, "37/media"), scripts={"rename"})
 
     def test_analyse_scripts(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "34"), clean=True)
         self._test_analyse_assert(join(dir_test, "34/media"))
         self._test_analyse_assert(join(dir_test, "34"))
 
     def test_analyse_empty(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "39"), scripts={}, clean=True)
         self._test_analyse_assert(join(dir_test, "33"), scripts={})
         self._test_analyse_assert(join(dir_test, "39"), scripts={})
 
     def test_analyse_comprehensive(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "10"), scripts={"rename", "transcode"}, asserts=False, clean=True)
         self._test_analyse_assert(join(dir_test, "10/media"), scripts={"rename", "transcode"}, asserts=False)
         self._test_analyse_assert(join(dir_test, "10"), scripts={"rename", "transcode"}, asserts=False)
@@ -71,21 +71,11 @@ class InternetTest(unittest.TestCase):
             self._test_analyse_assert(join(dir_test, INDEX), scripts={"rename", "transcode"})
 
     def test_analyse_failures(self):
-        dir_test = self._test_analyse_dir(1)
+        dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "some/non-existent/path"), expected=-1)
         self._test_analyse_assert("/tmp", expected=-2)
         self._test_analyse_assert(abspath(join(dir_test, "19/tmp")), expected=-3)
         self._test_analyse_assert(join(dir_test, "10/tmp"), expected=-4)
-
-    def _test_analyse_dir(self, index):
-        dir_test = join(DIR_ROOT, "target/runtime-unit/share_media_example_{}/share".format(index))
-        dir_test_src = join(DIR_ROOT, "src/test/resources/share_media_example_{}/share".format(index))
-        print("")
-        sys.stdout.flush()
-        shutil.rmtree(dir_test, ignore_errors=True)
-        os.makedirs(abspath(join(dir_test, "..")), exist_ok=True)
-        shutil.copytree(dir_test_src, dir_test)
-        return dir_test
 
     def _test_analyse_assert(self, dir_test, expected=None, asserts=True,
                              scripts=MEDIA_FILE_SCRIPTS, extensions=MEDIA_FILE_EXTENSIONS, clean=False):
@@ -122,27 +112,34 @@ class InternetTest(unittest.TestCase):
                 self.assertGreaterEqual(_file_count(), file_count)
 
     def test_ingress_comprehensive_1(self):
-        self._test_ingress(1, 171)
+        dir_test = self._test_prepare_dir("share_tmp_example", 1)
+        self._test_ingress(dir_test, 171)
 
     def test_ingress_comprehensive_2(self):
-        self._test_ingress(2, 1)
+        dir_test = self._test_prepare_dir("share_tmp_example", 2)
+        self._test_ingress(dir_test, 1)
 
     def test_ingress_comprehensive_3(self):
-        self._test_ingress(3, 7)
+        dir_test = self._test_prepare_dir("share_tmp_example", 3)
+        self._test_ingress(dir_test, 7)
 
     def test_ingress_comprehensive_4(self):
-        self._test_ingress(4, 5)
+        dir_test = self._test_prepare_dir("share_tmp_example", 4)
+        self._test_ingress(dir_test, 5)
 
-    def _test_ingress(self, index, files_renamed):
-        dir_test = join(DIR_ROOT, "target/runtime-unit/share_tmp_example_{}".format(index))
-        dir_test_src = join(DIR_ROOT, "src/test/resources/share_tmp_example_{}".format(index))
+    def _test_ingress(self, dir_test, files_renamed):
+        self.assertEqual(files_renamed, ingress._rename(join(dir_test, "1/tmp"), True))
+        self.assertEqual(0, ingress._rename(join(dir_test, "1/tmp"), True))
+
+    def _test_prepare_dir(self, label, index):
+        dir_test = join(DIR_ROOT, "target/runtime-unit/{}_{}/share".format(label, index))
+        dir_test_src = join(DIR_ROOT, "src/test/resources/{}_{}/share".format(label, index))
         print("")
         sys.stdout.flush()
         shutil.rmtree(dir_test, ignore_errors=True)
         os.makedirs(abspath(join(dir_test, "..")), exist_ok=True)
         shutil.copytree(dir_test_src, dir_test)
-        self.assertEqual(files_renamed, ingress._rename(dir_test, True))
-        self.assertEqual(0, ingress._rename(dir_test, True))
+        return dir_test
 
     @classmethod
     def setUp(_class):
