@@ -5,3 +5,4 @@ pyarrow
 gspread
 gspread-pandas
 ffmpeg-python
+subtitle-filter

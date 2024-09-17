@@ -2,8 +2,14 @@ import argparse
 import sys
 from pathlib import Path
 
+from subtitle_filter import Subtitles
+
+# TODO: Remove SDH cruft, merge lines, rename titles English, English (Forced)
 
 def _subtitles(file_path_root):
+    subtitles = Subtitles("/path/to/sub.srt")
+    subtitles.filter()
+    subtitles.save()
     return 0
 
 

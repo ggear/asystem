@@ -3,5 +3,6 @@ pandas==2.2.2
 polars==1.6.0
 pyarrow==16.1.0
 gspread==5.12.4
-ffmpeg-python==0.2.0
 gspread-pandas==3.2.3
+ffmpeg-python==0.2.0
+subtitle-filter==1.5.0
