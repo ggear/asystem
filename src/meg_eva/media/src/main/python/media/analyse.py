@@ -22,7 +22,24 @@ SIZE_BITRATE_HVEC_SCALE = 2 / 3
 SIZE_BITRATE_MIN_KBPS = 2000
 SIZE_BITRATE_MID_KBPS = 4000
 SIZE_BITRATE_MAX_KBPS = 8000
-# Reference: https://github.com/lisamelton/other_video_transcoding/blob/master/other-transcode.rb#L1070
+
+
+
+
+BITRATE_CI = 0.2
+BITRATE_SCALE_MIN = 0.8
+BITRATE_SCALE_MAX = 1.2
+BITRATE_SCALE_HVEC = 1.5
+BITRATE_RES_KBPS = {
+    "HD": 2000,  # <1080 @HVEC
+    "FHD": 4000,  # <2160 @HVEC
+    "UHD": 8000,  # >2160 @HVEC
+}
+
+
+
+
+
 
 MEDIA_YEAR_NUMBER_REGEXP = r"\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
 MEDIA_SEASON_NUMBER_REGEXP = r"Season ([0-9]?[0-9]+)"

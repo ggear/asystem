@@ -1,6 +1,6 @@
 # https://github.com/home-assistant/core/releases
 x-common: &common
-  image: homeassistant/home-assistant:2024.9.2
+  image: homeassistant/home-assistant:2024.9.3
   user: root
   environment:
     - TZ=Australia/Perth
