@@ -1581,7 +1581,7 @@ template:
         (metadata_hass_df["icon"].str.len() > 0)
         ]
     metadata_action_dicts = [row.dropna().to_dict() for index, row in metadata_action_df.iterrows()]
-    metadata_action_path = abspath(join(DIR_ROOT, "src/main/resources/config/scripts.yaml"))
+    metadata_action_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/scripts.yaml"))
     with open(metadata_action_path, 'w') as metadata_action_file:
         metadata_action_file.write("""
 #######################################################################################
