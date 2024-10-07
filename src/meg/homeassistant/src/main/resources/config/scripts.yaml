@@ -1,0 +1,44 @@
+#######################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+#######################################################################################
+script:
+  #####################################################################################
+  home_secure_back_door_off:
+    alias: "Unlock back door"
+    description: "Unlock back door"
+    icon: mdi:lock-open
+    mode: queued
+    sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.back_door_lock_security
+  #####################################################################################
+  home_secure_front_door_off:
+    alias: "Unlock front door"
+    description: "Unlock front door"
+    icon: mdi:lock-open
+    mode: queued
+    sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.front_door_lock_security
+  #####################################################################################
+  home_sleep_on:
+    alias: "Turn sleep mode on"
+    description: "Turn sleep mode on"
+    icon: mdi:chat-sleep
+    mode: queued
+    sequence:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.home_sleep
+  #####################################################################################
+  home_sleep_off:
+    alias: "Turn sleep mode off"
+    description: "Turn sleep mode off"
+    icon: mdi:chat-sleep-outline
+    mode: queued
+    sequence:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.home_sleep

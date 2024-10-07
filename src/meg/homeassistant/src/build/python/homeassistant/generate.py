@@ -1581,53 +1581,34 @@ template:
         (metadata_hass_df["icon"].str.len() > 0)
         ]
     metadata_action_dicts = [row.dropna().to_dict() for index, row in metadata_action_df.iterrows()]
-    metadata_action_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/actions.yaml"))
+    metadata_action_path = abspath(join(DIR_ROOT, "src/main/resources/config/scripts.yaml"))
     with open(metadata_action_path, 'w') as metadata_action_file:
         metadata_action_file.write("""
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
-ios:
-  #####################################################################################
-  actions:
-        """.strip() + "\n")
-        for metadata_action_dict in metadata_action_dicts:
-            metadata_action_file.write("    " + """
-    ###################################################################################
-    - name: {}
-      label:
-        text: "{}"
-      icon:
-        icon: {}
-              """.format(
-                metadata_action_dict["unique_id"],
-                metadata_action_dict["friendly_name"],
-                metadata_action_dict["icon"],
-            ).strip() + "\n")
-        metadata_action_file.write("""
-automation:
+script:
         """.strip() + "\n")
         for metadata_action_dict in metadata_action_dicts:
             metadata_action_file.write("  " + """
   #####################################################################################
-  - alias: "Action: {}"
-    trigger:
-      - platform: event
-        event_type: ios.action_fired
-        event_data:
-          actionName: "{}"
-    action:
-      - service: {}
-        entity_id: {}
+  {}:
+    alias: "{}"
+    description: "{}"
+    icon: {}
+    mode: queued
+    sequence:
+      - action: {}
+        target:
+          entity_id: {}
               """.format(
-                metadata_action_dict["friendly_name"],
                 metadata_action_dict["unique_id"],
+                metadata_action_dict["friendly_name"],
+                metadata_action_dict["friendly_name"],
+                metadata_action_dict["icon"],
                 metadata_action_dict["linked_service"],
                 metadata_action_dict["linked_entity"],
             ).strip() + "\n")
-        metadata_action_file.write("""
-#######################################################################################
-            """.strip() + "\n")
 
     # Build lovelace YAML
     metadata_lovelace_df = metadata_hass_df[
