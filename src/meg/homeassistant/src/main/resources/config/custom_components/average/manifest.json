@@ -17,5 +17,5 @@
     "requirements": [
         "pip>=21.3.1"
     ],
-    "version": "2.4.0"
+    "version": "2.4.1-alpha"
 }

@@ -13,7 +13,7 @@ from homeassistant.const import Platform
 # Base component constants
 NAME: Final = "Average Sensor"
 DOMAIN: Final = "average"
-VERSION: Final = "2.4.0"
+VERSION: Final = "2.4.1-alpha"
 ISSUE_URL: Final = "https://github.com/Limych/ha-average/issues"
 
 STARTUP_MESSAGE: Final = f"""
@@ -50,7 +50,9 @@ ATTR_COUNT_SOURCES: Final = "count_sources"
 ATTR_AVAILABLE_SOURCES: Final = "available_sources"
 ATTR_COUNT: Final = "count"
 ATTR_MIN_VALUE: Final = "min_value"
+ATTR_MIN_DATETIME: Final = "min_datetime"
 ATTR_MAX_VALUE: Final = "max_value"
+ATTR_MAX_DATETIME: Final = "max_datetime"
 ATTR_TRENDING_TOWARDS: Final = "trending_towards"
 #
 ATTR_TO_PROPERTY: Final = [
@@ -61,7 +63,9 @@ ATTR_TO_PROPERTY: Final = [
     ATTR_AVAILABLE_SOURCES,
     ATTR_COUNT,
     ATTR_MAX_VALUE,
+    ATTR_MAX_DATETIME,
     ATTR_MIN_VALUE,
+    ATTR_MIN_DATETIME,
     ATTR_TRENDING_TOWARDS,
 ]
 

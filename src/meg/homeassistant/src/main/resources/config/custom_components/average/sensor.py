@@ -171,6 +171,7 @@ class AverageSensor(SensorEntity):
         self.count = 0
         self.trending_towards = None
         self.min_value = self.max_value = None
+        self.min_datetime = self.max_datetime = None
 
         self._attr_name = config.get(CONF_NAME, DEFAULT_NAME)
         self._attr_native_value = None
@@ -284,6 +285,7 @@ class AverageSensor(SensorEntity):
 
     def _get_state_value(self, state: State) -> float | None:
         """Return value of given entity state and count some sensor attributes."""
+        state_dt_changed = state.last_changed
         state = self._get_temperature(state) if self._temperature_mode else state.state
         if not self._has_state(state):
             return self._undef
@@ -298,9 +300,17 @@ class AverageSensor(SensorEntity):
         rstate = round(state, self._precision)
         if self.min_value is None:
             self.min_value = self.max_value = rstate
+            if self._period:
+                self.min_datetime = self.max_datetime = state_dt_changed
         else:
-            self.min_value = min(self.min_value, rstate)
-            self.max_value = max(self.max_value, rstate)
+            if rstate < self.min_value:
+                self.min_value = rstate
+                if self._period:
+                    self.min_datetime = state_dt_changed
+            if rstate > self.max_value:
+                self.max_value = rstate
+                if self._period:
+                    self.max_datetime = state_dt_changed
         return state
 
     @Throttle(UPDATE_MIN_TIME)
@@ -393,8 +403,8 @@ class AverageSensor(SensorEntity):
         end = min(end, now)  # No point in making stats of the future
 
         self._period = start, end
-        self.start = start.replace(microsecond=0).isoformat()
-        self.end = end.replace(microsecond=0).isoformat()
+        self.start = start
+        self.end = end
 
     def _init_mode(self, state: State) -> None:
         """Initialize sensor mode."""
@@ -424,45 +434,50 @@ class AverageSensor(SensorEntity):
     async def _async_update_state(self) -> None:  # noqa: PLR0912, PLR0915
         """Update the sensor state."""
         _LOGGER.debug('Updating sensor "%s"', self.name)
-        start = end = start_ts = end_ts = None
         p_period = self._period
 
         # Parse templates
         await self._async_update_period()
 
-        if self._period is not None:
-            now = dt_util.now()
-            start, end = self._period
-            if p_period is None:
-                p_start = p_end = now
-            else:
-                p_start, p_end = p_period
+        if self._period is None:
+            self._update_state_no_period()
+            return
 
-            # Convert times to UTC
-            now = dt_util.as_utc(now)
-            start = dt_util.as_utc(start)
-            end = dt_util.as_utc(end)
-            actual_end = dt_util.as_utc(self._actual_end)
-            p_start = dt_util.as_utc(p_start)
-            p_end = dt_util.as_utc(p_end)
+        now = dt_util.now()
+        start, end = self._period
+        if p_period is None:
+            p_start = p_end = now
+        else:
+            p_start, p_end = p_period
 
-            # Compute integer timestamps
-            now_ts = math.floor(dt_util.as_timestamp(now))
-            start_ts = math.floor(dt_util.as_timestamp(start))
-            end_ts = math.floor(dt_util.as_timestamp(end))
-            actual_end_ts = math.floor(dt_util.as_timestamp(actual_end))
-            p_start_ts = math.floor(dt_util.as_timestamp(p_start))
-            p_end_ts = math.floor(dt_util.as_timestamp(p_end))
+        # Convert times to UTC
+        now = dt_util.as_utc(now)
+        start = dt_util.as_utc(start)
+        end = dt_util.as_utc(end)
+        actual_end = dt_util.as_utc(self._actual_end)
+        p_start = dt_util.as_utc(p_start)
+        p_end = dt_util.as_utc(p_end)
 
-            # If period has not changed and current time after the period end..
-            if start_ts == p_start_ts and end_ts == p_end_ts and end_ts <= now_ts:
-                # Don't compute anything as the value cannot have changed
-                return
+        # Compute integer timestamps
+        now_ts = math.floor(dt_util.as_timestamp(now))
+        start_ts = math.floor(dt_util.as_timestamp(start))
+        end_ts = math.floor(dt_util.as_timestamp(end))
+        actual_end_ts = math.floor(dt_util.as_timestamp(actual_end))
+        p_start_ts = math.floor(dt_util.as_timestamp(p_start))
+        p_end_ts = math.floor(dt_util.as_timestamp(p_end))
+
+        # If period has not changed and current time after the period end..
+        if start_ts == p_start_ts and end_ts == p_end_ts and end_ts <= now_ts:
+            # Don't compute anything as the value cannot have changed
+            return
 
         self.available_sources = 0
-        values = []
         self.count = 0
         self.min_value = self.max_value = None
+        self.min_datetime = self.max_datetime = None
+        self.trending_towards = None
+        #
+        values = []
         last_values = []
 
         # pylint: disable=too-many-nested-blocks
@@ -481,68 +496,62 @@ class AverageSensor(SensorEntity):
             elapsed = 0
             trending_last_state = None
 
-            if self._period is None:
-                # Get current state
+            # Get history between start and now
+            history_list = await get_instance(self.hass).async_add_executor_job(
+                history.state_changes_during_period,
+                self.hass,
+                start,
+                end,
+                str(entity_id),
+            )
+
+            if (
+                entity_id not in history_list
+                or history_list[entity_id] is None
+                or len(history_list[entity_id]) == 0
+            ):
                 value = self._get_state_value(state)
-                _LOGGER.debug("Current state: %s", value)
-
-            else:
-                # Get history between start and now
-                history_list = await get_instance(self.hass).async_add_executor_job(
-                    history.state_changes_during_period,
-                    self.hass,
-                    start,
-                    end,
-                    str(entity_id),
+                _LOGGER.warning(
+                    'Historical data not found for entity "%s". '
+                    "Current state used: %s",
+                    entity_id,
+                    value,
                 )
+            else:
+                # Get the first state
+                item = history_list[entity_id][0]
+                _LOGGER.debug("Initial historical state: %s", item)
+                last_state = None
+                last_time = start_ts
+                if item is not None and self._has_state(item.state):
+                    last_state = self._get_state_value(item)
 
-                if (
-                    entity_id not in history_list
-                    or history_list[entity_id] is None
-                    or len(history_list[entity_id]) == 0
-                ):
-                    value = self._get_state_value(state)
-                    _LOGGER.warning(
-                        'Historical data not found for entity "%s". '
-                        "Current state used: %s",
-                        entity_id,
-                        value,
-                    )
-                else:
-                    # Get the first state
-                    item = history_list[entity_id][0]
-                    _LOGGER.debug("Initial historical state: %s", item)
-                    last_state = None
-                    last_time = start_ts
-                    if item is not None and self._has_state(item.state):
-                        last_state = self._get_state_value(item)
+                # Get the other states
+                for item in history_list.get(entity_id):
+                    _LOGGER.debug("Historical state: %s", item)
+                    current_state = self._get_state_value(item)
+                    current_time = item.last_changed.timestamp()
 
-                    # Get the other states
-                    for item in history_list.get(entity_id):
-                        _LOGGER.debug("Historical state: %s", item)
-                        current_state = self._get_state_value(item)
-                        current_time = item.last_changed.timestamp()
-
-                        if last_state is not None:
-                            last_elapsed = current_time - last_time
-                            value += last_state * last_elapsed
-                            elapsed += last_elapsed
-
-                        last_state = current_state
-                        last_time = current_time
-
-                    # Count time elapsed between last history state and now
-                    if last_state is None:
-                        value = None
-                    else:
-                        last_elapsed = end_ts - last_time
+                    if last_state is not None:
+                        last_elapsed = current_time - last_time
                         value += last_state * last_elapsed
                         elapsed += last_elapsed
-                        if elapsed:
-                            value /= elapsed
-                        trending_last_state = last_state
 
-                    _LOGGER.debug("Historical average state: %s", value)
+                    last_state = current_state
+                    last_time = current_time
+
+                # Count time elapsed between last history state and now
+                if last_state is None:
+                    value = None
+                else:
+                    last_elapsed = end_ts - last_time
+                    value += last_state * last_elapsed
+                    elapsed += last_elapsed
+                    if elapsed:
+                        value /= elapsed
+                    trending_last_state = last_state
+
+                _LOGGER.debug("Historical average state: %s", value)
 
             if isinstance(value, numbers.Number):
                 values.append(value)
@@ -568,8 +577,6 @@ class AverageSensor(SensorEntity):
             to_now = self._attr_native_value * part_of_period
             to_end = current_average * (1 - part_of_period)
             self.trending_towards = to_now + to_end
-        else:
-            self.trending_towards = None
 
         _LOGGER.debug(
             "Total average state: %s %s",
@@ -579,5 +586,47 @@ class AverageSensor(SensorEntity):
         _LOGGER.debug(
             "Current trend: %s %s",
             self.trending_towards,
+            self._attr_native_unit_of_measurement,
+        )
+
+    def _update_state_no_period(self) -> None:
+        """Update the sensor state then period is not set."""
+        self.available_sources = 0
+        values = []
+        self.count = 0
+        self.min_value = self.max_value = None
+        self.min_datetime = self.max_datetime = None
+        self.trending_towards = None
+
+        # pylint: disable=too-many-nested-blocks
+        for entity_id in self.sources:
+            _LOGGER.debug('Processing entity "%s"', entity_id)
+
+            state = self.hass.states.get(entity_id)  # type: State
+
+            if state is None:
+                _LOGGER.error('Unable to find an entity "%s"', entity_id)
+                continue
+
+            self._init_mode(state)
+
+            # Get current state
+            value = self._get_state_value(state)
+            _LOGGER.debug("Current state: %s", value)
+
+            if isinstance(value, numbers.Number):
+                values.append(value)
+                self.available_sources += 1
+
+        if values:
+            self._attr_native_value = round(sum(values) / len(values), self._precision)
+            if self._precision < 1:
+                self._attr_native_value = int(self._attr_native_value)
+        else:
+            self._attr_native_value = None
+
+        _LOGGER.debug(
+            "Total average state: %s %s",
+            self._attr_native_value,
             self._attr_native_unit_of_measurement,
         )
