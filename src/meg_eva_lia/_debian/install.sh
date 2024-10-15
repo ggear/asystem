@@ -51,7 +51,7 @@ apt-get install -y --allow-downgrades 'docker-ce-cli=5:27.3.1-1~debian.12~bookwo
 apt-get install -y --allow-downgrades 'containerd.io=1.7.22-1'
 apt-get install -y --allow-downgrades 'cifs-utils=2:7.0-2'
 apt-get install -y --allow-downgrades 'samba=2:4.17.12+dfsg-0+deb12u1'
-apt-get install -y --allow-downgrades 'cups=2.4.2-3+deb12u7'
+apt-get install -y --allow-downgrades 'cups=2.4.2-3+deb12u8'
 apt-get install -y --allow-downgrades 'smbclient=2:4.17.12+dfsg-0+deb12u1'
 apt-get install -y --allow-downgrades 'inotify-tools=3.22.6.0-4'
 apt-get install -y --allow-downgrades 'htop=3.2.2-2'
@@ -59,7 +59,7 @@ apt-get install -y --allow-downgrades 'iotop=0.6-42-ga14256a-0.1+b2'
 apt-get install -y --allow-downgrades 'hdparm=9.65+ds-1'
 apt-get install -y --allow-downgrades 'stress-ng=0.15.06-2'
 apt-get install -y --allow-downgrades 'memtester=4.6.0-1'
-apt-get install -y --allow-downgrades 'linux-cpupower=6.1.106-3'
+apt-get install -y --allow-downgrades 'linux-cpupower=6.1.112-1'
 apt-get install -y --allow-downgrades 'firmware-linux-nonfree=20230210-5'
 apt-get install -y --allow-downgrades 'hwinfo=21.82-1'
 apt-get install -y --allow-downgrades 'lshw=02.19.git.2021.06.19.996aaad9c7-2+b1'
@@ -341,7 +341,7 @@ cat <<EOF >/etc/docker/daemon.json
 {
   "default-address-pools" : [
     {
-      "base" : "192.168.0.0/16",
+      "base" : "172.16.0.0/12",
       "size" : 24
     }
   ]
