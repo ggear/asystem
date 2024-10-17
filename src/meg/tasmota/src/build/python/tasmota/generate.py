@@ -87,7 +87,7 @@ echo ''
                         metadata_tasmota_dict["connection_ip"],
                     ))
                 tasmota_config_file.write(
-                    "\techo 'Current firmware ['\"$(curl -s -m 5 http://{}/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\()\"'] versus required [{}]'\n".format(
+                    "\techo 'Current firmware ['\"$(curl -s -m 5 http://{}/cm? --data-urlencode 'cmnd=Status 2' | jq -r .StatusFWR.Version | cut -f1 -d\\()\"'] versus required [{}]'\n".format(
                         metadata_tasmota_dict["connection_ip"],
                         env["TASMOTA_FIRMWARE_VERSION"],
                     ))

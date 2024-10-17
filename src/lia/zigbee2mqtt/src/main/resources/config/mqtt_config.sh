@@ -6,7 +6,7 @@ ROOT_DIR=$(dirname $(readlink -f "$0"))
 while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
 ${ROOT_DIR}/mqtt_config.py '0x0017880103433075' 'Ada Lamp Bulb 1' 'Ada Lamp' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":254, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x0017880102b8fd87' 'Edwin Lamp Bulb 1' 'Edwin Lamp' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":254, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
-${ROOT_DIR}/mqtt_config.py '0x001788010343c36f' 'Edwin Night Light Bulb 1' 'Edwin Night Light' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":500, "color_temp_startup":500 }'
+${ROOT_DIR}/mqtt_config.py '0x001788010343c36f' 'Edwin Night Light Bulb 1' 'Edwin Night Light' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":454, "color_temp_startup":454 }'
 ${ROOT_DIR}/mqtt_config.py '0x00178801043283b0' 'Hallway Main Bulb 1' 'Hallway Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x0017880104329975' 'Hallway Main Bulb 2' 'Hallway Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x001788010432996f' 'Hallway Main Bulb 3' 'Hallway Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
@@ -22,7 +22,7 @@ ${ROOT_DIR}/mqtt_config.py '0x00178801039f4eed' 'Dining Main Bulb 6' 'Dining Mai
 ${ROOT_DIR}/mqtt_config.py '0x00178801039f6b78' 'Lounge Main Bulb 1' 'Lounge Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":254, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x001788010444ef85' 'Lounge Main Bulb 2' 'Lounge Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":254, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x00178801039f6b4a' 'Lounge Main Bulb 3' 'Lounge Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":254, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
-${ROOT_DIR}/mqtt_config.py '0x0017880106bc4f2d' 'Lounge Lamp Bulb 1' 'Lounge Lamp' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":500, "color_temp_startup":500 }'
+${ROOT_DIR}/mqtt_config.py '0x0017880106bc4f2d' 'Lounge Lamp Bulb 1' 'Lounge Lamp' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":454, "color_temp_startup":454 }'
 ${ROOT_DIR}/mqtt_config.py '0x00178801039f585a' 'Parents Main Bulb 1' 'Parents Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x00178801039f69d1' 'Parents Main Bulb 2' 'Parents Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x001788010432a064' 'Parents Main Bulb 3' 'Parents Main' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":3, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'

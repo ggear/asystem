@@ -172,7 +172,7 @@ def _backup(context):
 def _pull(context):
     _print_header("asystem", "pull main")
     _run_local(context, "git remote set-url origin https://github.com/$(git remote get-url origin | "
-                        "sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')")
+                        "sed 's/https:\\/\\/github.com\\///' | sed 's/git@github.com://')")
     _run_local(context, "git pull --all")
     _print_footer("asystem", "pull main")
     if _run_local(context, "pwd", hide='out').stdout.strip().split('/')[-1] == "asystem":
@@ -343,11 +343,11 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
 def _clean(context, filter_module=None, filter_host=None):
     if filter_module is not None:
         _print_header("asystem", "clean transients", host=filter_host)
-        _run_local(context, "find . -name *.pyc -prune -exec rm -rf {} \;")
-        _run_local(context, "find . -name __pycache__ -prune -exec rm -rf {} \;")
-        _run_local(context, "find . -name .pytest_cache -prune -exec rm -rf {} \;")
-        _run_local(context, "find . -name .coverage -prune -exec rm -rf {} \;")
-        _run_local(context, "find . -name Cargo.lock -prune -exec rm -rf {} \;")
+        _run_local(context, "find . -name *.pyc -prune -exec rm -rf {} \\;")
+        _run_local(context, "find . -name __pycache__ -prune -exec rm -rf {} \\;")
+        _run_local(context, "find . -name .pytest_cache -prune -exec rm -rf {} \\;")
+        _run_local(context, "find . -name .coverage -prune -exec rm -rf {} \\;")
+        _run_local(context, "find . -name Cargo.lock -prune -exec rm -rf {} \\;")
         _print_footer("asystem", "clean transients", host=filter_host)
     for module in _get_modules(context, filter_module=filter_module, filter_changes=False):
         _print_header(module, "clean target", host=filter_host)
@@ -357,7 +357,7 @@ def _clean(context, filter_module=None, filter_host=None):
 
         _run_local(context, "rm -rf {}/{}/target".format(DIR_ROOT_MODULE, module))
         _print_footer(module, "clean target", host=filter_host)
-    _run_local(context, "find . -name .DS_Store -exec rm -r {} \;")
+    _run_local(context, "find . -name .DS_Store -exec rm -r {} \\;")
 
 
 def _build(context, filter_module=None, filter_host=None, is_release=False):

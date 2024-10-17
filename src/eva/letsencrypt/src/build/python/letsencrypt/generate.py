@@ -36,8 +36,8 @@ if __name__ == "__main__":
                     host_pull = "{}-{}".format(hosts_labels[host_pull_label][0], host_pull_label)
                     host_push = "{}-{}".format(hosts_labels[module_tokens[0]][0], module_tokens[0])
                     hosts_file.write(f"""
-ssh -n -q -o "StrictHostKeyChecking=no" root@{host_push} "find /var/lib/asystem/install/{service_name}/latest/config -name certificates.sh -exec {{}} pull {host_pull} {host_push} \;"
-ssh -n -q -o "StrictHostKeyChecking=no" root@{host_push} "find /var/lib/asystem/install/{service_name}/latest/config -name certificates.sh -exec {{}} push {host_pull} {host_push} \;"
+ssh -n -q -o "StrictHostKeyChecking=no" root@{host_push} "find /var/lib/asystem/install/{service_name}/latest/config -name certificates.sh -exec {{}} pull {host_pull} {host_push} \\;"
+ssh -n -q -o "StrictHostKeyChecking=no" root@{host_push} "find /var/lib/asystem/install/{service_name}/latest/config -name certificates.sh -exec {{}} push {host_pull} {host_push} \\;"
 logger -t pushcerts "Pushed new certificates to [{host_push}]"
                     """.strip() + "\n")
     print("Build generate script [letsencrypt] entity metadata persisted to [{}]".format(hosts_path))
