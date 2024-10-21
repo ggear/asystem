@@ -6,7 +6,7 @@
   icon: mdi:thermometer
   font_size_header: 19
   aggregate_func: max
-  hours_to_show: 24
+  hours_to_show: 48
   points_per_hour: 6
   line_width: 2
   tap_action: none
@@ -77,7 +77,7 @@
   icon: mdi:virus-outline
   font_size_header: 19
   aggregate_func: max
-  hours_to_show: 24
+  hours_to_show: 48
   points_per_hour: 6
   line_width: 2
   tap_action: none
@@ -116,7 +116,7 @@
   icon: mdi:water-percent
   font_size_header: 19
   aggregate_func: max
-  hours_to_show: 24
+  hours_to_show: 48
   points_per_hour: 6
   line_width: 2
   tap_action: none
@@ -184,7 +184,7 @@
   icon: mdi:molecule-carbon_dioxide
   font_size_header: 19
   aggregate_func: max
-  hours_to_show: 24
+  hours_to_show: 48
   points_per_hour: 6
   line_width: 2
   tap_action: none
@@ -232,7 +232,7 @@
   icon: mdi:volume-high
   font_size_header: 19
   aggregate_func: max
-  hours_to_show: 24
+  hours_to_show: 48
   points_per_hour: 6
   line_width: 2
   tap_action: none
