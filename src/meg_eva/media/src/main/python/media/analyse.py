@@ -16,16 +16,6 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-SIZE_BITRATE_CI = 2 / 5
-SIZE_MIN_THRESHOLD_GB = 1
-SIZE_BITRATE_HVEC_SCALE = 2 / 3
-SIZE_BITRATE_MIN_KBPS = 2000
-SIZE_BITRATE_MID_KBPS = 4000
-SIZE_BITRATE_MAX_KBPS = 8000
-
-
-
-
 BITRATE_CI = 0.2
 BITRATE_SCALE_MIN = 0.8
 BITRATE_SCALE_MAX = 1.2
@@ -35,11 +25,6 @@ BITRATE_RES_KBPS = {
     "FHD": 4000,  # <2160 @HVEC
     "UHD": 8000,  # >2160 @HVEC
 }
-
-
-
-
-
 
 MEDIA_YEAR_NUMBER_REGEXP = r"\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
 MEDIA_SEASON_NUMBER_REGEXP = r"Season ([0-9]?[0-9]+)"
@@ -386,10 +371,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 if file_probe_stream["field_order"] == "progressive":
                                     file_probe_stream_video_field_order = "p"
                             file_probe_stream_video_label = ""
-                            file_probe_stream_video_res = ""
-                            file_probe_stream_video_res_min = ""
-                            file_probe_stream_video_res_mid = ""
-                            file_probe_stream_video_res_max = ""
+                            file_probe_stream_video_resolution = ""
                             file_probe_stream_video_width = int(file_probe_stream["width"]) \
                                 if "width" in file_probe_stream else -1
                             file_probe_stream_video_height = int(file_probe_stream["height"]) \
@@ -397,75 +379,39 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             if file_probe_stream_video_width > 0:
                                 if file_probe_stream_video_width <= 640:
                                     file_probe_stream_video_label = "nHD"
-                                    file_probe_stream_video_res = "360" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
-                                    file_probe_stream_video_res_max = "1080p"
+                                    file_probe_stream_video_resolution = "360" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 960:
                                     file_probe_stream_video_label = "qHD"
-                                    file_probe_stream_video_res = "540" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
-                                    file_probe_stream_video_res_max = "1080p"
+                                    file_probe_stream_video_resolution = "540" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 1280:
                                     file_probe_stream_video_label = "HD"
-                                    file_probe_stream_video_res = "720" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
-                                    file_probe_stream_video_res_max = "1080p"
+                                    file_probe_stream_video_resolution = "720" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 1600:
                                     file_probe_stream_video_label = "HD+"
-                                    file_probe_stream_video_res = "900" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
-                                    file_probe_stream_video_res_max = "1080p"
+                                    file_probe_stream_video_resolution = "900" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 1920:
                                     file_probe_stream_video_label = "FHD"
-                                    file_probe_stream_video_res = "1080" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
-                                    file_probe_stream_video_res_max = "1080p"
+                                    file_probe_stream_video_resolution = "1080" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 2560:
                                     file_probe_stream_video_label = "QHD"
-                                    file_probe_stream_video_res = "1440" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
-                                    file_probe_stream_video_res_max = "1080p"
+                                    file_probe_stream_video_resolution = "1440" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 3200:
                                     file_probe_stream_video_label = "QHD+"
-                                    file_probe_stream_video_res = "1800" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "1080p"
-                                    file_probe_stream_video_res_max = "1080p"
+                                    file_probe_stream_video_resolution = "1800" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 3840:
                                     file_probe_stream_video_label = "UHD"
-                                    file_probe_stream_video_res = "2160" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "2160p"
-                                    file_probe_stream_video_res_max = "2160p"
+                                    file_probe_stream_video_resolution = "2160" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 5120:
                                     file_probe_stream_video_label = "UHD"
-                                    file_probe_stream_video_res = "2880" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "2160p"
-                                    file_probe_stream_video_res_max = "2160p"
+                                    file_probe_stream_video_resolution = "2880" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 7680:
                                     file_probe_stream_video_label = "UHD"
-                                    file_probe_stream_video_res = "4320" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "2160p"
-                                    file_probe_stream_video_res_max = "2160p"
+                                    file_probe_stream_video_resolution = "4320" + file_probe_stream_video_field_order
                                 elif file_probe_stream_video_width <= 15360:
                                     file_probe_stream_video_label = "UHD"
-                                    file_probe_stream_video_res = "8640" + file_probe_stream_video_field_order
-                                    file_probe_stream_video_res_min = "1080p"
-                                    file_probe_stream_video_res_mid = "2160p"
-                                    file_probe_stream_video_res_max = "2160p"
+                                    file_probe_stream_video_resolution = "8640" + file_probe_stream_video_field_order
                             file_probe_stream_filtered["label"] = file_probe_stream_video_label
-                            file_probe_stream_filtered["res"] = file_probe_stream_video_res
-                            file_probe_stream_filtered["res_min"] = file_probe_stream_video_res_min
-                            file_probe_stream_filtered["res_mid"] = file_probe_stream_video_res_mid
-                            file_probe_stream_filtered["res_max"] = file_probe_stream_video_res_max
+                            file_probe_stream_filtered["resolution"] = file_probe_stream_video_resolution
                             file_probe_stream_filtered["width"] = str(file_probe_stream_video_width) \
                                 if file_probe_stream_video_width > 0 else ""
                             file_probe_stream_filtered["height"] = str(file_probe_stream_video_height) \
@@ -474,8 +420,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 if "bit_rate" in file_probe_stream else -1
                             file_probe_stream_filtered["bitrate__Kbps"] = str(file_stream_bitrate) \
                                 if file_stream_bitrate > 0 else ""
-                            file_probe_stream_filtered["bitrate_est__Kbps"] = file_stream_bitrate \
+                            file_probe_stream_filtered["bitrate_estimate__Kbps"] = file_stream_bitrate \
                                 if file_stream_bitrate > 0 else -1
+                            file_probe_stream_filtered["bitrate_target__Kbps"] = -1
                             file_probe_stream_filtered["bitrate_min__Kbps"] = -1
                             file_probe_stream_filtered["bitrate_mid__Kbps"] = -1
                             file_probe_stream_filtered["bitrate_max__Kbps"] = -1
@@ -512,7 +459,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
                 for file_stream_video_index, file_stream_video in enumerate(file_probe_streams_filtered["video"]):
                     if file_stream_video_index == 0:
-                        file_stream_video_bitrate = file_stream_video["bitrate_est__Kbps"]
+                        file_stream_video_bitrate = file_stream_video["bitrate_estimate__Kbps"]
                         if file_stream_video_bitrate < 0:
                             if file_probe_bitrate > 0:
                                 file_stream_audio_bitrate = 0
@@ -522,24 +469,29 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 file_stream_video_bitrate = file_probe_bitrate - file_stream_audio_bitrate \
                                     if file_probe_bitrate > file_stream_audio_bitrate else 0
                         if file_stream_video_bitrate < 0:
-                            file_stream_video["bitrate_est__Kbps"] = " "
+                            file_stream_video["bitrate_estimate__Kbps"] = " "
+                            file_stream_video["bitrate_target__Kbps"] = " "
                             file_stream_video["bitrate_min__Kbps"] = " "
                             file_stream_video["bitrate_mid__Kbps"] = " "
                             file_stream_video["bitrate_max__Kbps"] = " "
                         else:
-                            file_stream_video["bitrate_est__Kbps"] = \
+                            file_stream_video["bitrate_estimate__Kbps"] = \
                                 str(file_stream_video_bitrate)
+                            file_stream_video["bitrate_target__Kbps"] = \
+                                _get_bitrate(file_probe_stream_video_codec, file_probe_stream_video_width,
+                                             file_target_quality)
                             file_stream_video["bitrate_min__Kbps"] = \
-                                str(min(file_stream_video_bitrate, SIZE_BITRATE_MIN_KBPS))
+                                _get_bitrate(file_probe_stream_video_codec, file_probe_stream_video_width,
+                                             "Min", file_stream_video_bitrate)
                             file_stream_video["bitrate_mid__Kbps"] = \
-                                str(min(file_stream_video_bitrate, SIZE_BITRATE_MID_KBPS))
+                                _get_bitrate(file_probe_stream_video_codec, file_probe_stream_video_width,
+                                             "Mid", file_stream_video_bitrate)
                             file_stream_video["bitrate_max__Kbps"] = \
-                                str(min(file_stream_video_bitrate, SIZE_BITRATE_MAX_KBPS))
+                                _get_bitrate(file_probe_stream_video_codec, file_probe_stream_video_width,
+                                             "Max", file_stream_video_bitrate)
                     else:
-                        del file_stream_video["res_min"]
-                        del file_stream_video["res_mid"]
-                        del file_stream_video["res_max"]
-                        del file_stream_video["bitrate_est__Kbps"]
+                        del file_stream_video["bitrate_estimate__Kbps"]
+                        del file_stream_video["bitrate_target__Kbps"]
                         del file_stream_video["bitrate_min__Kbps"]
                         del file_stream_video["bitrate_mid__Kbps"]
                         del file_stream_video["bitrate_max__Kbps"]
@@ -760,9 +712,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         "Video 1 Codec",
         "Video 1 Colour",
         "Video 1 Width",
-        "Video 1 Res Min",
-        "Video 1 Res Mid",
-        "Video 1 Res Max",
+        "Video 1 Bitrate Estimate (Kbps)",
+        "Video 1 Bitrate Target (Kbps)",
         "Video 1 Bitrate Min (Kbps)",
         "Video 1 Bitrate Mid (Kbps)",
         "Video 1 Bitrate Max (Kbps)",
@@ -877,50 +828,19 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    ((pl.col("Video 1 Codec") != "HEVC"))
-                ).then((pl.col("Bitrate (Kbps)").cast(pl.Float32) * SIZE_BITRATE_HVEC_SCALE))
-                .otherwise(pl.col("Bitrate (Kbps)").cast(pl.Float32))
-            ).alias("Bitrate Scaled")
-        ).with_columns(
-            (
-                pl.when(
-                    (pl.col("File Size (GB)").cast(pl.Float32) > SIZE_MIN_THRESHOLD_GB) &
                     (
-                            (
-                                    (pl.col("Target Quality") == "Max") &
-                                    (pl.col("Bitrate Scaled") > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS))
-                            ) | (
-                                    (pl.col("Target Quality") == "Mid") &
-                                    (pl.col("Bitrate Scaled") > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS))
-                            ) | (
-                                    (pl.col("Target Quality") == "Min") &
-                                    (pl.col("Bitrate Scaled") > ((1 + SIZE_BITRATE_CI) * SIZE_BITRATE_MIN_KBPS))
-                            )
+                            pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) >
+                            ((1 + BITRATE_CI) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
                     )
                 ).then(pl.lit("Large"))
                 .when(
                     (
-                            (
-                                    (pl.col("Target Quality") == "Max") &
-                                    (
-                                            (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MAX_KBPS)) |
-                                            (pl.col("Video 1 Width").cast(pl.Int32) < 1920)
-                                    )
-                            ) | (
-                                    (pl.col("Target Quality") == "Mid") &
-                                    (
-                                            (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MID_KBPS)) |
-                                            (pl.col("Video 1 Width").cast(pl.Int32) < 1920)
-                                    )
-                            ) | (
-                                    (pl.col("Target Quality") == "Min") &
-                                    (pl.col("Bitrate Scaled") < ((1 - SIZE_BITRATE_CI) * SIZE_BITRATE_MIN_KBPS))
-                            )
+                            pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) <
+                            ((1 - BITRATE_CI) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
                     )
                 ).then(pl.lit("Small"))
                 .otherwise(pl.lit("Right"))
-            ).alias("File Size")) \
-            .drop("Bitrate Scaled")
+            ).alias("File Size"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
@@ -1252,8 +1172,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         pl.concat_str([
                             pl.lit("--target "),
                             pl.col("Video 1 Bitrate Min (Kbps)"),
-                            pl.lit(" --hevc --"),
-                            pl.col("Video 1 Res Min"),
+                            pl.lit(" --hevc --1080p"),
                         ])
                     )
                 ).alias("Transcode Video"),
@@ -1514,6 +1433,25 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                              sheet="Summary", replace=True, index=False, add_filter=True)
             print("done", flush=True)
     return files_analysed
+
+
+def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
+    quality_scale = 1
+    if _quality is not None:
+        if _quality.upper() == "MIN":
+            quality_scale = BITRATE_SCALE_MIN
+        elif _quality.upper() == "MAX":
+            quality_scale = BITRATE_SCALE_MAX
+    if _width <= 1280:
+        bitrate_target = BITRATE_RES_KBPS["HD"]
+    elif _width <= 1920:
+        bitrate_target = BITRATE_RES_KBPS["FHD"]
+    else:
+        bitrate_target = BITRATE_RES_KBPS["UHD"]
+    hevc_scale = BITRATE_SCALE_HVEC if _codec != "HEVC" else 1
+    bitrate_target = bitrate_target * quality_scale * hevc_scale
+    bitrate_target = bitrate_target if _bitrate is None else min(int(_bitrate), bitrate_target)
+    return str(bitrate_target)
 
 
 def _normalise_name(_name):
