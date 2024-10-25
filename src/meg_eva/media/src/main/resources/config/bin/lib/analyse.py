@@ -20,7 +20,7 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-BITRATE_CI = 0.2
+BITRATE_CI = 0.4
 BITRATE_SCALE_MIN = 0.8
 BITRATE_SCALE_MAX = 1.2
 BITRATE_SCALE_HVEC = 1.5
