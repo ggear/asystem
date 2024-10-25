@@ -482,16 +482,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             file_stream_video["bitrate_estimate__Kbps"] = \
                                 str(file_stream_video_bitrate)
                             file_stream_video["bitrate_target__Kbps"] = \
-                                _get_bitrate(file_probe_stream_video_codec, file_probe_stream_video_width,
+                                _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
                                              file_target_quality)
                             file_stream_video["bitrate_min__Kbps"] = \
-                                _get_bitrate(file_probe_stream_video_codec, file_probe_stream_video_width,
+                                _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
                                              "Min", file_stream_video_bitrate)
                             file_stream_video["bitrate_mid__Kbps"] = \
-                                _get_bitrate(file_probe_stream_video_codec, file_probe_stream_video_width,
+                                _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
                                              "Mid", file_stream_video_bitrate)
                             file_stream_video["bitrate_max__Kbps"] = \
-                                _get_bitrate(file_probe_stream_video_codec, file_probe_stream_video_width,
+                                _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
                                              "Max", file_stream_video_bitrate)
                     else:
                         del file_stream_video["bitrate_estimate__Kbps"]
@@ -1446,6 +1446,7 @@ def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
             quality_scale = BITRATE_SCALE_MIN
         elif _quality.upper() == "MAX":
             quality_scale = BITRATE_SCALE_MAX
+    _width = int(_width)
     if _width <= 1280:
         bitrate_target = BITRATE_RES_KBPS["HD"]
     elif _width <= 1920:
