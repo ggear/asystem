@@ -20,7 +20,7 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-BITRATE_CI = 0.4
+BITRATE_CI = 0.3
 BITRATE_SCALE_MIN = 0.8
 BITRATE_SCALE_MAX = 1.2
 BITRATE_SCALE_HVEC = 1.5
@@ -1455,7 +1455,7 @@ def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
     hevc_scale = BITRATE_SCALE_HVEC if _codec != "HEVC" else 1
     bitrate_target = bitrate_target * quality_scale * hevc_scale
     bitrate_target = bitrate_target if _bitrate is None else min(int(_bitrate), bitrate_target)
-    return str(bitrate_target)
+    return str(round(bitrate_target))
 
 
 def _normalise_name(_name):
