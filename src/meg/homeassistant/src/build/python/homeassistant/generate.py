@@ -1264,9 +1264,10 @@ compensation:
     unique_id: weatherstation_console_battery_percent
     source: sensor.weatherstation_console_battery_voltage
     unit_of_measurement: "%"
+    degree: 7
+    precision: 0
     lower_limit: true
     upper_limit: true
-    degree: 10
     data_points:
       - [ 4, 100 ]
       - [ 3.97, 99 ]
