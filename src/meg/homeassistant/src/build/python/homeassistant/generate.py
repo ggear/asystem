@@ -1266,8 +1266,8 @@ compensation:
     unit_of_measurement: "%"
     lower_limit: true
     upper_limit: true
+    degree: 5
     data_points:
-      - [ 5, 100 ]
       - [ 4, 100 ]
       - [ 3.96, 99.9 ]
       - [ 3.97, 99.8 ]
