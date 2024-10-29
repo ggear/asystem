@@ -5,7 +5,7 @@ FROM image_base AS image_package
 USER root
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apk add --no-cache jq==1.7.1-r0
-RUN apk add --no-cache curl==8.9.0-r0
+RUN apk add --no-cache curl==8.10.1-r0
 RUN apk add --no-cache netcat-openbsd==1.226-r0
 
 FROM image_package AS image_install

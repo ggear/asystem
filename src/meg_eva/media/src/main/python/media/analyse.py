@@ -495,7 +495,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         del file_stream_video["bitrate_min__Kbps"]
                         del file_stream_video["bitrate_mid__Kbps"]
                         del file_stream_video["bitrate_max__Kbps"]
-
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
                 for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
