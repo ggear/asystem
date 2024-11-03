@@ -134,6 +134,15 @@
 # Settings -> Security -> Port Forwarding -> Protocol -> Both
 # Settings -> Security -> Port Forwarding -> Logging -> True
 
+# Settings -> Internet -> Primary (WAN1) -> IPv4 Connection -> Static IP -> True
+# Settings -> Internet -> Primary (WAN1) -> IPv4 Connection -> IPv4 Address -> 123.176.113.184
+# Settings -> Internet -> Primary (WAN1) -> IPv4 Connection -> Subnet Mask -> 255.255.255.0
+# Settings -> Internet -> Primary (WAN1) -> IPv4 Connection -> Gateway IP -> 123.176.113.1
+# Settings -> Internet -> Primary (WAN1) -> IPv4 Connection -> Additional IP Addresses -> 10.0.0.1/24
+# Settings -> Internet -> Primary (WAN1) -> IPv4 Connection -> DNS Auto -> False
+# Settings -> Internet -> Primary (WAN1) -> IPv4 Connection -> Primary Server -> 1.1.1.1
+# Settings -> Internet -> Primary (WAN1) -> IPv4 Connection -> Secondary Server -> 1.0.0.1
+
 ################################################################################
 # Not done
 ################################################################################
@@ -148,8 +157,6 @@
 # Protect setup cameras, medium streaming
 
 # Wireless coverage floorplan setup
-
-# Advanced Features -> Advanced Gateway Settings -> Dynamic DNS -> Create a Dummy entry
 
 # Classic UI -> Site -> Auto-optimize network -> False
 # Classic UI -> All Wireless Networks -> Block LAN to WLAN multicast and broadcast data -> False

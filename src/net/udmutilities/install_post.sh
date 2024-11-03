@@ -31,6 +31,7 @@ rm -rf /data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /data
 cp -rvf ./config/udm-dnsmasq/24-dnsmasq.sh /data/on_boot.d
 /data/on_boot.d/24-dnsmasq.sh
 
+# Disable after the fact that I get a static IP now from my ISP
 #cp -rvf ./config/udm-cloudflare-ddns/28-cloudflare-ddns.sh /data/on_boot.d
 #chmod a+x /data/on_boot.d/28-cloudflare-ddns.sh
 #/data/on_boot.d/28-cloudflare-ddns.sh
