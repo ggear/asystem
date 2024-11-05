@@ -169,22 +169,22 @@ sensor.office_basement_humidity:
   icon: 'mdi:water-percent'
 sensor.edwin_carbon_dioxide:
   friendly_name: 'Edwin'
-  icon: 'mdi:molecule-carbon_dioxide'
+  icon: 'mdi:molecule-co2'
 sensor.office_carbon_dioxide:
   friendly_name: 'Office'
-  icon: 'mdi:molecule-carbon_dioxide'
+  icon: 'mdi:molecule-co2'
 sensor.office_lounge_carbon_dioxide:
   friendly_name: 'Lounge'
-  icon: 'mdi:molecule-carbon_dioxide'
+  icon: 'mdi:molecule-co2'
 sensor.kitchen_carbon_dioxide:
   friendly_name: 'Kitchen'
-  icon: 'mdi:molecule-carbon_dioxide'
+  icon: 'mdi:molecule-co2'
 sensor.office_pantry_carbon_dioxide:
   friendly_name: 'Pantry'
-  icon: 'mdi:molecule-carbon_dioxide'
+  icon: 'mdi:molecule-co2'
 sensor.office_dining_carbon_dioxide:
   friendly_name: 'Dining'
-  icon: 'mdi:molecule-carbon_dioxide'
+  icon: 'mdi:molecule-co2'
 sensor.ada_noise:
   friendly_name: 'Ada'
   icon: 'mdi:volume-high'

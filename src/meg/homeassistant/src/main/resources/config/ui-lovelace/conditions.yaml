@@ -181,7 +181,7 @@
 ################################################################################
 - type: custom:mini-graph-card
   name: Carbon Dioxide
-  icon: mdi:molecule-carbon_dioxide
+  icon: mdi:molecule-co2
   font_size_header: 19
   aggregate_func: max
   hours_to_show: 48
@@ -207,25 +207,25 @@
   entities:
     - entity: sensor.edwin_carbon_dioxide
       name: Edwin
-      icon: mdi:molecule-carbon_dioxide
+      icon: mdi:molecule-co2
     - entity: sensor.office_carbon_dioxide
       name: Office
-      icon: mdi:molecule-carbon_dioxide
+      icon: mdi:molecule-co2
     - entity: sensor.office_lounge_carbon_dioxide
       name: Lounge
-      icon: mdi:molecule-carbon_dioxide
+      icon: mdi:molecule-co2
     - entity: sensor.kitchen_carbon_dioxide
       name: Kitchen
-      icon: mdi:molecule-carbon_dioxide
+      icon: mdi:molecule-co2
 ################################################################################
 - type: entities
   entities:
     - entity: sensor.office_pantry_carbon_dioxide
       name: Pantry
-      icon: mdi:molecule-carbon_dioxide
+      icon: mdi:molecule-co2
     - entity: sensor.office_dining_carbon_dioxide
       name: Dining
-      icon: mdi:molecule-carbon_dioxide
+      icon: mdi:molecule-co2
 ################################################################################
 - type: custom:mini-graph-card
   name: Noise
