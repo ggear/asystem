@@ -32,7 +32,14 @@ alias fab="fab -e"
 alias ssh-copy-id='sshcopyid_func'
 function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.ssh/authorized_keys' ;}
 
-export PATH=~/.cargo/bin:~/.conda/envs/python3/bin:/Library/Conda/anaconda3/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:${PATH}
+export PYTHON_HOME="${HOME}/.conda/envs/python3"
+
+export CARGO_HOME="${HOME}/.cargo"
+
+export GOROOT="${HOME}/.conda/envs/go"
+export GOPATH="${HOME}/.go"
+
+export PATH=${GOROOT}/bin:${CARGO_HOME}/bin:${PYTHON_HOME}/bin:/Library/Conda/anaconda3/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:${PATH}
 
 EOF
 cat <<EOF >/var/root/.profile
