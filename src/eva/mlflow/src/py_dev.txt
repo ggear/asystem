@@ -1,0 +1,15 @@
+scipy
+numpy
+polars
+tensorflow
+scikit-learn
+
+voila
+plotly
+seaborn
+matplotlib
+chart-studio
+
+mlflow
+notebook
+jupyterlab

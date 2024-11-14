@@ -28,6 +28,7 @@ ENV PIP_PACKAGES="\
   poetry==1.8.2 \
   paho-mqtt==1.6.1 \
 "
+RUN pip install --default-timeout=1000 --no-cache-dir --upgrade pip
 RUN pip install --default-timeout=1000 --no-cache-dir ${PIP_PACKAGES}
 
 #INFO: Disable pypy

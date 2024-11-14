@@ -5,6 +5,7 @@
   "macmini-eva": [
     "letsencrypt",
     "sabnzbd",
+    "mlflow",
     "grafana",
     "influxdb",
     "wrangle",

@@ -10,6 +10,7 @@
 
 import collections
 import glob
+import json
 import math
 import os
 import re
@@ -290,31 +291,50 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                         ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
                     and not docker_image_metadata["skipped"]:
                 if not docker_image_metadata["version_current"].startswith("$GO_VERSION"):
-                    docker_image_tags_url = "https://hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size=150" \
-                        .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
-                    print("Getting docker image versions from [{}] ... ".format(docker_image_tags_url), end="", flush=True)
-                    docker_image_tags_json = requests.get(docker_image_tags_url).json()
-                    print("done", flush=True)
-                    docker_image_tags = []
-                    if "results" in docker_image_tags_json:
-                        for docker_image_metatdata_hub in \
-                                sorted(docker_image_tags_json["results"], key=lambda x: x['last_updated'], reverse=True):
-                            docker_image_version = docker_image_metatdata_hub["name"]
+                    if docker_image_metadata["namespace"].startswith("ghcr.io"):
+                        docker_image_tags_command = "skopeo list-tags docker://{}/{}" \
+                            .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
+                        docker_image_tags_json = json.loads(
+                            _run_local(context, docker_image_tags_command, hide='out').stdout)
+                        print("Getting docker image versions from [{}] ... done".format(docker_image_tags_command), flush=True)
+                        docker_image_tags = []
+                        if "Tags" in docker_image_tags_json and len(docker_image_tags_json["Tags"]) > 0:
+                            docker_image_tags = docker_image_tags_json["Tags"]
+                        else:
+                            version_messages[version_types[2]].append(version_formats[2].format(
+                                module, "Could not determine versions from Github repository command [{}]" \
+                                    .format(docker_image_tags_command)))
+                        for docker_image_version in reversed(docker_image_tags):
                             if not any(substring.lower() in docker_image_version.lower()
-                                       for substring in ["rc", ".0b", "beta", "windows"]) and any(
-                                i.isdigit() for i in docker_image_version):
-                                docker_image_tags.append(docker_image_version)
-                                docker_image_version_match = re.match(docker_image_metadata["version_regex"], docker_image_version)
-                                if docker_image_version_match is not None and \
-                                        version.parse(docker_image_version_match.groups()[0]) >= \
-                                        version.parse(re.match(docker_image_metadata["version_regex"],
-                                                               docker_image_metadata["version_current"]).groups()[0]):
-                                    docker_image_metadata["version_upstream"] = docker_image_version
-                                    break;
+                                       for substring in ["rc", "a1", ".0b", "beta"]):
+                                docker_image_metadata["version_upstream"] = docker_image_version
+                                break
                     else:
-                        version_messages[version_types[2]] \
-                            .append(version_formats[2].format(module, "Could not determine versions from Docker Hub API request [{}]"
-                                                              .format(docker_image_tags_url)))
+                        docker_image_tags_url = "https://hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size=150" \
+                            .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
+                        print("Getting docker image versions from [{}] ... ".format(docker_image_tags_url), end="", flush=True)
+                        docker_image_tags_json = requests.get(docker_image_tags_url).json()
+                        print("done", flush=True)
+                        docker_image_tags = []
+                        if "results" in docker_image_tags_json:
+                            for docker_image_metatdata_hub in \
+                                    sorted(docker_image_tags_json["results"], key=lambda x: x['last_updated'], reverse=True):
+                                docker_image_version = docker_image_metatdata_hub["name"]
+                                if not any(substring.lower() in docker_image_version.lower()
+                                           for substring in ["rc", ".0b", "beta", "windows"]) and any(
+                                    i.isdigit() for i in docker_image_version):
+                                    docker_image_tags.append(docker_image_version)
+                                    docker_image_version_match = re.match(docker_image_metadata["version_regex"], docker_image_version)
+                                    if docker_image_version_match is not None and \
+                                            version.parse(docker_image_version_match.groups()[0]) >= \
+                                            version.parse(re.match(docker_image_metadata["version_regex"],
+                                                                   docker_image_metadata["version_current"]).groups()[0]):
+                                        docker_image_metadata["version_upstream"] = docker_image_version
+                                        break
+                        else:
+                            version_messages[version_types[2]].append(version_formats[2].format(
+                                module, "Could not determine versions from Docker Hub API request [{}]" \
+                                    .format(docker_image_tags_url)))
                     if "version_upstream" in docker_image_metadata:
                         version_type = 0 if docker_image_metadata["version_current"] == docker_image_metadata["version_upstream"] else 1
                         version_messages[version_types[version_type]].append(version_formats[version_type].format(
@@ -329,6 +349,14 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                 docker_image_metadata["version_current"],
                                 docker_image_metadata["version_regex"],
                                 "\n".join(docker_image_tags))))
+
+
+
+
+
+
+
+
             elif exists(docker_file_path) or exists(docker_compose_path):
                 if docker_image_metadata is None or "skipped" not in docker_image_metadata or not docker_image_metadata["skipped"]:
                     version_messages[version_types[2]].append(version_formats[2].format(
@@ -341,23 +369,22 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
 
 
 def _clean(context, filter_module=None, filter_host=None):
-    if filter_module is not None:
-        _print_header("asystem", "clean transients", host=filter_host)
-        _run_local(context, "find . -name *.pyc -prune -exec rm -rf {} \\;")
-        _run_local(context, "find . -name __pycache__ -prune -exec rm -rf {} \\;")
-        _run_local(context, "find . -name .pytest_cache -prune -exec rm -rf {} \\;")
-        _run_local(context, "find . -name .coverage -prune -exec rm -rf {} \\;")
-        _run_local(context, "find . -name Cargo.lock -prune -exec rm -rf {} \\;")
-        _print_footer("asystem", "clean transients", host=filter_host)
     for module in _get_modules(context, filter_module=filter_module, filter_changes=False):
-        _print_header(module, "clean target", host=filter_host)
+        _print_header(module, "clean transients", host=filter_host)
+        find_command = "find '{}/{}' -path '*/src/*/*/src/*' ! -path '*/resources/*' -name".format(DIR_ROOT_MODULE, module)
+        _run_local(context, "{} '.DS_Store' -exec rm -rf {{}} \\+".format(find_command))
+        _run_local(context, "{} '*.pyc' -exec rm -rf {{}} \\+".format(find_command))
+        _run_local(context, "{} '__pycache__' -exec rm -rf {{}} \\+".format(find_command))
+        _run_local(context, "{} '.pytest_cache' -exec rm -rf {{}} \\+".format(find_command))
+        _run_local(context, "{} '.coverage' -exec rm -rf {{}} \\+".format(find_command))
+        _run_local(context, "{} 'Cargo.lock' -exec rm -rf {{}} \\+".format(find_command))
+        _run_local(context, "{} '*.ipynb' -exec jupyter nbconvert --clear-output --inplace {{}} \\;".format(find_command))
 
         # TODO: Disable deleting .env, leave last build in place for running push.py scripts
         # _run_local(context, "rm -rf {}/{}/.env".format(DIR_ROOT, module))
 
         _run_local(context, "rm -rf {}/{}/target".format(DIR_ROOT_MODULE, module))
-        _print_footer(module, "clean target", host=filter_host)
-    _run_local(context, "find . -name .DS_Store -exec rm -r {} \\;")
+        _print_footer(module, "clean transients", host=filter_host)
 
 
 def _build(context, filter_module=None, filter_host=None, is_release=False):

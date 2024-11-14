@@ -15,7 +15,7 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}/config:/config
       - ${SERVICE_DATA_DIR}/transcode:/transcode
-      - /share:/share
+      - ${PLEX_SHARE_DIR}:${PLEX_SHARE_DIR}
     network_mode: host
     deploy:
       resources:

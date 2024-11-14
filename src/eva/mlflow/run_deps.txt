@@ -1,4 +1,2 @@
-vernemq
 postgres
 influxdb
-_unifios

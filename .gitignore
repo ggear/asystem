@@ -19,6 +19,7 @@
 .id_rsa
 .config
 .pydevproject
+.ipynb_checkpoints
 .toolchain*
 .viminfo
 .cache

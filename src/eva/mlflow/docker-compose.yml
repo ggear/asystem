@@ -1,0 +1,41 @@
+x-common: &common
+  image: mlflow:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  environment:
+    - TZ=Australia/Perth
+    - MLFLOW_SERVICE
+    - MLFLOW_HTTP_PORT
+    - MLFLOW_BACKEND_STORE_URI
+    - MLFLOW_DEFAULT_ARTIFACT_ROOT=${MLFLOW_SHARE_DIR}/artifacts
+#    - MLFLOW_ARTIFACTS_DESTINATION=
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
+services:
+  mlflow:
+    container_name: mlflow
+    <<: *common
+    restart: ${SERVICE_RESTART}
+    volumes:
+      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
+      - ${MLFLOW_SHARE_DIR}:${MLFLOW_SHARE_DIR}
+    ports:
+      - ${MLFLOW_HTTP_PORT}:5000
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+  mlflow_bootstrap:
+    container_name: mlflow_bootstrap
+    <<: *common
+    restart: 'no'
+    volumes:
+      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
+      - ${MLFLOW_SHARE_DIR}:${MLFLOW_SHARE_DIR}
+    entrypoint: /bin/bash
+    command:
+      - /bootstrap/bootstrap.sh
+    depends_on:
+      - mlflow

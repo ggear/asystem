@@ -37,13 +37,17 @@ cat <<EOF >/etc/samba/smb.conf
 EOF
 for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
   SHARE_INDEX=$(echo ${SHARE_DIR} | awk 'BEGIN{FS=OFS="/"}{print $3}')
-  mkdir -p ${SHARE_DIR}/tmp
-  mkdir -p ${SHARE_DIR}/media
-  mkdir -p ${SHARE_DIR}/backup/apps
+  rm -rf ${SHARE_DIR}/lost+found
+  mkdir -p ${SHARE_DIR}/backup/data
   mkdir -p ${SHARE_DIR}/backup/media
   mkdir -p ${SHARE_DIR}/backup/service
   mkdir -p ${SHARE_DIR}/backup/timemachine
-  rm -rf ${SHARE_DIR}/lost+found
+  mkdir -p ${SHARE_DIR}/data
+  mkdir -p ${SHARE_DIR}/media
+  mkdir -p ${SHARE_DIR}/service
+  mkdir -p ${SHARE_DIR}/service/mlflow
+  mkdir -p ${SHARE_DIR}/tmp
+  chown -R graham:users ${SHARE_DIR}
   cat <<EOF >>/etc/samba/smb.conf
 [share-${SHARE_INDEX}]
   comment = Share-${SHARE_INDEX} Files
