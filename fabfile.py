@@ -160,10 +160,6 @@ def _backup(context):
                         "-not -path './.git*' "
                         "-not -path './.deps*' "
                         "-not -path './.idea*' "
-                        "-not -path '*__pycache__*' "
-                        "-not -path '*.pytest_cache*' "
-                        "-not -path '*/target/*' "
-                        "-not -name asystem.iml "
                         "-type f -print) > /Users/graham/Backup/asystem/.gitexternal", DIR_ROOT)
     _run_local(context, "mkdir -p /Users/graham/Backup/asystem && "
                         "rsync -vr --files-from=/Users/graham/Backup/asystem/.gitexternal . /Users/graham/Backup/asystem", DIR_ROOT)
@@ -378,7 +374,6 @@ def _clean(context, filter_module=None, filter_host=None):
         _run_local(context, "{} '.pytest_cache' -exec rm -rf {{}} \\+".format(find_command))
         _run_local(context, "{} '.coverage' -exec rm -rf {{}} \\+".format(find_command))
         _run_local(context, "{} 'Cargo.lock' -exec rm -rf {{}} \\+".format(find_command))
-        _run_local(context, "{} '*.ipynb' -exec jupyter nbconvert --clear-output --inplace {{}} \\;".format(find_command))
 
         # TODO: Disable deleting .env, leave last build in place for running push.py scripts
         # _run_local(context, "rm -rf {}/{}/.env".format(DIR_ROOT, module))

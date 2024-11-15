@@ -5,11 +5,13 @@ import pytest
 
 sys.path.append('../../../main/python')
 
+from library import *
+
 
 class WrangleTest(unittest.TestCase):
 
-    def test_adhoc(self):
-        self.assertEqual(True, True)
+    def test_init_env(self):
+        self.assertEqual("/service/mlflow/artifacts", init_env()["MLFLOW_ARTIFACT_DIR"])
 
 
 if __name__ == '__main__':

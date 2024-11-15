@@ -21,7 +21,7 @@
 # Admins & Users -> Admins -> Add -> protect/$UNIFI_PROTECT_KEY, Local Access Only, Super Admin
 # Admins & Users -> Admins -> Add -> monitor/$UNFI_MONITOR_KEY, Local Access Only, Super Admin
 
-# Console Settings -> Advanced -> Remote Access -> True
+# Console Settings -> Advanced -> Remote Access -> False (Only available with the graham account.ui.com account)
 # Console Settings -> Advanced -> SSH -> True, $UNIFI_ROOT_KEY (to get past password restrictions, then reset to standard with passwd)
 
 ################################################################################
@@ -39,9 +39,12 @@
 # Devices -> uap-hallway -> Settings -> 5GHz Channel -> 36
 # Devices -> uap-hallway -> Settings -> 5GHz Transmit Power -> High
 
+# Settings -> System -> Backups -> Auto Backup -> False
 # Settings -> System -> Updates -> Automate Device Updates -> False
 # Settings -> System -> Advanced -> Email Services -> False
 # Settings -> System -> Advanced -> Wireless Connectivity -> Wireless Meshing -> False
+# Settings -> System -> Advanced -> Device Authentication -> Keys
+
 
 # Settings -> Networks -> IPv6 Support -> False
 # Settings -> Networks -> IGMP Snooping -> False

@@ -15,6 +15,7 @@ brew install \
   htop \
   wget \
   watch \
+  skopeo \
   rename \
   netcat \
   rustup \

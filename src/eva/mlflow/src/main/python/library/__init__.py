@@ -1,22 +1,30 @@
 import os
+import os.path
+import subprocess
 
 import matplotlib.pyplot as plt
 from dateutil.parser import parse
 from requests import post
 
 
-def load_env():
-    env_load = {}
-    with open(os.path.join(os.getcwd(), "../../../../.env"), 'r') as env_file:
-        for env_load_line in env_file:
-            env_load_line = env_load_line.replace("export ", "").rstrip()
-            if "=" not in env_load_line:
-                continue
-            if env_load_line.startswith("#"):
-                continue
-            env_load_key, env_load_value = env_load_line.split("=", 1)
-            env_load[env_load_key] = env_load_value
-    return env_load
+def init_env(prod_env=True):
+    def _load_env(_env, _env_path):
+        with open(os.path.join(os.path.dirname(__file__), _env_path), 'r') as env_file:
+            for env_line in env_file:
+                env_line = env_line.replace("export ", "").rstrip()
+                if not env_line.startswith("#") and "=" in env_line:
+                    env_key, env_value = env_line.split("=", 1)
+                    env[env_key] = env_value
+
+    env = {}
+    os.chdir(os.path.dirname(__file__))
+    _load_env(env, "../../../../.env")
+    if prod_env:
+        _load_env(env, "../../../../.env_prod")
+        mount_script_path = os.path.join(os.path.dirname(__file__), "../../resources/mount.sh")
+        if subprocess.run(mount_script_path, shell=True).returncode != 0:
+            raise Exception("Execution of [{}] failed".format(mount_script_path))
+    return env
 
 
 def query_influxdb(env, query):
