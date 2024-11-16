@@ -304,7 +304,7 @@ ntpq -p
 ################################################################################
 # Python
 ################################################################################
-if [ -d /root/.pyenv ]; then
+if [ ! -d /root/.pyenv ]; then
   git clone https://github.com/pyenv/pyenv.git /root/.pyenv
 fi
 cd /root/.pyenv

@@ -26,7 +26,7 @@ RUN ./configure --prefix=/usr/local
 RUN make
 RUN make install
 RUN /usr/local/bin/python3 --version
-RUN /usr/local/bin/python3 -m pip install --default-timeout=1000 --upgrade pip
+RUN /usr/local/bin/python3 -m pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip
 RUN /usr/local/bin/pip3 --version
 RUN rm -rf /tmp/*
 

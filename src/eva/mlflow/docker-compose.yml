@@ -7,7 +7,12 @@ x-common: &common
     - MLFLOW_HTTP_PORT
     - MLFLOW_BACKEND_STORE_URI
     - MLFLOW_DEFAULT_ARTIFACT_ROOT
+
+    # TODO: Is this required?
     #- MLFLOW_ARTIFACTS_DESTINATION
+
+    - MLFLOW_TRACKING_URI
+    - MLFLOW_REPOSITORY_URI
   logging:
     driver: "json-file"
     options:

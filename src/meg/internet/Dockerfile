@@ -28,7 +28,7 @@ RUN ./configure --prefix=/usr/local
 RUN make
 RUN make install
 RUN /usr/local/bin/python3 --version
-RUN /usr/local/bin/python3 -m pip install --default-timeout=1000 --upgrade pip
+RUN /usr/local/bin/python3 -m pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip
 RUN /usr/local/bin/pip3 --version
 RUN rm -rf /tmp/*
 
@@ -36,7 +36,7 @@ FROM image_install AS image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/.py_prod.txt /asystem
-RUN cat /asystem/.py_prod.txt | xargs -n 1 /usr/local/bin/pip3 install --default-timeout=1000 && rm -rf /asystem/reqs_run.txt
+RUN cat /asystem/.py_prod.txt | xargs -n 1 /usr/local/bin/pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir && rm -rf /asystem/reqs_run.txt
 COPY src/main/python/ /asystem/
 
 ENTRYPOINT ["/entrypoint.sh"]
