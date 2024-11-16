@@ -310,10 +310,10 @@ fi
 cd /root/.pyenv
 git checkout master
 git pull --all
-git checkout v2.4.3
+git checkout v2.4.17
 ./src/configure && make -C src
 if [ $(grep "pyenv" /root/.bashrc | wc -l) -eq 0 ]; then
-  echo $'export PATH=$PATH:/root/.pyenv/bin\n' >>/root/.bashrc
+  echo 'export PATH=$PATH:/root/.pyenv/bin\n' >>/root/.bashrc
 fi
 source /root/.bashrc
 cd /tmp

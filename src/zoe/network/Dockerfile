@@ -1,7 +1,7 @@
 # https://hub.docker.com/_/golang/tags?page=1&ordering=last_updated&name=-alpine
-ARG GO_VERSION
+ARG ASYSTEM_GO_VERSION
 
-FROM golang:$GO_VERSION-alpine AS image_base
+FROM golang:$ASYSTEM_GO_VERSION-alpine AS image_base
 
 FROM image_base AS image_package
 
