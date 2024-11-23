@@ -62,6 +62,9 @@ function echo_package_install_commands {
     -e ASYSTEM_MLSERVER_VERSION=1.6.1 \\
     -e ASYSTEM_TELEGRAF_VERSION=1.32.3 \\
     -e ASYSTEM_HOMEASSISTANT_VERSION=2024.11.1 \\
+    -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine \\
+    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-bookworm \\
+    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION=-slim-bookworm \\
     'python:3.12.5-bookworm'" && echo ""
   echo "#######################################################################################"
 }

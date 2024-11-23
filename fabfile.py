@@ -175,13 +175,11 @@ def _pull(context):
     py_deps_dict = {}
     for py_deps_scope in ["prod", "dev"]:
         py_deps_name = "py_deps_{}.txt".format(py_deps_scope)
-        _substitute_env(context, GLOBAL_ENV_PATH, ROOT_DIR, py_deps_name, ROOT_DIR, "_" + py_deps_name)
-        open(join(ROOT_DIR, "." + py_deps_name), "w").write("""
+        _substitute_env(context, GLOBAL_ENV_PATH, join(ROOT_DIR, py_deps_name), join(ROOT_DIR, "." + py_deps_name), """
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
-                """.strip() + "\n\n" + Path(join(ROOT_DIR, "_" + py_deps_name)).read_text())
-        os.remove(join(ROOT_DIR, "_" + py_deps_name))
+        """.strip() + "\n\n")
         with open(join(ROOT_DIR, "." + py_deps_name)) as py_all_file:
             for py_all_line in py_all_file:
                 if py_all_line.strip() != "" and not py_all_line.strip().startswith("#"):
@@ -251,10 +249,10 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                     if config_match is not None:
                         docker_image_metadata_dict = {"namespace": "library", "skipped": False} | config_match.groupdict()
                         docker_image_metadata_dict["version_current"] = varsubst.varsubst(
-                            docker_image_metadata_dict["version_current"],
-                            resolver=RetainNotFoundVariablesDictResolver(config_env))
+                            docker_image_metadata_dict["version_current"], resolver=RetainNotDefinedDictResolver(config_env))
                         if not docker_image_metadata_dict["skipped"]:
-                            docker_image_metadata_version_tokens = docker_image_metadata_dict["version_current"].split('-', 1)
+                            docker_image_metadata_version_tokens = \
+                                docker_image_metadata_dict["version_current"].split('-', 1)
                             docker_image_metadata_version_suffix = "$" if len(docker_image_metadata_version_tokens) == 1 else \
                                 (".*-" + docker_image_metadata_version_tokens[-1] + "$")
                             for config_version_regex in [
@@ -292,7 +290,6 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         if env_global_key.endswith("_VERSION"):
             docker_version_env["ASYSTEM_" + env_global_key] = env_global_value.removeprefix('"').removesuffix('"')
     for module in _get_modules(context, "generate.sh", filter_changes=False):
-        _print_header("asystem", "generate docker dependencies", host=filter_host)
         docker_file_path = join(ROOT_MODULE_DIR, module, "Dockerfile")
         docker_deps_path = join(ROOT_MODULE_DIR, module, "docker_deps.txt")
         if exists(docker_file_path) and exists(docker_deps_path):
@@ -381,7 +378,6 @@ docker rm -vf "${{CONTAINER_NAME}}"
                         docker_image,
                     ).strip())
                 os.chmod(docker_deps_script_path, 0o777)
-        _print_footer("asystem", "generate docker dependencies", host=filter_host)
     if is_pull:
         for module in module_generate_stdout:
             for line in module_generate_stdout[module].splitlines():
@@ -390,7 +386,6 @@ docker rm -vf "${{CONTAINER_NAME}}"
                     if match is not None:
                         version_messages[version_types[i]].append(version_formats[i].format(*match.groupdict().values()))
         for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
-            _print_header("asystem", "generate docker versions", host=filter_host)
             docker_image_metadata = None
             docker_file_path = join(ROOT_MODULE_DIR, module, "Dockerfile")
             docker_compose_path = join(ROOT_MODULE_DIR, module, "docker-compose.yml")
@@ -430,11 +425,10 @@ docker rm -vf "${{CONTAINER_NAME}}"
                             docker_image_tags_response_page)
                         print("Getting docker image versions from [{}] ... ".format(docker_image_tags_url), end="", flush=True)
                         docker_image_tags_response = requests.get(docker_image_tags_url)
+                        print("done")
                         if docker_image_tags_response.status_code != 200:
-                            print("done, but empty")
                             break
                         else:
-                            print("done")
                             docker_image_tags_json = docker_image_tags_response.json()
                             if "results" in docker_image_tags_json:
                                 for docker_image_metatdata_hub in \
@@ -472,7 +466,6 @@ docker rm -vf "${{CONTAINER_NAME}}"
                     version_messages[version_types[2]].append(version_formats[2].format(
                         module + ":" + docker_image_metadata["repository"],
                         "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
-            _print_footer("asystem", "generate docker versions", host=filter_host)
         for type in version_types:
             _print_header("asystem", "pull versions {}".format(type), host=filter_host)
             for message in sorted(version_messages[type]):
@@ -886,7 +879,7 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
             dependency_env_dev = "{}/{}/{}".format(ROOT_MODULE_DIR, dependency, dependency_env_file)
             if isfile(dependency_env_dev):
                 _run_local(context, "cat {} >> {}/.env".format(dependency_env_dev, working_path), module)
-    _substitute_env(context, "{}/.env".format(working_path), working_path, ".env", working_path, ".env")
+    _substitute_env(context, "{}/.env".format(working_path), join(working_path, ".env"), join(working_path, ".env"))
 
 
 def _get_env(env_path):
@@ -901,12 +894,14 @@ def _get_env(env_path):
     return env
 
 
-def _substitute_env(context, env_path, source_dir, source_file, destination_dir, destination_file):
+def _substitute_env(context, env_path, source_path, destination_path, header=None):
     env = _get_env(env_path)
     env.update(GLOBAL_ENV)
-    Path(join(destination_dir, destination_file)).write_text( \
-        varsubst.varsubst(Path(join(source_dir, source_file)).read_text(), \
-                          resolver=RetainNotFoundVariablesDictResolver(env)))
+    print(". {} && envsubst {}->{}".format(env_path, source_path, destination_path))
+    os.makedirs(dirname(destination_path), exist_ok=True)
+    Path(destination_path).write_text(("" if header is None else header) +
+        varsubst.varsubst(Path(source_path).read_text(), resolver=RetainNotDefinedDictResolver(env)))
+
 
 def _process_target(context, module, is_release=False):
     _run_local(context, "mkdir -p target/package && cp -rvfp src/* install* target/package", module, hide='err', warn=True)
@@ -921,7 +916,8 @@ def _process_target(context, module, is_release=False):
                                                           not isfile(join(ROOT_MODULE_DIR, module, package_resource)) \
                         else join(ROOT_MODULE_DIR, module, "target/package")
                     _substitute_env(context, join(ROOT_MODULE_DIR, module, "target/release/.env" if is_release else ".env"),
-                                    package_resource_source, package_resource, join(ROOT_MODULE_DIR, module, "target/package"), package_resource)
+                                    join(package_resource_source, package_resource),
+                                    join(ROOT_MODULE_DIR, module, "target/package", package_resource))
                     if is_release:
                         if package_resource.endswith(".html") or package_resource.endswith(".css"):
                             _run_local(context, "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
@@ -1039,7 +1035,7 @@ FOOTER = \
     "------------------------------------------------------------"
 
 
-class RetainNotFoundVariablesDictResolver(BaseResolver):
+class RetainNotDefinedDictResolver(BaseResolver):
     def __init__(self, dict: Dict[str, Any]) -> None:
         self.dict = dict
 

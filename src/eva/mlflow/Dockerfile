@@ -19,7 +19,7 @@ RUN pip cache dir && \
     pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip && \
     pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade virtualenv==20.27.1 && \
     pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade psycopg2-binary==2.9.10  && \
-    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade --ignore-requires-python mlflow[extras]==${ASYSTEM_MLFLOW_VERSION} && \
+    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade mlflow[extras]==${ASYSTEM_MLFLOW_VERSION} && \
     pip cache purge
 ENV PATH=/root/.pyenv/bin:$PATH
 RUN cd /tmp && \
