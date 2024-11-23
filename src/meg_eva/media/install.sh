@@ -53,9 +53,10 @@ done
 
 if [ ! -d /root/.pyenv/versions/${PYTHON_VERSION}/bin ]; then
   (cd ~/.pyenv && git checkout master && git pull --all)
-  pyenv install ${PYTHON_VERSION}
+  pyenv install "${PYTHON_VERSION}"
 fi
-/root/.pyenv/versions/${PYTHON_VERSION}/bin/pip install -r config/.reqs.txt
+"/root/.pyenv/versions/${PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
+"/root/.pyenv/versions/${PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 -r config/.reqs.txt
 
 cp -rvf /var/lib/asystem/install/media/latest/config/bin/lib/other-transcode.rb /usr/local/bin/other-transcode
 chmod +x /usr/local/bin/other-transcode
@@ -65,6 +66,6 @@ cp -rvf /var/lib/asystem/install/media/latest/config/.gspread_pandas /root/.conf
 
 chmod +x config/bin/*.sh config/bin/lib/*.sh
 for SCRIPT in /var/lib/asystem/install/media/latest/config/bin/*.sh; do
-  rm -rf /usr/local/bin/asystem-$(basename ${SCRIPT} .sh)
-  ln -vs ${SCRIPT} /usr/local/bin/asystem-$(basename ${SCRIPT} .sh)
+  rm -rf /usr/local/bin/asystem-$(basename "${SCRIPT}".sh)
+  ln -vs "${SCRIPT}" /usr/local/bin/asystem-$(basename "${SCRIPT}" .sh)
 done
