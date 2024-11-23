@@ -902,13 +902,9 @@ def _get_env(env_path):
 
 
 def _substitute_env(context, env_path, source_dir, source_file, destination_dir, destination_file):
-
-    print("{}/{}->{}/{}".format(source_dir, source_file, destination_dir, destination_file))
-
-
     Path(join(destination_dir, destination_file)).write_text( \
         varsubst.varsubst(Path(join(source_dir, source_file)).read_text(), \
-                          resolver=RetainNotFoundVariablesDictResolver(_get_env(env_path))))
+                          resolver=RetainNotFoundVariablesDictResolver(_get_env(env_path).update(GLOBAL_ENV))))
 
 def _process_target(context, module, is_release=False):
     _run_local(context, "mkdir -p target/package && cp -rvfp src/* install* target/package", module, hide='err', warn=True)
