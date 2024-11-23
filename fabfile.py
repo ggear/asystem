@@ -828,7 +828,7 @@ def _get_dependencies(context, module):
 
 def _write_env(context, module, working_path=".", filter_host=None, is_release=False):
     service = _get_service(module)
-    _run_local(context, "mkdir -p {} && rm {}/.env".format(working_path, working_path), module)
+    _run_local(context, "mkdir -p {} && rm -rf {}/.env".format(working_path, working_path), module)
     for env_global_key, env_global_value in GLOBAL_ENV.items():
         if env_global_key.endswith("_VERSION"):
             _run_local(context, "echo 'ASYSTEM_{}={}' >> {}/.env".format(env_global_key, env_global_value, working_path), module)
