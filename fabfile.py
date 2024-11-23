@@ -900,9 +900,14 @@ def _get_env(env_path):
 
 
 def _substitute_env(context, env_path, source_root, source_path, destination_root, destination_path=None):
+
+
+
+
+
     env = _get_env(env_path)
     env["PATH"] = os.environ.get("PATH")
-    _run_local(context, "envsubst < {}/{} > {}.new"
+    _run_local(context, "cat {}/{} > {}.new"
                .format(
         source_root, source_path, source_path), destination_root, env=env)
     if destination_path is None:
