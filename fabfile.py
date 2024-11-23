@@ -12,6 +12,7 @@ import signal
 import sys
 import time
 from os.path import *
+from typing import Any, Dict, Optional
 
 import requests
 import varsubst
@@ -19,6 +20,7 @@ import varsubst.resolvers
 from fabric import task
 from packaging import version
 from pathlib2 import Path
+from varsubst.resolvers import BaseResolver
 
 FAB_SKIP_GIT = 'FAB_SKIP_GIT'
 FAB_SKIP_TESTS = 'FAB_SKIP_TESTS'
@@ -902,12 +904,14 @@ def _get_env(env_path):
 def _substitute_env(context, env_path, source_root, source_path, destination_root, destination_path=None):
 
 
-
-
+    print("\n\n{}\n\n".format(
+        varsubst.varsubst(
+            "${SERVICE_INSTALL} ${SERVICE_NAME}",
+            resolver=DefaultingDictResolver(_get_env(env_path)))))
 
     env = _get_env(env_path)
     env["PATH"] = os.environ.get("PATH")
-    _run_local(context, "cat {}/{} > {}.new"
+    _run_local(context, "envsubst < {}/{} > {}.new"
                .format(
         source_root, source_path, source_path), destination_root, env=env)
     if destination_path is None:
@@ -1047,3 +1051,16 @@ FOOTER = \
     "------------------------------------------------------------\n" \
     "\033[32m{} SUCCESSFUL: {}-{}\033[00m\n" \
     "------------------------------------------------------------"
+
+
+class DefaultingDictResolver(BaseResolver):
+    def __init__(self, dict: Dict[str, Any]) -> None:
+        self.dict = dict
+
+    def resolve(self, key: str) -> Optional[Any]:
+        if key in self.dict:
+            return self.dict.get(key)
+        return "${{{}}}".format(key)
+
+    def values(self) -> Dict[str, Any]:
+        return self.dict.copy()
