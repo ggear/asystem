@@ -1,45 +1,44 @@
-# https://github.com/mlflow/mlflow/pkgs/container/mlflow
-FROM ghcr.io/mlflow/mlflow:v2.17.2 AS image_base
+ARG ASYSTEM_PYTHON_VERSION="latest"
+ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION=""
 
-ARG ASYSTEM_PYTHON_VERSION
+FROM python:${ASYSTEM_PYTHON_VERSION}${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_base
+
+ARG ASYSTEM_MLFLOW_VERSION
 
 FROM image_base AS image_package
-# NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
-RUN apt-get update
-RUN apt-get -y --no-install-recommends install build-essential=12.9
-RUN apt-get -y --no-install-recommends install pkg-config=0.29.2-1
-RUN apt-get -y --no-install-recommends install procps=2:3.3.17-5
-RUN apt-get -y --no-install-recommends install git=1:2.30.2-1+deb11u3
-RUN apt-get -y --no-install-recommends install vim=2:8.2.2434-3+deb11u1
-RUN apt-get -y --no-install-recommends install llvm=1:11.0-51+nmu5
-RUN apt-get -y --no-install-recommends install curl=7.74.0-1.3+deb11u14
-RUN apt-get -y --no-install-recommends install wget=1.21-1+deb11u1
-RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.11.dfsg-2+deb11u2
-RUN apt-get -y --no-install-recommends install libssl-dev=1.1.1w-0+deb11u2
-RUN apt-get -y --no-install-recommends install libbz2-dev=1.0.8-4
-RUN apt-get -y --no-install-recommends install libreadline-dev=8.1-1
-RUN apt-get -y --no-install-recommends install libsqlite3-dev=3.34.1-3+deb11u1
-RUN apt-get -y --no-install-recommends install libncurses5-dev=6.2+20201114-2+deb11u2
-RUN apt-get -y --no-install-recommends install libncursesw5-dev=6.2+20201114-2+deb11u2
-RUN apt-get -y --no-install-recommends install xz-utils=5.2.5-2.1~deb11u1
-RUN apt-get -y --no-install-recommends install tk-dev=8.6.11+1
-RUN apt-get -y --no-install-recommends install libffi-dev=3.3-6
-RUN apt-get -y --no-install-recommends install liblzma-dev=5.2.5-2.1~deb11u1
+USER root
+RUN apt-get update && \
+    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install git=1:2.39.5-0+deb12u1 && \
+    apt-get -y --no-install-recommends --allow-downgrades install curl=7.88.1-10+deb12u8 && \
+    apt-get -y --no-install-recommends --allow-downgrades install build-essential=12.9 && \
+    apt-get clean
 
 FROM image_package AS image_install
-RUN pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip
-RUN pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir virtualenv==20.27.1
-RUN pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir psycopg2-binary==2.9.10
-RUN git clone https://github.com/pyenv/pyenv.git /root/.pyenv &&  \
-    cd /root/.pyenv &&  \
+RUN pip cache dir && \
+    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip && \
+    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade virtualenv==20.27.1 && \
+    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade psycopg2-binary==2.9.10  && \
+    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade --ignore-requires-python mlflow[extras]==${ASYSTEM_MLFLOW_VERSION} && \
+    pip cache purge
+ENV PATH=/root/.pyenv/bin:$PATH
+RUN cd /tmp && \
+    rm -rf pyenv && \
+    git clone https://github.com/pyenv/pyenv.git &&  \
+    cd /tmp/pyenv &&  \
     git checkout v2.4.17 && \
     ./src/configure &&  \
-    make -C src &&  \
-    echo 'export PATH=$PATH:/root/.pyenv/bin\n' >>/root/.bashrc
-RUN /root/.pyenv/bin/pyenv install -s $ASYSTEM_PYTHON_VERSION
+    make -C src && \
+    rm -rf /root/.pyenv && \
+    mkdir -p /root/.pyenv && \
+    mv bin libexec /root/.pyenv && \
+    cd /root && \
+    pyenv --version && \
+    rm -rf /tmp/* && \
+    apt-get -y remove git && \
+    apt-get -y remove build-essential && \
+    apt-get -y purge
 
 FROM image_install AS image_runtime
-
 COPY src/main/resources/entrypoint.sh /
-
 ENTRYPOINT ["/entrypoint.sh"]

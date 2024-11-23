@@ -1,21 +1,16 @@
-import glob
-import sys
 from os.path import *
 
 import pandas as pd
 import urllib3
 
+from homeassistant.generate import load_env
+from homeassistant.generate import load_modules
+from homeassistant.generate import write_certificates
+
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
-    if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, join(dir_module, "src/build/python"))
-
-from homeassistant.generate import load_env
-from homeassistant.generate import load_modules
-from homeassistant.generate import write_certificates
 
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)

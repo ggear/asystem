@@ -9,6 +9,7 @@
     "grafana",
     "influxdb",
     "wrangle",
+    "mlserver",
     "monitor"
   ],
   "raspbpi-lia": [

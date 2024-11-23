@@ -1,29 +1,34 @@
 # https://github.com/weewx/weewx/releases
 FROM python:3.12.5-bookworm AS image_base
 
+ARG ASYSTEM_WEEWX_VERSION
+
 ENV WEEWX_HOME="/home/weewx"
 ENV PYTHONDONTWRITEBYTECODE=1
 
 FROM image_base AS image_package
-# NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
-RUN apt-get update
-RUN apt-get -y --no-install-recommends install build-essential=12.9
-RUN apt-get -y --no-install-recommends install lbzip2=2.5-2.3
-RUN apt-get -y --no-install-recommends install libjpeg-dev=1:2.1.5-2
-RUN apt-get -y --no-install-recommends install zlib1g-dev=1:1.2.13.dfsg-1
-RUN apt-get -y --no-install-recommends install tar=1.34+dfsg-1.2+deb12u1
-RUN apt-get -y --no-install-recommends install gnupg2=2.2.40-1.1
-RUN apt-get -y --no-install-recommends install default-mysql-client=1.1.0
-RUN apt-get -y --no-install-recommends install apache2=2.4.61-1~deb12u1
-RUN apt-get -y --no-install-recommends install apache2-utils=2.4.61-1~deb12u1
-RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1.2+deb12u1
-RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+USER root
+RUN apt-get update && \
+    apt-get -y --no-install-recommends --allow-downgrades install tar=1.34+dfsg-1.2+deb12u1 && \
+    apt-get -y --no-install-recommends --allow-downgrades install gnupg2=2.2.40-1.1 && \
+    apt-get -y --no-install-recommends --allow-downgrades install apache2=2.4.62-1~deb12u2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install apache2-utils=2.4.62-1~deb12u2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install mosquitto-clients=2.0.11-1.2+deb12u1 && \
+    apt-get -y --no-install-recommends --allow-downgrades install default-mysql-client=1.1.0 && \
+    apt-get -y --no-install-recommends --allow-downgrades install build-essential=12.9 && \
+    apt-get -y --no-install-recommends --allow-downgrades install lbzip2=2.5-2.3 && \
+    apt-get -y --no-install-recommends --allow-downgrades install libjpeg-dev=1:2.1.5-2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install zlib1g-dev=1:1.2.13.dfsg-1 && \
+    apt-get clean
 
 FROM image_package AS image_install
 WORKDIR /tmp
-RUN mkdir -p /data/html && touch /data/html/index.html
-RUN rm -rf /var/www/html && ln -s /data/html /var/www/html
+RUN mkdir -p /data/html && touch /data/html/index.html && \
+    rm -rf /var/www/html && ln -s /data/html /var/www/html
 COPY src/main/resources/apache2.conf /etc/apache2
+
+
+# TODO: Convert to py_deps, check pull doesnt ask to update to 0a2 release
 ENV PIP_PACKAGES="\
   poetry==1.8.2 \
   paho-mqtt==1.6.1 \
@@ -61,10 +66,7 @@ RUN rm -rf /tmp/* /etc/weewx/weewx.conf*
 
 FROM image_install AS image_runtime
 WORKDIR ${WEEWX_HOME}
-
 COPY src/main/resources/entrypoint.sh /
-
 EXPOSE 80
 VOLUME ["/data"]
-
 ENTRYPOINT ["/entrypoint.sh"]

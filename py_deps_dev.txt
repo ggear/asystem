@@ -1,0 +1,7 @@
+###############################################################################
+# Python dependencies providing interfaces required during development.
+# Installed into development environment with no transitive dependencies.
+###############################################################################
+
+mlserver==$MLSERVER_VERSION
+homeassistant==$HOMEASSISTANT_VERSION

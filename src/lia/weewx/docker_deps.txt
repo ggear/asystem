@@ -1,0 +1,10 @@
+tar
+gnupg2
+apache2
+apache2-utils
+mosquitto-clients
+default-mysql-client
+build-essential
+lbzip2
+libjpeg-dev
+zlib1g-dev

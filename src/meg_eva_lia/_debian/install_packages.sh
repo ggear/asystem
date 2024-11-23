@@ -3,7 +3,7 @@
 ################################################################################
 # Install packages
 ################################################################################
-PACKAGES=(
+ASYSTEM_PACKAGES=(
   jq
   xq
   duf
@@ -95,13 +95,9 @@ PACKAGES=(
   libcurl4-openssl-dev
 )
 apt-get update
-for PACKAGE in "${PACKAGES[@]}"; do
-  apt-get install -y "${PACKAGE}"
-done
-INSTALLED="$(apt list 2>/dev/null | grep -v " i386" | column -t | awk -F"/" '{print $1"\t"$2}' | awk '{print "  "$1"="$3""}' | grep -v Listing)"
-echo "" && echo "Run script base package versions:"
-for PACKAGE in "${PACKAGES[@]}"; do
-  PACKAGE_VERSION=$(echo "${INSTALLED}" | grep " "${PACKAGE}"=")
-  echo "apt-get install -y --allow-downgrades '"${PACKAGE_VERSION##*( )}"'"
-done
-echo ""
+for ASYSTEM_PACKAGE in "${ASYSTEM_PACKAGES[@]}"; do apt-get install -y "${ASYSTEM_PACKAGE}"; done
+echo "#######################################################################################"
+echo "Base image install commands:"
+echo "#######################################################################################" && echo ""
+for ASYSTEM_PACKAGE in "${ASYSTEM_PACKAGES[@]}"; do echo "apt-get -y --allow-downgrades install" "${ASYSTEM_PACKAGE}="$(apt show ${ASYSTEM_PACKAGE} 2>/dev/null | grep "Version" | column -t | awk '{print $2}'); done
+echo "" && echo "#######################################################################################"

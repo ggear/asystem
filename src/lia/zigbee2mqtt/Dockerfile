@@ -15,6 +15,5 @@ RUN pip3 install --no-cache --upgrade pip setuptools
 RUN pip3 install paho-mqtt==1.5.0
 
 FROM image_install AS image_runtime
-
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD [ "/sbin/tini", "--", "node", "index.js"]

@@ -3,15 +3,11 @@
 import glob
 import os
 import shutil
-import sys
 from os.path import *
 
-DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
-    if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, join(dir_module, "src/build/python"))
-
 from homeassistant.generate import load_entity_metadata
+
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 DIR_DASHBOARDS_ROOT = join(DIR_ROOT, "src/main/resources/config/dashboards")
 

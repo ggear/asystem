@@ -1,8 +1,0 @@
-TODO
-
-- Convert to .deps for grizzly/grafonet ro what ever else we depend on
-
-- Rebuild for InfluxDB IOx and SQL or TimescaleDB (only unifipoller wont work now that telegraf is fixed?)
-- Perhaps use grabana instead of grizzly/jsonnet https://github.com/K-Phoen/grabana or update to https://github.com/grafana/grafonnet, think the latter
-- https://blog.kevingomez.fr/2023/03/07/three-years-of-grafana-dashboards-as-code/#tl-dr
-- https://grafana.com/blog/2022/12/06/a-complete-guide-to-managing-grafana-as-code-tools-tips-and-tricks/

@@ -12,6 +12,7 @@ brew install \
   xq \
   duf \
   grep \
+  bash \
   htop \
   wget \
   watch \
@@ -41,12 +42,13 @@ brew cleanup
 ################################################################################
 wget https://repo.anaconda.com/miniconda/Miniconda3-py312_24.5.0-0-MacOSX-arm64.sh && chmod +x Miniconda3-py312_24.5.0-0-MacOSX-arm64.sh && sudo ./Miniconda3-py312_24.5.0-0-MacOSX-arm64.sh -b -p /Library/Conda/anaconda3
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh && chmod +x Miniconda3-latest-MacOSX-x86_64.sh && ./Miniconda3-latest-MacOSX-x86_64.sh -b -p /Library/Conda/anaconda3
+chown -R graham:staff /Library/Conda/anaconda3
 conda config --add channels conda-forge
 conda config --set channel_priority strict
 conda env list
 conda remove -y -n python3 --all
-conda create -y -n python3 python=3.11
-pip install --default-timeout=1000 \
+conda create -y -n python3 python=3.12.7
+pip install --upgrade --default-timeout=1000 \
   fabric \
   docker \
   requests \

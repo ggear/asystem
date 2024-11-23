@@ -1,20 +1,15 @@
-import glob
 from os.path import *
 
 import pandas as pd
-import sys
 import urllib3
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
-DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
-    if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, join(dir_module, "src/build/python"))
-
 from homeassistant.generate import load_env
 from homeassistant.generate import load_entity_metadata
+
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
 UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"

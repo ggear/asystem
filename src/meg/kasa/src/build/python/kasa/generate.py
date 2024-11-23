@@ -1,19 +1,13 @@
-import glob
 import json
-import os
-import sys
-
-import pandas as pd
 from os.path import *
 
-DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
-    if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, join(dir_module, "src/build/python"))
+import pandas as pd
 
 from homeassistant.generate import load_entity_metadata
 
 pd.options.mode.chained_assignment = None
+
+DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
     metadata_df = load_entity_metadata()

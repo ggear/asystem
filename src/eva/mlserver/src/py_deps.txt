@@ -1,0 +1,9 @@
+mlflow
+
+scipy
+numpy
+polars
+tensorflow
+scikit-learn
+
+matplotlib

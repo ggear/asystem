@@ -1,8 +1,6 @@
 #!/bin/bash
 ###############################################################################
-#
-# Generic module install script, to be invoked by the fabric management script
-#
+# Generic module install script, to be invoked by the Fabric management script
 ###############################################################################
 
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}

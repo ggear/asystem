@@ -20,6 +20,7 @@ export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
 alias ls='ls $LS_OPTIONS'
 
+export DOCKER_CLI_HINTS=false
 export PYTHONDONTWRITEBYTECODE=1
 
 bind '"\e[A":history-search-backward'
@@ -39,7 +40,7 @@ export CARGO_HOME="${HOME}/.cargo"
 export GOROOT="${HOME}/.conda/envs/go"
 export GOPATH="${HOME}/.go"
 
-export PATH=${GOROOT}/bin:${CARGO_HOME}/bin:${PYTHON_HOME}/bin:/Library/Conda/anaconda3/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:${PATH}
+export PATH=${GOROOT}/bin:${CARGO_HOME}/bin:${PYTHON_HOME}/bin:/Library/Conda/anaconda3/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 EOF
 cat <<EOF >/var/root/.profile

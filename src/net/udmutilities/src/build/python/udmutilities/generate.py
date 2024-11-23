@@ -8,18 +8,15 @@ import pandas as pd
 import requests
 import urllib3
 
+from homeassistant.generate import load_entity_metadata
+from homeassistant.generate import load_env
+from homeassistant.generate import load_modules
+from homeassistant.generate import write_certificates
+
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
-    if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, join(dir_module, "src/build/python"))
-
-from homeassistant.generate import load_env
-from homeassistant.generate import load_modules
-from homeassistant.generate import load_entity_metadata
-from homeassistant.generate import write_certificates
 
 DNSMASQ_CONF_PREFIX = "dhcp.dhcpServers"
 UNIFI_CONTROLLER_URL = "https://unifi.local.janeandgraham.com:443"
@@ -174,8 +171,6 @@ if __name__ == "__main__":
     with open(metadata_dhcpaliases_path, 'w') as metadata_hass_file:
         for name in modules:
 
-
-
             if "{}_HTTP_PORT".format(name.upper()) in modules[name][1]:
                 metadata_hass_file.write("cname={}.janeandgraham.com,{}\n".format(
                     name,
@@ -186,4 +181,3 @@ if __name__ == "__main__":
                 name,
                 modules[name][0][0],
             ))
-

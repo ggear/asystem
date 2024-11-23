@@ -1,0 +1,21 @@
+#######################################################################################
+# Container management packages
+#######################################################################################
+vim
+
+#######################################################################################
+# Python and app minimal build packages
+#######################################################################################
+build-essential
+poppler-utils
+libc6-dev
+zlib1g-dev
+libssl-dev
+libbz2-dev
+libffi-dev
+liblzma-dev
+libsqlite3-dev
+libreadline-dev
+libncurses5-dev
+libncursesw5-dev
+libpoppler-cpp-dev

@@ -5,8 +5,9 @@
 ~$*.*
 .env
 .env_all_key
-.py_dev.txt
-.py_prod.txt
+.py_deps_dev.txt
+.py_deps_prod.txt
+.py_deps_trans.txt
 .gspread_pandas
 .google_service_account.json
 .DS_Store

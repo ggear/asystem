@@ -1,28 +1,24 @@
-import glob
 import os.path
 import shutil
 import string
 import subprocess
+import sys
 from datetime import datetime
 from os.path import *
 
 import osxphotos
 import pandas as pd
-import sys
 import urllib3
 from osxphotos import ExportOptions
 from osxphotos import PhotoExporter
 from pathvalidate import sanitize_filepath
 
+from homeassistant.generate import load_env
+
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
-    if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, join(dir_module, "src/build/python"))
-
-from homeassistant.generate import load_env
 
 DIR_PHOTOS_DB = "/Users/graham/Pictures/Photos Library.photoslibrary"
 

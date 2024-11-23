@@ -1,6 +1,5 @@
-# https://github.com/home-assistant/core/releases
 x-common: &common
-  image: homeassistant/home-assistant:2024.11.1
+  image: homeassistant/home-assistant:${ASYSTEM_HOMEASSISTANT_VERSION}
   user: root
   environment:
     - TZ=Australia/Perth
