@@ -886,7 +886,7 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
             dependency_env_dev = "{}/{}/{}".format(ROOT_MODULE_DIR, dependency, dependency_env_file)
             if isfile(dependency_env_dev):
                 _run_local(context, "cat {} >> {}/.env".format(dependency_env_dev, working_path), module)
-    _substitute_env(context, "{}/.env".format(working_path), working_path, ".env", working_path)
+    _substitute_env(context, "{}/.env".format(working_path), working_path, ".env", working_path, ".env")
 
 
 def _get_env(env_path):
@@ -901,26 +901,10 @@ def _get_env(env_path):
     return env
 
 
-def _substitute_env(context, env_path, source_root, source_path, destination_root, destination_path=None):
-
-
-    print("\n\n{}\n\n".format(
-        varsubst.varsubst(
-            "${SERVICE_INSTALL} ${SERVICE_NAME}",
-            resolver=DefaultingDictResolver(_get_env(env_path)))))
-
-    env = _get_env(env_path)
-    env["PATH"] = os.environ.get("PATH")
-    _run_local(context, "envsubst < {}/{} > {}.new"
-               .format(
-        source_root, source_path, source_path), destination_root, env=env)
-    if destination_path is None:
-        _run_local(context, "mv {}.new {}"
-                   .format(source_path, source_path), destination_root, env=env)
-    else:
-        _run_local(context, "mv {}.new {}"
-                   .format(source_path, destination_path), destination_root, env=env)
-
+def _substitute_env(context, env_path, source_dir, source_file, destination_dir, destination_file):
+    Path(join(destination_dir, destination_file)).write_text( \
+        varsubst.varsubst(Path(join(source_dir, source_file)).read_text(), \
+                          resolver=RetainNotFoundVariablesDictResolver(_get_env(env_path))))
 
 def _process_target(context, module, is_release=False):
     _run_local(context, "mkdir -p target/package && cp -rvfp src/* install* target/package", module, hide='err', warn=True)
@@ -935,7 +919,7 @@ def _process_target(context, module, is_release=False):
                                                           not isfile(join(ROOT_MODULE_DIR, module, package_resource)) \
                         else join(ROOT_MODULE_DIR, module, "target/package")
                     _substitute_env(context, join(ROOT_MODULE_DIR, module, "target/release/.env" if is_release else ".env"),
-                                    package_resource_source, package_resource, join(module, "target/package"))
+                                    package_resource_source, package_resource, join(module, "target/package"), ".env")
                     if is_release:
                         if package_resource.endswith(".html") or package_resource.endswith(".css"):
                             _run_local(context, "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
@@ -1053,7 +1037,7 @@ FOOTER = \
     "------------------------------------------------------------"
 
 
-class DefaultingDictResolver(BaseResolver):
+class RetainNotFoundVariablesDictResolver(BaseResolver):
     def __init__(self, dict: Dict[str, Any]) -> None:
         self.dict = dict
 
