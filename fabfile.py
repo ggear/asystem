@@ -923,7 +923,7 @@ def _process_target(context, module, is_release=False):
                                                           not isfile(join(ROOT_MODULE_DIR, module, package_resource)) \
                         else join(ROOT_MODULE_DIR, module, "target/package")
                     _substitute_env(context, join(ROOT_MODULE_DIR, module, "target/release/.env" if is_release else ".env"),
-                                    package_resource_source, package_resource, join(module, "target/package"), package_resource)
+                                    package_resource_source, package_resource, join(ROOT_MODULE_DIR, module, "target/package"), package_resource)
                     if is_release:
                         if package_resource.endswith(".html") or package_resource.endswith(".css"):
                             _run_local(context, "html-minifier --collapse-whitespace --remove-comments --remove-optional-tags"
