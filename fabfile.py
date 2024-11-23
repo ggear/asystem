@@ -252,7 +252,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                         docker_image_metadata_dict = {"namespace": "library", "skipped": False} | config_match.groupdict()
                         docker_image_metadata_dict["version_current"] = varsubst.varsubst(
                             docker_image_metadata_dict["version_current"],
-                            resolver=varsubst.resolvers.DictResolver(config_env))
+                            resolver=RetainNotFoundVariablesDictResolver(config_env))
                         if not docker_image_metadata_dict["skipped"]:
                             docker_image_metadata_version_tokens = docker_image_metadata_dict["version_current"].split('-', 1)
                             docker_image_metadata_version_suffix = "$" if len(docker_image_metadata_version_tokens) == 1 else \
@@ -1046,7 +1046,7 @@ class RetainNotFoundVariablesDictResolver(BaseResolver):
     def resolve(self, key: str) -> Optional[Any]:
         if key in self.dict:
             return self.dict.get(key)
-        return "${{{}}}".format(key)
+        return "${}".format(key)
 
     def values(self) -> Dict[str, Any]:
         return self.dict.copy()
