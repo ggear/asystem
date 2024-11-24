@@ -1,5 +1,5 @@
 # https://github.com/grafana/grafana/releases
-FROM grafana/grafana:10.0.5 AS image_base
+FROM grafana/grafana:10.0.5-ubuntu AS image_base
 
 FROM image_base AS image_package
 USER root

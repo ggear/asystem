@@ -23,7 +23,7 @@ function echo_package_install_commands {
     PKG_VERSION_AWK='{print $3}' &&
     PKG_INSTALL="apk add --no-cache" &&
     PKG_CLEAN="apk cache clean"
-  [[ ${PKG} == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
+  [[ $PKG == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
   ASYSTEM_PACKAGES=(
     jq
     git
@@ -33,9 +33,9 @@ function echo_package_install_commands {
     go
   )
   set -x
-  ${PKG_UPDATE}
-  ${PKG_BOOTSTRAP}
-  for ASYSTEM_PACKAGE in "${ASYSTEM_PACKAGES[@]}"; do ${PKG_INSTALL} "${ASYSTEM_PACKAGE}" 2>/dev/null; done
+  $PKG_UPDATE
+  $PKG_BOOTSTRAP
+  for ASYSTEM_PACKAGE in "${ASYSTEM_PACKAGES[@]}"; do $PKG_INSTALL "$ASYSTEM_PACKAGE" 2>/dev/null; done
   set +x
   sleep 1
   echo "#######################################################################################"
@@ -43,10 +43,10 @@ function echo_package_install_commands {
   echo "#######################################################################################" && echo ""
   echo "USER root"
   echo -n "RUN "
-  [[ "${PKG_UPDATE}" != "" ]] && echo -n "${PKG_UPDATE}"
+  [[ "$PKG_UPDATE" != "" ]] && echo -n "$PKG_UPDATE"
   echo " && \\"
-  for ASYSTEM_PACKAGE in "${ASYSTEM_PACKAGES[@]}"; do echo "    ${PKG_INSTALL}" "${ASYSTEM_PACKAGE}="$(${PKG_VERSION} ${ASYSTEM_PACKAGE} 2>/dev/null | grep "${PKG_VERSION_GREP}" | column -t | awk "${PKG_VERSION_AWK}")" && \\"; done
-  echo "    ${PKG_CLEAN}" && echo ""
+  for ASYSTEM_PACKAGE in "${ASYSTEM_PACKAGES[@]}"; do echo "    $PKG_INSTALL" "$ASYSTEM_PACKAGE="$($PKG_VERSION $ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | column -t | awk "$PKG_VERSION_AWK")" && \\"; done
+  echo "    $PKG_CLEAN" && echo ""
   echo "#######################################################################################"
   echo "Base image run command:"
   echo "#######################################################################################" && echo ""
@@ -59,17 +59,34 @@ function echo_package_install_commands {
     -e ASYSTEM_TELEGRAF_VERSION=1.32.3 \\
     -e ASYSTEM_HOMEASSISTANT_VERSION=2024.11.1 \\
     -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine \\
-    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-bookworm \\
-    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION=-slim-bookworm \\
-    'grafana/grafana:10.0.5'" && echo ""
+    -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu \\
+    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian \\
+    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm \\
+    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm \\
+    'grafana/grafana:10.0.5-ubuntu'" && echo ""
   echo "#######################################################################################"
 }
 DOCKER_CLI_HINTS=false
 CONTAINER_NAME="asystem_deps_bootstrap"
-docker ps -q --filter "name=${CONTAINER_NAME}" | grep -q . && docker kill "${CONTAINER_NAME}"
-docker ps -qa --filter "name=${CONTAINER_NAME}" | grep -q . && docker rm -vf "${CONTAINER_NAME}"
-docker run --name "${CONTAINER_NAME}" --user root --entrypoint sh -dt 'grafana/grafana:10.0.5'
-docker exec -t "${CONTAINER_NAME}" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get-update && apt-get -y install bash'
-declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "${CONTAINER_NAME}" bash -
-docker kill "${CONTAINER_NAME}"
-docker rm -vf "${CONTAINER_NAME}"
+docker ps -q --filter "name=$CONTAINER_NAME" | grep -q . && docker kill "$CONTAINER_NAME"
+docker ps -qa --filter "name=$CONTAINER_NAME" | grep -q . && docker rm -vf "$CONTAINER_NAME"
+docker run --name "$CONTAINER_NAME" --user root --entrypoint sh -dt 'grafana/grafana:10.0.5-ubuntu'
+docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
+declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
+echo "Base image shell:" && echo "#######################################################################################" && echo ""
+docker exec -it \
+    -e ASYSTEM_PYTHON_VERSION=3.12.7 \
+    -e ASYSTEM_GO_VERSION=1.21.6 \
+    -e ASYSTEM_RUST_VERSION=1.75.0 \
+    -e ASYSTEM_MLFLOW_VERSION=2.18.0 \
+    -e ASYSTEM_MLSERVER_VERSION=1.6.1 \
+    -e ASYSTEM_TELEGRAF_VERSION=1.32.3 \
+    -e ASYSTEM_HOMEASSISTANT_VERSION=2024.11.1 \
+    -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine \
+    -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu \
+    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian \
+    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm \
+    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm \
+ "$CONTAINER_NAME" bash
+docker kill "$CONTAINER_NAME"
+docker rm -vf "$CONTAINER_NAME"

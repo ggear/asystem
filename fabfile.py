@@ -337,14 +337,14 @@ function echo_package_install_commands {{
     PKG_VERSION_AWK='{{print $3}}' &&
     PKG_INSTALL="apk add --no-cache" &&
     PKG_CLEAN="apk cache clean"
-  [[ ${{PKG}} == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
+  [[ $PKG == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
   ASYSTEM_PACKAGES=(
     {}
   )
   set -x
-  ${{PKG_UPDATE}}
-  ${{PKG_BOOTSTRAP}}
-  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES[@]}}"; do ${{PKG_INSTALL}} "${{ASYSTEM_PACKAGE}}" 2>/dev/null; done
+  $PKG_UPDATE
+  $PKG_BOOTSTRAP
+  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES[@]}}"; do $PKG_INSTALL "$ASYSTEM_PACKAGE" 2>/dev/null; done
   set +x
   sleep 1
   echo "#######################################################################################"
@@ -352,10 +352,10 @@ function echo_package_install_commands {{
   echo "#######################################################################################" && echo ""
   echo "USER root"
   echo -n "RUN "
-  [[ "${{PKG_UPDATE}}" != "" ]] && echo -n "${{PKG_UPDATE}}"
+  [[ "$PKG_UPDATE" != "" ]] && echo -n "$PKG_UPDATE"
   echo " && \\\\"
-  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES[@]}}"; do echo "    ${{PKG_INSTALL}}" "${{ASYSTEM_PACKAGE}}="$(${{PKG_VERSION}} ${{ASYSTEM_PACKAGE}} 2>/dev/null | grep "${{PKG_VERSION_GREP}}" | column -t | awk "${{PKG_VERSION_AWK}}")" && \\\\"; done
-  echo "    ${{PKG_CLEAN}}" && echo ""
+  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES[@]}}"; do echo "    $PKG_INSTALL" "$ASYSTEM_PACKAGE="$($PKG_VERSION $ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | column -t | awk "$PKG_VERSION_AWK")" && \\\\"; done
+  echo "    $PKG_CLEAN" && echo ""
   echo "#######################################################################################"
   echo "Base image run command:"
   echo "#######################################################################################" && echo ""
@@ -364,18 +364,21 @@ function echo_package_install_commands {{
 }}
 DOCKER_CLI_HINTS=false
 CONTAINER_NAME="asystem_deps_bootstrap"
-docker ps -q --filter "name=${{CONTAINER_NAME}}" | grep -q . && docker kill "${{CONTAINER_NAME}}"
-docker ps -qa --filter "name=${{CONTAINER_NAME}}" | grep -q . && docker rm -vf "${{CONTAINER_NAME}}"
-docker run --name "${{CONTAINER_NAME}}" --user root --entrypoint sh -dt '{}'
-docker exec -t "${{CONTAINER_NAME}}" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get-update && apt-get -y install bash'
-declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "${{CONTAINER_NAME}}" bash -
-docker kill "${{CONTAINER_NAME}}"
-docker rm -vf "${{CONTAINER_NAME}}"
+docker ps -q --filter "name=$CONTAINER_NAME" | grep -q . && docker kill "$CONTAINER_NAME"
+docker ps -qa --filter "name=$CONTAINER_NAME" | grep -q . && docker rm -vf "$CONTAINER_NAME"
+docker run --name "$CONTAINER_NAME" --user root --entrypoint sh -dt '{}'
+docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
+declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
+echo "Base image shell:" && echo "#######################################################################################" && echo ""
+docker exec -it \\\n{} "$CONTAINER_NAME" bash
+docker kill "$CONTAINER_NAME"
+docker rm -vf "$CONTAINER_NAME"
                                 """.format(
                         docker_build_packages,
                         docker_build_env,
                         docker_image,
                         docker_image,
+                        docker_build_env.replace("\\\\", "\\"),
                     ).strip())
                 os.chmod(docker_deps_script_path, 0o777)
     if is_pull:
@@ -416,8 +419,9 @@ docker rm -vf "${{CONTAINER_NAME}}"
                             docker_image_metadata["version_upstream"] = docker_image_version
                             break
                 else:
+                    docker_image_tags = []
                     docker_image_tags_response_page = 1
-                    while docker_image_tags_response_page < 4:
+                    while docker_image_tags_response_page < 3:
                         docker_image_tags_url = "https://hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size=100&page={}" \
                             .format(
                             docker_image_metadata["namespace"],
@@ -429,23 +433,23 @@ docker rm -vf "${{CONTAINER_NAME}}"
                         if docker_image_tags_response.status_code != 200:
                             break
                         else:
-                            docker_image_tags_json = docker_image_tags_response.json()
-                            if "results" in docker_image_tags_json:
-                                for docker_image_metatdata_hub in \
-                                        sorted(docker_image_tags_json["results"], key=lambda x: x['last_updated'], reverse=True):
-                                    docker_image_version = docker_image_metatdata_hub["name"]
-                                    if not any(substring.lower() in docker_image_version.lower()
-                                               for substring in docker_image_version_ignores) and any(
-                                        i.isdigit() for i in docker_image_version):
-                                        docker_image_tags.append(docker_image_version)
-                                        docker_image_version_match = re.match(docker_image_metadata["version_regex"], docker_image_version)
-                                        if docker_image_version_match is not None and \
-                                                version.parse(docker_image_version_match.groups()[0]) >= \
-                                                version.parse(re.match(docker_image_metadata["version_regex"],
-                                                                       docker_image_metadata["version_current"]).groups()[0]):
-                                            docker_image_metadata["version_upstream"] = docker_image_version
-                                            break
+                            docker_image_tags_page = docker_image_tags_response.json()
+                            if "results" in docker_image_tags_page:
+                                docker_image_tags.extend(docker_image_tags_page["results"])
                         docker_image_tags_response_page += 1
+                    for docker_image_metatdata_hub in sorted(docker_image_tags, key=lambda x: x['last_updated'], reverse=True):
+                        docker_image_version = docker_image_metatdata_hub["name"]
+                        if not any(substring.lower() in docker_image_version.lower()
+                                   for substring in docker_image_version_ignores) and any(
+                            i.isdigit() for i in docker_image_version):
+                            docker_image_tags.append(docker_image_version)
+                            docker_image_version_match = re.match(docker_image_metadata["version_regex"], docker_image_version)
+                            if docker_image_version_match is not None and \
+                                    version.parse(docker_image_version_match.groups()[0]) >= \
+                                    version.parse(re.match(docker_image_metadata["version_regex"],
+                                                           docker_image_metadata["version_current"]).groups()[0]):
+                                docker_image_metadata["version_upstream"] = docker_image_version
+                                break
                 if "version_upstream" in docker_image_metadata:
                     version_type = 0 if docker_image_metadata["version_current"] == docker_image_metadata["version_upstream"] else 1
                     version_messages[version_types[version_type]].append(version_formats[version_type].format(
@@ -899,8 +903,9 @@ def _substitute_env(context, env_path, source_path, destination_path, header=Non
     env.update(GLOBAL_ENV)
     print(". {} && envsubst {}->{}".format(env_path, source_path, destination_path))
     os.makedirs(dirname(destination_path), exist_ok=True)
-    Path(destination_path).write_text(("" if header is None else header) +
-        varsubst.varsubst(Path(source_path).read_text(), resolver=RetainNotDefinedDictResolver(env)))
+    Path(destination_path).write_text(("" if header is None else header) + \
+                                      varsubst.varsubst(Path(source_path).read_text(),
+                                                        resolver=RetainNotDefinedDictResolver(env)))
 
 
 def _process_target(context, module, is_release=False):
