@@ -1,3 +1,3 @@
 ../install.sh
-main/resources/config/config.yml
-main/resources/config/influx-configs
+main/resources/host/config.yml
+main/resources/host/influx-configs

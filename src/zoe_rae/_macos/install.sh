@@ -21,6 +21,7 @@ export LS_OPTIONS='--color=auto'
 alias ls='ls $LS_OPTIONS'
 
 export DOCKER_CLI_HINTS=false
+export BASH_SILENCE_DEPRECATION_WARNING=1
 export PYTHONDONTWRITEBYTECODE=1
 
 bind '"\e[A":history-search-backward'

@@ -1,7 +1,7 @@
 services:
   wrangle:
-    container_name: wrangle
     image: wrangle:${SERVICE_VERSION_ABSOLUTE}
+    container_name: wrangle
     init: true
     restart: ${SERVICE_RESTART}
     environment:

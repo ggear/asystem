@@ -8,7 +8,4 @@ service apache2 start
 
 [ ! -f /data/weewx.conf ] && cp -f /home/weewx/weewx.conf /data
 
-#INFO: Disable pypy
-#/var/lib/pypy/bin/pypy /home/weewx/bin/weewxd "$@"
-
 weewxd "$@"

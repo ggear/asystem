@@ -1,7 +1,7 @@
 services:
   internet:
-    container_name: internet
     image: internet:${SERVICE_VERSION_ABSOLUTE}
+    container_name: internet
     init: true
     restart: ${SERVICE_RESTART}
     environment:

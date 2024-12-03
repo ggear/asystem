@@ -10,7 +10,8 @@ dropbox==11.36.2
 yfinance==0.2.40
 pdftotext==2.2.2
 xlsx2csv==0.8.1
-influxdb==5.3.2
-influxdb3-python==0.5.0
 gspread==5.12.4
 gspread-pandas==3.2.3
+influxdb==5.3.2
+influxdb3-python==0.5.0
+google-api-python-client==2.154.0

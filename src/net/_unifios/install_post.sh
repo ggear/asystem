@@ -20,6 +20,8 @@
 # Admins & Users -> Admins -> Add -> unifi/$UNIFI_ADMIN_KEY, Local Access Only, Super Admin
 # Admins & Users -> Admins -> Add -> protect/$UNIFI_PROTECT_KEY, Local Access Only, Super Admin
 # Admins & Users -> Admins -> Add -> monitor/$UNFI_MONITOR_KEY, Local Access Only, Super Admin
+# Admins & Users -> Admins -> Add -> graham/$UNFI_GRAHAM_KEY, Local Access Only, Super Admin
+# Admins & Users -> Admins -> Add -> jane/$UNFI_JANE_KEY, Local Access Only, Super Admin
 
 # Console Settings -> Advanced -> Remote Access -> False (Only available with the graham account.ui.com account)
 # Console Settings -> Advanced -> SSH -> True, $UNIFI_ROOT_KEY (to get past password restrictions, then reset to standard with passwd)

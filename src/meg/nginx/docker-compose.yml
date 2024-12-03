@@ -1,8 +1,8 @@
-# https://nginx.org/en/CHANGES
 services:
   nginx:
-    container_name: nginx
+    # https://nginx.org/en/CHANGES
     image: nginx:1.27.2-alpine
+    container_name: nginx
     init: true
     restart: ${SERVICE_RESTART}
     environment:

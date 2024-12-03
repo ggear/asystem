@@ -1,11 +1,11 @@
 # https://github.com/influxdata/telegraf/releases
-FROM telegraf:1.28.1 AS image_base
+FROM telegraf:1.28.1 AS image_upstream
 
 ARG ASYSTEM_PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-FROM image_base AS image_package
+FROM image_upstream AS image_base
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
 RUN apt-get -y --no-install-recommends install build-essential=12.9
@@ -16,7 +16,7 @@ RUN apt-get -y --no-install-recommends install libssl-dev=3.0.11-1~deb12u2
 RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1.2+deb12u1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-FROM image_package AS image_install
+FROM image_base AS image_build
 RUN mkdir -p /tmp
 WORKDIR /tmp
 RUN wget https://www.python.org/ftp/python/$ASYSTEM_PYTHON_VERSION/Python-$ASYSTEM_PYTHON_VERSION.tgz
@@ -30,7 +30,7 @@ RUN /usr/local/bin/python3 -m pip install --root-user-action ignore --default-ti
 RUN /usr/local/bin/pip3 --version
 RUN rm -rf /tmp/*
 
-FROM image_install AS image_runtime
+FROM image_build AS image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/.py_deps.txt /asystem

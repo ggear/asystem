@@ -43,6 +43,22 @@ pgsrip ./*.mkv
 # Copy between shares
 rsync -avhPr /share/3/media/kids /share/2/media
 
+# Copy media to usb-drive
+nohup rsync -avhPr --no-perms --no-owner --no-group \
+  '/share/3/media/parents/movies/A New Hope (1977)/A New Hope (1977).mkv' \
+  '/share/3/media/parents/movies/The Empire Strikes Back (1980)/The Empire Strikes Back (1980).mkv' \
+  '/share/3/media/parents/movies/Return Of The Jedi (1983)/Return Of The Jedi (1983).mkv' \
+  '/media/usbdrive/Movies' &
+disown
+SERIES='The Last Of Us'
+nohup mkdir -p "/media/usbdrive/Shows/${SERIES}" && rsync -avhPr --no-perms --no-owner --no-group \
+  '/share/5/media/parents/series/The Last Of Us/Season 1/The Last Of Us S01E01.mkv' \
+  '/share/5/media/parents/series/The Last Of Us/Season 1/The Last Of Us S01E02.mkv' \
+  '/share/5/media/parents/series/The Last Of Us/Season 1/The Last Of Us S01E03.mkv' \
+  '/share/5/media/parents/series/The Last Of Us/Season 1/The Last Of Us S01E04.mkv' \
+  "/media/usbdrive/Shows/${SERIES}" &
+disown
+
 # TODO: Update all for find and cull to only useful commands
 ffmpeg -i "input.mov" -vcodec hevc_videotoolbox -b:v 500k -n "output.mov"
 ffmpeg -i "input.mov" -vcodec h264_videotoolbox -b:v 500k -n "output.mov"

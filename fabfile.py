@@ -56,8 +56,9 @@ def backup(context):
 
 @task(aliases=["pll", "u"] + ["pull"[0:i] for i in range(3, len("pull"))])
 def pull(context):
-    _clean(context)
-    _backup(context)
+    # TODO!
+    # _clean(context)
+    # _backup(context)
     _pull(context)
 
 
@@ -190,7 +191,7 @@ def _pull(context):
                         else:
                             py_deps_dict[py_all_line.split("==")[0].strip()] = py_all_line.split("==")[1].strip()
     py_deps_path = join(ROOT_DIR, "py_*.txt")
-    for py_mod_path in glob.glob(join(ROOT_MODULE_DIR, "*/*/*/py_deps.txt")):
+    for py_mod_path in glob.glob(join(ROOT_MODULE_DIR, "*/*/*/main/python/py_deps.txt")):
         py_mod_versioned_path = join(py_mod_path.removesuffix(basename(py_mod_path)), "." + basename(py_mod_path))
         with open(py_mod_versioned_path, "w") as py_mod_versioned_file:
             with open(py_mod_path) as py_mod_file:
@@ -233,8 +234,8 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         "Module [{}] threw errors determining versions: {}",
     ]
     file_image_regexs = [
-        r"FROM (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*) AS image_base",
-        r"FROM (?P<repository>.*):(?P<version_current>.*) AS image_base",
+        r"FROM (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*) AS image_upstream",
+        r"FROM (?P<repository>.*):(?P<version_current>.*) AS image_upstream",
     ]
     compose_image_regexs = [
         r"image: (?P<namespace>.*)/(?P<repository>.*):(?P<version_current>.*)",
@@ -289,29 +290,50 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
     for env_global_key, env_global_value in GLOBAL_ENV.items():
         if env_global_key.endswith("_VERSION"):
             docker_version_env["ASYSTEM_" + env_global_key] = env_global_value.removeprefix('"').removesuffix('"')
-    for module in _get_modules(context, "generate.sh", filter_changes=False):
+    for module in _get_modules(context, filter_changes=False):
+        docker_image_metadata = None
         docker_file_path = join(ROOT_MODULE_DIR, module, "Dockerfile")
-        docker_deps_path = join(ROOT_MODULE_DIR, module, "docker_deps.txt")
-        if exists(docker_file_path) and exists(docker_deps_path):
+        docker_compose_path = join(ROOT_MODULE_DIR, module, "docker-compose.yml")
+        if exists(docker_file_path):
             docker_image_metadata = get_docker_image_metadata(docker_file_path, file_image_regexs, docker_version_env)
-            if "repository" in docker_image_metadata and "version_current" in docker_image_metadata and isfile(docker_deps_path):
-                docker_deps_script_path = join(ROOT_MODULE_DIR, module, "docker_deps.sh")
-                docker_image = "{}{}:{}".format(
-                    (docker_image_metadata["namespace"] + "/") \
-                        if "namespace" in docker_image_metadata and docker_image_metadata["namespace"] != "library" else "",
-                    docker_image_metadata["repository"],
-                    docker_image_metadata["version_current"]
-                )
-                docker_build_packages = "\n    ".join([
-                    dep for dep in Path(docker_deps_path).read_text().strip().split("\n") \
-                    if (dep and not dep.startswith("#"))
-                ])
-                docker_build_env = ""
-                for env_global_key, env_global_value in GLOBAL_ENV.items():
-                    if env_global_key.endswith("_VERSION"):
-                        docker_build_env += "    -e ASYSTEM_{}={} \\\\\n".format(env_global_key, env_global_value)
-                with open(docker_deps_script_path, "w+") as docker_deps_script_file:
-                    docker_deps_script_file.write("""
+        elif exists(docker_compose_path):
+            docker_image_metadata = get_docker_image_metadata(docker_compose_path, compose_image_regexs, docker_version_env)
+        if docker_image_metadata is not None and "repository" in docker_image_metadata and \
+                "version_current" in docker_image_metadata:
+            docker_deps_script_path = join(ROOT_MODULE_DIR, module, "docker_deps.sh")
+            docker_image = "{}{}:{}".format(
+                (docker_image_metadata["namespace"] + "/") \
+                    if "namespace" in docker_image_metadata and docker_image_metadata["namespace"] != "library" else "",
+                docker_image_metadata["repository"],
+                docker_image_metadata["version_current"]
+            )
+            docker_build_packages = {}
+            for docker_build_packages_scope in ["base", "build"]:
+                docker_deps_path = join(ROOT_MODULE_DIR, module, "docker_deps_{}.txt".format(docker_build_packages_scope))
+                if isfile(docker_deps_path):
+                    docker_build_packages[docker_build_packages_scope] = "\n    ".join(
+                        [dep for dep in Path(docker_deps_path).read_text().strip().split("\n") if (dep and not dep.startswith("#"))])
+                if docker_build_packages_scope not in docker_build_packages or \
+                        len(docker_build_packages[docker_build_packages_scope]) == 0:
+                    docker_build_packages[docker_build_packages_scope] = "bash"
+            docker_build_copies = []
+            docker_build_mounts = []
+            for docker_build_mount in [
+                (join(ROOT_MODULE_DIR, module, "src/main/go"), "/asystem/bin/go"),
+                (join(ROOT_MODULE_DIR, module, "src/main/python"), "/asystem/bin/python"),
+                (join(ROOT_MODULE_DIR, module, "src/main/resources/host"), "/asystem/etc"),
+            ]:
+                if isdir(docker_build_mount[0]):
+                    docker_build_copies.append("COPY {} {}".format(
+                        docker_build_mount[0].replace(join(ROOT_MODULE_DIR, module) + "/", ""),
+                        docker_build_mount[1]))
+                    docker_build_mounts.append("--mount type=bind,source={},target={},readonly".format(*docker_build_mount))
+            docker_build_variables = []
+            for env_global_key, env_global_value in GLOBAL_ENV.items():
+                if env_global_key.endswith("_VERSION"):
+                    docker_build_variables.append("-e ASYSTEM_{}={}".format(env_global_key, env_global_value))
+            with open(docker_deps_script_path, "w+") as docker_deps_script_file:
+                docker_deps_script_file.write("""
 #!/bin/bash
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
@@ -327,7 +349,7 @@ function echo_package_install_commands {{
     PKG_VERSION_GREP="Version" &&
     PKG_VERSION_AWK='{{print $2}}' &&
     PKG_INSTALL="apt-get -y --no-install-recommends --allow-downgrades install" &&
-    PKG_CLEAN="apt-get clean"
+    PKG_CLEAN="apt-get clean && rm -rf /var/lib/apt/lists/*"
   [[ "$(which apk)" != "" ]] &&
     PKG="apk" &&
     PKG_UPDATE="apk update" &&
@@ -336,51 +358,90 @@ function echo_package_install_commands {{
     PKG_VERSION_GREP="=" &&
     PKG_VERSION_AWK='{{print $3}}' &&
     PKG_INSTALL="apk add --no-cache" &&
-    PKG_CLEAN="apk cache clean"
+    PKG_CLEAN="apk cache clean && rm -rf /var/cache/apk/*"
   [[ $PKG == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
-  ASYSTEM_PACKAGES=(
+  ASYSTEM_PACKAGES_BASE=(
+    {}
+  )
+  ASYSTEM_PACKAGES_BUILD=(
     {}
   )
   set -x
   $PKG_UPDATE
   $PKG_BOOTSTRAP
-  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES[@]}}"; do $PKG_INSTALL "$ASYSTEM_PACKAGE" 2>/dev/null; done
+  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BASE[@]}}"; do $PKG_INSTALL "$ASYSTEM_PACKAGE" 2>/dev/null; done
+  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BUILD[@]}}"; do $PKG_INSTALL "$ASYSTEM_PACKAGE" 2>/dev/null; done
   set +x
   sleep 1
-  echo "#######################################################################################"
-  echo "Base image package install command:"
-  echo "#######################################################################################" && echo ""
-  echo "USER root"
-  echo -n "RUN "
-  [[ "$PKG_UPDATE" != "" ]] && echo -n "$PKG_UPDATE"
-  echo " && \\\\"
-  for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES[@]}}"; do echo "    $PKG_INSTALL" "$ASYSTEM_PACKAGE="$($PKG_VERSION $ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | column -t | awk "$PKG_VERSION_AWK")" && \\\\"; done
-  echo "    $PKG_CLEAN" && echo ""
-  echo "#######################################################################################"
-  echo "Base image run command:"
-  echo "#######################################################################################" && echo ""
-  echo "docker run -it --rm --user root --entrypoint sh \\\\\n{}    '{}'" && echo ""
-  echo "#######################################################################################"
+  cat <<EOF >"/tmp/base_image_install.sh"
+ASYSTEM_PACKAGES_BASE=(
+    {}
+)
+ASYSTEM_PACKAGES_BUILD=(
+    {}
+)
+echo "#######################################################################################"
+echo "# Base image package install command:"
+echo "#######################################################################################" && echo ""
+echo "USER root"
+echo "RUN \\\\\\\\"
+[[ "$PKG_UPDATE" != "" ]] && echo -n "    $PKG_UPDATE"
+echo " && \\\\\\\\"
+for ASYSTEM_PACKAGE in "\\${{ASYSTEM_PACKAGES_BASE[@]}}"; do echo "    $PKG_INSTALL" "\\$ASYSTEM_PACKAGE="\\$($PKG_VERSION \\$ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | column -t | awk '$PKG_VERSION_AWK')" && \\\\\\\\"; done
+echo "    $PKG_CLEAN && \\\\\\\\"
+echo "    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt"
+{}
+echo "#######################################################################################"
+echo "# Build image package install command:"
+echo "#######################################################################################" && echo ""
+echo "USER root"
+echo "RUN \\\\\\\\"
+[[ "$PKG_UPDATE" != "" ]] && echo -n "    $PKG_UPDATE"
+echo " && \\\\\\\\"
+for ASYSTEM_PACKAGE in "\\${{ASYSTEM_PACKAGES_BUILD[@]}}"; do echo "    $PKG_INSTALL" "\\$ASYSTEM_PACKAGE="\\$($PKG_VERSION \\$ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | column -t | awk '$PKG_VERSION_AWK')" && \\\\\\\\"; done
+echo "    $PKG_CLEAN && \\\\\\\\"
+EOF
+  cat <<EOF >"/tmp/base_image_run.sh"
+echo ""
+echo "#######################################################################################"
+echo "# Base image run command:"
+echo "#######################################################################################" && echo ""
+echo "docker run -it --rm --user root --entrypoint sh \\\\\\\\"
+{}
+echo "    '{}'" && echo ""
+echo "#######################################################################################"
+EOF
+    chmod +x /tmp/base_image_*.sh
+    /tmp/base_image_install.sh | grep -v '^USER' | grep -v '^RUN' | grep -v '^COPY' | bash -
+    echo ""
+    /tmp/base_image_install.sh
+    /tmp/base_image_run.sh
 }}
 DOCKER_CLI_HINTS=false
 CONTAINER_NAME="asystem_deps_bootstrap"
 docker ps -q --filter "name=$CONTAINER_NAME" | grep -q . && docker kill "$CONTAINER_NAME"
 docker ps -qa --filter "name=$CONTAINER_NAME" | grep -q . && docker rm -vf "$CONTAINER_NAME"
-docker run --name "$CONTAINER_NAME" --user root --entrypoint sh -dt '{}'
+docker run --name "$CONTAINER_NAME" --user root --entrypoint sh {} -dt '{}'
 docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
 declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
 echo "Base image shell:" && echo "#######################################################################################" && echo ""
-docker exec -it \\\n{} "$CONTAINER_NAME" bash
+docker exec -it {} "$CONTAINER_NAME" bash
 docker kill "$CONTAINER_NAME"
 docker rm -vf "$CONTAINER_NAME"
-                                """.format(
-                        docker_build_packages,
-                        docker_build_env,
-                        docker_image,
-                        docker_image,
-                        docker_build_env.replace("\\\\", "\\"),
-                    ).strip())
-                os.chmod(docker_deps_script_path, 0o777)
+                                              """.format(
+                    docker_build_packages["base"],
+                    docker_build_packages["build"],
+                    docker_build_packages["base"],
+                    docker_build_packages["build"],
+                    "\n".join([("echo \"" + x + "\"") for x in docker_build_copies]),
+                    "\n".join([("echo \"    " + x + " \\\\\\\\\"") for x in docker_build_variables]),
+                    docker_image,
+                    " ".join(docker_build_mounts),
+                    docker_image,
+                    " ".join(docker_build_variables),
+                ).strip())
+            os.chmod(docker_deps_script_path, 0o777)
+            print("Wrote [{}]".format(docker_deps_script_path))
     if is_pull:
         for module in module_generate_stdout:
             for line in module_generate_stdout[module].splitlines():
@@ -666,7 +727,8 @@ def _release(context):
                                .format(_name(module), _get_versions()[0], file_image), join(module, "target/release"))
                 if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/main/resources/*")):
                     _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
-                _run_local(context, "mkdir -p target/release/config", module)
+                _run_local(context, "mkdir -p target/release/host", module)
+                _run_local(context, "mkdir -p target/release/image", module)
                 Path(join(ROOT_MODULE_DIR, module, "target/release/hosts")) \
                     .write_text("\n".join(["{}-{}".format(HOSTS[host][0], host) for host in HOSTS]) + "\n")
                 if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/install*")):
@@ -679,7 +741,9 @@ def _release(context):
                            .format(ssh_pass, host, install, install))
                 _run_local(context, "{}scp -qprO $(find target/release -maxdepth 1 -type f) root@{}:{}"
                            .format(ssh_pass, host, install), module)
-                _run_local(context, "{}scp -qprO target/release/config root@{}:{}"
+                _run_local(context, "{}scp -qprO target/release/host root@{}:{}"
+                           .format(ssh_pass, host, install), module)
+                _run_local(context, "{}scp -qprO target/release/image root@{}:{}"
                            .format(ssh_pass, host, install), module)
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
@@ -945,7 +1009,7 @@ def _up_module(context, module, up_this=True):
             _package(context, filter_module=run_dep)
             _print_header(run_dep, "run prepare")
             _run_local(context, "mkdir -p target/runtime-system", run_dep)
-            dir_config = join(ROOT_MODULE_DIR, run_dep, "target/package/main/resources/config")
+            dir_config = join(ROOT_MODULE_DIR, run_dep, "target/package/main/resources/host")
             if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
                 _run_local(context, "cp -rvfp $(find {} -mindepth 1 -maxdepth 1) target/runtime-system".format(dir_config), run_dep)
             _print_footer(run_dep, "run prepare")

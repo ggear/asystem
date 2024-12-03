@@ -1,12 +1,12 @@
 ARG ASYSTEM_TELEGRAF_VERSION="latest"
 
-FROM telegraf:${ASYSTEM_TELEGRAF_VERSION} AS image_base
+FROM telegraf:${ASYSTEM_TELEGRAF_VERSION} AS image_upstream
 
 ARG ASYSTEM_PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-FROM image_base AS image_package
+FROM image_upstream AS image_base
 USER root
 RUN apt-get update && \
     apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2 && \
@@ -25,7 +25,7 @@ RUN apt-get update && \
     apt-get -y --no-install-recommends --allow-downgrades install libpoppler-cpp-dev=22.12.0-2+b1 && \
     apt-get clean
 
-FROM image_package AS image_install
+FROM image_base AS image_build
 RUN cd /tmp && \
     rm -f Python* && \
     wget https://www.python.org/ftp/python/$ASYSTEM_PYTHON_VERSION/Python-$ASYSTEM_PYTHON_VERSION.tgz && \
@@ -39,12 +39,11 @@ RUN cd /tmp && \
     pip3 --version && \
     rm -rf /tmp/*
 
-FROM image_install AS image_runtime
+FROM image_build AS image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/main/python/ src/.py_deps.txt /asystem/
 RUN pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/.py_deps.txt && \
-    rm -rf /asystem/.py_deps.txt && \
     mkdir -p /root/.config && \
     mkdir -p /etc/telegraf/.config
 COPY src/main/resources/.gspread_pandas /root/.config/gspread_pandas

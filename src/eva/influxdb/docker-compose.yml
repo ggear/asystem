@@ -19,6 +19,10 @@ x-common: &common
     - INFLUXDB_TOKEN
     - INFLUXDB_TOKEN_PUBLIC_V1
     - INFLUXDB_TOKEN_PUBLIC_V2
+  volumes:
+      - ${SERVICE_DATA_DIR}:/asystem/mnt
+      - ${SERVICE_DATA_DIR}:/var/lib/influxdb2:${INFLUXDB_MOUNT}
+      - ${SERVICE_DATA_DIR}/influx-configs:/etc/influxdb2/influx-configs
   logging:
     driver: "json-file"
     options:
@@ -29,10 +33,6 @@ services:
     container_name: influxdb
     <<: *common
     restart: ${SERVICE_RESTART}
-    volumes:
-      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
-      - ${SERVICE_DATA_DIR}/influx-configs:/etc/influxdb2/influx-configs
-      - ${SERVICE_DATA_DIR}:/var/lib/influxdb2:${INFLUXDB_MOUNT}
     ports:
       - ${INFLUXDB_HTTP_PORT}:${INFLUXDB_HTTP_PORT}
     deploy:
@@ -43,11 +43,8 @@ services:
     container_name: influxdb_bootstrap
     <<: *common
     restart: 'no'
-    volumes:
-      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
-      - ${SERVICE_DATA_DIR}:/var/lib/influxdb2:${INFLUXDB_MOUNT}
     entrypoint: /bin/bash
     command:
-      - /bootstrap/bootstrap.sh
+      - /asystem/etc/bootstrap.sh
     depends_on:
       - influxdb

@@ -1,9 +1,9 @@
 # https://github.com/influxdata/telegraf/releases
-FROM telegraf:1.28.1 AS image_base
+FROM telegraf:1.28.1 AS image_upstream
 
 ARG ASYSTEM_PYTHON_VERSION
 
-FROM image_base AS image_package
+FROM image_upstream AS image_base
 # NOTE: To get package versions to pin: clear && docker image build . --progress=plain --no-cache 2>&1
 RUN apt-get update
 RUN apt-get -y --no-install-recommends install build-essential=12.9
@@ -15,7 +15,7 @@ RUN apt-get -y --no-install-recommends install jq=1.6-2.1
 RUN apt-get -y --no-install-recommends install mosquitto-clients=2.0.11-1.2+deb12u1
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-FROM image_package AS image_install
+FROM image_base AS image_build
 RUN cd /tmp && \
     rm -f Python* && \
     wget https://www.python.org/ftp/python/$ASYSTEM_PYTHON_VERSION/Python-$ASYSTEM_PYTHON_VERSION.tgz && \
@@ -30,7 +30,7 @@ RUN cd /tmp && \
     rm -rf /tmp/*
 
 
-FROM image_install AS image_runtime
+FROM image_build AS image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
 COPY src/.py_deps.txt /asystem

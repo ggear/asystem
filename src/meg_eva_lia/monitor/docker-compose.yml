@@ -1,7 +1,7 @@
 services:
   monitor:
-    container_name: monitor
     image: monitor:${SERVICE_VERSION_ABSOLUTE}
+    container_name: monitor
     init: true
     restart: ${SERVICE_RESTART}
     environment:

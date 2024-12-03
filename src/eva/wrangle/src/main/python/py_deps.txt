@@ -10,7 +10,8 @@ dropbox
 yfinance
 pdftotext
 xlsx2csv
-influxdb
-influxdb3-python
 gspread
 gspread-pandas
+influxdb
+influxdb3-python
+google-api-python-client

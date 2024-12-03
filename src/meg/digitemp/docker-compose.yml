@@ -1,7 +1,7 @@
 services:
   digitemp:
-    container_name: digitemp
     image: digitemp:${SERVICE_VERSION_ABSOLUTE}
+    container_name: digitemp
     init: true
     restart: ${SERVICE_RESTART}
     environment:

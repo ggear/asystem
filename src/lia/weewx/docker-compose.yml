@@ -1,7 +1,7 @@
 services:
   weewx:
-    container_name: weewx
     image: weewx:${SERVICE_VERSION_ABSOLUTE}
+    container_name: weewx
     init: true
     restart: ${SERVICE_RESTART}
     environment:
@@ -18,7 +18,6 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}:/data
       - ${SERVICE_DATA_DIR}/skins:/home/weewx/skins
-      - ${SERVICE_DATA_DIR}/weewx.conf:/etc/weewx/weewx.conf
     devices:
       - ${WEEWX_DEV}:/dev/ttyUSB0
     logging:

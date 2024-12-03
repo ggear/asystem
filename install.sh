@@ -30,7 +30,7 @@ if [ ! -d "$SERVICE_HOME" ]; then
   rm -rf $SERVICE_HOME_OLDEST
 fi
 rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
-[ "$(ls -A config | wc -l)" -gt 0 ] && cp -rfp $(find config -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
+[ "$(ls -A persistent | wc -l)" -gt 0 ] && cp -rfp $(find persistent -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
 chmod 600 .env
 [ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
