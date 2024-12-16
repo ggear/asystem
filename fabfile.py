@@ -1006,20 +1006,21 @@ def _process_target(context, module, is_release=False):
 def _up_module(context, module, up_this=True):
     if isfile(join(ROOT_MODULE_DIR, module, "docker-compose.yml")):
         for run_dep in _get_dependencies(context, module):
-            _clean(context, filter_module=run_dep)
-            _generate(context, filter_module=run_dep)
-            _build(context, filter_module=run_dep)
-            _package(context, filter_module=run_dep)
-            _print_header(run_dep, "run prepare")
-            _run_local(context, "mkdir -p target/runtime-system", run_dep)
-            dir_config = join(ROOT_MODULE_DIR, run_dep, "target/package/main/resources/data")
-            if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
-                _run_local(context, "cp -rvfp $(find {} -mindepth 1 -maxdepth 1) target/runtime-system".format(dir_config), run_dep)
-            _print_footer(run_dep, "run prepare")
-            if run_dep != module or up_this:
-                _print_header(run_dep, "run")
-                _run_local(context, "docker compose --ansi never up --force-recreate --remove-orphans -d", run_dep)
-                _print_footer(run_dep, "run")
+            if isfile(join(ROOT_MODULE_DIR, run_dep, "docker-compose.yml")):
+                _clean(context, filter_module=run_dep)
+                _generate(context, filter_module=run_dep)
+                _build(context, filter_module=run_dep)
+                _package(context, filter_module=run_dep)
+                _print_header(run_dep, "run prepare")
+                _run_local(context, "mkdir -p target/runtime-system", run_dep)
+                dir_config = join(ROOT_MODULE_DIR, run_dep, "target/package/main/resources/data")
+                if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
+                    _run_local(context, "cp -rvfp $(find {} -mindepth 1 -maxdepth 1) target/runtime-system".format(dir_config), run_dep)
+                _print_footer(run_dep, "run prepare")
+                if run_dep != module or up_this:
+                    _print_header(run_dep, "run")
+                    _run_local(context, "docker compose --ansi never up --force-recreate --remove-orphans -d", run_dep)
+                    _print_footer(run_dep, "run")
 
 
 def _down_module(context, module, down_this=True):
