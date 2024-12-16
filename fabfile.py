@@ -321,12 +321,15 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
             for docker_build_mount in [
                 (join(ROOT_MODULE_DIR, module, "src/main/go"), "/asystem/bin/go"),
                 (join(ROOT_MODULE_DIR, module, "src/main/python"), "/asystem/bin/python"),
-                (join(ROOT_MODULE_DIR, module, "src/main/resources/host"), "/asystem/etc"),
+                (join(ROOT_MODULE_DIR, module, "src/main/resources/image"), "/asystem/etc"),
             ]:
                 if isdir(docker_build_mount[0]):
                     docker_build_copies.append("COPY {} {}".format(
-                        docker_build_mount[0].replace(join(ROOT_MODULE_DIR, module) + "/", ""),
-                        docker_build_mount[1]))
+                        docker_build_mount[0] \
+                            .removeprefix(join(ROOT_MODULE_DIR, module) + "/") \
+                            .replace("src/main/resources", "target/package/main/resources"),
+                        docker_build_mount[1],
+                    ))
                     docker_build_mounts.append("--mount type=bind,source={},target={},readonly".format(*docker_build_mount))
             docker_build_variables = []
             for env_global_key, env_global_value in GLOBAL_ENV.items():
@@ -391,6 +394,7 @@ for ASYSTEM_PACKAGE in "\\${{ASYSTEM_PACKAGES_BASE[@]}}"; do echo "    $PKG_INST
 echo "    $PKG_CLEAN && \\\\\\\\"
 echo "    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt"
 {}
+echo ""
 echo "#######################################################################################"
 echo "# Build image package install command:"
 echo "#######################################################################################" && echo ""
@@ -399,7 +403,7 @@ echo "RUN \\\\\\\\"
 [[ "$PKG_UPDATE" != "" ]] && echo -n "    $PKG_UPDATE"
 echo " && \\\\\\\\"
 for ASYSTEM_PACKAGE in "\\${{ASYSTEM_PACKAGES_BUILD[@]}}"; do echo "    $PKG_INSTALL" "\\$ASYSTEM_PACKAGE="\\$($PKG_VERSION \\$ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | column -t | awk '$PKG_VERSION_AWK')" && \\\\\\\\"; done
-echo "    $PKG_CLEAN && \\\\\\\\"
+echo "    $PKG_CLEAN"
 EOF
   cat <<EOF >"/tmp/base_image_run.sh"
 echo ""
@@ -412,7 +416,6 @@ echo "    '{}'" && echo ""
 echo "#######################################################################################"
 EOF
     chmod +x /tmp/base_image_*.sh
-    /tmp/base_image_install.sh | grep -v '^USER' | grep -v '^RUN' | grep -v '^COPY' | bash -
     echo ""
     /tmp/base_image_install.sh
     /tmp/base_image_run.sh
@@ -727,7 +730,7 @@ def _release(context):
                                .format(_name(module), _get_versions()[0], file_image), join(module, "target/release"))
                 if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/main/resources/*")):
                     _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
-                _run_local(context, "mkdir -p target/release/host", module)
+                _run_local(context, "mkdir -p target/release/data", module)
                 _run_local(context, "mkdir -p target/release/image", module)
                 Path(join(ROOT_MODULE_DIR, module, "target/release/hosts")) \
                     .write_text("\n".join(["{}-{}".format(HOSTS[host][0], host) for host in HOSTS]) + "\n")
@@ -741,7 +744,7 @@ def _release(context):
                            .format(ssh_pass, host, install, install))
                 _run_local(context, "{}scp -qprO $(find target/release -maxdepth 1 -type f) root@{}:{}"
                            .format(ssh_pass, host, install), module)
-                _run_local(context, "{}scp -qprO target/release/host root@{}:{}"
+                _run_local(context, "{}scp -qprO target/release/data root@{}:{}"
                            .format(ssh_pass, host, install), module)
                 _run_local(context, "{}scp -qprO target/release/image root@{}:{}"
                            .format(ssh_pass, host, install), module)
@@ -1009,7 +1012,7 @@ def _up_module(context, module, up_this=True):
             _package(context, filter_module=run_dep)
             _print_header(run_dep, "run prepare")
             _run_local(context, "mkdir -p target/runtime-system", run_dep)
-            dir_config = join(ROOT_MODULE_DIR, run_dep, "target/package/main/resources/host")
+            dir_config = join(ROOT_MODULE_DIR, run_dep, "target/package/main/resources/data")
             if isdir(dir_config) and len(os.listdir(dir_config)) > 0:
                 _run_local(context, "cp -rvfp $(find {} -mindepth 1 -maxdepth 1) target/runtime-system".format(dir_config), run_dep)
             _print_footer(run_dep, "run prepare")

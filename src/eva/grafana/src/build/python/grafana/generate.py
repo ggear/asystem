@@ -3,13 +3,15 @@
 import glob
 import os
 import shutil
+from os import makedirs
 from os.path import *
 
 from homeassistant.generate import load_entity_metadata
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
-DIR_DASHBOARDS_ROOT = join(DIR_ROOT, "src/main/resources/config/dashboards")
+DIR_DASHBOARD_ROOT = join(DIR_ROOT, "src/main/resources/image/dashboards")
+DIR_DASHBOARD_TEMPLATE_ROOT = join(DIR_ROOT, "src/build/resources/dashboards")
 
 PREFIX = "//AS"
 PREFIX_MOBILE = PREFIX + "M"
@@ -42,8 +44,12 @@ if __name__ == "__main__":
                 metadata_dashboard_dicts[group][domain].append([])
         else:
             metadata_dashboard_dicts[group][domain][-1].append(metadata_dashboard_dict)
+    for scope in ["public", "private"]:
+        shutil.rmtree(join(DIR_DASHBOARD_TEMPLATE_ROOT, scope, "generated"), ignore_errors=True)
+        makedirs(join(DIR_DASHBOARD_TEMPLATE_ROOT, scope, "generated"))
     for group in metadata_dashboard_dicts:
-        with open(DIR_DASHBOARDS_ROOT + "/template/private/generated/graph_{}.jsonnet".format(group.lower()), "w") as file:
+        with open(join(DIR_DASHBOARD_TEMPLATE_ROOT, "private/generated", "graph_{}.jsonnet".format(group.lower())), "w") as file:
+            file.write("// WARNING: This file is written by the build process, any manual edits will be lost!\n\n")
             file.write((PREFIX_DASHBOARD_DEFAULTS + "time_from='now-7d', refresh='', "
                                                     "timepicker=timepicker.new(refresh_intervals=['1m'], time_options="
                                                     "['5m', '15m', '1h', '6h', '12h', '24h', '2d', '7d', '30d', '60d', '90d'])" + """
@@ -51,7 +57,7 @@ if __name__ == "__main__":
       graphs()::
 
             local grafana = import 'grafonnet/grafana.libsonnet';
-            local asystem = import 'default/generated/asystem-library.jsonnet';
+            local asystem = import 'default/asystem-library.jsonnet';
             local dashboard = grafana.dashboard;
             local stat = grafana.statPanel;
             local graph = grafana.graphPanel;
@@ -78,7 +84,7 @@ if __name__ == "__main__":
 
             [
             """).strip() + "\n\n")
-            snip_path = DIR_DASHBOARDS_ROOT + "/template/private/" + basename(file.name).replace("graph_", "snippet_")
+            snip_path = join(DIR_DASHBOARD_TEMPLATE_ROOT, "private", basename(file.name).replace("graph_", "snippet_"))
             if isfile(snip_path):
                 with open(snip_path, 'r') as snip_file:
                     file.write(snip_file.read())
@@ -125,19 +131,23 @@ if __name__ == "__main__":
         ],
 }
             """.strip() + "\n")
-    print("Metadata script [grafana] graphs saved")
-
+            print("{}".format(abspath(file.name), ))
     graphs = {"public": {}, "private": {}}
     for scope in ["public", "private"]:
-        for graph in glob.glob("{}/template/{}/graph_*.jsonnet".format(DIR_DASHBOARDS_ROOT, scope)):
+        for graph in glob.glob("{}/{}/graph_*.jsonnet".format(DIR_DASHBOARD_TEMPLATE_ROOT, scope)):
             graphs[scope][basename(graph).replace(".jsonnet", "").replace("graph_", "")] = \
-                "../../config/dashboards/template/{}/".format(scope)
-        for graph in glob.glob("{}/template/{}/generated/graph_*.jsonnet".format(DIR_DASHBOARDS_ROOT, scope)):
+                scope
+        for graph in glob.glob("{}/{}/generated/graph_*.jsonnet".format(DIR_DASHBOARD_TEMPLATE_ROOT, scope)):
             graphs[scope][basename(graph).replace(".jsonnet", "").replace("graph_", "")] = \
-                "../../config/dashboards/template/{}/generated/".format(scope)
+                join(scope, "generated")
     graphs["private"].update(graphs["public"])
+    print("Metadata script [grafana] dashboard templates generated")
+
     for scope in ["public", "private"]:
-        with open(DIR_DASHBOARDS_ROOT + "/template/{}/generated/dashboard_graphs.jsonnet".format(scope), "w") as file:
+        file_path = join(DIR_DASHBOARD_TEMPLATE_ROOT, scope, "generated/dashboard_graphs.jsonnet")
+        makedirs(dirname(file_path), exist_ok=True)
+        with open(file_path, "w") as file:
+            file.write("// WARNING: This file is written by the build process, any manual edits will be lost!\n\n")
             file.write("""
 local grafana = import 'grafonnet/grafana.libsonnet';
 local dashboard = grafana.dashboard;
@@ -163,7 +173,7 @@ local graph_{} = import 'graph_{}.jsonnet';
 
             """).strip() + "\n")
             for graph in graphs[scope]:
-                defaults = open(join(DIR_DASHBOARDS_ROOT, graphs[scope][graph], "graph_{}.jsonnet".format(graph))) \
+                defaults = open(join(DIR_DASHBOARD_TEMPLATE_ROOT, graphs[scope][graph], "graph_{}.jsonnet".format(graph))) \
                     .readline().rstrip()
                 if defaults.startswith(PREFIX_DASHBOARD_DEFAULTS):
                     defaults = defaults.replace(PREFIX_DASHBOARD_DEFAULTS, "")
@@ -205,19 +215,18 @@ local graph_{} = import 'graph_{}.jsonnet';
       },
 }
             """.strip() + "\n")
-    print("Metadata script [grafana] dashboard templates saved")
-
-    shutil.rmtree(join(DIR_DASHBOARDS_ROOT, "instance"), ignore_errors=True)
+    shutil.rmtree(DIR_DASHBOARD_ROOT, ignore_errors=True)
     for scope in ["default", "public", "private"]:
         for form in ["desktop", "tablet", "mobile"]:
-            for files in os.walk("{}/template/{}".format(DIR_DASHBOARDS_ROOT, scope)):
-                for file_name in files[2]:
+            for file_dir, file_dirs, files in os.walk(join(DIR_DASHBOARD_TEMPLATE_ROOT, scope)):
+                for file_name in files:
                     if not file_name.startswith("snippet_"):
-                        with open("{}/{}".format(files[0], file_name), "r") as file_source:
-                            file_destination_path = "{}/{}/{}{}".format(files[0].replace("template", "instance")
-                                                                        .replace("generated", ""), "generated",
-                                                                        "" if scope == "default" else (form + "/"),
-                                                                        file_name)
+                        with open(join(file_dir, file_name), "r") as file_source:
+                            file_destination_path = join(
+                                file_dir.replace(DIR_DASHBOARD_TEMPLATE_ROOT, DIR_DASHBOARD_ROOT).replace("generated", ""),
+                                "" if scope == "default" else (form + "/"),
+                                file_name
+                            )
                             private_copy = scope == "public" and file_name.startswith("graph_")
                             if private_copy:
                                 destination_path_copy = file_destination_path.replace("public", "private")
@@ -227,7 +236,12 @@ local graph_{} = import 'graph_{}.jsonnet';
                             if not exists(dirname(file_destination_path)):
                                 os.makedirs(dirname(file_destination_path))
                             with open(file_destination_path, "w") as destination_file:
+                                is_first_line = True
                                 for line in file_source:
+                                    if is_first_line and not line.startswith("// WARNING:"):
+                                        destination_file.write(
+                                            "// WARNING: This file is written by the build process, any manual edits will be lost!\n\n")
+                                    is_first_line = False
                                     if not line.startswith(PREFIX) or \
                                             line.startswith(PREFIX_MOBILE) and form == "mobile" or \
                                             line.startswith(PREFIX_TABLET) and form == "tablet" or \
@@ -250,4 +264,4 @@ local graph_{} = import 'graph_{}.jsonnet';
                                     abspath(destination_path_copy)
                                 ))
                                 destination_file_copy.close()
-    print("Metadata script [grafana] dashboard specialisations saved")
+    print("Metadata script [grafana] dashboard specialisations generated")

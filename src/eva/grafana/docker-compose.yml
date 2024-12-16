@@ -5,16 +5,20 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - GF_SECURITY_ADMIN_USER=${GRAFANA_USER}
-    - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_KEY}
+    - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_TOKEN}
     - GRAFANA_SERVICE
     - GRAFANA_HTTP_PORT
     - GRAFANA_URL
     - GRAFANA_URL_PUBLIC
     - GRAFANA_URL_PRIVATE
+    - GRAFANA_DOMAIN
+    - GRAFANA_DOMAIN_URL
+    - GRAFANA_USER
     - GRAFANA_USER_PUBLIC
     - GRAFANA_USER_PRIVATE
-    - GRAFANA_KEY_PUBLIC
-    - GRAFANA_KEY_PRIVATE
+    - GRAFANA_TOKEN
+    - GRAFANA_TOKEN_PUBLIC
+    - GRAFANA_TOKEN_PRIVATE
     - INFLUXDB_SERVICE
     - INFLUXDB_HTTP_PORT
     - INFLUXDB_ORG
@@ -28,6 +32,9 @@ x-common: &common
     - INFLUXDB_TOKEN
     - INFLUXDB_TOKEN_PUBLIC_V1
     - INFLUXDB_TOKEN_PUBLIC_V2
+  volumes:
+    - ${SERVICE_DATA_DIR}:/asystem/mnt
+    - ${SERVICE_DATA_DIR}/config/settings.yaml:/root/.config/grizzly/settings.yaml
   logging:
     driver: "json-file"
     options:
@@ -38,12 +45,15 @@ services:
     container_name: grafana
     <<: *common
     restart: ${SERVICE_RESTART}
-    volumes:
-      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
-      - ${SERVICE_DATA_DIR}/grafana.ini:/etc/grafana/grafana.ini
-      - ${SERVICE_DATA_DIR}/dashboards/dashboard_home.json:/etc/grafana/dashboard_home.json
     ports:
       - ${GRAFANA_HTTP_PORT}:${GRAFANA_HTTP_PORT}
+    healthcheck:
+      test: /asystem/etc/healthcheck.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     deploy:
       resources:
         limits:
@@ -52,10 +62,8 @@ services:
     container_name: grafana_bootstrap
     <<: *common
     restart: 'no'
-    volumes:
-      - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
     entrypoint: /bin/bash
     command:
-      - /bootstrap/bootstrap.sh
+      - /asystem/etc/bootstrap.sh
     depends_on:
       - grafana

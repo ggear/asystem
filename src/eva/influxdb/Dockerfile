@@ -12,7 +12,7 @@ RUN \
     apk add --no-cache jq=1.7.1-r0 && \
     apk cache clean && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
-COPY src/main/resources/host /asystem/etc
+COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 

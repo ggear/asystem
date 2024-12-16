@@ -55,6 +55,7 @@ for ASYSTEM_PACKAGE in "\${ASYSTEM_PACKAGES_BASE[@]}"; do echo "    $PKG_INSTALL
 echo "    $PKG_CLEAN && \\\\"
 echo "    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt"
 
+echo ""
 echo "#######################################################################################"
 echo "# Build image package install command:"
 echo "#######################################################################################" && echo ""
@@ -63,7 +64,7 @@ echo "RUN \\\\"
 [[ "$PKG_UPDATE" != "" ]] && echo -n "    $PKG_UPDATE"
 echo " && \\\\"
 for ASYSTEM_PACKAGE in "\${ASYSTEM_PACKAGES_BUILD[@]}"; do echo "    $PKG_INSTALL" "\$ASYSTEM_PACKAGE="\$($PKG_VERSION \$ASYSTEM_PACKAGE 2>/dev/null | grep "$PKG_VERSION_GREP" | column -t | awk '$PKG_VERSION_AWK')" && \\\\"; done
-echo "    $PKG_CLEAN && \\\\"
+echo "    $PKG_CLEAN"
 EOF
   cat <<EOF >"/tmp/base_image_run.sh"
 echo ""
@@ -75,10 +76,11 @@ echo "    -e ASYSTEM_PYTHON_VERSION=3.12.7 \\\\"
 echo "    -e ASYSTEM_GO_VERSION=1.21.6 \\\\"
 echo "    -e ASYSTEM_RUST_VERSION=1.75.0 \\\\"
 echo "    -e ASYSTEM_WEEWX_VERSION=5.1.0 \\\\"
+echo "    -e ASYSTEM_GRIZZLY_VERSION=v0.2.0 \\\\"
 echo "    -e ASYSTEM_MLFLOW_VERSION=2.18.0 \\\\"
 echo "    -e ASYSTEM_MLSERVER_VERSION=1.6.1 \\\\"
 echo "    -e ASYSTEM_TELEGRAF_VERSION=1.32.3 \\\\"
-echo "    -e ASYSTEM_HOMEASSISTANT_VERSION=2024.11.1 \\\\"
+echo "    -e ASYSTEM_HOMEASSISTANT_VERSION=2024.12.0 \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian \\\\"
@@ -88,7 +90,6 @@ echo "    'golift/unifi-poller:2.1.3'" && echo ""
 echo "#######################################################################################"
 EOF
     chmod +x /tmp/base_image_*.sh
-    /tmp/base_image_install.sh | grep -v '^USER' | grep -v '^RUN' | grep -v '^COPY' | bash -
     echo ""
     /tmp/base_image_install.sh
     /tmp/base_image_run.sh
@@ -101,6 +102,6 @@ docker run --name "$CONTAINER_NAME" --user root --entrypoint sh  -dt 'golift/uni
 docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
 declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
 echo "Base image shell:" && echo "#######################################################################################" && echo ""
-docker exec -it -e ASYSTEM_PYTHON_VERSION=3.12.7 -e ASYSTEM_GO_VERSION=1.21.6 -e ASYSTEM_RUST_VERSION=1.75.0 -e ASYSTEM_WEEWX_VERSION=5.1.0 -e ASYSTEM_MLFLOW_VERSION=2.18.0 -e ASYSTEM_MLSERVER_VERSION=1.6.1 -e ASYSTEM_TELEGRAF_VERSION=1.32.3 -e ASYSTEM_HOMEASSISTANT_VERSION=2024.11.1 -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm "$CONTAINER_NAME" bash
+docker exec -it -e ASYSTEM_PYTHON_VERSION=3.12.7 -e ASYSTEM_GO_VERSION=1.21.6 -e ASYSTEM_RUST_VERSION=1.75.0 -e ASYSTEM_WEEWX_VERSION=5.1.0 -e ASYSTEM_GRIZZLY_VERSION=v0.2.0 -e ASYSTEM_MLFLOW_VERSION=2.18.0 -e ASYSTEM_MLSERVER_VERSION=1.6.1 -e ASYSTEM_TELEGRAF_VERSION=1.32.3 -e ASYSTEM_HOMEASSISTANT_VERSION=2024.12.0 -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm "$CONTAINER_NAME" bash
 docker kill "$CONTAINER_NAME"
 docker rm -vf "$CONTAINER_NAME"
