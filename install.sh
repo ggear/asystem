@@ -40,7 +40,7 @@ if [ -f "docker-compose.yml" ]; then
     docker logs "${SERVICE_NAME}_bootstrap" -f
   fi
   echo "----------" && docker ps -f name="${SERVICE_NAME}" && echo "----------"
-  sleep 5 && docker logs "${SERVICE_NAME}" && echo "----------"
+  sleep 11 && docker logs "${SERVICE_NAME}" && echo "----------"
   if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
     echo && echo "Container failed to start" && echo "" && exit 1
   else
