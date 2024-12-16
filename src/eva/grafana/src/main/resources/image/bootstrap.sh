@@ -136,7 +136,7 @@ if [ "$(curl -sf "${GRAFANA_URL_PUBLIC}"/api/datasources/name/InfluxDB_V2 | jq -
             "httpMode": "POST"
           },
           "secureJsonData": {
-            "token": "'"${INFLUXDB_TOKEN_PUBLIC_V2}"'"
+            "token": "'"${INFLUXDB_TOKEN}"'"
           },
           "secureJsonFields": {
             "token": true
@@ -338,6 +338,7 @@ set +eo pipefail
 while ! "${ASYSTEM_HOME}/healthcheck.sh"; do
   echo "Waiting for service to become ready ..." && sleep 1
 done
+echo "" && echo "Service has become ready!" && echo ""
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"

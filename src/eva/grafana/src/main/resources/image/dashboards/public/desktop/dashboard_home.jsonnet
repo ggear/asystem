@@ -32,7 +32,7 @@ local dashboard = grafana.dashboard;
                                     mode='html',
                                     content='
 <p style="text-align: center">
-      <a href="/">All</a>
+      <a href="#" onClick="location.href=\'/?kiosk=1\'";return false;">All</a>
           &nbsp;&nbsp;|&nbsp;&nbsp;
       <a href="#" onClick="location.href=\'/d/home-desktop/home?orgId=2\'";return false;">Private</a>
 </p>
