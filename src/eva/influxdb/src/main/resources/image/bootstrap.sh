@@ -5,7 +5,7 @@ echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
 while ! influx ping --host http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT} >/dev/null 2>&1; do
-  echo "Waiting for service to become alive ..." && sleep 1
+  echo "Waiting for service to come alive ..." && sleep 1
 done
 
 set -eo pipefail

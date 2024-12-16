@@ -5,7 +5,7 @@ echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
 while ! pg_isready -q -h ${TIMESCALEDB_IP} -p ${TIMESCALEDB_PORT} -U ${POSTGRES_USER} -t 1 >/dev/null 2>&1; do
-  echo "Waiting for service to become alive ..." && sleep 1
+  echo "Waiting for service to come alive ..." && sleep 1
 done
 
 set -eo pipefail
