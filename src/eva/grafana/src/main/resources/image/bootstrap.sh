@@ -214,8 +214,8 @@ find "${ASYSTEM_HOME}"/dashboards/public -name "dashboard_*" -exec grr -J "${ASY
 #######################################################################################
 # Default Dashboard
 #######################################################################################
-if [ "$(curl -sf "${GRAFANA_URL_PUBLIC}"/api/org/preferences | grep public-home-default | wc -l)" -eq 0 ]; then
-  curl -sf -XPATCH "${GRAFANA_URL_PUBLIC}"/api/org/preferences \
+if [ "$(curl -sf "${GRAFANA_URL}"/api/org/preferences | grep public-home-default | wc -l)" -eq 0 ]; then
+  curl -sf -XPATCH "${GRAFANA_URL}"/api/org/preferences \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -227,8 +227,8 @@ fi
 #######################################################################################
 # Private Datasource
 #######################################################################################
-if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l)" -eq 0 ]; then
-  curl -sf -XPOST "${GRAFANA_URL_PRIVATE}"/api/datasources \
+if [ "$(curl -sf "${GRAFANA_URL}"/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l)" -eq 0 ]; then
+  curl -sf -XPOST "${GRAFANA_URL}"/api/datasources \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -240,8 +240,9 @@ if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V2 | jq 
           "jsonData": {
             "version": "Flux",
             "organization": "'"${INFLUXDB_ORG}"'",
+            "timeout": 60,
             "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PRIVATE}"'",
-            "timeout": "60"
+            "httpMode": "POST"
           },
           "secureJsonData": {
             "token": "'"${INFLUXDB_TOKEN}"'"
@@ -251,8 +252,8 @@ if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V2 | jq 
           }
         }' | jq
 fi
-if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l)" -eq 0 ]; then
-  curl -sf -XPOST "${GRAFANA_URL_PRIVATE}"/api/datasources \
+if [ "$(curl -sf "${GRAFANA_URL}"/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l)" -eq 0 ]; then
+  curl -sf -XPOST "${GRAFANA_URL}"/api/datasources \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
