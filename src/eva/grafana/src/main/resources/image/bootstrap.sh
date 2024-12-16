@@ -7,11 +7,10 @@ echo "--------------------------------------------------------------------------
 ASYSTEM_HOME=${ASYSTEM_HOME:-"/asystem/etc"}
 
 while ! "${ASYSTEM_HOME}/healthcheck.sh" alive; do
-  echo "Waiting for service to come up ..." && sleep 1
+  echo "Waiting for service to become alive ..." && sleep 1
 done
 
-set -e
-set -o pipefail
+set -eo pipefail
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap starting ..."
@@ -132,8 +131,9 @@ if [ "$(curl -sf "${GRAFANA_URL_PUBLIC}"/api/datasources/name/InfluxDB_V2 | jq -
           "jsonData": {
             "version": "Flux",
             "organization": "'"${INFLUXDB_ORG}"'",
+            "timeout": 60,
             "defaultBucket": "'"${INFLUXDB_BUCKET_DATA_PUBLIC}"'",
-            "timeout": "60"
+            "httpMode": "POST"
           },
           "secureJsonData": {
             "token": "'"${INFLUXDB_TOKEN_PUBLIC_V2}"'"
@@ -227,8 +227,8 @@ fi
 #######################################################################################
 # Private Datasource
 #######################################################################################
-if [ "$(curl -sf "${GRAFANA_URL}"/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l)" -eq 0 ]; then
-  curl -sf -XPOST "${GRAFANA_URL}"/api/datasources \
+if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V2 | jq -r '.name' | grep InfluxDB_V2 | wc -l)" -eq 0 ]; then
+  curl -sf -XPOST "${GRAFANA_URL_PRIVATE}"/api/datasources \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -252,8 +252,8 @@ if [ "$(curl -sf "${GRAFANA_URL}"/api/datasources/name/InfluxDB_V2 | jq -r '.nam
           }
         }' | jq
 fi
-if [ "$(curl -sf "${GRAFANA_URL}"/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l)" -eq 0 ]; then
-  curl -sf -XPOST "${GRAFANA_URL}"/api/datasources \
+if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/datasources/name/InfluxDB_V1 | grep InfluxDB_V1 | wc -l)" -eq 0 ]; then
+  curl -sf -XPOST "${GRAFANA_URL_PRIVATE}"/api/datasources \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -d '{
@@ -332,6 +332,12 @@ if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/org/preferences | grep private-hom
           "homeDashboardUID":"private-home-default"
         }' | jq
 fi
+
+set +eo pipefail
+
+while ! "${ASYSTEM_HOME}/healthcheck.sh"; do
+  echo "Waiting for service to become ready ..." && sleep 1
+done
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"

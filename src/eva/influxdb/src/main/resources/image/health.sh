@@ -1,7 +1,6 @@
 #!/bin/sh
 
-set -e
-set -o pipefail
+set -eo pipefail
 
 influx ping --host http://localhost:${INFLUXDB_HTTP_PORT}
 

@@ -5,11 +5,10 @@ echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
 while ! pg_isready -q -h ${POSTGRES_SERVICE} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -t 1 >/dev/null 2>&1; do
-  echo "Waiting for service to come up ..." && sleep 1
+  echo "Waiting for service to become alive ..." && sleep 1
 done
 
-set -e
-set -o pipefail
+set -eo pipefail
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap starting ..."
