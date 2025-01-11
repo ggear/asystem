@@ -1,10 +1,10 @@
 #!/bin/bash
 
 if ! diff -q /root/install/udmutilities/latest/image/udm-certificates/.key.pem /data/unifi-core/image/unifi-core.key &>/dev/null ||
-  ! diff -q /root/install/udmutilities/latest/image/udm-certificates/certificate.pem /data/unifi-core/image/unifi-core.crt &>/dev/null; then
+  ! diff -q /root/install/udmutilities/latest/image/udm-certificates/certificate.pem /data/unifi-core/config/unifi-core.crt &>/dev/null; then
   echo -n "Installing latest certificates ..."
   cp -uvf /root/install/udmutilities/latest/image/udm-certificates/.key.pem /data/unifi-core/image/unifi-core.key >/dev/null
-  cp -uvf /root/install/udmutilities/latest/image/udm-certificates/certificate.pem /data/unifi-core/image/unifi-core.crt >/dev/null
+  cp -uvf /root/install/udmutilities/latest/image/udm-certificates/certificate.pem /data/unifi-core/config/unifi-core.crt >/dev/null
   echo "done"
   echo -n "Restarting UniFi ..."
   systemctl restart unifi-core
