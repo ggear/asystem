@@ -26,7 +26,7 @@ if __name__ == "__main__":
     modules = load_modules(load_disabled=False, load_infrastrcture=False)
     metadata_df = load_entity_metadata()
 
-    write_certificates("udmutilities", join(DIR_ROOT, "src/main/resources/config/udm-certificates"))
+    write_certificates("udmutilities", join(DIR_ROOT, "src/main/resources/image/udm-certificates"))
 
     metadata_dhcp_df = metadata_df[
         (metadata_df["index"] > 0) &
@@ -35,7 +35,7 @@ if __name__ == "__main__":
         (metadata_df["connection_vlan"].str.len() > 0) &
         (metadata_df["connection_mac"].str.len() > 0)
         ]
-    dnsmasq_conf_root_path = join(DIR_ROOT, "src/main/resources/config/udm-dnsmasq")
+    dnsmasq_conf_root_path = join(DIR_ROOT, "src/main/resources/image/udm-dnsmasq")
     metadata_dhcp_df = metadata_dhcp_df.fillna('')
     if not metadata_dhcp_df.loc[metadata_dhcp_df["connection_ip"] != '', :]["connection_ip"].is_unique:
         raise Exception("Build generate script [udmutilities] found non-unique IP addresses!")
@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     # INFO: Disable podman services since it has been deprecated since udm-pro-3
     # metadata_dhcp_ips = {}
-    # hosts_conf_path = join(DIR_ROOT, "src/main/resources/config/udm-utilities/run-pihole/custom.list")
+    # hosts_conf_path = join(DIR_ROOT, "src/main/resources/image/udm-utilities/run-pihole/custom.list")
     # for metadata_dhcp_host in metadata_dhcp_hosts:
     #     metadata_dhcp_hosts[metadata_dhcp_host].sort()
     #     metadata_dhcp_ips[metadata_dhcp_hosts[metadata_dhcp_host][0]] = metadata_dhcp_host

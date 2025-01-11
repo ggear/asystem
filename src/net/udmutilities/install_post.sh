@@ -5,9 +5,9 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 
 cd ${SERVICE_INSTALL} || exit
 
-chmod a+x ./config/udm-utilities/on-boot-script/remote_install.sh
+chmod a+x ./image/udm-utilities/on-boot-script/remote_install.sh
 if [ ! -d /data/on_boot.d ]; then
-  ./config/udm-utilities/on-boot-script/remote_install.sh
+  ./image/udm-utilities/on-boot-script/remote_install.sh
 fi
 
 cp -rvf /data/asystem/install/udmutilities/latest/install_prep.sh /data/on_boot.d/07-asystem-install.sh
@@ -22,34 +22,34 @@ add_on_boot_script() {
 add_on_boot_script "10-unifios" "_unifios"
 add_on_boot_script "11-users" "_users"
 
-chmod a+x ./config/udm-certificates/20-certifcates.sh
-cp -rvf ./config/udm-certificates/20-certifcates.sh /data/on_boot.d
+chmod a+x ./image/udm-certificates/20-certifcates.sh
+cp -rvf ./image/udm-certificates/20-certifcates.sh /data/on_boot.d
 /data/on_boot.d/20-certifcates.sh
 
-chmod a+x ./config/udm-dnsmasq/24-dnsmasq.sh
-rm -rf /data/udm-dnsmasq && cp -rvf ./config/udm-dnsmasq /data
-cp -rvf ./config/udm-dnsmasq/24-dnsmasq.sh /data/on_boot.d
+chmod a+x ./image/udm-dnsmasq/24-dnsmasq.sh
+rm -rf /data/udm-dnsmasq && cp -rvf ./image/udm-dnsmasq /data
+cp -rvf ./image/udm-dnsmasq/24-dnsmasq.sh /data/on_boot.d
 /data/on_boot.d/24-dnsmasq.sh
 
 # Disable after the fact that I get a static IP now from my ISP
-#cp -rvf ./config/udm-cloudflare-ddns/28-cloudflare-ddns.sh /data/on_boot.d
+#cp -rvf ./image/udm-cloudflare-ddns/28-cloudflare-ddns.sh /data/on_boot.d
 #chmod a+x /data/on_boot.d/28-cloudflare-ddns.sh
 #/data/on_boot.d/28-cloudflare-ddns.sh
 
 # INFO: Disable podman services since it has been deprecated since udm-pro-3
-#chmod a+x ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh
+#chmod a+x ./image/udm-utilities/container-common/on_boot.d/05-container-common.sh
 #if [ ! -f /data/on_boot.d/05-container-common.sh ]; then
-#  cp -rvf ./config/udm-utilities/container-common/on_boot.d/05-container-common.sh /data/on_boot.d
+#  cp -rvf ./image/udm-utilities/container-common/on_boot.d/05-container-common.sh /data/on_boot.d
 #  /data/on_boot.d/05-container-common.sh
 #fi
 #
 #podman exec unifi-os systemctl enable udm-boot
 #podman exec unifi-os systemctl restart udm-boot
 #
-#cp -rvf ./config/udm-utilities/cni-plugins/05-install-cni-plugins.sh /data/on_boot.d
+#cp -rvf ./image/udm-utilities/cni-plugins/05-install-cni-plugins.sh /data/on_boot.d
 #chmod a+x /data/on_boot.d/05-install-cni-plugins.sh
 #/data/on_boot.d/05-install-cni-plugins.sh
-#cp -rvf ./config/udm-utilities/cni-plugins/20-dns.conflist /data/podman/cni
+#cp -rvf ./image/udm-utilities/cni-plugins/20-dns.conflist /data/podman/cni
 #
 #mkdir -p /data/etc-pihole && chmod 777 /data/etc-pihole
 #mkdir -p /data/pihole/etc-dnsmasq.d && chmod 777 /data/pihole/etc-dnsmasq.d
@@ -77,7 +77,7 @@ cp -rvf ./config/udm-dnsmasq/24-dnsmasq.sh /data/on_boot.d
 #  -e ServerIP="${PIHOLE_IP}" \
 #  -e IPv6="False" \
 #  pihole/pihole:2023.02.2
-#cp -rvf ./config/udm-utilities/dns-common/on_boot.d/10-dns.sh /data/on_boot.d
+#cp -rvf ./image/udm-utilities/dns-common/on_boot.d/10-dns.sh /data/on_boot.d
 #chmod a+x /data/on_boot.d/10-dns.sh
 #/data/on_boot.d/10-dns.sh
 #podman exec -it pihole pihole -a -p ${PIHOLE_KEY}
