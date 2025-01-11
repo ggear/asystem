@@ -1,0 +1,30 @@
+x-common: &common
+  image: unpoller:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  environment:
+    - TZ=Australia/Perth
+  volumes:
+    - ${SERVICE_DATA_DIR}:/asystem/mnt
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
+services:
+  unpoller:
+    container_name: unpoller
+    <<: *common
+    restart: ${SERVICE_RESTART}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+  unpoller_bootstrap:
+    container_name: unpoller_bootstrap
+    <<: *common
+    restart: 'no'
+    entrypoint: /bin/bash
+    command:
+      - /asystem/etc/bootstrap.sh
+    depends_on:
+      - unpoller

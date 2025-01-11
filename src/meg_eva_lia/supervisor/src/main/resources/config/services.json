@@ -1,7 +1,4 @@
 {
-  "macmini-zoe": [
-    "unifipoller"
-  ],
   "macmini-eva": [
     "letsencrypt",
     "sabnzbd",
@@ -10,6 +7,7 @@
     "influxdb",
     "wrangle",
     "mlserver",
+    "unpoller",
     "monitor"
   ],
   "raspbpi-lia": [

@@ -7,6 +7,7 @@ umount -fq /media/usbdrive
 # Renaming
 rename -v 's/X/Y/' ./*.mkv
 rename -v 's/(.*)[sS]([0-9][0-9])[eE]([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
+find . -name *TRANS*mkv -exec rename -v 's/__TRANSCODE_MID//' "{}" \;
 
 # Extract RAR files
 ROOT_DIR=$PWD
@@ -44,12 +45,12 @@ pgsrip ./*.mkv
 rsync -avhPr /share/3/media/kids /share/2/media
 
 # Copy media to usb-drive
+find "/share/*/media/parents/movies -name *Hope*mkv" -exec echo "     '{}' \\" \;
 nohup rsync -avhPr --no-perms --no-owner --no-group \
   '/share/3/media/parents/movies/A New Hope (1977)/A New Hope (1977).mkv' \
-  '/share/3/media/parents/movies/The Empire Strikes Back (1980)/The Empire Strikes Back (1980).mkv' \
-  '/share/3/media/parents/movies/Return Of The Jedi (1983)/Return Of The Jedi (1983).mkv' \
   '/media/usbdrive/Movies' &
 disown
+find "/share/*/media/parents/series -name *Last*mkv" -exec echo "     '{}' \\" \;
 SERIES='The Last Of Us'
 nohup mkdir -p "/media/usbdrive/Shows/${SERIES}" && rsync -avhPr --no-perms --no-owner --no-group \
   '/share/5/media/parents/series/The Last Of Us/Season 1/The Last Of Us S01E01.mkv' \

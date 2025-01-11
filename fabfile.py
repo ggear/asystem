@@ -424,7 +424,7 @@ DOCKER_CLI_HINTS=false
 CONTAINER_NAME="asystem_deps_bootstrap"
 docker ps -q --filter "name=$CONTAINER_NAME" | grep -q . && docker kill "$CONTAINER_NAME"
 docker ps -qa --filter "name=$CONTAINER_NAME" | grep -q . && docker rm -vf "$CONTAINER_NAME"
-docker run --name "$CONTAINER_NAME" --user root --entrypoint sh {} -dt '{}'
+docker run --name "$CONTAINER_NAME" --user root --platform linux/{} --entrypoint sh {} -dt '{}'
 docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
 declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
 echo "Base image shell:" && echo "#######################################################################################" && echo ""
@@ -439,6 +439,7 @@ docker rm -vf "$CONTAINER_NAME"
                     "\n".join([("echo \"" + x + "\"") for x in docker_build_copies]),
                     "\n".join([("echo \"    " + x + " \\\\\\\\\"") for x in docker_build_variables]),
                     docker_image,
+                    HOSTS[_get_host(module) if filter_host is None else _get_host_label(filter_host)][1],
                     " ".join(docker_build_mounts),
                     docker_image,
                     " ".join(docker_build_variables),

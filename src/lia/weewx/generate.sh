@@ -6,7 +6,7 @@
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 
 pull_repo $(pwd) weewx weewx-core weewx/weewx v${WEEWX_VERSION} ${1}
-[ $(ls ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*.whl 2>/dev/null | wc -l) -eq 0 ] && cd ${ROOT_DIR}/../../../.deps/weewx/weewx-core && rm -rf dist && make pypi-package
+[ $(ls ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*.whl 2>/dev/null | wc -l) -eq 0 ] && cd ${ROOT_DIR}/../../../.deps/weewx/weewx-core && rm -rf dist && make clean pypi-package
 mkdir -p ${ROOT_DIR}/src/build/resources
 cp -nv ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*.whl ${ROOT_DIR}/src/build/resources
 
