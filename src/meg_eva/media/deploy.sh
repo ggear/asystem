@@ -2,15 +2,6 @@
 
 ROOT_DIR=$(dirname $(readlink -f "$0"))
 
-cp -rvf ${ROOT_DIR}/src/main/resources/config/bin/lib/other-transcode.rb /usr/local/bin/other-transcode
-chmod +x /usr/local/bin/other-transcode
-
-chmod +x ${ROOT_DIR}/src/main/resources/config/bin/*.sh ${ROOT_DIR}/src/main/resources/config/bin/lib/*.sh
-for SCRIPT in ${ROOT_DIR}/src/main/resources/config/bin/*.sh; do
-  rm -rf /usr/local/bin/asystem-$(basename ${SCRIPT} .sh)
-  ln -vs ${SCRIPT} /usr/local/bin/asystem-$(basename ${SCRIPT} .sh)
-done
-
 HOSTS=$(echo $(basename $(dirname $(pwd))) | tr "_" "\n")
 HOST="$(grep $(echo "${HOSTS}" | head -1) ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-$(echo "${HOSTS}" | head -1)"
 

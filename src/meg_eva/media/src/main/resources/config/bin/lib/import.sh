@@ -22,7 +22,7 @@ if [ $(lsblk -ro name,label | grep GRAHAM | wc -l) -eq 1 ]; then
     rsync -avP /media/usbdrive ${WORKING_DIR}/tmp
     echo '' && echo "Completed rsync of /media/usbdrive to ${WORKING_DIR}/tmp" && date && echo ''
     echo "#######################################################################################"
-    ${PYTHON_DIR}/python" "${ROOT_DIR}/lib/ingress.py" "${WORKING_DIR}/tmp
+    ${PYTHON_DIR}/python" "${LIB_ROOT}/ingress.py" "${WORKING_DIR}/tmp
   fi
 fi
 echo -n "Import '${WORKING_DIR}/tmp' ... "

@@ -33,6 +33,10 @@ class InternetTest(unittest.TestCase):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "22/media"))
 
+    def test_analyse_corrupt(self):
+        dir_test = self._test_prepare_dir("share_media_example", 1)
+        self._test_analyse_assert(join(dir_test, "32/media"), scripts={})
+
     def test_analyse_duplicate(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "38/media"), scripts={})

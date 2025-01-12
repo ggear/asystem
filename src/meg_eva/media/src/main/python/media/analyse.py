@@ -167,7 +167,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 file_season_match = re.search("/" + MEDIA_SEASON_NUMBER_REGEXP, file_base_dir)
                 file_episode_match = re.search(MEDIA_EPISODE_NAME_REGEXP, file_name)
                 if file_episode_match is not None:
-                    file_version_qualifier = "".join(file_episode_match.groups())
+                    file_version_qualifier = "".join(file_episode_match.groups()).split("__TRANSCODE")[0]
                     file_stem = "{} {}".format(file_stem, file_version_qualifier).title()
                 else:
                     file_version_qualifier = file_name_sans_extension
@@ -985,10 +985,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Version Directory") == ".") &
-                    (~pl.col("File Directory").is_null()) & (pl.col("File Directory") != "") &
+                    (~pl.col("File Stem").is_null()) & (pl.col("File Stem") != "") &
                     (~pl.col("Duration (hours)").is_null()) & (pl.col("Duration (hours)") != "") &
+                    (pl.col("File Stem").is_duplicated()) &
                     (~pl.struct(
-                        pl.col("File Directory"),
+                        pl.col("File Stem"),
                         pl.col("Duration (hours)").cast(pl.Float32).round_sig_figs(2),
                     ).is_duplicated())
                 ).then(pl.lit("Corrupt"))
@@ -1024,8 +1025,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             (pl.col("Plex Video") == "Transcode") |
                             (pl.col("Plex Audio") == "Transcode") |
                             (pl.col("Duration (hours)").is_null()) |
-                            (pl.col("Bitrate (Kbps)").is_null()) |
-                            ((pl.col("File Size") == "Large") & (pl.col("Video 1 Colour") == "SDR"))
+                            (pl.col("Bitrate (Kbps)").is_null())
                     )
                 ).then(pl.lit(FileAction.TRANSCODE.value))
                 .when(
@@ -1037,7 +1037,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Version") != "Merged") &
                     (pl.col("File Version") != "Ignored") &
                     (pl.col("File Size") == "Large") &
-                    (pl.col("Video 1 Colour") != "SDR")
+                    (pl.col("Video 1 Colour") == "SDR")
                 ).then(pl.lit(FileAction.DOWNSCALE.value))
                 .otherwise(pl.lit(FileAction.NOTHING.value))
             ).alias("File Action"))
@@ -1390,27 +1390,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             .sort(["File Action", "Media Type"], nulls_last=True) \
             .fill_null(0)
         if verbose:
-            with pl.Config(
-                    tbl_rows=-1,
-                    tbl_cols=-1,
-                    tbl_formatting="ASCII_FULL_CONDENSED",
-                    fmt_str_lengths=200,
-                    set_tbl_width_chars=30000,
-                    set_fmt_float="full",
-                    set_ascii_tables=True,
-                    set_tbl_hide_dataframe_shape=True,
-                    set_tbl_hide_column_data_types=True,
-            ):
-                print("#metadata-delta ... ")
-                print(
-                    metadata_merged_pl \
-                        .filter((pl.col("Metadata Loaded") == "True"))
-                        .select(metadata_merged_pl.columns[:9] + ["File Directory"])
-                        .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
-                        .fill_null("")
-                )
-                print("#metadata-summary ... ")
-                print(metadata_summary_pl.fill_null(""))
+            print("#metadata-delta ... ")
+            _print_df(
+                metadata_merged_pl \
+                    .filter((pl.col("Metadata Loaded") == "True"))
+                    .select(metadata_merged_pl.columns[:9] + ["File Directory"])
+                    .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
+                    .fill_null("")
+            )
+            print("#metadata-summary ... ")
+            print(metadata_summary_pl.fill_null(""))
     if "Metadata Loaded" in metadata_merged_pl.columns:
         metadata_merged_pl = metadata_merged_pl.drop("Metadata Loaded")
     _print_message(_message="done", _header=not verbose, _footer=False)
@@ -1529,6 +1518,21 @@ def _flatten_dicts(_dicts, _parent_key=''):
         else:
             items.append((new_key, value))
     return OrderedDict(items)
+
+
+def _print_df(data_df):
+    with pl.Config(
+            tbl_rows=-1,
+            tbl_cols=-1,
+            tbl_formatting="ASCII_FULL_CONDENSED",
+            fmt_str_lengths=200,
+            set_tbl_width_chars=30000,
+            set_fmt_float="full",
+            set_ascii_tables=True,
+            set_tbl_hide_dataframe_shape=True,
+            set_tbl_hide_column_data_types=True,
+    ):
+        print(data_df)
 
 
 if __name__ == "__main__":
