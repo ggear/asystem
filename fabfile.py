@@ -747,6 +747,8 @@ def _release(context):
 
 
 
+                _run_local(context, "{}scp -qprO $(find target/release -maxdepth 1 -type f) root@{}:{}"
+                           .format(ssh_pass, host, install), module)
                 _run_local(context, "{}scp -qprO target/release/* root@{}:{}"
                            .format(ssh_pass, host, install), module)
 
