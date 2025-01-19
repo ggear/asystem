@@ -523,6 +523,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 if len(file_probe_streams_filtered_audios) > 0 and \
                         file_probe_streams_filtered_audios[0]["channels"] < file_target_channels:
                     if len(file_probe_streams_filtered_audios_supplementary) > 0 and \
+                            file_probe_streams_filtered_audios_supplementary[0]["lang"] == file_target_lang and \
                             file_probe_streams_filtered_audios_supplementary[0]["channels"] >= file_target_channels:
                         file_probe_streams_filtered_audios.insert(0,
                                                                   file_probe_streams_filtered_audios_supplementary.pop(0))
@@ -789,18 +790,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 .otherwise(pl.col("File Version"))
             ).alias("File Version"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
-            (
-                pl.col("File Stem") \
-                    .str.to_lowercase() \
-                    .str.split(TOKEN_TRANSCODE.lower() + "_").list.first() \
-                    .str.strip_prefix(" '") \
-                    .str.strip_suffix("' ")
-            ).alias("Base Path")
-        ).with_columns(
-            (
-                pl.col("Base Path").count().over("Base Path")
-            ).alias("Version Count")
-        ).drop("Base Path")
+            pl.col("File Stem").count().over("File Stem").alias("Version Count")
+        )
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
@@ -812,18 +803,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Audio Count") == "0")
                 ).then(pl.lit("Incomplete"))
                 .when(
-                    (pl.col("Target Lang") == "eng") &
-                    (pl.col("Audio 1 Lang") != "eng")
+                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
                 ).then(pl.lit("Incomplete"))
                 .when(
-                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
+                    (pl.col("Target Lang") != pl.col("Audio 1 Lang"))
                 ).then(pl.lit("Incomplete"))
                 .when(
                     (pl.col("Target Lang") != "eng") &
                     (
                             (pl.col("Subtitle Count") == "0") |
-                            (pl.col("Subtitle 1 Lang").is_null()) |
-                            (pl.col("Subtitle 1 Lang") != "eng")
+                            (pl.col("Subtitle Count") == "Subtitle Non-Eng Count")
                     )
                 ).then(pl.lit("Incomplete"))
                 .otherwise(pl.lit("Complete"))
@@ -1403,7 +1392,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     .fill_null("")
             )
             print("#metadata-summary ... ")
-            print(metadata_summary_pl.fill_null(""))
+            _print_df(metadata_summary_pl.fill_null(""))
     if "Metadata Loaded" in metadata_merged_pl.columns:
         metadata_merged_pl = metadata_merged_pl.drop("Metadata Loaded")
     _print_message(_message="done", _header=not verbose, _footer=False)
@@ -1528,13 +1517,13 @@ def _print_df(data_df):
     with pl.Config(
             tbl_rows=-1,
             tbl_cols=-1,
-            tbl_formatting="ASCII_FULL_CONDENSED",
+            ascii_tables=True,
             fmt_str_lengths=200,
-            set_tbl_width_chars=30000,
-            set_fmt_float="full",
-            set_ascii_tables=True,
-            set_tbl_hide_dataframe_shape=True,
-            set_tbl_hide_column_data_types=True,
+            fmt_float="full",
+            tbl_width_chars=30000,
+            tbl_formatting="ASCII_FULL_CONDENSED",
+            tbl_hide_dataframe_shape=True,
+            tbl_hide_column_data_types=True,
     ):
         print(data_df)
 

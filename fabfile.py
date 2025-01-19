@@ -462,7 +462,7 @@ docker rm -vf "$CONTAINER_NAME"
             elif exists(docker_compose_path):
                 docker_image_metadata = get_docker_image_metadata(docker_compose_path, compose_image_regexs, docker_version_env)
             docker_image_tags = []
-            docker_image_version_ignores = ["windows", ".beta", ".rc", ".0rc", ".0a", ".0b"]
+            docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "0a", "0b"]
             if docker_image_metadata is not None and \
                     all(key in docker_image_metadata for key in
                         ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
@@ -743,17 +743,10 @@ def _release(context):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
                            .format(ssh_pass, host, install, install))
-
-
-
-
                 _run_local(context, "{}scp -qprO $(find target/release -maxdepth 1 -type f) root@{}:{}"
                            .format(ssh_pass, host, install), module)
                 _run_local(context, "{}scp -qprO target/release/* root@{}:{}"
                            .format(ssh_pass, host, install), module)
-
-
-
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
                            .format(ssh_pass, host, install, install, install))
