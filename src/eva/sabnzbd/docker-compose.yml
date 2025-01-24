@@ -1,7 +1,7 @@
 services:
   sabnzbd:
     # https://sabnzbd.org/downloads#
-    image: linuxserver/sabnzbd:4.3.3
+    image: linuxserver/sabnzbd:4.4.1
     container_name: sabnzbd
     init: false
     restart: ${SERVICE_RESTART}

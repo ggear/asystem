@@ -35,7 +35,7 @@ MEDIA_SEASON_NUMBER_REGEXP = r"Season ([0-9]?[0-9]+)"
 MEDIA_EPISODE_NUMBER_REGEXP = r".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
 MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
-MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode"}
+MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode", "downscale", "merge"}
 
 TOKEN_TRANSCODE = "__TRANSCODE"
 TOKEN_UNKNOWABLE = "__UNKNOWABLE"
@@ -92,24 +92,24 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         print("Truncating '{}' ... ".format(sheet_url), end="", flush=True)
         _truncate_sheet(sheet_url)
         print("done")
-        return 0
+        return 0, get_file_actions_dict()
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
-        return -1
+        return -1, get_file_actions_dict()
     file_path_root_re = re.search("(.*/share/[0-9]+)*", file_path_root)
     if file_path_root_re is None or file_path_root_re.groups()[0] is None or file_path_root_re.groups()[0] == "":
         print("Error: path [{}] is not a share".format(file_path_root))
-        return -2
+        return -2, get_file_actions_dict()
     file_path_root_parent = file_path_root_re.groups()[0]
     file_path_root_is_nested = file_path_root != file_path_root_parent
     file_path_media = os.path.join(file_path_root_parent, "media")
     if not os.path.isdir(file_path_media):
         print("Error: path [{}] does not exist".format(file_path_media))
-        return -3
+        return -3, get_file_actions_dict()
     if file_path_root_is_nested and not file_path_root.startswith(file_path_media):
         print("Error: path [{}] not nested in media directory [{}]" \
               .format(file_path_root, file_path_media))
-        return -4
+        return -4, get_file_actions_dict()
     file_path_root_target = file_path_root if file_path_root_is_nested else file_path_media
     file_path_root_target_relative = file_path_root_target.replace(file_path_media, ".")
     file_path_scripts = os.path.join(file_path_root_parent, "tmp", "scripts")
@@ -803,9 +803,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Audio Count") == "0")
                 ).then(pl.lit("Incomplete"))
                 .when(
-                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
-                ).then(pl.lit("Incomplete"))
-                .when(
                     (pl.col("Target Lang") != pl.col("Audio 1 Lang"))
                 ).then(pl.lit("Incomplete"))
                 .when(
@@ -1022,9 +1019,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     )
                 ).then(pl.lit(FileAction.TRANSCODE.value))
                 .when(
-                    (pl.col("File Version") != "Merged") &
-                    (pl.col("File Version") != "Ignored") &
-                    (pl.col("File Size") == "Small")
+                    (
+                            (pl.col("File Version") != "Merged") &
+                            (pl.col("File Version") != "Ignored") &
+                            (pl.col("File Size") == "Small")
+                    ) |
+                    (
+                        (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
+                    )
                 ).then(pl.lit(FileAction.UPSCALE.value))
                 .when(
                     (pl.col("File Version") != "Merged") &
@@ -1059,8 +1061,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
+    if verbose:
+        print("done", flush=True)
+    if metadata_merged_pl.height > 0:
         if verbose:
-            print("done", flush=True)
             print("#enriched-dataframe -> {}/*.sh ... ".format(file_path_root_target_relative), end='', flush=True)
         metadata_scripts_pl = metadata_merged_pl.filter(
             (pl.col("Media Directory").is_in(metadata_local_media_dirs))
@@ -1116,6 +1120,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.col("File Stem"),
                 ]).alias("Rename Script Directory"),
                 pl.concat_str([
+                    pl.col("File Directory"),
+                    pl.lit("/._downscale_"),
+                    pl.col("File Stem"),
+                ]).alias("Downscale Script Directory"),
+                pl.concat_str([
+                    pl.col("File Directory"),
+                    pl.lit("/._merge_"),
+                    pl.col("File Stem"),
+                ]).alias("Merge Script Directory"),
+                pl.concat_str([
                     pl.col("File Stem"),
                     pl.lit(TOKEN_TRANSCODE + "_"),
                     pl.col("Target Quality").str.to_uppercase(),
@@ -1136,6 +1150,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.col("Rename Script Directory"),
                     pl.lit("/rename.sh"),
                 ]).alias("Rename Script File"),
+                pl.concat_str([
+                    pl.col("Downscale Script Directory"),
+                    pl.lit("/downscale.sh"),
+                ]).alias("Downscale Script File"),
+                pl.concat_str([
+                    pl.col("Merge Script Directory"),
+                    pl.lit("/merge.sh"),
+                ]).alias("Merge Script File"),
             ]
         ).with_columns(
             [
@@ -1339,50 +1361,59 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 _set_permissions(script_global_path, 0o750)
 
         for script in MEDIA_FILE_SCRIPTS:
-            _write_scripts("{}.sh".format(script),
-                           metadata_scripts_pl.filter(
-                               (
-                                       (script == "reformat") &
-                                       (file_path_root_is_nested) &
-                                       (pl.col("File Version") == "Original")
-                               ) |
-                               (pl.col("File Action").str.ends_with(script.title()))
-                           ).select(
-                               [
-                                   "{} Script File".format(script.title()),
-                                   "{} Script Directory".format(script.title()),
-                                   "{} Script Source".format(script.title() if script != "reformat" else "Transcode")
-                               ]
-                           ).rows())
+            script_metadata = [
+                "{} Script File".format(script.title()),
+                "{} Script Directory".format(script.title()),
+                "{} Script Source".format(script.title() if script != "reformat" else "Transcode")
+            ]
+            if all(_script_metadata in metadata_scripts_pl.schema for _script_metadata in script_metadata):
+                _write_scripts("{}.sh".format(script),
+                               metadata_scripts_pl.filter(
+                                   (
+                                           (script == "reformat") &
+                                           (file_path_root_is_nested) &
+                                           (pl.col("File Version") == "Original")
+                                   ) |
+                                   (pl.col("File Action").str.ends_with(script.title()))
+                               ).select(script_metadata).rows())
         if verbose:
             print("done", flush=True)
+    if metadata_merged_pl.height == 0:
+        metadata_merged_pl = pl.DataFrame(schema={
+            "File Name": pl.String,
+            "File Action": pl.String,
+            "Media Type": pl.String,
+            "Metadata Loaded": pl.String,
+        })
+    else:
         metadata_merged_pl = metadata_merged_pl.select([
             column.name for column in metadata_merged_pl \
             if not (column.null_count() == metadata_merged_pl.height)
         ])
-        metadata_summary_pl = pl.concat([
-            metadata_merged_pl.group_by(["File Action"]).agg(pl.col("File Name").count().alias("File Count")),
-            metadata_merged_pl.group_by(["Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
-            metadata_merged_pl.group_by(["File Action", "Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
-        ], how="diagonal_relaxed")
-        metadata_summary_pl = pl.concat([
-            metadata_summary_pl,
-            metadata_summary_pl.filter(pl.col("Media Type").is_null()).select(pl.sum("File Count"))
-        ], how="diagonal_relaxed") \
-            .select(["File Action", "Media Type", "File Count"]) \
-            .sort(["File Action", "Media Type"], nulls_last=True)
-        metadata_summary_pl = metadata_summary_pl.join(
-            pl.DataFrame([{
-                "File Action": file_action,
-                "Media Type": media_type,
-                "File Count": 0
-            } for file_action in [None] + [_file_action.value for _file_action in FileAction] \
-                for media_type in (None, "movies", "series")]
-            ), on=["File Action", "Media Type"], how="right", join_nulls=True) \
-            .select(["File Action", "Media Type", "File Count"]) \
-            .sort(["File Action", "Media Type"], nulls_last=True) \
-            .fill_null(0)
-        if verbose:
+    metadata_summary_pl = pl.concat([
+        metadata_merged_pl.group_by(["File Action"]).agg(pl.col("File Name").count().alias("File Count")),
+        metadata_merged_pl.group_by(["Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
+        metadata_merged_pl.group_by(["File Action", "Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
+    ], how="diagonal_relaxed")
+    metadata_summary_pl = pl.concat([
+        metadata_summary_pl,
+        metadata_summary_pl.filter(pl.col("Media Type").is_null()).select(pl.sum("File Count"))
+    ], how="diagonal_relaxed") \
+        .select(["File Action", "Media Type", "File Count"]) \
+        .sort(["File Action", "Media Type"], nulls_last=True)
+    metadata_summary_pl = metadata_summary_pl.join(
+        pl.DataFrame([{
+            "File Action": file_action,
+            "Media Type": media_type,
+            "File Count": 0
+        } for file_action in [None] + [_file_action.value for _file_action in FileAction] \
+            for media_type in (None, "movies", "series")]
+        ), on=["File Action", "Media Type"], how="right", join_nulls=True) \
+        .select(["File Action", "Media Type", "File Count"]) \
+        .sort(["File Action", "Media Type"], nulls_last=True) \
+        .fill_null(0)
+    if verbose:
+        if metadata_merged_pl.height > 0:
             print("#metadata-delta ... ")
             _print_df(
                 metadata_merged_pl \
@@ -1391,8 +1422,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                     .fill_null("")
             )
-            print("#metadata-summary ... ")
-            _print_df(metadata_summary_pl.fill_null(""))
+        print("#metadata-summary ... ")
+        _print_df(metadata_summary_pl.fill_null(""))
     if "Metadata Loaded" in metadata_merged_pl.columns:
         metadata_merged_pl = metadata_merged_pl.drop("Metadata Loaded")
     _print_message(_message="done", _header=not verbose, _footer=False)
@@ -1413,7 +1444,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 .df_to_sheet(metadata_summary_pl.to_pandas(use_pyarrow_extension_array=True),
                              sheet="Summary", replace=True, index=False, add_filter=True)
             print("done", flush=True)
-    return files_analysed
+    metadata_summary_categories = {}
+    for metadata_summary_category in metadata_summary_pl.filter(
+            ~pl.col("File Action").is_null() &
+            pl.col("Media Type").is_null()
+    ).select("File Action", "File Count").to_dicts():
+        metadata_summary_categories[metadata_summary_category["File Action"]] = metadata_summary_category["File Count"]
+    return files_analysed, metadata_summary_categories
 
 
 def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
@@ -1528,6 +1565,16 @@ def _print_df(data_df):
         print(data_df)
 
 
+def get_file_actions_dict(rename=0, delete=0, merge=0, reformat=0, transcode=0, upscale=0, downscale=0, nothing=0):
+    files_action = {_file_action.value: 0 for _file_action in FileAction}
+    for var in vars().copy():
+        if var != files_action:
+            for _file_action in FileAction:
+                if _file_action.value.endswith(var.title()):
+                    files_action[_file_action.value] = vars()[var]
+    return files_action
+
+
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
     argument_parser.add_argument("--verbose", default=False, action="store_true")
@@ -1540,4 +1587,4 @@ if __name__ == "__main__":
         arguments.sheetguid,
         arguments.clean,
         arguments.verbose
-    ) < 0 else 0)
+    )[0] < 0 else 0)

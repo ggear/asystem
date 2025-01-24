@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 
-def _rename(file_path_root, verbose=False):
+def _process(file_path_root, verbose=False):
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
         return -1
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     argument_parser.add_argument("--verbose", default=False, action="store_true")
     argument_parser.add_argument("directory")
     arguments = argument_parser.parse_args()
-    sys.exit(1 if _rename(
+    sys.exit(1 if _process(
         Path(arguments.directory).absolute().as_posix(),
         arguments.verbose,
     ) < 0 else 0)
