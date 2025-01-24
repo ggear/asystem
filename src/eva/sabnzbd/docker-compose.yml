@@ -10,7 +10,7 @@ services:
       - PUID=0
       - PGID=0
     volumes:
-      - ${SERVICE_DATA_DIR}:/config
+      - ${SERVICE_DATA_DIR}/sabnzbd.ini:/config/sabnzbd.ini
       - ${SABNZBD_SHARE_DIR}/enqueued:/downloads/enqueued
       - ${SABNZBD_SHARE_DIR}/finished:/downloads/finished
       - ${SABNZBD_SHARE_DIR}/staging:/downloads/staging
