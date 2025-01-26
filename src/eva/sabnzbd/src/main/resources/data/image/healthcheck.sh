@@ -10,10 +10,4 @@ else
   CURL_CMD="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-if STATUS="$(${CURL_CMD} "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" &&
-  [ "$(jq -er .orgs <<<"${STATUS}")" -eq 2 ] &&
-  [ "$(jq -er .dashboards <<<"${STATUS}")" -ge "$(($(find /asystem/etc/dashboards \( -path "*/public/*" -o -path "*/private/*" \) -name "graph_*\.jsonnet" | wc -l) + 8))" ]; then
-  return 0
-else
-  return 1
-fi
+if STATUS="$(curl -sf --connect-timeout 2 --max-time 2 "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" && [ "$(jq -er '.status.paused' <<<"${STATUS}")" == "false" ] && [ "$(jq -er '[.status.servers[].serveractiveconn] | add' <<<"${STATUS}")" -gt 0 ]; then exit 0; else exit 1; fi

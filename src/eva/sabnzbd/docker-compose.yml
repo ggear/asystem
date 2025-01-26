@@ -20,6 +20,13 @@ services:
       - ${SABNZBD_SHARE_DIR}/staging:/downloads/staging
     ports:
       - ${SABNZBD_HTTP_PORT}:8080
+    healthcheck:
+      test: if STATUS="$(curl -sf --connect-timeout 2 --max-time 2 "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" && [ "$(jq -er '.status.paused' <<<"${STATUS}")" == "false" ] && [ "$(jq -er '[.status.servers[].serveractiveconn] | add' <<<"${STATUS}")" -gt 0 ]; then exit 0; else exit 1; fi
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     logging:
       driver: "json-file"
       options:
