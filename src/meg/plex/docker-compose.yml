@@ -1,8 +1,7 @@
-# https://forums.plex.tv/t/plex-media-server/30447/630
 services:
   plex:
+    image: plex:${SERVICE_VERSION_ABSOLUTE}
     container_name: plex
-    image: linuxserver/plex:1.41.2
     init: false
     restart: ${SERVICE_RESTART}
     environment:
@@ -10,6 +9,8 @@ services:
       - PUID=0
       - PGID=0
       - VERSION=docker
+      - PLEX_SERVICE_PROD
+      - PLEX_HTTP_PORT
       - PLEX_CLAIM
       - PLEX_TOKEN
     volumes:
@@ -17,7 +18,19 @@ services:
       - ${SERVICE_DATA_DIR}/transcode:/transcode
       - ${PLEX_SHARE_DIR}:${PLEX_SHARE_DIR}
     network_mode: host
+    healthcheck:
+      test: /asystem/etc/healthcheck.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+      start_interval: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
     deploy:
       resources:
         limits:
-          memory: 5G
+          memory: 2G

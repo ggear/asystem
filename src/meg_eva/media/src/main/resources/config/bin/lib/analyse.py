@@ -1353,9 +1353,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         script_local_path = _localise_path(script_local_row[0], file_path_root)
                         with open(script_local_path, 'w') as script_local_file:
                             script_local_file.write(script_local_row[2])
+                            script_local_file.flush()
                         _set_permissions(script_local_path, 0o750)
             finally:
                 if not file_path_root_is_nested and script_global_file is not None:
+                    script_global_file.flush()
                     script_global_file.close()
             if not file_path_root_is_nested:
                 _set_permissions(script_global_path, 0o750)
@@ -1376,6 +1378,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                    ) |
                                    (pl.col("File Action").str.ends_with(script.title()))
                                ).select(script_metadata).rows())
+        os.sync()
         if verbose:
             print("done", flush=True)
     if metadata_merged_pl.height == 0:

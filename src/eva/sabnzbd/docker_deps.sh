@@ -26,6 +26,10 @@ function echo_package_install_commands {
   [[ $PKG == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
   ASYSTEM_PACKAGES_BASE=(
     bash
+    less
+    curl
+    vim
+    jq
   )
   ASYSTEM_PACKAGES_BUILD=(
     bash
@@ -40,6 +44,10 @@ function echo_package_install_commands {
   cat <<EOF >"/tmp/base_image_install.sh"
 ASYSTEM_PACKAGES_BASE=(
     bash
+    less
+    curl
+    vim
+    jq
 )
 ASYSTEM_PACKAGES_BUILD=(
     bash
