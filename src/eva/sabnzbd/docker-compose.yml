@@ -9,6 +9,10 @@ services:
       - TZ=Australia/Perth
       - PUID=0
       - PGID=0
+      - SABNZBD_SERVICE_PROD
+      - SABNZBD_HTTP_PORT
+      - SABNZBD_API_KEY
+      - SABNZBD_NZB_KEY
     volumes:
       - ${SERVICE_DATA_DIR}:/config
       - ${SABNZBD_SHARE_DIR}/enqueued:/downloads/enqueued
