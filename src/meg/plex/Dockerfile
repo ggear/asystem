@@ -1,5 +1,5 @@
-# https://forums.plex.tv/t/plex-media-server/30447/630
-FROM linuxserver/plex:1.41.2 AS image_upstream
+# https://forums.plex.tv/t/plex-media-server/30447
+FROM linuxserver/plex:1.41.3 AS image_upstream
 
 FROM image_upstream AS image_base
 USER root
