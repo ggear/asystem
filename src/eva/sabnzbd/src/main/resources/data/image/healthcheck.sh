@@ -22,7 +22,7 @@ function alive() {
 function ready() {
   if STATUS="$(${CURL_CMD} "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" &&
     [ "$(jq -er '.status.paused' <<<"${STATUS}")" == "false" ] &&
-    [ "$(jq -er '[.status.servers[].serveractiveconn] | add' <<<"${STATUS}")" -gt 0 ]; then
+    [ "$(jq -er '[.status.servers[].servertotalconn] | add' <<<"${STATUS}")" -gt 0 ]; then
     return 0
   else
     return 1

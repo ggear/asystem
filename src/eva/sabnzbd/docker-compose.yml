@@ -1,7 +1,6 @@
 services:
   sabnzbd:
-    # https://sabnzbd.org/downloads#
-    image: linuxserver/sabnzbd:4.4.1
+    image: sabnzbd:${SERVICE_VERSION_ABSOLUTE}
     container_name: sabnzbd
     init: false
     restart: ${SERVICE_RESTART}
@@ -21,11 +20,11 @@ services:
     ports:
       - ${SABNZBD_HTTP_PORT}:8080
     healthcheck:
-      test: [ "CMD-SHELL", "if [ \"`echo \\\"SELECT ACCOUNT_STATUS FROM DBA_USERS WHERE USERNAME = 'ANONYMOUS' AND ACCOUNT_STATUS = 'EXPIRED';\\\"|/u01/app/oracle/product/12.1.0/xe/bin/sqlplus -S sys/oracle as sysdba|grep ACCOUNT_STATUS`\" = \"ACCOUNT_STATUS\" ];then true;else false;fi" ]
+      test: /asystem/etc/healthcheck.sh
       interval: 2m
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 60s
       start_interval: 10s
     logging:
       driver: "json-file"
