@@ -21,7 +21,7 @@ services:
     ports:
       - ${SABNZBD_HTTP_PORT}:8080
     healthcheck:
-      test: 'if STATUS="$(curl -sf --connect-timeout 2 --max-time 2 "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" && [ "$(jq -er ".status.paused" <<<"${STATUS}")" == "false" ] && [ "$(jq -er "[.status.servers[].serveractiveconn] | add" <<<"${STATUS}")" -gt 0 ]; then exit 0; else exit 1; fi'
+      test: [ "CMD-SHELL", "if [ \"`echo \\\"SELECT ACCOUNT_STATUS FROM DBA_USERS WHERE USERNAME = 'ANONYMOUS' AND ACCOUNT_STATUS = 'EXPIRED';\\\"|/u01/app/oracle/product/12.1.0/xe/bin/sqlplus -S sys/oracle as sysdba|grep ACCOUNT_STATUS`\" = \"ACCOUNT_STATUS\" ];then true;else false;fi" ]
       interval: 2m
       timeout: 10s
       retries: 3
