@@ -22,6 +22,11 @@ function alive() {
 function ready() {
   if READY="$(${CURL_CMD} "http://${PLEX_SERVICE_PROD}:${PLEX_HTTP_PORT}/identity")" &&
     [ "$(xq -e '/MediaContainer/@claimed' <<<"${READY}")" == "1" ]; then
+    for SHARE in /share/*; do
+      if [ $(ls -l $SHARE | grep -v '^total' | wc -l) -eq 0 ]; then
+        return 1
+      fi
+    done
     return 0
   else
     return 1
