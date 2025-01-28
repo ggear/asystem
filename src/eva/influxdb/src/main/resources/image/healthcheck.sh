@@ -11,7 +11,7 @@ else
 fi
 
 function alive() {
-  if ALIVE=$(influx ping --host http://${INFLUXDB_SERVICE_PROD}:${INFLUXDB_HTTP_PORT} 2>&1) &&
+  if ALIVE=$(influx ping --host http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT} 2>&1) &&
     [ "${ALIVE}" == "OK" ]; then
     return 0
   else
@@ -20,7 +20,7 @@ function alive() {
 }
 
 function ready() {
-  if [ "$(influx ping --host http://${INFLUXDB_SERVICE_PROD}:${INFLUXDB_HTTP_PORT})" == "OK" ] &&
+  if [ "$(influx ping --host http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT})" == "OK" ] &&
     [ "$(${CURL_CMD} "http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT}/query" --user "${INFLUXDB_USER_PRIVATE}:${INFLUXDB_TOKEN}" --data-urlencode "db=${INFLUXDB_BUCKET_HOME_PUBLIC}" --data-urlencode "q=SELECT count(*) FROM a_non_existent_metric WHERE time >= now() - 15m" | jq -er .results[0].statement_id)" == "0" ] &&
     [ "$(${CURL_CMD} "http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT}/query" --user "${INFLUXDB_USER_PRIVATE}:${INFLUXDB_TOKEN}" --data-urlencode "db=${INFLUXDB_BUCKET_HOME_PRIVATE}" --data-urlencode "q=SELECT count(*) FROM a_non_existent_metric WHERE time >= now() - 15m" | jq -er .results[0].statement_id)" == "0" ] &&
     [ "$(${CURL_CMD} "http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT}/query" --user "${INFLUXDB_USER_PRIVATE}:${INFLUXDB_TOKEN}" --data-urlencode "db=${INFLUXDB_BUCKET_DATA_PUBLIC}" --data-urlencode "q=SELECT count(*) FROM a_non_existent_metric WHERE time >= now() - 15m" | jq -er .results[0].statement_id)" == "0" ] &&

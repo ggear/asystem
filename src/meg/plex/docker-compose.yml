@@ -9,7 +9,7 @@ services:
       - PUID=0
       - PGID=0
       - VERSION=docker
-      - PLEX_SERVICE_PROD
+      - PLEX_SERVICE
       - PLEX_HTTP_PORT
       - PLEX_CLAIM
       - PLEX_TOKEN
