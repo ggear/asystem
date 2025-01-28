@@ -11,7 +11,7 @@ RUN apk update && \
     apk cache clean
 
 FROM image_base AS image_build
-COPY src/.py_deps.txt /asystem/
+COPY src/main/python/.py_deps.txt /asystem/
 RUN (python3 -m ensurepip 2> /dev/null || true) && \
     pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip && \
     pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/.py_deps.txt && \

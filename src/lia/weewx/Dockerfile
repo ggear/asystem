@@ -17,7 +17,7 @@ RUN \
 
 FROM image_base AS image_build
 COPY \
-  src/.py_deps.txt \
+  src/main/python/.py_deps.txt \
   src/build/resources/weewx* \
   target/package/main/resources/config/weewx.conf \
   src/main/resources/apache2.conf \

@@ -33,7 +33,7 @@ RUN rm -rf /tmp/*
 FROM image_build AS image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
-COPY src/.py_deps.txt /asystem
+COPY src/main/python/.py_deps.txt /asystem
 RUN cat /asystem/.py_deps.txt | xargs -n 1 /usr/local/bin/pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir && rm -rf /asystem/reqs_run.txt
 COPY src/main/python/ /asystem/
 

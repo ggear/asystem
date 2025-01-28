@@ -18,11 +18,11 @@ x-common: &common
     - INFLUXDB_KEY
     - INFLUXDB_TOKEN
     - INFLUXDB_TOKEN_PUBLIC_V1
-    - INFLUXDB_TOKEN_PUBLIC_V2
+    - INFLUXDB_TOKEN_PRIVATE_V1
   volumes:
-      - ${SERVICE_DATA_DIR}:/asystem/mnt
-      - ${SERVICE_DATA_DIR}:/var/lib/influxdb2:${INFLUXDB_MOUNT}
-      - ${SERVICE_DATA_DIR}/influx-configs:/etc/influxdb2/influx-configs
+    - ${SERVICE_DATA_DIR}:/asystem/mnt
+    - ${SERVICE_DATA_DIR}:/var/lib/influxdb2:${INFLUXDB_MOUNT}
+    - ${SERVICE_DATA_DIR}/influx-configs:/etc/influxdb2/influx-configs
   logging:
     driver: "json-file"
     options:
@@ -35,6 +35,13 @@ services:
     restart: ${SERVICE_RESTART}
     ports:
       - ${INFLUXDB_HTTP_PORT}:${INFLUXDB_HTTP_PORT}
+    healthcheck:
+      test: /asystem/etc/healthcheck.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     deploy:
       resources:
         limits:

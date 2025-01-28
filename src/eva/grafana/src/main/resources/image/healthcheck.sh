@@ -11,8 +11,7 @@ else
 fi
 
 function alive() {
-  if ALIVE="$(${CURL_CMD} "${GRAFANA_URL}/api/health" | jq -er .database | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" &&
-    [ "${ALIVE}" == "ok" ]; then
+  if [ "$(${CURL_CMD} "${GRAFANA_URL}/api/health" | jq -er .database | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" == "ok" ]; then
     return 0
   else
     return 1

@@ -16,7 +16,7 @@ RUN \
     apt-get -y --no-install-recommends --allow-downgrades install build-essential=12.9 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/config && mkdir -p /asystem/data
-COPY src/.py_deps.txt /asystem/bin/
+COPY src/main/python/.py_deps.txt /asystem/bin/
 COPY src/main/resources/config/ /asystem/config/
 
 FROM image_base AS image_build

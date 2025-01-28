@@ -42,7 +42,7 @@ RUN cd /tmp && \
 FROM image_build AS image_runtime
 RUN mkdir -p /asystem/runtime
 WORKDIR /asystem/runtime
-COPY src/main/python/ src/.py_deps.txt /asystem/
+COPY src/main/python/ src/main/python/.py_deps.txt /asystem/
 RUN pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/.py_deps.txt && \
     mkdir -p /root/.config && \
     mkdir -p /etc/telegraf/.config

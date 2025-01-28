@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! influx ping --host http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT} >/dev/null 2>&1; do
+while ! "${ASYSTEM_HOME}/healthcheck.sh" alive; do
   echo "Waiting for service to come alive ..." && sleep 1
 done
 
@@ -91,7 +91,7 @@ influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_PRIVATE} \
   --write-bucket ${BUCKET_ID_DATA_PUBLIC} \
   --write-bucket ${BUCKET_ID_DATA_PRIVATE} \
   --write-bucket ${BUCKET_ID_HOST_PRIVATE} \
-  --password ${INFLUXDB_TOKEN} -d "Read/Write all buckets" -t ${INFLUXDB_TOKEN}
+  --password ${INFLUXDB_TOKEN_PRIVATE_V1} -d "Read/Write all buckets" -t ${INFLUXDB_TOKEN}
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
