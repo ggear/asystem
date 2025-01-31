@@ -5,9 +5,9 @@ x-common: &common
     - TZ=Australia/Perth
     - APPDAEMON_SERVICE
     - APPDAEMON_HTTP_PORT
-    - HA_URL=
-    - TOKEN=
-    - DASH_URL=
+    - HA_URL=http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}
+    - TOKEN=${HOMEASSISTANT_API_TOKEN}
+    - DASH_URL=http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
   volumes:
     - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
   #    - ${SERVICE_DATA_DIR}/config:/conf
