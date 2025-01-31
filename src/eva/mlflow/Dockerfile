@@ -18,6 +18,7 @@ RUN \
     apt-get -y --no-install-recommends --allow-downgrades install jq=1.6-2.1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 USER root
