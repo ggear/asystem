@@ -6,5 +6,6 @@ grafana
 vernemq
 influxdb
 mlserver
+appdaemon
 zigbee2mqtt
 homeassistant
