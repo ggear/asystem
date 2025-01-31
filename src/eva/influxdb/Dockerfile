@@ -1,4 +1,4 @@
-# https://github.com/influxdata/influxdb/releases
+# Notes: https://github.com/influxdata/influxdb/releases
 FROM influxdb:2.7.11-alpine AS image_upstream
 
 FROM image_upstream AS image_base

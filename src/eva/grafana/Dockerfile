@@ -1,4 +1,4 @@
-# https://github.com/grafana/grafana/releases
+# Notes: https://github.com/grafana/grafana/releases
 FROM grafana/grafana:11.4.0 AS image_upstream
 
 ARG ASYSTEM_GRIZZLY_VERSION

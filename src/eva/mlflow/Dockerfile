@@ -1,7 +1,7 @@
 ARG ASYSTEM_PYTHON_VERSION="latest"
 ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=""
 
-  # Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
+# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 FROM python:${ASYSTEM_PYTHON_VERSION}${ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION} AS image_upstream
 
 ARG ASYSTEM_MLFLOW_VERSION
