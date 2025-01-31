@@ -1,4 +1,5 @@
 x-common: &common
+  # Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
   image: influxdb:${SERVICE_VERSION_ABSOLUTE}
   init: true
   environment:

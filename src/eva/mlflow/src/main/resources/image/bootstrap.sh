@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! curl -sf http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT} >/dev/null 2>&1; do
+while ! "${ASYSTEM_HOME}/healthcheck.sh" alive; do
   echo "Waiting for service to come alive ..." && sleep 1
 done
 

@@ -1,4 +1,4 @@
-mlflow==2.18.0
+mlflow==v2.20.1
 scipy==1.14.1
 numpy==1.26.4
 polars==1.6.0

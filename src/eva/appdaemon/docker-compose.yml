@@ -1,6 +1,6 @@
 x-common: &common
   # Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
-  image: mlflow:${SERVICE_VERSION_ABSOLUTE}
+  image: appdaemon:${SERVICE_VERSION_ABSOLUTE}
   init: true
   environment:
     - TZ=Australia/Perth
@@ -16,8 +16,8 @@ x-common: &common
       max-file: "5"
       max-size: "100m"
 services:
-  mlflow:
-    container_name: mlflow
+  appdaemon:
+    container_name: appdaemon
     <<: *common
     restart: ${SERVICE_RESTART}
     volumes:
@@ -36,8 +36,8 @@ services:
       resources:
         limits:
           memory: 2G
-  mlflow_bootstrap:
-    container_name: mlflow_bootstrap
+  appdaemon_bootstrap:
+    container_name: appdaemon_bootstrap
     <<: *common
     restart: 'no'
     volumes:
@@ -47,4 +47,4 @@ services:
     command:
       - /bootstrap/bootstrap.sh
     depends_on:
-      - mlflow
+      - appdaemon
