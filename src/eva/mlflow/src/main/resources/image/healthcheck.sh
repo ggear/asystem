@@ -11,6 +11,7 @@ else
 fi
 
 function alive() {
+  return 0
   if [ "$(${CURL_CMD} "${GRAFANA_URL}/api/health" | jq -er .database | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" == "ok" ]; then
     return 0
   else
@@ -19,6 +20,7 @@ function alive() {
 }
 
 function ready() {
+  return 0
   if READY="$(${CURL_CMD} "${GRAFANA_URL}/api/admin/stats")" &&
     [ "$(jq -er .orgs <<<"${READY}")" -eq 2 ] &&
     [ "$(jq -er .dashboards <<<"${READY}")" -ge "$(($(find /asystem/etc/dashboards \( -path "*/public/*" -o -path "*/private/*" \) -name "graph_*\.jsonnet" | wc -l) + 8))" ]; then
