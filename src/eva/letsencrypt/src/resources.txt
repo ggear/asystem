@@ -2,4 +2,4 @@
 ../install_pre.sh
 main/resources/pushcerts.sh
 main/resources/pushcerts.service
-main/resources/config/dnsrobocert/config.yml
+main/resources/data/dnsrobocert/config.yml
