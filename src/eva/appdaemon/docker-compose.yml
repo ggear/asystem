@@ -22,7 +22,7 @@ services:
     <<: *common
     restart: ${SERVICE_RESTART}
     ports:
-      - ${MLFLOW_HTTP_PORT}:5000
+      - ${APPDAEMON_HTTP_PORT}:${APPDAEMON_HTTP_PORT}
     healthcheck:
       test: /asystem/etc/healthcheck.sh
       interval: 2m
