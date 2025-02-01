@@ -14,8 +14,8 @@ admin:
 http:
   password: ${APPDAEMON_TOKEN}
   url: http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
-  ssl_certificate: /asystem/etc/certificate.pem
-  ssl_key: /asystem/etc/.key.pem
+#  ssl_certificate: /asystem/etc/certificate.pem
+#  ssl_key: /asystem/etc/.key.pem
   transport: ws
   headers:
     Access-Control-Allow-Origin: "*"
