@@ -12,11 +12,13 @@ api:
 admin:
   stats_update: none
 http:
-  url: http://appdaemon.janeandgraham.com:${APPDAEMON_HTTP_PORT}
   password: ${APPDAEMON_TOKEN}
+  url: http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
+  ssl_certificate: /asystem/etc/certificate.pem
+  ssl_key: /asystem/etc/.key.pem
+  transport: ws
   headers:
     Access-Control-Allow-Origin: "*"
-  transport: ws
 logs:
   main_log:
     filter_threshold: 1
