@@ -489,8 +489,8 @@ docker rm -vf "$CONTAINER_NAME"
                     while docker_image_tags_response_page < 3:
                         docker_image_tags_url = "https://hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size=100&page={}" \
                             .format(
-                            docker_image_metadata["namespace"],
-                            docker_image_metadata["repository"],
+                            docker_image_metadata["namespace"].strip(),
+                            docker_image_metadata["repository"].strip(),
                             docker_image_tags_response_page)
                         print("Getting docker image versions from [{}] ... ".format(docker_image_tags_url), end="", flush=True)
                         docker_image_tags_response = requests.get(docker_image_tags_url)

@@ -10,7 +10,12 @@ x-common: &common
     - DASH_URL=http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
   volumes:
     - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
+
+
+  # TODO: Implement
   #    - ${SERVICE_DATA_DIR}/config:/conf
+
+
   logging:
     driver: "json-file"
     options:

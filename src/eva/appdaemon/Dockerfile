@@ -1,5 +1,5 @@
 # Notes: https://github.com/AppDaemon/appdaemon/releases
-FROM  acockburn/appdaemon:4.4.2 AS image_upstream
+FROM acockburn/appdaemon:4.4.2 AS image_upstream
 
 FROM image_upstream AS image_base
 

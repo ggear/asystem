@@ -11,6 +11,7 @@ else
 fi
 
 function alive() {
+  # TODO: Implement
   if ALIVE="$(${CURL_CMD} "http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/health")" &&
     [ "${ALIVE}" == "OK" ]; then
     return 0
@@ -20,7 +21,7 @@ function alive() {
 }
 
 function ready() {
-  #  TODO: Provide implementation that relfects on models being served
+  # TODO: Implement
   if READY="$(${CURL_CMD} "http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/health")" &&
     [ "${READY}" == "OK" ]; then
     return 0
