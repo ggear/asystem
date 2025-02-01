@@ -11,9 +11,8 @@ else
 fi
 
 function alive() {
-  # TODO: Implement
-  if ALIVE="$(${CURL_CMD} "http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/health")" &&
-    [ "${ALIVE}" == "OK" ]; then
+  if ALIVE="$(${CURL_CMD} -LI "http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/aui/index.html" | head -n 1 | cut -d$' ' -f2)" &&
+    [ "${ALIVE}" == "200" ]; then
     return 0
   else
     return 1
@@ -21,9 +20,7 @@ function alive() {
 }
 
 function ready() {
-  # TODO: Implement
-  if READY="$(${CURL_CMD} "http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/health")" &&
-    [ "${READY}" == "OK" ]; then
+  if [ alive == "0" ]; then
     return 0
   else
     return 1
