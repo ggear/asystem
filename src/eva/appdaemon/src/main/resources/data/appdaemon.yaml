@@ -1,0 +1,19 @@
+appdaemon:
+  time_zone: CET
+  latitude: 51.725
+  longitude: 14.3434
+  elevation: 0
+  threads: '10'
+  api_key: ${APPDAEMON_API_TOKEN}
+  api_port: ${APPDAEMON_HTTP_API_PORT}
+  plugins:
+    HASS:
+      type: hass
+      ha_url: http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}
+      token: ${HOMEASSISTANT_API_TOKEN}
+http:
+  url: http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
+  password: ${APPDAEMON_TOKEN}
+api:
+admin:
+  stats_update: none

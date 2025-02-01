@@ -10,7 +10,6 @@ x-common: &common
     - MLFLOW_TRACKING_URI
     - MLFLOW_REPOSITORY_URI
   volumes:
-    - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
     - ${MLFLOW_DEFAULT_ARTIFACT_ROOT_SERVER}:${MLFLOW_DEFAULT_ARTIFACT_ROOT}
   logging:
     driver: "json-file"
@@ -41,6 +40,6 @@ services:
     restart: 'no'
     entrypoint: /bin/bash
     command:
-      - /bootstrap/bootstrap.sh
+      - /asystem/etc/bootstrap.sh
     depends_on:
       - mlflow

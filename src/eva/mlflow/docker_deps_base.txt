@@ -7,3 +7,4 @@ curl
 vim
 git
 jq
+build-essential

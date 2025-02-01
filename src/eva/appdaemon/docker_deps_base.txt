@@ -5,5 +5,4 @@ bash
 less
 curl
 vim
-git
 jq
