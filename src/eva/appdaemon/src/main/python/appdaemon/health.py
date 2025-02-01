@@ -6,5 +6,5 @@ class Health(hass.Hass):
         self.register_endpoint(self.health, "health")
         self.log("Initialised")
 
-    def health(self):
+    def health(self, body_json, url_args):
         return {"health": "OK"}, 200
