@@ -118,6 +118,7 @@ http {
             ip_key = "{}_IP".format(name.upper())
             port_key = "{}_HTTP_PORT".format(name.upper())
             host_public_key = "{}_HOST_PUBLIC".format(name.upper())
+            scheme_key = "{}_HTTP_SCHEME".format(name.upper())
             ws_context_key = "{}_HTTP_WS_CONTEXT".format(name.upper())
             console_context_key = "{}_HTTP_CONSOLE_CONTEXT".format(name.upper())
             if port_key in modules[name][1] and name != "nginx":
@@ -127,7 +128,7 @@ http {
                 for server_name in server_names:
                     conf_file.write("  " + """
   # {} server for [{}] and domain [{}.janeandgraham.com]
-  map $host ${}_url {{ default http://${{{}}}:{}; }}
+  map $host ${}_url {{ default {}${{{}}}:{}; }}
   server {{
     listen {};
     server_name {}.janeandgraham.com;
@@ -143,6 +144,7 @@ http {
                         name,
                         server_name,
                         name,
+                        modules[name][1][scheme_key] if scheme_key in modules[name][1] else "http://",
                         ip_key,
                         modules[name][1][port_key],
                         modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
