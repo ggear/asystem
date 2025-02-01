@@ -116,7 +116,7 @@ http {
   }
       """.strip() + "\n\n")
         for name in modules:
-            host_key = "{}_SERVICE".format(name.upper())
+            host_key = "{}_IP".format(name.upper())
             port_key = "{}_HTTP_PORT".format(name.upper())
             host_public_key = "{}_HOST_PUBLIC".format(name.upper())
             scheme_key = "{}_HTTP_SCHEME".format(name.upper())
