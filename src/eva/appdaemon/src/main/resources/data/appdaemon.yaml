@@ -3,7 +3,6 @@ appdaemon:
   latitude: 51.725
   longitude: 14.3434
   elevation: 0
-  threads: '10'
   plugins:
     HASS:
       type: hass

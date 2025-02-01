@@ -20,10 +20,8 @@ function alive() {
 }
 
 function ready() {
-
-#  curl -i -X POST -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/hello" -d '{"type": "Hello World Test"}'
-
-  if [ alive == "0" ]; then
+  if READY="$(${CURL_CMD} -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/health")" &&
+    [ "$(jq -er .health <<<"${READY}")" == "OK" ]; then
     return 0
   else
     return 1

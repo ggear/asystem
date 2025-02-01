@@ -3,5 +3,6 @@
 # Installed into development environment with no transitive dependencies.
 ###############################################################################
 
+hassapi==0.2.1
 mlserver==$MLSERVER_VERSION
 homeassistant==$HOMEASSISTANT_VERSION
