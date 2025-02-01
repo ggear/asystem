@@ -17,9 +17,9 @@ if __name__ == "__main__":
     env = load_env(DIR_ROOT)
     modules = load_modules()
 
-    write_certificates("nginx", join(DIR_ROOT, "src/main/resources/config"))
+    write_certificates("nginx", join(DIR_ROOT, "src/main/resources/data"))
 
-    conf_path = abspath(join(DIR_ROOT, "src/main/resources/config/nginx.conf"))
+    conf_path = abspath(join(DIR_ROOT, "src/main/resources/data/nginx.conf"))
     with open(conf_path, 'w') as conf_file:
         conf_file.write("""
 #######################################################################################
