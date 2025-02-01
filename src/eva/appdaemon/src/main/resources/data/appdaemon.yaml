@@ -12,7 +12,7 @@ api:
 admin:
   stats_update: none
 http:
-  url: http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
+  url: http://appdaemon.janeandgraham.com:${APPDAEMON_HTTP_PORT}
   password: ${APPDAEMON_TOKEN}
   headers:
     Access-Control-Allow-Origin: "*"
