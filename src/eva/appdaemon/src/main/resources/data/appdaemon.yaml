@@ -16,6 +16,7 @@ http:
   password: ${APPDAEMON_TOKEN}
   headers:
     Access-Control-Allow-Origin: "*"
+  transport: socketio
 logs:
   main_log:
     filter_threshold: 1
