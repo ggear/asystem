@@ -22,6 +22,7 @@ services:
     restart: ${SERVICE_RESTART}
     ports:
       - ${APPDAEMON_HTTP_PORT}:${APPDAEMON_HTTP_PORT}
+      - ${APPDAEMON_HTTP_API_PORT}:${APPDAEMON_HTTP_API_PORT}
     healthcheck:
       test: /asystem/etc/healthcheck.sh
       interval: 2m

@@ -20,6 +20,9 @@ function alive() {
 }
 
 function ready() {
+
+  #curl -i -X POST -H "x-ad-access: fred" -H "Content-Type: application/json" http://appdaemon.local.janeandgraham.com:32417/api/appdaemon/hello -d '{"type": "Hello World Test"}'
+
   if [ alive == "0" ]; then
     return 0
   else
