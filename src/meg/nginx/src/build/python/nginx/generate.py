@@ -129,7 +129,7 @@ http {
                 for server_name in server_names:
                     conf_file.write("  " + """
   # {} server for [{}] and domain [{}.janeandgraham.com]
-  map $host ${}_url {{ default {}${{{}}}:{}; }}
+  map $host ${}_url {{ default {}${}:{}; }}
   server {{
     listen {};
     server_name {}.janeandgraham.com;
