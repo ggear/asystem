@@ -6,7 +6,6 @@ x-common: &common
     - APPDAEMON_SERVICE
     - APPDAEMON_HTTP_PORT
     - APPDAEMON_TOKEN
-    - APPDAEMON_API_TOKEN
   volumes:
     - ${SERVICE_DATA_DIR}:/conf
   logging:
