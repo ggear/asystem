@@ -8,12 +8,14 @@ appdaemon:
       type: hass
       ha_url: http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}
       token: ${HOMEASSISTANT_API_TOKEN}
-http:
-  url: http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
-  password: ${APPDAEMON_TOKEN}
 api:
 admin:
   stats_update: none
+http:
+  url: http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
+  password: ${APPDAEMON_TOKEN}
+  headers:
+    Access-Control-Allow-Origin: "http://appdaemon.janeandgraham.com"
 logs:
   main_log:
     filter_threshold: 1
