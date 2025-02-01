@@ -1,5 +1,5 @@
 import hassapi as hass
-
+import json
 
 class HelloWorld(hass.Hass):
     def initialize(self):
@@ -9,5 +9,5 @@ class HelloWorld(hass.Hass):
 
     def my_callback(self, json_obj, cb_args):
         self.log(json_obj)
-        response = {"message": "Hello World"}
+        response = {"message": "Received: {}".format(json_obj)}
         return response, 200

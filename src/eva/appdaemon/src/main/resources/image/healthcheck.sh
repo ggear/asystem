@@ -21,7 +21,8 @@ function alive() {
 
 function ready() {
 
-  #curl -i -X POST -H "x-ad-access: fred" -H "Content-Type: application/json" http://appdaemon.local.janeandgraham.com:32417/api/appdaemon/hello -d '{"type": "Hello World Test"}'
+#  curl -i -X POST -H "x-ad-access: ${APPDAEMON_API_TOKEN}" -H "Content-Type: application/json" "http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_API_PORT}/api/appdaemon/hello" -d '{"type": "Hello World Test"}'
+#  curl -i -X POST -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "http://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/hello" -d '{"type": "Hello World Test"}'
 
   if [ alive == "0" ]; then
     return 0

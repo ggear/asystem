@@ -4,8 +4,8 @@ appdaemon:
   longitude: 14.3434
   elevation: 0
   threads: '10'
-  api_key: ${APPDAEMON_API_TOKEN}
-  api_port: ${APPDAEMON_HTTP_API_PORT}
+#  api_key: ${APPDAEMON_API_TOKEN}
+#  api_port: ${APPDAEMON_HTTP_API_PORT}
   plugins:
     HASS:
       type: hass
