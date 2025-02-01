@@ -116,12 +116,17 @@ http {
   }
       """.strip() + "\n\n")
         for name in modules:
-            host_key = "{}_IP".format(name.upper())
+            ip_key = "{}_IP".format(name.upper())
             port_key = "{}_HTTP_PORT".format(name.upper())
+            port_value = modules[name][1][port_key] if port_key in modules[name][1] else ""
             host_public_key = "{}_HOST_PUBLIC".format(name.upper())
-            scheme_key = "{}_HTTP_SCHEME".format(name.upper())
             ws_context_key = "{}_HTTP_WS_CONTEXT".format(name.upper())
+            scheme_key = "{}_HTTP_SCHEME".format(name.upper())
+            scheme_value = modules[name][1][scheme_key] if scheme_key in modules[name][1] else "http://"
             console_context_key = "{}_HTTP_CONSOLE_CONTEXT".format(name.upper())
+            console_context_value = modules[name][1][console_context_key] if console_context_key in modules[name][1] else ""
+            nginx_port_key = "NGINX_PORT_INTERNAL_HTTPS"
+            nginx_port_value = modules["nginx"][1][nginx_port_key]
             if port_key in modules[name][1] and name != "nginx":
                 server_names = [name]
                 if host_public_key in modules[name][1]:
@@ -145,13 +150,13 @@ http {
                         name,
                         server_name,
                         name,
-                        modules[name][1][scheme_key] if scheme_key in modules[name][1] else "http://",
-                        host_key,
-                        modules[name][1][port_key],
-                        modules["nginx"][1]["NGINX_PORT_INTERNAL_HTTPS"],
+                        scheme_value,
+                        ip_key,
+                        port_value,
+                        nginx_port_value,
                         server_name,
                         name,
-                        modules[name][1][console_context_key] if console_context_key in modules[name][1] else "",
+                        console_context_value,
                     ).strip() + "\n")
                     if ws_context_key in modules[name][1]:
                         conf_file.write("    " + """
