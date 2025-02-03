@@ -1,0 +1,33 @@
+{
+    "name": "Sonos Move",
+    "aliases": [
+        "Move"
+    ],
+    "measure_description": "Measured with utils/measure script",
+    "measure_device": "Kasa KP115",
+    "measure_method": "script",
+    "measure_settings": {
+        "SAMPLE_COUNT": 2,
+        "SLEEP_TIME": 1,
+        "VERSION": "v1.3.13:docker"
+    },
+    "calculation_enabled_condition": "{{ is_state('[[entity]]', 'playing') }}",
+    "calculation_strategy": "linear",
+    "device_type": "smart_speaker",
+    "linear_config": {
+        "calibrate": [
+            "10 -> 3.46",
+            "20 -> 3.67",
+            "30 -> 3.7",
+            "40 -> 3.88",
+            "50 -> 4.21",
+            "60 -> 4.74",
+            "70 -> 6.37",
+            "80 -> 10.05",
+            "90 -> 10.79",
+            "100 -> 13.18",
+            "0 -> 2.8"
+        ]
+    },
+    "standby_power": 2.6
+}
