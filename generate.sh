@@ -38,6 +38,10 @@ function pull_repo() {
         # git rebase upstream/master
         # git push --force
         # git push --tags --force
+        # git checkout ggear-mybranch
+        # git merge latest-tag
+        # git push --force
+        # git push --tags --force
 
       fi
     done
