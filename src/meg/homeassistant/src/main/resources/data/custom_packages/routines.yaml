@@ -14,21 +14,25 @@ input_boolean:
     initial: off
   #####################################################################################
 automation:
-  - id: routine_init
-    alias: "Routine: Run init code after startup"
-    mode: single
-    trigger:
-      - platform: homeassistant
-        event: start
-    action:
-      - service: system_log.write
-        data_template:
-          level: info
-          message: "Home Assistant has started!"
-      - service: switch.turn_on
-        target:
-          entity_id:
-            - switch.adaptive_lighting_sleep_mode_night
+
+  # TODO: Hack, disable for time being
+  #  - id: routine_init
+  #    alias: "Routine: Run init code after startup"
+  #    mode: single
+  #    trigger:
+  #      - platform: homeassistant
+  #        event: start
+  #    action:
+  #      - service: system_log.write
+  #        data_template:
+  #          level: info
+  #          message: "Home Assistant has started!"
+  #      - service: switch.turn_on
+  #        target:
+  #          entity_id:
+  #            - switch.adaptive_lighting_sleep_mode_night
+
+
   #####################################################################################
   - id: routine_home_movie_on
     alias: "Routine: Put home into Movie mode"
