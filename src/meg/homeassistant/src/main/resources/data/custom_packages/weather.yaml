@@ -522,6 +522,7 @@ binary_sensor:
 #    workdays: [ mon, tue, wed, thu, fri ]
 #    excludes: [ sat, sun, holiday ]
 
+# TODO: Hack out automations
 #automation:
 #  - alias: 'Weather: Update BOM Icons'
 #    trigger:

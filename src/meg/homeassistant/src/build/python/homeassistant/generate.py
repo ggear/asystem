@@ -774,6 +774,7 @@ template:
                     metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace("_last", "").lower(),
                     metadata_contact_dict["unique_id"].replace("contact", "battery"),
                 ).strip() + "\n")
+# TODO: Hack out automations
 #             metadata_security_file.write("""
 # #######################################################################################
 # automation:
@@ -1126,6 +1127,7 @@ input_boolean:
                 metadata_lighting_dict["unique_id"],
                 metadata_lighting_dict["friendly_name"],
             ).strip() + "\n")
+# TODO: Hack out automations
 #         metadata_lighting_file.write("  " + """
 #   #####################################################################################
 # automation:
@@ -1339,6 +1341,7 @@ template:
                 metadata_diagnostic_dict["unique_id"].replace("template_", ""),
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("_percentage", ""),
             ).strip() + "\n")
+# TODO: Hack out automations
 #         metadata_diagnostic_file.write("""
 # #######################################################################################
 # input_boolean:
