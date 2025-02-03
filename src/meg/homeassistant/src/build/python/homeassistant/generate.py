@@ -608,6 +608,7 @@ template:
         ).strip() + "\n")
         metadata_media_file.write("""
 #######################################################################################
+# TODO: Wake on LAN seems to be broken
 #wake_on_lan:
 # webostv:
 #   host: 10.0.4.49

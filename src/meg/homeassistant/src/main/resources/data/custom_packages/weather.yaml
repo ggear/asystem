@@ -522,17 +522,18 @@ binary_sensor:
 #    workdays: [ mon, tue, wed, thu, fri ]
 #    excludes: [ sat, sun, holiday ]
 
-automation:
-  - alias: 'Weather: Update BOM Icons'
-    trigger:
-      - event: start
-        platform: homeassistant
-      - entity_id: sun.sun
-        platform: state
-        to: 'above_horizon'
-      - entity_id: sun.sun
-        platform: state
-        to: 'below_horizon'
-    action:
-      - service: homeassistant.update_entity
-        entity_id: sensor.bom_forecast_0, sensor.bom_forecast_1, sensor.bom_forecast_2, sensor.bom_forecast_3, sensor.bom_forecast_4, sensor.bom_forecast_5, sensor.bom_forecast_6
+# TODO: Broke 2025.1.4
+#automation:
+#  - alias: 'Weather: Update BOM Icons'
+#    trigger:
+#      - event: start
+#        platform: homeassistant
+#      - entity_id: sun.sun
+#        platform: state
+#        to: 'above_horizon'
+#      - entity_id: sun.sun
+#        platform: state
+#        to: 'below_horizon'
+#    action:
+#      - service: homeassistant.update_entity
+#        entity_id: sensor.bom_forecast_0, sensor.bom_forecast_1, sensor.bom_forecast_2, sensor.bom_forecast_3, sensor.bom_forecast_4, sensor.bom_forecast_5, sensor.bom_forecast_6
