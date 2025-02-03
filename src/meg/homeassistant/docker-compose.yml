@@ -22,6 +22,8 @@ x-common: &common
     - WITHINGS_CONSUMERSECRET
   volumes:
     - ${SERVICE_DATA_DIR}:/config
+    - ${SERVICE_DATA_DIR}/bootstrap.sh:/asystem/etc/bootstrap.sh
+    - ${SERVICE_DATA_DIR}/healthcheck.sh:/asystem/etc/healthcheck.sh
   logging:
     driver: "json-file"
     options:
