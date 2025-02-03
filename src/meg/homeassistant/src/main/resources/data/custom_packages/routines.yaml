@@ -93,19 +93,19 @@ automation:
           repeat: all
         entity_id: media_player.parents_move
   #####################################################################################
-  - id: routine_home_sleep_cube
-    alias: "Routine: Put home to sleep via cube"
-    mode: restart
-    trigger:
-      platform: state
-      entity_id: sensor.home_cube_remote_action
-      to: "flip90"
-    condition: [ ]
-    action:
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.home_sleep
-      - service: input_boolean.turn_on
-        entity_id: input_boolean.home_sleep
+#  - id: routine_home_sleep_cube
+#    alias: "Routine: Put home to sleep via cube"
+#    mode: restart
+#    trigger:
+#      platform: state
+#      entity_id: sensor.home_cube_remote_action
+#      to: "flip90"
+#    condition: [ ]
+#    action:
+#      - service: input_boolean.turn_off
+#        entity_id: input_boolean.home_sleep
+#      - service: input_boolean.turn_on
+#        entity_id: input_boolean.home_sleep
   #####################################################################################
   - id: routine_home_wakeup
     alias: "Routine: Wake home up"
@@ -129,17 +129,17 @@ automation:
         data:
           entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
   #####################################################################################
-  - id: routine_home_wakeup_cube
-    alias: "Routine: Wake home up via cube"
-    mode: restart
-    trigger:
-      platform: state
-      entity_id: sensor.home_cube_remote_action
-      to: "shake"
-    condition: [ ]
-    action:
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.home_sleep
+#  - id: routine_home_wakeup_cube
+#    alias: "Routine: Wake home up via cube"
+#    mode: restart
+#    trigger:
+#      platform: state
+#      entity_id: sensor.home_cube_remote_action
+#      to: "shake"
+#    condition: [ ]
+#    action:
+#      - service: input_boolean.turn_off
+#        entity_id: input_boolean.home_sleep
   #####################################################################################
   - id: routine_home_reset
     alias: "Routine: Reset home to defaults"
