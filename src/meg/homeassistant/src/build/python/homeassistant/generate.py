@@ -68,8 +68,8 @@ def write_certificates(module_name, certificate_dir):
     os.makedirs(certificate_dir, exist_ok=True)
 
     certificate_dir_sub = "/"
-    if len(certificate_dir.split("/config")) > 1:
-        certificate_dir_sub = certificate_dir.split("/config")[1] + "/"
+    if len(certificate_dir.split("/data")) > 1:
+        certificate_dir_sub = certificate_dir.split("/data")[1] + "/"
 
     certificate_path = abspath(join(certificate_dir, "certificates.sh"))
     with open(certificate_path, 'w') as certificate_file:
@@ -90,7 +90,7 @@ if [ "$1" = "pull" ]; then
   echo "Pulling certificates ... done"
 elif [ "$1" = "push" ]; then
   echo "Pushing certificates ..."
-  for DIR in "/home/asystem/{}/latest{}" "/var/lib/asystem/install/{}/latest/config{}"; do
+  for DIR in "/home/asystem/{}/latest{}" "/var/lib/asystem/install/{}/latest/data{}"; do
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/.key.pem" "root@$3:$DIR"
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/certificate.pem" "root@$3:$DIR"
     echo "localhost:$ROOT_DIR -> $3:$DIR"
@@ -364,7 +364,7 @@ if __name__ == "__main__":
                     _add_energy_plug("{}_energy_{}".format(energy_group_unique_id, energy_meter_label),
                                      "{} {}".format(metadata_hass_row[energy_group], energy_meter_labels[energy_meter_label],
                                                     "mdi:counter"))
-    metadata_customise_path = abspath(join(DIR_ROOT, "src/main/resources/config/customise.yaml"))
+    metadata_customise_path = abspath(join(DIR_ROOT, "src/main/resources/data/customise.yaml"))
     with open(metadata_customise_path, 'w') as metadata_customise_file:
         metadata_customise_file.write("""
 ################################################################################
@@ -404,7 +404,7 @@ if __name__ == "__main__":
         (metadata_hass_df["compensation_curve"].str.len() > 0)
         ]
     metadata_compensation_dicts = [row.dropna().to_dict() for index, row in metadata_compensation_df.iterrows()]
-    metadata_compensation_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/compensation.yaml"))
+    metadata_compensation_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/compensation.yaml"))
     with open(metadata_compensation_path, 'w') as metadata_compensation_file:
         metadata_compensation_file.write("""
 #######################################################################################
@@ -462,7 +462,7 @@ compensation:
             metadata_control_init_dicts[metadata_hass_row["entity_namespace"]][metadata_control_init_state] = []
         metadata_control_init_dicts[metadata_hass_row["entity_namespace"]][metadata_control_init_state] \
             .append(metadata_hass_row["unique_id"])
-    metadata_control_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/control.yaml"))
+    metadata_control_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/control.yaml"))
     with open(metadata_control_path, 'w') as metadata_control_file:
         metadata_control_file.write("""
 #######################################################################################
@@ -503,7 +503,7 @@ tplink:
             (metadata_hass_df["device_suggested_area"].str.len() > 0)
             ]
         metadata_alias_dicts = [row.dropna().to_dict() for index, row in metadata_alias_df.iterrows()]
-        metadata_alias_path = abspath(join(DIR_ROOT, "src/main/resources/config/hass-entities.yaml"))
+        metadata_alias_path = abspath(join(DIR_ROOT, "src/main/resources/data/hass-entities.yaml"))
         with open(metadata_alias_path, 'w') as metadata_alias_file:
             metadata_alias_file.write("""
 #######################################################################################
@@ -550,7 +550,7 @@ tplink:
             (metadata_hass_df["unit_of_measurement"].str.len() > 0)
             ]
         metadata_proxy_dicts = [row.dropna().to_dict() for index, row in metadata_proxy_df.iterrows()]
-        metadata_proxy_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/proxy.yaml"))
+        metadata_proxy_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/proxy.yaml"))
         with open(metadata_proxy_path, 'w') as metadata_proxy_file:
             metadata_proxy_file.write("""
 #######################################################################################
@@ -591,7 +591,7 @@ template:
                                    for index, row in metadata_media_df.query("device_via_device == 'Google'").iterrows()]
     metadata_media_sonos_dicts = [row.dropna().to_dict()
                                   for index, row in metadata_media_df.query("device_via_device == 'Sonos'").iterrows()]
-    metadata_media_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/media.yaml"))
+    metadata_media_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/media.yaml"))
     with open(metadata_media_path, 'w') as metadata_media_file:
         metadata_media_file.write("""
 #######################################################################################
@@ -676,7 +676,7 @@ sonos:
             "states('binary_sensor.template_{}') == 'on'".format(metadata_lock_dict["unique_id"].replace("_lock", "_state"))
             for metadata_lock_dict in metadata_lock_dicts
         ])
-        metadata_security_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/security.yaml"))
+        metadata_security_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/security.yaml"))
         with open(metadata_security_path, 'w') as metadata_security_file:
             metadata_security_file.write("""
 #######################################################################################
@@ -1073,7 +1073,7 @@ automation:
             if metadata_lighting_dict["linked_entity"] not in metadata_lighting_automations_dicts:
                 metadata_lighting_automations_dicts[metadata_lighting_dict["linked_entity"]] = []
             metadata_lighting_automations_dicts[metadata_lighting_dict["linked_entity"]].append(metadata_lighting_dict)
-    metadata_lighting_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/lighting.yaml"))
+    metadata_lighting_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/lighting.yaml"))
     with open(metadata_lighting_path, 'w') as metadata_lighting_file:
         metadata_lighting_file.write("""
 #######################################################################################
@@ -1252,7 +1252,7 @@ automation:
         (metadata_hass_df["entity_group"] == "Diagnostics")
         ]
     metadata_diagnostic_dicts = [row.dropna().to_dict() for index, row in metadata_diagnostic_df.iterrows()]
-    metadata_diagnostic_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/diagnostics.yaml"))
+    metadata_diagnostic_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/diagnostics.yaml"))
     with open(metadata_diagnostic_path, 'w') as metadata_diagnostic_file:
         metadata_diagnostic_file.write("""
 #######################################################################################
@@ -1443,7 +1443,7 @@ automation:
                     metadata_electricity_single_group_dicts[dict_group4].append(dict)
             else:
                 metadata_electricity_ungrouped_dicts.append(dict)
-        metadata_electricity_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/electricity.yaml"))
+        metadata_electricity_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/electricity.yaml"))
         with open(metadata_electricity_path, 'w') as metadata_electricity_file:
             metadata_electricity_file.write("""
 #######################################################################################
@@ -1617,7 +1617,7 @@ template:
         (metadata_hass_df["icon"].str.len() > 0)
         ]
     metadata_action_dicts = [row.dropna().to_dict() for index, row in metadata_action_df.iterrows()]
-    metadata_action_path = abspath(join(DIR_ROOT, "src/main/resources/config/custom_packages/scripts.yaml"))
+    metadata_action_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/scripts.yaml"))
     with open(metadata_action_path, 'w') as metadata_action_file:
         metadata_action_file.write("""
 #######################################################################################
@@ -1668,7 +1668,7 @@ script:
             metadata_lovelace_group_domain_dicts[group][domain] = []
         metadata_lovelace_group_domain_dicts[group][domain].append(metadata_lovelace_dict)
     for group in metadata_lovelace_group_domain_dicts:
-        metadata_lovelace_path = abspath(join(DIR_ROOT, "src/main/resources/config/ui-lovelace", group.lower() + ".yaml"))
+        metadata_lovelace_path = abspath(join(DIR_ROOT, "src/main/resources/data/ui-lovelace", group.lower() + ".yaml"))
         with open(metadata_lovelace_path, 'w') as metadata_lovelace_file:
             metadata_lovelace_file.write("""
 ################################################################################

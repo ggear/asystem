@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 SERVICE_HOME=/home/asystem/homeassistant/latest
 SERVICE_INSTALL=/var/lib/asystem/install/homeassistant/latest

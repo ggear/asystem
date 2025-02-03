@@ -73,6 +73,18 @@ input_boolean.home_reset:
   name: Home Reset
   aliases: ['Home Reset Mode', 'Reset', 'Reset Mode']
   room: Abode
+input_boolean.edwin_wakeup:
+  name: Edwin Edwin Wakeup
+  aliases: ['Edwin  Edwin Wakeup Mode', 'Edwin Wakeup', ' Edwin Wakeup Mode']
+  room: Edwin
+input_boolean.edwin_playtime:
+  name: Edwin Edwin Playtime
+  aliases: ['Edwin  Edwin Playtime Mode', 'Edwin Playtime', ' Edwin Playtime Mode']
+  room: Edwin
+input_boolean.edwin_goodnight:
+  name: Edwin Edwin Goodnight
+  aliases: ['Edwin  Edwin Goodnight Mode', 'Edwin Goodnight', ' Edwin Goodnight Mode']
+  room: Edwin
 switch.kitchen_coffee_machine_plug:
   name: Kitchen Coffee Machine
   aliases: ['Coffee Machine']
