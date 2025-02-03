@@ -10,7 +10,7 @@ appdaemon:
       token: ${HOMEASSISTANT_API_TOKEN}
 api:
 admin:
-  stats_update: none
+hadashboard:
 http:
   password: ${APPDAEMON_TOKEN}
   url: https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
