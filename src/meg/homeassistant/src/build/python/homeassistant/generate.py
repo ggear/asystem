@@ -774,290 +774,290 @@ template:
                     metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace("_last", "").lower(),
                     metadata_contact_dict["unique_id"].replace("contact", "battery"),
                 ).strip() + "\n")
-            metadata_security_file.write("""
-#######################################################################################
-automation:
-  #####################################################################################
-  - id: routine_home_security_check_on
-    alias: "Routine: Attempt to put Home into Secure mode at regular intervals"
-    mode: queued
-    trigger:
-      - platform: time_pattern
-        minutes: "/15"
-    condition: [ ]
-    action:
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ states('input_boolean.home_security') == 'off' }}}}
-        then:
-          - service: input_boolean.turn_on
-            entity_id: input_boolean.home_security
-  #####################################################################################
-  - id: routine_home_security_on
-    alias: "Routine: Put Home into Secure mode"
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id: input_boolean.home_security
-        to: 'on'
-    condition: [ ]
-    action:
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ {} }}}}
-        then:
-          - service: input_boolean.turn_on
-            entity_id: input_boolean.home_security_triggered
-          - delay: '00:00:01'
-          - service: input_boolean.turn_off
-            entity_id: input_boolean.home_security
-        else:
-          - service: input_boolean.turn_off
-            entity_id: input_boolean.home_security_triggered
-      - service: input_boolean.turn_on
-        entity_id:
-            """.format(
-                metadata_locks_some_unlocked_template
-            ).strip() + "\n")
-            for metadata_lock_dict in metadata_lock_dicts:
-                metadata_security_file.write("          " + """
-          - input_boolean.{}                
-                """.format(
-                    metadata_lock_dict["unique_id"] + "_security",
-                ).strip() + "\n")
-            metadata_security_file.write("  " + """
-  #####################################################################################
-  - id: routine_home_security_off
-    alias: "Routine: Take Home out of Secure mode"
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id: input_boolean.home_security
-        to: 'off'
-    condition: [ ]
-    action:
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ states('input_boolean.home_security_triggered') == 'on' }}}}
-        then:
-          - service: input_boolean.turn_off
-            entity_id: input_boolean.home_security_triggered
-        else:
-          - service: input_boolean.turn_off
-            entity_id:
-            """.format(
-                metadata_locks_some_locked_template,
-            ).strip() + "\n")
-            for metadata_lock_dict in metadata_lock_dicts:
-                metadata_security_file.write("              " + """
-              - input_boolean.{}
-                """.format(
-                    metadata_lock_dict["unique_id"] + "_security",
-                ).strip() + "\n")
-            for metadata_lock_dict in metadata_lock_dicts:
-                metadata_security_file.write("  " + """
-  #####################################################################################
-  - id: routine_{}_all_on
-    alias: "Routine: {} all on"
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.{}
-        to: 'on'
-    condition: [ ]
-    action:
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ {} }}}}
-        then:
-          - service: input_boolean.turn_on
-            entity_id: input_boolean.home_security
-                """.format(
-                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
-                    metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
-                    "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
-                    metadata_state_all_on_template
-                ).strip() + "\n")
-                metadata_security_file.write("  " + """
-  #####################################################################################
-  - id: routine_{}_all_off
-    alias: "Routine: {} all off"
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.{}
-        to: 'off'
-    condition: [ ]
-    action:
-      - service: input_boolean.turn_on
-        entity_id: input_boolean.home_security_triggered
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.home_security
-                """.format(
-                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
-                    metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
-                    "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
-                    "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
-                ).strip() + "\n")
-            for metadata_lock_dict in metadata_lock_dicts:
-                metadata_security_file.write("  " + """
-  #####################################################################################
-  - id: routine_{}_security_on
-    alias: "Routine: Put {} into Secure mode"
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id: input_boolean.{}_security
-        to: 'on'
-    condition: [ ]
-    action:
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ states('lock.{}') == 'unlocked' }}}}
-        then:
-          - delay: '00:00:01'
-          - service: input_boolean.turn_off
-            entity_id: input_boolean.{}_security
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ states('binary_sensor.{}') == 'off' and states('lock.{}') == 'unlocked' }}}}
-        then:
-          - service: lock.lock
-            entity_id: lock.{}
-                """.format(
-                    metadata_lock_dict["unique_id"],
-                    metadata_lock_dict["unique_id"].replace("_", " ").title(),
-                    metadata_lock_dict["unique_id"],
-                    metadata_lock_dict["unique_id"],
-                    metadata_lock_dict["unique_id"],
-                    "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_sensor_contact_last"),
-                    metadata_lock_dict["unique_id"],
-                    metadata_lock_dict["unique_id"],
-                ).strip() + "\n")
-            for metadata_lock_dict in metadata_lock_dicts:
-                metadata_security_file.write("  " + """
-  #####################################################################################
-  - id: routine_{}_security_off
-    alias: "Routine: Take {} out of Secure mode"
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id: input_boolean.{}_security
-        to: 'off'
-    condition: [ ]
-    action:
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ states('lock.{}') == 'locked' }}}}
-        then:
-          - service: lock.unlock
-            entity_id: lock.{}
-                """.format(
-                    metadata_lock_dict["unique_id"],
-                    metadata_lock_dict["unique_id"].replace("_", " ").title(),
-                    metadata_lock_dict["unique_id"],
-                    metadata_lock_dict["unique_id"],
-                    metadata_lock_dict["unique_id"],
-                ).strip() + "\n")
-            for metadata_contact_dict in metadata_contact_dicts:
-                metadata_security_file.write("  " + """
-  #####################################################################################
-  - id: routine_{}_on
-    alias: "Routine: {} on"
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.{}
-        to: 'off'
-    condition: [ ]
-    action:
-      - delay: '00:00:01'
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ states('binary_sensor.{}') == 'off' and states('lock.{}') == 'unlocked' }}}}
-        then:
-          - service: lock.lock
-            entity_id: lock.{}
-      - delay: '00:00:01'
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ states('binary_sensor.{}') == 'off' and states('lock.{}') == 'unlocked' }}}}
-        then:
-          - service: lock.lock
-            entity_id: lock.{}
-      - delay: '00:00:01'
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ states('binary_sensor.{}') == 'off' and states('lock.{}') == 'unlocked' }}}}
-        then:
-          - service: lock.lock
-            entity_id: lock.{}
-                """.format(
-                    metadata_contact_dict["unique_id"],
-                    metadata_contact_dict["unique_id"].replace("_", " ").title(),
-                    metadata_contact_dict["unique_id"],
-                    metadata_contact_dict["unique_id"],
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
-                    metadata_contact_dict["unique_id"],
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
-                    metadata_contact_dict["unique_id"],
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
-                ).strip() + "\n")
-            for metadata_lock_dict in metadata_lock_dicts:
-                metadata_security_file.write("  " + """
-  #####################################################################################
-  - id: routine_{}_on
-    alias: "Routine: {} on"
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.{}
-        to: 'on'
-    condition: [ ]
-    action:
-      - service: input_boolean.turn_on
-        entity_id: input_boolean.{}
-                """.format(
-                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
-                    metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
-                    "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
-                    metadata_lock_dict["unique_id"] + "_security",
-                ).strip() + "\n")
-                metadata_security_file.write("  " + """
-  #####################################################################################
-  - id: routine_{}_off
-    alias: "Routine: {} off"
-    mode: queued
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.{}
-        to: 'off'
-    condition: [ ]
-    action:
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.{}
-                """.format(
-                    metadata_lock_dict["unique_id"].replace("_lock", "_state"),
-                    metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
-                    "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
-                    metadata_lock_dict["unique_id"] + "_security",
-                ).strip() + "\n")
-            metadata_security_file.write("""      
-#######################################################################################
-                """.strip() + "\n")
+#             metadata_security_file.write("""
+# #######################################################################################
+# automation:
+#   #####################################################################################
+#   - id: routine_home_security_check_on
+#     alias: "Routine: Attempt to put Home into Secure mode at regular intervals"
+#     mode: queued
+#     trigger:
+#       - platform: time_pattern
+#         minutes: "/15"
+#     condition: [ ]
+#     action:
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ states('input_boolean.home_security') == 'off' }}}}
+#         then:
+#           - service: input_boolean.turn_on
+#             entity_id: input_boolean.home_security
+#   #####################################################################################
+#   - id: routine_home_security_on
+#     alias: "Routine: Put Home into Secure mode"
+#     mode: queued
+#     trigger:
+#       - platform: state
+#         entity_id: input_boolean.home_security
+#         to: 'on'
+#     condition: [ ]
+#     action:
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ {} }}}}
+#         then:
+#           - service: input_boolean.turn_on
+#             entity_id: input_boolean.home_security_triggered
+#           - delay: '00:00:01'
+#           - service: input_boolean.turn_off
+#             entity_id: input_boolean.home_security
+#         else:
+#           - service: input_boolean.turn_off
+#             entity_id: input_boolean.home_security_triggered
+#       - service: input_boolean.turn_on
+#         entity_id:
+#             """.format(
+#                 metadata_locks_some_unlocked_template
+#             ).strip() + "\n")
+#             for metadata_lock_dict in metadata_lock_dicts:
+#                 metadata_security_file.write("          " + """
+#           - input_boolean.{}
+#                 """.format(
+#                     metadata_lock_dict["unique_id"] + "_security",
+#                 ).strip() + "\n")
+#             metadata_security_file.write("  " + """
+#   #####################################################################################
+#   - id: routine_home_security_off
+#     alias: "Routine: Take Home out of Secure mode"
+#     mode: queued
+#     trigger:
+#       - platform: state
+#         entity_id: input_boolean.home_security
+#         to: 'off'
+#     condition: [ ]
+#     action:
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ states('input_boolean.home_security_triggered') == 'on' }}}}
+#         then:
+#           - service: input_boolean.turn_off
+#             entity_id: input_boolean.home_security_triggered
+#         else:
+#           - service: input_boolean.turn_off
+#             entity_id:
+#             """.format(
+#                 metadata_locks_some_locked_template,
+#             ).strip() + "\n")
+#             for metadata_lock_dict in metadata_lock_dicts:
+#                 metadata_security_file.write("              " + """
+#               - input_boolean.{}
+#                 """.format(
+#                     metadata_lock_dict["unique_id"] + "_security",
+#                 ).strip() + "\n")
+#             for metadata_lock_dict in metadata_lock_dicts:
+#                 metadata_security_file.write("  " + """
+#   #####################################################################################
+#   - id: routine_{}_all_on
+#     alias: "Routine: {} all on"
+#     mode: queued
+#     trigger:
+#       - platform: state
+#         entity_id: binary_sensor.{}
+#         to: 'on'
+#     condition: [ ]
+#     action:
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ {} }}}}
+#         then:
+#           - service: input_boolean.turn_on
+#             entity_id: input_boolean.home_security
+#                 """.format(
+#                     metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+#                     metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
+#                     "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+#                     metadata_state_all_on_template
+#                 ).strip() + "\n")
+#                 metadata_security_file.write("  " + """
+#   #####################################################################################
+#   - id: routine_{}_all_off
+#     alias: "Routine: {} all off"
+#     mode: queued
+#     trigger:
+#       - platform: state
+#         entity_id: binary_sensor.{}
+#         to: 'off'
+#     condition: [ ]
+#     action:
+#       - service: input_boolean.turn_on
+#         entity_id: input_boolean.home_security_triggered
+#       - service: input_boolean.turn_off
+#         entity_id: input_boolean.home_security
+#                 """.format(
+#                     metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+#                     metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
+#                     "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+#                     "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+#                 ).strip() + "\n")
+#             for metadata_lock_dict in metadata_lock_dicts:
+#                 metadata_security_file.write("  " + """
+#   #####################################################################################
+#   - id: routine_{}_security_on
+#     alias: "Routine: Put {} into Secure mode"
+#     mode: queued
+#     trigger:
+#       - platform: state
+#         entity_id: input_boolean.{}_security
+#         to: 'on'
+#     condition: [ ]
+#     action:
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ states('lock.{}') == 'unlocked' }}}}
+#         then:
+#           - delay: '00:00:01'
+#           - service: input_boolean.turn_off
+#             entity_id: input_boolean.{}_security
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ states('binary_sensor.{}') == 'off' and states('lock.{}') == 'unlocked' }}}}
+#         then:
+#           - service: lock.lock
+#             entity_id: lock.{}
+#                 """.format(
+#                     metadata_lock_dict["unique_id"],
+#                     metadata_lock_dict["unique_id"].replace("_", " ").title(),
+#                     metadata_lock_dict["unique_id"],
+#                     metadata_lock_dict["unique_id"],
+#                     metadata_lock_dict["unique_id"],
+#                     "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_sensor_contact_last"),
+#                     metadata_lock_dict["unique_id"],
+#                     metadata_lock_dict["unique_id"],
+#                 ).strip() + "\n")
+#             for metadata_lock_dict in metadata_lock_dicts:
+#                 metadata_security_file.write("  " + """
+#   #####################################################################################
+#   - id: routine_{}_security_off
+#     alias: "Routine: Take {} out of Secure mode"
+#     mode: queued
+#     trigger:
+#       - platform: state
+#         entity_id: input_boolean.{}_security
+#         to: 'off'
+#     condition: [ ]
+#     action:
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ states('lock.{}') == 'locked' }}}}
+#         then:
+#           - service: lock.unlock
+#             entity_id: lock.{}
+#                 """.format(
+#                     metadata_lock_dict["unique_id"],
+#                     metadata_lock_dict["unique_id"].replace("_", " ").title(),
+#                     metadata_lock_dict["unique_id"],
+#                     metadata_lock_dict["unique_id"],
+#                     metadata_lock_dict["unique_id"],
+#                 ).strip() + "\n")
+#             for metadata_contact_dict in metadata_contact_dicts:
+#                 metadata_security_file.write("  " + """
+#   #####################################################################################
+#   - id: routine_{}_on
+#     alias: "Routine: {} on"
+#     mode: queued
+#     trigger:
+#       - platform: state
+#         entity_id: binary_sensor.{}
+#         to: 'off'
+#     condition: [ ]
+#     action:
+#       - delay: '00:00:01'
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ states('binary_sensor.{}') == 'off' and states('lock.{}') == 'unlocked' }}}}
+#         then:
+#           - service: lock.lock
+#             entity_id: lock.{}
+#       - delay: '00:00:01'
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ states('binary_sensor.{}') == 'off' and states('lock.{}') == 'unlocked' }}}}
+#         then:
+#           - service: lock.lock
+#             entity_id: lock.{}
+#       - delay: '00:00:01'
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ states('binary_sensor.{}') == 'off' and states('lock.{}') == 'unlocked' }}}}
+#         then:
+#           - service: lock.lock
+#             entity_id: lock.{}
+#                 """.format(
+#                     metadata_contact_dict["unique_id"],
+#                     metadata_contact_dict["unique_id"].replace("_", " ").title(),
+#                     metadata_contact_dict["unique_id"],
+#                     metadata_contact_dict["unique_id"],
+#                     metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
+#                     metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
+#                     metadata_contact_dict["unique_id"],
+#                     metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
+#                     metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
+#                     metadata_contact_dict["unique_id"],
+#                     metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
+#                     metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
+#                 ).strip() + "\n")
+#             for metadata_lock_dict in metadata_lock_dicts:
+#                 metadata_security_file.write("  " + """
+#   #####################################################################################
+#   - id: routine_{}_on
+#     alias: "Routine: {} on"
+#     mode: queued
+#     trigger:
+#       - platform: state
+#         entity_id: binary_sensor.{}
+#         to: 'on'
+#     condition: [ ]
+#     action:
+#       - service: input_boolean.turn_on
+#         entity_id: input_boolean.{}
+#                 """.format(
+#                     metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+#                     metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
+#                     "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+#                     metadata_lock_dict["unique_id"] + "_security",
+#                 ).strip() + "\n")
+#                 metadata_security_file.write("  " + """
+#   #####################################################################################
+#   - id: routine_{}_off
+#     alias: "Routine: {} off"
+#     mode: queued
+#     trigger:
+#       - platform: state
+#         entity_id: binary_sensor.{}
+#         to: 'off'
+#     condition: [ ]
+#     action:
+#       - service: input_boolean.turn_off
+#         entity_id: input_boolean.{}
+#                 """.format(
+#                     metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+#                     metadata_lock_dict["unique_id"].replace("_lock", "_state").replace("_", " ").title(),
+#                     "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_state"),
+#                     metadata_lock_dict["unique_id"] + "_security",
+#                 ).strip() + "\n")
+#             metadata_security_file.write("""
+# #######################################################################################
+#                 """.strip() + "\n")
 
     # Build lighting YAML
     metadata_lighting_df = metadata_hass_df[
@@ -1126,123 +1126,123 @@ input_boolean:
                 metadata_lighting_dict["unique_id"],
                 metadata_lighting_dict["friendly_name"],
             ).strip() + "\n")
-        metadata_lighting_file.write("  " + """
-  #####################################################################################
-automation:
-  #####################################################################################
-  - id: lighting_reset_adaptive_lighting_announce
-    alias: 'Lighting: Reset Adaptive Lighting on bulb announce'
-    mode: single
-    trigger:
-      - platform: mqtt
-        topic: zigbee/bridge/event
-    condition:
-      - condition: template
-        value_template: '{{ trigger.payload_json.data.friendly_name | regex_search(" Bulb 1$") }}'
-    action:
-      ################################################################################
-      - variables:
-          light: '{{ "light." + (trigger.payload_json.data.friendly_name | regex_replace(" Bulb 1$") | replace(" ", "_") | lower) }}'
-          light_reset: '{{ "input_boolean.lighting_reset_adaptive_lighting_" + (light | replace("light.", "")) }}'
-      ################################################################################
-      - if:
-          - condition: template
-            value_template: '{{ is_state(light_reset, "off") }}'
-        then:
-          - service: input_boolean.turn_on
-            data_template:
-              entity_id: '{{ light_reset }}'
-        else:
-          - service: light.turn_on
-            data_template:
-              color_temp: 366
-              brightness_pct: 100
-              entity_id: '{{ light }}'
-        """.strip() + "\n")
-        metadata_lighting_file.write("  " + """
-  #####################################################################################
-  - id: lighting_reset_adaptive_lighting_for_all_lights
-    alias: 'Lighting: Reset Adaptive Lighting for All Lights'
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_all
-        from: 'off'
-        to: 'on'
-    condition: [ ]
-    action:
-        """.strip() + "\n")
-        for automation_name in metadata_lighting_automations_dicts:
-            metadata_lighting_file.write("      " + """
-      - service: switch.turn_off
-        entity_id: {}
-      - delay: '00:00:01'
-      - service: switch.turn_on
-        entity_id: {}
-            """.format(
-                automation_name,
-                automation_name,
-            ).strip() + "\n")
-        metadata_lighting_file.write("      " + """
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_all
-        """.strip() + "\n")
-        for metadata_lighting_dict in metadata_lighting_dicts:
-            metadata_lighting_file.write("  " + """
-  #####################################################################################
-  - id: lighting_reset_adaptive_lighting_{}
-    alias: "Lighting: Reset Adaptive Lighting on request of {}"
-    trigger:
-      - platform: state
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
-        from: 'off'
-        to: 'on'
-            """.format(
-                metadata_lighting_dict["unique_id"],
-                metadata_lighting_dict["friendly_name"],
-                metadata_lighting_dict["unique_id"],
-            ).strip() + "\n")
-            reset_double_trigger_timeout = "'00:00:10'"
-            if "linked_entity" in metadata_lighting_dict:
-                metadata_lighting_file.write("    " + """
-    action:
-      - service: adaptive_lighting.set_manual_control
-        data:
-          entity_id: {}
-          lights: light.{}
-          manual_control: false
-      - delay: {}
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
-                """.format(
-                    metadata_lighting_dict["linked_entity"],
-                    metadata_lighting_dict["unique_id"],
-                    reset_double_trigger_timeout,
-                    metadata_lighting_dict["unique_id"],
-                ).strip() + "\n")
-            else:
-                device_config = json.loads(metadata_lighting_dict["zigbee_device_config"]) \
-                    if "zigbee_device_config" in metadata_lighting_dict else {}
-                metadata_lighting_file.write("    " + """
-    action:
-      - service: light.turn_on
-        data_template:
-          color_temp: {}
-          brightness_pct: {}
-          entity_id: light.{}
-      - delay: {}
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
-                """.format(
-                    device_config["color_temp_startup"] if "color_temp_startup" in device_config else 366,
-                    int(device_config["hue_power_on_brightness"] / 254 * 100) if "hue_power_on_brightness" in device_config else 100,
-                    metadata_lighting_dict["unique_id"],
-                    reset_double_trigger_timeout,
-                    metadata_lighting_dict["unique_id"],
-                ).strip() + "\n")
-        metadata_lighting_file.write("  " + """
-  #####################################################################################
-        """.strip() + "\n")
+#         metadata_lighting_file.write("  " + """
+#   #####################################################################################
+# automation:
+#   #####################################################################################
+#   - id: lighting_reset_adaptive_lighting_announce
+#     alias: 'Lighting: Reset Adaptive Lighting on bulb announce'
+#     mode: single
+#     trigger:
+#       - platform: mqtt
+#         topic: zigbee/bridge/event
+#     condition:
+#       - condition: template
+#         value_template: '{{ trigger.payload_json.data.friendly_name | regex_search(" Bulb 1$") }}'
+#     action:
+#       ################################################################################
+#       - variables:
+#           light: '{{ "light." + (trigger.payload_json.data.friendly_name | regex_replace(" Bulb 1$") | replace(" ", "_") | lower) }}'
+#           light_reset: '{{ "input_boolean.lighting_reset_adaptive_lighting_" + (light | replace("light.", "")) }}'
+#       ################################################################################
+#       - if:
+#           - condition: template
+#             value_template: '{{ is_state(light_reset, "off") }}'
+#         then:
+#           - service: input_boolean.turn_on
+#             data_template:
+#               entity_id: '{{ light_reset }}'
+#         else:
+#           - service: light.turn_on
+#             data_template:
+#               color_temp: 366
+#               brightness_pct: 100
+#               entity_id: '{{ light }}'
+#         """.strip() + "\n")
+#         metadata_lighting_file.write("  " + """
+#   #####################################################################################
+#   - id: lighting_reset_adaptive_lighting_for_all_lights
+#     alias: 'Lighting: Reset Adaptive Lighting for All Lights'
+#     mode: single
+#     trigger:
+#       - platform: state
+#         entity_id: input_boolean.lighting_reset_adaptive_lighting_all
+#         from: 'off'
+#         to: 'on'
+#     condition: [ ]
+#     action:
+#         """.strip() + "\n")
+#         for automation_name in metadata_lighting_automations_dicts:
+#             metadata_lighting_file.write("      " + """
+#       - service: switch.turn_off
+#         entity_id: {}
+#       - delay: '00:00:01'
+#       - service: switch.turn_on
+#         entity_id: {}
+#             """.format(
+#                 automation_name,
+#                 automation_name,
+#             ).strip() + "\n")
+#         metadata_lighting_file.write("      " + """
+#       - service: input_boolean.turn_off
+#         entity_id: input_boolean.lighting_reset_adaptive_lighting_all
+#         """.strip() + "\n")
+#         for metadata_lighting_dict in metadata_lighting_dicts:
+#             metadata_lighting_file.write("  " + """
+#   #####################################################################################
+#   - id: lighting_reset_adaptive_lighting_{}
+#     alias: "Lighting: Reset Adaptive Lighting on request of {}"
+#     trigger:
+#       - platform: state
+#         entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
+#         from: 'off'
+#         to: 'on'
+#             """.format(
+#                 metadata_lighting_dict["unique_id"],
+#                 metadata_lighting_dict["friendly_name"],
+#                 metadata_lighting_dict["unique_id"],
+#             ).strip() + "\n")
+#             reset_double_trigger_timeout = "'00:00:10'"
+#             if "linked_entity" in metadata_lighting_dict:
+#                 metadata_lighting_file.write("    " + """
+#     action:
+#       - service: adaptive_lighting.set_manual_control
+#         data:
+#           entity_id: {}
+#           lights: light.{}
+#           manual_control: false
+#       - delay: {}
+#       - service: input_boolean.turn_off
+#         entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
+#                 """.format(
+#                     metadata_lighting_dict["linked_entity"],
+#                     metadata_lighting_dict["unique_id"],
+#                     reset_double_trigger_timeout,
+#                     metadata_lighting_dict["unique_id"],
+#                 ).strip() + "\n")
+#             else:
+#                 device_config = json.loads(metadata_lighting_dict["zigbee_device_config"]) \
+#                     if "zigbee_device_config" in metadata_lighting_dict else {}
+#                 metadata_lighting_file.write("    " + """
+#     action:
+#       - service: light.turn_on
+#         data_template:
+#           color_temp: {}
+#           brightness_pct: {}
+#           entity_id: light.{}
+#       - delay: {}
+#       - service: input_boolean.turn_off
+#         entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
+#                 """.format(
+#                     device_config["color_temp_startup"] if "color_temp_startup" in device_config else 366,
+#                     int(device_config["hue_power_on_brightness"] / 254 * 100) if "hue_power_on_brightness" in device_config else 100,
+#                     metadata_lighting_dict["unique_id"],
+#                     reset_double_trigger_timeout,
+#                     metadata_lighting_dict["unique_id"],
+#                 ).strip() + "\n")
+#         metadata_lighting_file.write("  " + """
+#   #####################################################################################
+#         """.strip() + "\n")
     print("Build generate script [homeassistant] entity lighting persisted to [{}]".format(metadata_lighting_path))
 
     # Diagnostics YAML
@@ -1339,69 +1339,69 @@ template:
                 metadata_diagnostic_dict["unique_id"].replace("template_", ""),
                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("_percentage", ""),
             ).strip() + "\n")
-        metadata_diagnostic_file.write("""
-#######################################################################################
-input_boolean:
-  #####################################################################################
-  network_refresh_zigbee_router_lqi:
-    name: Refresh state
-    initial: false
-#######################################################################################
-automation:
-  #####################################################################################
-  - id: network_refresh_zigbee_router_lqi_action_scheduled
-    alias: "Network: Refresh Zigbee router network link qualities on schedule"
-    trigger:
-      - platform: time_pattern
-        hours: "/1"
-    action:
-      - service: input_boolean.turn_on
-        entity_id: input_boolean.network_refresh_zigbee_router_lqi
-  #####################################################################################
-  - id: network_refresh_zigbee_router_lqi_action
-    alias: "Network: Refresh Zigbee router network link qualities"
-    trigger:
-      - platform: state
-        entity_id: input_boolean.network_refresh_zigbee_router_lqi
-        from: 'off'
-        to: 'on'
-    action:
-        """.strip() + "\n")
-        for metadata_diagnostic_dict in metadata_diagnostic_dicts:
-            metadata_diagnostic_file.write("      " + """
-      - service: mqtt.publish
-        data:
-          topic: "zigbee/{}/{}/set"
-          payload: '{{"read":{{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{{}}}}}}'
-      - delay: '00:00:01'
-            """.format(
-                metadata_diagnostic_dict["friendly_name"],
-                "11" if "outlet" in metadata_diagnostic_dict["unique_id"] else "1",
-            ).strip() + "\n")
-        for metadata_diagnostic_dict in metadata_diagnostic_dicts:
-            metadata_diagnostic_file.write("      " + """
-      - delay: '00:00:01'
-      - if:
-          - condition: template
-            value_template: >-
-              {{{{ ((states('sensor.{}') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
-                    ((as_timestamp(now()) - as_timestamp(states('sensor.{}'))) > {}) }}}}
-        then:
-          - service: mqtt.publish
-            data:
-              topic: "zigbee/{}"
-              payload: '{{ "last_seen": null, "linkquality": 0, "state": null, "update": {{ "installed_version": null, "latest_version": null, "state": null }}, "update_available": false }}'
-            """.format(
-                metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
-                metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
-                len(metadata_diagnostic_dicts) + 5,
-                metadata_diagnostic_dict["friendly_name"],
-            ).strip() + "\n")
-        metadata_diagnostic_file.write("      " + """
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.network_refresh_zigbee_router_lqi
-#######################################################################################
-        """.strip() + "\n")
+#         metadata_diagnostic_file.write("""
+# #######################################################################################
+# input_boolean:
+#   #####################################################################################
+#   network_refresh_zigbee_router_lqi:
+#     name: Refresh state
+#     initial: false
+# #######################################################################################
+# automation:
+#   #####################################################################################
+#   - id: network_refresh_zigbee_router_lqi_action_scheduled
+#     alias: "Network: Refresh Zigbee router network link qualities on schedule"
+#     trigger:
+#       - platform: time_pattern
+#         hours: "/1"
+#     action:
+#       - service: input_boolean.turn_on
+#         entity_id: input_boolean.network_refresh_zigbee_router_lqi
+#   #####################################################################################
+#   - id: network_refresh_zigbee_router_lqi_action
+#     alias: "Network: Refresh Zigbee router network link qualities"
+#     trigger:
+#       - platform: state
+#         entity_id: input_boolean.network_refresh_zigbee_router_lqi
+#         from: 'off'
+#         to: 'on'
+#     action:
+#         """.strip() + "\n")
+#         for metadata_diagnostic_dict in metadata_diagnostic_dicts:
+#             metadata_diagnostic_file.write("      " + """
+#       - service: mqtt.publish
+#         data:
+#           topic: "zigbee/{}/{}/set"
+#           payload: '{{"read":{{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{{}}}}}}'
+#       - delay: '00:00:01'
+#             """.format(
+#                 metadata_diagnostic_dict["friendly_name"],
+#                 "11" if "outlet" in metadata_diagnostic_dict["unique_id"] else "1",
+#             ).strip() + "\n")
+#         for metadata_diagnostic_dict in metadata_diagnostic_dicts:
+#             metadata_diagnostic_file.write("      " + """
+#       - delay: '00:00:01'
+#       - if:
+#           - condition: template
+#             value_template: >-
+#               {{{{ ((states('sensor.{}') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
+#                     ((as_timestamp(now()) - as_timestamp(states('sensor.{}'))) > {}) }}}}
+#         then:
+#           - service: mqtt.publish
+#             data:
+#               topic: "zigbee/{}"
+#               payload: '{{ "last_seen": null, "linkquality": 0, "state": null, "update": {{ "installed_version": null, "latest_version": null, "state": null }}, "update_available": false }}'
+#             """.format(
+#                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
+#                 metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
+#                 len(metadata_diagnostic_dicts) + 5,
+#                 metadata_diagnostic_dict["friendly_name"],
+#             ).strip() + "\n")
+#         metadata_diagnostic_file.write("      " + """
+#       - service: input_boolean.turn_off
+#         entity_id: input_boolean.network_refresh_zigbee_router_lqi
+# #######################################################################################
+#         """.strip() + "\n")
 
         # Electricity YAML
         metadata_electricity_df = metadata_hass_df[
