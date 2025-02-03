@@ -22,7 +22,7 @@ function echo_package_install_commands {
     PKG_VERSION_GREP="=" &&
     PKG_VERSION_AWK='{print $3}' &&
     PKG_INSTALL="apk add --upgrade --no-cache" &&
-    PKG_CLEAN="apk cache clean && rm -rf /var/cache/apk/*"
+    PKG_CLEAN="(apk cache clean || true) && rm -rf /var/cache/apk/*"
   [[ $PKG == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
   ASYSTEM_PACKAGES_BASE=(
     bash
@@ -74,20 +74,20 @@ echo "##########################################################################
 echo "docker run -it --rm --user root --entrypoint sh \\\\"
 echo "    -e ASYSTEM_PYTHON_VERSION=3.12.7 \\\\"
 echo "    -e ASYSTEM_GO_VERSION=1.21.6 \\\\"
+echo "    -e ASYSTEM_TELEGRAF_VERSION=1.32.3 \\\\"
+echo "    -e ASYSTEM_HOMEASSISTANT_VERSION=2024.12.0 \\\\"
 echo "    -e ASYSTEM_RUST_VERSION=1.75.0 \\\\"
 echo "    -e ASYSTEM_WEEWX_VERSION=5.1.0 \\\\"
 echo "    -e ASYSTEM_UNPOLLER_VERSION=2.11.2 \\\\"
 echo "    -e ASYSTEM_GRIZZLY_VERSION=v0.6.1 \\\\"
-echo "    -e ASYSTEM_MLFLOW_VERSION=2.18.0 \\\\"
+echo "    -e ASYSTEM_MLFLOW_VERSION=v2.20.1 \\\\"
 echo "    -e ASYSTEM_MLSERVER_VERSION=1.6.1 \\\\"
-echo "    -e ASYSTEM_TELEGRAF_VERSION=1.32.3 \\\\"
-echo "    -e ASYSTEM_HOMEASSISTANT_VERSION=2024.12.0 \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm \\\\"
-echo "    'timescale/timescaledb:2.17.2-pg15'" && echo ""
+echo "    'timescale/timescaledb:2.18.0-pg15'" && echo ""
 echo "#######################################################################################"
 EOF
     chmod +x /tmp/base_image_*.sh
@@ -99,10 +99,10 @@ DOCKER_CLI_HINTS=false
 CONTAINER_NAME="asystem_deps_bootstrap"
 docker ps -q --filter "name=$CONTAINER_NAME" | grep -q . && docker kill "$CONTAINER_NAME"
 docker ps -qa --filter "name=$CONTAINER_NAME" | grep -q . && docker rm -vf "$CONTAINER_NAME"
-docker run --name "$CONTAINER_NAME" --user root --platform linux/x86_64 --entrypoint sh  -dt 'timescale/timescaledb:2.17.2-pg15'
+docker run --name "$CONTAINER_NAME" --user root --platform linux/x86_64 --entrypoint sh  -dt 'timescale/timescaledb:2.18.0-pg15'
 docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
 declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
 echo "Base image shell:" && echo "#######################################################################################" && echo ""
-docker exec -it -e ASYSTEM_PYTHON_VERSION=3.12.7 -e ASYSTEM_GO_VERSION=1.21.6 -e ASYSTEM_RUST_VERSION=1.75.0 -e ASYSTEM_WEEWX_VERSION=5.1.0 -e ASYSTEM_UNPOLLER_VERSION=2.11.2 -e ASYSTEM_GRIZZLY_VERSION=v0.6.1 -e ASYSTEM_MLFLOW_VERSION=2.18.0 -e ASYSTEM_MLSERVER_VERSION=1.6.1 -e ASYSTEM_TELEGRAF_VERSION=1.32.3 -e ASYSTEM_HOMEASSISTANT_VERSION=2024.12.0 -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm "$CONTAINER_NAME" bash
+docker exec -it -e ASYSTEM_PYTHON_VERSION=3.12.7 -e ASYSTEM_GO_VERSION=1.21.6 -e ASYSTEM_TELEGRAF_VERSION=1.32.3 -e ASYSTEM_HOMEASSISTANT_VERSION=2024.12.0 -e ASYSTEM_RUST_VERSION=1.75.0 -e ASYSTEM_WEEWX_VERSION=5.1.0 -e ASYSTEM_UNPOLLER_VERSION=2.11.2 -e ASYSTEM_GRIZZLY_VERSION=v0.6.1 -e ASYSTEM_MLFLOW_VERSION=v2.20.1 -e ASYSTEM_MLSERVER_VERSION=1.6.1 -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm "$CONTAINER_NAME" bash
 docker kill "$CONTAINER_NAME"
 docker rm -vf "$CONTAINER_NAME"

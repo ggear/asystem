@@ -22,7 +22,7 @@ function echo_package_install_commands {
     PKG_VERSION_GREP="=" &&
     PKG_VERSION_AWK='{print $3}' &&
     PKG_INSTALL="apk add --upgrade --no-cache" &&
-    PKG_CLEAN="apk cache clean && rm -rf /var/cache/apk/*"
+    PKG_CLEAN="(apk cache clean || true) && rm -rf /var/cache/apk/*"
   [[ $PKG == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
   ASYSTEM_PACKAGES_BASE=(
     bash

@@ -1,5 +1,8 @@
 #!/bin/sh
 
+ssh -n -q -o "StrictHostKeyChecking=no" root@macmini-eva "find /var/lib/asystem/install/appdaemon/latest/config -name certificates.sh -exec {} pull macmini-eva macmini-eva \;"
+ssh -n -q -o "StrictHostKeyChecking=no" root@macmini-eva "find /var/lib/asystem/install/appdaemon/latest/config -name certificates.sh -exec {} push macmini-eva macmini-eva \;"
+logger -t pushcerts "Pushed new certificates to [macmini-eva]"
 ssh -n -q -o "StrictHostKeyChecking=no" root@udm-net "find /var/lib/asystem/install/udmutilities/latest/config -name certificates.sh -exec {} pull macmini-eva udm-net \;"
 ssh -n -q -o "StrictHostKeyChecking=no" root@udm-net "find /var/lib/asystem/install/udmutilities/latest/config -name certificates.sh -exec {} push macmini-eva udm-net \;"
 logger -t pushcerts "Pushed new certificates to [udm-net]"
