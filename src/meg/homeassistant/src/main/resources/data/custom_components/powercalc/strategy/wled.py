@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import voluptuous as vol
 from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import HomeAssistant, State
 from homeassistant.helpers import entity_registry
 from homeassistant.helpers.event import TrackTemplate
@@ -55,6 +56,14 @@ class WledStrategy(PowerCalculationStrategyInterface):
         if entity_state.entity_id != self._estimated_current_entity:
             entity_state = self._hass.states.get(self._estimated_current_entity)
 
+        if entity_state.state in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
+            _LOGGER.warning(
+                "%s: Estimated current entity %s is not available",
+                self._light_entity.entity_id,
+                self._estimated_current_entity,
+            )
+            return None
+
         _LOGGER.debug(
             "%s: Estimated current %s (voltage=%d, power_factor=%.2f)",
             self._light_entity.entity_id,
@@ -86,7 +95,7 @@ class WledStrategy(PowerCalculationStrategyInterface):
                 if estimated_current_entities:
                     return estimated_current_entities[0]
 
-        raise StrategyConfigurationError("{No estimated current entity found")
+        raise StrategyConfigurationError("No estimated current entity found. Probably brightness limiter not enabled. See documentation")
 
     def get_entities_to_track(self) -> list[str | TrackTemplate]:
         if self._estimated_current_entity:

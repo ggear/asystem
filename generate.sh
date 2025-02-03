@@ -31,6 +31,14 @@ function pull_repo() {
       if [ $(git branch | grep ${BRANCH} | wc -l) -eq 1 ]; then
         git checkout ${BRANCH} 2>/dev/null
         git branch --set-upstream-to origin/${BRANCH} 2>/dev/null
+
+        # TODO: Rebase to upstream
+        # git remote add upstream https://github.com/someuser/forked-origin.git
+        # git fetch upstream
+        # git rebase upstream/master
+        # git push --force
+        # git push --tags --force
+
       fi
     done
     git remote set-url origin https://github.com/$(git remote get-url origin | sed 's/https:\/\/github.com\///' | sed 's/git@github.com://')

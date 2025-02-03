@@ -17,8 +17,11 @@ from .const import (
     CONF_CREATE_GROUP,
     CONF_DAILY_FIXED_ENERGY,
     CONF_FORCE_ENERGY_SENSOR_CREATION,
+    CONF_MULTI_SWITCH,
     CONF_POWER_SENSOR_ID,
+    CONF_SENSOR_TYPE,
     DUMMY_ENTITY_ID,
+    SensorType,
 )
 from .errors import SensorConfigurationError
 
@@ -92,10 +95,14 @@ def get_wrapped_entity_name(
 ) -> str:
     """Construct entity name based on the wrapped entity"""
     if entity_entry:
-        if entity_entry.name is None and entity_entry.has_entity_name and device_entry:
-            return device_entry.name_by_user or device_entry.name or object_id
+        if entity_entry.name:
+            return entity_entry.name
+        if entity_entry.has_entity_name and device_entry:
+            device_name = device_entry.name_by_user or device_entry.name
+            if device_name:
+                return f"{device_name} {entity_entry.original_name}" if entity_entry.original_name else device_name
 
-        return entity_entry.name or entity_entry.original_name or object_id
+        return entity_entry.original_name or object_id
 
     entity_state = hass.states.get(entity_id)
     if entity_state:
@@ -131,10 +138,13 @@ def get_merged_sensor_configuration(*configs: dict, validate: bool = True) -> di
             CONF_CREATE_ENERGY_SENSORS,
         )
 
-    if (CONF_DAILY_FIXED_ENERGY in merged_config or CONF_POWER_SENSOR_ID in merged_config) and CONF_ENTITY_ID not in merged_config:
+    is_entity_id_required = not any(key in merged_config for key in (CONF_DAILY_FIXED_ENERGY, CONF_POWER_SENSOR_ID, CONF_MULTI_SWITCH))
+
+    if not is_entity_id_required and CONF_ENTITY_ID not in merged_config:
         merged_config[CONF_ENTITY_ID] = DUMMY_ENTITY_ID
 
-    if validate and CONF_CREATE_GROUP not in merged_config and CONF_ENTITY_ID not in merged_config:
+    sensor_type = merged_config.get(CONF_SENSOR_TYPE)
+    if validate and CONF_CREATE_GROUP not in merged_config and CONF_ENTITY_ID not in merged_config and sensor_type != SensorType.GROUP:
         raise SensorConfigurationError(
             "You must supply an entity_id in the configuration, see the README",
         )

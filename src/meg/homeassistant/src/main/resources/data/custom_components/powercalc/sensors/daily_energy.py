@@ -41,6 +41,7 @@ from custom_components.powercalc.const import (
     CONF_START_TIME,
     CONF_UPDATE_FREQUENCY,
     CONF_VALUE,
+    DEFAULT_ENERGY_SENSOR_PRECISION,
     UnitPrefix,
 )
 
@@ -112,12 +113,12 @@ async def create_daily_fixed_energy_sensor(
         name,
         entity_id,
         mode_config.get(CONF_VALUE),  # type: ignore
-        mode_config.get(CONF_UNIT_OF_MEASUREMENT),  # type: ignore
-        mode_config.get(CONF_UPDATE_FREQUENCY),  # type: ignore
+        str(mode_config.get(CONF_UNIT_OF_MEASUREMENT)),
+        int(mode_config.get(CONF_UPDATE_FREQUENCY, DEFAULT_DAILY_UPDATE_FREQUENCY)),
         sensor_config,
         on_time=on_time,
         start_time=mode_config.get(CONF_START_TIME),
-        rounding_digits=sensor_config.get(CONF_ENERGY_SENSOR_PRECISION),  # type: ignore
+        rounding_digits=int(sensor_config.get(CONF_ENERGY_SENSOR_PRECISION, DEFAULT_ENERGY_SENSOR_PRECISION)),
     )
 
 

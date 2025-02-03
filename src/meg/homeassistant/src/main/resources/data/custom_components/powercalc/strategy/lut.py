@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import gzip
-import io
 import logging
 import os
 from collections import defaultdict
@@ -10,20 +9,20 @@ from csv import reader
 from dataclasses import dataclass
 from decimal import Decimal
 from functools import partial
-from typing import Any
+from typing import Any, TextIO
 
 import numpy as np
 from homeassistant.components import light
 from homeassistant.components.light import (
     ATTR_BRIGHTNESS,
     ATTR_COLOR_MODE,
-    ATTR_COLOR_TEMP,
+    ATTR_COLOR_TEMP_KELVIN,
     ATTR_HS_COLOR,
     COLOR_MODES_COLOR,
     ColorMode,
 )
 from homeassistant.core import HomeAssistant, State
-from homeassistant.util.color import color_temperature_to_hs
+from homeassistant.util.color import color_temperature_kelvin_to_mired, color_temperature_to_hs
 
 from custom_components.powercalc.common import SourceEntity
 from custom_components.powercalc.errors import (
@@ -86,13 +85,17 @@ class LutRegistry:
         return lookup_dict
 
     @staticmethod
-    def get_lut_file(power_profile: PowerProfile, color_mode: ColorMode) -> io.TextIOWrapper:
+    def get_lut_file(power_profile: PowerProfile, color_mode: ColorMode) -> TextIO:
         path = os.path.join(power_profile.get_model_directory(), f"{color_mode}.csv")
 
         gzip_path = f"{path}.gz"
         if os.path.exists(gzip_path):
             _LOGGER.debug("Loading LUT data file: %s", gzip_path)
-            return gzip.open(gzip_path, "rt")  # type: ignore
+            return gzip.open(gzip_path, "rt")
+
+        if os.path.exists(path):
+            _LOGGER.debug("Loading LUT data file: %s", path)
+            return open(path)
 
         raise LutFileNotFoundError("Data file not found: %s")
 
@@ -103,8 +106,9 @@ class LutRegistry:
         if supported_color_modes is None:
             supported_color_modes = set()
             for file in await self._hass.async_add_executor_job(os.listdir, power_profile.get_model_directory()):
-                if file.endswith(".csv.gz"):
-                    color_mode = ColorMode(file.removesuffix(".csv.gz"))
+                if file.endswith((".csv.gz", ".csv")):
+                    base_name = file.split(".", 1)[0]
+                    color_mode = ColorMode(base_name)
                     if color_mode in LUT_COLOR_MODES:
                         supported_color_modes.add(color_mode)
             self._supported_color_modes[cache_key] = supported_color_modes
@@ -163,7 +167,7 @@ class LutStrategy(PowerCalculationStrategyInterface):
         light_setting = LightSetting(color_mode=color_mode, brightness=brightness)
         if color_mode == ColorMode.HS:
             try:
-                hs = color_temperature_to_hs(attrs[ATTR_COLOR_TEMP]) if original_color_mode == ColorMode.COLOR_TEMP else attrs[ATTR_HS_COLOR]
+                hs = color_temperature_to_hs(attrs[ATTR_COLOR_TEMP_KELVIN]) if original_color_mode == ColorMode.COLOR_TEMP else attrs[ATTR_HS_COLOR]
                 light_setting.hue = int(hs[0] / 360 * 65535)
                 light_setting.saturation = int(hs[1] / 100 * 255)
                 _LOGGER.debug(
@@ -180,7 +184,7 @@ class LutStrategy(PowerCalculationStrategyInterface):
                 )
                 return None
         elif color_mode == ColorMode.COLOR_TEMP:
-            light_setting.color_temp = attrs[ATTR_COLOR_TEMP]
+            light_setting.color_temp = color_temperature_kelvin_to_mired(attrs[ATTR_COLOR_TEMP_KELVIN])
             _LOGGER.debug(
                 "%s: Looking up power usage for bri:%s mired:%s",
                 entity_state.entity_id,
