@@ -478,13 +478,13 @@ fan:
         """.strip() + "\n")
         metadata_control_file.write("""
 #######################################################################################
-tplink:
-  discovery: false
-  switch:
+#tplink:
+#  discovery: false
+#  switch:
         """.strip() + "\n")
         for metadata_control_dict in metadata_control_dicts:
             metadata_control_file.write("    " + """
-    - host: {}
+#    - host: {}
             """.format(
                 metadata_control_dict["connection_ip"]
             ).strip() + "\n")
