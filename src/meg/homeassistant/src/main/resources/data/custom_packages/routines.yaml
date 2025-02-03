@@ -118,27 +118,34 @@ automation:
   #        entity_id: input_boolean.home_sleep
 
   #####################################################################################
-#  - id: routine_home_wakeup
-#    alias: "Routine: Wake home up"
-#    mode: single
+  - id: routine_home_wakeup
+    alias: "Routine: Wake home up"
+    mode: single
+
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.home_sleep
+        from: 'on'
+        to: 'off'
+        
 #    trigger:
 #      - platform: state
 #        entity_id: input_boolean.home_sleep
 #        from: 'on'
 #        to: 'off'
-#    condition: [ ]
-#    action:
-#      - service: media_player.media_stop
-#        target:
-#          entity_id:
-#            - media_player.parents_move
-#      - service: media_player.volume_set
-#        data:
-#          entity_id: media_player.parents_move
-#          volume_level: '0.2'
-#      - service: automation.trigger
-#        data:
-#          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
+    condition: [ ]
+    action:
+      - service: media_player.media_stop
+        target:
+          entity_id:
+            - media_player.parents_move
+      - service: media_player.volume_set
+        data:
+          entity_id: media_player.parents_move
+          volume_level: '0.2'
+      - service: automation.trigger
+        data:
+          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
 #  #####################################################################################
 #
 #  # TODO: Hack, disable for time being
