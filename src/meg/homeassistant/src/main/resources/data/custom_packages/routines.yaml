@@ -1,451 +1,451 @@
-#######################################################################################
-input_boolean:
-  #####################################################################################
-  home_movie:
-    name: Movie
-    initial: off
-  #####################################################################################
-  home_sleep:
-    name: Sleep
-    initial: off
-  #####################################################################################
-  home_reset:
-    name: Reset
-    initial: off
-  #####################################################################################
-automation:
-  - id: routine_init
-    alias: "Routine: Run init code after startup"
-    mode: single
-    trigger:
-      - platform: homeassistant
-        event: start
-    action:
-      - service: system_log.write
-        data_template:
-          level: info
-          message: "Home Assistant has started!"
-      - service: switch.turn_on
-        target:
-          entity_id:
-            - switch.adaptive_lighting_sleep_mode_night
-  #####################################################################################
-  - id: routine_home_movie_on
-    alias: "Routine: Put home into Movie mode"
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: input_boolean.home_movie
-        from: 'off'
-        to: 'on'
-    condition: [ ]
-    action:
-  #####################################################################################
-  - id: routine_home_movie_off
-    alias: "Routine: Take home out of Movie mode"
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: input_boolean.home_movie
-        from: 'on'
-        to: 'off'
-    condition: [ ]
-    action:
-  #####################################################################################
-  - id: routine_home_sleep
-    alias: "Routine: Put home to sleep"
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: input_boolean.home_sleep
-        from: 'off'
-        to: 'on'
-    condition: [ ]
-    action:
-      - service: light.turn_off
-        target:
-          entity_id:
-            - light.parents_main
-      - service: media_player.unjoin
-        target:
-          entity_id: media_player.parents_move
-      - service: media_player.volume_mute
-        data:
-          entity_id: media_player.parents_move
-          is_volume_muted: false
-      - service: media_player.volume_set
-        data:
-          entity_id: media_player.parents_move
-          volume_level: '0.3'
-      - service: media_player.turn_off
-        target:
-          entity_id:
-            - media_player.ada_home
-            - media_player.edwin_home
-      - service: media_player.play_media
-        data:
-          media_content_type: music
-          media_content_id: 'https://nginx.janeandgraham.com/relaxation-sounds/ocean.mp3'
-        target:
-          entity_id: media_player.parents_move
-      - service: media_player.repeat_set
-        data:
-          repeat: all
-        entity_id: media_player.parents_move
-  #####################################################################################
-  - id: routine_home_sleep_cube
-    alias: "Routine: Put home to sleep via cube"
-    mode: restart
-    trigger:
-      platform: state
-      entity_id: sensor.home_cube_remote_action
-      to: "flip90"
-    condition: [ ]
-    action:
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.home_sleep
-      - service: input_boolean.turn_on
-        entity_id: input_boolean.home_sleep
-  #####################################################################################
-  - id: routine_home_wakeup
-    alias: "Routine: Wake home up"
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: input_boolean.home_sleep
-        from: 'on'
-        to: 'off'
-    condition: [ ]
-    action:
-      - service: media_player.media_stop
-        target:
-          entity_id:
-            - media_player.parents_move
-      - service: media_player.volume_set
-        data:
-          entity_id: media_player.parents_move
-          volume_level: '0.2'
-      - service: automation.trigger
-        data:
-          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
-  #####################################################################################
-  - id: routine_home_wakeup_cube
-    alias: "Routine: Wake home up via cube"
-    mode: restart
-    trigger:
-      platform: state
-      entity_id: sensor.home_cube_remote_action
-      to: "shake"
-    condition: [ ]
-    action:
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.home_sleep
-  #####################################################################################
-  - id: routine_home_reset
-    alias: "Routine: Reset home to defaults"
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: input_boolean.home_reset
-        from: 'off'
-        to: 'on'
-    condition: [ ]
-    action:
-      - service: automation.trigger
-        data:
-          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
-      - delay: '00:00:01'
-      - service: input_boolean.turn_off
-        entity_id: input_boolean.home_reset
-  #####################################################################################
-  - id: routine_home_lights_off
-    alias: "Routine: Turn night lights off"
-    mode: single
-    trigger:
-      - platform: time
-        at: "09:00:00"
-    condition: [ ]
-    action:
-      - service: switch.turn_off
-        target:
-          entity_id:
-            - switch.adaptive_lighting_sleep_mode_night
-      - delay: '00:00:05'
-      - service: light.turn_off
-        target:
-          entity_id:
-            - light.ada_lamp
-            - light.edwin_lamp
-            - light.edwin_night_light
-            - light.hallway_sconces
-      - service: number.set_value
-        target:
-          entity_id:
-            - number.ada_fan_light_motion_sense_timeout
-            - number.edwin_fan_light_motion_sense_timeout
-        data:
-          value: 3600
-      - service: switch.turn_on
-        target:
-          entity_id:
-            - switch.ada_fan_light_return_to_auto
-            - switch.edwin_fan_light_return_to_auto
-      - service: light.turn_on
-        target:
-          entity_id:
-            - light.ada_fan
-            - light.edwin_fan
-      - service: fan.turn_off
-        target:
-          entity_id:
-            - fan.ada_fan
-            - fan.edwin_fan
-            - fan.parents_fan
-            - fan.lounge_fan
-            - fan.deck_fan
-  #####################################################################################
-  - id: routine_home_lights_off_weekday
-    alias: "Routine: Turn night lights off on week days"
-    mode: single
-    trigger:
-      - platform: time
-        at: "09:00:00"
-    condition:
-      condition: state
-      entity_id: binary_sensor.workday_sensor
-      state: "on"
-    action:
-      - service: media_player.turn_off
-        target:
-          entity_id:
-            - media_player.ada_home
-            - media_player.edwin_home
-            - media_player.lounge_home
-  #####################################################################################
-  - id: routine_home_lights_off_early
-    alias: "Routine: Turn early night lights off"
-    mode: single
-    trigger:
-      - platform: time
-        at: "19:30:00"
-    condition: [ ]
-    action:
-      - service: light.turn_off
-        target:
-          entity_id:
-            - light.hallway_sconces
-  #####################################################################################
-  - id: routine_home_lights_on
-    alias: "Routine: Turn night lights on"
-    mode: single
-    trigger:
-      - platform: time
-        at: "17:45:00"
-    condition: [ ]
-    action:
-      - service: switch.turn_on
-        target:
-          entity_id:
-            - switch.adaptive_lighting_sleep_mode_night
-      - delay: '00:00:05'
-      - service: light.turn_on
-        target:
-          entity_id:
-            - light.edwin_night_light
-            - light.hallway_sconces
-      - service: number.set_value
-        target:
-          entity_id:
-            - number.ada_fan_light_motion_sense_timeout
-            - number.edwin_fan_light_motion_sense_timeout
-        data:
-          value: 10800
-      - service: switch.turn_off
-        target:
-          entity_id:
-            - switch.ada_fan_light_return_to_auto
-            - switch.edwin_fan_light_return_to_auto
-      - service: light.turn_off
-        target:
-          entity_id:
-            - light.ada_fan
-            - light.ada_lamp
-            - light.edwin_fan
-            - light.edwin_lamp
-      - service: media_player.volume_set
-        data:
-          entity_id:
-            - media_player.ada_home
-            - media_player.edwin_home
-          volume_level: '0.2'
-  #####################################################################################
-
-
-
-
-
-  # TODO: Disable becasue Edwin hates it, maybe turn off based on temp?
-  #  - id: routine_home_fans_off
-  #    alias: "Routine: Turn fans off"
-  #    mode: single
-  #    trigger:
-  #      - platform: time
-  #        at: "03:00:00"
-  #    condition: [ ]
-  #    action:
-  #      - service: fan.turn_off
-  #        target:
-  #          entity_id:
-  #            - fan.ada_fan
-  #            - fan.edwin_fan
-  #            - fan.parents_fan
-  #            - fan.lounge_fan
-  #            - fan.deck_fan
-
-
-
-
-
-  #####################################################################################
-  - id: routine_water_booster_on
-    alias: "Water Heating: Turn on water heater booster"
-    mode: single
-    trigger:
-      - platform: time
-        at: '04:30:00'
-      - platform: time
-        at: '05:30:00'
-      - platform: time
-        at: '15:30:00'
-    condition:
-      or:
-        - condition: template
-          value_template: '{{ now().month == 5 }}'
-        - condition: template
-          value_template: '{{ now().month == 6 }}'
-        - condition: template
-          value_template: '{{ now().month == 7 }}'
-        - condition: template
-          value_template: '{{ now().month == 8 }}'
-    action:
-      - service: switch.turn_on
-        entity_id: switch.ceiling_water_booster_plug
-  #####################################################################################
-  - id: routine_water_booster_off
-    mode: single
-    alias: "Water Heating: Turn off water heater booster"
-    trigger:
-      - platform: state
-        entity_id: switch.ceiling_water_booster_plug
-        from: 'off'
-        to: 'on'
-    condition: [ ]
-    action:
-      - delay: '00:45:00'
-      - service: switch.turn_off
-        target:
-          entity_id: switch.ceiling_water_booster_plug
-  #####################################################################################
-  - id: routine_water_booster_off_failsafe
-    alias: "Water Heating: Turn off water heater booster fail-safe"
-    mode: single
-    trigger:
-      platform: time_pattern
-      minutes: '/15'
-    condition:
-      and:
-        - condition: time
-          after: '22:00:00'
-          before: '04:00:00'
-        - condition: state
-          entity_id: switch.ceiling_water_booster_plug
-          state: 'on'
-    action:
-      - service: switch.turn_off
-        entity_id: switch.ceiling_water_booster_plug
-  #####################################################################################
-  - id: routine_bathroom_rails_on
-    alias: "Water Heating: Turn on towel rails"
-    mode: single
-    trigger:
-      - platform: time
-        at: '03:00:00'
-    condition:
-      or:
-        - condition: template
-          value_template: '{{ now().month == 5 }}'
-        - condition: template
-          value_template: '{{ now().month == 6 }}'
-        - condition: template
-          value_template: '{{ now().month == 7 }}'
-        - condition: template
-          value_template: '{{ now().month == 8 }}'
-    action:
-      - service: switch.turn_on
-        entity_id: switch.bathroom_rails_plug
-  #####################################################################################
-  - id: routine_bathroom_rails_off
-    alias: "Water Heating: Turn off towel rails"
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: switch.bathroom_rails_plug
-        from: 'off'
-        to: 'on'
-    condition: [ ]
-    action:
-      - delay: '04:00:00'
-      - service: switch.turn_off
-        target:
-          entity_id: switch.bathroom_rails_plug
-  #####################################################################################
-  - id: routine_bathroom_rails_off_failsafe
-    alias: "Water Heating: Turn off towel rails fail-safe"
-    mode: single
-    trigger:
-      platform: time_pattern
-      minutes: '/15'
-    condition:
-      and:
-        - condition: time
-          after: '22:00:00'
-          before: '02:00:00'
-        - condition: state
-          entity_id: switch.bathroom_rails_plug
-          state: 'on'
-    action:
-      - service: switch.turn_off
-        entity_id: switch.bathroom_rails_plug
-#######################################################################################
-  - id: routine_coffee_machine_off
-    alias: "Coffee Machine: Turn off coffee machine"
-    mode: single
-    trigger:
-      - platform: state
-        entity_id: switch.kitchen_coffee_machine_plug
-        from: 'off'
-        to: 'on'
-    condition: [ ]
-    action:
-      - delay: '00:15:00'
-      - service: switch.turn_off
-        target:
-          entity_id: switch.kitchen_coffee_machine_plug
-  #####################################################################################
-  - id: routine_coffee_machine_off_failsafe
-    alias: "Coffee Machine: Turn off coffee machine fail-safe"
-    mode: single
-    trigger:
-      platform: time_pattern
-      minutes: '/15'
-    condition:
-      and:
-        - condition: time
-          after: '13:00:00'
-          before: '06:00:00'
-        - condition: state
-          entity_id: switch.kitchen_coffee_machine_plug
-          state: 'on'
-    action:
-      - service: switch.turn_off
-        entity_id: switch.kitchen_coffee_machine_plug
+########################################################################################
+#input_boolean:
+#  #####################################################################################
+#  home_movie:
+#    name: Movie
+#    initial: off
+#  #####################################################################################
+#  home_sleep:
+#    name: Sleep
+#    initial: off
+#  #####################################################################################
+#  home_reset:
+#    name: Reset
+#    initial: off
+#  #####################################################################################
+#automation:
+#  - id: routine_init
+#    alias: "Routine: Run init code after startup"
+#    mode: single
+#    trigger:
+#      - platform: homeassistant
+#        event: start
+#    action:
+#      - service: system_log.write
+#        data_template:
+#          level: info
+#          message: "Home Assistant has started!"
+#      - service: switch.turn_on
+#        target:
+#          entity_id:
+#            - switch.adaptive_lighting_sleep_mode_night
+#  #####################################################################################
+#  - id: routine_home_movie_on
+#    alias: "Routine: Put home into Movie mode"
+#    mode: single
+#    trigger:
+#      - platform: state
+#        entity_id: input_boolean.home_movie
+#        from: 'off'
+#        to: 'on'
+#    condition: [ ]
+#    action:
+#  #####################################################################################
+#  - id: routine_home_movie_off
+#    alias: "Routine: Take home out of Movie mode"
+#    mode: single
+#    trigger:
+#      - platform: state
+#        entity_id: input_boolean.home_movie
+#        from: 'on'
+#        to: 'off'
+#    condition: [ ]
+#    action:
+#  #####################################################################################
+#  - id: routine_home_sleep
+#    alias: "Routine: Put home to sleep"
+#    mode: single
+#    trigger:
+#      - platform: state
+#        entity_id: input_boolean.home_sleep
+#        from: 'off'
+#        to: 'on'
+#    condition: [ ]
+#    action:
+#      - service: light.turn_off
+#        target:
+#          entity_id:
+#            - light.parents_main
+#      - service: media_player.unjoin
+#        target:
+#          entity_id: media_player.parents_move
+#      - service: media_player.volume_mute
+#        data:
+#          entity_id: media_player.parents_move
+#          is_volume_muted: false
+#      - service: media_player.volume_set
+#        data:
+#          entity_id: media_player.parents_move
+#          volume_level: '0.3'
+#      - service: media_player.turn_off
+#        target:
+#          entity_id:
+#            - media_player.ada_home
+#            - media_player.edwin_home
+#      - service: media_player.play_media
+#        data:
+#          media_content_type: music
+#          media_content_id: 'https://nginx.janeandgraham.com/relaxation-sounds/ocean.mp3'
+#        target:
+#          entity_id: media_player.parents_move
+#      - service: media_player.repeat_set
+#        data:
+#          repeat: all
+#        entity_id: media_player.parents_move
+#  #####################################################################################
+#  - id: routine_home_sleep_cube
+#    alias: "Routine: Put home to sleep via cube"
+#    mode: restart
+#    trigger:
+#      platform: state
+#      entity_id: sensor.home_cube_remote_action
+#      to: "flip90"
+#    condition: [ ]
+#    action:
+#      - service: input_boolean.turn_off
+#        entity_id: input_boolean.home_sleep
+#      - service: input_boolean.turn_on
+#        entity_id: input_boolean.home_sleep
+#  #####################################################################################
+#  - id: routine_home_wakeup
+#    alias: "Routine: Wake home up"
+#    mode: single
+#    trigger:
+#      - platform: state
+#        entity_id: input_boolean.home_sleep
+#        from: 'on'
+#        to: 'off'
+#    condition: [ ]
+#    action:
+#      - service: media_player.media_stop
+#        target:
+#          entity_id:
+#            - media_player.parents_move
+#      - service: media_player.volume_set
+#        data:
+#          entity_id: media_player.parents_move
+#          volume_level: '0.2'
+#      - service: automation.trigger
+#        data:
+#          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
+#  #####################################################################################
+#  - id: routine_home_wakeup_cube
+#    alias: "Routine: Wake home up via cube"
+#    mode: restart
+#    trigger:
+#      platform: state
+#      entity_id: sensor.home_cube_remote_action
+#      to: "shake"
+#    condition: [ ]
+#    action:
+#      - service: input_boolean.turn_off
+#        entity_id: input_boolean.home_sleep
+#  #####################################################################################
+#  - id: routine_home_reset
+#    alias: "Routine: Reset home to defaults"
+#    mode: single
+#    trigger:
+#      - platform: state
+#        entity_id: input_boolean.home_reset
+#        from: 'off'
+#        to: 'on'
+#    condition: [ ]
+#    action:
+#      - service: automation.trigger
+#        data:
+#          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
+#      - delay: '00:00:01'
+#      - service: input_boolean.turn_off
+#        entity_id: input_boolean.home_reset
+#  #####################################################################################
+#  - id: routine_home_lights_off
+#    alias: "Routine: Turn night lights off"
+#    mode: single
+#    trigger:
+#      - platform: time
+#        at: "09:00:00"
+#    condition: [ ]
+#    action:
+#      - service: switch.turn_off
+#        target:
+#          entity_id:
+#            - switch.adaptive_lighting_sleep_mode_night
+#      - delay: '00:00:05'
+#      - service: light.turn_off
+#        target:
+#          entity_id:
+#            - light.ada_lamp
+#            - light.edwin_lamp
+#            - light.edwin_night_light
+#            - light.hallway_sconces
+#      - service: number.set_value
+#        target:
+#          entity_id:
+#            - number.ada_fan_light_motion_sense_timeout
+#            - number.edwin_fan_light_motion_sense_timeout
+#        data:
+#          value: 3600
+#      - service: switch.turn_on
+#        target:
+#          entity_id:
+#            - switch.ada_fan_light_return_to_auto
+#            - switch.edwin_fan_light_return_to_auto
+#      - service: light.turn_on
+#        target:
+#          entity_id:
+#            - light.ada_fan
+#            - light.edwin_fan
+#      - service: fan.turn_off
+#        target:
+#          entity_id:
+#            - fan.ada_fan
+#            - fan.edwin_fan
+#            - fan.parents_fan
+#            - fan.lounge_fan
+#            - fan.deck_fan
+#  #####################################################################################
+#  - id: routine_home_lights_off_weekday
+#    alias: "Routine: Turn night lights off on week days"
+#    mode: single
+#    trigger:
+#      - platform: time
+#        at: "09:00:00"
+#    condition:
+#      condition: state
+#      entity_id: binary_sensor.workday_sensor
+#      state: "on"
+#    action:
+#      - service: media_player.turn_off
+#        target:
+#          entity_id:
+#            - media_player.ada_home
+#            - media_player.edwin_home
+#            - media_player.lounge_home
+#  #####################################################################################
+#  - id: routine_home_lights_off_early
+#    alias: "Routine: Turn early night lights off"
+#    mode: single
+#    trigger:
+#      - platform: time
+#        at: "19:30:00"
+#    condition: [ ]
+#    action:
+#      - service: light.turn_off
+#        target:
+#          entity_id:
+#            - light.hallway_sconces
+#  #####################################################################################
+#  - id: routine_home_lights_on
+#    alias: "Routine: Turn night lights on"
+#    mode: single
+#    trigger:
+#      - platform: time
+#        at: "17:45:00"
+#    condition: [ ]
+#    action:
+#      - service: switch.turn_on
+#        target:
+#          entity_id:
+#            - switch.adaptive_lighting_sleep_mode_night
+#      - delay: '00:00:05'
+#      - service: light.turn_on
+#        target:
+#          entity_id:
+#            - light.edwin_night_light
+#            - light.hallway_sconces
+#      - service: number.set_value
+#        target:
+#          entity_id:
+#            - number.ada_fan_light_motion_sense_timeout
+#            - number.edwin_fan_light_motion_sense_timeout
+#        data:
+#          value: 10800
+#      - service: switch.turn_off
+#        target:
+#          entity_id:
+#            - switch.ada_fan_light_return_to_auto
+#            - switch.edwin_fan_light_return_to_auto
+#      - service: light.turn_off
+#        target:
+#          entity_id:
+#            - light.ada_fan
+#            - light.ada_lamp
+#            - light.edwin_fan
+#            - light.edwin_lamp
+#      - service: media_player.volume_set
+#        data:
+#          entity_id:
+#            - media_player.ada_home
+#            - media_player.edwin_home
+#          volume_level: '0.2'
+#  #####################################################################################
+#
+#
+#
+#
+#
+#  # TODO: Disable becasue Edwin hates it, maybe turn off based on temp?
+#  #  - id: routine_home_fans_off
+#  #    alias: "Routine: Turn fans off"
+#  #    mode: single
+#  #    trigger:
+#  #      - platform: time
+#  #        at: "03:00:00"
+#  #    condition: [ ]
+#  #    action:
+#  #      - service: fan.turn_off
+#  #        target:
+#  #          entity_id:
+#  #            - fan.ada_fan
+#  #            - fan.edwin_fan
+#  #            - fan.parents_fan
+#  #            - fan.lounge_fan
+#  #            - fan.deck_fan
+#
+#
+#
+#
+#
+#  #####################################################################################
+#  - id: routine_water_booster_on
+#    alias: "Water Heating: Turn on water heater booster"
+#    mode: single
+#    trigger:
+#      - platform: time
+#        at: '04:30:00'
+#      - platform: time
+#        at: '05:30:00'
+#      - platform: time
+#        at: '15:30:00'
+#    condition:
+#      or:
+#        - condition: template
+#          value_template: '{{ now().month == 5 }}'
+#        - condition: template
+#          value_template: '{{ now().month == 6 }}'
+#        - condition: template
+#          value_template: '{{ now().month == 7 }}'
+#        - condition: template
+#          value_template: '{{ now().month == 8 }}'
+#    action:
+#      - service: switch.turn_on
+#        entity_id: switch.ceiling_water_booster_plug
+#  #####################################################################################
+#  - id: routine_water_booster_off
+#    mode: single
+#    alias: "Water Heating: Turn off water heater booster"
+#    trigger:
+#      - platform: state
+#        entity_id: switch.ceiling_water_booster_plug
+#        from: 'off'
+#        to: 'on'
+#    condition: [ ]
+#    action:
+#      - delay: '00:45:00'
+#      - service: switch.turn_off
+#        target:
+#          entity_id: switch.ceiling_water_booster_plug
+#  #####################################################################################
+#  - id: routine_water_booster_off_failsafe
+#    alias: "Water Heating: Turn off water heater booster fail-safe"
+#    mode: single
+#    trigger:
+#      platform: time_pattern
+#      minutes: '/15'
+#    condition:
+#      and:
+#        - condition: time
+#          after: '22:00:00'
+#          before: '04:00:00'
+#        - condition: state
+#          entity_id: switch.ceiling_water_booster_plug
+#          state: 'on'
+#    action:
+#      - service: switch.turn_off
+#        entity_id: switch.ceiling_water_booster_plug
+#  #####################################################################################
+#  - id: routine_bathroom_rails_on
+#    alias: "Water Heating: Turn on towel rails"
+#    mode: single
+#    trigger:
+#      - platform: time
+#        at: '03:00:00'
+#    condition:
+#      or:
+#        - condition: template
+#          value_template: '{{ now().month == 5 }}'
+#        - condition: template
+#          value_template: '{{ now().month == 6 }}'
+#        - condition: template
+#          value_template: '{{ now().month == 7 }}'
+#        - condition: template
+#          value_template: '{{ now().month == 8 }}'
+#    action:
+#      - service: switch.turn_on
+#        entity_id: switch.bathroom_rails_plug
+#  #####################################################################################
+#  - id: routine_bathroom_rails_off
+#    alias: "Water Heating: Turn off towel rails"
+#    mode: single
+#    trigger:
+#      - platform: state
+#        entity_id: switch.bathroom_rails_plug
+#        from: 'off'
+#        to: 'on'
+#    condition: [ ]
+#    action:
+#      - delay: '04:00:00'
+#      - service: switch.turn_off
+#        target:
+#          entity_id: switch.bathroom_rails_plug
+#  #####################################################################################
+#  - id: routine_bathroom_rails_off_failsafe
+#    alias: "Water Heating: Turn off towel rails fail-safe"
+#    mode: single
+#    trigger:
+#      platform: time_pattern
+#      minutes: '/15'
+#    condition:
+#      and:
+#        - condition: time
+#          after: '22:00:00'
+#          before: '02:00:00'
+#        - condition: state
+#          entity_id: switch.bathroom_rails_plug
+#          state: 'on'
+#    action:
+#      - service: switch.turn_off
+#        entity_id: switch.bathroom_rails_plug
+########################################################################################
+#  - id: routine_coffee_machine_off
+#    alias: "Coffee Machine: Turn off coffee machine"
+#    mode: single
+#    trigger:
+#      - platform: state
+#        entity_id: switch.kitchen_coffee_machine_plug
+#        from: 'off'
+#        to: 'on'
+#    condition: [ ]
+#    action:
+#      - delay: '00:15:00'
+#      - service: switch.turn_off
+#        target:
+#          entity_id: switch.kitchen_coffee_machine_plug
+#  #####################################################################################
+#  - id: routine_coffee_machine_off_failsafe
+#    alias: "Coffee Machine: Turn off coffee machine fail-safe"
+#    mode: single
+#    trigger:
+#      platform: time_pattern
+#      minutes: '/15'
+#    condition:
+#      and:
+#        - condition: time
+#          after: '13:00:00'
+#          before: '06:00:00'
+#        - condition: state
+#          entity_id: switch.kitchen_coffee_machine_plug
+#          state: 'on'
+#    action:
+#      - service: switch.turn_off
+#        entity_id: switch.kitchen_coffee_machine_plug
