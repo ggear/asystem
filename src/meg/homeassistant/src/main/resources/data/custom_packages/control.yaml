@@ -9,6 +9,7 @@ fan:
       - fan.deck_east_fan
       - fan.deck_west_fan
 #######################################################################################
+# TODO: Disable tplink config, given it has been deprecated 
 #tplink:
 #  discovery: false
 #  switch:

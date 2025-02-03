@@ -478,6 +478,7 @@ fan:
         """.strip() + "\n")
         metadata_control_file.write("""
 #######################################################################################
+# TODO: Disable tplink config, given it has been deprecated 
 #tplink:
 #  discovery: false
 #  switch:
