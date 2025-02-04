@@ -2,14 +2,14 @@ title: Edwin
 widget_size: [1, 1]
 widget_margins: [5, 5]
 widget_dimensions: [120, 120]
-columns: 1
+columns: 2
 
 header:
   widget_type: label
   text: Edwin's Routines!
 
 layout:
-  - header
-  - input_boolean.edwin_wakeup
-  - input_boolean.edwin_playtime
-  - input_boolean.edwin_goodnight
+  - header(2x1)
+  - input_boolean.edwin_wakeup(2x1)
+  - input_boolean.edwin_playtime(2x1)
+  - input_boolean.edwin_goodnight(2x1)

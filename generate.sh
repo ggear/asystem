@@ -33,15 +33,16 @@ function pull_repo() {
         git branch --set-upstream-to origin/${BRANCH} 2>/dev/null
 
         # TODO: Rebase to upstream
-        # git remote add upstream https://github.com/someuser/forked-origin.git
+        # git remote show
+        # git remote add upstream https://github.com/home-assistant/core.git
+        # git remote show
         # git fetch upstream
         # git rebase upstream/master
         # git push --force
         # git push --tags --force
-        # git checkout ggear-mybranch
-        # git merge latest-tag
-        # git push --force
-        # git push --tags --force
+        # git checkout ggear-influxdb
+        # git merge 2025.1.4
+        # git push --all --force
 
       fi
     done

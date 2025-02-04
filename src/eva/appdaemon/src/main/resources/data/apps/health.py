@@ -11,4 +11,5 @@ class Health(hass.Hass):
         self.log("Initialised")
 
     def health(self, body_json, url_args):
+        # TODO: Check HASS input_boolean.home_started == True
         return {"health": "OK"}, 200

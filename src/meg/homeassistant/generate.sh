@@ -90,13 +90,12 @@ rm -rf ${ROOT_DIR}/src/main/resources/data/custom_components/powercalc
 mkdir -p ${ROOT_DIR}/src/main/resources/data/custom_components
 cp -rvf ${ROOT_DIR}/../../../.deps/homeassistant/powercalc-component/custom_components/powercalc ${ROOT_DIR}/src/main/resources/data/custom_components
 
-# TODO: Hack temporarily disable
-## Notes: https://github.com/home-assistant/core/tree/dev/homeassistant/components/influxdb
-#VERSION=ggear-influxdb
-#pull_repo "$(pwd)" homeassistant influxdb-component ggear/homeassistant-core ${VERSION} ${1}
-#rm -rf ${ROOT_DIR}/src/main/resources/data/custom_components/influxdb
-#mkdir -p ${ROOT_DIR}/src/main/resources/data/custom_components
-#cp -rvf ${ROOT_DIR}/../../../.deps/homeassistant/influxdb-component/homeassistant/components/influxdb ${ROOT_DIR}/src/main/resources/data/custom_components
+# Notes: https://github.com/home-assistant/core/tree/dev/homeassistant/components/influxdb
+VERSION=ggear-influxdb
+pull_repo "$(pwd)" homeassistant influxdb-component ggear/homeassistant-core ${VERSION} ${1}
+rm -rf ${ROOT_DIR}/src/main/resources/data/custom_components/influxdb
+mkdir -p ${ROOT_DIR}/src/main/resources/data/custom_components
+cp -rvf ${ROOT_DIR}/../../../.deps/homeassistant/influxdb-component/homeassistant/components/influxdb ${ROOT_DIR}/src/main/resources/data/custom_components
 
 # TODO: Disable tplink config, given it has been deprecated
 ## Notes: https://github.com/home-assistant/core/tree/dev/homeassistant/components/tplink
