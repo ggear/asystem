@@ -2,7 +2,7 @@
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
 mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Ada Lamp Bulb 1" }' && echo '[INFO] Device [Ada Lamp Bulb 1] removed from all groups' && sleep 1
 mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Edwin Lamp Bulb 1" }' && echo '[INFO] Device [Edwin Lamp Bulb 1] removed from all groups' && sleep 1

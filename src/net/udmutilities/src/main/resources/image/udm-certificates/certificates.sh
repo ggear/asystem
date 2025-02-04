@@ -1,6 +1,6 @@
 #!/bin/bash
 
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 if [ "$#" -ne 3 ]; then
   echo "Usage: $0 <mode> <host-pull> <host-push>"
@@ -14,7 +14,7 @@ if [ "$1" = "pull" ]; then
   echo "Pulling certificates ... done"
 elif [ "$1" = "push" ]; then
   echo "Pushing certificates ..."
-  for DIR in "/home/asystem/udmutilities/latest/" "/var/lib/asystem/install/udmutilities/latest/config/"; do
+  for DIR in "/home/asystem/udmutilities/latest/" "/var/lib/asystem/install/udmutilities/latest/data/"; do
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/.key.pem" "root@$3:$DIR"
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/certificate.pem" "root@$3:$DIR"
     echo "localhost:$ROOT_DIR -> $3:$DIR"

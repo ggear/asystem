@@ -82,7 +82,7 @@ if __name__ == "__main__":
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
         """.strip() + "\n")
         for metadata_config_dict in metadata_config_dicts:
@@ -103,7 +103,7 @@ ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
         """.strip() + "\n")
         for metadata_config_clean_dict in metadata_config_dicts:

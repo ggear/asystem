@@ -2,7 +2,7 @@
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
 ${ROOT_DIR}/mqtt_config.py '0x0017880103433075' 'Ada Lamp Bulb 1' 'Ada Lamp' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":254, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'
 ${ROOT_DIR}/mqtt_config.py '0x0017880102b8fd87' 'Edwin Lamp Bulb 1' 'Edwin Lamp' '{ "hue_power_on_behavior":"on", "hue_power_on_brightness":254, "hue_power_on_color_temperature":65535, "color_temp_startup":65535 }'

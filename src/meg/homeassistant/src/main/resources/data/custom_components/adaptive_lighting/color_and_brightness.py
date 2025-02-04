@@ -64,10 +64,12 @@ class SunEvents:
         ) + self.sunrise_offset
         if self.min_sunrise_time is not None:
             min_sunrise = self._replace_time(dt, self.min_sunrise_time)
-            sunrise = max(min_sunrise, sunrise)
+            if min_sunrise > sunrise:
+                sunrise = min_sunrise
         if self.max_sunrise_time is not None:
             max_sunrise = self._replace_time(dt, self.max_sunrise_time)
-            sunrise = min(max_sunrise, sunrise)
+            if max_sunrise < sunrise:
+                sunrise = max_sunrise
         return sunrise
 
     def sunset(self, dt: datetime.date) -> datetime.datetime:
@@ -79,10 +81,12 @@ class SunEvents:
         ) + self.sunset_offset
         if self.min_sunset_time is not None:
             min_sunset = self._replace_time(dt, self.min_sunset_time)
-            sunset = max(min_sunset, sunset)
+            if min_sunset > sunset:
+                sunset = min_sunset
         if self.max_sunset_time is not None:
             max_sunset = self._replace_time(dt, self.max_sunset_time)
-            sunset = min(max_sunset, sunset)
+            if max_sunset < sunset:
+                sunset = max_sunset
         return sunset
 
     def _replace_time(

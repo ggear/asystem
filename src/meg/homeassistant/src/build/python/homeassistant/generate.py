@@ -76,7 +76,7 @@ def write_certificates(module_name, certificate_dir):
         certificate_file.write("""
 #!/bin/bash
 
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 if [ "$#" -ne 3 ]; then
   echo "Usage: $0 <mode> <host-pull> <host-push>"

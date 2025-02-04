@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 rm -rf src/main/resources/config/parse
 mkdir -p src/main/resources/config/parse &&

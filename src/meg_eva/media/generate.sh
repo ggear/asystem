@@ -2,7 +2,7 @@
 
 . ../../../generate.sh
 
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 mkdir -p /Users/graham/.config
 cp -rvf ${ROOT_DIR}/src/main/resources/config/.gspread_pandas /Users/graham/.config/gspread_pandas
@@ -23,7 +23,7 @@ for FILE in "ingress.py" "analyse.py"; do
 done
 
 VERSION=ggear-tested
-pull_repo $(pwd) media other_video_transcoding ggear/other_video_transcoding ${VERSION} ${1}
+pull_repo "$(pwd)" media other_video_transcoding ggear/other_video_transcoding ${VERSION} ${1}
 rm -rf ${ROOT_DIR}/src/main/resources/config/bin/lib/other-transcode.rb
 mkdir -p ${ROOT_DIR}/src/main/resources/config/bin/lib &&
   cp -rvf ${ROOT_DIR}/../../../.deps/media/other_video_transcoding/other-transcode.rb ${ROOT_DIR}/src/main/resources/config/bin/lib

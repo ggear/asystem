@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 HOSTS=$(echo $(basename $(dirname $(pwd))) | tr "_" "\n")
 HOST="$(grep $(echo "${HOSTS}" | head -1) ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-$(echo "${HOSTS}" | head -1)"

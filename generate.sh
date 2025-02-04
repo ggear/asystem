@@ -56,7 +56,7 @@ function pull_repo() {
     REPO_DIR="$(cd ${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME} && pwd)"
     REPO_LABEL="$(basename $(dirname ${INVOKING_DIR}))/$(basename ${INVOKING_DIR}):${REPO_NAME}"
     echo -n "Module repository [${REPO_LABEL}] is being verified at [${REPO_DIR}] ... "
-    TAG_CHECKED_OUT=$(git tag --points-at HEAD | head -n 1)
+    TAG_CHECKED_OUT=$(git tag --points-at HEAD | grep -iv untagged | head -n 1)
     TAG_MOST_RECENT=$(git tag --sort=creatordate | grep -iv dev | grep -iv beta | grep -v stable | grep -iv rc | grep -iv a0 | grep -iv 0a | grep -iv b0 | grep -iv 0b | tail -n 1)
     [[ $(git tag | wc -l) -eq 0 ]] && TAG_CHECKED_OUT=$(git branch --show-current) && TAG_MOST_RECENT=$(git branch --show-current)
     [[ $(git branch | grep "ggear" | wc -l) -gt 0 ]] && TAG_MOST_RECENT=$(git describe --tags --abbrev=0) && TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 HOSTS=$(echo $(basename $(dirname $(pwd))) | tr "_" "\n")
 

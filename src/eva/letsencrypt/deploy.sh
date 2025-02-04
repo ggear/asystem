@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ROOT_DIR=$(dirname $(readlink -f "$0"))
+ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 echo ""
 for MODULE_DIR in $(find "${ROOT_DIR}/../.." -name certificates.sh -type f -path "*/src/*" ! -path "*/target/*" | sed 's/\/src\/main\// /' | cut -d ' ' -f1); do
