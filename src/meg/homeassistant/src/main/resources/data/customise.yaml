@@ -276,6 +276,8 @@ sensor.roof_storm_rain:
   friendly_name: 'Storm'
   icon: 'mdi:weather-pouring'
   unit_of_measurement: 'cm'
+input_boolean.home_started:
+  friendly_name: 'Started'
 input_boolean.home_security:
   friendly_name: 'Secure'
   icon: 'mdi:shield-home'
@@ -289,11 +291,11 @@ input_boolean.home_reset:
   friendly_name: 'Reset'
   icon: 'mdi:refresh-circle'
 input_boolean.edwin_wakeup:
-  friendly_name: 'Turn Edwin wakeup mode on'
+  friendly_name: 'Edwin Wakeup'
 input_boolean.edwin_playtime:
-  friendly_name: 'Turn Edwin playtime mode on'
+  friendly_name: 'Edwin playtime'
 input_boolean.edwin_goodnight:
-  friendly_name: 'Turn Edwin goodnight mode on'
+  friendly_name: 'Edwin Goodnight'
 switch.kitchen_coffee_machine_plug:
   friendly_name: 'Coffee Machine'
   icon: 'mdi:coffee-maker'

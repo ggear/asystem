@@ -20,9 +20,8 @@ function alive() {
 }
 
 function ready() {
-  if READY="$(${CURL_CMD} -X POST -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" -H "Content-Type: application/json" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/config/core/check_config")" &&
-    [ "$(jq -er .result <<<"${READY}")" == "valid" ] &&
-    [ "$(jq -er .errors <<<"${READY}")" == "null" ]; then
+  if READY="$(${CURL_CMD} -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" -H "Content-Type: application/json" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/states/input_boolean.home_started")" &&
+    [ "$(jq -er .state <<<"${READY}")" == "on" ]; then
     return 0
   else
     return 1

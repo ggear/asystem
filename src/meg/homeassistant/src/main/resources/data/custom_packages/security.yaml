@@ -5,8 +5,6 @@ stream:
 #######################################################################################
 input_boolean:
   #####################################################################################
-  home_security:
-    name: Security
   home_security_triggered:
     name: Security triggered flag
     initial: false
