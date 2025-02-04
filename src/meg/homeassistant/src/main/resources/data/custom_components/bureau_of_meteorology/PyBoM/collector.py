@@ -35,7 +35,7 @@ class Collector:
         async with aiohttp.ClientSession(headers=headers) as session:
             response = await session.get(URL_BASE + self.geohash7)
 
-        if response is not None and response.status == 200:
+        if response is not None and response.health == 200:
             self.locations_data = await response.json()
 
     async def format_daily_forecast_data(self):

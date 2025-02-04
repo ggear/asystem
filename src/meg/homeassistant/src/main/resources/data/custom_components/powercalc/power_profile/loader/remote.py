@@ -82,7 +82,7 @@ class RemoteLoader(Loader):
             """
             _LOGGER.debug("Loading library.json from github")
             async with aiohttp.ClientSession() as session, session.get(ENDPOINT_LIBRARY) as resp:
-                if resp.status != 200:
+                if resp.health != 200:
                     raise ProfileDownloadError("Failed to download library.json, unexpected status code")
 
                 def _save_to_local_storage(data: bytes) -> None:
@@ -290,7 +290,7 @@ class RemoteLoader(Loader):
         async with aiohttp.ClientSession() as session:
             try:
                 async with session.get(endpoint) as resp:
-                    if resp.status != 200:
+                    if resp.health != 200:
                         raise ProfileDownloadError(f"Failed to download profile: {manufacturer}/{model}")
                     resources = await resp.json()
 
@@ -300,7 +300,7 @@ class RemoteLoader(Loader):
                 for resource in resources:
                     url = resource.get("url")
                     async with session.get(url) as resp:
-                        if resp.status != 200:
+                        if resp.health != 200:
                             raise ProfileDownloadError(f"Failed to download github URL: {url}")
 
                         contents = await resp.read()
