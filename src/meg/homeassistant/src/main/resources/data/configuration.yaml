@@ -75,8 +75,12 @@ influxdb:
       - 'adaptive_lighting_*'
   ignore_attributes: !include influxdb-ignores.yaml
 #######################################################################################
+
+
+#######################################################################################
+# INFO: The UI is now used to configure MQTT, perhaps return with a version < 2022.2.9
+#######################################################################################
 mqtt:
-# The UI is now used to configure MQTT, perhaps return with a version 2022.2.9-
 #  broker: !env_var VERNEMQ_SERVICE
 #  port: !env_var VERNEMQ_PORT
 #  client_id: 'homeassistant'
@@ -92,6 +96,9 @@ mqtt:
 #    payload: 'offline'
 #    qos: 2
 #    retain: true
+#######################################################################################
+
+
 #######################################################################################
 google_assistant:
   project_id: 'home-assistant-31854'

@@ -454,6 +454,7 @@ input_boolean:
   #####################################################################################
   {}:
     name: {}
+    initial: off
                 """.format(
                     metadata_inputs_dict["unique_id"],
                     metadata_inputs_dict["friendly_name"],

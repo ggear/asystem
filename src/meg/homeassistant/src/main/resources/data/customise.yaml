@@ -293,7 +293,7 @@ input_boolean.home_reset:
 input_boolean.edwin_wakeup:
   friendly_name: 'Edwin Wakeup'
 input_boolean.edwin_playtime:
-  friendly_name: 'Edwin playtime'
+  friendly_name: 'Edwin Playtime'
 input_boolean.edwin_goodnight:
   friendly_name: 'Edwin Goodnight'
 switch.kitchen_coffee_machine_plug:
