@@ -1,0 +1,35 @@
+#######################################################################################
+automation:
+  #######################################################################################
+  - id: routine_coffee_machine_off
+    alias: "Coffee Machine: Turn off coffee machine"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: switch.kitchen_coffee_machine_plug
+        from: 'off'
+        to: 'on'
+    actions:
+      - delay: '00:15:00'
+      - action: switch.turn_off
+        target:
+          entity_id: switch.kitchen_coffee_machine_plug
+  #####################################################################################
+  - id: routine_coffee_machine_off_failsafe
+    alias: "Coffee Machine: Turn off coffee machine fail-safe"
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        minutes: 15
+    condition:
+      and:
+        - condition: time
+          after: '13:00:00'
+          before: '06:00:00'
+        - condition: state
+          entity_id: switch.kitchen_coffee_machine_plug
+          state: 'on'
+    actions:
+      - action: switch.turn_off
+        entity_id: switch.kitchen_coffee_machine_plug
+  #####################################################################################

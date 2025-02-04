@@ -1,0 +1,27 @@
+#######################################################################################
+automation:
+  #####################################################################################
+  - id: routine_home_sleep_cube
+    alias: "Routine: Put home to sleep via cube"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: sensor.home_cube_remote_action
+        to: "flip90"
+    actions:
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.home_sleep
+      - action: input_boolean.turn_on
+        entity_id: input_boolean.home_sleep
+  #####################################################################################
+  - id: routine_home_wakeup_cube
+    alias: "Routine: Wake home up via cube"
+    mode: restart
+    triggers:
+      - trigger: state
+        entity_id: sensor.home_cube_remote_action
+        to: "shake"
+    actions:
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.home_sleep
+  #####################################################################################

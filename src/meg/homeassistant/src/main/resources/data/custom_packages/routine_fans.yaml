@@ -1,0 +1,19 @@
+#######################################################################################
+automation:
+  #####################################################################################
+  - id: routine_home_fans_off
+    alias: "Routine: Turn fans off"
+    mode: single
+    triggers:
+      - trigger: time
+        at: "03:00:00"
+    action:
+      - service: fan.turn_off
+        target:
+          entity_id:
+            - fan.ada_fan
+            - fan.edwin_fan
+            - fan.parents_fan
+            - fan.lounge_fan
+            - fan.deck_fan
+  #####################################################################################

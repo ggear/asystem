@@ -1,0 +1,23 @@
+#######################################################################################
+automation:
+  #####################################################################################
+  - id: routine_home_movie_on
+    alias: "Routine: Put home into Movie mode"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.home_movie
+        from: 'off'
+        to: 'on'
+    actions:
+  #####################################################################################
+  - id: routine_home_movie_off
+    alias: "Routine: Take home out of Movie mode"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.home_movie
+        from: 'on'
+        to: 'off'
+    actions:
+  #####################################################################################

@@ -1,0 +1,55 @@
+#######################################################################################
+automation:
+  #####################################################################################
+  - id: routine_bathroom_rails_on
+    alias: "Water Heating: Turn on towel rails"
+    mode: single
+    triggers:
+      - trigger: time
+        at: '03:00:00'
+    condition:
+      or:
+        - condition: template
+          value_template: '{{ now().month == 5 }}'
+        - condition: template
+          value_template: '{{ now().month == 6 }}'
+        - condition: template
+          value_template: '{{ now().month == 7 }}'
+        - condition: template
+          value_template: '{{ now().month == 8 }}'
+    actions:
+      - action: switch.turn_on
+        entity_id: switch.bathroom_rails_plug
+  #####################################################################################
+  - id: routine_bathroom_rails_off
+    alias: "Water Heating: Turn off towel rails"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: switch.bathroom_rails_plug
+        from: 'off'
+        to: 'on'
+    actions:
+      - delay: '04:00:00'
+      - action: switch.turn_off
+        target:
+          entity_id: switch.bathroom_rails_plug
+  #####################################################################################
+  - id: routine_bathroom_rails_off_failsafe
+    alias: "Water Heating: Turn off towel rails fail-safe"
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        minutes: 15
+    condition:
+      and:
+        - condition: time
+          after: '22:00:00'
+          before: '02:00:00'
+        - condition: state
+          entity_id: switch.bathroom_rails_plug
+          state: 'on'
+    actions:
+      - action: switch.turn_off
+        entity_id: switch.bathroom_rails_plug
+  #####################################################################################

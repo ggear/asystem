@@ -1,0 +1,59 @@
+#######################################################################################
+automation:
+  #####################################################################################
+  - id: routine_water_booster_on
+    alias: "Water Heating: Turn on water heater booster"
+    mode: single
+    triggers:
+      - trigger: time
+        at: '04:30:00'
+      - trigger: time
+        at: '05:30:00'
+      - trigger: time
+        at: '15:30:00'
+    condition:
+      or:
+        - condition: template
+          value_template: '{{ now().month == 5 }}'
+        - condition: template
+          value_template: '{{ now().month == 6 }}'
+        - condition: template
+          value_template: '{{ now().month == 7 }}'
+        - condition: template
+          value_template: '{{ now().month == 8 }}'
+    actions:
+      - action: switch.turn_on
+        entity_id: switch.ceiling_water_booster_plug
+  #####################################################################################
+  - id: routine_water_booster_off
+    mode: single
+    alias: "Water Heating: Turn off water heater booster"
+    triggers:
+      - trigger: state
+        entity_id: switch.ceiling_water_booster_plug
+        from: 'off'
+        to: 'on'
+    actions:
+      - delay: '00:45:00'
+      - action: switch.turn_off
+        target:
+          entity_id: switch.ceiling_water_booster_plug
+  #####################################################################################
+  - id: routine_water_booster_off_failsafe
+    alias: "Water Heating: Turn off water heater booster fail-safe"
+    mode: single
+    triggers:
+      - trigger: time_pattern
+        minutes: 15
+    condition:
+      and:
+        - condition: time
+          after: '22:00:00'
+          before: '04:00:00'
+        - condition: state
+          entity_id: switch.ceiling_water_booster_plug
+          state: 'on'
+    actions:
+      - action: switch.turn_off
+        entity_id: switch.ceiling_water_booster_plug
+  #####################################################################################

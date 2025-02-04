@@ -1,0 +1,99 @@
+#######################################################################################
+automation:
+  #####################################################################################
+  - id: routine_init
+    alias: "Routine: Run init code after startup"
+    mode: single
+    triggers:
+      - trigger: homeassistant
+        event: start
+    actions:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.home_started
+      - action: system_log.write
+        data_template:
+          level: info
+          message: "Home Assistant has started!"
+      - action: switch.turn_on
+        target:
+          entity_id:
+            - switch.adaptive_lighting_sleep_mode_night
+  #####################################################################################
+  - id: routine_home_sleep
+    alias: "Routine: Put home to sleep"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.home_sleep
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: light.turn_off
+        target:
+          entity_id:
+            - light.parents_main
+      - action: media_player.unjoin
+        target:
+          entity_id: media_player.parents_move
+      - action: media_player.volume_mute
+        data:
+          entity_id: media_player.parents_move
+          is_volume_muted: false
+      - action: media_player.volume_set
+        data:
+          entity_id: media_player.parents_move
+          volume_level: '0.3'
+      - action: media_player.turn_off
+        target:
+          entity_id:
+            - media_player.ada_home
+            - media_player.edwin_home
+      - action: media_player.play_media
+        data:
+          media_content_type: music
+          media_content_id: 'https://nginx.janeandgraham.com/relaxation-sounds/ocean.mp3'
+        target:
+          entity_id: media_player.parents_move
+      - action: media_player.repeat_set
+        data:
+          repeat: all
+        entity_id: media_player.parents_move
+  #####################################################################################
+  - id: routine_home_wakeup
+    alias: "Routine: Wake home up"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.home_sleep
+        from: 'on'
+        to: 'off'
+    actions:
+      - action: media_player.media_stop
+        target:
+          entity_id:
+            - media_player.parents_move
+      - action: media_player.volume_set
+        data:
+          entity_id: media_player.parents_move
+          volume_level: '0.2'
+      - action: automation.trigger
+        data:
+          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
+  #####################################################################################
+  - id: routine_home_reset
+    alias: "Routine: Reset home to defaults"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.home_reset
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: automation.trigger
+        data:
+          entity_id: automation.lighting_reset_adaptive_lighting_for_all_lights
+      - delay: '00:00:01'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.home_reset
+  #####################################################################################
