@@ -10,7 +10,7 @@ HOST_LETSENCRYPT="$(grep $(basename $(dirname $(find ${ROOT_DIR}/../../.. -type 
 ${ROOT_DIR}/src/main/resources/image/udm-certificates/certificates.sh pull ${HOST_LETSENCRYPT} ${HOST}
 
 VERSION=ggear-patch-1
-pull_repo "$(pwd)" udmutilities udm-utilities ggear/udm-utilities ${VERSION} ${1}
+pull_repo "${ROOT_DIR}" udmutilities udm-utilities ggear/udm-utilities "${VERSION}" "${1}"
 rm -rf ${ROOT_DIR}/src/main/resources/image/udm-utilities
 mkdir -p ${ROOT_DIR}/src/main/resources/image/udm-utilities &&
   cp -rvf  ${ROOT_DIR}/../../../.deps/udmutilities/udm-utilities/on-boot-script ${ROOT_DIR}/src/main/resources/image/udm-utilities

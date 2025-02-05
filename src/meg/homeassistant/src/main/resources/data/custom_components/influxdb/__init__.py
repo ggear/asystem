@@ -401,7 +401,7 @@ def get_influx_connection(  # noqa: C901
             except (urllib3.exceptions.HTTPError, OSError) as exc:
                 raise ConnectionError(CONNECTION_ERROR % exc) from exc
             except ApiException as exc:
-                if exc.health == CODE_INVALID_INPUTS:
+                if exc.status == CODE_INVALID_INPUTS:
                     raise ValueError(WRITE_ERROR % (json, exc)) from exc
                 raise ConnectionError(CLIENT_ERROR_V2 % exc) from exc
 
@@ -412,7 +412,7 @@ def get_influx_connection(  # noqa: C901
             except (urllib3.exceptions.HTTPError, OSError) as exc:
                 raise ConnectionError(CONNECTION_ERROR % exc) from exc
             except ApiException as exc:
-                if exc.health == CODE_INVALID_INPUTS:
+                if exc.status == CODE_INVALID_INPUTS:
                     raise ValueError(QUERY_ERROR % (query, exc)) from exc
                 raise ConnectionError(CLIENT_ERROR_V2 % exc) from exc
 

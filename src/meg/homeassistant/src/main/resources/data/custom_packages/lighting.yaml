@@ -187,3 +187,451 @@ input_boolean:
   lighting_reset_adaptive_lighting_tree_spotlights:
     name: Tree Spotlights
     initial: false
+  #####################################################################################
+automation:
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_announce
+    alias: 'Lighting: Reset Adaptive Lighting on bulb announce'
+    mode: single
+    triggers:
+      - trigger: mqtt
+        topic: zigbee/bridge/event
+    condition:
+      - condition: template
+        value_template: '{{ trigger.payload_json.data.friendly_name | regex_search(" Bulb 1$") }}'
+    actions:
+      ################################################################################
+      - variables:
+          light: '{{ "light." + (trigger.payload_json.data.friendly_name | regex_replace(" Bulb 1$") | replace(" ", "_") | lower) }}'
+          light_reset: '{{ "input_boolean.lighting_reset_adaptive_lighting_" + (light | replace("light.", "")) }}'
+      ################################################################################
+      - if:
+          - condition: template
+            value_template: '{{ is_state(light_reset, "off") }}'
+        then:
+          - action: input_boolean.turn_on
+            data_template:
+              entity_id: '{{ light_reset }}'
+        else:
+          - action: light.turn_on
+            data_template:
+              color_temp: 366
+              brightness_pct: 100
+              entity_id: '{{ light }}'
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_for_all_lights
+    alias: 'Lighting: Reset Adaptive Lighting for All Lights'
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_all
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: switch.turn_off
+        entity_id: switch.adaptive_lighting_task
+      - delay: '00:00:01'
+      - action: switch.turn_on
+        entity_id: switch.adaptive_lighting_task
+      - action: switch.turn_off
+        entity_id: switch.adaptive_lighting_night
+      - delay: '00:00:01'
+      - action: switch.turn_on
+        entity_id: switch.adaptive_lighting_night
+      - action: switch.turn_off
+        entity_id: switch.adaptive_lighting_ambient_narrowband_dimming
+      - delay: '00:00:01'
+      - action: switch.turn_on
+        entity_id: switch.adaptive_lighting_ambient_narrowband_dimming
+      - action: switch.turn_off
+        entity_id: switch.adaptive_lighting_ambient
+      - delay: '00:00:01'
+      - action: switch.turn_on
+        entity_id: switch.adaptive_lighting_ambient
+      - action: switch.turn_off
+        entity_id: switch.adaptive_lighting_ambient_dimming
+      - delay: '00:00:01'
+      - action: switch.turn_on
+        entity_id: switch.adaptive_lighting_ambient_dimming
+      - action: switch.turn_off
+        entity_id: switch.adaptive_lighting_task_narrowband
+      - delay: '00:00:01'
+      - action: switch.turn_on
+        entity_id: switch.adaptive_lighting_task_narrowband
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_all
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_ada_lamp
+    alias: "Lighting: Reset Adaptive Lighting on request of Ada Lamp"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_ada_lamp
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_task
+          lights: light.ada_lamp
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_ada_lamp
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_edwin_lamp
+    alias: "Lighting: Reset Adaptive Lighting on request of Edwin Lamp"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_task
+          lights: light.edwin_lamp
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_edwin_night_light
+    alias: "Lighting: Reset Adaptive Lighting on request of Edwin Night Light"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_edwin_night_light
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_night
+          lights: light.edwin_night_light
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_edwin_night_light
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_hallway_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Hallway Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_hallway_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient_narrowband_dimming
+          lights: light.hallway_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_hallway_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_hallway_sconces
+    alias: "Lighting: Reset Adaptive Lighting on request of Hallway Sconces"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_hallway_sconces
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient_narrowband_dimming
+          lights: light.hallway_sconces
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_hallway_sconces
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_dining_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Dining Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_dining_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient
+          lights: light.dining_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_dining_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_lounge_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Lounge Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient
+          lights: light.lounge_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_lounge_lamp
+    alias: "Lighting: Reset Adaptive Lighting on request of Lounge Lamp"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_task
+          lights: light.lounge_lamp
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_parents_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Parents Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient_dimming
+          lights: light.parents_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_parents_jane_bedside
+    alias: "Lighting: Reset Adaptive Lighting on request of Jane Bedside"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_jane_bedside
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_task_narrowband
+          lights: light.parents_jane_bedside
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_jane_bedside
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_parents_graham_bedside
+    alias: "Lighting: Reset Adaptive Lighting on request of Graham Bedside"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_graham_bedside
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_task_narrowband
+          lights: light.parents_graham_bedside
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_parents_graham_bedside
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_study_lamp
+    alias: "Lighting: Reset Adaptive Lighting on request of Study Lamp"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_study_lamp
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_task
+          lights: light.study_lamp
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_study_lamp
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_kitchen_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Kitchen Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_kitchen_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient
+          lights: light.kitchen_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_kitchen_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_laundry_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Laundry Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_laundry_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient
+          lights: light.laundry_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_laundry_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_pantry_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Pantry Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_pantry_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient
+          lights: light.pantry_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_pantry_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_office_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Office Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_office_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: light.turn_on
+        data_template:
+          color_temp: 250
+          brightness_pct: 100
+          entity_id: light.office_main
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_office_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_bathroom_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Bathroom Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_bathroom_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient_dimming
+          lights: light.bathroom_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_bathroom_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_bathroom_sconces
+    alias: "Lighting: Reset Adaptive Lighting on request of Bathroom Sconces"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_bathroom_sconces
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_task_narrowband
+          lights: light.bathroom_sconces
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_bathroom_sconces
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_ensuite_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Ensuite Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_ensuite_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient_dimming
+          lights: light.ensuite_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_ensuite_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_ensuite_sconces
+    alias: "Lighting: Reset Adaptive Lighting on request of Ensuite Sconces"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_ensuite_sconces
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_task_narrowband
+          lights: light.ensuite_sconces
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_ensuite_sconces
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_wardrobe_main
+    alias: "Lighting: Reset Adaptive Lighting on request of Wardrobe Main"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_ambient
+          lights: light.wardrobe_main
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_wardrobe_main
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_tree_spotlights
+    alias: "Lighting: Reset Adaptive Lighting on request of Tree Spotlights"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_tree_spotlights
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: light.turn_on
+        data_template:
+          color_temp: 366
+          brightness_pct: 100
+          entity_id: light.tree_spotlights
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_tree_spotlights
+  #####################################################################################
