@@ -175,6 +175,8 @@ logger:
     #google_assistant: debug
     #homeassistant.components.mqtt: debug
     #homeassistant.components.webhook: debug
+    homeassistant.components.tplink: debug
+    homeassistant.components.network: debug
     #homeassistant.components.google_assistant: debug
     #homeassistant.components.google_assistant.http: debug
     #homeassistant.components.google_assistant.trait: debug

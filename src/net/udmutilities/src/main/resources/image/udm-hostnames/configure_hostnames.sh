@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # TODO: Does not work, so I have not generated and productionised to be run on release yet, maybe one day?
 # TODO: Reverse engineered API doc https://ubntwiki.com/products/software/unifi-controller/api

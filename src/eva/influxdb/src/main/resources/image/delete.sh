@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 influx config set --config-name remote
 

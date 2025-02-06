@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 docker exec monitor /asystem/runtime/mqtt.sh
 

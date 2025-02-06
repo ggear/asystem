@@ -69,17 +69,3 @@ if fdisk -l /dev/sda >/dev/null 2>&1 && ! fdisk -l /dev/sda1 >/dev/null 2>&1; th
   blkid /dev/sda1
 fi
 fdisk -l /dev/sda1
-
-################################################################################
-# Network (Onboard)
-################################################################################
-INTERFACE=$(lshw -C network -short 2>/dev/null | grep enp | tr -s ' ' | cut -d' ' -f2)
-if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "rename ${INTERFACE}" /etc/network/interfaces | wc -l) -eq 0 ]; then
-  cat <<EOF >>/etc/network/interfaces
-
-rename ${INTERFACE}=lan0
-allow-hotplug lan0
-iface lan0 inet dhcp
-
-EOF
-fi

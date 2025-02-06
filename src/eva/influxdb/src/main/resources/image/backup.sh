@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 DIR_BACKUP="/var/lib/influxdb2/backup"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")

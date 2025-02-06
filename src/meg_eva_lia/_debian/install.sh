@@ -16,27 +16,27 @@ apt-get -y --allow-downgrades install duf=0.8.1-1+b6
 apt-get -y --allow-downgrades install ntp=1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1+deb12u1
 apt-get -y --allow-downgrades install psmisc=23.6-1
 apt-get -y --allow-downgrades install usbutils=1:014-1+deb12u1
-apt-get -y --allow-downgrades install dnsutils=1:9.18.28-1~deb12u2
+apt-get -y --allow-downgrades install dnsutils=1:9.18.33-1~deb12u2
 apt-get -y --allow-downgrades install ntpdate=1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1+deb12u1
 apt-get -y --allow-downgrades install ntfs-3g=1:2022.10.3-1+deb12u2
 apt-get -y --allow-downgrades install acl=2.3.1-3
 apt-get -y --allow-downgrades install unrar=1:6.2.6-1+deb12u1
-apt-get -y --allow-downgrades install rsync=3.2.7-1
+apt-get -y --allow-downgrades install rsync=3.2.7-1+deb12u2
 apt-get -y --allow-downgrades install vim=2:9.0.1378-2
 apt-get -y --allow-downgrades install rename=2.01-1
 apt-get -y --allow-downgrades install parted=3.5-3
 apt-get -y --allow-downgrades install curl=7.88.1-10+deb12u8
 apt-get -y --allow-downgrades install screen=4.9.0-4
 apt-get -y --allow-downgrades install fswatch=1.14.0+repack-13.1+b1
-apt-get -y --allow-downgrades install util-linux=2.38.1-5+deb12u2
+apt-get -y --allow-downgrades install util-linux=2.38.1-5+deb12u3
 apt-get -y --allow-downgrades install mediainfo=23.04-1
 apt-get -y --allow-downgrades install digitemp=3.7.2-2
 apt-get -y --allow-downgrades install tuptime=5.2.2
 apt-get -y --allow-downgrades install bsdmainutils=12.1.8
 apt-get -y --allow-downgrades install netselect-apt=0.3.ds1-30.1
 apt-get -y --allow-downgrades install smartmontools=7.3-1+b1
-apt-get -y --allow-downgrades install avahi-daemon=0.8-10
-apt-get -y --allow-downgrades install avahi-utils=0.8-10
+apt-get -y --allow-downgrades install avahi-daemon=0.8-10+deb12u1
+apt-get -y --allow-downgrades install avahi-utils=0.8-10+deb12u1
 apt-get -y --allow-downgrades install net-tools=2.10-0.1
 apt-get -y --allow-downgrades install ethtool=1:6.1-1
 apt-get -y --allow-downgrades install lm-sensors=1:3.6.0-7.1
@@ -46,9 +46,9 @@ apt-get -y --allow-downgrades install ca-certificates=20230311
 apt-get -y --allow-downgrades install gnupg-agent=2.2.40-1.1
 apt-get -y --allow-downgrades install software-properties-common=0.99.30-4.1~deb12u1
 apt-get -y --allow-downgrades install mkvtoolnix=74.0.0-1
-apt-get -y --allow-downgrades install docker-ce=5:27.3.1-1~debian.12~bookworm
-apt-get -y --allow-downgrades install docker-ce-cli=5:27.3.1-1~debian.12~bookworm
-apt-get -y --allow-downgrades install containerd.io=1.7.24-1
+apt-get -y --allow-downgrades install docker-ce=5:27.5.1-1~debian.12~bookworm
+apt-get -y --allow-downgrades install docker-ce-cli=5:27.5.1-1~debian.12~bookworm
+apt-get -y --allow-downgrades install containerd.io=1.7.25-1
 apt-get -y --allow-downgrades install cifs-utils=2:7.0-2
 apt-get -y --allow-downgrades install samba=2:4.17.12+dfsg-0+deb12u1
 apt-get -y --allow-downgrades install cups=2.4.2-3+deb12u8
@@ -59,7 +59,7 @@ apt-get -y --allow-downgrades install iotop=0.6-42-ga14256a-0.1+b2
 apt-get -y --allow-downgrades install hdparm=9.65+ds-1
 apt-get -y --allow-downgrades install stress-ng=0.15.06-2
 apt-get -y --allow-downgrades install memtester=4.6.0-1
-apt-get -y --allow-downgrades install linux-cpupower=6.1.119-1
+apt-get -y --allow-downgrades install linux-cpupower=6.1.124-1
 apt-get -y --allow-downgrades install firmware-linux-nonfree=20230210-5
 apt-get -y --allow-downgrades install hwinfo=21.82-1
 apt-get -y --allow-downgrades install lshw=02.19.git.2021.06.19.996aaad9c7-2+b1
@@ -96,7 +96,7 @@ apt-get -y --allow-downgrades install liblzma-dev=5.4.1-0.2
 apt-get -y --allow-downgrades install libxml2-dev=2.9.14+dfsg-1.3~deb12u1
 apt-get -y --allow-downgrades install libgtk2.0-dev=2.24.33-2+deb12u1
 apt-get -y --allow-downgrades install libnotify-dev=0.8.1-1
-apt-get -y --allow-downgrades install libglib2.0-dev=2.74.6-2+deb12u4
+apt-get -y --allow-downgrades install libglib2.0-dev=2.74.6-2+deb12u5
 apt-get -y --allow-downgrades install libevent-dev=2.1.12-stable-8
 apt-get -y --allow-downgrades install libcurl4-openssl-dev=7.88.1-10+deb12u8
 
@@ -110,6 +110,35 @@ fi
 if [ -f /etc/default/grub ] && [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq 0 ]; then
   sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="cdgroup_enable=memory swapaccount=1"/' /etc/default/grub
   update-grub
+fi
+
+################################################################################
+# Network (Onboard)
+################################################################################
+echo "macvlan" | sudo tee -a /etc/modules
+INTERFACE=$(lshw -C network -short -c network 2>/dev/null | tr -s ' ' | cut -d' ' -f2 | grep -v 'path\|=\|network')
+if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "auto eth0." /etc/network/interfaces | wc -l) -eq 0 ]; then
+  MACADDRESS_SUFFIX="$(ifconfig "${INTERFACE}" | grep ether | tr -s ' ' | cut -d' ' -f3 | cut -d':' -f2-)"
+  if [ "${INTERFACE}" != "" ]; then
+    cat <<EOF >>/etc/network/interfaces
+
+rename ${INTERFACE}=eth0
+
+auto eth0
+iface eth0 inet dhcp
+
+auto eth0.3
+iface eth0.3 inet dhcp
+    vlan-raw-device eth0
+    pre-up ip link set eth0.3 address 3a:${MACADDRESS_SUFFIX}
+
+auto eth0.4
+iface eth0.4 inet dhcp
+    vlan-raw-device eth0
+    pre-up ip link set eth0.4 address 4a:${MACADDRESS_SUFFIX}
+
+EOF
+  fi
 fi
 
 ################################################################################
@@ -260,7 +289,7 @@ mkdir -p /root/.config/htop && rm -rf /root/.config/htop/htoprc
 ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
 
 ################################################################################
-# Network
+# Avahi
 ################################################################################
 cat <<EOF >/etc/avahi/avahi-daemon.conf
 [server]
@@ -280,9 +309,8 @@ systemctl enable avahi-daemon.service
 systemctl restart avahi-daemon.service
 systemctl status avahi-daemon.service
 avahi-browse -a -t
-avahi-browse _home-assistant._tcp -t -r
-#avahi-browse _home-assistant._tcp -r
-#avahi-publish -v -s "Home1" _home-assistant._tcp 32401 "HACK"
+#avahi-browse _home-assistant._tcp -t -r
+#avahi-publish -v -s "Home" _home-assistant._tcp 32401 "Testing"
 #dns-sd -L Home _home-assistant._tcp local
 
 ################################################################################

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 docker exec internet /asystem/runtime/mqtt.sh
 

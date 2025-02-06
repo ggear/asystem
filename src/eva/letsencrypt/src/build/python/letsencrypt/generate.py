@@ -19,7 +19,7 @@ if __name__ == "__main__":
                     for line in Path(join(DIR_ROOT, "../../../.hosts")).read_text().strip().split("\n")}
     host_pull_label = os.path.basename(os.path.dirname(DIR_ROOT))
     with (open(hosts_path, "w") as hosts_file):
-        hosts_file.write("#!/bin/sh\n\n")
+        hosts_file.write("#!/bin/bash\n\n")
         for certificates_path in Path(os.path.join(DIR_ROOT, "../..")).rglob('certificates.sh'):
             certificates_path = os.path.abspath(certificates_path)
             certificates_path_tokens = certificates_path.split("/src/")

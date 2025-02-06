@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 ssh -n -q -o "StrictHostKeyChecking=no" root@macmini-eva "find /var/lib/asystem/install/appdaemon/latest/config -name certificates.sh -exec {} pull macmini-eva macmini-eva \;"
 ssh -n -q -o "StrictHostKeyChecking=no" root@macmini-eva "find /var/lib/asystem/install/appdaemon/latest/config -name certificates.sh -exec {} push macmini-eva macmini-eva \;"

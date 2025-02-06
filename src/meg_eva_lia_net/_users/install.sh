@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 user_add() {
   if [ -d "${3}" ]; then

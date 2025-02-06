@@ -23,7 +23,7 @@ for FILE in "ingress.py" "analyse.py"; do
 done
 
 VERSION=ggear-tested
-pull_repo "${ROOT_DIR}" media other_video_transcoding ggear/other_video_transcoding "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" media other_video_transcoding ggear/other_video_transcoding "${VERSION}"
 rm -rf ${ROOT_DIR}/src/main/resources/config/bin/lib/other-transcode.rb
 mkdir -p ${ROOT_DIR}/src/main/resources/config/bin/lib &&
   cp -rvf ${ROOT_DIR}/../../../.deps/media/other_video_transcoding/other-transcode.rb ${ROOT_DIR}/src/main/resources/config/bin/lib

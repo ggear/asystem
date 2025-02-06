@@ -1,3 +1,3 @@
-#!/bin/sh
+#!/bin/bash
 
 rm -rvf /home/asystem/monitor/latest/mqtt

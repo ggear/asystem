@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 docker exec digitemp /asystem/runtime/mqtt.sh
 

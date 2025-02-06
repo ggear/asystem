@@ -24,7 +24,7 @@ if __name__ == "__main__":
     kasa_config_path = join(DIR_ROOT, "src/build/resources/kasa_config.sh")
     with open(kasa_config_path, "wt") as kasa_config_file:
         kasa_config_file.write("""
-#!/bin/sh
+#!/bin/bash
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################

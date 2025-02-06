@@ -5,11 +5,11 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-pull_repo "${ROOT_DIR}" homeassistant homeassistant-core home-assistant/core "${HOMEASSISTANT_VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" homeassistant homeassistant-core home-assistant/core "${HOMEASSISTANT_VERSION}"
 
 # Notes: https://github.com/DavidFW1960/bom-weather-card/tags
 VERSION=0.90a
-pull_repo "${ROOT_DIR}" homeassistant bom-weather-card davidfw1960/bom-weather-card "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" homeassistant bom-weather-card davidfw1960/bom-weather-card "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/bom_icons"
 unzip "${ROOT_DIR}/../../../.deps/homeassistant/bom-weather-card/bom_icons.zip" -d "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-weather-card/icons/bom_icons"
@@ -27,7 +27,7 @@ done
 
 # Notes: https://github.com/Makin-Things/bom-radar-card/tags
 VERSION=v3.0.2
-pull_repo "${ROOT_DIR}" "homeassistant" "bom-radar-card" "Makin-Things/bom-radar-card" "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bom-radar-card" "Makin-Things/bom-radar-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/"* "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
@@ -36,71 +36,71 @@ wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/lea
 
 # Notes: https://github.com/thomasloven/lovelace-layout-card/tags
 VERSION=v2.4.5
-pull_repo "${ROOT_DIR}" "homeassistant" "lovelace-layout-card" "thomasloven/lovelace-layout-card" "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-layout-card" "thomasloven/lovelace-layout-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/lovelace-layout-card/layout-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
 
 # Notes: https://github.com/RomRider/apexcharts-card/tags
 VERSION=v2.1.2
-pull_repo "${ROOT_DIR}" "homeassistant" "apexcharts-card" "romrider/apexcharts-card" "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "apexcharts-card" "romrider/apexcharts-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/apexcharts-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/apexcharts-card"
 wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/apexcharts-card/apexcharts-card.js" "https://github.com/RomRider/apexcharts-card/releases/download/${VERSION}/apexcharts-card.js"
 
 # Notes: https://github.com/kalkih/mini-graph-card/tags
 VERSION=v0.12.1
-pull_repo "${ROOT_DIR}" "homeassistant" "mini-graph-card" "kalkih/mini-graph-card" "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "mini-graph-card" "kalkih/mini-graph-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card"
 wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js" "https://github.com/kalkih/mini-graph-card/releases/download/${VERSION}/mini-graph-card-bundle.js"
 
 # Notes: https://github.com/pnbruckner/ha-sun2/tags
 VERSION=3.3.5
-pull_repo "${ROOT_DIR}" "homeassistant" "sun2-component" "pnbruckner/ha-sun2" "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "sun2-component" "pnbruckner/ha-sun2" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/sun2"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/sun2-component/custom_components/sun2" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/Limych/ha-average/tags
 VERSION=dev
-pull_repo "${ROOT_DIR}" "homeassistant" "average-component" "limych/ha-average" "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "average-component" "limych/ha-average" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/average"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/average-component/custom_components/average" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/bremor/bureau_of_meteorology/tags
 VERSION=1.3.0
-pull_repo "${ROOT_DIR}" "homeassistant" "bureau_of_meteorology-component" "bremor/bureau_of_meteorology" "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bureau_of_meteorology-component" "bremor/bureau_of_meteorology" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/bureau_of_meteorology"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/basnijholt/adaptive-lighting/tags
 VERSION=v1.25.0
-pull_repo "${ROOT_DIR}" "homeassistant" "adaptive-lighting-component" "basnijholt/adaptive-lighting" "${VERSION}" "${1}"
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "adaptive-lighting-component" "basnijholt/adaptive-lighting" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/adaptive_lighting"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/bramstroker/homeassistant-powercalc/tags
-VERSION=ggear-powercalc
-pull_repo "${ROOT_DIR}" "homeassistant" "powercalc-component" "ggear/homeassistant-powercalc" "${VERSION}" "${1}"
+VERSION=v1.17.5
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "powercalc-component" "ggear/homeassistant-powercalc" "ggear-powercalc" "https://github.com/bramstroker/homeassistant-powercalc.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/powercalc"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/powercalc-component/custom_components/powercalc" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/home-assistant/core/tree/dev/homeassistant/components/influxdb
-VERSION=ggear-influxdb
-pull_repo "${ROOT_DIR}" "homeassistant" "influxdb-component" "ggear/homeassistant-core" "${VERSION}" "${1}"
+VERSION=${HOMEASSISTANT_VERSION}
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "influxdb-component" "ggear/homeassistant-core" "ggear-influxdb" "https://github.com/home-assistant/core.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/influxdb"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/influxdb-component/homeassistant/components/influxdb" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # TODO: Disable tplink config, given it has been deprecated
 ## Notes: https://github.com/home-assistant/core/tree/dev/homeassistant/components/tplink
-#VERSION=ggear-tplink
-#pull_repo "${ROOT_DIR}" "homeassistant" "tplink-component" "ggear/homeassistant-core" "${VERSION}" "${1}"
+#VERSION=${HOMEASSISTANT_VERSION}
+#pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "tplink-component" "ggear/homeassistant-core" "ggear-tplink" "https://github.com/home-assistant/core.git" "${VERSION}"
 #rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/tplink"
 #mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 #cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/tplink-component/homeassistant/components/tplink" "${ROOT_DIR}/src/main/resources/data/custom_components"

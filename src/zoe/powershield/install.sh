@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 SERVICE_INSTALL=/var/lib/asystem/install/_powershield/latest
 

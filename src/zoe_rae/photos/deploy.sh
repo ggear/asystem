@@ -1,3 +1,3 @@
-#!/bin/sh
+#!/bin/bash
 
 ~/.conda/envs/asystem-python/bin/python ./src/build/python/photos/export_photoslibrary.py
