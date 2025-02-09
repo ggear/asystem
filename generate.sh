@@ -37,7 +37,7 @@ function pull_repo() {
           git fetch upstream
           git rebase "upstream/${BRANCH}"
           git checkout "${CHECKOUT_LABEL}"
-          echo git merge "${FORKED_LABEL}"
+          git merge "${FORKED_LABEL}"
           git push --all --force
           git checkout "${BRANCH}" 2>/dev/null
         fi
@@ -57,9 +57,8 @@ function pull_repo() {
     echo -n "Module repository [${REPO_LABEL}] is being verified at [${REPO_DIR}] ... "
     TAG_CHECKED_OUT="$(git tag --points-at HEAD | grep -iv untagged | head -n 1)"
     TAG_MOST_RECENT="$(git tag --sort=creatordate | grep -iv dev | grep -iv beta | grep -v stable | grep -iv rc | grep -iv a0 | grep -iv 0a | grep -iv b0 | grep -iv 0b | tail -n 1)"
-    [[ $(git tag | wc -l) -eq 0 ]] && TAG_CHECKED_OUT=$(git branch --show-current) && TAG_MOST_RECENT=$(git branch --show-current)
-    [[ $(git branch | grep "ggear" | wc -l) -gt 0 ]] && TAG_MOST_RECENT=$(git describe --tags --abbrev=0) && TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
-    [[ "${TAG_CHECKED_OUT}" == "" ]] && TAG_CHECKED_OUT="$(git branch --show-current) && TAG_MOST_RECENT=$(git branch --show-current)"
+    [[ $(git branch | grep "ggear" | wc -l) -gt 0 ]] && TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
+    [[ "${TAG_CHECKED_OUT}" == "" ]] && TAG_CHECKED_OUT="$(git branch --show-current)" && TAG_MOST_RECENT="$(git branch --show-current)"
     [[ "${TAG_MOST_RECENT}" == "" ]] && TAG_MOST_RECENT="${TAG_CHECKED_OUT}"
     echo "current tag [${TAG_CHECKED_OUT}] and upstream [${TAG_MOST_RECENT}]"
     [[ "${TAG_CHECKED_OUT}" == "${TAG_MOST_RECENT}" ]] && echo "Module [${REPO_LABEL}] [INFO] is up to date with version [${TAG_CHECKED_OUT}]"

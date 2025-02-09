@@ -113,35 +113,6 @@ if [ -f /etc/default/grub ] && [ $(grep "cdgroup_enable=memory swapaccount=1" /e
 fi
 
 ################################################################################
-# Network (Onboard)
-################################################################################
-echo "macvlan" | sudo tee -a /etc/modules
-INTERFACE=$(lshw -C network -short -c network 2>/dev/null | tr -s ' ' | cut -d' ' -f2 | grep -v 'path\|=\|network')
-if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "auto eth0." /etc/network/interfaces | wc -l) -eq 0 ]; then
-  MACADDRESS_SUFFIX="$(ifconfig "${INTERFACE}" | grep ether | tr -s ' ' | cut -d' ' -f3 | cut -d':' -f2-)"
-  if [ "${INTERFACE}" != "" ]; then
-    cat <<EOF >>/etc/network/interfaces
-
-rename ${INTERFACE}=eth0
-
-auto eth0
-iface eth0 inet dhcp
-
-auto eth0.3
-iface eth0.3 inet dhcp
-    vlan-raw-device eth0
-    pre-up ip link set eth0.3 address 3a:${MACADDRESS_SUFFIX}
-
-auto eth0.4
-iface eth0.4 inet dhcp
-    vlan-raw-device eth0
-    pre-up ip link set eth0.4 address 4a:${MACADDRESS_SUFFIX}
-
-EOF
-  fi
-fi
-
-################################################################################
 # Packages purge
 ################################################################################
 systemctl stop unattended-upgrades

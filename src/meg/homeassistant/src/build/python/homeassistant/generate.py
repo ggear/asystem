@@ -463,17 +463,38 @@ input_boolean:
 #######################################################################################
                 """.strip() + "\n")
 
-    # Build control YAML
-    metadata_control_df = metadata_hass_df[
+    # Build network devices JSON
+    metadata_network_devices_df = metadata_hass_df[
         (metadata_hass_df["index"] > 0) &
         (metadata_hass_df["entity_status"] == "Enabled") &
         (metadata_hass_df["device_via_device"] == "TPLink") &
         (metadata_hass_df["unique_id"].str.len() > 0) &
-        (metadata_hass_df["connection_ip"].str.len() > 0)
-        ]
-    metadata_control_dicts = [row.dropna().to_dict() for index, row in metadata_control_df.iterrows()]
-    metadata_control_dicts = sorted(metadata_control_dicts, key=lambda metadata_control_dict: metadata_control_dict['connection_ip'])
-    metadata_control_init_df = metadata_hass_df[
+        (metadata_hass_df["connection_ip"].str.len() > 0)] \
+        [[
+            "name",
+            "device_manufacturer",
+            "device_model",
+            "connection_vlan",
+            "connection_ip",
+            "connection_mac"
+        ]].rename(
+        columns={
+            "name": "Name",
+            "device_manufacturer": "Manufacturer",
+            "device_model": "Model",
+            "connection_vlan": "VLAN",
+            "connection_ip": "IP",
+            "connection_mac": "MAC",
+        })
+    metadata_network_devices_dicts = [row.dropna().to_dict() for index, row in metadata_network_devices_df.iterrows()]
+    metadata_network_devices_dicts = sorted(metadata_network_devices_dicts,
+                                            key=lambda metadata_network_devices_dict: metadata_network_devices_dict['IP'])
+    metadata_network_devices_path = abspath(join(DIR_ROOT, "src/main/resources/data/network_devices.json"))
+    with open(metadata_network_devices_path, 'w') as metadata_network_devices_file:
+        metadata_network_devices_file.write(json.dumps(metadata_network_devices_dicts, indent=2))
+
+    # Build control YAML
+    metadata_control_df = metadata_hass_df[
         (metadata_hass_df["index"] > 0) &
         (metadata_hass_df["entity_status"] == "Enabled") &
         (metadata_hass_df["device_via_device"] == "Tasmota") &
@@ -481,18 +502,18 @@ input_boolean:
         (metadata_hass_df["entity_namespace"] != "sensor") &
         (metadata_hass_df["unique_id"].str.len() > 0)
         ]
-    metadata_control_init_dicts = {}
-    for _, metadata_hass_row in metadata_control_init_df.iterrows():
-        if metadata_hass_row["entity_namespace"] not in metadata_control_init_dicts:
-            metadata_control_init_dicts[metadata_hass_row["entity_namespace"]] = {}
-        metadata_control_init_state = "on" if metadata_hass_row["entity_namespace"] == "switch" and \
-                                              "tasmota_device_config" in metadata_hass_row and \
-                                              "PowerOnState" in json.loads(metadata_hass_row["tasmota_device_config"]) and \
-                                              json.loads(metadata_hass_row["tasmota_device_config"])["PowerOnState"] == 1 \
+    metadata_control_dicts = {}
+    for _, metadata_hass_row in metadata_control_df.iterrows():
+        if metadata_hass_row["entity_namespace"] not in metadata_control_dicts:
+            metadata_control_dicts[metadata_hass_row["entity_namespace"]] = {}
+        metadata_control_state = "on" if metadata_hass_row["entity_namespace"] == "switch" and \
+                                         "tasmota_device_config" in metadata_hass_row and \
+                                         "PowerOnState" in json.loads(metadata_hass_row["tasmota_device_config"]) and \
+                                         json.loads(metadata_hass_row["tasmota_device_config"])["PowerOnState"] == 1 \
             else "off"
-        if metadata_control_init_state not in metadata_control_init_dicts[metadata_hass_row["entity_namespace"]]:
-            metadata_control_init_dicts[metadata_hass_row["entity_namespace"]][metadata_control_init_state] = []
-        metadata_control_init_dicts[metadata_hass_row["entity_namespace"]][metadata_control_init_state] \
+        if metadata_control_state not in metadata_control_dicts[metadata_hass_row["entity_namespace"]]:
+            metadata_control_dicts[metadata_hass_row["entity_namespace"]][metadata_control_state] = []
+        metadata_control_dicts[metadata_hass_row["entity_namespace"]][metadata_control_state] \
             .append(metadata_hass_row["unique_id"])
     metadata_control_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/control.yaml"))
     with open(metadata_control_path, 'w') as metadata_control_file:
@@ -508,23 +529,6 @@ fan:
       - fan.deck_east_fan
       - fan.deck_west_fan
         """.strip() + "\n")
-        metadata_control_file.write("""
-#######################################################################################
-
-
-#######################################################################################
-# TODO: Disable tplink config, given it has been deprecated 
-#######################################################################################
-#tplink:
-#  discovery: false
-#  switch:
-        """.strip() + "\n")
-        for metadata_control_dict in metadata_control_dicts:
-            metadata_control_file.write("    " + """
-#    - host: {}
-            """.format(
-                metadata_control_dict["connection_ip"]
-            ).strip() + "\n")
         metadata_control_file.write("""
 #######################################################################################
             """.strip() + "\n")
