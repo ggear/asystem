@@ -143,7 +143,7 @@ async def get_manually_configured_devices(config_path="/config/network_devices.j
                         try:
                             await device_instance.connect(config=DeviceConfig(
                                 host=device_network_config["IP"],
-                                timeout=1,
+                                timeout=5,
                             ))
                             await device_instance.update()
                             await device_instance.disconnect()
