@@ -14,9 +14,9 @@ cd ${SERVICE_INSTALL} || exit
 [ -f "${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz
 if [ -f "docker-compose.yml" ]; then
   docker stop "${SERVICE_NAME}" >/dev/null 2>&1
-  docker stop "${SERVICE_NAME}" >/dev/null 2>&1
+  docker stop "${SERVICE_NAME}"_bootstrap >/dev/null 2>&1
   docker wait "${SERVICE_NAME}" >/dev/null 2>&1
-  docker wait "${SERVICE_NAME}" >/dev/null 2>&1
+  docker wait "${SERVICE_NAME}"_bootstrap >/dev/null 2>&1
   docker system prune --volumes -f 2>&1 >/dev/null
 fi
 if [ ! -d "$SERVICE_HOME" ]; then
