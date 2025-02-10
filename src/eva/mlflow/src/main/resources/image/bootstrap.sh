@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! "${ASYSTEM_HOME}/healthcheck.sh" alive; do
+while ! "/asystem/etc/healthcheck.sh" alive; do
   echo "Waiting for service to come alive ..." && sleep 1
 done
 
