@@ -49,12 +49,6 @@
     - entity: sensor.coffee_machine_power
       name: Coffee Machine
       icon: mdi:home-lightning-bolt
-    - entity: sensor.battery_charger_power
-      name: Battery Charger
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.vacuum_charger_power
-      name: Vacuum Charger
-      icon: mdi:home-lightning-bolt
     - entity: sensor.pool_filter_power
       name: Pool Filter
       icon: mdi:home-lightning-bolt
@@ -64,12 +58,6 @@
     - entity: sensor.dish_washer_power
       name: Dish Washer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.clothes_dryer_power
-      name: Clothes Dryer
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.washing_machine_power
-      name: Washing Machine
-      icon: mdi:home-lightning-bolt
     - entity: sensor.kitchen_fridge_power
       name: Kitchen Fridge
       icon: mdi:home-lightning-bolt
@@ -78,9 +66,6 @@
       icon: mdi:home-lightning-bolt
     - entity: sensor.towel_rails_power
       name: Towel Rails
-      icon: mdi:home-lightning-bolt
-    - entity: sensor.study_outlet_power
-      name: Study Outlet
       icon: mdi:home-lightning-bolt
     - entity: sensor.audio_visual_devices_power
       name: Audio/Visual Devices
@@ -139,12 +124,6 @@
     - entity: sensor.coffee_machine_energy_daily
       name: Coffee Machine
       icon: mdi:battery-charging
-    - entity: sensor.battery_charger_energy_daily
-      name: Battery Charger
-      icon: mdi:battery-charging
-    - entity: sensor.vacuum_charger_energy_daily
-      name: Vacuum Charger
-      icon: mdi:battery-charging
     - entity: sensor.pool_filter_energy_daily
       name: Pool Filter
       icon: mdi:battery-charging
@@ -154,12 +133,6 @@
     - entity: sensor.dish_washer_energy_daily
       name: Dish Washer
       icon: mdi:battery-charging
-    - entity: sensor.clothes_dryer_energy_daily
-      name: Clothes Dryer
-      icon: mdi:battery-charging
-    - entity: sensor.washing_machine_energy_daily
-      name: Washing Machine
-      icon: mdi:battery-charging
     - entity: sensor.kitchen_fridge_energy_daily
       name: Kitchen Fridge
       icon: mdi:battery-charging
@@ -168,9 +141,6 @@
       icon: mdi:battery-charging
     - entity: sensor.towel_rails_energy_daily
       name: Towel Rails
-      icon: mdi:battery-charging
-    - entity: sensor.study_outlet_energy_daily
-      name: Study Outlet
       icon: mdi:battery-charging
     - entity: sensor.audio_visual_devices_energy_daily
       name: Audio/Visual Devices
