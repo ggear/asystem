@@ -26,6 +26,12 @@ function echo_package_install_commands {
   [[ $PKG == "" ]] && echo "Cannot identify package manager, bailing out!" && exit 1
   ASYSTEM_PACKAGES_BASE=(
     bash
+    less
+    curl
+    vim
+    git
+    jq
+    build-essential
   )
   ASYSTEM_PACKAGES_BUILD=(
     bash
@@ -40,6 +46,12 @@ function echo_package_install_commands {
   cat <<EOF >"/tmp/base_image_install.sh"
 ASYSTEM_PACKAGES_BASE=(
     bash
+    less
+    curl
+    vim
+    git
+    jq
+    build-essential
 )
 ASYSTEM_PACKAGES_BUILD=(
     bash
@@ -55,6 +67,7 @@ for ASYSTEM_PACKAGE in "\${ASYSTEM_PACKAGES_BASE[@]}"; do echo "    $PKG_INSTALL
 echo "    $PKG_CLEAN && \\\\"
 echo "    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt"
 echo "COPY src/main/python /asystem/bin/python"
+echo "COPY target/package/main/resources/image /asystem/etc"
 echo ""
 echo "#######################################################################################"
 echo "# Build image package install command:"
@@ -75,7 +88,7 @@ echo "docker run -it --rm --user root --entrypoint sh \\\\"
 echo "    -e ASYSTEM_PYTHON_VERSION=3.12.7 \\\\"
 echo "    -e ASYSTEM_GO_VERSION=1.21.6 \\\\"
 echo "    -e ASYSTEM_TELEGRAF_VERSION=1.32.3 \\\\"
-echo "    -e ASYSTEM_HOMEASSISTANT_VERSION=2025.1.4 \\\\"
+echo "    -e ASYSTEM_HOMEASSISTANT_VERSION=2025.2.1 \\\\"
 echo "    -e ASYSTEM_RUST_VERSION=1.75.0 \\\\"
 echo "    -e ASYSTEM_WEEWX_VERSION=5.1.0 \\\\"
 echo "    -e ASYSTEM_UNPOLLER_VERSION=2.11.2 \\\\"
@@ -99,10 +112,10 @@ DOCKER_CLI_HINTS=false
 CONTAINER_NAME="asystem_deps_bootstrap"
 docker ps -q --filter "name=$CONTAINER_NAME" | grep -q . && docker kill "$CONTAINER_NAME"
 docker ps -qa --filter "name=$CONTAINER_NAME" | grep -q . && docker rm -vf "$CONTAINER_NAME"
-docker run --name "$CONTAINER_NAME" --user root --platform linux/x86_64 --entrypoint sh --mount type=bind,source=/Users/graham/Code/asystem/src/eva/mlserver/src/main/python,target=/asystem/bin/python,readonly -dt 'python:3.12.7-slim-bookworm'
+docker run --name "$CONTAINER_NAME" --user root --platform linux/x86_64 --entrypoint sh --mount type=bind,source=/Users/graham/Code/asystem/src/eva/mlserver/src/main/python,target=/asystem/bin/python,readonly --mount type=bind,source=/Users/graham/Code/asystem/src/eva/mlserver/src/main/resources/image,target=/asystem/etc,readonly -dt 'python:3.12.7-slim-bookworm'
 docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
 declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
 echo "Base image shell:" && echo "#######################################################################################" && echo ""
-docker exec -it -e ASYSTEM_PYTHON_VERSION=3.12.7 -e ASYSTEM_GO_VERSION=1.21.6 -e ASYSTEM_TELEGRAF_VERSION=1.32.3 -e ASYSTEM_HOMEASSISTANT_VERSION=2025.1.4 -e ASYSTEM_RUST_VERSION=1.75.0 -e ASYSTEM_WEEWX_VERSION=5.1.0 -e ASYSTEM_UNPOLLER_VERSION=2.11.2 -e ASYSTEM_GRIZZLY_VERSION=v0.6.1 -e ASYSTEM_MLFLOW_VERSION=v2.20.1 -e ASYSTEM_MLSERVER_VERSION=1.6.1 -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm "$CONTAINER_NAME" bash
+docker exec -it -e ASYSTEM_PYTHON_VERSION=3.12.7 -e ASYSTEM_GO_VERSION=1.21.6 -e ASYSTEM_TELEGRAF_VERSION=1.32.3 -e ASYSTEM_HOMEASSISTANT_VERSION=2025.2.1 -e ASYSTEM_RUST_VERSION=1.75.0 -e ASYSTEM_WEEWX_VERSION=5.1.0 -e ASYSTEM_UNPOLLER_VERSION=2.11.2 -e ASYSTEM_GRIZZLY_VERSION=v0.6.1 -e ASYSTEM_MLFLOW_VERSION=v2.20.1 -e ASYSTEM_MLSERVER_VERSION=1.6.1 -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm "$CONTAINER_NAME" bash
 docker kill "$CONTAINER_NAME"
 docker rm -vf "$CONTAINER_NAME"
