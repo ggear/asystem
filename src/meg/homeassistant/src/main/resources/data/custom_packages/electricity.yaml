@@ -17,59 +17,9 @@ powercalc:
   #####################################################################################
   sensors:
     ###################################################################################
-    - entity_id: binary_sensor.template_old_kitchen_fan_plug_proxy
-      standby_power: 1.54
-      unavailable_power: 0
-      fixed:
-        power: 2.19
-    ###################################################################################
-    - entity_id: switch.old_kitchen_fan_plug
-      power_sensor_id: sensor.old_kitchen_fan_plug_current_consumption
-      force_energy_sensor_creation: true
-    ###################################################################################
-    - entity_id: binary_sensor.template_old_deck_festoons_plug_proxy
-      standby_power: 0.5
-      unavailable_power: 0
-      fixed:
-        power: 0.9
-    ###################################################################################
-    - entity_id: switch.old_deck_festoons_plug
-      power_sensor_id: sensor.old_deck_festoons_plug_current_consumption
-      force_energy_sensor_creation: true
-    ###################################################################################
-    - entity_id: binary_sensor.template_old_landing_festoons_plug_proxy
-      standby_power: 0.5
-      unavailable_power: 0
-      fixed:
-        power: 0.9
-    ###################################################################################
-    - entity_id: switch.old_landing_festoons_plug
-      power_sensor_id: sensor.old_landing_festoons_plug_current_consumption
-      force_energy_sensor_creation: true
-    ###################################################################################
     - entity_id: sensor.all_standby
       power_sensor_id: sensor.all_standby_power
       energy_sensor_id: sensor.all_standby_energy
-    ###################################################################################
-    - entity_id: binary_sensor.template_old_rack_outlet_plug_proxy
-      standby_power: 1.54
-      unavailable_power: 0
-      fixed:
-        power: 2.19
-    ###################################################################################
-    - entity_id: switch.old_rack_outlet_plug
-      power_sensor_id: sensor.old_rack_outlet_plug_current_consumption
-      force_energy_sensor_creation: true
-    ###################################################################################
-    - entity_id: binary_sensor.template_old_roof_network_switch_plug_proxy
-      standby_power: 1.54
-      unavailable_power: 0
-      fixed:
-        power: 2.19
-    ###################################################################################
-    - entity_id: switch.old_roof_network_switch_plug
-      power_sensor_id: sensor.old_roof_network_switch_plug_current_consumption
-      force_energy_sensor_creation: true
     ###################################################################################
     - entity_id: fan.rack_fans_plug
       standby_power: 0.6
@@ -78,39 +28,6 @@ powercalc:
     ###################################################################################
     - entity_id: media_player.lounge_arc
       name: Lounge Arc
-    ###################################################################################
-    - create_group: Server Eva
-      entities:
-        - entity_id: binary_sensor.template_server_eva_plug_proxy
-          standby_power: 0.5
-          unavailable_power: 0
-          fixed:
-            power: 0.9
-        - entity_id: switch.server_eva_plug
-          power_sensor_id: sensor.server_eva_plug_current_consumption
-          force_energy_sensor_creation: true
-    ###################################################################################
-    - create_group: Server Meg
-      entities:
-        - entity_id: binary_sensor.template_server_meg_plug_proxy
-          standby_power: 0.5
-          unavailable_power: 0
-          fixed:
-            power: 0.9
-        - entity_id: switch.server_meg_plug
-          power_sensor_id: sensor.server_meg_plug_current_consumption
-          force_energy_sensor_creation: true
-    ###################################################################################
-    - create_group: Internet Modem
-      entities:
-        - entity_id: binary_sensor.template_rack_internet_modem_plug_proxy
-          standby_power: 0.5
-          unavailable_power: 0
-          fixed:
-            power: 0.9
-        - entity_id: switch.rack_internet_modem_plug
-          power_sensor_id: sensor.rack_internet_modem_plug_current_consumption
-          force_energy_sensor_creation: true
     ###################################################################################
     - create_group: Home
       entities:
@@ -124,10 +41,10 @@ powercalc:
                 - create_group: Coffee Machine
                   entities:
                     - entity_id: binary_sensor.template_kitchen_coffee_machine_plug_proxy
-                      standby_power: 0.5
+                      standby_power: 1.54
                       unavailable_power: 0
                       fixed:
-                        power: 0.9
+                        power: 2.19
                     - entity_id: switch.kitchen_coffee_machine_plug
                       power_sensor_id: sensor.kitchen_coffee_machine_plug_current_consumption
                       force_energy_sensor_creation: true
@@ -135,34 +52,12 @@ powercalc:
                 - create_group: Dish Washer
                   entities:
                     - entity_id: binary_sensor.template_kitchen_dish_washer_plug_proxy
-                      standby_power: 0.5
+                      standby_power: 1.54
                       unavailable_power: 0
                       fixed:
-                        power: 0.9
+                        power: 2.19
                     - entity_id: switch.kitchen_dish_washer_plug
                       power_sensor_id: sensor.kitchen_dish_washer_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
-                - create_group: Clothes Dryer
-                  entities:
-                    - entity_id: binary_sensor.template_laundry_clothes_dryer_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.laundry_clothes_dryer_plug
-                      power_sensor_id: sensor.laundry_clothes_dryer_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
-                - create_group: Washing Machine
-                  entities:
-                    - entity_id: binary_sensor.template_laundry_washing_machine_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.laundry_washing_machine_plug
-                      power_sensor_id: sensor.laundry_washing_machine_plug_current_consumption
                       force_energy_sensor_creation: true
             ###########################################################################
             - create_group: Heating & Cooling
@@ -455,28 +350,6 @@ powercalc:
                       power_sensor_id: sensor.lounge_tv_plug_current_consumption
                       force_energy_sensor_creation: true
                 #######################################################################
-                - create_group: Lounge Sub
-                  entities:
-                    - entity_id: binary_sensor.template_lounge_sub_plug_proxy
-                      standby_power: 1.54
-                      unavailable_power: 0
-                      fixed:
-                        power: 2.19
-                    - entity_id: switch.lounge_sub_plug
-                      power_sensor_id: sensor.lounge_sub_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
-                - create_group: Ada Tablet
-                  entities:
-                    - entity_id: binary_sensor.template_ada_tablet_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.ada_tablet_plug
-                      power_sensor_id: sensor.ada_tablet_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
                 - create_group: Ada Home Devices
                   entities:
                     - entity_id: media_player.ada_home
@@ -514,42 +387,6 @@ powercalc:
                 - create_group: Parents Move Devices
                   entities:
                     - entity_id: media_player.parents_move
-            ###########################################################################
-            - create_group: Power Plugs
-              entities:
-                #######################################################################
-                - create_group: Study Outlet
-                  entities:
-                    - entity_id: binary_sensor.template_study_outlet_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.study_outlet_plug
-                      power_sensor_id: sensor.study_outlet_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
-                - create_group: Battery Charger
-                  entities:
-                    - entity_id: binary_sensor.template_study_battery_charger_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.study_battery_charger_plug
-                      power_sensor_id: sensor.study_battery_charger_plug_current_consumption
-                      force_energy_sensor_creation: true
-                #######################################################################
-                - create_group: Vacuum Charger
-                  entities:
-                    - entity_id: binary_sensor.template_laundry_vacuum_charger_plug_proxy
-                      standby_power: 0.5
-                      unavailable_power: 0
-                      fixed:
-                        power: 0.9
-                    - entity_id: switch.laundry_vacuum_charger_plug
-                      power_sensor_id: sensor.laundry_vacuum_charger_plug_current_consumption
-                      force_energy_sensor_creation: true
             ###########################################################################
             - create_group: Whitegoods Continuous
               entities:
@@ -638,6 +475,20 @@ powercalc:
                       standby_power: 0
                       fixed:
                         power: 0.4
+            ###########################################################################
+            - create_group: Power Plugs
+              entities:
+                #######################################################################
+                - create_group: Garden Sewerage Blower
+                  entities:
+                    - entity_id: binary_sensor.template_garden_sewerage_blower_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.garden_sewerage_blower_plug
+                      power_sensor_id: sensor.garden_sewerage_blower_plug_current_consumption
+                      force_energy_sensor_creation: true
   #####################################################################################
 template:
   #####################################################################################
@@ -646,10 +497,6 @@ template:
       - unique_id: kitchen_coffee_machine_plug_proxy
         state: >-
           {{ states('switch.kitchen_coffee_machine_plug') }}
-      #################################################################################
-      - unique_id: old_kitchen_fan_plug_proxy
-        state: >-
-          {{ states('switch.old_kitchen_fan_plug') }}
       #################################################################################
       - unique_id: kitchen_fan_plug_proxy
         state: >-
@@ -683,17 +530,9 @@ template:
           fan_speed: >-
             {{ states('sensor.kitchen_air_purifier_fan_speed') | int(0) }}
       #################################################################################
-      - unique_id: old_deck_festoons_plug_proxy
-        state: >-
-          {{ states('switch.old_deck_festoons_plug') }}
-      #################################################################################
       - unique_id: deck_festoons_plug_proxy
         state: >-
           {{ states('light.deck_festoons_plug') }}
-      #################################################################################
-      - unique_id: old_landing_festoons_plug_proxy
-        state: >-
-          {{ states('switch.old_landing_festoons_plug') }}
       #################################################################################
       - unique_id: landing_festoons_plug_proxy
         state: >-
@@ -715,25 +554,9 @@ template:
         state: >-
           {{ states('switch.lounge_tv_plug') }}
       #################################################################################
-      - unique_id: lounge_sub_plug_proxy
-        state: >-
-          {{ states('switch.lounge_sub_plug') }}
-      #################################################################################
-      - unique_id: study_outlet_plug_proxy
-        state: >-
-          {{ states('switch.study_outlet_plug') }}
-      #################################################################################
       - unique_id: kitchen_dish_washer_plug_proxy
         state: >-
           {{ states('switch.kitchen_dish_washer_plug') }}
-      #################################################################################
-      - unique_id: laundry_clothes_dryer_plug_proxy
-        state: >-
-          {{ states('switch.laundry_clothes_dryer_plug') }}
-      #################################################################################
-      - unique_id: laundry_washing_machine_plug_proxy
-        state: >-
-          {{ states('switch.laundry_washing_machine_plug') }}
       #################################################################################
       - unique_id: kitchen_fridge_plug_proxy
         state: >-
@@ -743,47 +566,19 @@ template:
         state: >-
           {{ states('switch.deck_freezer_plug') }}
       #################################################################################
-      - unique_id: study_battery_charger_plug_proxy
-        state: >-
-          {{ states('switch.study_battery_charger_plug') }}
-      #################################################################################
-      - unique_id: laundry_vacuum_charger_plug_proxy
-        state: >-
-          {{ states('switch.laundry_vacuum_charger_plug') }}
-      #################################################################################
-      - unique_id: ada_tablet_plug_proxy
-        state: >-
-          {{ states('switch.ada_tablet_plug') }}
-      #################################################################################
-      - unique_id: server_eva_plug_proxy
-        state: >-
-          {{ states('switch.server_eva_plug') }}
-      #################################################################################
-      - unique_id: server_meg_plug_proxy
-        state: >-
-          {{ states('switch.server_meg_plug') }}
-      #################################################################################
       - unique_id: server_lia_plug_proxy
         state: >-
           {{ states('switch.server_lia_plug') }}
-      #################################################################################
-      - unique_id: old_rack_outlet_plug_proxy
-        state: >-
-          {{ states('switch.old_rack_outlet_plug') }}
       #################################################################################
       - unique_id: rack_outlet_plug_proxy
         state: >-
           {{ states('switch.rack_outlet_plug') }}
       #################################################################################
-      - unique_id: old_roof_network_switch_plug_proxy
-        state: >-
-          {{ states('switch.old_roof_network_switch_plug') }}
-      #################################################################################
       - unique_id: ceiling_network_switch_plug_proxy
         state: >-
           {{ states('switch.ceiling_network_switch_plug') }}
       #################################################################################
-      - unique_id: rack_internet_modem_plug_proxy
+      - unique_id: garden_sewerage_blower_plug_proxy
         state: >-
-          {{ states('switch.rack_internet_modem_plug') }}
+          {{ states('switch.garden_sewerage_blower_plug') }}
       #################################################################################

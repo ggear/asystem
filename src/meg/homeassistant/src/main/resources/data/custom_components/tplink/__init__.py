@@ -64,7 +64,10 @@ from .models import TPLinkData
 
 type TPLinkConfigEntry = ConfigEntry[TPLinkData]
 
-DISCOVERY_INTERVAL = timedelta(minutes=15)
+# HACK-GRAHAM-Start: Increase discovery polling interval from 15m to 7d
+DISCOVERY_INTERVAL = timedelta(days=7)
+# HACK-GRAHAM-Finish
+
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _LOGGER = logging.getLogger(__name__)

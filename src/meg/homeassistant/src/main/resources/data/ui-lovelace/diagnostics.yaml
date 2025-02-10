@@ -173,42 +173,15 @@
     - entity: switch.lounge_tv_plug
       name: Lounge TV
       icon: mdi:television
-    - entity: switch.lounge_sub_plug
-      name: Lounge Sub
-      icon: mdi:speaker
-    - entity: switch.study_outlet_plug
-      name: Study Outlet
-      icon: mdi:power-plug-outline
     - entity: switch.kitchen_dish_washer_plug
       name: Dish Washer
       icon: mdi:dishwasher
-    - entity: switch.laundry_clothes_dryer_plug
-      name: Clothes Dryer
-      icon: mdi:tumble-dryer
-    - entity: switch.laundry_washing_machine_plug
-      name: Washing Machine
-      icon: mdi:washing-machine
     - entity: switch.kitchen_fridge_plug
       name: Kitchen Fridge
       icon: mdi:fridge-outline
     - entity: switch.deck_freezer_plug
       name: Deck Freezer
       icon: mdi:fridge-top
-    - entity: switch.study_battery_charger_plug
-      name: Battery Charger
-      icon: mdi:battery-charging-30
-    - entity: switch.laundry_vacuum_charger_plug
-      name: Vacuum Charger
-      icon: mdi:battery-charging-30
-    - entity: switch.ada_tablet_plug
-      name: Ada Tablet
-      icon: mdi:tablet
-    - entity: switch.server_eva_plug
-      name: Server Eva
-      icon: mdi:server
-    - entity: switch.server_meg_plug
-      name: Server Meg
-      icon: mdi:server
     - entity: switch.server_lia_plug
       name: Server Lia
       icon: mdi:server
@@ -218,12 +191,12 @@
     - entity: switch.ceiling_network_switch_plug
       name: Network Switch
       icon: mdi:server-network
-    - entity: switch.rack_internet_modem_plug
-      name: Internet Modem
-      icon: mdi:router-wireless
     - entity: fan.rack_fans_plug
       name: Rack Fans
       icon: mdi:server-remove
+    - entity: switch.garden_sewerage_blower_plug
+      name: Garden Sewerage Blower
+      icon: mdi:fan
     - entity: switch.deck_fans_outlet
       name: Deck Fans Outlet
       icon: mdi:power-plug-outline
