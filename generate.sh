@@ -28,9 +28,9 @@ function pull_repo() {
   elif [ "${PULL_LATEST}" == "True" ]; then
     cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME}"
     echo "Pulling latest ${MODULE_NAME}/${REPO_NAME} ..."
-    for BRANCH in master main dev development; do
+    for BRANCH in master main development dev; do
       if [ $(git branch | grep ${BRANCH} | wc -l) -eq 1 ]; then
-        git checkout "${BRANCH}" 2>/dev/null
+        git checkout "${BRANCH}"
         git branch --set-upstream-to "origin/${BRANCH}" 2>/dev/null
         if [ "${FORKED_UPSTREAM}" != "" ] && [ "${FORKED_LABEL}" != "" ]; then
           git remote add upstream "${FORKED_UPSTREAM}" 2>/dev/null

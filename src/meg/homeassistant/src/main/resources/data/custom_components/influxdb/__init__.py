@@ -10,10 +10,8 @@ import math
 import queue
 import threading
 import time
-import string
-import dateutil.parser
-
 from typing import Any
+
 from influxdb import InfluxDBClient, exceptions
 from influxdb_client import InfluxDBClient as InfluxDBClientV2
 from influxdb_client.client.write_api import ASYNCHRONOUS, SYNCHRONOUS
@@ -42,8 +40,11 @@ from homeassistant.const import (
     STATE_UNKNOWN,
 )
 from homeassistant.core import Event, HomeAssistant, State, callback
-from homeassistant.helpers import event as event_helper, state as state_helper
-import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers import (
+    config_validation as cv,
+    event as event_helper,
+    state as state_helper,
+)
 from homeassistant.helpers.entity_values import EntityValues
 from homeassistant.helpers.entityfilter import (
     INCLUDE_EXCLUDE_BASE_FILTER_SCHEMA,
@@ -285,7 +286,8 @@ def _generate_event_to_json(conf: dict) -> Callable[[Event], dict[str, Any] | No
         ignore_attributes = set(entity_config.get(CONF_IGNORE_ATTRIBUTES, []))
         ignore_attributes.update(global_ignore_attributes)
 
-        # Build a unique key (recursively add '_' until unique) with optional type suffix
+        # HACK-GRAHAM-Start: Build a unique key (recursively add '_' until unique) with optional type suffix
+        import dateutil.parser
         def format_key(_key, _suffix=None):
             _suffix = "" if _suffix is None else f"_{_suffix}"
             key_suffix = f"{_key}{_suffix}".lower().replace(' ', '_') \
@@ -348,6 +350,7 @@ def _generate_event_to_json(conf: dict) -> Callable[[Event], dict[str, Any] | No
                 if key_root not in json[INFLUX_CONF_FIELDS] and key in json[INFLUX_CONF_FIELDS]:
                     json[INFLUX_CONF_FIELDS][key_root] = json[INFLUX_CONF_FIELDS][key]
                     del json[INFLUX_CONF_FIELDS][key]
+        # HACK-GRAHAM-Finish
 
         json[INFLUX_CONF_TAGS].update(tags)
 
