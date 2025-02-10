@@ -19,7 +19,7 @@ RUN \
     apt-get -y --no-install-recommends --allow-downgrades install build-essential=12.9 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
-COPY src/main/python /asystem/bin/python
+COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 RUN (python3 -m ensurepip 2> /dev/null || true) && \
