@@ -288,7 +288,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         _print_footer(module, "generate shell script", host=filter_host)
     docker_version_env = {}
     for env_global_key, env_global_value in GLOBAL_ENV.items():
-        if env_global_key.endswith("_VERSION"):
+        if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
             docker_version_env["ASYSTEM_" + env_global_key] = env_global_value.removeprefix('"').removesuffix('"')
     for module in _get_modules(context, filter_changes=False):
         docker_image_metadata = None
@@ -333,7 +333,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                     docker_build_mounts.append("--mount type=bind,source={},target={},readonly".format(*docker_build_mount))
             docker_build_variables = []
             for env_global_key, env_global_value in GLOBAL_ENV.items():
-                if env_global_key.endswith("_VERSION"):
+                if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
                     docker_build_variables.append("-e ASYSTEM_{}={}".format(env_global_key, env_global_value))
             with open(docker_deps_script_path, "w+") as docker_deps_script_file:
                 docker_deps_script_file.write("""
@@ -892,7 +892,7 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
     service = _get_service(module)
     _run_local(context, "mkdir -p {} && rm -rf {}/.env".format(working_path, working_path), module)
     for env_global_key, env_global_value in GLOBAL_ENV.items():
-        if env_global_key.endswith("_VERSION"):
+        if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
             _run_local(context, "echo 'ASYSTEM_{}={}' >> {}/.env".format(env_global_key, env_global_value, working_path), module)
     _run_local(context, "echo '' >> {}/.env".format(working_path), module)
     _run_local(context, "echo 'SERVICE_NAME={}' >> {}/.env"

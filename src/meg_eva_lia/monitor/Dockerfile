@@ -4,9 +4,12 @@ FROM telegraf:${ASYSTEM_TELEGRAF_VERSION} AS image_upstream
 
 FROM image_upstream AS image_base
 USER root
-RUN apt-get update && \
-    apt-get -y --no-install-recommends --allow-downgrades install mosquitto-clients=2.0.11-1.2+deb12u1 && \
-    apt-get clean
+RUN \
+    apt-get update && \
+    apt-get -y --no-install-recommends --allow-downgrades install curl=7.88.1-10+deb12u8 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 

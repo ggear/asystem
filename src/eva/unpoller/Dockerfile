@@ -1,8 +1,22 @@
-FROM debian:12.8-slim AS image_upstream
+ARG ASYSTEM_PYTHON_VERSION="latest"
+ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION="slim"
+
+FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
 
 ARG ASYSTEM_UNPOLLER_VERSION
 
 FROM image_upstream AS image_base
+USER root
+RUN \
+    apt-get update && \
+    apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b7 && \
+    apt-get -y --no-install-recommends --allow-downgrades install less=590-2.1~deb12u2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install curl=7.88.1-10+deb12u8 && \
+    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install ca-certificates=20230311 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 RUN \
@@ -11,6 +25,11 @@ RUN \
     tar xvzf "unpoller.tar.gz" && \
     cp "unpoller" "/usr/local/bin" && \
     chmod a+x "/usr/local/bin/unpoller" && \
+    mkdir -p "/etc/unifi-poller" && \
+    cp /asystem/etc/up.conf /etc/unifi-poller/up.conf && \
+    cd / &&  \
+    rm -rf /tmp/* && \
     unpoller --version
 
 FROM image_build AS image_runtime
+ENTRYPOINT [ "/usr/local/bin/unpoller" ]

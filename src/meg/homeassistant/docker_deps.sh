@@ -82,11 +82,11 @@ echo "    -e ASYSTEM_UNPOLLER_VERSION=2.11.2 \\\\"
 echo "    -e ASYSTEM_GRIZZLY_VERSION=v0.6.1 \\\\"
 echo "    -e ASYSTEM_MLFLOW_VERSION=v2.20.1 \\\\"
 echo "    -e ASYSTEM_MLSERVER_VERSION=1.6.1 \\\\"
-echo "    -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine \\\\"
-echo "    -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu \\\\"
-echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian \\\\"
-echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm \\\\"
-echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm \\\\"
+echo "    -e ASYSTEM_IMAGE_VARIANT_ALPINE_LABEL=-alpine \\\\"
+echo "    -e ASYSTEM_IMAGE_VARIANT_UBUNTU_LABEL=-ubuntu \\\\"
+echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_LABEL=-debian \\\\"
+echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_LABEL=-bookworm \\\\"
+echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL=-slim-bookworm \\\\"
 echo "    'homeassistant/home-assistant:2025.2.2'" && echo ""
 echo "#######################################################################################"
 EOF
@@ -103,6 +103,6 @@ docker run --name "$CONTAINER_NAME" --user root --platform linux/x86_64 --entryp
 docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
 declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
 echo "Base image shell:" && echo "#######################################################################################" && echo ""
-docker exec -it -e ASYSTEM_PYTHON_VERSION=3.12.7 -e ASYSTEM_GO_VERSION=1.21.6 -e ASYSTEM_TELEGRAF_VERSION=1.32.3 -e ASYSTEM_HOMEASSISTANT_VERSION=2025.2.2 -e ASYSTEM_RUST_VERSION=1.75.0 -e ASYSTEM_WEEWX_VERSION=5.1.0 -e ASYSTEM_UNPOLLER_VERSION=2.11.2 -e ASYSTEM_GRIZZLY_VERSION=v0.6.1 -e ASYSTEM_MLFLOW_VERSION=v2.20.1 -e ASYSTEM_MLSERVER_VERSION=1.6.1 -e ASYSTEM_IMAGE_VARIANT_ALPINE_VERSION=-alpine -e ASYSTEM_IMAGE_VARIANT_UBUNTU_VERSION=-ubuntu -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=-debian -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_VERSION=-bookworm -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_VERSION=-slim-bookworm "$CONTAINER_NAME" bash
+docker exec -it -e ASYSTEM_PYTHON_VERSION=3.12.7 -e ASYSTEM_GO_VERSION=1.21.6 -e ASYSTEM_TELEGRAF_VERSION=1.32.3 -e ASYSTEM_HOMEASSISTANT_VERSION=2025.2.2 -e ASYSTEM_RUST_VERSION=1.75.0 -e ASYSTEM_WEEWX_VERSION=5.1.0 -e ASYSTEM_UNPOLLER_VERSION=2.11.2 -e ASYSTEM_GRIZZLY_VERSION=v0.6.1 -e ASYSTEM_MLFLOW_VERSION=v2.20.1 -e ASYSTEM_MLSERVER_VERSION=1.6.1 -e ASYSTEM_IMAGE_VARIANT_ALPINE_LABEL=-alpine -e ASYSTEM_IMAGE_VARIANT_UBUNTU_LABEL=-ubuntu -e ASYSTEM_IMAGE_VARIANT_DEBIAN_LABEL=-debian -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_LABEL=-bookworm -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL=-slim-bookworm "$CONTAINER_NAME" bash
 docker kill "$CONTAINER_NAME"
 docker rm -vf "$CONTAINER_NAME"

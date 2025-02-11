@@ -3,8 +3,11 @@ x-common: &common
   init: true
   environment:
     - TZ=Australia/Perth
-  volumes:
-    - ${SERVICE_DATA_DIR}:/asystem/mnt
+    - INFLUXDB_IP
+    - INFLUXDB_HTTP_PORT
+    - INFLUXDB_USER_PRIVATE
+    - INFLUXDB_TOKEN
+    - INFLUXDB_BUCKET_HOST_PRIVATE
   logging:
     driver: "json-file"
     options:
