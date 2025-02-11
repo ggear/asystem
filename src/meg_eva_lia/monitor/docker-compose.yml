@@ -23,7 +23,7 @@ services:
       - /dev:/dev:ro
       - /run/udev:/run/udev:ro
       - /run/utmp:/hostfs/var/run/utmp:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
       test: /asystem/etc/healthcheck.sh
       interval: 2m

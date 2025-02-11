@@ -20,4 +20,4 @@ RUN \
 
 FROM image_build AS image_runtime
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["telegraf", "--config-directory", "/asystem/etc/config/host"]
+CMD ["telegraf"]
