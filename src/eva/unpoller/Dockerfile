@@ -27,6 +27,7 @@ RUN \
     chmod a+x "/usr/local/bin/unpoller" && \
     mkdir -p "/etc/unifi-poller" && \
     cp /asystem/etc/up.conf /etc/unifi-poller/up.conf && \
+    mkdir -p "/usr/local/lib/unpoller/web" && \
     cd / &&  \
     rm -rf /tmp/* && \
     unpoller --version
