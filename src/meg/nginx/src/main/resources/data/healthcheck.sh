@@ -10,7 +10,7 @@ else
   CURL_CMD="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-function alive() {
+alive() {
   if [ "$(${CURL_CMD} -I http://localhost | grep HTTP | cut -d ' ' -f2)" == "301" ]; then
     return 0
   else
@@ -18,7 +18,7 @@ function alive() {
   fi
 }
 
-function ready() {
+ready() {
   if [ "$(${CURL_CMD} -I https://nginx.janeandgraham.com | grep HTTP | cut -d ' ' -f2)" == "200" ]; then
     return 0
   else
