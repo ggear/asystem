@@ -23,8 +23,13 @@ services:
       - /run/udev:/run/udev:ro
       - /run/utmp:/hostfs/var/run/utmp:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${SERVICE_DATA_DIR}:/asystem/runtime
+    healthcheck:
+      test: /asystem/etc/healthcheck.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     logging:
       driver: "json-file"
       options:
