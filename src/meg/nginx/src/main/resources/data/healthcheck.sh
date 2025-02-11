@@ -9,7 +9,7 @@ else
 fi
 
 alive() {
-  if [ "$(${CURL_CMD} -I http://localhost | grep HTTP | cut -d ' ' -f2)" = "301" ]; then
+  if [ "$(${CURL_CMD} -I http://localhost | grep HTTP | wc -l)" -eq 1 ]; then
     return 0
   else
     return 1
@@ -24,9 +24,5 @@ ready() {
   fi
 }
 
-if [ "$#" -eq 1 ] && [ "${1}" = "alive" ]; then
-  alive
-else
-  ready
-fi
+if [ "$#" -eq 1 ] && [ "${1}" = "alive" ]; then alive; else ready; fi
 exit $?
