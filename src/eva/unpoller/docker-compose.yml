@@ -7,6 +7,8 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
+      - UNPOLLER_SERVICE
+      - UNPOLLER_HTTP_PORT
     ports:
       - ${UNPOLLER_HTTP_PORT}:${UNPOLLER_HTTP_PORT}
     healthcheck:
