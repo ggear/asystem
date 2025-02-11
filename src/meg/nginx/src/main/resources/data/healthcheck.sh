@@ -25,8 +25,8 @@ ready() {
 }
 
 if [ "$#" -eq 1 ] && [ "${1}" = "alive" ]; then
-  EXIT=alive
+  alive
 else
-  EXIT=ready
+  ready
 fi
-exit ${EXIT}
+exit $?
