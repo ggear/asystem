@@ -29,6 +29,7 @@ function echo_package_install_commands {
     less
     curl
     vim
+    jq
     ca-certificates
   )
   ASYSTEM_PACKAGES_BUILD=(
@@ -47,6 +48,7 @@ ASYSTEM_PACKAGES_BASE=(
     less
     curl
     vim
+    jq
     ca-certificates
 )
 ASYSTEM_PACKAGES_BUILD=(

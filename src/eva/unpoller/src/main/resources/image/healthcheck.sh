@@ -11,9 +11,7 @@ else
 fi
 
 function alive() {
-  return 0
-  if ALIVE="$(${CURL_CMD} -LI "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/aui/index.html" | tac | tac | head -n 1 | cut -d$' ' -f2)" &&
-    [ "${ALIVE}" == "200" ]; then
+  if [ "$(${CURL_CMD} "http://${UNPOLLER_SERVICE}:${UNPOLLER_HTTP_PORT}/health")" == "OK" ]; then
     return 0
   else
     return 1
@@ -21,9 +19,8 @@ function alive() {
 }
 
 function ready() {
-  return 0
-  if READY="$(${CURL_CMD} -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/health")" &&
-    [ "$(jq -er .health <<<"${READY}")" == "OK" ]; then
+  if READY="$(${CURL_CMD} "http://${UNPOLLER_SERVICE}:${UNPOLLER_HTTP_PORT}/api/v1/output/influxdb/events"))" &&
+    [ "$(jq -er .influxdb.latest <<<"${READY}" | cut -d 'T' -f 1)" == "$(date --rfc-3339=ns | sed 's/ /T/' | cut -d 'T' -f 1)" ]; then
     return 0
   else
     return 1

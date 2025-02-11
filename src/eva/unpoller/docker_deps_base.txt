@@ -5,4 +5,5 @@ bash
 less
 curl
 vim
+jq
 ca-certificates

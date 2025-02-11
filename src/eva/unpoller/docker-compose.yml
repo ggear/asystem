@@ -3,11 +3,8 @@ x-common: &common
   init: true
   environment:
     - TZ=Australia/Perth
-    - INFLUXDB_IP
-    - INFLUXDB_HTTP_PORT
-    - INFLUXDB_USER_PRIVATE
-    - INFLUXDB_TOKEN
-    - INFLUXDB_BUCKET_HOST_PRIVATE
+    - UNPOLLER_SERVICE
+    - UNPOLLER_HTTP_PORT
   logging:
     driver: "json-file"
     options:
@@ -18,6 +15,8 @@ services:
     container_name: unpoller
     <<: *common
     restart: ${SERVICE_RESTART}
+    ports:
+      - ${UNPOLLER_HTTP_PORT}:${UNPOLLER_HTTP_PORT}
     healthcheck:
       test: /asystem/etc/healthcheck.sh
       interval: 2m
