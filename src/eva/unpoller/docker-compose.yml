@@ -18,6 +18,13 @@ services:
     container_name: unpoller
     <<: *common
     restart: ${SERVICE_RESTART}
+    healthcheck:
+      test: /asystem/etc/healthcheck.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     deploy:
       resources:
         limits:
