@@ -1,39 +1,23 @@
 x-common: &common
-  image: unpoller:${SERVICE_VERSION_ABSOLUTE}
-  init: true
-  environment:
-    - TZ=Australia/Perth
-    - UNPOLLER_SERVICE
-    - UNPOLLER_HTTP_PORT
-  logging:
-    driver: "json-file"
-    options:
-      max-file: "5"
-      max-size: "100m"
 services:
   unpoller:
+    image: unpoller:${SERVICE_VERSION_ABSOLUTE}
     container_name: unpoller
-    <<: *common
+    init: true
     restart: ${SERVICE_RESTART}
-    ports:
-      - ${UNPOLLER_HTTP_PORT}:${UNPOLLER_HTTP_PORT}
-    healthcheck:
-      test: /asystem/etc/healthcheck.sh
-      interval: 2m
-      timeout: 10s
-      retries: 3
-      start_period: 1m
-      start_interval: 10s
+    environment:
+      - TZ=Australia/Perth
+      - INFLUXDB_IP
+      - INFLUXDB_HTTP_PORT
+      - INFLUXDB_USER_PRIVATE
+      - INFLUXDB_TOKEN
+      - INFLUXDB_BUCKET_HOST_PRIVATE
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
     deploy:
       resources:
         limits:
           memory: 2G
-  unpoller_bootstrap:
-    container_name: unpoller_bootstrap
-    <<: *common
-    restart: 'no'
-    entrypoint: /bin/bash
-    command:
-      - /asystem/etc/bootstrap.sh
-    depends_on:
-      - unpoller
