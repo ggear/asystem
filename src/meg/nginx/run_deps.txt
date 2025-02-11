@@ -6,6 +6,7 @@ grafana
 vernemq
 influxdb
 mlserver
+unpoller
 appdaemon
 zigbee2mqtt
 homeassistant
