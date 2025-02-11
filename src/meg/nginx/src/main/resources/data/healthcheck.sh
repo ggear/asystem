@@ -24,5 +24,9 @@ ready() {
   fi
 }
 
-[ "$#" -eq 1 ] && [ "${1}" = "alive" ] && exit $(alive)
-exit $(ready)
+if [ "$#" -eq 1 ] && [ "${1}" = "alive" ]; then
+  EXIT=alive
+else
+  EXIT=ready
+fi
+exit ${EXIT}
