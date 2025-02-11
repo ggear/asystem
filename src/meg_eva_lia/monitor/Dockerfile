@@ -15,7 +15,9 @@ RUN \
 COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
+RUN \
+    cp /asystem/etc/config/telegraf.conf /etc/telegraf/telegraf.conf
 
 FROM image_build AS image_runtime
 ENTRYPOINT ["/entrypoint.sh"]
-CMD ["telegraf", "--config", "/asystem/etc/telegraf.conf"]
+CMD ["telegraf", "--config-directory", "/asystem/etc/config/host"]
