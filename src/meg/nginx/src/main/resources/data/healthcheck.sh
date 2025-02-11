@@ -1,9 +1,7 @@
 #!/bin/sh
 
-set -eo pipefail
-
 HEALTHCHECK_VERBOSE=${HEALTHCHECK_VERBOSE:-false}
-if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
+if [ "${HEALTHCHECK_VERBOSE}" = true ]; then
   CURL_CMD="curl -f --connect-timeout 2 --max-time 2"
   set -o xtrace
 else
@@ -11,7 +9,7 @@ else
 fi
 
 alive() {
-  if [ "$(${CURL_CMD} -I http://localhost | grep HTTP | cut -d ' ' -f2)" == "301" ]; then
+  if [ "$(${CURL_CMD} -I http://localhost | grep HTTP | cut -d ' ' -f2)" = "301" ]; then
     return 0
   else
     return 1
@@ -19,12 +17,12 @@ alive() {
 }
 
 ready() {
-  if [ "$(${CURL_CMD} -I https://nginx.janeandgraham.com | grep HTTP | cut -d ' ' -f2)" == "200" ]; then
+  if [ "$(${CURL_CMD} -I https://nginx.janeandgraham.com | grep HTTP | cut -d ' ' -f2)" = "200" ]; then
     return 0
   else
     return 1
   fi
 }
 
-[ "$#" -eq 1 ] && [ "${1}" == "alive" ] && exit $(alive)
+[ "$#" -eq 1 ] && [ "${1}" = "alive" ] && exit $(alive)
 exit $(ready)
