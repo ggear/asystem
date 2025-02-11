@@ -20,6 +20,7 @@ services:
       - HOST_MOUNT_PREFIX=/hostfs
     volumes:
       - /:/hostfs:ro
+      - /dev:/dev:ro
       - /run/udev:/run/udev:ro
       - /run/utmp:/hostfs/var/run/utmp:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
