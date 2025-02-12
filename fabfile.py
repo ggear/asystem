@@ -13,6 +13,7 @@ import sys
 import time
 from os.path import *
 from typing import Any, Dict, Optional
+from packaging.version import Version
 
 import requests
 import varsubst
@@ -256,14 +257,17 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                 docker_image_metadata_dict["version_current"].split('-', 1)
                             docker_image_metadata_version_suffix = "$" if len(docker_image_metadata_version_tokens) == 1 else \
                                 (".*-" + docker_image_metadata_version_tokens[-1] + "$")
-                            for config_version_regex in [
-                                r"^v([0-9]*\.[0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
-                                r"^([0-9]*\.[0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
-                                r"^([0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
-                            ]:
-                                if re.match(config_version_regex, docker_image_metadata_dict["version_current"]):
-                                    docker_image_metadata_dict["version_regex"] = config_version_regex
-                                    break
+                            if docker_image_metadata_dict["version_current"] == "latest":
+                                docker_image_metadata_dict["version_regex"] = "latest"
+                            else:
+                                for config_version_regex in [
+                                    r"^v([0-9]*\.[0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
+                                    r"^([0-9]*\.[0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
+                                    r"^([0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
+                                ]:
+                                    if re.match(config_version_regex, docker_image_metadata_dict["version_current"]):
+                                        docker_image_metadata_dict["version_regex"] = config_version_regex
+                                        break
                         return docker_image_metadata_dict
 
     version_messages = {type: [] for type in version_types}
@@ -461,60 +465,28 @@ docker rm -vf "$CONTAINER_NAME"
                 docker_image_metadata = get_docker_image_metadata(docker_file_path, file_image_regexs, docker_version_env)
             elif exists(docker_compose_path):
                 docker_image_metadata = get_docker_image_metadata(docker_compose_path, compose_image_regexs, docker_version_env)
-            docker_image_tags = []
             docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "0a", "0b"]
             if docker_image_metadata is not None and \
                     all(key in docker_image_metadata for key in
                         ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
                     and not docker_image_metadata["skipped"]:
-                if docker_image_metadata["namespace"].startswith("ghcr.io"):
-                    docker_image_tags_command = "skopeo list-tags docker://{}/{}" \
-                        .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
-                    docker_image_tags_json = json.loads(
-                        _run_local(context, docker_image_tags_command, hide='out').stdout)
-                    print("Getting docker image versions from [{}] ... done".format(docker_image_tags_command), flush=True)
-                    if "Tags" in docker_image_tags_json and len(docker_image_tags_json["Tags"]) > 0:
-                        docker_image_tags.extend(docker_image_tags_json["Tags"])
-                    else:
-                        version_messages[version_types[2]].append(version_formats[2].format(
-                            module, "Could not determine versions from Github repository command [{}]" \
-                                .format(docker_image_tags_command)))
-                    for docker_image_version in reversed(docker_image_tags):
-                        if not any(substring.lower() in docker_image_version.lower() for substring in docker_image_version_ignores):
-                            docker_image_metadata["version_upstream"] = docker_image_version
-                            break
-                else:
-                    docker_image_tags = []
-                    docker_image_tags_response_page = 1
-                    while docker_image_tags_response_page < 3:
-                        docker_image_tags_url = "https://hub.docker.com/v2/namespaces/{}/repositories/{}/tags?page_size=100&page={}" \
-                            .format(
-                            docker_image_metadata["namespace"].strip(),
-                            docker_image_metadata["repository"].strip(),
-                            docker_image_tags_response_page)
-                        print("Getting docker image versions from [{}] ... ".format(docker_image_tags_url), end="", flush=True)
-                        docker_image_tags_response = requests.get(docker_image_tags_url)
-                        print("done")
-                        if docker_image_tags_response.status_code != 200:
-                            break
-                        else:
-                            docker_image_tags_page = docker_image_tags_response.json()
-                            if "results" in docker_image_tags_page:
-                                docker_image_tags.extend(docker_image_tags_page["results"])
-                        docker_image_tags_response_page += 1
-                    for docker_image_metatdata_hub in sorted(docker_image_tags, key=lambda x: x['last_updated'], reverse=True):
-                        docker_image_version = docker_image_metatdata_hub["name"]
-                        if not any(substring.lower() in docker_image_version.lower()
-                                   for substring in docker_image_version_ignores) and any(
-                            i.isdigit() for i in docker_image_version):
-                            docker_image_tags.append(docker_image_version)
+                docker_image_tags_command = "regctl -v error tag ls {}/{}" \
+                    .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
+                docker_image_tags = _run_local(context, docker_image_tags_command, hide='out').stdout.splitlines()
+                if docker_image_tags is None or len(docker_image_tags) == 0:
+                    version_messages[version_types[2]].append(version_formats[2].format(
+                        module, "Could not determine versions from Github repository command [{}]" \
+                            .format(docker_image_tags_command)))
+                docker_image_metadata["version_upstream"] = docker_image_metadata["version_current"]
+                if docker_image_metadata["version_upstream"] != "latest":
+                    for docker_image_version in docker_image_tags:
+                        if not any(_ignored.lower() in docker_image_version.lower() for _ignored in docker_image_version_ignores):
                             docker_image_version_match = re.match(docker_image_metadata["version_regex"], docker_image_version)
                             if docker_image_version_match is not None and \
                                     version.parse(docker_image_version_match.groups()[0]) >= \
-                                    version.parse(re.match(docker_image_metadata["version_regex"],
-                                                           docker_image_metadata["version_current"]).groups()[0]):
+                                    version.parse(re.match(docker_image_metadata["version_regex"], \
+                                                           docker_image_metadata["version_upstream"]).groups()[0]):
                                 docker_image_metadata["version_upstream"] = docker_image_version
-                                break
                 if "version_upstream" in docker_image_metadata:
                     version_type = 0 if docker_image_metadata["version_current"] == docker_image_metadata["version_upstream"] else 1
                     version_messages[version_types[version_type]].append(version_formats[version_type].format(

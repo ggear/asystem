@@ -8,6 +8,7 @@
     "influxdb",
     "wrangle",
     "mlserver",
+    "influxdb3",
     "unpoller",
     "monitor"
   ],

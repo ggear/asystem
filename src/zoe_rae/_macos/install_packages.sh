@@ -25,6 +25,7 @@ brew install \
   telnet \
   poppler \
   rstudio \
+  regclient \
   mosquitto \
   coreutils \
   mpv \

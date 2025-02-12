@@ -1,0 +1,41 @@
+x-common: &common
+  image: influxdb3:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  environment:
+    - TZ=Australia/Perth
+    - INFLUXDB3_SERVICE
+    - INFLUXDB3_HTTP_PORT
+  volumes:
+    - ${SERVICE_DATA_DIR}:/asystem/mnt
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
+services:
+  influxdb3:
+    container_name: influxdb3
+    <<: *common
+    restart: ${SERVICE_RESTART}
+    ports:
+      - ${INFLUXDB3_HTTP_PORT}:${INFLUXDB3_HTTP_PORT}
+    healthcheck:
+      test: /asystem/etc/healthcheck.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 5G
+  influxdb3_bootstrap:
+    container_name: influxdb3_bootstrap
+    <<: *common
+    restart: 'no'
+    entrypoint: /bin/bash
+    command:
+      - /asystem/etc/bootstrap.sh
+    depends_on:
+      - influxdb3
