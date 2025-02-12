@@ -5,6 +5,10 @@ x-common: &common
     - TZ=Australia/Perth
     - INFLUXDB3_SERVICE
     - INFLUXDB3_HTTP_PORT
+    - INFLUXDB3_NODE_IDENTIFIER_PREFIX=node_1
+    - INFLUXDB3_OBJECT_STORE=file
+    - INFLUXDB3_DB_DIR=/asystem/mnt
+    - INFLUXDB3_HTTP_BIND_ADDR=0.0.0.0:${INFLUXDB3_HTTP_PORT}
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
   logging:

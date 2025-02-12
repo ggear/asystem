@@ -18,4 +18,4 @@ FROM image_base AS image_build
 
 FROM image_base AS image_runtime
 ENTRYPOINT ["/usr/bin/entrypoint.sh"]
-CMD ["serve", "--node-id=node_1", "--object-store=file", "--data-dir=/asystem/mnt"]
+CMD ["serve"]
