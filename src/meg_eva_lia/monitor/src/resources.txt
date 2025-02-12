@@ -1,3 +1,2 @@
 ../install.sh
-main/resources/image/config/telegraf.conf
-main/resources/image/config/host/telegraf-health.conf
+main/resources/image/telegraf.conf
