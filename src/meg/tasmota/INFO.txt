@@ -1,1 +1,0 @@
-# https://github.com/arendst/Tasmota/releases

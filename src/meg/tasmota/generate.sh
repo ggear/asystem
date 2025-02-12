@@ -6,6 +6,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 . ${ROOT_DIR}/.env
 
+# Notes: https://github.com/arendst/Tasmota/releases
 VERSION=${TASMOTA_FIRMWARE_VERSION}
 pull_repo "${ROOT_DIR}" "${1}" tasmota tasmota-core arendst/tasmota v${VERSION}
 if [ ! -f ${ROOT_DIR}/src/build/resources/firmware/tasmota-${VERSION}.bin.gz ] || [ ! -f ${ROOT_DIR}/src/build/resources/firmware/tasmota-minimal-${VERSION}.bin.gz ] || [ ! -f ${ROOT_DIR}/src/build/resources/firmware/tasmota32-${VERSION}.bin ]; then
