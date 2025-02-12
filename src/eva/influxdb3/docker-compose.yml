@@ -4,11 +4,11 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - INFLUXDB3_SERVICE
-    - INFLUXDB3_HTTP_PORT
+    - INFLUXDB3_PORT
     - INFLUXDB3_NODE_IDENTIFIER_PREFIX=node_1
     - INFLUXDB3_OBJECT_STORE=file
     - INFLUXDB3_DB_DIR=/asystem/mnt
-    - INFLUXDB3_HTTP_BIND_ADDR=0.0.0.0:${INFLUXDB3_HTTP_PORT}
+    - INFLUXDB3_HTTP_BIND_ADDR=0.0.0.0:8181
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
   logging:
@@ -22,7 +22,7 @@ services:
     <<: *common
     restart: ${SERVICE_RESTART}
     ports:
-      - ${INFLUXDB3_HTTP_PORT}:${INFLUXDB3_HTTP_PORT}
+      - ${INFLUXDB3_PORT}:8181
     healthcheck:
       test: /asystem/etc/healthcheck.sh
       interval: 2m
