@@ -9,9 +9,9 @@ fi
 
 function alive() {
   if [ "$(pidof telegraf)" != "" ]; then
-    echo return 0
+    return 0
   else
-    echo return 1
+    return 1
   fi
 }
 
@@ -28,9 +28,9 @@ function ready() {
     [ "$(grep -c '^> docker_container_blkio,com.docker.compose.config-hash=' <<<"${OUTPUT}")" -gt 0 ] &&
     [ "$(grep -c '^> docker_container_net,com.docker.compose.config-hash=' <<<"${OUTPUT}")" -gt 0 ] &&
     telegraf --once >/dev/null 2>&1; then
-    echo return 0
+    return 0
   else
-    echo return 1
+    return 1
   fi
 }
 
