@@ -40,6 +40,7 @@
 *egg-info
 *.pipeout
 .pytest_cache
+license
 nohup.out
 Cargo.lock
 pom.xml.tag
