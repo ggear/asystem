@@ -4,6 +4,10 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
+while ! "/asystem/etc/healthcheck.sh"; do
+  echo "Waiting for service to come alive ..." && sleep 1
+done
+
 set -eo pipefail
 
 echo "--------------------------------------------------------------------------------"
