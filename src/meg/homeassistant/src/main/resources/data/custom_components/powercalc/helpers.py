@@ -1,9 +1,20 @@
 import decimal
 import logging
 import os.path
+import re
+import uuid
+from collections.abc import Callable, Coroutine
 from decimal import Decimal
+from functools import wraps
+from typing import Any, TypeVar
 
+from homeassistant.const import CONF_UNIQUE_ID
 from homeassistant.helpers.template import Template
+from homeassistant.helpers.typing import ConfigType
+
+from custom_components.powercalc.common import SourceEntity
+from custom_components.powercalc.const import DUMMY_ENTITY_ID, CalculationStrategy
+from custom_components.powercalc.power_profile.power_profile import PowerProfile
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,3 +46,91 @@ def get_library_path(sub_path: str = "") -> str:
 def get_library_json_path() -> str:
     """Get the path to the library.json file."""
     return get_library_path("library.json")
+
+
+def get_or_create_unique_id(
+    sensor_config: ConfigType,
+    source_entity: SourceEntity,
+    power_profile: PowerProfile | None,
+) -> str:
+    """Get or create the unique id."""
+    unique_id = sensor_config.get(CONF_UNIQUE_ID)
+    if unique_id:
+        return str(unique_id)
+
+    # For multi-switch and wled strategy we need to use the device id as unique id
+    # As we don't want to start a discovery for each switch entity
+    if (
+        source_entity.device_entry
+        and power_profile
+        and power_profile.calculation_strategy in [CalculationStrategy.WLED, CalculationStrategy.MULTI_SWITCH]
+    ):
+        return f"pc_{source_entity.device_entry.id}"
+
+    if source_entity and source_entity.entity_id != DUMMY_ENTITY_ID:
+        source_unique_id = source_entity.unique_id or source_entity.entity_id
+        # Prefix with pc_ to avoid conflicts with other integrations
+        return f"pc_{source_unique_id}"
+
+    return str(uuid.uuid4())
+
+
+P = TypeVar("P")  # Used for positional and keyword argument types
+R = TypeVar("R")  # Used for return type
+
+
+def make_hashable(arg: Any) -> Any:  # noqa: ANN401
+    """Convert unhashable arguments to hashable equivalents."""
+    if isinstance(arg, set):
+        return frozenset(arg)
+    if isinstance(arg, list):
+        return tuple(arg)
+    if isinstance(arg, dict):
+        return frozenset((key, make_hashable(value)) for key, value in arg.items())
+    return arg
+
+
+def async_cache(func: Callable[..., Coroutine[Any, Any, R]]) -> Callable[..., Coroutine[Any, Any, R]]:
+    """
+    A decorator to cache results of an async function based on its arguments.
+
+    Args:
+        func: The asynchronous function to decorate.
+
+    Returns:
+        A decorated asynchronous function with caching.
+    """
+    cache: dict[tuple[tuple[Any, ...], frozenset], R] = {}
+
+    @wraps(func)
+    async def wrapper(*args: Any, **kwargs: Any) -> R:  # noqa: ANN401
+        # Make arguments hashable
+        hashable_args = tuple(make_hashable(arg) for arg in args)
+        hashable_kwargs = frozenset((key, make_hashable(value)) for key, value in kwargs.items())
+        cache_key = (hashable_args, hashable_kwargs)
+
+        if cache_key in cache:
+            return cache[cache_key]
+        result = await func(*args, **kwargs)
+        cache[cache_key] = result
+        return result
+
+    return wrapper
+
+
+def replace_placeholders(data: list | str | dict[str, Any], replacements: dict[str, str]) -> list | str | dict[str, Any]:
+    """Replace placeholders in a dictionary with values from a replacement dictionary."""
+    if isinstance(data, dict):
+        for key, value in data.items():
+            data[key] = replace_placeholders(value, replacements)
+    elif isinstance(data, list):
+        for i in range(len(data)):
+            data[i] = replace_placeholders(data[i], replacements)
+    elif isinstance(data, str):
+        # Adjust regex to match [[variable]]
+        matches = re.findall(r"\[\[\s*(\w+)\s*\]\]", data)
+        for match in matches:
+            if match in replacements:
+                # Replace [[variable]] with its value
+                data = data.replace(f"[[{match}]]", replacements[match])
+    return data
