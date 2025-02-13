@@ -1,15 +1,12 @@
 {
   "services": {
-    "activate_playbook": "mdi:play",
+    "reset_energy": "mdi:restore",
     "calibrate_utility_meter": "mdi:wrench",
     "calibrate_energy": "mdi:wrench",
-    "change_gui_config": "mdi:cogs",
-    "get_active_playbook": "mdi:book-open-variant-outline",
-    "get_group_entities": "mdi:format-list-group",
     "increase_daily_energy": "mdi:numeric",
-    "reset_energy": "mdi:restore",
+    "activate_playbook": "mdi:play",
     "stop_playbook": "mdi:stop",
     "switch_sub_profile": "mdi:toggle-switch",
-    "update_library": "mdi:cloud-download"
+    "change_gui_config": "mdi:cogs"
   }
 }

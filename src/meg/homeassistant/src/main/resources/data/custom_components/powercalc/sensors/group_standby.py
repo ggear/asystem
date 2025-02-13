@@ -19,7 +19,6 @@ from custom_components.powercalc.const import (
     CONF_CREATE_ENERGY_SENSORS,
     CONF_POWER_SENSOR_PRECISION,
     DATA_STANDBY_POWER_SENSORS,
-    DEFAULT_POWER_SENSOR_PRECISION,
     DOMAIN,
     DUMMY_ENTITY_ID,
     SIGNAL_POWER_SENSOR_STATE_CHANGE,
@@ -37,7 +36,7 @@ async def create_general_standby_sensors(
     sensors: list[Entity] = []
     power_sensor = StandbyPowerSensor(
         hass,
-        rounding_digits=int(config.get(CONF_POWER_SENSOR_PRECISION, DEFAULT_POWER_SENSOR_PRECISION)),
+        rounding_digits=config.get(CONF_POWER_SENSOR_PRECISION),  # type: ignore
     )
     sensors.append(power_sensor)
     if config.get(CONF_CREATE_ENERGY_SENSORS):
@@ -61,7 +60,11 @@ class StandbyPowerSensor(SensorEntity, PowerSensor):
     _attr_native_unit_of_measurement = UnitOfPower.WATT
     _attr_has_entity_name = True
     _attr_unique_id = "powercalc_standby_group"
-    _attr_name = "All standby power"
+
+    @property
+    def name(self) -> str:
+        """Name of the entity."""
+        return "All standby power"
 
     def __init__(self, hass: HomeAssistant, rounding_digits: int = 2) -> None:
         self.standby_sensors: dict[str, Decimal] = hass.data[DOMAIN][DATA_STANDBY_POWER_SENSORS]
@@ -79,11 +82,9 @@ class StandbyPowerSensor(SensorEntity, PowerSensor):
     async def _recalculate(self) -> None:
         """Calculate sum of all power sensors in standby, and update the state of the sensor."""
         if self.standby_sensors:
-            self._attr_native_value = Decimal(
-                round(  # type: ignore
-                    sum(self.standby_sensors.values()),
-                    self._rounding_digits,
-                ),
+            self._attr_native_value = round(
+                sum(self.standby_sensors.values()),
+                self._rounding_digits,
             )
         else:
             self._attr_native_value = None

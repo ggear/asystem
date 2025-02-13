@@ -13,27 +13,26 @@ class CompositeLoader(Loader):
     async def initialize(self) -> None:
         [await loader.initialize() for loader in self.loaders]  # type: ignore[func-returns-value]
 
-    async def get_manufacturer_listing(self, device_types: set[DeviceType] | None) -> set[str]:
+    async def get_manufacturer_listing(self, device_type: DeviceType | None) -> set[str]:
         """Get listing of available manufacturers."""
 
-        return {manufacturer for loader in self.loaders for manufacturer in await loader.get_manufacturer_listing(device_types)}
+        return {manufacturer for loader in self.loaders for manufacturer in await loader.get_manufacturer_listing(device_type)}
 
-    async def find_manufacturers(self, search: str) -> set[str]:
+    async def find_manufacturer(self, search: str) -> str | None:
         """Check if a manufacturer is available. Also must check aliases."""
 
         search = search.lower()
-        found_manufacturers = set()
         for loader in self.loaders:
-            manufacturers = await loader.find_manufacturers(search)
-            if manufacturers:
-                found_manufacturers.update(manufacturers)
+            manufacturer = await loader.find_manufacturer(search)
+            if manufacturer:
+                return manufacturer
 
-        return found_manufacturers
+        return None
 
-    async def get_model_listing(self, manufacturer: str, device_types: set[DeviceType] | None) -> set[str]:
+    async def get_model_listing(self, manufacturer: str, device_type: DeviceType | None) -> set[str]:
         """Get listing of available models for a given manufacturer."""
 
-        return {model for loader in self.loaders for model in await loader.get_model_listing(manufacturer, device_types)}
+        return {model for loader in self.loaders for model in await loader.get_model_listing(manufacturer, device_type)}
 
     async def load_model(self, manufacturer: str, model: str) -> tuple[dict, str] | None:
         for loader in self.loaders:
@@ -43,11 +42,12 @@ class CompositeLoader(Loader):
 
         return None
 
-    async def find_model(self, manufacturer: str, search: set[str]) -> set[str]:
+    async def find_model(self, manufacturer: str, search: set[str]) -> str | None:
         """Find the model in the library."""
 
-        models = set()
         for loader in self.loaders:
-            models.update(await loader.find_model(manufacturer, search))
+            model = await loader.find_model(manufacturer, search)
+            if model:
+                return model
 
-        return models
+        return None
