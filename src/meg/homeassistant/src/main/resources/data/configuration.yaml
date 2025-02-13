@@ -183,8 +183,7 @@ logger:
     #homeassistant.components.google_assistant.helpers: debug
     #homeassistant.components.google_assistant.smart_home: debug
     #homeassistant.components.google_assistant.report_state: debug
-    custom_components.powercalc.sensors.power: debug
-    custom_components.powercalc: debug
+    #custom_components.powercalc: debug
     #custom_components.adaptive_lighting: debug
     #custom_components.bureau_of_meteorology: debug
   #####################################################################################
