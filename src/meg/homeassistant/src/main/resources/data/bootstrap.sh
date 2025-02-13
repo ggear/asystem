@@ -12,7 +12,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! "/asystem/etc/healthcheck.sh" alive; do
+while ! "/asystem/etc/healthcheck.sh"; do
   echo "Waiting for service to become ready ..." && sleep 1
 done
 
