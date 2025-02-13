@@ -217,10 +217,12 @@ powercalc:
                         min_power: 0.5
                         max_power: 16.3
                     - entity_id: light.ada_lamp_bulb_1
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Edwin Lights
                   entities:
                     - entity_id: light.edwin_lamp_bulb_1
+                      manufacturer: Signify
                     - entity_id: light.edwin_fan
                       name: Edwin Main Fan Light
                       unique_id: edwin_main_light_fan
@@ -228,30 +230,44 @@ powercalc:
                         min_power: 0.5
                         max_power: 16.3
                     - entity_id: light.edwin_night_light_bulb_1
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Hallway Lights
                   entities:
                     - entity_id: light.hallway_main_bulb_1
+                      manufacturer: Signify
                     - entity_id: light.hallway_main_bulb_2
+                      manufacturer: Signify
                     - entity_id: light.hallway_main_bulb_3
+                      manufacturer: Signify
                     - entity_id: light.hallway_main_bulb_4
+                      manufacturer: Signify
                     - entity_id: light.hallway_sconces_bulb_1
                     - entity_id: light.hallway_sconces_bulb_2
                 #######################################################################
                 - create_group: Dining Lights
                   entities:
                     - entity_id: light.dining_main_bulb_1
+                      manufacturer: Signify
                     - entity_id: light.dining_main_bulb_2
+                      manufacturer: Signify
                     - entity_id: light.dining_main_bulb_3
+                      manufacturer: Signify
                     - entity_id: light.dining_main_bulb_4
+                      manufacturer: Signify
                     - entity_id: light.dining_main_bulb_5
+                      manufacturer: Signify
                     - entity_id: light.dining_main_bulb_6
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Lounge Lights
                   entities:
                     - entity_id: light.lounge_main_bulb_1
+                      manufacturer: Signify
                     - entity_id: light.lounge_main_bulb_2
+                      manufacturer: Signify
                     - entity_id: light.lounge_main_bulb_3
+                      manufacturer: Signify
                     - entity_id: light.lounge_fan
                       name: Lounge Fan Light
                       unique_id: lounge_light_fan
@@ -259,25 +275,34 @@ powercalc:
                         min_power: 0.5
                         max_power: 16.3
                     - entity_id: light.lounge_lamp_bulb_1
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Parents Lights
                   entities:
                     - entity_id: light.parents_main_bulb_1
+                      manufacturer: Signify
                     - entity_id: light.parents_main_bulb_2
+                      manufacturer: Signify
                     - entity_id: light.parents_main_bulb_3
+                      manufacturer: Signify
                     - entity_id: light.parents_jane_bedside_bulb_1
                     - entity_id: light.parents_graham_bedside_bulb_1
                 #######################################################################
                 - create_group: Study Lights
                   entities:
                     - entity_id: light.study_lamp_bulb_1
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Kitchen Lights
                   entities:
                     - entity_id: light.kitchen_main_bulb_1
+                      manufacturer: Signify
                     - entity_id: light.kitchen_main_bulb_2
+                      manufacturer: Signify
                     - entity_id: light.kitchen_main_bulb_3
+                      manufacturer: Signify
                     - entity_id: light.kitchen_main_bulb_4
+                      manufacturer: Signify
                     - entity_id: light.kitchen_bench_lights_plug
                       standby_power: 0.6
                       fixed:
@@ -286,24 +311,29 @@ powercalc:
                 - create_group: Laundry Lights
                   entities:
                     - entity_id: light.laundry_main_bulb_1
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Pantry Lights
                   entities:
                     - entity_id: light.pantry_main_bulb_1
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Office Lights
                   entities:
                     - entity_id: light.office_main_bulb_1
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Bathroom Lights
                   entities:
                     - entity_id: light.bathroom_main_bulb_1
+                      manufacturer: Signify
                     - entity_id: light.bathroom_sconces_bulb_1
                     - entity_id: light.bathroom_sconces_bulb_2
                 #######################################################################
                 - create_group: Ensuite Lights
                   entities:
                     - entity_id: light.ensuite_main_bulb_1
+                      manufacturer: Signify
                     - entity_id: light.ensuite_sconces_bulb_1
                     - entity_id: light.ensuite_sconces_bulb_2
                     - entity_id: light.ensuite_sconces_bulb_3
@@ -311,6 +341,7 @@ powercalc:
                 - create_group: Wardrobe Lights
                   entities:
                     - entity_id: light.wardrobe_main_bulb_1
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Deck Lights
                   entities:

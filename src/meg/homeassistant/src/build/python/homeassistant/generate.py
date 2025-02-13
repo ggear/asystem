@@ -1563,11 +1563,12 @@ powercalc:
                                     ("\n                      " + dict["powercalc_config"].replace("\n", "\n                      ")) \
                                         if "powercalc_config" in dict else ""
                                 metadata_electricity_file.write("                    " + """
-                    - entity_id: {}.{}{}
+                    - entity_id: {}.{}{}{}
                               """.format(
                                     dict["entity_namespace"],
                                     dict["unique_id"],
                                     dict_config,
+                                    "\n                      manufacturer: {}\n".format(dict["manufacturer_alias"]) if "manufacturer_alias" in dict else "",
                                 ).strip() + "\n")
             metadata_electricity_file.write("  " + """
   #####################################################################################
