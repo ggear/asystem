@@ -8,7 +8,7 @@ if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
 fi
 
 function alive() {
-  if nc -z ${INFLUXDB3_SERVICE} ${INFLUXDB3_PORT}; then
+  if ! nc -z ${INFLUXDB3_SERVICE} ${INFLUXDB3_PORT}; then
     return 0
   else
     return 1
