@@ -8,7 +8,7 @@ if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
 fi
 
 function alive() {
-  if ! nc -z ${INFLUXDB3_SERVICE} ${INFLUXDB3_PORT}; then
+  if influxdb3 show databases >/dev/null 2>&1; then
     return 0
   else
     return 1
