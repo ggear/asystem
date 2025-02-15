@@ -11,7 +11,7 @@ else
 fi
 
 function alive() {
-  if [ $(${CURL_CMD} "http://127.0.0.1:8181/api/v3/configure/database?format=pretty&show_deleted=false" 2>/dev/null | wc) -gt 0 ]; then
+  if [ $(${CURL_CMD} "http://127.0.0.1:8181/api/v3/configure/database?format=pretty&show_deleted=false" 2>/dev/null | wc -l) -gt 0 ]; then
     return 0
   else
     return 1
