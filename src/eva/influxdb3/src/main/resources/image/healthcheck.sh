@@ -12,18 +12,18 @@ fi
 
 function alive() {
   if ${CURL_CMD} "http://127.0.0.1:8181/api/v3/configure/database?format=pretty&show_deleted=false" >/dev/null 2>&1; then
-    echo return 0
+    return 0
   else
-    echo return 1
+    return 1
   fi
 }
 
 function ready() {
   if READY="$(influxdb3 show databases --format json)" &&
-    [ "$(jq length <<<"${READY}")" -gt 0 ]; then
-    return 0
+    [ "$(grep -c host_private <<<"${READY}")" -eq 1 ]; then
+    echo return 0
   else
-    return 1
+    echo return 1
   fi
 }
 
