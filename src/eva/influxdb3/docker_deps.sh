@@ -30,6 +30,7 @@ function echo_package_install_commands {
     curl
     vim
     jq
+    netcat-openbsd
   )
   ASYSTEM_PACKAGES_BUILD=(
     bash
@@ -48,6 +49,7 @@ ASYSTEM_PACKAGES_BASE=(
     curl
     vim
     jq
+    netcat-openbsd
 )
 ASYSTEM_PACKAGES_BUILD=(
     bash

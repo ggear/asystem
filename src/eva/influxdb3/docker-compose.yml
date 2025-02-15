@@ -9,6 +9,8 @@ x-common: &common
     - INFLUXDB3_OBJECT_STORE=file
     - INFLUXDB3_DB_DIR=/asystem/mnt
     - INFLUXDB3_HTTP_BIND_ADDR=0.0.0.0:8181
+    - INFLUXDB3_ENTERPRISE_COMPACTOR_ID=compactor_1
+    - INFLUXDB3_ENTERPRISE_RUN_COMPACTIONS=true
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
   logging:
