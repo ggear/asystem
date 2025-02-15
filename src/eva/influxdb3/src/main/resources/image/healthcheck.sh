@@ -21,9 +21,9 @@ function alive() {
 function ready() {
   if READY="$(influxdb3 show databases --format json)" &&
     [ "$(grep -c host_private <<<"${READY}")" -eq 1 ]; then
-    echo return 0
+    return 0
   else
-    echo return 1
+    return 1
   fi
 }
 
