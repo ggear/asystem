@@ -11,7 +11,7 @@ else
 fi
 
 function alive() {
-  if [ $(influxdb3 show databases 2>&1 | grep -c error) -eq 0 ]; then
+  if ${CURL_CMD} "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_PORT}/api/v3/configure/database?format=csv&show_deleted=false" >/dev/null 2>&1; then
     return 0
   else
     return 1
@@ -19,11 +19,11 @@ function alive() {
 }
 
 function ready() {
-  if READY="$(influxdb3 show databases --format json)" &&
+  if READY="$(${CURL_CMD} "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_PORT}/api/v3/configure/database?format=csv&show_deleted=false")" &&
     [ "$(grep -c host_private <<<"${READY}")" -eq 1 ]; then
-    return 0
+    echo return 0
   else
-    return 1
+    echo return 1
   fi
 }
 

@@ -14,7 +14,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-[[ $(influxdb3 show databases | grep -c host_private) -eq 0 ]] && influxdb3 create database host_private
+#[[ $(influxdb3 show databases | grep -c host_private) -eq 0 ]] && influxdb3 create database host_private
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
