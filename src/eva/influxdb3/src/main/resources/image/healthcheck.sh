@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -eo pipefail
-
 HEALTHCHECK_VERBOSE=${HEALTHCHECK_VERBOSE:-false}
 if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
   CURL_CMD="curl -f --connect-timeout 2 --max-time 2"
