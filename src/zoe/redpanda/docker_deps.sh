@@ -86,7 +86,7 @@ echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_VERSION=12.9 \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_LABEL=bookworm \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION=12.9-slim \\\\"
 echo "    -e ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL=slim-bookworm \\\\"
-echo "    'vectorized/redpanda:v24.2.9'" && echo ""
+echo "    'redpandadata/redpanda:v24.3.6'" && echo ""
 echo "#######################################################################################"
 EOF
     chmod +x /tmp/base_image_*.sh
@@ -98,7 +98,7 @@ DOCKER_CLI_HINTS=false
 CONTAINER_NAME="asystem_deps_bootstrap"
 docker ps -q --filter "name=$CONTAINER_NAME" | grep -q . && docker kill "$CONTAINER_NAME"
 docker ps -qa --filter "name=$CONTAINER_NAME" | grep -q . && docker rm -vf "$CONTAINER_NAME"
-docker run --name "$CONTAINER_NAME" --user root --platform linux/x86_64 --entrypoint sh  -dt 'vectorized/redpanda:v24.2.9'
+docker run --name "$CONTAINER_NAME" --user root --platform linux/x86_64 --entrypoint sh  -dt 'redpandadata/redpanda:v24.3.6'
 docker exec -t "$CONTAINER_NAME" sh -c '[ "$(which apk)" != "" ] && apk add --no-cache bash; [ "$(which apt-get)" != "" ] && apt-get update && apt-get -y install bash'
 declare -f echo_package_install_commands | sed '1,2d;$d' | docker exec -i "$CONTAINER_NAME" bash -
 echo "Base image shell:" && echo "#######################################################################################" && echo ""
