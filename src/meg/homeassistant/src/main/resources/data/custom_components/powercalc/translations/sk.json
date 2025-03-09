@@ -325,7 +325,7 @@
         "data": {
           "sub_profile": "Podprofil"
         },
-        "description": "Tento model má viacero podprofilov. Vyberte ten, ktorý vyhovuje vášmu zariadeniu:\n\n\"{entity_id}\"",
+        "description": "Tento model má viacero podprofilov. Vyberte ten, ktorý vyhovuje vášmu zariadeniu:\n\n\"{entity_id}\"{remarks}",
         "title": "Konfigurácia podprofilu"
       },
       "smart_switch": {
@@ -402,6 +402,20 @@
     "deprecated_platform_yaml": {
       "description": "Konfigurácia senzorov pomocou `sensor->platform` bola zastaraná. Musíte zmeniť konfiguráciu na `powercalc->sensors`. Kliknite na 'Viac informácií' pre ďalšie pokyny.",
       "title": "Konfigurácia Powercalc YAML bola presunutá"
+    },
+    "sub_profile": {
+      "fix_flow": {
+        "step": {
+          "sub_profile": {
+            "description": "This device has a model with multiple sub profiles. Select one that corresponds to the following entity of this device:\n\n\"{entity_id}\"{remarks}",
+            "title": "Select correct sub profile",
+            "data": {
+              "sub_profile": "Sub profile"
+            }
+          }
+        }
+      },
+      "title": "Sub profile selection required for {entry}"
     }
   },
   "options": {
@@ -748,6 +762,10 @@
         }
       },
       "name": "Zvýšenie denného energetického snímača"
+    },
+    "reload": {
+      "description": "Reload Powercalc configuration and entities",
+      "name": "Reload"
     },
     "reset_energy": {
       "description": "Resetovanie snímača energie na nulovú hodnotu kWh.",

@@ -325,7 +325,7 @@
         "data": {
           "sub_profile": "Subperfil"
         },
-        "description": "Este modelo tiene múltiples subperfiles. Seleccione uno que se adapte a su dispositivo\n\n\"{entity_id}\"",
+        "description": "Este modelo tiene múltiples subperfiles. Seleccione uno que se adapte a su dispositivo\n\n\"{entity_id}\"{remarks}",
         "title": "Configuración del subperfil"
       },
       "smart_switch": {
@@ -402,6 +402,20 @@
     "deprecated_platform_yaml": {
       "description": "La configuración de los sensores usando `sensor->plataform` está ahora obsoleta. Necesita cambiar su configuración a `powercalc->sensores`. Haga clic en 'Learn more' para más instrucciones.",
       "title": "La configuración de Powercalc YAML se ha movido"
+    },
+    "sub_profile": {
+      "fix_flow": {
+        "step": {
+          "sub_profile": {
+            "description": "This device has a model with multiple sub profiles. Select one that corresponds to the following entity of this device:\n\n\"{entity_id}\"{remarks}",
+            "title": "Select correct sub profile",
+            "data": {
+              "sub_profile": "Sub profile"
+            }
+          }
+        }
+      },
+      "title": "Sub profile selection required for {entry}"
     }
   },
   "options": {
@@ -748,6 +762,10 @@
         }
       },
       "name": "Aumentar el sensor de energía diario"
+    },
+    "reload": {
+      "description": "Reload Powercalc configuration and entities",
+      "name": "Reload"
     },
     "reset_energy": {
       "description": "Restablecer un sensor de energía a cero kWh.",

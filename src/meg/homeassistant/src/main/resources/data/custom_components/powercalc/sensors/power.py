@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from copy import copy
 from datetime import timedelta
@@ -30,6 +31,7 @@ from homeassistant.core import (
     callback,
 )
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers import start
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.entity import EntityCategory
@@ -143,6 +145,18 @@ async def create_virtual_power_sensor(
             if CONF_CALCULATION_ENABLED_CONDITION not in sensor_config and power_profile.calculation_enabled_condition:
                 sensor_config[CONF_CALCULATION_ENABLED_CONDITION] = power_profile.calculation_enabled_condition
 
+            if config_entry and await power_profile.requires_manual_sub_profile_selection and "/" not in sensor_config.get(CONF_MODEL, ""):
+                ir.async_create_issue(
+                    hass,
+                    DOMAIN,
+                    f"sub_profile_{config_entry.entry_id}",
+                    is_fixable=True,
+                    severity=ir.IssueSeverity.WARNING,
+                    translation_key="sub_profile",
+                    translation_placeholders={"entry": config_entry.title},
+                    data={"config_entry_id": config_entry.entry_id},
+                )
+
         name = generate_power_sensor_name(
             sensor_config,
             sensor_config.get(CONF_NAME),
@@ -159,7 +173,7 @@ async def create_virtual_power_sensor(
         strategy = detect_calculation_strategy(sensor_config, power_profile)
         calculation_strategy_factory = PowerCalculatorStrategyFactory.get_instance(hass)
 
-        standby_power, standby_power_on = _get_standby_power(sensor_config, strategy, power_profile)
+        standby_power, standby_power_on = _get_standby_power(sensor_config, power_profile)
 
         _LOGGER.debug(
             "Creating power sensor (entity_id=%s entity_category=%s, sensor_name=%s strategy=%s manufacturer=%s model=%s unique_id=%s)",
@@ -251,7 +265,6 @@ async def _select_sub_profile(
 
 def _get_standby_power(
     sensor_config: ConfigType,
-    strategy: CalculationStrategy,
     power_profile: PowerProfile | None,
 ) -> tuple[Template | Decimal, Decimal]:
     """Retrieve standby power settings from sensor config or power profile."""
@@ -418,6 +431,12 @@ class VirtualPowerSensor(SensorEntity, PowerSensor):
             async_dispatcher_send(self.hass, SIGNAL_POWER_SENSOR_STATE_CHANGE)
 
         async def initial_update(hass: HomeAssistant) -> None:
+            """Calculate initial value and push state"""
+
+            # When using reload service energy sensor became unavailable
+            # This is caused because state change listener of energy sensor is registered before power sensor pushes initial update
+            # Adding sleep 0 fixes this issue.
+            await asyncio.sleep(0)
             if self._strategy_instance:
                 await self._strategy_instance.on_start(hass)
 
