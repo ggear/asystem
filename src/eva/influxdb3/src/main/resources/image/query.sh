@@ -22,10 +22,6 @@ influxdb3 query \
   "SHOW TAG VALUES FROM 'cpu' WITH KEY = 'host'"
 influxdb3 query \
   --language influxql \
-  --database host_private \
-  "SELECT COUNT(*) FROM cpu"
-influxdb3 query \
-  --language influxql \
   --database host_private "
     SELECT
       time, host, usage_system, usage_user
@@ -37,3 +33,8 @@ influxdb3 query \
     ORDER by time DESC
     LIMIT 10
 "
+influxdb3 query \
+  --language influxql \
+  --format json \
+  --database host_private \
+  "SELECT COUNT(usage_system) FROM cpu" | jq -r '.[0].count'
