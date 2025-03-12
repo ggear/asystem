@@ -16,7 +16,7 @@ function alive() {
 }
 
 function ready() {
-  if [ -f /train/en_US-rhasspy/data/lang/lm.arpa ]; then
+  if [ "$(jq -er .model_version /train/en_US-rhasspy/training_info.json)" == "1.0" ]; then
     return 0
   else
     return 1
