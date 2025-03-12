@@ -1,9 +1,9 @@
 import json
+import sys
+import time
 import traceback
 from os.path import *
 
-import sys
-import time
 from digitemp.device import TemperatureSensor
 from digitemp.master import UART_Adapter
 

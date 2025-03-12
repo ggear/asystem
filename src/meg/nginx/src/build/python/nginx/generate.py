@@ -2,7 +2,6 @@ from os.path import *
 
 import pandas as pd
 import urllib3
-from mpl_toolkits.axes_grid1 import host_subplot
 
 from homeassistant.generate import load_env
 from homeassistant.generate import load_modules

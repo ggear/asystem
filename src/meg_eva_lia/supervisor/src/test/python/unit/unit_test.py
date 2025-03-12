@@ -1,9 +1,9 @@
+import sys
 import unittest
 from os.path import *
 from unittest.mock import patch, MagicMock
 
 import pytest
-import sys
 
 sys.path.append('../../../main/python')
 

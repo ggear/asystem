@@ -1,9 +1,9 @@
 import os
+import sys
 import unittest
 from os.path import *
 
 import pytest
-import sys
 
 sys.path.append('../../../main/python')
 

@@ -1,10 +1,10 @@
 import json
 import os.path
 import socket
-
-import docker
 import sys
 import time
+
+import docker
 
 RUN_CODE_ALL_UP = 0
 RUN_CODE_SOME_ALIENS = 1

@@ -1,0 +1,50 @@
+x-common: &common
+  image: rhasspy:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  environment:
+    - TZ=Australia/Perth
+    - RHASSPY_SERVICE
+    - RHASSPY_API_PORT
+  volumes:
+    - ${SERVICE_DATA_DIR}/models:/models
+    - ${SERVICE_DATA_DIR}/train:/train
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
+services:
+  rhasspy:
+    container_name: rhasspy
+    <<: *common
+    restart: ${SERVICE_RESTART}
+    ports:
+      - ${RHASSPY_API_PORT}:${RHASSPY_API_PORT}
+    entrypoint:
+      - "bash"
+      - "/run.sh"
+      - "--hass-websocket-uri"
+      - "ws://${HOMEASSISTANT_IP_PROD}:${HOMEASSISTANT_HTTP_PORT}/api/websocket"
+      - "--hass-token"
+      - "${HOMEASSISTANT_API_TOKEN}"
+      - "--retrain-on-start"
+    healthcheck:
+      test: /asystem/etc/healthcheck.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+  rhasspy_bootstrap:
+    container_name: rhasspy_bootstrap
+    <<: *common
+    restart: 'no'
+    entrypoint: /bin/bash
+    command:
+      - /asystem/etc/bootstrap.sh
+    depends_on:
+      - rhasspy

@@ -3,12 +3,12 @@ import os.path
 import shutil
 import subprocess
 from datetime import datetime
+from os.path import *
 from subprocess import check_output
 
 import dateutil.parser
 import pandas as pd
 import urllib3
-from os.path import *
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None

@@ -4,7 +4,6 @@
 
 import collections
 import glob
-import json
 import math
 import os
 import re
@@ -13,9 +12,7 @@ import sys
 import time
 from os.path import *
 from typing import Any, Dict, Optional
-from packaging.version import Version
 
-import requests
 import varsubst
 import varsubst.resolvers
 from fabric import task

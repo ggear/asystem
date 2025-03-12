@@ -7,6 +7,7 @@ vernemq
 influxdb
 mlserver
 unpoller
+postgres
 appdaemon
 zigbee2mqtt
 homeassistant
