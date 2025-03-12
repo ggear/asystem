@@ -1,7 +1,7 @@
 #!/bin/bash
 
-SERVICE_HOME=/home/asystem/homeassistant/latest
-SERVICE_INSTALL=/var/lib/asystem/install/homeassistant/latest
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/latest
+SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/latest
 
 # Bootstrap with altitude '193m' and create user 'graham' with password '$HOMEASSISTANT_KEY_GRAHAM'
 # Create user 'jane' with password '$HOMEASSISTANT_KEY_JANE'

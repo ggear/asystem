@@ -9,14 +9,14 @@ fi
 
 function alive() {
   if netcat -zw 1 ${RHASSPY_SERVICE} ${RHASSPY_API_PORT}; then
-    echo return 0
+    return 0
   else
-    echo return 1
+    return 1
   fi
 }
 
 function ready() {
-  if netcat -zw 1 ${RHASSPY_SERVICE} ${RHASSPY_API_PORT}; then
+  if [ -f ./en_US-rhasspy/data/lang/lm.arpa ]; then
     return 0
   else
     return 1
