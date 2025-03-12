@@ -45,7 +45,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
+          memory: 256M
   rhasspy_bootstrap:
     container_name: rhasspy_bootstrap
     <<: *common
