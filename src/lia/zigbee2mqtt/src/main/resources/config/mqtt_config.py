@@ -22,7 +22,7 @@ if __name__ == "__main__":
     device_config = sys.argv[4]
     device_config_group = '{{ "group": "{}", "device": "{}" }}'.format(device_group, device_name)
     mqtt_host = os.environ["VERNEMQ_SERVICE"]
-    mqtt_port = int(os.environ["VERNEMQ_PORT"])
+    mqtt_port = int(os.environ["VERNEMQ_API_PORT"])
 
 
     def _mqtt_pub(topic: str, message: str, **mqtt_kwargs):

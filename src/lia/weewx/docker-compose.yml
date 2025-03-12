@@ -12,7 +12,7 @@ services:
       - MARIADB_USER_WEEWX
       - MARIADB_DATABASE_WEEWX
       - VERNEMQ_SERVICE
-      - VERNEMQ_PORT
+      - VERNEMQ_API_PORT
     ports:
       - ${WEEWX_HTTP_PORT}:80
     volumes:

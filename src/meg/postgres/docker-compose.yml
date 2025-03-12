@@ -5,7 +5,7 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - POSTGRES_SERVICE
-    - POSTGRES_PORT
+    - POSTGRES_API_PORT
     - POSTGRES_USER
     - POSTGRES_KEY
     - POSTGRES_PASSWORD=${POSTGRES_KEY}
@@ -31,7 +31,7 @@ services:
     <<: *common
     restart: ${SERVICE_RESTART}
     ports:
-      - ${POSTGRES_PORT}:5432
+      - ${POSTGRES_API_PORT}:5432
     deploy:
       resources:
         limits:

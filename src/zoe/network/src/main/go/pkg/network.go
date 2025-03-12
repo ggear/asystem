@@ -40,7 +40,7 @@ func ConfigLog(level logrus.Level) {
 
 func OpenMQTTClient(cliendID string, subsribeHandlers []func(client mqtt.Client)) mqtt.Client {
 	clientID := cliendID[:int(math.Min(float64(len(cliendID)), 10))]
-	brokerURL := fmt.Sprintf("mqtt://%v:%v", os.Getenv("VERNEMQ_IP"), os.Getenv("VERNEMQ_PORT"))
+	brokerURL := fmt.Sprintf("mqtt://%v:%v", os.Getenv("VERNEMQ_IP"), os.Getenv("VERNEMQ_API_PORT"))
 	options := mqtt.NewClientOptions()
 	options.AddBroker(brokerURL)
 	options.SetClientID(fmt.Sprintf("%v-%.6f", cliendID, rand.Float64()))

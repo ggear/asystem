@@ -82,7 +82,7 @@ influxdb:
 #######################################################################################
 mqtt:
 #  broker: !env_var VERNEMQ_SERVICE
-#  port: !env_var VERNEMQ_PORT
+#  port: !env_var VERNEMQ_API_PORT
 #  client_id: 'homeassistant'
 #  discovery: true
 #  discovery_prefix: 'homeassistant'

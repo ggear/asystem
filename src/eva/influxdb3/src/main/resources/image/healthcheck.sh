@@ -11,7 +11,7 @@ else
 fi
 
 function alive() {
-  if ${CURL_CMD} "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_PORT}/api/v3/configure/database?format=csv&show_deleted=false" >/dev/null 2>&1; then
+  if ${CURL_CMD} "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}/api/v3/configure/database?format=csv&show_deleted=false" >/dev/null 2>&1; then
     return 0
   else
     return 1
@@ -19,7 +19,7 @@ function alive() {
 }
 
 function ready() {
-  if READY="$(${CURL_CMD} "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_PORT}/api/v3/configure/database?format=csv&show_deleted=false")" &&
+  if READY="$(${CURL_CMD} "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}/api/v3/configure/database?format=csv&show_deleted=false")" &&
     [ "$(grep -c host_private <<<"${READY}")" -eq 1 ]; then
     echo return 0
   else

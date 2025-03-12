@@ -4,7 +4,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap initialising ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! pg_isready -q -h ${POSTGRES_SERVICE} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -t 1 >/dev/null 2>&1; do
+while ! pg_isready -q -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -t 1 >/dev/null 2>&1; do
   echo "Waiting for service to come alive ..." && sleep 1
 done
 
@@ -15,12 +15,12 @@ echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
 init_user_database() {
-  if [ $(psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "SELECT usename FROM pg_user WHERE usename = '"$1"'" | grep $1 | wc -l) -eq 0 ]; then
-    psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "CREATE USER $1"
-    psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "ALTER USER $1 WITH PASSWORD '"$2"'"
+  if [ $(psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "SELECT usename FROM pg_user WHERE usename = '"$1"'" | grep $1 | wc -l) -eq 0 ]; then
+    psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "CREATE USER $1"
+    psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "ALTER USER $1 WITH PASSWORD '"$2"'"
   fi
-  if [ $(psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "SELECT datname FROM pg_database WHERE datname = '"$3"'" | grep $3 | wc -l) -eq 0 ]; then
-    psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "CREATE DATABASE $3"
+  if [ $(psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "SELECT datname FROM pg_database WHERE datname = '"$3"'" | grep $3 | wc -l) -eq 0 ]; then
+    psql -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -d postgres -w -t -c "CREATE DATABASE $3"
   fi
 }
 

@@ -5,7 +5,7 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - MARIADB_SERVICE
-    - MARIADB_PORT
+    - MARIADB_API_PORT
     - MARIADB_ROOT_PASSWORD=${MARIADB_KEY}
     - MARIADB_DATABASE=${MARIADB_DATABASE_WEEWX}
     - MARIADB_USER=${MARIADB_USER_WEEWX}
@@ -24,7 +24,7 @@ services:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}:/var/lib/mysql
     ports:
-      - ${MARIADB_PORT}:${MARIADB_PORT}
+      - ${MARIADB_API_PORT}:${MARIADB_API_PORT}
     deploy:
       resources:
         limits:

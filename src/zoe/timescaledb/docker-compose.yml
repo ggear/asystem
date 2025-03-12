@@ -5,7 +5,7 @@ x-common: &common
   environment:
     - TZ=Australia/Perth
     - TIMESCALEDB_IP
-    - TIMESCALEDB_PORT
+    - TIMESCALEDB_API_PORT
     - PGUSER=${TIMESCALEDB_USER}
     - PGPASSWORD=${TIMESCALEDB_KEY}
     - PGDATA=/var/lib/postgresql/data/pgdata
@@ -23,7 +23,7 @@ services:
       - ${SERVICE_DATA_DIR}/bootstrap.sh:/bootstrap/bootstrap.sh
       - ${SERVICE_DATA_DIR}:/var/lib/postgresql/data
     ports:
-      - ${TIMESCALEDB_PORT}:5432
+      - ${TIMESCALEDB_API_PORT}:5432
     deploy:
       resources:
         limits:

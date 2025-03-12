@@ -9,7 +9,7 @@ services:
       - HOST_IP
       - HOST_NAME
       - VERNEMQ_SERVICE
-      - VERNEMQ_PORT
+      - VERNEMQ_API_PORT
       - INFLUXDB_SERVICE
       - INFLUXDB_HTTP_PORT
       - HOST_ETC=/hostfs/etc

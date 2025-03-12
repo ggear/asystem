@@ -58,7 +58,7 @@ echo ''
                         "devicename": "{}".format(metadata_tasmota_dict["unique_id"]),
                         "friendlyname": [metadata_tasmota_dict["friendly_name"]],
                         "mqtt_host": "{}".format(env["VERNEMQ_SERVICE_PROD"]),
-                        "mqtt_port": env["VERNEMQ_PORT"],
+                        "mqtt_port": env["VERNEMQ_API_PORT"],
                         "mqtt_client": "DVES_%06X",
                         "mqtt_grptopic": "tasmotas",
                         "mqtt_topic": "{}".format(metadata_tasmota_dict["unique_id"]),

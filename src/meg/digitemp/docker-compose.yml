@@ -8,7 +8,7 @@ services:
       - TZ=Australia/Perth
       - DIGITEMP_HEALTH_PORT
       - VERNEMQ_SERVICE
-      - VERNEMQ_PORT
+      - VERNEMQ_API_PORT
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/runtime:rw
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro

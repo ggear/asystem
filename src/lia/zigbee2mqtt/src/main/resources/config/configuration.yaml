@@ -12,7 +12,7 @@ frontend:
 mqtt:
   version: 5
   base_topic: zigbee
-  server: 'mqtt://$VERNEMQ_SERVICE:$VERNEMQ_PORT'
+  server: 'mqtt://$VERNEMQ_SERVICE:$VERNEMQ_API_PORT'
 homeassistant:
 
 # To be added for 2+
