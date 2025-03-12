@@ -698,7 +698,7 @@ sensor.template_deck_festoons_plug_temperature_proxy:
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
 sensor.template_wardrobe_temperature_proxy:
-  friendly_name: 'Wardobe Ambient'
+  friendly_name: 'Wardrobe Ambient'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
 sensor.host_lia_temperature:
@@ -784,7 +784,7 @@ switch.kitchen_fan_outlet:
   friendly_name: 'Kitchen Fan Outlet'
   icon: 'mdi:power-plug-outline'
 switch.edwin_wardrobe_outlet:
-  friendly_name: 'Edwin Wardobe Outlet'
+  friendly_name: 'Edwin Wardrobe Outlet'
   icon: 'mdi:power-plug-outline'
 sensor.garden_repeater_linkquality:
   friendly_name: 'Garden Repeater'
