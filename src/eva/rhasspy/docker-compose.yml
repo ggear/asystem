@@ -20,7 +20,7 @@ services:
     <<: *common
     restart: ${SERVICE_RESTART}
     ports:
-      - ${RHASSPY_API_PORT}:${RHASSPY_API_PORT}
+      - ${RHASSPY_API_PORT}:10300
     entrypoint:
       - "bash"
       - "/run.sh"

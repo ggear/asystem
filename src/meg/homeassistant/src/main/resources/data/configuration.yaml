@@ -2,6 +2,10 @@
 default_config:
 #######################################################################################
 homeassistant:
+
+
+
+# TODO: Disable, since I need to add the local network automatic flag
 #  name: 'Home'
 #  latitude: -31.918381
 #  longitude: 116.079391
@@ -11,6 +15,9 @@ homeassistant:
 #  country: 'AU'
 #  internal_url: !env_var HOMEASSISTANT_INTERNAL_URL
 #  external_url: !env_var HOMEASSISTANT_EXTERNAL_URL
+
+
+
   customize_domain:
     fan:
       assumed_state: false
