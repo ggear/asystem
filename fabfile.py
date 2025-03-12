@@ -301,6 +301,9 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
             docker_image_metadata = get_docker_image_metadata(docker_compose_path, compose_image_regexs, docker_version_env)
         if docker_image_metadata is not None and "repository" in docker_image_metadata and \
                 "version_current" in docker_image_metadata:
+            if docker_image_metadata["version_current"] == "latest":
+                _run_local(context, "docker image prune --all -f")
+                _run_local(context, "docker builder prune --all -f")
             docker_deps_script_path = join(ROOT_MODULE_DIR, module, "docker_deps.sh")
             docker_image = "{}{}:{}".format(
                 (docker_image_metadata["namespace"] + "/") \
