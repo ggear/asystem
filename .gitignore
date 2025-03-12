@@ -51,6 +51,7 @@ release.properties
 dependency-reduced-pom.xml
 buildNumber.properties
 phantomjsdriver.log
+docker_deps.sh
 /spark-defaults.conf
 target
 dist
