@@ -16,7 +16,7 @@ function alive() {
 }
 
 function ready() {
-  if [ -f ./en_US-rhasspy/data/lang/lm.arpa ]; then
+  if [ -f /train/en_US-rhasspy/data/lang/lm.arpa ]; then
     return 0
   else
     return 1
