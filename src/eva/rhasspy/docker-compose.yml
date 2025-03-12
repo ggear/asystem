@@ -6,8 +6,9 @@ x-common: &common
     - RHASSPY_SERVICE
     - RHASSPY_API_PORT
   volumes:
-    - ${SERVICE_DATA_DIR}/models:/models
     - ${SERVICE_DATA_DIR}/train:/train
+    - ${SERVICE_DATA_DIR}/train:/custom
+    - ${SERVICE_DATA_DIR}/models:/models
   logging:
     driver: "json-file"
     options:
@@ -23,11 +24,17 @@ services:
     entrypoint:
       - "bash"
       - "/run.sh"
+      - "--train-dir"
+      - "/train"
+      - "--custom-sentences-dir"
+      - "/custom"
+      - "--models-dir"
+      - "/models"
+      - "--retrain-on-start"
       - "--hass-websocket-uri"
       - "ws://${HOMEASSISTANT_IP_PROD}:${HOMEASSISTANT_HTTP_PORT}/api/websocket"
       - "--hass-token"
       - "${HOMEASSISTANT_API_TOKEN}"
-      - "--retrain-on-start"
     healthcheck:
       test: /asystem/etc/healthcheck.sh
       interval: 2m
