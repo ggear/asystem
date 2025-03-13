@@ -85,15 +85,15 @@ rename ${INTERFACE}=eth0
 auto eth0
 iface eth0 inet dhcp
 
-auto eth0.3
-iface eth0.3 inet dhcp
-    vlan-raw-device eth0
-    pre-up ip link set eth0.3 address 3a:${MACADDRESS_SUFFIX}
-
-auto eth0.4
-iface eth0.4 inet dhcp
-    vlan-raw-device eth0
-    pre-up ip link set eth0.4 address 4a:${MACADDRESS_SUFFIX}
+#auto eth0.3
+#iface eth0.3 inet dhcp
+#    vlan-raw-device eth0
+#    pre-up ip link set eth0.3 address 3a:${MACADDRESS_SUFFIX}
+#
+#auto eth0.4
+#iface eth0.4 inet dhcp
+#    vlan-raw-device eth0
+#    pre-up ip link set eth0.4 address 4a:${MACADDRESS_SUFFIX}
 
 EOF
   fi

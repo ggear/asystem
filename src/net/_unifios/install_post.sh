@@ -89,6 +89,7 @@
 # Settings -> Networks -> New Virtual Network -> IGMP Snooping -> False
 # Settings -> Networks -> New Virtual Network -> Multicast DNS -> True
 # Settings -> Networks -> New Virtual Network -> DHCP Range -> 10.0.4.150/10.0.4.254
+# Settings -> Networks -> New Virtual Network -> DHCP Guarding -> True / 10.0.4.1
 # Settings -> Networks -> New Virtual Network -> Domain Name -> local.janeandgraham.com
 
 # Settings -> WiFi -> BertAndErnie -> Network -> Controlled
