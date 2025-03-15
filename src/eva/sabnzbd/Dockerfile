@@ -7,10 +7,10 @@ RUN \
     apk update && \
     apk add --upgrade --no-cache bash=5.2.37-r0 && \
     apk add --upgrade --no-cache less=668-r0 && \
-    apk add --upgrade --no-cache curl=8.11.1-r0 && \
-    apk add --upgrade --no-cache vim=9.1.1012-r0 && \
+    apk add --upgrade --no-cache curl=8.12.1-r0 && \
+    apk add --upgrade --no-cache vim=9.1.1105-r0 && \
     apk add --upgrade --no-cache jq=1.7.1-r0 && \
-    apk cache clean && rm -rf /var/cache/apk/* && \
+    (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 COPY target/package/main/resources/image /asystem/etc
 

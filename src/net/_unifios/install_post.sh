@@ -24,7 +24,7 @@
 # Admins & Users -> Admins -> Add -> jane/$UNFI_JANE_KEY, Local Access Only, Super Admin
 
 # Console Settings -> Advanced -> Remote Access -> False (Only available with the graham account.ui.com account)
-# Console Settings -> Advanced -> SSH -> True, $UNIFI_ROOT_KEY (to get past password restrictions, then reset to standard with passwd)
+# Console Settings -> Advanced -> SSH -> True, $UNIFI_ROOT_KEY (to get past password restrictions, then reset to standard with passwd), graham/$UNIFI_DEVICE_KEY and Graham/~/.ssh/id_rsa.pub
 
 ################################################################################
 # Network baseline
