@@ -1,5 +1,5 @@
 # Notes: https://github.com/grafana/grafana/releases
-FROM grafana/grafana:11.4.0 AS image_upstream
+FROM grafana/grafana:11.5.2 AS image_upstream
 
 ARG ASYSTEM_GRIZZLY_VERSION
 
