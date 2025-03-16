@@ -21,9 +21,9 @@ function alive() {
 function ready() {
   if READY="$(${CURL_CMD} "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}/api/v3/configure/database?format=csv&show_deleted=false")" &&
     [ "$(grep -c host_private <<<"${READY}")" -eq 1 ]; then
-    echo return 0
+    return 0
   else
-    echo return 1
+    return 1
   fi
 }
 

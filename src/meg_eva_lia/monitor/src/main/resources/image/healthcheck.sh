@@ -23,10 +23,10 @@ function ready() {
     [ "$(grep -c '^> disk,device=' <<<"${OUTPUT}")" -gt 0 ] &&
     [ "$(grep -c '^> diskio,host=' <<<"${OUTPUT}")" -gt 0 ] &&
     [ "$(grep -c '^> net,host=' <<<"${OUTPUT}")" -gt 0 ] &&
-    [ "$(grep -c '^> docker_container_cpu,com.docker.compose.config-hash=' <<<"${OUTPUT}")" -gt 0 ] &&
-    [ "$(grep -c '^> docker_container_mem,com.docker.compose.config-hash=' <<<"${OUTPUT}")" -gt 0 ] &&
-    [ "$(grep -c '^> docker_container_blkio,com.docker.compose.config-hash=' <<<"${OUTPUT}")" -gt 0 ] &&
-    [ "$(grep -c '^> docker_container_net,com.docker.compose.config-hash=' <<<"${OUTPUT}")" -gt 0 ] &&
+    [ "$(grep -c '^> docker_container_cpu,container_image=' <<<"${OUTPUT}")" -gt 0 ] &&
+    [ "$(grep -c '^> docker_container_mem,container_image=' <<<"${OUTPUT}")" -gt 0 ] &&
+    [ "$(grep -c '^> docker_container_blkio,container_image=' <<<"${OUTPUT}")" -gt 0 ] &&
+    [ "$(grep -c '^> docker_container_net,container_image=' <<<"${OUTPUT}")" -gt 0 ] &&
     telegraf --once >/dev/null 2>&1; then
     return 0
   else
