@@ -8,7 +8,7 @@ RUN \
     apt-get update && \
     apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b7 && \
     apt-get -y --no-install-recommends --allow-downgrades install less=590-2.1~deb12u2 && \
-    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2+deb12u2 && \
     apt-get -y --no-install-recommends --allow-downgrades install mosquitto-clients=2.0.11-1.2+deb12u1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
