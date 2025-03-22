@@ -28,6 +28,7 @@ brew install \
   regclient \
   mosquitto \
   coreutils \
+  bluesnooze \
   mpv \
   ffmpeg \
   mediainfo \
