@@ -30,18 +30,17 @@ RUN \
     pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt && \
     pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir /asystem/etc/install/weewx*.whl && \
     pip3 cache purge && \
-    rm -rf /asystem/etc/install/weewx*.whl
-RUN \
-    mkdir -p "${WEEWX_HOME}" && \
-    find "${WEEWX_HOME}" -type f -delete && \
-    rm -rf $(pip show weewx | grep Location | sed 's/Location: //')/weewx_data && \
-    ln -s $(pip show weewx | grep Location | sed 's/Location: //')/weewx_data "${WEEWX_HOME}" && \
     mkdir -p /etc/weewx && \
     rm -rf /etc/weewx/weewx.conf* && \
     cp -rf /asystem/etc/config/weewx.conf /etc/weewx && \
+    rm -rf /asystem/etc/install/weewx*.whl
+RUN \
     weectl extension install -y /asystem/etc/install/weewx-mqtt.zip && \
     sed -i "/#   openssl s_client -help/d" /home/weewx/bin/user/mqtt.py && \
     rm -rf /asystem/etc/install/weewx-mqtt.zip
+RUN \
+    weectl extension install -y /asystem/etc/install/weewx-loopdata.zip && \
+    rm -rf /asystem/etc/install/weewx-loopdata.zip
 RUN \
     mkdir -p /data/html && \
     touch /data/html/index.html && \

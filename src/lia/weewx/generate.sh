@@ -16,6 +16,12 @@ pull_repo "${ROOT_DIR}" "${1}" weewx weewx-mqtt matthewwall/weewx-mqtt "${VERSIO
 mkdir -p ${ROOT_DIR}/src/main/resources/image/install
 cp -nv ${ROOT_DIR}/../../../.deps/weewx/weewx-mqtt/weewx-mqtt.zip~ ${ROOT_DIR}/src/main/resources/image/install/weewx-mqtt.zip
 
+VERSION=v3.3.2
+pull_repo "${ROOT_DIR}" "${1}" weewx weewx-loopdata chaunceygardiner/weewx-loopdata "${VERSION}"
+[ $(ls ${ROOT_DIR}/../../../.deps/weewx/weewx-mqtt/weewx-loopdata.zip~ 2>/dev/null | wc -l) -eq 0 ] && cd ${ROOT_DIR}/../../../.deps/weewx && zip -x "weewx-loopdata/.git*" -r weewx-loopdata.zip~ weewx-loopdata && mv ${ROOT_DIR}/../../../.deps/weewx/weewx-loopdata.zip~ ${ROOT_DIR}/../../../.deps/weewx/weewx-loopdata
+mkdir -p ${ROOT_DIR}/src/main/resources/image/install
+cp -nv ${ROOT_DIR}/../../../.deps/weewx/weewx-loopdata/weewx-loopdata.zip~ ${ROOT_DIR}/src/main/resources/image/install/weewx-loopdata.zip
+
 VERSION=ggear-skins_seasons
 pull_repo "${ROOT_DIR}" "${1}" weewx weewx-core-skins ggear/weewx "${VERSION}"
 rm -rf ${ROOT_DIR}/src/main/resources/image/config/skins/Seasons
