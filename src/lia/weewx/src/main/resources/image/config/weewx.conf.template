@@ -212,8 +212,6 @@ version = 5.0.2
         obs_to_upload = none
         $INPUTS_METADATA
 
-    
-
 ##############################################################################
 
 #   This section specifies what reports, using which skins, to generate.
