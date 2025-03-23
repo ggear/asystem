@@ -20,9 +20,9 @@ function ready() {
     [ $(($(date +%s) - $(stat "/data/html/loopdata/loop-data.txt" -c %Y))) -le 2 ] &&
     [ $(($(date +%s) - $(jq -r '."current.dateTime.raw"' "/data/html/loopdata/loop-data.txt"))) -le 2 ] &&
     [ -n "$(jq -r '."current.outTemp" | select( . != null )' "/data/html/loopdata/loop-data.txt")" ]; then
-    echo return 0
+    return 0
   else
-    echo return 1
+    return 1
   fi
 }
 
