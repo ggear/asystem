@@ -262,6 +262,8 @@ version = 5.0.2
         skin = Standard
         enable = false
 
+
+
     [[FTP]]
         # FTP'ing the results to a webserver is treated as just another report,
         # albeit one with an unusual report generator!
