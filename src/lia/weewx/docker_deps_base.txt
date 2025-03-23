@@ -6,3 +6,4 @@ less
 curl
 vim
 apache2
+mosquitto-clients
