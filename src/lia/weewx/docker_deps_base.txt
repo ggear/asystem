@@ -5,5 +5,6 @@ bash
 less
 curl
 vim
+jq
 apache2
 mosquitto-clients
