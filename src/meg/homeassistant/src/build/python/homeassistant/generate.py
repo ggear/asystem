@@ -154,7 +154,6 @@ def write_entity_metadata(module_name, metadata_dir, metadata_df, topics_discove
                 metadata_publish_file.write(metadata_publish_str)
                 print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
                       .format(module_name, metadata_unique_id, metadata_publish_path))
-
         metadata_publish_script_path = abspath(metadata_dir + ".sh")
         with open(metadata_publish_script_path, 'w') as metadata_publish_script_file:
             metadata_publish_script_file.write("""
@@ -188,8 +187,9 @@ printf "\\n"
                 module_name,
                 module_name,
             ).strip())
-        print(
-            "Build generate script [{}] entity metadata publish script persisted to [{}]".format(module_name, metadata_publish_script_path))
+        os.chmod(metadata_publish_script_path, 0o750)
+        print("Build generate script [{}] entity metadata publish script persisted to [{}]"
+              .format(module_name, metadata_publish_script_path))
 
 
 if __name__ == "__main__":
@@ -1568,7 +1568,8 @@ powercalc:
                                     dict["entity_namespace"],
                                     dict["unique_id"],
                                     dict_config,
-                                    "\n                      manufacturer: {}\n".format(dict["manufacturer_alias"]) if "manufacturer_alias" in dict else "",
+                                    "\n                      manufacturer: {}\n".format(
+                                        dict["manufacturer_alias"]) if "manufacturer_alias" in dict else "",
                                 ).strip() + "\n")
             metadata_electricity_file.write("  " + """
   #####################################################################################
