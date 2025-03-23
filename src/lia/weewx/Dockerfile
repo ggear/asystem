@@ -12,39 +12,38 @@ FROM image_upstream AS image_base
 USER root
 RUN \
     apt-get update && \
+    apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b7 && \
+    apt-get -y --no-install-recommends --allow-downgrades install less=590-2.1~deb12u2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install curl=7.88.1-10+deb12u12 && \
+    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2+deb12u2 && \
     apt-get -y --no-install-recommends --allow-downgrades install apache2=2.4.62-1~deb12u2 && \
-    apt-get clean
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+COPY target/package/main/resources/image /asystem/etc
+COPY src/main/python /asystem/bin/python
 
 FROM image_base AS image_build
-COPY \
-  src/main/python/.py_deps.txt \
-  src/build/resources/weewx* \
-  target/package/main/resources/config/weewx.conf \
-  src/main/resources/apache2.conf \
-  src/main/resources/entrypoint.sh \
-  /asystem/
 RUN \
     (python3 -m ensurepip 2> /dev/null || true) && \
     pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip && \
-    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/.py_deps.txt && \
-    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir /asystem/weewx*.whl && \
+    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt && \
+    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir /asystem/etc/bin/weewx*.whl && \
     pip3 cache purge
 RUN \
-    rm -rf "${WEEWX_HOME}" && \
-    mkdir -p $(dirname "${WEEWX_HOME}") && \
+    mkdir -p "${WEEWX_HOME}" && \
+    find "${WEEWX_HOME}" -type f -delete && \
+    rm -rf $(pip show weewx | grep Location | sed 's/Location: //')/weewx_data && \
     ln -s $(pip show weewx | grep Location | sed 's/Location: //')/weewx_data "${WEEWX_HOME}" && \
     mkdir -p /etc/weewx && \
     rm -rf /etc/weewx/weewx.conf* && \
-    cp -rf /asystem/weewx.conf /etc/weewx && \
-    weectl extension install -y /asystem/weewx-mqtt.zip
+    cp -rf /asystem/etc/config/weewx.conf /etc/weewx && \
+    weectl extension install -y /asystem/etc/bin/weewx-mqtt.zip
 RUN \
     mkdir -p /data/html && \
     touch /data/html/index.html && \
     rm -rf /var/www/html && \
     ln -s /data/html /var/www/html && \
-    cp -rf /asystem//apache2.conf /etc/apache2
+    cp -rf /asystem/etc/config/apache2.conf /etc/apache2
 
 FROM image_build AS image_runtime
-WORKDIR "${WEEWX_HOME}"
-EXPOSE 80
-ENTRYPOINT ["/asystem/entrypoint.sh"]
+ENTRYPOINT ["/asystem/etc/entrypoint.sh"]

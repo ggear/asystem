@@ -29,7 +29,7 @@ if __name__ == "__main__":
             metadata_weewx_dict["unique_id_device"],
             metadata_weewx_dict["unique_id"]
         ).strip() + "\n")
-    weewx_conf_path = join(DIR_ROOT, "src/main/resources/config/weewx.conf")
+    weewx_conf_path = join(DIR_ROOT, "src/main/resources/image/config/weewx.conf")
     with open(weewx_conf_path + ".template", "rt") as weewx_conf_template_file:
         with open(weewx_conf_path, "wt") as weewx_conf_file:
             for line in weewx_conf_template_file:
@@ -45,5 +45,5 @@ if __name__ == "__main__":
         (metadata_df["name"].str.len() > 0) &
         (metadata_df["discovery_topic"].str.len() > 0)
         ]
-    write_entity_metadata("weewx", join(DIR_ROOT, "src/main/resources/config/mqtt"),
+    write_entity_metadata("weewx", join(DIR_ROOT, "src/main/resources/image/config/mqtt"),
                           metadata_publish_df, "homeassistant/+/weewx/#", "weewx/#")
