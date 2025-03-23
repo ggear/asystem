@@ -41,6 +41,7 @@ RUN \
     rm -rf /asystem/etc/install/weewx-mqtt.zip
 RUN \
     weectl extension install -y /asystem/etc/install/weewx-loopdata.zip && \
+    rm -rf /data/html/loopdata/* && \
     rm -rf /asystem/etc/install/weewx-loopdata.zip
 RUN \
     mkdir -p /data/html && \

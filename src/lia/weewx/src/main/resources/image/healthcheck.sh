@@ -8,7 +8,7 @@ if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
 fi
 
 function alive() {
-  if [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ]; then
+  if [ -f "/data/html/loopdata/loop-data.txt" ]; then
     return 0
   else
     return 1
@@ -16,12 +16,13 @@ function alive() {
 }
 
 function ready() {
-  if [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ] &&
-    [ $(grep ERROR /etc/letsencrypt/logs/letsencrypt.log | wc -l) -eq 0 ] &&
-    [ $((($(date +%s) - $(stat /etc/letsencrypt/logs/letsencrypt.log -c %Y)) / 3600)) -le 25 ]; then
-    return 0
+  if [ -f "/data/html/loopdata/loop-data.txt" ] &&
+    [ $(($(date +%s) - $(stat "/data/html/loopdata/loop-data.txt" -c %Y))) -le 2 ] &&
+    [ $(($(date +%s) - $(jq -r '."current.dateTime.raw"' "/data/html/loopdata/loop-data.txt"))) -le 2 ] &&
+    [ -n "$(jq -r '."current.outTemp" | select( . != null )' "/data/html/loopdata/loop-data.txt")" ]; then
+    echo return 0
   else
-    return 1
+    echo return 1
   fi
 }
 

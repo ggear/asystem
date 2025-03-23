@@ -17,6 +17,13 @@ services:
       - ${WEEWX_HTTP_PORT}:80
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/mnt
+    healthcheck:
+      test: /asystem/etc/healthcheck.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     devices:
       - ${WEEWX_DEV}:/dev/ttyUSB0
     logging:
