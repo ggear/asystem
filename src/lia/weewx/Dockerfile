@@ -39,7 +39,7 @@ RUN \
     rm -rf /etc/weewx/weewx.conf* && \
     cp -rf /asystem/etc/config/weewx.conf /etc/weewx && \
     weectl extension install -y /asystem/etc/bin/weewx-mqtt.zip && \
-    sed -i "s/\egrep \"\-/egrep \"\\\\-/g" /home/weewx/bin/user/mqtt.py
+    sed -i "/#   openssl s_client -help/d" /home/weewx/bin/user/mqtt.py
 RUN \
     mkdir -p /data/html && \
     touch /data/html/index.html && \
