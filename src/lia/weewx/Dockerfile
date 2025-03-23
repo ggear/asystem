@@ -28,8 +28,9 @@ RUN \
     (python3 -m ensurepip 2> /dev/null || true) && \
     pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip && \
     pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt && \
-    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir /asystem/etc/bin/weewx*.whl && \
-    pip3 cache purge
+    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir /asystem/etc/install/weewx*.whl && \
+    pip3 cache purge && \
+    rm -rf /asystem/etc/install/weewx*.whl
 RUN \
     mkdir -p "${WEEWX_HOME}" && \
     find "${WEEWX_HOME}" -type f -delete && \
@@ -38,8 +39,9 @@ RUN \
     mkdir -p /etc/weewx && \
     rm -rf /etc/weewx/weewx.conf* && \
     cp -rf /asystem/etc/config/weewx.conf /etc/weewx && \
-    weectl extension install -y /asystem/etc/bin/weewx-mqtt.zip && \
-    sed -i "/#   openssl s_client -help/d" /home/weewx/bin/user/mqtt.py
+    weectl extension install -y /asystem/etc/install/weewx-mqtt.zip && \
+    sed -i "/#   openssl s_client -help/d" /home/weewx/bin/user/mqtt.py && \
+    rm -rf /asystem/etc/install/weewx-mqtt.zip
 RUN \
     mkdir -p /data/html && \
     touch /data/html/index.html && \
