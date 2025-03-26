@@ -11,15 +11,15 @@ influxdb3 query \
 influxdb3 query \
   --language influxql \
   --database host_private \
-  "SHOW FIELD KEYS FROM 'cpu'"
+  "SHOW FIELD KEYS FROM cpu"
 influxdb3 query \
   --language influxql \
   --database host_private \
-  "SHOW TAG KEYS FROM 'cpu'"
+  "SHOW TAG KEYS FROM cpu"
 influxdb3 query \
   --language influxql \
   --database host_private \
-  "SHOW TAG VALUES FROM 'cpu' WITH KEY = 'host'"
+  "SHOW TAG VALUES FROM cpu WITH KEY = host"
 influxdb3 query \
   --language influxql \
   --database host_private "
@@ -27,7 +27,7 @@ influxdb3 query \
       time, host, usage_system, usage_user
     FROM cpu
     WHERE
-      cpu = 'cpu-total' AND
+      cpu = cpu-total AND
       time >= now() - 2h
 --    time >= '2025-02-15T01:45:00Z' AND time <= '2025-02-15T01:45:30Z'
     ORDER by time DESC
