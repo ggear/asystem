@@ -1,7 +1,7 @@
 pyyaml==6.0.1
-pandas==2.2.2
-polars==1.6.0
-pyarrow==18.1.0
+pandas==2.2.3
+polars==1.26.0
+pyarrow==19.0.1
 gspread==5.12.4
 gspread-pandas==3.2.3
 ffmpeg-python==0.2.0

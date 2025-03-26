@@ -471,7 +471,7 @@ docker rm -vf "$CONTAINER_NAME"
                     .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
                 docker_image_tags = _run_local(context, docker_image_tags_command, hide='out').stdout.splitlines()
                 if docker_image_tags is None or len(docker_image_tags) == 0:
-                    version_messages[version_types[2]].append(version_formats[2].format(
+                    version_messages["error"].append(version_formats[2].format(
                         module, "Could not determine versions from Github repository command [{}]" \
                             .format(docker_image_tags_command)))
                 docker_image_metadata["version_upstream"] = docker_image_metadata["version_current"]
@@ -492,7 +492,7 @@ docker rm -vf "$CONTAINER_NAME"
                         docker_image_metadata["version_upstream"]
                     ))
                 else:
-                    version_messages[version_types[2]].append(version_formats[2].format(
+                    version_messages["error"].append(version_formats[2].format(
                         module + ":" + docker_image_metadata["repository"],
                         "Could not get upstream version with current [{}], regex [{}] and upstream versions:\n{}"
                         .format(
@@ -501,9 +501,29 @@ docker rm -vf "$CONTAINER_NAME"
                             "\n".join(docker_image_tags))))
             elif exists(docker_file_path) or exists(docker_compose_path):
                 if docker_image_metadata is None or "skipped" not in docker_image_metadata or not docker_image_metadata["skipped"]:
-                    version_messages[version_types[2]].append(version_formats[2].format(
+                    version_messages["error"].append(version_formats[2].format(
                         module + ":" + docker_image_metadata["repository"],
                         "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
+        for stack in ["python", "go", "rust"]:
+            stack_version_installed = GLOBAL_ENV["{}_VERSION".format(stack.upper())]
+            stack_version_upstream = _run_local(context, "conda search --json '{}>={}' | jq -r .{}[-1].version"
+                                                .format(stack, stack_version_installed, stack),
+                                                module, hide='out').stdout.strip()
+            if stack_version_upstream != stack_version_installed:
+                version_messages["to update"].append(version_formats[1].format(
+                    "*/{}".format(stack), stack_version_installed,
+                    stack_version_upstream))
+            else:
+                version_messages["up to date"].append(version_formats[0].format(
+                    "*/{}".format(stack), stack_version_installed))
+        version_types.insert(1, "pinned")
+        version_messages["pinned"] = []
+        for message in version_messages["to update"]:
+            for stack in GLOBAL_ENV["PINNED_DEPENDENCIES"].split(","):
+                if "{}]".format(stack) in message:
+                    version_messages["pinned"].append(message)
+        for message in version_messages["pinned"]:
+            version_messages["to update"].remove(message)
         for type in version_types:
             _print_header("asystem", "pull versions {}".format(type), host=filter_host)
             for message in sorted(version_messages[type]):

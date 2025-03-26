@@ -1,7 +1,6 @@
 mlflow
 
 scipy
-numpy
 polars
 scikit-learn
 
