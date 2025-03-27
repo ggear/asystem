@@ -1,2 +1,2 @@
-paho-mqtt==2.1.0
+paho-mqtt==1.6.1
 sortedcontainers==2.4.0
