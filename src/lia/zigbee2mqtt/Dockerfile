@@ -5,13 +5,13 @@ FROM image_upstream AS image_base
 USER root
 RUN \
     apk update && \
-    apk add --upgrade --no-cache bash=5.2.15-r5 && \
-    apk add --upgrade --no-cache less=633-r0 && \
-    apk add --upgrade --no-cache curl=8.12.1-r0 && \
-    apk add --upgrade --no-cache vim=9.0.2073-r0 && \
-    apk add --upgrade --no-cache jq=1.6-r4 && \
-    apk add --upgrade --no-cache python3=3.11.11-r0 && \
-    apk add --upgrade --no-cache mosquitto-clients=2.0.18-r0 && \
+    apk add --upgrade --no-cache bash=5.2.37-r0 && \
+    apk add --upgrade --no-cache less=668-r0 && \
+    apk add --upgrade --no-cache curl=8.12.1-r1 && \
+    apk add --upgrade --no-cache vim=9.1.1105-r0 && \
+    apk add --upgrade --no-cache jq=1.7.1-r0 && \
+    apk add --upgrade --no-cache python3=3.12.9-r0 && \
+    apk add --upgrade --no-cache mosquitto-clients=2.0.20-r0 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 COPY src/main/python /asystem/bin/python
