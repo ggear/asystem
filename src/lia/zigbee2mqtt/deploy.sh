@@ -10,7 +10,7 @@ HOST="$(grep "$(basename "$(dirname "${ROOT_DIR}")")" "${ROOT_DIR}/../../../.hos
 export VERNEMQ_SERVICE=${VERNEMQ_SERVICE_PROD}
 
 
-# TODO: Fix me!
+# TODO: Fix me! Use healthcheck
 
 #ssh root@${HOST} "cd ${INSTALL}; echo '---' && echo -n 'Stopping container ... ' && docker stop $(basename ${ROOT_DIR}) && echo '---' && sleep 1"
 #${ROOT_DIR}/src/main/resources/image/mqtt.sh
