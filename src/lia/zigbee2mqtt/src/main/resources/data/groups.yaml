@@ -9,14 +9,6 @@
   off_state: 'all_members_off'
   devices:
     - '0x0017880103433075'
-'101':
-  friendly_name: 'Edwin Lamp'
-  retain: true
-  transition: 1
-  optimistic: true
-  off_state: 'all_members_off'
-  devices:
-    - '0x0017880102b8fd87'
 '102':
   friendly_name: 'Edwin Night Light'
   retain: true
