@@ -1,5 +1,5 @@
 from os.path import *
-
+import os
 import pandas as pd
 import urllib3
 
@@ -94,7 +94,8 @@ ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
                 metadata_groups_dict[metadata_config_dict["zigbee_group"]]["device_name"],
                 metadata_config_dict["zigbee_device_config"].replace("'", "\"") if "zigbee_device_config" in metadata_config_dict else "",
             ).strip() + "\n")
-        print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
+    os.chmod(metadata_config_path, 0o750)
+    print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
 
     metadata_config_clean_path = abspath(join(DIR_ROOT, "src/main/resources/image/mqtt/mqtt_config_clean.sh"))
     with open(metadata_config_clean_path, 'w') as metadata_config_clean_file:
@@ -114,6 +115,8 @@ while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} -t 'zigbee/
                 '{{ "device": "{}" }}'.format(metadata_name),
                 metadata_name,
             ).strip() + "\n")
+    os.chmod(metadata_config_clean_path, 0o750)
+    print("Build generate script [zigbee2mqtt] entity device clean persisted to [{}]".format(metadata_config_clean_path))
 
     metadata_devices_df = metadata_df[
         (metadata_df["index"] > 0) &
