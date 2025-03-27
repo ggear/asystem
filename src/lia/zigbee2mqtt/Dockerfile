@@ -15,6 +15,7 @@ RUN \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 COPY src/main/python /asystem/bin/python
+COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 COPY src/main/python/.py_deps.txt /asystem/

@@ -26,6 +26,13 @@ services:
       - /run/udev:/run/udev:ro
     ports:
       - ${ZIGBEE2MQTT_HTTP_PORT}:${ZIGBEE2MQTT_HTTP_PORT}
+    healthcheck:
+      test: /asystem/etc/healthcheck.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     devices:
       - /dev/ttyUSBZB3DongleP:/dev/ttyACM0
     deploy:
@@ -36,10 +43,8 @@ services:
     container_name: zigbee2mqtt_bootstrap
     <<: *common
     restart: 'no'
-    volumes:
-      - ${SERVICE_DATA_DIR}:/app/data
     entrypoint: /bin/sh
     command:
-      - /app/data/bootstrap.sh
+      - /asystem/etc/bootstrap.sh
     depends_on:
       - zigbee2mqtt

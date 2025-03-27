@@ -1,2 +1,2 @@
 ../install.sh
-./main/resources/config/configuration.yaml
+./main/resources/data/configuration.yaml

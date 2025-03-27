@@ -37,7 +37,7 @@ if __name__ == "__main__":
         if metadata_groups_devices_dict["zigbee_type"] == "Device" and \
                 metadata_groups_devices_dict["zigbee_group"] in metadata_grouped_devices_dict:
             metadata_grouped_devices_dict[metadata_groups_devices_dict["zigbee_group"]].append(metadata_groups_devices_dict)
-    metadata_groups_path = abspath(join(DIR_ROOT, "src/main/resources/config/groups.yaml"))
+    metadata_groups_path = abspath(join(DIR_ROOT, "src/main/resources/data/groups.yaml"))
     with open(metadata_groups_path, 'w') as metadata_groups_file:
         metadata_groups_file.write("""
 #######################################################################################
@@ -75,10 +75,10 @@ if __name__ == "__main__":
         (metadata_df["connection_mac"].str.len() > 0)
         ]
     metadata_config_dicts = [row.dropna().to_dict() for index, row in metadata_config_df.iterrows()]
-    metadata_config_path = abspath(join(DIR_ROOT, "src/main/resources/config/mqtt_config.sh"))
+    metadata_config_path = abspath(join(DIR_ROOT, "src/main/resources/image/mqtt/mqtt_config.sh"))
     with open(metadata_config_path, 'w') as metadata_config_file:
         metadata_config_file.write("""
-#!/bin/sh
+#!/bin/bash
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
@@ -96,10 +96,10 @@ ${{ROOT_DIR}}/mqtt_config.py '{}' '{}' '{}' '{}'
             ).strip() + "\n")
         print("Build generate script [zigbee2mqtt] entity device config persisted to [{}]".format(metadata_config_path))
 
-    metadata_config_clean_path = abspath(join(DIR_ROOT, "src/main/resources/config/mqtt_config_clean.sh"))
+    metadata_config_clean_path = abspath(join(DIR_ROOT, "src/main/resources/image/mqtt/mqtt_config_clean.sh"))
     with open(metadata_config_clean_path, 'w') as metadata_config_clean_file:
         metadata_config_clean_file.write("""
-#!/bin/sh
+#!/bin/bash
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
@@ -124,7 +124,7 @@ while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} -t 'zigbee/
         (metadata_df["connection_mac"].str.len() > 0)
         ]
     metadata_devices_dicts = [row.dropna().to_dict() for index, row in metadata_devices_df.iterrows()]
-    metadata_devices_path = abspath(join(DIR_ROOT, "src/main/resources/config/devices.yaml"))
+    metadata_devices_path = abspath(join(DIR_ROOT, "src/main/resources/data/devices.yaml"))
     with open(metadata_devices_path, 'w') as metadata_devices_file:
         metadata_devices_file.write("""
 #######################################################################################
