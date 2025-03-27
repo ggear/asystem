@@ -12,6 +12,7 @@ homeassistant:
   discovery_topic: 'homeassistant'
   status_topic: 'homeassistant/status'
 availability:
+  enabled: true
   active:
     timeout: 10
   passive:
