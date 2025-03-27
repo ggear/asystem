@@ -22,7 +22,7 @@ services:
     <<: *common
     restart: ${SERVICE_RESTART}
     volumes:
-      - ${SERVICE_DATA_DIR}:/app
+#      - ${SERVICE_DATA_DIR}:/app
       - /run/udev:/run/udev:ro
     ports:
       - ${ZIGBEE2MQTT_HTTP_PORT}:${ZIGBEE2MQTT_HTTP_PORT}
