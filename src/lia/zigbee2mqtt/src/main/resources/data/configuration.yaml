@@ -1,12 +1,6 @@
-
-# To be added for 2+
-#version: 4
-
+version: 4
 frontend:
-
-# To be added for 2+
-#  enabled: true
-
+  enabled: true
   port: $ZIGBEE2MQTT_HTTP_PORT
   url: 'http://$ZIGBEE2MQTT_SERVICE:$ZIGBEE2MQTT_HTTP_PORT'
 mqtt:
@@ -14,17 +8,9 @@ mqtt:
   base_topic: zigbee
   server: 'mqtt://$VERNEMQ_SERVICE:$VERNEMQ_API_PORT'
 homeassistant:
-
-# To be added for 2+
-#  enabled: true
-
+  enabled: true
   discovery_topic: 'homeassistant'
   status_topic: 'homeassistant/status'
-
-# To be removed for 2+
-  legacy_entity_attributes: false
-  legacy_triggers: true
-
 availability:
   active:
     timeout: 10
@@ -35,17 +21,11 @@ device_options:
   qos: 1
   debounce: 0.5
   optimistic: true
-
-# To be added for 2+
-#  legacy: false
-
+  legacy: false
 devices: devices.yaml
 groups: groups.yaml
 serial:
-
-# To be added for 2+
-#  adapter: zstack
-
+  adapter: zstack
   port: /dev/ttyACM0
 advanced:
   pan_id: $ZIGBEE2MQTT_PAN_ID
@@ -53,14 +33,8 @@ advanced:
   network_key: $ZIGBEE2MQTT_NETWORK_KEY
   channel: 11
   last_seen: ISO_8601_local
-
-# To be added for 2+
-#  legacy_api: false
-
+  legacy_api: false
   legacy_availability_payload: false
-
-# To be added for 2+
-#  homeassistant_legacy_entity_attributes: false
-#  homeassistant_legacy_triggers: false
-
+  homeassistant_legacy_entity_attributes: false
+  homeassistant_legacy_triggers: false
   log_level: error

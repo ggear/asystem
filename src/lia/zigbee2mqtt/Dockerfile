@@ -1,5 +1,5 @@
 # https://github.com/Koenkk/zigbee2mqtt/releases
-FROM koenkk/zigbee2mqtt:1.41.0 AS image_upstream
+FROM koenkk/zigbee2mqtt:2.1.3 AS image_upstream
 
 FROM image_upstream AS image_base
 USER root
