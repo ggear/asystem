@@ -44,7 +44,7 @@ if __name__ == "__main__":
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
         """.strip() + "\n")
-        for metadata_groups_id in metadata_groups_dict:
+        for metadata_groups_id in sorted(metadata_groups_dict.keys()):
             if sum(1 for k in metadata_grouped_devices_dict[metadata_groups_id] if k.get('connection_mac')) > 0:
                 metadata_groups_file.write("""
 '{}':
