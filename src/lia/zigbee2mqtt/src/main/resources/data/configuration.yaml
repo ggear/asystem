@@ -37,4 +37,4 @@ advanced:
   legacy_availability_payload: false
   homeassistant_legacy_entity_attributes: false
   homeassistant_legacy_triggers: false
-  log_level: error
+  log_level: info
