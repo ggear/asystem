@@ -19,10 +19,10 @@ COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 COPY src/main/python/.py_deps.txt /asystem/
-RUN (python3 -m ensurepip 2> /dev/null || true) && \
-    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip && \
-    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt && \
-    pip3 cache purge
+RUN (python -m ensurepip 2> /dev/null || true) && \
+    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip && \
+    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt && \
+    pip cache purge
 
 FROM image_build AS image_runtime
 ENTRYPOINT ["docker-entrypoint.sh"]
