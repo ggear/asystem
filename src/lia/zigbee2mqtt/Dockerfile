@@ -10,6 +10,7 @@ RUN \
     apk add --upgrade --no-cache curl=8.12.1-r1 && \
     apk add --upgrade --no-cache vim=9.1.1105-r0 && \
     apk add --upgrade --no-cache jq=1.7.1-r0 && \
+    apk add --upgrade --no-cache py3-pip=24.3.1-r0 && \
     apk add --upgrade --no-cache python3=3.12.9-r0 && \
     apk add --upgrade --no-cache mosquitto-clients=2.0.20-r0 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
@@ -19,10 +20,10 @@ COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 COPY src/main/python/.py_deps.txt /asystem/
-RUN (python -m ensurepip 2> /dev/null || true) && \
-    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip && \
-    pip install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt && \
-    pip cache purge
+RUN (python3 -m ensurepip 2> /dev/null || true) && \
+    pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade pip && \
+    pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt && \
+    pip3 cache purge
 
 FROM image_build AS image_runtime
 ENTRYPOINT ["docker-entrypoint.sh"]

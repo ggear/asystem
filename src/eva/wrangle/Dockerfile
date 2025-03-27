@@ -45,7 +45,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 #RUN mkdir -p /asystem/runtime
 #WORKDIR /asystem/runtime
 #COPY src/main/python/ src/main/python/.py_deps.txt /asystem/
-#RUN pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/.py_deps.txt && \
+#RUN pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/.py_deps.txt && \
 #    mkdir -p /root/.config && \
 #    mkdir -p /etc/telegraf/.config
 #COPY src/main/resources/.gspread_pandas /root/.config/gspread_pandas

@@ -6,5 +6,6 @@ less
 curl
 vim
 jq
+py3-pip
 python3
 mosquitto-clients

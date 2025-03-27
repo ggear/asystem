@@ -26,9 +26,9 @@ COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 RUN (python3 -m ensurepip 2> /dev/null || true) && \
-    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade pip && \
-    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt && \
-    pip3 install --root-user-action ignore --default-timeout=1000 --no-cache-dir /asystem/etc/install/weewx*.whl && \
+    pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade pip && \
+    pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt && \
+    pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir /asystem/etc/install/weewx*.whl && \
     pip3 cache purge && \
     mkdir -p /etc/weewx && \
     rm -rf /etc/weewx/weewx.conf* && \
