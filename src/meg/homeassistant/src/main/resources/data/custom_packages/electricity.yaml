@@ -221,8 +221,6 @@ powercalc:
                 #######################################################################
                 - create_group: Edwin Lights
                   entities:
-                    - entity_id: light.edwin_lamp_bulb_1
-                      manufacturer: Signify
                     - entity_id: light.edwin_fan
                       name: Edwin Main Fan Light
                       unique_id: edwin_main_light_fan

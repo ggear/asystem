@@ -137,10 +137,6 @@ light.ada_lamp:
   name: Ada Lamp
   aliases: ['Lamp']
   room: Zombie
-light.edwin_lamp:
-  name: Edwin Lamp
-  aliases: ['Lamp']
-  room: Zombie
 light.edwin_fan:
   name: Edwin Main Light
   aliases: ['Edwins Main Light', 'Main Light', 's Main Light']

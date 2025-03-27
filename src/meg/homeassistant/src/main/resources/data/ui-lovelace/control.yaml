@@ -75,9 +75,6 @@
     - entity: light.ada_lamp
       name: Ada Lamp
       icon: mdi:lightbulb-group
-    - entity: light.edwin_lamp
-      name: Edwin Lamp
-      icon: mdi:lightbulb-group
     - entity: light.edwin_fan
       name: Edwin Main
       icon: mdi:lightbulb-group

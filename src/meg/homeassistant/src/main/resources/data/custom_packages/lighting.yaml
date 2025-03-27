@@ -15,7 +15,6 @@ adaptive_lighting:
     detect_non_ha_changes: true
     lights:
       - light.ada_lamp
-      - light.edwin_lamp
       - light.lounge_lamp
       - light.study_lamp
   #####################################################################################
@@ -102,10 +101,6 @@ input_boolean:
   #####################################################################################
   lighting_reset_adaptive_lighting_ada_lamp:
     name: Ada Lamp
-    initial: false
-  #####################################################################################
-  lighting_reset_adaptive_lighting_edwin_lamp:
-    name: Edwin Lamp
     initial: false
   #####################################################################################
   lighting_reset_adaptive_lighting_edwin_night_light:
@@ -277,23 +272,6 @@ automation:
       - delay: '00:00:10'
       - action: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_ada_lamp
-  #####################################################################################
-  - id: lighting_reset_adaptive_lighting_edwin_lamp
-    alias: "Lighting: Reset Adaptive Lighting on request of Edwin Lamp"
-    triggers:
-      - trigger: state
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
-        from: 'off'
-        to: 'on'
-    actions:
-      - action: adaptive_lighting.set_manual_control
-        data:
-          entity_id: switch.adaptive_lighting_task
-          lights: light.edwin_lamp
-          manual_control: false
-      - delay: '00:00:10'
-      - action: input_boolean.turn_off
-        entity_id: input_boolean.lighting_reset_adaptive_lighting_edwin_lamp
   #####################################################################################
   - id: lighting_reset_adaptive_lighting_edwin_night_light
     alias: "Lighting: Reset Adaptive Lighting on request of Edwin Night Light"
