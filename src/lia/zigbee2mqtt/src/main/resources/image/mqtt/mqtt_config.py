@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     def _mqtt_pub(topic: str, message: str, **mqtt_kwargs):
 
-        def on_publish(client, userdata):
+        def on_publish(client, userdata, qos=None):
             client.disconnect()
             if userdata["lock"]:
                 userdata["lock"].release()
