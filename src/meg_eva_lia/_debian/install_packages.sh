@@ -38,6 +38,7 @@ ASYSTEM_PACKAGES=(
   apt-transport-https
   ca-certificates
   gnupg-agent
+  bash-completion
   software-properties-common
   mkvtoolnix
   docker-ce
