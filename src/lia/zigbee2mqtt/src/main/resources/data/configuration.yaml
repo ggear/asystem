@@ -38,10 +38,10 @@ advanced:
   legacy_availability_payload: false
   homeassistant_legacy_entity_attributes: false
   homeassistant_legacy_triggers: false
-  log_level: debug
+  log_level: info
   log_namespaced_levels:
     zh: info
     zhc: info
-    z2m:mqtt: error
+    z2m: error
   log_output:
     - console
