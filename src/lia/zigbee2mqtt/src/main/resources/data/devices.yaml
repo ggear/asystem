@@ -13,7 +13,7 @@
   friendly_name: 'Parents Air Purifier'
   homeassistant:
     expire_after: 3600
-'0x9035eafffe27e819':
+'0x8c65a3fffef0c92d':
   friendly_name: 'Kitchen Air Purifier'
   homeassistant:
     expire_after: 3600
