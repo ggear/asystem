@@ -42,6 +42,6 @@ advanced:
   log_namespaced_levels:
     zh: info
     zhc: info
-    z2m: error
+    z2m: info
   log_output:
     - console
