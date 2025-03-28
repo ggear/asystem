@@ -40,8 +40,8 @@ advanced:
   homeassistant_legacy_triggers: false
   log_level: debug
   log_namespaced_levels:
-    zh:zstack: info
-    zh:controller: info
+    zh: info
+    zhc: info
     z2m:mqtt: error
   log_output:
     - console
