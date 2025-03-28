@@ -123,7 +123,8 @@ if __name__ == "__main__":
                 device_name,
                 device_group,
             ))
-            time.sleep(4)
+            sys.stdout.flush()
+            time.sleep(2)
             return _device_config()
 
 
