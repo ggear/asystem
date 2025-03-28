@@ -40,7 +40,6 @@ advanced:
   homeassistant_legacy_triggers: false
   log_level: warning
   log_namespaced_levels:
-    z2m: info
     zh:zstack: info
     zh:controller: info
     z2m:mqtt: warning
