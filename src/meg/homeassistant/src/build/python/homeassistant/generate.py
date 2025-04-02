@@ -64,7 +64,12 @@ def load_entity_metadata():
     return metadata_df
 
 
-def write_certificates(module_name, working_dir):
+def write_certificates(module_name=None, working_dir=None):
+    root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
+    if module_name is None:
+        module_name = basename(root_dir)
+    if working_dir is None:
+        working_dir = join(root_dir, "src/main/resources/image")
     os.makedirs(working_dir, exist_ok=True)
     script_path = abspath(join(working_dir, "certificates.sh"))
     with open(script_path, 'w') as script_file:
@@ -105,7 +110,12 @@ exit 0
           .format(module_name, script_path))
 
 
-def write_bootstrap(module_name, working_dir, script_source="echo 'No-Op bootstrap executed'"):
+def write_bootstrap(module_name=None, working_dir=None, script_bootstrap="echo 'No-Op bootstrap executed'"):
+    root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
+    if module_name is None:
+        module_name = basename(root_dir)
+    if working_dir is None:
+        working_dir = join(root_dir, "src/main/resources/image")
     os.makedirs(working_dir, exist_ok=True)
     script_path = abspath(join(working_dir, "bootstrap.sh"))
     with open(script_path, 'w') as script_file:
@@ -134,24 +144,48 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap finished"
 echo "--------------------------------------------------------------------------------"
         """.format(
-            script_source.strip(),
+            script_bootstrap.strip(),
         ).strip())
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]"
           .format(module_name, script_path))
 
 
-def write_healthcheck(module_name, working_dir, script_alive="true", script_ready="true"):
+def write_healthcheck(module_name=None, working_dir=None, script_alive="true", script_ready="true"):
+    root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
+    if module_name is None:
+        module_name = basename(root_dir)
+    if working_dir is None:
+        working_dir = join(root_dir, "src/main/resources/image")
     os.makedirs(working_dir, exist_ok=True)
     script_path = abspath(join(working_dir, "healthcheck.sh"))
     with open(script_path, 'w') as script_file:
         script_file.write("""
 #!/bin/bash
 
-set -eo pipefail
-shopt -s expand_aliases
-
+POSITIONAL_ARGS=()
 HEALTHCHECK_VERBOSE=${{HEALTHCHECK_VERBOSE:-false}}
+while [[ $# -gt 0 ]]; do
+  case $1 in
+  -v | --verbose)
+    HEALTHCHECK_VERBOSE=true
+    shift
+    ;;
+  -h | --help)
+    echo "Usage: ${{0}} [-v|--verbose] [-h|--help] [alive|ready]"
+    exit 2
+    ;;
+  -* | --*)
+    shift
+    ;;
+  *)
+    POSITIONAL_ARGS+=("$1")
+    shift
+    ;;
+  esac
+done
+set -- "${{POSITIONAL_ARGS[@]}}"
+
 if [ "${{HEALTHCHECK_VERBOSE}}" == true ]; then
   alias curl="curl -f --connect-timeout 2 --max-time 2"
   set -o xtrace
@@ -159,12 +193,17 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+set -eo pipefail
+shopt -s expand_aliases
+
 function alive() {{
   if
     {}
   then
+    [ "${{HEALTHCHECK_VERBOSE}}" == true ] >&2 && echo "Alive :)"
     return 0
   else
+    [ "${{HEALTHCHECK_VERBOSE}}" == true ] >&2 && echo "Not Alive :("
     return 1
   fi
 }}
@@ -173,18 +212,20 @@ function ready() {{
   if
     {}
   then
+    [ "${{HEALTHCHECK_VERBOSE}}" == true ] >&2 && echo "Ready :)"
     return 0
   else
+    [ "${{HEALTHCHECK_VERBOSE}}" == true ] >&2 && echo "Not Ready :("
     return 1
   fi
 }}
 
-[ "$#" -eq 1 ] && [ "${{1}}" == "alive" ] && exit $(alive)
+[ $# -eq 1 ] && [ "${{1}}" == "alive" ] && exit $(alive)
 exit $(ready)
         """.format(
             script_alive.strip(),
             script_ready.strip(),
-        ).strip())
+        ).strip() + "\n")
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]"
           .format(module_name, script_path))
