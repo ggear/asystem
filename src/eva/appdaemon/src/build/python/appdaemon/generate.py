@@ -10,11 +10,9 @@ if __name__ == "__main__":
     write_bootstrap("appdaemon", join(DIR_ROOT, "src/main/resources/image"))
     write_certificates("appdaemon", join(DIR_ROOT, "src/main/resources/image"))
     write_healthcheck("appdaemon", join(DIR_ROOT, "src/main/resources/image"), """
-ALIVE="$(${CURL_CMD} -LI "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/aui/index.html" | tac | tac | head -n 1 | cut -d$' ' -f2)" && \
-[ "${ALIVE}" == "200" ]
+[ "$(curl -LI "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/aui/index.html" | tac | tac | head -n 1 | cut -d$' ' -f2)" == "200" ]
         """, """
-READY="$(${CURL_CMD} -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/health")" && \
-[ "$(jq -er .health <<<"${READY}")" == "OK" ]
+[ "$(curl -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/health" | jq -er .health)" == "OK" ]
         """)
 
     print("Build generate script [appdaemon] completed".format())
