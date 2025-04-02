@@ -1,7 +1,9 @@
 #!/bin/bash
 
-SERVICE_HOME=/home/asystem/homeassistant/latest
-SERVICE_INSTALL=/var/lib/asystem/install/homeassistant/latest
+. .env
+
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/latest
+SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/latest
 
 if [ -f "${SERVICE_HOME}/ip_bans.yaml" ]; then
   echo "Flushing IP bans:" && echo "---" && cat "${SERVICE_HOME}/ip_bans.yaml" && echo "---"
