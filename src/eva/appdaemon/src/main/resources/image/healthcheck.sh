@@ -1,6 +1,7 @@
 #!/bin/bash
 
 set -eo pipefail
+shopt -s expand_aliases
 
 HEALTHCHECK_VERBOSE=${HEALTHCHECK_VERBOSE:-false}
 if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
