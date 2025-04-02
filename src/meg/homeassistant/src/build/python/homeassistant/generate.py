@@ -64,16 +64,11 @@ def load_entity_metadata():
     return metadata_df
 
 
-def write_certificates(module_name, certificate_dir):
-    os.makedirs(certificate_dir, exist_ok=True)
-
-    certificate_dir_sub = "/"
-    if len(certificate_dir.split("/data")) > 1:
-        certificate_dir_sub = certificate_dir.split("/data")[1] + "/"
-
-    certificate_path = abspath(join(certificate_dir, "certificates.sh"))
-    with open(certificate_path, 'w') as certificate_file:
-        certificate_file.write("""
+def write_certificates(module_name, working_dir):
+    os.makedirs(working_dir, exist_ok=True)
+    script_path = abspath(join(working_dir, "certificates.sh"))
+    with open(script_path, 'w') as script_file:
+        script_file.write("""
 #!/bin/bash
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
@@ -90,7 +85,7 @@ if [ "$1" = "pull" ]; then
   echo "Pulling certificates ... done"
 elif [ "$1" = "push" ]; then
   echo "Pushing certificates ..."
-  for DIR in "/home/asystem/{}/latest{}" "/var/lib/asystem/install/{}/latest/data{}"; do
+  for DIR in "/home/asystem/{}/latest" "/var/lib/asystem/install/{}/latest/data"; do
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/.key.pem" "root@$3:$DIR"
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/certificate.pem" "root@$3:$DIR"
     echo "localhost:$ROOT_DIR -> $3:$DIR"
@@ -102,23 +97,105 @@ fi
 exit 0
         """.format(
             module_name,
-            certificate_dir_sub,
             module_name,
-            certificate_dir_sub,
             module_name,
         ).strip())
-    os.chmod(certificate_path, os.stat(certificate_path).st_mode | stat.S_IEXEC)
-    print("Build generate script [{}] certificate script persisted to [{}]"
-          .format(module_name, certificate_path))
+    os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
+    print("Build generate script [{}] script persisted to [{}]"
+          .format(module_name, script_path))
 
 
-def write_entity_metadata(module_name, metadata_dir, metadata_df, topics_discovery, topics_data):
+def write_bootstrap(module_name, working_dir, script_source="echo 'No-Op bootstrap executed'"):
+    os.makedirs(working_dir, exist_ok=True)
+    script_path = abspath(join(working_dir, "bootstrap.sh"))
+    with open(script_path, 'w') as script_file:
+        script_file.write("""
+#!/bin/bash
+
+echo "--------------------------------------------------------------------------------"
+echo "Bootstrap initialising ..."
+echo "--------------------------------------------------------------------------------"
+
+ASYSTEM_HOME=${{ASYSTEM_HOME:-"/asystem/etc"}}
+
+while ! "${{ASYSTEM_HOME}}/healthcheck.sh" alive; do
+  echo "Waiting for service to come alive ..." && sleep 1
+done
+
+set -eo pipefail
+
+echo "--------------------------------------------------------------------------------"
+echo "Bootstrap starting ..."
+echo "--------------------------------------------------------------------------------"
+
+{}
+
+echo "--------------------------------------------------------------------------------"
+echo "Bootstrap finished"
+echo "--------------------------------------------------------------------------------"
+        """.format(
+            script_source.strip(),
+        ).strip())
+    os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
+    print("Build generate script [{}] script persisted to [{}]"
+          .format(module_name, script_path))
+
+
+def write_healthcheck(module_name, working_dir, script_alive="true", script_ready="true"):
+    os.makedirs(working_dir, exist_ok=True)
+    script_path = abspath(join(working_dir, "healthcheck.sh"))
+    with open(script_path, 'w') as script_file:
+        script_file.write("""
+#!/bin/bash
+
+set -eo pipefail
+
+HEALTHCHECK_VERBOSE=${{HEALTHCHECK_VERBOSE:-false}}
+if [ "${{HEALTHCHECK_VERBOSE}}" == true ]; then
+  CURL_CMD="curl -f --connect-timeout 2 --max-time 2"
+  set -o xtrace
+else
+  CURL_CMD="curl -sf --connect-timeout 2 --max-time 2"
+fi
+
+function alive() {{
+  if
+    {}
+  then
+    return 0
+  else
+    return 1
+  fi
+}}
+
+function ready() {{
+  if
+    {}
+  then
+    return 0
+  else
+    return 1
+  fi
+}}
+
+[ "$#" -eq 1 ] && [ "${{1}}" == "alive" ] && exit $(alive)
+exit $(ready)
+        """.format(
+            script_alive.strip(),
+            script_ready.strip(),
+        ).strip())
+    os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
+    print("Build generate script [{}] script persisted to [{}]"
+          .format(module_name, script_path))
+
+
+def write_entity_metadata(module_name, working_dir, metadata_df, topics_discovery, topics_data):
     if len(metadata_df) > 0:
         metadata_df = metadata_df.copy()
         metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
         metadata_columns_rename = {column: column.replace("device_", "") for column in metadata_columns}
-        if exists(metadata_dir):
-            shutil.rmtree(metadata_dir)
+        if exists(working_dir):
+            shutil.rmtree(working_dir)
         for _, row in metadata_df.iterrows():
             metadata_dict = row[[
                 "unique_id",
@@ -146,7 +223,7 @@ def write_entity_metadata(module_name, metadata_dir, metadata_df, topics_discove
             metadata_dict["device"] = row[metadata_columns].rename(metadata_columns_rename).dropna().to_dict()
             if "connections" in metadata_dict["device"]:
                 metadata_dict["device"]["connections"] = json.loads(metadata_dict["device"]["connections"])
-            metadata_publish_dir = abspath(join(metadata_dir, row['discovery_topic']))
+            metadata_publish_dir = abspath(join(working_dir, row['discovery_topic']))
             os.makedirs(metadata_publish_dir)
             metadata_publish_str = json.dumps(metadata_dict, ensure_ascii=False, indent=2) + "\n"
             metadata_publish_path = abspath(join(metadata_publish_dir, metadata_unique_id + ".json"))
@@ -154,7 +231,7 @@ def write_entity_metadata(module_name, metadata_dir, metadata_df, topics_discove
                 metadata_publish_file.write(metadata_publish_str)
                 print("Build generate script [{}] entity metadata [sensor.{}] persisted to [{}]"
                       .format(module_name, metadata_unique_id, metadata_publish_path))
-        metadata_publish_script_path = abspath(metadata_dir + ".sh")
+        metadata_publish_script_path = abspath(working_dir + ".sh")
         with open(metadata_publish_script_path, 'w') as metadata_publish_script_file:
             metadata_publish_script_file.write("""
 #!/bin/bash

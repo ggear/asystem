@@ -11,8 +11,9 @@ else
 fi
 
 function alive() {
-  if ALIVE="$(${CURL_CMD} -LI "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/aui/index.html" | tac | tac | head -n 1 | cut -d$' ' -f2)" &&
-    [ "${ALIVE}" == "200" ]; then
+  if
+    ALIVE="$(${CURL_CMD} -LI "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/aui/index.html" | tac | tac | head -n 1 | cut -d$' ' -f2)" && [ "${ALIVE}" == "200" ]
+  then
     return 0
   else
     return 1
@@ -20,8 +21,9 @@ function alive() {
 }
 
 function ready() {
-  if READY="$(${CURL_CMD} -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/health")" &&
-    [ "$(jq -er .health <<<"${READY}")" == "OK" ]; then
+  if
+    READY="$(${CURL_CMD} -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/health")" && [ "$(jq -er .health <<<"${READY}")" == "OK" ]
+  then
     return 0
   else
     return 1

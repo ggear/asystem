@@ -14,7 +14,7 @@ if [ "$1" = "pull" ]; then
   echo "Pulling certificates ... done"
 elif [ "$1" = "push" ]; then
   echo "Pushing certificates ..."
-  for DIR in "/home/asystem/nginx/latest/" "/var/lib/asystem/install/nginx/latest/data/"; do
+  for DIR in "/home/asystem/nginx/latest" "/var/lib/asystem/install/nginx/latest/data"; do
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/.key.pem" "root@$3:$DIR"
     scp -q -o "StrictHostKeyChecking=no" -pr "$ROOT_DIR/certificate.pem" "root@$3:$DIR"
     echo "localhost:$ROOT_DIR -> $3:$DIR"
