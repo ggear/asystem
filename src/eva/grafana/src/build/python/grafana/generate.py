@@ -1,12 +1,6 @@
-# coding=utf-8
-
-import glob
-import os
-import shutil
 from os import makedirs
-from os.path import *
 
-from homeassistant.generate import load_entity_metadata
+from homeassistant.generate import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
@@ -21,6 +15,9 @@ PREFIX_DASHBOARD_DEFAULTS = PREFIX + "DASHBOARD_DEFAULTS "
 
 if __name__ == "__main__":
     metadata_df = load_entity_metadata()
+
+    write_healthcheck()
+    write_bootstrap()
 
     metadata_dashboard_df = metadata_df[
         (metadata_df["index"] > 0) &

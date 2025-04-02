@@ -11,7 +11,7 @@ else
 fi
 
 function alive() {
-  if ALIVE="$(${CURL_CMD} "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" &&
+  if ALIVE="$(curl "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" &&
     [ "$(jq -er '.pid' <<<"${ALIVE}")" -gt 0 ]; then
     return 0
   else
@@ -20,7 +20,7 @@ function alive() {
 }
 
 function ready() {
-  if READY="$(${CURL_CMD} "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" &&
+  if READY="$(curl "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" &&
     [ "$(jq -er '.status.paused' <<<"${READY}")" == "false" ] &&
     [ "$(jq -er '[.status.servers[].servertotalconn] | add' <<<"${READY}")" -gt 0 ]; then
     return 0

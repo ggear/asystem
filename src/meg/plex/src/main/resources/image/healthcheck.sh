@@ -11,7 +11,7 @@ else
 fi
 
 function alive() {
-  if ALIVE="$(${CURL_CMD} "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity")" &&
+  if ALIVE="$(curl "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity")" &&
     [ "$(xq -e '/MediaContainer/@version' <<<"${ALIVE}")" != "" ]; then
     return 0
   else
@@ -20,7 +20,7 @@ function alive() {
 }
 
 function ready() {
-  if READY="$(${CURL_CMD} "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity")" &&
+  if READY="$(curl "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity")" &&
     [ "$(xq -e '/MediaContainer/@claimed' <<<"${READY}")" == "1" ]; then
     for SHARE in /share/*; do
       if [ "$(ls -l $SHARE | grep -v '^total' | wc -l)" -eq 0 ]; then

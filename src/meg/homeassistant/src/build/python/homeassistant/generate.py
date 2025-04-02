@@ -110,12 +110,15 @@ exit 0
           .format(module_name, script_path))
 
 
-def write_bootstrap(module_name=None, working_dir=None, script_bootstrap="echo 'No-Op bootstrap executed'"):
+def write_bootstrap(module_name=None, working_dir=None):
     root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
     if module_name is None:
         module_name = basename(root_dir)
     if working_dir is None:
         working_dir = join(root_dir, "src/main/resources/image")
+    path_bootstrap = join(root_dir, "src/build/resources/bootstrap.sh")
+    script_bootstrap = Path(path_bootstrap).read_text().strip() if isfile(path_bootstrap) \
+        else "echo 'No-Op bootstrap executed'"
     os.makedirs(working_dir, exist_ok=True)
     script_path = abspath(join(working_dir, "bootstrap.sh"))
     with open(script_path, 'w') as script_file:
@@ -143,6 +146,13 @@ echo "--------------------------------------------------------------------------
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
 echo "--------------------------------------------------------------------------------"
+
+set +eo pipefail
+
+while ! "${{ASYSTEM_HOME}}/healthcheck.sh"; do
+  echo "Waiting for service to become ready ..." && sleep 1
+done
+echo "" && echo "----------" && echo "Service is ready ... " && echo "----------" && echo "" && echo ""
         """.format(
             script_bootstrap.strip(),
         ).strip())
@@ -151,12 +161,18 @@ echo "--------------------------------------------------------------------------
           .format(module_name, script_path))
 
 
-def write_healthcheck(module_name=None, working_dir=None, script_alive="true", script_ready="true"):
+def write_healthcheck(module_name=None, working_dir=None):
     root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
     if module_name is None:
         module_name = basename(root_dir)
     if working_dir is None:
         working_dir = join(root_dir, "src/main/resources/image")
+    path_alive = join(root_dir, "src/build/resources/healthcheck/alive.sh")
+    script_alive = " ".join([line.strip() for line in Path(path_alive).read_text().strip().split("\n")]) \
+        if isfile(path_alive) else "true"
+    path_ready = join(root_dir, "src/build/resources/healthcheck/ready.sh")
+    script_ready = " ".join([line.strip() for line in Path(path_ready).read_text().strip().split("\n")]) \
+        if isfile(path_ready) else "true"
     os.makedirs(working_dir, exist_ok=True)
     script_path = abspath(join(working_dir, "healthcheck.sh"))
     with open(script_path, 'w') as script_file:
@@ -171,12 +187,9 @@ while [[ $# -gt 0 ]]; do
     HEALTHCHECK_VERBOSE=true
     shift
     ;;
-  -h | --help)
-    echo "Usage: ${{0}} [-v|--verbose] [-h|--help] [alive|ready]"
+  -h | --help | -*)
+    echo "Usage: ${{0}} [-v|--verbose] [-h|--help] [alive]"
     exit 2
-    ;;
-  -* | --*)
-    shift
     ;;
   *)
     POSITIONAL_ARGS+=("$1")
@@ -200,10 +213,10 @@ function alive() {{
   if
     {}
   then
-    [ "${{HEALTHCHECK_VERBOSE}}" == true ] >&2 && echo "Alive :)"
+    [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "Alive :)" >&2
     return 0
   else
-    [ "${{HEALTHCHECK_VERBOSE}}" == true ] >&2 && echo "Not Alive :("
+    [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "Not Alive :(" >&2
     return 1
   fi
 }}
@@ -212,10 +225,10 @@ function ready() {{
   if
     {}
   then
-    [ "${{HEALTHCHECK_VERBOSE}}" == true ] >&2 && echo "Ready :)"
+    [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "Ready :)" >&2
     return 0
   else
-    [ "${{HEALTHCHECK_VERBOSE}}" == true ] >&2 && echo "Not Ready :("
+    [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "Not Ready :(" >&2
     return 1
   fi
 }}
@@ -223,8 +236,8 @@ function ready() {{
 [ $# -eq 1 ] && [ "${{1}}" == "alive" ] && exit $(alive)
 exit $(ready)
         """.format(
-            script_alive.strip(),
-            script_ready.strip(),
+            script_alive,
+            script_ready,
         ).strip() + "\n")
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]"

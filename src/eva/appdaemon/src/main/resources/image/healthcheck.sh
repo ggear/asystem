@@ -8,12 +8,9 @@ while [[ $# -gt 0 ]]; do
     HEALTHCHECK_VERBOSE=true
     shift
     ;;
-  -h | --help)
-    echo "Usage: ${0} [-v|--verbose] [-h|--help] [alive|ready]"
+  -h | --help | -*)
+    echo "Usage: ${0} [-v|--verbose] [-h|--help] [alive]"
     exit 2
-    ;;
-  -* | --*)
-    shift
     ;;
   *)
     POSITIONAL_ARGS+=("$1")
@@ -37,10 +34,10 @@ function alive() {
   if
     [ "$(curl -LI "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/aui/index.html" | tac | tac | head -n 1 | cut -d$' ' -f2)" == "200" ]
   then
-    [ "${HEALTHCHECK_VERBOSE}" == true ] >&2 && echo "Alive :)"
+    [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)" >&2
     return 0
   else
-    [ "${HEALTHCHECK_VERBOSE}" == true ] >&2 && echo "Not Alive :("
+    [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Not Alive :(" >&2
     return 1
   fi
 }
@@ -49,10 +46,10 @@ function ready() {
   if
     [ "$(curl -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/health" | jq -er .health)" == "OK" ]
   then
-    [ "${HEALTHCHECK_VERBOSE}" == true ] >&2 && echo "Ready :)"
+    [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Ready :)" >&2
     return 0
   else
-    [ "${HEALTHCHECK_VERBOSE}" == true ] >&2 && echo "Not Ready :("
+    [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Not Ready :(" >&2
     return 1
   fi
 }

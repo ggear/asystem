@@ -11,7 +11,7 @@ else
 fi
 
 function alive() {
-  if ALIVE="$(${CURL_CMD} "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" &&
+  if ALIVE="$(curl "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" &&
     [ "${ALIVE}" == "OK" ]; then
     return 0
   else
@@ -21,7 +21,7 @@ function alive() {
 
 function ready() {
   #  TODO: Provide implementation that reflects on models being served
-  if READY="$(${CURL_CMD} "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" &&
+  if READY="$(curl "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" &&
     [ "${READY}" == "OK" ]; then
     return 0
   else

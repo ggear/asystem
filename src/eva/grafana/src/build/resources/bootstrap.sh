@@ -1,21 +1,3 @@
-#!/bin/bash
-
-echo "--------------------------------------------------------------------------------"
-echo "Bootstrap initialising ..."
-echo "--------------------------------------------------------------------------------"
-
-ASYSTEM_HOME=${ASYSTEM_HOME:-"/asystem/etc"}
-
-while ! "${ASYSTEM_HOME}/healthcheck.sh" alive; do
-  echo "Waiting for service to come alive ..." && sleep 1
-done
-
-set -eo pipefail
-
-echo "--------------------------------------------------------------------------------"
-echo "Bootstrap starting ..."
-echo "--------------------------------------------------------------------------------"
-
 #######################################################################################
 # Current Stats
 #######################################################################################
@@ -332,14 +314,3 @@ if [ "$(curl -sf "${GRAFANA_URL_PRIVATE}"/api/org/preferences | grep private-hom
           "homeDashboardUID":"private-home-default"
         }' | jq
 fi
-
-echo "--------------------------------------------------------------------------------"
-echo "Bootstrap finished"
-echo "--------------------------------------------------------------------------------"
-
-set +eo pipefail
-
-while ! "${ASYSTEM_HOME}/healthcheck.sh"; do
-  echo "Waiting for service to become ready ..." && sleep 1
-done
-echo "" && echo "----------" && echo "Service is ready ... " && echo "----------" && echo "" && echo ""

@@ -11,7 +11,7 @@ else
 fi
 
 function alive() {
-  if ALIVE="$(${CURL_CMD} -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/")" &&
+  if ALIVE="$(curl -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/")" &&
     [ "$(jq -er .message <<<"${ALIVE}")" == "API running." ]; then
     return 0
   else
@@ -20,7 +20,7 @@ function alive() {
 }
 
 function ready() {
-  if READY="$(${CURL_CMD} -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" -H "Content-Type: application/json" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/states/input_boolean.home_started")" &&
+  if READY="$(curl -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" -H "Content-Type: application/json" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/states/input_boolean.home_started")" &&
     [ "$(jq -er .state <<<"${READY}")" == "on" ]; then
     return 0
   else
