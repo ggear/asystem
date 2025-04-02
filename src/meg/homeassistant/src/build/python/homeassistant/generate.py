@@ -118,7 +118,7 @@ def write_bootstrap(module_name=None, working_dir=None):
         working_dir = join(root_dir, "src/main/resources/image")
     path_bootstrap = join(root_dir, "src/build/resources/bootstrap.sh")
     script_bootstrap = Path(path_bootstrap).read_text().strip() if isfile(path_bootstrap) \
-        else "echo 'No-Op bootstrap executed'"
+        else "echo ''"
     os.makedirs(working_dir, exist_ok=True)
     script_path = abspath(join(working_dir, "bootstrap.sh"))
     with open(script_path, 'w') as script_file:
@@ -152,7 +152,7 @@ set +eo pipefail
 while ! "${{ASYSTEM_HOME}}/healthcheck.sh"; do
   echo "Waiting for service to become ready ..." && sleep 1
 done
-echo "----------" && echo "Service has started" && echo "----------"
+echo "----------" && echo "Service has started"
         """.format(
             script_bootstrap.strip(),
         ).strip())

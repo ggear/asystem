@@ -16,7 +16,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-echo 'No-Op bootstrap executed'
+echo ''
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
@@ -27,4 +27,4 @@ set +eo pipefail
 while ! "${ASYSTEM_HOME}/healthcheck.sh"; do
   echo "Waiting for service to become ready ..." && sleep 1
 done
-echo "----------" && echo "Service has started" && echo "----------"
+echo "----------" && echo "Service has started"
