@@ -22,4 +22,4 @@ echo '---' && echo 'Starting device configure ... ' && echo '---'
 
 ${ROOT_DIR}/src/main/resources/image/mqtt/mqtt_config.sh
 
-echo '---' && echo 'Complete device configure' && echo '---'
+echo '---' && echo 'Completed device configure' && echo '---'

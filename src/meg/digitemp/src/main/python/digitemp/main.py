@@ -24,10 +24,12 @@ if __name__ == "__main__":
                 temperature = None
                 run_time_start_metric = time.time()
                 try:
-                    temperature = TemperatureSensor(UART_Adapter(FILE_SERIAL_DEVICE),
-                                                    metadata_digitemp_dict["connection_mac"].replace("0x", "")).get_temperature()
+                    temperature = TemperatureSensor(
+                        UART_Adapter(FILE_SERIAL_DEVICE),
+                        metadata_digitemp_dict["connection_mac"].replace("0x", "")
+                    ).get_temperature()
                     run_code_metric_success += 1
-                except Exception as error:
+                except Exception:
                     print("Error getting temperature sensor with name [{}], ID [{}] and serial device [{}]:".format(
                         metadata_digitemp_dict["unique_id"],
                         metadata_digitemp_dict["connection_mac"],
@@ -42,7 +44,10 @@ if __name__ == "__main__":
                         metadata_digitemp_dict["connection_mac"],
                     ),
                     run_code_metric,
-                    "{}_celsius={},".format(metadata_digitemp_dict["unique_id"], temperature) if run_code_metric == 0 else "",
+                    "{}_celsius={},".format(
+                        metadata_digitemp_dict["unique_id"],
+                        temperature
+                    ) if run_code_metric == 0 else "",
                     int((time.time() - run_time_start_metric) * 1000),
                     int(time.time() * 1000000000),
                 ))

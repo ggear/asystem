@@ -31,10 +31,10 @@ if __name__ == "__main__":
 
     def _mqtt_pub(topic: str, message: str, **mqtt_kwargs):
 
-        def on_publish(client, userdata, mid):
-            client.disconnect()
-            if userdata["lock"]:
-                userdata["lock"].release()
+        def on_publish(_client, _userdata, _mid=None):
+            _client.disconnect()
+            if _userdata["lock"]:
+                _userdata["lock"].release()
             return
 
         lock: Optional[threading.Lock]
@@ -57,15 +57,15 @@ if __name__ == "__main__":
 
     def _mqtt_sub(topic: str, **mqtt_kwargs):
 
-        def on_connect(client, userdata, flags, rc):
-            client.subscribe(userdata["topic"])
+        def on_connect(_client, _userdata, _flags=None, _rc=None):
+            _client.subscribe(_userdata["topic"])
             return
 
-        def on_message(client, userdata, message):
-            userdata["messages"] = message
-            client.disconnect()
-            if userdata["lock"]:
-                userdata["lock"].release()
+        def on_message(_client, _userdata, _message):
+            _userdata["messages"] = _message
+            _client.disconnect()
+            if _userdata["lock"]:
+                _userdata["lock"].release()
             return
 
         lock: Optional[threading.Lock]
