@@ -18,6 +18,7 @@ function alive() {
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
 }
+
 function ready() {
   if READY="$(${CURL_CMD} "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity")" &&
     [ "$(xq -e '/MediaContainer/@claimed' <<<"${READY}")" == "1" ]; then
@@ -30,6 +31,7 @@ function ready() {
   else
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
+}
 
 [ "$#" -eq 1 ] && [ "${1}" == "alive" ] && exit $(alive)
 exit $(ready)

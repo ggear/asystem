@@ -18,6 +18,7 @@ function alive() {
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
 }
+
 function ready() {
   if [ "$(influx ping --host http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT})" == "OK" ] &&
     influx query 'from(bucket:"'"${INFLUXDB_BUCKET_HOME_PUBLIC}"'") |> range(start:-15m) |> filter(fn: (r) => r["_measurement"] == "a_non_existent_metric")' &&
@@ -36,6 +37,7 @@ function ready() {
   else
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
+}
 
 [ "$#" -eq 1 ] && [ "${1}" == "alive" ] && exit $(alive)
 exit $(ready)

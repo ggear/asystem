@@ -17,6 +17,7 @@ function alive() {
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
 }
+
 function ready() {
   if READY="$(${CURL_CMD} "${GRAFANA_URL}/api/admin/stats")" &&
     [ "$(jq -er .orgs <<<"${READY}")" -eq 2 ] &&

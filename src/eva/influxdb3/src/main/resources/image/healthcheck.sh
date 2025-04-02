@@ -17,6 +17,7 @@ function alive() {
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
 }
+
 function ready() {
   if READY="$(${CURL_CMD} "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}/api/v3/configure/database?format=csv&show_deleted=false")" &&
     [ "$(grep -c host_private <<<"${READY}")" -eq 1 ]; then
@@ -24,6 +25,7 @@ function ready() {
   else
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
+}
 
 [ "$#" -eq 1 ] && [ "${1}" == "alive" ] && exit $(alive)
 exit $(ready)

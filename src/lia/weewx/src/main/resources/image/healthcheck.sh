@@ -14,6 +14,7 @@ function alive() {
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
 }
+
 function ready() {
   if [ -f "/data/html/loopdata/loop-data.txt" ] &&
     [ $(($(date +%s) - $(stat "/data/html/loopdata/loop-data.txt" -c %Y))) -le 2 ] &&
@@ -23,6 +24,7 @@ function ready() {
   else
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
+}
 
 [ "$#" -eq 1 ] && [ "${1}" == "alive" ] && exit $(alive)
 exit $(ready)

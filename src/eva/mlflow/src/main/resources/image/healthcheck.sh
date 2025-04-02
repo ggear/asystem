@@ -18,6 +18,7 @@ function alive() {
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
 }
+
 function ready() {
   #  TODO: Provide implementation that reflects on models being served
   if READY="$(${CURL_CMD} "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" &&
@@ -26,6 +27,7 @@ function ready() {
   else
     ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
   fi
+}
 
 [ "$#" -eq 1 ] && [ "${1}" == "alive" ] && exit $(alive)
 exit $(ready)
