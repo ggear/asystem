@@ -126,7 +126,7 @@ def write_bootstrap(module_name=None, working_dir=None):
 #!/bin/bash
 
 echo "--------------------------------------------------------------------------------"
-echo "Bootstrap initialising ..."
+echo "Service is starting ..."
 echo "--------------------------------------------------------------------------------"
 
 ASYSTEM_HOME=${{ASYSTEM_HOME:-"/asystem/etc"}}
@@ -152,7 +152,7 @@ set +eo pipefail
 while ! "${{ASYSTEM_HOME}}/healthcheck.sh"; do
   echo "Waiting for service to become ready ..." && sleep 1
 done
-echo "" && echo "----------" && echo "Service is ready ... " && echo "----------" && echo "" && echo ""
+echo "----------" && echo "Service has started" && echo "----------"
         """.format(
             script_bootstrap.strip(),
         ).strip())
