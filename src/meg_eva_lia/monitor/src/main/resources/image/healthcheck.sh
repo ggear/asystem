@@ -9,9 +9,9 @@ fi
 
 function alive() {
   if [ "$(pidof telegraf)" != "" ]; then
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 
@@ -28,9 +28,9 @@ function ready() {
     [ "$(grep -c '^> docker_container_blkio,container_image=' <<<"${OUTPUT}")" -gt 0 ] &&
     [ "$(grep -c '^> docker_container_net,container_image=' <<<"${OUTPUT}")" -gt 0 ] &&
     telegraf --once >/dev/null 2>&1; then
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 

@@ -13,18 +13,18 @@ fi
 function alive() {
   if ALIVE="$(${CURL_CMD} -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/")" &&
     [ "$(jq -er .message <<<"${ALIVE}")" == "API running." ]; then
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 
 function ready() {
   if READY="$(${CURL_CMD} -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" -H "Content-Type: application/json" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/states/input_boolean.home_started")" &&
     [ "$(jq -er .state <<<"${READY}")" == "on" ]; then
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 

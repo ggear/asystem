@@ -15,9 +15,9 @@ function alive() {
   return 0
   if ALIVE="$(${CURL_CMD} "http://${MLSERVER_SERVICE}:${MLSERVER_HTTP_PORT}/health")" &&
     [ "${ALIVE}" == "OK" ]; then
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 
@@ -26,9 +26,9 @@ function ready() {
   return 0
   if READY="$(${CURL_CMD} "http://${MLSERVER_SERVICE}:${MLSERVER_HTTP_PORT}/health")" &&
     [ "${READY}" == "OK" ]; then
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 

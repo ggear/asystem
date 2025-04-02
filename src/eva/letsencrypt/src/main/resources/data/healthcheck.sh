@@ -9,9 +9,9 @@ fi
 
 function alive() {
   if [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ]; then
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 
@@ -19,9 +19,9 @@ function ready() {
   if [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ] &&
     [ $(grep ERROR /etc/letsencrypt/logs/letsencrypt.log | wc -l) -eq 0 ] &&
     [ $((($(date +%s) - $(stat /etc/letsencrypt/logs/letsencrypt.log -c %Y)) / 3600)) -le 25 ]; then
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 

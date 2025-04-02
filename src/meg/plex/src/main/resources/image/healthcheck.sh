@@ -13,9 +13,9 @@ fi
 function alive() {
   if ALIVE="$(${CURL_CMD} "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity")" &&
     [ "$(xq -e '/MediaContainer/@version' <<<"${ALIVE}")" != "" ]; then
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 
@@ -27,9 +27,9 @@ function ready() {
         return 1
       fi
     done
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "Alive :)") || return 0
+    return 0
   else
-    ([ "${HEALTHCHECK_VERBOSE}" == true ] && echo "NOT Alive :(") || return 1
+    return 1
   fi
 }
 
