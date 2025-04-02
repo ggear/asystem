@@ -1,16 +1,15 @@
 # ASystem
 
-A home data, analytics and automation system monorepo.
+A home data, analytics and automation system mono-repo.
 
 ## Requirements
 
 To build, test and package this project the following is required:
 
-* python-3+
+* python-3.12+
 * fabric-2.5+
-* conda-20+
-* docker-19+
-* docker-compose-1.26+
+* conda-25+
+* docker-28+
 
 The following programming toolchains are installed with the required version levels and
 dependencies into an isolated, dedicated Conda environment on project setup:
