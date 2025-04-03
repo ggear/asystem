@@ -1,21 +1,3 @@
-#!/bin/bash
-
-echo "--------------------------------------------------------------------------------"
-echo "Service is starting ..."
-echo "--------------------------------------------------------------------------------"
-
-ASYSTEM_HOME=${ASYSTEM_HOME:-"/asystem/etc"}
-
-while ! "${ASYSTEM_HOME}/checkalive.sh"; do
-  echo "Waiting for service to come alive ..." && sleep 1
-done
-
-set -eo pipefail
-
-echo "--------------------------------------------------------------------------------"
-echo "Bootstrap starting ..."
-echo "--------------------------------------------------------------------------------"
-
 influx setup -f -n default --host http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT} -o ${INFLUXDB_ORG} -b ${INFLUXDB_BUCKET_HOME_PUBLIC} -u ${INFLUXDB_USER} -p ${INFLUXDB_KEY} -t ${INFLUXDB_TOKEN} 2>/dev/null || true
 if [ $(influx config list | grep remote | wc -l) -ne 1 ]; then
   influx config create -a -n remote -u http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT} -o ${INFLUXDB_ORG} -t ${INFLUXDB_TOKEN}
@@ -94,14 +76,3 @@ influx v1 auth create -o ${INFLUXDB_ORG} --username ${INFLUXDB_USER_PRIVATE} \
   --write-bucket ${BUCKET_ID_DATA_PRIVATE} \
   --write-bucket ${BUCKET_ID_HOST_PRIVATE} \
   --password ${INFLUXDB_TOKEN_PRIVATE_V1} -d "Read/Write all buckets" -t ${INFLUXDB_TOKEN}
-
-echo "--------------------------------------------------------------------------------"
-echo "Bootstrap finished"
-echo "--------------------------------------------------------------------------------"
-
-set +eo pipefail
-
-while ! "${ASYSTEM_HOME}/checkready.sh"; do
-  echo "Waiting for service to become ready ..." && sleep 1
-done
-echo "----------" && echo "Service has started"
