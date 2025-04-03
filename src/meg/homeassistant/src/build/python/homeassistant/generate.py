@@ -118,6 +118,7 @@ def write_bootstrap(module_name=None, working_dir=None):
         working_dir = join(root_dir, "src/main/resources/image")
     path_bootstrap = join(root_dir, "src/build/resources/bootstrap.sh")
     if not isfile(path_bootstrap):
+        os.makedirs(os.path.dirname(path_bootstrap), exist_ok=True)
         Path(path_bootstrap).write_text("echo ''\n")
     script_bootstrap = Path(path_bootstrap).read_text().strip()
     os.makedirs(working_dir, exist_ok=True)
