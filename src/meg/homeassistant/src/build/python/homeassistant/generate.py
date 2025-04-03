@@ -176,6 +176,7 @@ def write_healthcheck(module_name=None, working_dir=None):
     for script in ["alive", "ready"]:
         script_source_path = join(root_dir, "src/build/resources/check{}.sh".format(script))
         if not isfile(script_source_path):
+            os.makedirs(os.path.dirname(script_source_path), exist_ok=True)
             Path(script_source_path).write_text("true\n")
         script_source = " ".join([line.strip() for line in Path(script_source_path).read_text().strip().split("\n")])
         script_path = abspath(join(working_dir, "check{}.sh".format(script)))

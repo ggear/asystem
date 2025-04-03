@@ -1,10 +1,4 @@
-import os
-from os.path import *
-from pathlib import Path
-
-import pandas as pd
-
-from homeassistant.generate import load_env
+from homeassistant.generate import *
 
 pd.options.mode.chained_assignment = None
 
@@ -12,6 +6,8 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
+
+    write_healthcheck(working_dir=join(DIR_ROOT, "src/main/resources/data"))
 
     hosts_path = join(DIR_ROOT, "src/main/resources/pushcerts-hosts.sh")
     os.makedirs(os.path.dirname(hosts_path), exist_ok=True)
