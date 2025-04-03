@@ -1,6 +1,7 @@
-from homeassistant.generate import load_entity_metadata
+from homeassistant.generate import *
 
 if __name__ == "__main__":
     metadata_df = load_entity_metadata()
 
-    print("Build generate script [mlserver] completed".format())
+    write_bootstrap()
+    write_healthcheck()
