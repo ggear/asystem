@@ -18,7 +18,7 @@ export PS1='\u@\h:\w\$ '
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
-alias ls='ls $LS_OPTIONS'
+alias ls='gls $LS_OPTIONS'
 
 export DOCKER_CLI_HINTS=false
 export BASH_SILENCE_DEPRECATION_WARNING=1

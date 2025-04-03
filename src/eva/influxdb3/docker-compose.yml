@@ -26,7 +26,7 @@ services:
     ports:
       - ${INFLUXDB3_API_PORT}:8181
     healthcheck:
-      test: /asystem/etc/healthcheck.sh
+      test: /asystem/etc/checkready.sh
       interval: 2m
       timeout: 10s
       retries: 3

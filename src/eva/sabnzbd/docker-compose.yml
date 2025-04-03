@@ -20,7 +20,7 @@ services:
     ports:
       - ${SABNZBD_HTTP_PORT}:8080
     healthcheck:
-      test: /asystem/etc/healthcheck.sh
+      test: /asystem/etc/checkready.sh
       interval: 2m
       timeout: 10s
       retries: 3

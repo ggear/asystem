@@ -16,7 +16,7 @@ services:
       - ${SERVICE_DATA_DIR}/dnsrobocert:/etc/dnsrobocert
       - ${SERVICE_DATA_DIR}/healthcheck.sh:/asystem/etc/healthcheck.sh
     healthcheck:
-      test: /asystem/etc/healthcheck.sh
+      test: /asystem/etc/checkready.sh
       interval: 2m
       timeout: 10s
       retries: 3

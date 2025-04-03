@@ -1,12 +1,12 @@
 #!/bin/bash
 
 echo "--------------------------------------------------------------------------------"
-echo "Bootstrap initialising ..."
+echo "Service is starting ..."
 echo "--------------------------------------------------------------------------------"
 
 ASYSTEM_HOME=${ASYSTEM_HOME:-"/asystem/etc"}
 
-while ! "${ASYSTEM_HOME}/healthcheck.sh" alive; do
+while ! "${ASYSTEM_HOME}/checkalive.sh"; do
   echo "Waiting for service to come alive ..." && sleep 1
 done
 
@@ -339,7 +339,7 @@ echo "--------------------------------------------------------------------------
 
 set +eo pipefail
 
-while ! "${ASYSTEM_HOME}/healthcheck.sh"; do
+while ! "${ASYSTEM_HOME}/checkready.sh"; do
   echo "Waiting for service to become ready ..." && sleep 1
 done
-echo "" && echo "----------" && echo "Service is ready ... " && echo "----------" && echo "" && echo ""
+echo "----------" && echo "Service has started"

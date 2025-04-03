@@ -19,7 +19,7 @@ services:
       - ${PLEX_SHARE_DIR}:${PLEX_SHARE_DIR}
     network_mode: host
     healthcheck:
-      test: /asystem/etc/healthcheck.sh
+      test: /asystem/etc/checkready.sh
       interval: 2m
       timeout: 10s
       retries: 3

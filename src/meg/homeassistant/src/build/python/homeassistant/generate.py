@@ -117,8 +117,9 @@ def write_bootstrap(module_name=None, working_dir=None):
     if working_dir is None:
         working_dir = join(root_dir, "src/main/resources/image")
     path_bootstrap = join(root_dir, "src/build/resources/bootstrap.sh")
-    script_bootstrap = Path(path_bootstrap).read_text().strip() if isfile(path_bootstrap) \
-        else "echo ''"
+    if not isfile(path_bootstrap):
+        Path(path_bootstrap).write_text("echo ''\n")
+    script_bootstrap = Path(path_bootstrap).read_text().strip()
     os.makedirs(working_dir, exist_ok=True)
     script_path = abspath(join(working_dir, "bootstrap.sh"))
     with open(script_path, 'w') as script_file:
@@ -131,7 +132,7 @@ echo "--------------------------------------------------------------------------
 
 ASYSTEM_HOME=${{ASYSTEM_HOME:-"/asystem/etc"}}
 
-while ! "${{ASYSTEM_HOME}}/healthcheck.sh" alive; do
+while ! "${{ASYSTEM_HOME}}/checkalive.sh"; do
   echo "Waiting for service to come alive ..." && sleep 1
 done
 
@@ -149,7 +150,7 @@ echo "--------------------------------------------------------------------------
 
 set +eo pipefail
 
-while ! "${{ASYSTEM_HOME}}/healthcheck.sh"; do
+while ! "${{ASYSTEM_HOME}}/checkready.sh"; do
   echo "Waiting for service to become ready ..." && sleep 1
 done
 echo "----------" && echo "Service has started"
@@ -167,16 +168,15 @@ def write_healthcheck(module_name=None, working_dir=None):
         module_name = basename(root_dir)
     if working_dir is None:
         working_dir = join(root_dir, "src/main/resources/image")
-    path_alive = join(root_dir, "src/build/resources/healthcheck/alive.sh")
-    script_alive = " ".join([line.strip() for line in Path(path_alive).read_text().strip().split("\n")]) \
-        if isfile(path_alive) else "true"
-    path_ready = join(root_dir, "src/build/resources/healthcheck/ready.sh")
-    script_ready = " ".join([line.strip() for line in Path(path_ready).read_text().strip().split("\n")]) \
-        if isfile(path_ready) else "true"
     os.makedirs(working_dir, exist_ok=True)
-    script_path = abspath(join(working_dir, "healthcheck.sh"))
-    with open(script_path, 'w') as script_file:
-        script_file.write("""
+    for script in ["alive", "ready"]:
+        script_source_path = join(root_dir, "src/build/resources/check{}.sh".format(script))
+        if not isfile(script_source_path):
+            Path(script_source_path).write_text("true\n")
+        script_source = " ".join([line.strip() for line in Path(script_source_path).read_text().strip().split("\n")])
+        script_path = abspath(join(working_dir, "check{}.sh".format(script)))
+        with open(script_path, 'w') as script_file:
+            script_file.write("""
 #!/bin/bash
 
 POSITIONAL_ARGS=()
@@ -209,39 +209,25 @@ fi
 set -eo pipefail
 shopt -s expand_aliases
 
-function alive() {{
-  if
-    {}
-  then
-    [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "Alive :)" >&2
-    return 0
-  else
-    [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "Not Alive :(" >&2
-    return 1
-  fi
-}}
-
-function ready() {{
-  if
-    {}
-  then
-    [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "Ready :)" >&2
-    return 0
-  else
-    [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "Not Ready :(" >&2
-    return 1
-  fi
-}}
-
-[ $# -eq 1 ] && [ "${{1}}" == "alive" ] && exit $(alive)
-exit $(ready)
-        """.format(
-            script_alive,
-            script_ready,
-        ).strip() + "\n")
-    os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
-    print("Build generate script [{}] script persisted to [{}]"
-          .format(module_name, script_path))
+if
+  {}
+then
+  [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "The service [{}] is {} :)" >&2
+  exit 0
+else
+  [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "The service [{}] is *NOT* {} :(" >&2
+  exit 1
+fi
+            """.format(
+                script_source,
+                module_name,
+                script,
+                module_name,
+                script,
+            ).strip() + "\n")
+        os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
+        print("Build generate script [{}] script persisted to [{}]"
+              .format(module_name, script_path))
 
 
 def write_entity_metadata(module_name, working_dir, metadata_df, topics_discovery, topics_data):
