@@ -11,7 +11,7 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/runtime:rw
       - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${SERVICE_DATA_DIR}/healthcheck.sh:/bootstrap/healthcheck.sh:ro
+      - ${SERVICE_DATA_DIR}/checkready.sh:/bootstrap/checkready.sh:ro
     devices:
       - /dev/ttyUSBTempProbe:/dev/ttyUSB0:rw
     logging:

@@ -15,7 +15,7 @@ services:
       - ${SERVICE_DATA_DIR}/.key.pem:/etc/nginx/.key.pem
       - ${SERVICE_DATA_DIR}/certificate.pem:/etc/nginx/certificate.pem
       - ${SERVICE_DATA_DIR}/html:/usr/share/nginx/html
-      - ${SERVICE_DATA_DIR}/healthcheck.sh:/asystem/etc/healthcheck.sh
+      - ${SERVICE_DATA_DIR}/checkready.sh:/asystem/etc/checkready.sh
     healthcheck:
       test: /asystem/etc/checkready.sh
       interval: 2m
