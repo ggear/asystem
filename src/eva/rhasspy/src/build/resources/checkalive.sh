@@ -1,0 +1,1 @@
+netcat -zw 1 ${RHASSPY_SERVICE} ${RHASSPY_API_PORT}
