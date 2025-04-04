@@ -1,13 +1,10 @@
-from os.path import *
-import os
 import pandas as pd
 import urllib3
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
 
-from homeassistant.generate import load_env
-from homeassistant.generate import load_entity_metadata
+from homeassistant.generate import *
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
@@ -17,6 +14,9 @@ UNIFI_CONTROLLER_URL = "https://unifi.janeandgraham.com:443"
 if __name__ == "__main__":
     env = load_env(DIR_ROOT)
     metadata_df = load_entity_metadata()
+
+    write_bootstrap()
+    write_healthcheck()
 
     metadata_groups_devices_df = metadata_df[
         (metadata_df["index"] > 0) &

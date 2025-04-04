@@ -1,8 +1,4 @@
-from os.path import *
-
-import pandas as pd
-
-from homeassistant.generate import load_entity_metadata
+from homeassistant.generate import *
 from homeassistant.generate import write_entity_metadata
 
 pd.options.mode.chained_assignment = None
@@ -11,6 +7,8 @@ DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
 
 if __name__ == "__main__":
     metadata_df = load_entity_metadata()
+
+    write_healthcheck()
 
     metadata_weewx_df = metadata_df[
         (metadata_df["index"] > 0) &
