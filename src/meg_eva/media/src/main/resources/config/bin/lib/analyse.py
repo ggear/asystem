@@ -1270,7 +1270,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
                     pl.lit("  if [ $? -eq 0 ]; then\n"),
                     pl.lit("    ${ECHO} -n 'Completed: ' && date\n"),
-                    pl.lit("    cd .. && rm -rf '"), pl.col("Transcode Script Directory"), pl.lit("'\n"),
+                    pl.lit("    cd .. && rm -rf ./._transcode_*\n"),
                     pl.lit("    asystem-media-analyse\n"),
                     pl.lit("    exit 0\n"),
                     pl.lit("  else\n"),
