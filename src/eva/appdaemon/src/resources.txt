@@ -1,2 +1,3 @@
 ../install.sh
+../install_pre.sh
 main/resources/data/appdaemon.yaml

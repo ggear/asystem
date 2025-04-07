@@ -1,4 +1,5 @@
 ../install.sh
+../install_prep.sh
 ../install_post.sh
 main/resources/image/udm-cloudflare-ddns/ddns-eth8-inadyn.conf
 

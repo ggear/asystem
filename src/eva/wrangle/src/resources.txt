@@ -1,2 +1,3 @@
 ../install.sh
+../install_dev.sh
 ../install_post.sh
