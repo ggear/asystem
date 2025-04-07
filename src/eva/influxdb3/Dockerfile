@@ -1,4 +1,4 @@
-# Notes: https://docs.influxdata.com/influxdb3/enterprise
+# Notes: https://docs.influxdata.com/influxdb3/core/release-notes
 FROM quay.io/influxdb/influxdb3-enterprise:latest AS image_upstream
 
 FROM image_upstream AS image_base
