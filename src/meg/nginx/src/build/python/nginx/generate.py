@@ -1,11 +1,6 @@
-from os.path import *
-
-import pandas as pd
 import urllib3
 
-from homeassistant.generate import load_env
-from homeassistant.generate import load_modules
-from homeassistant.generate import write_certificates
+from homeassistant.generate import *
 
 urllib3.disable_warnings()
 pd.options.mode.chained_assignment = None
@@ -16,7 +11,8 @@ if __name__ == "__main__":
     env = load_env(DIR_ROOT)
     modules = load_modules()
 
-    write_certificates("nginx", join(DIR_ROOT, "src/main/resources/data"))
+    write_healthcheck(working_dir=join(DIR_ROOT, "src/main/resources/data"))
+    write_certificates(working_dir=join(DIR_ROOT, "src/main/resources/data"))
 
     conf_path = abspath(join(DIR_ROOT, "src/main/resources/data/nginx.conf"))
     with open(conf_path, 'w') as conf_file:

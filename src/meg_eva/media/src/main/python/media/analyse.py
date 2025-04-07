@@ -1187,13 +1187,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     )
                 ).alias("Transcode Video"),
                 (
-                    pl.when(
-                        (pl.col("Audio 1 Index") == "0")
-                    ).then(
-                        pl.lit("1")
-                    ).otherwise(
-                        pl.col("Audio 1 Index")
-                    )
+                    pl.lit("1")
                 ).alias("Transcode Audio Index"),
             ]
         ).with_columns(
@@ -1407,7 +1401,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             "File Count": 0
         } for file_action in [None] + [_file_action.value for _file_action in FileAction] \
             for media_type in (None, "movies", "series")]
-        ), on=["File Action", "Media Type"], how="right", join_nulls=True) \
+        ), on=["File Action", "Media Type"], how="right", nulls_equal=True) \
         .select(["File Action", "Media Type", "File Count"]) \
         .sort(["File Action", "Media Type"], nulls_last=True) \
         .fill_null(0)
