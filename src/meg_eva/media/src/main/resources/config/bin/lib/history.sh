@@ -7,7 +7,12 @@ umount -fq /media/usbdrive
 # Renaming
 rename -v 's/X/Y/' ./*.mkv
 rename -v 's/(.*)[sS]([0-9][0-9])[eE]([0-9][0-9])\..*\.mkv/$1s$2e$3.mkv/' ./*.mkv
-find . -name *TRANS*mkv -exec rename -v 's/__TRANSCODE_MID//' "{}" \;
+find . -name "*TRANS*mkv" -exec rename -vf 's/__TRANSCODE_MID//' "{}" \;
+find . -name "*TRANS*mkv" -exec rename -vf 's/__TRANSCODE_MIN//' "{}" \;
+
+# Merge
+asystem-media-analyse && open *__TRANS*mkv
+rename -vf 's/__TRANSCODE_MID//' "{}" && asystem-media-analyse
 
 # Extract RAR files
 ROOT_DIR=$PWD
