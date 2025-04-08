@@ -1372,6 +1372,27 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                    ) |
                                    (pl.col("File Action").str.ends_with(script.title()))
                                ).select(script_metadata).rows())
+        script_analyse_path = _localise_path(os.path.join(file_path_scripts, "analyse.sh"), file_path_root)
+        with open(script_analyse_path, 'w') as script_analyse_file:
+            script_analyse_file.write("""
+# !/bin/bash
+
+ROOT_DIR=$(dirname "$(readlink -f "$0")")
+
+if [ $(uname) == "Darwin" ]; then
+  for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../../..)" | tr "_" "\n"); do
+    HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
+    LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
+    ANALYSE='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-analyse'
+    if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
+        ssh "root@${HOST}" "${ANALYSE}"
+    fi
+  done
+else
+  cd "${ROOT_DIR}/../../media" && asystem-media-analyse
+fi
+        """.strip() + "\n")
+        _set_permissions(script_analyse_path, 0o750)
         os.sync()
         if verbose:
             print("done", flush=True)
