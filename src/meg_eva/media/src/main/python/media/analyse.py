@@ -109,12 +109,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     file_path_root_target = file_path_root if file_path_root_is_nested else file_path_media
     file_path_root_target_relative = file_path_root_target.replace(file_path_media, ".")
 
+    file_path_media_is_nested = file_path_media != file_path_root_target
 
 
     print("")
     print(file_path_root)
     print(file_path_media)
     print(file_path_root_target)
+    print(not file_path_media_is_nested)
     print("")
 
 
