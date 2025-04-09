@@ -1375,10 +1375,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                    (pl.col("File Action").str.ends_with(script.title()))
                                ).select(script_metadata).rows())
         script_analyse_path = _localise_path(os.path.join(file_path_scripts, "analyse.sh"), file_path_root)
-        if verbose:
-            print("#enriched-dataframe -> {} ... ".format(script_analyse_path), end='', flush=True)
-        with open(script_analyse_path, 'w') as script_analyse_file:
-            script_analyse_file.write("""
+        if not file_path_root_is_nested:
+            if verbose:
+                print("#enriched-dataframe -> {} ... ".format(script_analyse_path), end='', flush=True)
+            with open(script_analyse_path, 'w') as script_analyse_file:
+                script_analyse_file.write("""
 # !/bin/bash
 
 ROOT_DIR=$(dirname "$(readlink -f "$0")")
@@ -1395,10 +1396,10 @@ if [ $(uname) == "Darwin" ]; then
 else
   cd "${ROOT_DIR}/../../media" && asystem-media-analyse
 fi
-        """.strip() + "\n")
-        _set_permissions(script_analyse_path, 0o750)
-        if verbose:
-            print("done", flush=True)
+            """.strip() + "\n")
+            _set_permissions(script_analyse_path, 0o750)
+            if verbose:
+                print("done", flush=True)
         os.sync()
     if metadata_merged_pl.height == 0:
         metadata_merged_pl = pl.DataFrame(schema={
