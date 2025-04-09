@@ -1376,9 +1376,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                ).select(script_metadata).rows())
         script_analyse_path = _localise_path(os.path.join(file_path_scripts, "analyse.sh"), file_path_root)
 
+
+
+        print("")
         print(file_path_root)
         print(file_path_root_parent)
         print(file_path_root_is_nested)
+        print("")
+
+
 
         if not file_path_root_is_nested:
             if verbose:
