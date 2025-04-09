@@ -17,6 +17,7 @@ import polars as pl
 import polars.selectors as cs
 import yaml
 from ffmpeg._run import Error
+from gitdb.util import basename
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
@@ -112,6 +113,18 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         return -4, get_file_actions_dict()
     file_path_root_target = file_path_root if file_path_root_is_nested else file_path_media
     file_path_root_target_relative = file_path_root_target.replace(file_path_media, ".")
+
+
+
+    print("")
+    print(file_path_root)
+    print(file_path_media)
+    print(file_path_root_target)
+    print("")
+
+
+
+
     file_path_scripts = os.path.join(file_path_root_parent, "tmp", "scripts")
     if not os.path.isdir(file_path_scripts):
         os.makedirs(file_path_scripts, exist_ok=True)
@@ -1375,18 +1388,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                    (pl.col("File Action").str.ends_with(script.title()))
                                ).select(script_metadata).rows())
         script_analyse_path = _localise_path(os.path.join(file_path_scripts, "analyse.sh"), file_path_root)
-
-
-
-        print("")
-        print(file_path_root)
-        print(file_path_root_parent)
-        print(file_path_media)
-        print(file_path_root_is_nested)
-        print("")
-
-
-
         if not file_path_root_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(script_analyse_path), end='', flush=True)
