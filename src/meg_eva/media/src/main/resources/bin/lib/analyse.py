@@ -1375,6 +1375,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                    (pl.col("File Action").str.ends_with(script.title()))
                                ).select(script_metadata).rows())
         script_analyse_path = _localise_path(os.path.join(file_path_scripts, "analyse.sh"), file_path_root)
+
+        print(file_path_root)
+        print(file_path_root_parent)
+        print(file_path_root_is_nested)
+
         if not file_path_root_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(script_analyse_path), end='', flush=True)
