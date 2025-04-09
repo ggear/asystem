@@ -56,15 +56,21 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "35/media"),
                                   files_action_expected=actions(rename=2, delete=1, merge=1, nothing=2))
 
-    # def test_analyse_rename(self):
-    #     dir_test = self._test_prepare_dir("share_media_example", 1)
-    #     self._test_analyse_assert(join(dir_test, "37/media"),
-    #                               files_action_expected=actions(rename=47, merge=5, nothing=11), scripts={"rename"})
-    #     self._test_analyse_assert(join(dir_test, "37/media"),
-    #                               files_action_expected=actions(rename=19, delete=8, merge=5, upscale=10, nothing=21), scripts={"rename"})
-    #     self._test_analyse_assert(join(dir_test, "37/media"),
-    #                               files_action_expected=actions(rename=19, delete=8, merge=5, upscale=10, nothing=21), scripts={"rename"})
-    #
+    def test_analyse_rename(self):
+        dir_test = self._test_prepare_dir("share_media_example", 1)
+        self._test_analyse_assert(join(dir_test, "37/media"),
+                                  files_action_expected=actions(rename=47, merge=5, nothing=11), scripts={"rename"})
+        self._test_analyse_assert(join(dir_test, "37/media"),
+                                  files_action_expected=actions(rename=19, delete=8, merge=5, upscale=10, nothing=21), scripts={"rename"})
+        self._test_analyse_assert(join(dir_test, "37/media"),
+                                  files_action_expected=actions(rename=19, delete=8, merge=5, upscale=10, nothing=21), scripts={"rename"})
+
+    def test_analyse_merge(self):
+        dir_test = self._test_prepare_dir("share_media_example", 1)
+        self._test_analyse_assert(join(dir_test, "41/media"),
+                                  files_action_expected=actions(rename=0, delete=2, merge=5, upscale=4), scripts={"merge"})
+
+    # TODO: Enable as implementation provided
     # def test_analyse_reformat(self):
     #     dir_test = self._test_prepare_dir("share_media_example", 1)
     #     self._test_analyse_assert(join(dir_test, "37/media"),

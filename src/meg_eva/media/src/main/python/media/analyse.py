@@ -1318,6 +1318,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("fi\n"),
                     pl.lit("${ECHO} '' && exit 0\n"),
                 ]).alias("Rename Script Source"),
+                pl.concat_str([
+                    pl.lit("#!/bin/bash\n\n"),
+                    pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  ${ECHO} 'Killing Rename!!!!'\n")),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("${ECHO} \"Renaming: "), pl.col("File Name"), pl.lit(" ... \"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("${ECHO} '' && exit 0\n"),
+                ]).alias("Merge Script Source"),
             ]
         ).sort("Action Index")
 
@@ -1336,8 +1345,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 for script_local_row in _script_local_rows:
                     if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
                         if not file_path_media_is_nested:
-                            script_global_file.write("\"${{ROOT_DIR}}/../../../..{}\"\n".format(
-                                script_local_row[0].replace("$", "\\$").replace("\"", "\\\"")))
+                            script_exec_path = script_local_row[0].replace("$", "\\$").replace("\"", "\\\"")
+                            script_global_file.write("[[ -f \"${{ROOT_DIR}}/../../../..{}\" ]] && \"${{ROOT_DIR}}/../../../..{}\"\n"
+                                                     .format(script_exec_path, script_exec_path))
                         script_local_dir = _localise_path(script_local_row[1], file_path_root)
                         os.makedirs(script_local_dir, exist_ok=True)
                         _set_permissions(script_local_dir, 0o750)

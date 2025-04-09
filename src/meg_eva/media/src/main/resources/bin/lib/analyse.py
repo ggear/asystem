@@ -1322,6 +1322,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("fi\n"),
                     pl.lit("${ECHO} '' && exit 0\n"),
                 ]).alias("Rename Script Source"),
+                pl.concat_str([
+                    pl.lit("#!/bin/bash\n\n"),
+                    pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  ${ECHO} 'Killing Rename!!!!'\n")),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("${ECHO} \"Renaming: "), pl.col("File Name"), pl.lit(" ... \"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("${ECHO} '' && exit 0\n"),
+                ]).alias("Merge Script Source"),
             ]
         ).sort("Action Index")
 
