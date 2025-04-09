@@ -112,20 +112,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         return -4, get_file_actions_dict()
     file_path_root_target = file_path_root if file_path_root_is_nested else file_path_media
     file_path_root_target_relative = file_path_root_target.replace(file_path_media, ".")
-
     file_path_media_is_nested = file_path_media != file_path_root_target
-
-
-    print("")
-    print(file_path_root)
-    print(file_path_media)
-    print(file_path_root_target)
-    print(not file_path_media_is_nested)
-    print("")
-
-
-
-
     file_path_scripts = os.path.join(file_path_root_parent, "tmp", "scripts")
     if not os.path.isdir(file_path_scripts):
         os.makedirs(file_path_scripts, exist_ok=True)
@@ -1342,7 +1329,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             script_global_file = None
             script_global_path = _localise_path(os.path.join(file_path_scripts, _script_name), file_path_root)
             try:
-                if not file_path_root_is_nested:
+                if not file_path_media_is_nested:
                     if verbose:
                         print("#enriched-dataframe -> {} ... ".format(script_global_path), end='', flush=True)
                     script_global_file = open(script_global_path, 'w')
@@ -1352,7 +1339,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     script_global_file.write("${ECHO} ''\n")
                 for script_local_row in _script_local_rows:
                     if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
-                        if not file_path_root_is_nested:
+                        if not file_path_media_is_nested:
                             script_global_file.write("\"${{ROOT_DIR}}/../../../..{}\"\n".format(
                                 script_local_row[0].replace("$", "\\$").replace("\"", "\\\"")))
                         script_local_dir = _localise_path(script_local_row[1], file_path_root)
@@ -1364,10 +1351,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             script_local_file.flush()
                         _set_permissions(script_local_path, 0o750)
             finally:
-                if not file_path_root_is_nested and script_global_file is not None:
+                if not file_path_media_is_nested and script_global_file is not None:
                     script_global_file.flush()
                     script_global_file.close()
-            if not file_path_root_is_nested:
+            if not file_path_media_is_nested:
                 _set_permissions(script_global_path, 0o750)
                 if verbose:
                     print("done", flush=True)
@@ -1389,7 +1376,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                    (pl.col("File Action").str.ends_with(script.title()))
                                ).select(script_metadata).rows())
         script_analyse_path = _localise_path(os.path.join(file_path_scripts, "analyse.sh"), file_path_root)
-        if not file_path_root_is_nested:
+        if not file_path_media_is_nested:
             if verbose:
                 print("#enriched-dataframe -> {} ... ".format(script_analyse_path), end='', flush=True)
             with open(script_analyse_path, 'w') as script_analyse_file:
