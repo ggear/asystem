@@ -1377,6 +1377,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         print("")
         print(file_path_root)
         print(file_path_root_parent)
+        print(file_path_media)
         print(file_path_root_is_nested)
         print("")
 
