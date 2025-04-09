@@ -1355,6 +1355,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     script_global_file.close()
             if not file_path_root_is_nested:
                 _set_permissions(script_global_path, 0o750)
+                if verbose:
+                    print("#global-script -> {} ... ".format(script_global_path), end='', flush=True)
 
         for script in MEDIA_FILE_SCRIPTS:
             script_metadata = [
@@ -1393,6 +1395,8 @@ else
 fi
         """.strip() + "\n")
         _set_permissions(script_analyse_path, 0o750)
+        if verbose:
+            print("#global-script -> {} ... ".format(script_analyse_path), end='', flush=True)
         os.sync()
         if verbose:
             print("done", flush=True)
