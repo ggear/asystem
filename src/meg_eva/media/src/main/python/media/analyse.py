@@ -1060,8 +1060,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     if verbose:
         print("done", flush=True)
     if metadata_merged_pl.height > 0:
-        if verbose:
-            print("#enriched-dataframe -> {}/*.sh ... ".format(file_path_root_target_relative), end='', flush=True)
         metadata_scripts_pl = metadata_merged_pl.filter(
             (pl.col("Media Directory").is_in(metadata_local_media_dirs))
         ).with_columns(
@@ -1327,6 +1325,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             script_global_path = _localise_path(os.path.join(file_path_scripts, _script_name), file_path_root)
             try:
                 if not file_path_root_is_nested:
+                    if verbose:
+                        print("#enriched-dataframe -> {} ... ".format(script_global_path), end='', flush=True)
                     script_global_file = open(script_global_path, 'w')
                     script_global_file.write("# !/bin/bash\n\n")
                     script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
@@ -1352,7 +1352,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             if not file_path_root_is_nested:
                 _set_permissions(script_global_path, 0o750)
                 if verbose:
-                    print("#global-script -> {} ... ".format(script_global_path), end='', flush=True)
+                    print("done", flush=True)
 
         for script in MEDIA_FILE_SCRIPTS:
             script_metadata = [
@@ -1371,6 +1371,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                    (pl.col("File Action").str.ends_with(script.title()))
                                ).select(script_metadata).rows())
         script_analyse_path = _localise_path(os.path.join(file_path_scripts, "analyse.sh"), file_path_root)
+        if verbose:
+            print("#enriched-dataframe -> {} ... ".format(script_analyse_path), end='', flush=True)
         with open(script_analyse_path, 'w') as script_analyse_file:
             script_analyse_file.write("""
 # !/bin/bash
@@ -1392,10 +1394,8 @@ fi
         """.strip() + "\n")
         _set_permissions(script_analyse_path, 0o750)
         if verbose:
-            print("#global-script -> {} ... ".format(script_analyse_path), end='', flush=True)
-        os.sync()
-        if verbose:
             print("done", flush=True)
+        os.sync()
     if metadata_merged_pl.height == 0:
         metadata_merged_pl = pl.DataFrame(schema={
             "File Name": pl.String,
