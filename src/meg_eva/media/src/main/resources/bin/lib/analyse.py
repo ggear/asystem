@@ -17,7 +17,6 @@ import polars as pl
 import polars.selectors as cs
 import yaml
 from ffmpeg._run import Error
-from gitdb.util import basename
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
