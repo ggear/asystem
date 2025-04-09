@@ -729,8 +729,6 @@ def _release(context):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
                            .format(ssh_pass, host, install, install))
-                # _run_local(context, "{}scp -qprO $(find target/release -maxdepth 1 -type f) root@{}:{}"
-                #            .format(ssh_pass, host, install), module)
                 _run_local(context, "{}scp -qpr target/release/.  root@{}:{}"
                            .format(ssh_pass, host, install), module)
                 print("Installing release to {} ... ".format(host))
