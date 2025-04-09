@@ -666,7 +666,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     if metadata_local_pl.width > 0:
         metadata_local_media_dirs = [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
     if verbose:
-        print("#local-dataframe partition '{}' ... done".format(metadata_local_media_dirs), flush=True)
+        print("#local-dataframe partition {} ... done".format(metadata_local_media_dirs), flush=True)
     if file_path_root_is_nested:
         metadata_merged_pl = metadata_local_pl
     else:
@@ -1328,7 +1328,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             script_global_file = None
             script_global_path = _localise_path(os.path.join(file_path_scripts, _script_name), file_path_root)
             try:
-                if not file_path_root_is_nested:
+
+
+                # if not file_path_root_is_nested:
+                if True:
+
+
+
                     if verbose:
                         print("#enriched-dataframe -> {} ... ".format(script_global_path), end='', flush=True)
                     script_global_file = open(script_global_path, 'w')
@@ -1350,10 +1356,19 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             script_local_file.flush()
                         _set_permissions(script_local_path, 0o750)
             finally:
-                if not file_path_root_is_nested and script_global_file is not None:
+
+
+                # if not file_path_root_is_nested and script_global_file is not None:
+                if script_global_file is not None:
+
+
                     script_global_file.flush()
                     script_global_file.close()
-            if not file_path_root_is_nested:
+
+
+            # if not file_path_root_is_nested:
+            if True:
+
                 _set_permissions(script_global_path, 0o750)
                 if verbose:
                     print("done", flush=True)
