@@ -1324,13 +1324,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             script_global_file = None
             script_global_path = _localise_path(os.path.join(file_path_scripts, _script_name), file_path_root)
             try:
-                if verbose:
-                    print("#enriched-dataframe -> {} ... ".format(script_global_path), end='', flush=True)
-                script_global_file = open(script_global_path, 'w')
-                script_global_file.write("# !/bin/bash\n\n")
-                script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
-                script_global_file.write(BASH_EXIT_HANDLER.format(""))
-                script_global_file.write("${ECHO} ''\n")
+                if not file_path_root_is_nested:
+                    if verbose:
+                        print("#enriched-dataframe -> {} ... ".format(script_global_path), end='', flush=True)
+                    script_global_file = open(script_global_path, 'w')
+                    script_global_file.write("# !/bin/bash\n\n")
+                    script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
+                    script_global_file.write(BASH_EXIT_HANDLER.format(""))
+                    script_global_file.write("${ECHO} ''\n")
                 for script_local_row in _script_local_rows:
                     if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
                         if not file_path_root_is_nested:
@@ -1345,12 +1346,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             script_local_file.flush()
                         _set_permissions(script_local_path, 0o750)
             finally:
-                if script_global_file is not None:
+                if not file_path_root_is_nested and script_global_file is not None:
                     script_global_file.flush()
                     script_global_file.close()
-            _set_permissions(script_global_path, 0o750)
-            if verbose:
-                print("done", flush=True)
+            if not file_path_root_is_nested:
+                _set_permissions(script_global_path, 0o750)
+                if verbose:
+                    print("done", flush=True)
 
         for script in MEDIA_FILE_SCRIPTS:
             script_metadata = [
@@ -1378,8 +1380,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 if [ $(uname) == "Darwin" ]; then
-  for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../../..)" | tr "_" "\n"); do
-    HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
+  for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\n"); do
+    HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
     LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
     ANALYSE='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-analyse'
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
