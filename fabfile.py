@@ -716,7 +716,7 @@ def _release(context):
                     _run_local(context, "docker image save {}:{} | pigz -9 > {}"
                                .format(_name(module), _get_versions()[0], file_image), join(module, "target/release"))
                 if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/main/resources/*")):
-                    _run_local(context, "cp -rvfp target/package/main/resources/* target/release", module)
+                    _run_local(context, "cp -rvfp target/package/main/resources/.* target/package/main/resources/* target/release", module)
                 _run_local(context, "mkdir -p target/release/data", module)
                 _run_local(context, "mkdir -p target/release/image", module)
                 Path(join(ROOT_MODULE_DIR, module, "target/release/hosts")) \
