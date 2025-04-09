@@ -54,16 +54,16 @@ if [ ! -d /root/.pyenv/versions/${PYTHON_VERSION}/bin ]; then
   pyenv install "${PYTHON_VERSION}"
 fi
 "/root/.pyenv/versions/${PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 --upgrade pip
-"/root/.pyenv/versions/${PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 -r config/.reqs.txt
+"/root/.pyenv/versions/${PYTHON_VERSION}/bin/pip" install --root-user-action ignore --default-timeout=1000 -r .reqs.txt
 
-cp -rvf /var/lib/asystem/install/media/latest/config/bin/lib/other-transcode.rb /usr/local/bin/other-transcode
+cp -rvf /var/lib/asystem/install/media/latest/bin/lib/other-transcode.rb /usr/local/bin/other-transcode
 chmod +x /usr/local/bin/other-transcode
 
 mkdir -p /root/.config
-cp -rvf /var/lib/asystem/install/media/latest/config/.gspread_pandas /root/.config/gspread_pandas
+cp -rvf /var/lib/asystem/install/media/latest/.gspread_pandas /root/.config/gspread_pandas
 
-chmod +x config/bin/*.sh config/bin/lib/*.sh
-for SCRIPT in /var/lib/asystem/install/media/latest/config/bin/*.sh; do
+chmod +x bin/*.sh bin/lib/*.sh
+for SCRIPT in /var/lib/asystem/install/media/latest/bin/*.sh; do
   rm -rf /usr/local/bin/asystem-$(basename "${SCRIPT}" .sh)
   ln -vs "${SCRIPT}" /usr/local/bin/asystem-$(basename "${SCRIPT}" .sh)
 done

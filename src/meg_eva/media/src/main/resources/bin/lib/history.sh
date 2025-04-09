@@ -11,8 +11,8 @@ find . -name "*TRANS*mkv" -exec rename -vf 's/__TRANSCODE_MID//' "{}" \;
 find . -name "*TRANS*mkv" -exec rename -vf 's/__TRANSCODE_MIN//' "{}" \;
 
 # Merge
-asystem-media-analyse && open *__TRANS*mkv
-rename -vf 's/__TRANSCODE_MID//' "{}" && asystem-media-analyse
+open *__TRANS*mkv
+rename -vf 's/__TRANSCODE_MID//' *__TRANS*mkv
 
 # Extract RAR files
 ROOT_DIR=$PWD

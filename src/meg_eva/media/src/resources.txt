@@ -1,2 +1,2 @@
 ../install.sh
-main/resources/config/bin/.env_media
+main/resources/bin/.env_media
