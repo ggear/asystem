@@ -1443,7 +1443,7 @@ if [ $(uname) == "Darwin" ]; then
     LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
     COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-analyse'
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
-        LOG=$(ssh "root@${HOST}" "${COMMAND}" | tee /dev/tty)
+        LOG=$(ssh "root@${HOST}" "${COMMAND}" | tee /dev/tty | grep -E "1. Rename|2. Delete|3. Merge" | grep "/share")
     fi
   done
 else
@@ -1454,7 +1454,7 @@ fi
 declare -A MERGE_DIRS
 readarray -t LOG_LINES <<<"$LOG"
 for LOG_LINE in "${LOG_LINES[@]}"; do
-  MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | grep Transcoded | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
+  MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
   if [ -n "${MERGE_DIR}" ]; then
     MERGE_DIRS["${MERGE_DIR}"]=1
   fi
