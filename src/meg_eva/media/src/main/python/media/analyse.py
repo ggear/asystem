@@ -1334,7 +1334,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  ORIGINAL=\"$(find \"${ROOT_DIR}/..\" -name \""), pl.col("File Stem"), pl.lit("\\.*\")\"\n"),
                     pl.lit("  TRANSCODED=\"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
                     pl.lit("  if [ -f \"${ORIGINAL}\" ] && [ -f \"${TRANSCODED}\" ]; then\n"),
-                    pl.lit("    echo '' && mv -f \"${TRANSCODED}\""), pl.lit(" "), pl.lit("\"${ORIGINAL}\"\n"),
+
+
+                    pl.lit("    #echo '' && mv -f \"${TRANSCODED}\""), pl.lit(" "), pl.lit("\"${ORIGINAL}\"\n"),
+                    pl.lit("    echo !!!!!No-OP!!!!\n"),
+
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
                     pl.lit("      echo \"./$(basename \"${TRANSCODED}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIGINAL}\")\"\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
