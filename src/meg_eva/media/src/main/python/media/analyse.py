@@ -1440,13 +1440,13 @@ if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
     LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
-    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && find "$PWD" -name "*__TRANSCODE_*mkv" -type f -exec echo \\''"${SHARE_ROOT}"'/{}\\' \\;'
+    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-merge'
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
         ssh "root@${HOST}" "${COMMAND}"
     fi
   done
 else
-  cd "${ROOT_DIR}/../../media" && find "$PWD" -name "*__TRANSCODE_*mkv" -type f -exec echo \'{}\' \\;
+  cd "${ROOT_DIR}/../../media" && asystem-media-merge
 fi
                 """
             }.items():
