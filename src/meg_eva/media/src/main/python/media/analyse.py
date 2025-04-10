@@ -30,7 +30,7 @@ MEDIA_YEAR_NUMBER_REGEXP = r"\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
 MEDIA_SEASON_NUMBER_REGEXP = r"Season ([0-9]?[0-9]+)"
 MEDIA_EPISODE_NUMBER_REGEXP = r".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
 MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
-MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv"}
+MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv", "ts"}
 MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode", "downscale", "merge"}
 
 TOKEN_TRANSCODE = "__TRANSCODE"

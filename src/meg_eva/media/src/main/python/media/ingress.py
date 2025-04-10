@@ -18,7 +18,7 @@ def _process(file_path_root, verbose=False):
     for file_source in ["usbdrive", "usenet/finished", "finished"]:
         file_path_source = Path(os.path.join(file_path_root, file_source))
         file_path_processed = Path(file_path_source, "__RENAMED")
-        for file_type in ["mkv", "mp4", "avi", "m2ts"]:
+        for file_type in ["mkv", "mp4", "avi", "m2ts", "ts"]:
             for file_path in Path(os.path.join(file_path_root, file_source)).rglob("*." + file_type):
                 file_to_be_renamed = False
                 file_path_source_relative = file_path.as_posix().replace(os.path.join(file_path_root, file_source) + "/", "")

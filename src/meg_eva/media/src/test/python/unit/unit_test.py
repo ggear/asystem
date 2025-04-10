@@ -32,6 +32,11 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "22/media"),
                                   files_action_expected=actions(delete=1), scripts={})
 
+    def test_analyse_containers(self):
+        dir_test = self._test_prepare_dir("share_media_example", 1)
+        self._test_analyse_assert(join(dir_test, "43/media"),
+                                  files_action_expected=actions(delete=2), scripts={})
+
     def test_analyse_corrupt(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "32/media"),
