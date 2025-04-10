@@ -72,8 +72,10 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_merge(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
+        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=13,
+                                  files_action_expected=actions(rename=0, delete=3, merge=5, upscale=5), scripts={"merge"})
         self._test_analyse_assert(join(dir_test, "41/media"),
-                                  files_action_expected=actions(rename=0, delete=2, merge=5, upscale=4), scripts={"merge"})
+                                  files_action_expected=actions(rename=0, delete=3, merge=4, upscale=5), scripts={"merge"})
 
     # TODO: Enable as implementation provided
     # def test_analyse_reformat(self):
@@ -145,7 +147,7 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(abspath(join(dir_test, "19/tmp")), files_expected=-3, files_action_expected=actions())
         self._test_analyse_assert(join(dir_test, "10/tmp"), files_expected=-4, files_action_expected=actions())
 
-    def _test_analyse_assert(self, dir_test, files_expected=None, files_action_expected=None,
+    def _test_analyse_assert(self, dir_test, files_expected=None, files_expected_scripts=None, files_action_expected=None,
                              asserts=True, scripts=MEDIA_FILE_SCRIPTS, extensions=MEDIA_FILE_EXTENSIONS, clean=False):
 
         def _file_count():
@@ -183,7 +185,8 @@ class InternetTest(unittest.TestCase):
                             sys.stderr.flush()
                             self.assertEqual(0, script_return)
                             print("\n\nRan {} with return code [{}]".format(script_path, script_return), flush=True)
-                self.assertGreaterEqual(_file_count(), file_count)
+                if asserts:
+                    self.assertGreaterEqual(_file_count() if files_expected_scripts is None else files_expected_scripts, file_count)
 
     def test_ingress_comprehensive_1(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 1)
