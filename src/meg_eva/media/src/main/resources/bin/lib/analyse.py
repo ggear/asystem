@@ -1334,22 +1334,24 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Merging: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local"), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
-
                     pl.lit("if [ $(find \"${ROOT_DIR}/..\" -name \""), pl.col("File Stem"), pl.lit("*\" | wc -l) -eq 2 ]; then\n"),
                     pl.lit("  ORIGINAL=\"$(find \"${ROOT_DIR}/..\" -name \""), pl.col("File Stem"), pl.lit("\\.*\")\"\n"),
                     pl.lit("  TRANSCODED=\"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
-                    pl.lit("  echo '' && mv -f \"${TRANSCODED}\""), pl.lit(" "), pl.lit("\"${ORIGINAL}\"\n"),
-                    pl.lit("  if [ $? -eq 0 ]; then\n"),
-                    pl.lit("    echo \"./$(basename \"${TRANSCODED}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIGINAL}\")\"\n"),
-                    pl.lit("    echo '' && echo -n 'Completed: ' && date && exit 0\n"),
+                    pl.lit("  if [ -f \"${ORIGINAL}\" ] && [ -f \"${TRANSCODED}\" ]; then\n"),
+                    pl.lit("    echo '' && mv -f \"${TRANSCODED}\""), pl.lit(" "), pl.lit("\"${ORIGINAL}\"\n"),
+                    pl.lit("    if [ $? -eq 0 ]; then\n"),
+                    pl.lit("      echo \"./$(basename \"${TRANSCODED}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIGINAL}\")\"\n"),
+                    pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
+                    pl.lit("    else\n"),
+                    pl.lit("      echo '' && echo -n 'Failed (mv): ' && date && exit 1\n"),
+                    pl.lit("    fi\n"),
                     pl.lit("  else\n"),
-                    pl.lit("    echo '' && echo -n 'Failed (mv): ' && date && exit 1\n"),
+                    pl.lit("    echo '' && echo -n 'Skipped (missing-files): ' && date && exit 0\n"),
                     pl.lit("  fi\n"),
                     pl.lit("else\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (duplicate-files): ' && date && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("echo '' && echo -n 'Failed: ' && date && exit 2\n"),
-
                 ]).alias("Merge Script Source"),
             ]
         ).sort("Action Index")
@@ -1405,7 +1407,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                    ) |
                                    (pl.col("File Action").str.ends_with(script.title()))
                                ).select(script_metadata).rows())
-
         if not file_path_media_is_nested:
             for script_name, script_source in {
                 "analyse": """
@@ -1413,13 +1414,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
 
 ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
+. $(asystem-media-home)/.env_media
+
 if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
     LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
-    ANALYSE='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-analyse'
+    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-analyse'
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
-        ssh "root@${HOST}" "${ANALYSE}"
+        ssh "root@${HOST}" "${COMMAND}"
     fi
   done
 else
@@ -1431,17 +1434,19 @@ fi
 
 ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
+. $(asystem-media-home)/.env_media
+
 if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
     LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
-    ANALYSE='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && echo "MERGE!"'
+    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && find "$PWD" -name "*__TRANSCODE_*mkv" -type f -exec echo \\''"${SHARE_ROOT}"'/{}\\' \;'
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
-        ssh "root@${HOST}" "${ANALYSE}"
+        ssh "root@${HOST}" "${COMMAND}"
     fi
   done
 else
-  cd "${ROOT_DIR}/../../media" && echo "MERGE!"
+  cd "${ROOT_DIR}/../../media" && find "$PWD" -name "*__TRANSCODE_*mkv" -type f -exec echo \'{}\' \;
 fi
                 """
             }.items():
