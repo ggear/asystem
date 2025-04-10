@@ -1450,7 +1450,7 @@ fi
 declare -A MERGE_DIRS
 readarray -t LOG_LINES <<<"$LOG"
 for LOG_LINE in "${LOG_LINES[@]}"; do
-  MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | grep Transcoded | cut -d'|' -f11 | xargs | sed -e "s/^\/share//")
+  MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | grep Transcoded | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
   if [ -n "${MERGE_DIR}" ]; then
     MERGE_DIRS["${MERGE_DIR}"]=1
   fi
