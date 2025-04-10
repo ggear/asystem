@@ -1246,7 +1246,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ).with_columns(
             [
                 pl.concat_str([
-                    pl.lit("#!/bin/bash\n\n"),
+                    pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
@@ -1283,7 +1283,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("echo '' && exit -1\n"),
                 ]).alias("Transcode Script Source"),
                 pl.concat_str([
-                    pl.lit("#!/bin/bash\n\n"),
+                    pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
@@ -1328,7 +1328,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("echo '' && exit 0\n"),
                 ]).alias("Rename Script Source"),
                 pl.concat_str([
-                    pl.lit("#!/bin/bash\n\n"),
+                    pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
@@ -1364,7 +1364,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     if verbose:
                         print("#enriched-dataframe -> {} ... ".format(script_global_path), end='', flush=True)
                     script_global_file = open(script_global_path, 'w')
-                    script_global_file.write("# !/bin/bash\n\n")
+                    script_global_file.write("#!/usr/bin/env bash\n\n")
                     script_global_file.write("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n")
                     script_global_file.write(BASH_EXIT_HANDLER.format(""))
                     script_global_file.write("echo ''\n")
@@ -1410,7 +1410,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         if not file_path_media_is_nested:
             for script_name, script_source in {
                 "analyse": """
-# !/bin/bash
+#!/usr/bin/env bash
 
 ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
@@ -1430,24 +1430,45 @@ else
 fi
                 """,
                 "merge": """
-# !/bin/bash
+#!/usr/bin/env bash
 
 ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
+LOG=""
 if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
     LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
-    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-analyse | grep "3. Merge" | grep Transcoded | tr -s ' ' | cut -d'|' -f11'
+    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-analyse'
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
-        ssh "root@${HOST}" "${COMMAND}"
+        LOG=$(ssh "root@${HOST}" "${COMMAND}" | tee /dev/tty)
     fi
   done
 else
-  cd "${ROOT_DIR}/../../media" && asystem-media-analyse | grep "3. Merge" | grep Transcoded | tr -s ' ' | cut -d'|' -f11
+  cd "${ROOT_DIR}/../../media"
+  LOG=$(asystem-media-analyse | tee /dev/tty)
 fi
+
+declare -A MERGE_DIRS
+readarray -t LOG_LINES <<<"$LOG"
+for LOG_LINE in "${LOG_LINES[@]}"; do
+  MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | grep Transcoded | cut -d'|' -f11 | xargs | sed -e "s/^\/share//")
+  if [ -n "${MERGE_DIR}" ]; then
+    MERGE_DIRS["${MERGE_DIR}"]=1
+  fi
+done
+declare -a MERGE_DIRS_SORTED=()
+for MERGE_DIR in "${!MERGE_DIRS[@]}"; do
+  # echo "'${SHARE_ROOT}${MERGE_DIR}'"
+  MERGE_DIRS_SORTED+=("'${SHARE_ROOT}${MERGE_DIR}'")
+done
+IFS=$'\\n' MERGE_DIRS_SORTED=($(sort <<<"${MERGE_DIRS_SORTED[*]}"))
+unset IFS
+for MERGE_DIR in "${MERGE_DIRS_SORTED[@]}"; do
+   echo "${MERGE_DIR}"
+done
                 """
             }.items():
                 script_path = _localise_path(os.path.join(file_path_scripts, "{}.sh".format(script_name)), file_path_root)
