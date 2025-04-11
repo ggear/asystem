@@ -1451,7 +1451,10 @@ else
   LOG=$(asystem-media-analyse | tee /dev/tty)
 fi
 
+echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))' ... "
+
 declare -A MERGE_DIRS
+declare -a MERGE_DIRS_SORTED=()
 readarray -t LOG_LINES <<<"$LOG"
 for LOG_LINE in "${LOG_LINES[@]}"; do
   MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
@@ -1459,16 +1462,21 @@ for LOG_LINE in "${LOG_LINES[@]}"; do
     MERGE_DIRS["${MERGE_DIR}"]=1
   fi
 done
-declare -a MERGE_DIRS_SORTED=()
 for MERGE_DIR in "${!MERGE_DIRS[@]}"; do
-  # echo "'${SHARE_ROOT}${MERGE_DIR}'"
   MERGE_DIRS_SORTED+=("'${SHARE_ROOT}${MERGE_DIR}'")
 done
 IFS=$'\\n' MERGE_DIRS_SORTED=($(sort <<<"${MERGE_DIRS_SORTED[*]}"))
 unset IFS
+
+echo "done"
+echo "+----------------------------------------------------------------------------------------------------------------------------+"
+echo "| Merges to run in directory                                                                                                            |"
+echo "+============================================================================================================================+"
 for MERGE_DIR in "${MERGE_DIRS_SORTED[@]}"; do
-   echo "${MERGE_DIR}"
+   echo "| cd ${MERGE_DIR}"
 done
+echo "+============================================================================================================================+"
+echo ""
                 """
             }.items():
                 script_path = _localise_path(os.path.join(file_path_scripts, "{}.sh".format(script_name)), file_path_root)
