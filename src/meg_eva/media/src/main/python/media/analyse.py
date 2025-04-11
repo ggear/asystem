@@ -1412,26 +1412,6 @@ ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
-if [ $(uname) == "Darwin" ]; then
-  for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
-    HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
-    LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
-    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-analyse'
-    if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
-        ssh "root@${HOST}" "${COMMAND}"
-    fi
-  done
-else
-  cd "${ROOT_DIR}/../../media" && asystem-media-analyse
-fi
-                """,
-                "merge": """
-#!/usr/bin/env bash
-
-ROOT_DIR=$(dirname "$(readlink -f "$0")")
-
-. $(asystem-media-home)/.env_media
-
 LOG=""
 if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
@@ -1447,32 +1427,79 @@ else
   LOG=$(asystem-media-analyse | tee /dev/tty)
 fi
 
-echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))' ... "
-
-declare -A MERGE_DIRS
-declare -a MERGE_DIRS_SORTED=()
+echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
+declare -a RENAME_DIRS
+declare -A RENAME_DIRS_SET
+declare -a DELETE_DIRS
+declare -A DELETE_DIRS_SET
+declare -a MERGE_DIRS
+declare -A MERGE_DIRS_SET
 readarray -t LOG_LINES <<<"$LOG"
 for LOG_LINE in "${LOG_LINES[@]}"; do
+  RENAME_DIR=$(grep "1. Rename"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
+  if [ -n "${RENAME_DIR}" ]; then
+    RENAME_DIRS_SET["${RENAME_DIR}"]=1
+  fi
+  DELETE_DIR=$(grep "2. Delete"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
+  if [ -n "${DELETE_DIR}" ]; then
+    DELETE_DIRS_SET["${DELETE_DIR}"]=1
+  fi
   MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
   if [ -n "${MERGE_DIR}" ]; then
-    MERGE_DIRS["${MERGE_DIR}"]=1
+    MERGE_DIRS_SET["${MERGE_DIR}"]=1
   fi
 done
-for MERGE_DIR in "${!MERGE_DIRS[@]}"; do
-  MERGE_DIRS_SORTED+=("'${SHARE_ROOT}${MERGE_DIR}'")
+for RENAME_DIR in "${!RENAME_DIRS_SET[@]}"; do
+  RENAME_DIRS+=("'${SHARE_ROOT}${RENAME_DIR}'")
 done
-IFS=$'\\n' MERGE_DIRS_SORTED=($(sort <<<"${MERGE_DIRS_SORTED[*]}"))
+IFS=$'\\n' RENAME_DIRS=($(sort <<<"${RENAME_DIRS[*]}"))
 unset IFS
-
+for DELETE_DIR in "${!DELETE_DIRS_SET[@]}"; do
+  DELETE_DIRS+=("'${SHARE_ROOT}${DELETE_DIR}'")
+done
+IFS=$'\\n' DELETE_DIRS=($(sort <<<"${DELETE_DIRS[*]}"))
+unset IFS
+for MERGE_DIR in "${!MERGE_DIRS_SET[@]}"; do
+  MERGE_DIRS+=("'${SHARE_ROOT}${MERGE_DIR}'")
+done
+IFS=$'\\n' MERGE_DIRS=($(sort <<<"${MERGE_DIRS[*]}"))
+unset IFS
 echo "done"
+
+echo ""
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
-echo "| Merges to run in directory                                                                                                            |"
+echo "| Renames to run in directory                                                                                                 |"
 echo "+============================================================================================================================+"
-for MERGE_DIR in "${MERGE_DIRS_SORTED[@]}"; do
-   echo "| cd ${MERGE_DIR}"
+for RENAME_DIR in "${RENAME_DIRS[@]}"; do
+   echo "cd ${RENAME_DIR} # && asystem-media-merge"
 done
 echo "+============================================================================================================================+"
 echo ""
+echo "+----------------------------------------------------------------------------------------------------------------------------+"
+echo "| Deletes to run in directory                                                                                                 |"
+echo "+============================================================================================================================+"
+for DELETE_DIR in "${DELETE_DIRS[@]}"; do
+   echo "cd ${DELETE_DIR} # && asystem-media-merge"
+done
+echo "+============================================================================================================================+"
+echo ""
+echo "+----------------------------------------------------------------------------------------------------------------------------+"
+echo "| Merges to run in directory                                                                                                 |"
+echo "+============================================================================================================================+"
+for MERGE_DIR in "${MERGE_DIRS[@]}"; do
+   echo "cd ${MERGE_DIR} # && asystem-media-merge"
+done
+echo "+============================================================================================================================+"
+                """,
+                "merge": """
+#!/usr/bin/env bash
+
+ROOT_DIR=$(dirname "$(readlink -f "$0")")
+
+. $(asystem-media-home)/.env_media
+
+echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
+echo "done"
                 """
             }.items():
                 script_path = _localise_path(os.path.join(file_path_scripts, "{}.sh".format(script_name)), file_path_root)
