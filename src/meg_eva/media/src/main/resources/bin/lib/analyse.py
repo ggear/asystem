@@ -1372,8 +1372,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
                         if not file_path_media_is_nested:
                             script_exec_path = script_local_row[0].replace("$", "\\$").replace("\"", "\\\"")
-                            script_global_file.write("[[ -f \"${{ROOT_DIR}}/../../../..{}\" ]] && \"${{ROOT_DIR}}/../../../..{}\"\n"
-                                                     .format(script_exec_path, script_exec_path))
+                            script_global_file.write(
+                                "[[ -f \"${{ROOT_DIR}}/../../../..{}\" ]] && \"${{ROOT_DIR}}/../../../..{}\"\n"
+                                .format(script_exec_path, script_exec_path))
                         script_local_dir = _localise_path(script_local_row[1], file_path_root)
                         os.makedirs(script_local_dir, exist_ok=True)
                         _set_permissions(script_local_dir, 0o750)
@@ -1401,8 +1402,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 _write_scripts("{}.sh".format(script),
                                metadata_scripts_pl.filter(
                                    (
+                                           file_path_root_is_nested &
                                            (script == "reformat") &
-                                           (file_path_root_is_nested) &
                                            (pl.col("File Version") == "Original")
                                    ) |
                                    (pl.col("File Action").str.ends_with(script.title()))
@@ -1471,19 +1472,19 @@ unset IFS
 echo "done"
 
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
-echo "Renames to run in directory ...                                                                                            |"
+echo "Renames to run in directory ... "
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
 for RENAME_DIR in "${RENAME_DIRS[@]}"; do
    echo "cd ${RENAME_DIR}"
 done
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
-echo "Deletes to run in directory ...                                                                                            |"
+echo "Deletes to run in directory ... "
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
 for DELETE_DIR in "${DELETE_DIRS[@]}"; do
    echo "cd ${DELETE_DIR}"
 done
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
-echo "Merges to run in directory ...                                                                                             |"
+echo "Merges to run in directory ... "
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
 for MERGE_DIR in "${MERGE_DIRS[@]}"; do
    echo "cd ${MERGE_DIR}"
