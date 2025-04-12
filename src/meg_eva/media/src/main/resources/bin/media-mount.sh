@@ -10,7 +10,7 @@ if [ $(uname) == "Darwin" ]; then
     set -- ${_SHARE}
     mkdir -p ~/Desktop/share/${2}
     diskutil unmount force ~/Desktop/share/${2} &>/dev/null
-    mount_smbfs //GUEST:@${1}/share-${2} ~/Desktop/share/${2}
+    mount_smbfs -o nodatacache,nodatacache //GUEST:@${1}/share-${2} ~/Desktop/share/${2}
   done
 else
   IMPORT_MEDIA_DEV="/dev/"$(lsblk -ro name,label | grep GRAHAM | awk 'BEGIN{FS=OFS=" "}{print $1}')
