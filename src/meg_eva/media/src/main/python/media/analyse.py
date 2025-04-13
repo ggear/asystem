@@ -1375,10 +1375,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         os.makedirs(script_local_dir, exist_ok=True)
                         _set_permissions(script_local_dir, 0o750)
                         script_local_path = _localise_path(script_local_row[0], file_path_root)
-                        with open(script_local_path, 'w') as script_local_file:
-                            script_local_file.write(script_local_row[2])
-                            script_local_file.flush()
-                        _set_permissions(script_local_path, 0o750)
+                        try:
+                            with open(script_local_path, 'w') as script_local_file:
+                                script_local_file.write(script_local_row[2])
+                                script_local_file.flush()
+                            _set_permissions(script_local_path, 0o750)
+                        except FileNotFoundError:
+                            if verbose:
+                                print("skipping file currently transcoding")
+                                print("#enriched-dataframe -> {} ... ".format(script_global_path), end='', flush=True)
             finally:
                 if not file_path_media_is_nested and script_global_file is not None:
                     script_global_file.flush()
