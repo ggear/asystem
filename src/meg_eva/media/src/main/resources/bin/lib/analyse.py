@@ -1008,9 +1008,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Version") == "Transcoded")
                 ).then(pl.lit(FileAction.MERGE.value))
                 .when(
-                    (pl.col("Metadata State") == "Messy")
-                ).then(pl.lit(FileAction.REFORMAT.value))
-                .when(
                     (
                             (pl.col("File Version") != "Merged") &
                             (pl.col("File Version") != "Ignored")
@@ -1022,6 +1019,18 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     )
                 ).then(pl.lit(FileAction.TRANSCODE.value))
                 .when(
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit(FileAction.REFORMAT.value))
+                .when(
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit(FileAction.REFORMAT.value))
+                .when(
+                    (pl.col("File Version") != "Merged") &
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("File Size") == "Large") &
+                    (pl.col("Video 1 Colour") == "SDR")
+                ).then(pl.lit(FileAction.DOWNSCALE.value))
+                .when(
                     (
                             (pl.col("File Version") != "Merged") &
                             (pl.col("File Version") != "Ignored") &
@@ -1031,12 +1040,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
                     )
                 ).then(pl.lit(FileAction.UPSCALE.value))
-                .when(
-                    (pl.col("File Version") != "Merged") &
-                    (pl.col("File Version") != "Ignored") &
-                    (pl.col("File Size") == "Large") &
-                    (pl.col("Video 1 Colour") == "SDR")
-                ).then(pl.lit(FileAction.DOWNSCALE.value))
                 .otherwise(pl.lit(FileAction.NOTHING.value))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
