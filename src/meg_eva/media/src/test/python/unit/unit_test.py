@@ -72,10 +72,10 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_merge(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=17,
-                                  files_action_expected=actions(rename=0, delete=3, merge=7, upscale=7), scripts={"merge"})
+        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=20,
+                                  files_action_expected=actions(rename=0, delete=3, merge=9, upscale=8), scripts={"merge"})
         self._test_analyse_assert(join(dir_test, "41/media"),
-                                  files_action_expected=actions(rename=0, delete=3, merge=4, upscale=7), scripts={"merge"})
+                                  files_action_expected=actions(rename=0, delete=3, merge=6, upscale=8), scripts={"merge"})
 
     # TODO: Enable as implementation provided
     # def test_analyse_transcode(self):
