@@ -1,5 +1,5 @@
 # https://sabnzbd.org/downloads#
-FROM linuxserver/sabnzbd:4.5.0 AS image_upstream
+FROM linuxserver/sabnzbd:4.5.1 AS image_upstream
 
 FROM image_upstream AS image_base
 USER root
