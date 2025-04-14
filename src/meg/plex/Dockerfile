@@ -8,7 +8,7 @@ RUN \
     apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.21-2ubuntu4 && \
     apt-get -y --no-install-recommends --allow-downgrades install less=590-2ubuntu2.1 && \
     apt-get -y --no-install-recommends --allow-downgrades install curl=8.5.0-2ubuntu10.6 && \
-    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.1.0016-1ubuntu7.6 && \
+    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.1.0016-1ubuntu7.8 && \
     apt-get -y --no-install-recommends --allow-downgrades install xq=1.0.0-2ubuntu0.24.04.2 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
