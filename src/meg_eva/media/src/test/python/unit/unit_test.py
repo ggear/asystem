@@ -72,12 +72,21 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_merge(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=13,
-                                  files_action_expected=actions(rename=0, delete=3, merge=5, upscale=5), scripts={"merge"})
+        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=15,
+                                  files_action_expected=actions(rename=0, delete=3, merge=6, upscale=6), scripts={"merge"})
         self._test_analyse_assert(join(dir_test, "41/media"),
-                                  files_action_expected=actions(rename=0, delete=3, merge=4, upscale=5), scripts={"merge"})
+                                  files_action_expected=actions(rename=0, delete=3, merge=4, upscale=6), scripts={"merge"})
 
     # TODO: Enable as implementation provided
+    # def test_analyse_transcode(self):
+    #     dir_test = self._test_prepare_dir("share_media_example", 1)
+    #     self._test_analyse_assert(join(dir_test, "37/media"),
+    #                               files_action_expected=actions(transcode=1), scripts={"transcode"})
+    #     self._test_analyse_assert(join(dir_test, "37/media"),
+    #                               files_action_expected=actions(transcode=1), scripts={"transcode"})
+    #     self._test_analyse_assert(join(dir_test, "37/media"),
+    #                               files_action_expected=actions(transcode=1), scripts={"transcode"})
+    #
     # def test_analyse_reformat(self):
     #     dir_test = self._test_prepare_dir("share_media_example", 1)
     #     self._test_analyse_assert(join(dir_test, "37/media"),
@@ -87,14 +96,6 @@ class InternetTest(unittest.TestCase):
     #     self._test_analyse_assert(join(dir_test, "37/media"),
     #                               files_action_expected=actions(reformat=1), scripts={"reformat"})
     #
-    # def test_analyse_transcode(self):
-    #     dir_test = self._test_prepare_dir("share_media_example", 1)
-    #     self._test_analyse_assert(join(dir_test, "37/media"),
-    #                               files_action_expected=actions(transcode=1), scripts={"transcode"})
-    #     self._test_analyse_assert(join(dir_test, "37/media"),
-    #                               files_action_expected=actions(transcode=1), scripts={"transcode"})
-    #     self._test_analyse_assert(join(dir_test, "37/media"),
-    #                               files_action_expected=actions(transcode=1), scripts={"transcode"})
     #
     # def test_analyse_downscale(self):
     #     dir_test = self._test_prepare_dir("share_media_example", 1)
