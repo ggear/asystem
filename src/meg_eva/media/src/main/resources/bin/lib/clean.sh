@@ -20,7 +20,9 @@ for SCRIPT in "analyse" "merge" "rename" "reformat" "transcode"; do
   find "${WORKING_DIR}" -name "${SCRIPT}.sh" -type f -delete &>${LOG}
   find "${WORKING_DIR}" -name "._${SCRIPT}_*" -type d -exec rm -rf '{}' + &>${LOG}
 done
-find "${WORKING_DIR}" -type d -empty -delete &>${LOG}
+
+find "${WORKING_DIR}" -path "*/share/*/media/*" -type d -empty
+
 if [ $(cat ${LOG} | wc -l) -gt 0 ]; then
   echo "failed"
   cat ${LOG}
