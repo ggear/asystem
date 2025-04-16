@@ -354,12 +354,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     for file_probe_stream in file_probe["streams"]:
                         file_probe_stream_filtered = OrderedDict()
                         file_probe_stream_type = file_probe_stream["codec_type"].lower() \
-                            if "codec_type" in file_probe_stream else ""
+                            if "codec_type" in file_probe_stream else "unknown"
                         if file_probe_stream_type not in file_probe_streams_filtered:
                             file_probe_stream_type = "other"
                         file_probe_streams_filtered[file_probe_stream_type].append(file_probe_stream_filtered)
                         file_probe_stream_filtered["index"] = str(file_probe_stream["index"]) \
                             if "index" in file_probe_stream else ""
+                        file_probe_stream_filtered["index_{}".format(file_probe_stream_type)] = ""
                         if file_probe_stream_type == "video":
                             file_probe_stream_video_codec = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
@@ -463,6 +464,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             file_probe_stream_filtered["format"] = "Picture" if \
                                 (file_probe_stream_filtered["codec"] in {"VOB", "VOBSUB", "DVD_SUBTITLE"} or
                                  ("tags" in file_probe_stream and "width" in file_probe_stream["tags"])) else "Text"
+                for stream_label in ["video", "audio", "subtitle"]:
+                    stream_index = 0
+                    file_probe_streams_filtered[stream_label].sort(key=lambda stream: stream["index"])
+                    for stream in file_probe_streams_filtered[stream_label]:
+                        stream_index += 1
+                        stream["index_{}".format(stream_label)] = str(stream_index)
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
                 for file_stream_video_index, file_stream_video in enumerate(file_probe_streams_filtered["video"]):
                     if file_stream_video_index == 0:
@@ -1198,7 +1205,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     )
                 ).alias("Transcode Video"),
                 (
-                    pl.lit("1")
+                    pl.col("Audio 1 Index Audio")
                 ).alias("Transcode Audio Index"),
             ]
         ).with_columns(
