@@ -1259,6 +1259,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Transcoding: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local"), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo -n 'Starting: ' && date\n"),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
