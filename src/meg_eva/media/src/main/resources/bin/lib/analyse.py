@@ -35,6 +35,7 @@ MEDIA_SEASON_NUMBER_REGEXP = r"Season ([0-9]?[0-9]+)"
 MEDIA_EPISODE_NUMBER_REGEXP = r".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
 MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv", "ts"}
+MEDIA_FILE_EXTENSIONS_IGNORE = {"yaml", "sh", "srt", "png", "jpg", "jpeg", "log"}
 MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode", "downscale", "merge"}
 
 TOKEN_TRANSCODE = "__TRANSCODE"
@@ -140,7 +141,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 if len(file_relative_dir_tokens) > 1 else ""
             file_media_type = file_relative_dir_tokens[2] \
                 if len(file_relative_dir_tokens) > 2 else ""
-            if file_media_type in {"audio"} or file_extension in {"yaml", "sh", "srt", "jpg", "jpeg", "log"}:
+            if file_media_type in {"audio"} or file_extension in MEDIA_FILE_EXTENSIONS_IGNORE:
                 continue
             _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)),
                            _no_header_footer=not verbose)
@@ -286,7 +287,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             try:
                                 file_defaults_dict.update(_unwrap_lists(yaml.safe_load(file_defaults)))
                                 file_defaults_dict["transcode_action"] = file_defaults_dict["transcode_action"].title()
-                                if file_defaults_dict["transcode_action"] not in {"Defer", "Ignore", "Merge"}:
+                                if file_defaults_dict["transcode_action"] not in {"Defer", "Ignore", "Merged"}:
                                     raise Exception("Invalid transcode action: {}".format(file_defaults_dict["transcode_action"]))
                                 file_defaults_dict["target_quality"] = file_defaults_dict["target_quality"].title()
                                 if file_defaults_dict["target_quality"] not in {"Min", "Mid", "Max"}:
@@ -323,7 +324,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     file_dir_path, "._defaults_merged_{}_{}.yaml".format(
                         file_name_sans_extension, file_extension))
                 if os.path.isfile(file_defaults_merged_path):
-                    file_defaults_dict["transcode_action"] = "Merge"
+                    file_defaults_dict["transcode_action"] = "Merged"
                 file_transcode_action = file_defaults_dict["transcode_action"]
                 file_target_quality = file_defaults_dict["target_quality"]
                 file_target_video = file_defaults_dict["target_video"]
@@ -776,7 +777,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Version Directory").str.starts_with("Plex Versions"))
                 ).then(pl.lit("Transcoded"))
                 .when(
-                    (pl.col("Transcode Action") == "Merge")
+                    (pl.col("Transcode Action") == "Merged")
                 ).then(pl.lit("Merged"))
                 .when(
                     (pl.col("Transcode Action") == "Ignore")
@@ -786,7 +787,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (pl.col("File Version") == "Original") &
+                    ((pl.col("File Version") == "Original") | (pl.col("File Version") == "Merged")) &
                     (~pl.col("File Stem").str.contains(".", literal=True)) &
                     (pl.struct(
                         pl.col("Version Directory"),
@@ -1016,8 +1017,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit(FileAction.MERGE.value))
                 .when(
                     (
-                            (pl.col("File Version") != "Merged") &
-                            (pl.col("File Version") != "Ignored")
+                        (pl.col("File Version") != "Ignored")
                     ) & (
                             (pl.col("Plex Video") == "Transcode") |
                             (pl.col("Plex Audio") == "Transcode") |
@@ -1032,14 +1032,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Metadata State") == "Messy")
                 ).then(pl.lit(FileAction.REFORMAT.value))
                 .when(
-                    (pl.col("File Version") != "Merged") &
                     (pl.col("File Version") != "Ignored") &
                     (pl.col("File Size") == "Large") &
                     (pl.col("Video 1 Colour") == "SDR")
                 ).then(pl.lit(FileAction.DOWNSCALE.value))
                 .when(
                     (
-                            (pl.col("File Version") != "Merged") &
                             (pl.col("File Version") != "Ignored") &
                             (pl.col("File Size") == "Small")
                     ) |
@@ -1350,8 +1348,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("else\n"),
                     pl.lit("  ORIGNL_DIR=${ROOT_DIR}/..\n"),
                     pl.lit("fi\n"),
-                    pl.lit("if [ $(find \"${ORIGNL_DIR}\" -name \""), pl.col("File Stem"), pl.lit("*\" | wc -l) -le 2 ]; then\n"),
-                    pl.lit("  ORIGNL_FILE=\"$(find \"${ORIGNL_DIR}\" -name \""), pl.col("File Stem"), pl.lit("\\.*\")\"\n"),
+                    pl.lit("if [ $(find \"${ORIGNL_DIR}\" ! -name *." + " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) + " -name \""), pl.col("File Stem"), pl.lit("*\" | wc -l) -le 2 ]; then\n"),
+                    pl.lit("  ORIGNL_FILE=\"$(find \"${ORIGNL_DIR}\" ! -name *." + " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) + " -name \""), pl.col("File Stem"), pl.lit("\\.*\")\"\n"),
                     pl.lit("  TRNSCD_FILE=\"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
                     pl.lit("  MERGED_FILE=\"${ORIGNL_DIR}/"), pl.col("File Stem"), pl.lit(".mkv\"\n"),
                     pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ] &&\n"),
@@ -1359,6 +1357,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("    echo ''\n"),
                     pl.lit("    rm -f \"${ORIGNL_FILE}\"\n"),
                     pl.lit("    mv -f \"${TRNSCD_FILE}\" \"${MERGED_FILE}\"\n"),
+
+                    # TODO: mv ._defaults_ananlaysed*TRANS_mkv.yaml ._defaults_merged*mkv.yaml, work for Plex and normal, if doesnt exist, touch one, rename all pre-existing ones in bulk, then have clean delete them
+                    # pl.lit("    echo \"${ROOT_DIR}/../"), pl.col("File Stem"), pl.lit("_mkv.yaml\"\n"),
+
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
                     pl.lit("      echo \"./$(basename \"${TRNSCD_FILE}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIGNL_FILE}\")\"\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
