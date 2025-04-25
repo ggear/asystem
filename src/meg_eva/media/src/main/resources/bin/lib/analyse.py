@@ -1027,12 +1027,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     )
                 ).then(pl.lit(FileAction.TRANSCODE.value))
                 .when(
-                    (pl.col("Metadata State") == "Messy")
-                ).then(pl.lit(FileAction.REFORMAT.value))
-                .when(
                     (pl.col("File Version") != "Ignored") &
                     (pl.col("File Size") == "Large")
                 ).then(pl.lit(FileAction.DOWNSCALE.value))
+                .when(
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit(FileAction.REFORMAT.value))
                 .when(
                     (
                             (pl.col("File Version") != "Ignored") &
