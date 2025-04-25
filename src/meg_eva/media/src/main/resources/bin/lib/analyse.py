@@ -1246,7 +1246,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     ).then(
                         pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --eac3")])
                     ).otherwise(
-                        pl.concat_str([pl.col("Transcode Audio")])
+                        pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --eac3")])
                     )
                 ).alias("Transcode Audio")
             ]
