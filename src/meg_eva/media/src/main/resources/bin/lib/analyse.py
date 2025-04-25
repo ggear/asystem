@@ -1027,16 +1027,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     )
                 ).then(pl.lit(FileAction.TRANSCODE.value))
                 .when(
-                    (pl.col("Metadata State") == "Messy")
-                ).then(pl.lit(FileAction.REFORMAT.value))
-                .when(
-                    (pl.col("Metadata State") == "Messy")
-                ).then(pl.lit(FileAction.REFORMAT.value))
-                .when(
                     (pl.col("File Version") != "Ignored") &
-                    (pl.col("File Size") == "Large") &
-                    (pl.col("Video 1 Colour") == "SDR")
+                    (pl.col("File Size") == "Large")
                 ).then(pl.lit(FileAction.DOWNSCALE.value))
+                .when(
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit(FileAction.REFORMAT.value))
                 .when(
                     (
                             (pl.col("File Version") != "Ignored") &
@@ -1051,12 +1047,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         metadata_merged_pl = pl.concat([
             metadata_merged_pl.filter(
                 (pl.col("File Action") == FileAction.TRANSCODE.value) |
+                (pl.col("File Action") == FileAction.DOWNSCALE.value) |
                 (pl.col("File Action") == FileAction.REFORMAT.value)
             ).with_columns(
                 pl.col("File Size (GB)").cast(pl.Float32).alias("Action Index Sort")
             ),
             metadata_merged_pl.filter(
                 (pl.col("File Action") != FileAction.TRANSCODE.value) &
+                (pl.col("File Action") != FileAction.DOWNSCALE.value) &
                 (pl.col("File Action") != FileAction.REFORMAT.value)
             ).sort("File Name", descending=True).with_columns(
                 pl.col("File Name").cum_count().cast(pl.Float32).alias("Action Index Sort")
@@ -1257,45 +1255,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
-                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
-                    pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
-                    pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Transcoding: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
-                        .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
-                    pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo -n 'Verifying \"files\" at ' && date\n"),
-                    pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
-                    pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
-                    pl.lit("fi\n"),
-                    pl.lit("if [ $(df -k \"${ROOT_DIR}\" | tail -1 | awk '{print $4}') -lt 20000000 ]; then\n"),
-                    pl.lit("  echo '' && echo -n 'Skipped (space): ' && date && echo '' && exit 1\n"),
-                    pl.lit("fi\n"),
-                    pl.lit("cd \"${ROOT_DIR}\"\n"),
-                    pl.lit("if [ ! -f \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" ]; then\n"),
-                    pl.lit("  echo '' && echo -n 'Skipped (missing): ' && date && echo '' && exit 0\n"),
-                    pl.lit("fi\n"),
-                    pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
-                    pl.lit("[[ $(hostname) == macmini* ]] && TRANSCODE_VIDEO='--copy-video'\n"),
-                    pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
-                    pl.lit("  ${TRANSCODE_VIDEO} \\\n"),
-                    pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
-                    pl.lit("  "), pl.col("Transcode Subtitle"), pl.lit("\n"),
-                    pl.lit("if [ $? -eq 0 ]; then\n"),
-                    pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
-                    pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
-                    pl.lit("  if [ $? -eq 0 ]; then\n"),
-                    pl.lit("    echo -n 'Completed: ' && date && exit 0\n"),
-                    pl.lit("  else\n"),
-                    pl.lit("    echo -n 'Failed (mv): ' && date && exit 3\n"),
-                    pl.lit("  fi\n"),
-                    pl.lit("else\n"),
-                    pl.lit("  echo -n 'Failed (other-transcode): ' && date && exit 2\n"),
-                    pl.lit("fi\n"),
-                    pl.lit("echo '' && exit -1\n"),
-                ]).alias("Transcode Script Source"),
-                pl.concat_str([
-                    pl.lit("#!/usr/bin/env bash\n\n"),
-                    pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Renaming: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
@@ -1342,6 +1301,46 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo \"Transcoding: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
+                        .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo -n 'Verifying \"files\" at ' && date\n"),
+                    pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
+                    pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("if [ $(df -k \"${ROOT_DIR}\" | tail -1 | awk '{print $4}') -lt 20000000 ]; then\n"),
+                    pl.lit("  echo '' && echo -n 'Skipped (space): ' && date && echo '' && exit 1\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("cd \"${ROOT_DIR}\"\n"),
+                    pl.lit("if [ ! -f \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" ]; then\n"),
+                    pl.lit("  echo '' && echo -n 'Skipped (missing): ' && date && echo '' && exit 0\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
+                    pl.lit("[[ \"$(basename \"$0\")\" == \"reformat.sh\" ]] && TRANSCODE_VIDEO='--copy-video'\n"),
+                    pl.lit("[[ $(hostname) == macmini* ]] && TRANSCODE_VIDEO='--copy-video'\n"),
+                    pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
+                    pl.lit("  ${TRANSCODE_VIDEO} \\\n"),
+                    pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
+                    pl.lit("  "), pl.col("Transcode Subtitle"), pl.lit("\n"),
+                    pl.lit("if [ $? -eq 0 ]; then\n"),
+                    pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
+                    pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\"\n"),
+                    pl.lit("  if [ $? -eq 0 ]; then\n"),
+                    pl.lit("    echo -n 'Completed: ' && date && exit 0\n"),
+                    pl.lit("  else\n"),
+                    pl.lit("    echo -n 'Failed (mv): ' && date && exit 3\n"),
+                    pl.lit("  fi\n"),
+                    pl.lit("else\n"),
+                    pl.lit("  echo -n 'Failed (other-transcode): ' && date && exit 2\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("echo '' && exit -1\n"),
+                ]).alias("Transcode Script Source"),
+                pl.concat_str([
+                    pl.lit("#!/usr/bin/env bash\n\n"),
+                    pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Merging: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
@@ -1367,7 +1366,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("    mv -f \"${TRNSCD_FILE}\" \"${MERGED_FILE}\"\n"),
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
                     pl.lit("      TRNSCD_STEM=\"$(basename \"${TRNSCD_FILE}\")\"\n"),
-                    pl.lit("      TRNSCD_DEFTS=\"$(dirname \"${TRNSCD_FILE}\")/._defaults_analysed_${TRNSCD_STEM%.*}_${TRNSCD_STEM##*.}.yaml\"\n"),
+                    pl.lit("      TRNSCD_DEFTS=\"$(dirname \"${TRNSCD_FILE}\")/" + \
+                           "._defaults_analysed_${TRNSCD_STEM%.*}_${TRNSCD_STEM##*.}.yaml\"\n"),
                     pl.lit("      MERGED_DEFTS=\"${ORIGNL_DIR}/._defaults_merged_"), pl.col("File Stem"), pl.lit("_mkv.yaml\"\n"),
                     pl.lit("      if [ -f \"$TRNSCD_DEFTS\" ]; then\n"),
                     pl.lit("        mv -f \"$TRNSCD_DEFTS\" \"$MERGED_DEFTS\"\n"),
@@ -1435,17 +1435,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             script_metadata = [
                 "{} Script File".format(script.title()),
                 "{} Script Directory".format(script.title()),
-                "{} Script Source".format(script.title() if script != "reformat" else "Transcode")
+                "{} Script Source".format("Transcode" if script in {"reformat", "downscale"} else script.title())
             ]
             if all(_script_metadata in metadata_scripts_pl.schema for _script_metadata in script_metadata):
                 _write_scripts("{}.sh".format(script),
                                metadata_scripts_pl.filter(
-                                   (
-                                           file_path_root_is_nested &
-                                           (script == "reformat") &
-                                           (pl.col("File Version") == "Original")
-                                   ) |
-                                   (pl.col("File Action").str.ends_with(script.title()))
+                                   pl.col("File Action").str.ends_with(script.title())
                                ).select(script_metadata).rows())
         if not file_path_media_is_nested:
             for script_name, script_source in {
