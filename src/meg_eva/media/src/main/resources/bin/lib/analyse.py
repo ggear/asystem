@@ -1526,16 +1526,6 @@ done
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
 asystem-media-space
                 """,
-                "merge": """
-#!/usr/bin/env bash
-
-ROOT_DIR=$(dirname "$(readlink -f "$0")")
-
-. $(asystem-media-home)/.env_media
-
-echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
-echo "done"
-                """
             }.items():
                 script_path = _localise_path(os.path.join(file_path_scripts, "{}.sh".format(script_name)), file_path_root)
                 if verbose:
