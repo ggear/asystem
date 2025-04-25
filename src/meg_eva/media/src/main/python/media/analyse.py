@@ -729,6 +729,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         "Video 1 Bitrate Mid (Kbps)",
         "Video 1 Bitrate Max (Kbps)",
         "Audio 1 Index",
+        "Audio 1 Index Audio",
         "Audio 1 Codec",
         "Audio 1 Lang",
         "Audio 1 Channels",
@@ -1255,7 +1256,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Transcoding: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local"), pl.lit("'\"\n"),
+                    pl.lit("echo \"Transcoding: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
+                        .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo -n 'Verifying \"files\" at ' && date\n"),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
@@ -1292,7 +1294,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Renaming: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local"), pl.lit("'\"\n"),
+                    pl.lit("echo \"Renaming: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
+                        .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("BASE_DIR=\""), pl.col("Base Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("BASE_DIR=(\"${BASE_DIR// /_____}\")\n"),
@@ -1337,7 +1340,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Merging: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local"), pl.lit("'\"\n"),
+                    pl.lit("echo \"Merging: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
+                        .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("if [[ ${ROOT_DIR} == *\"/Plex Versions/\"* ]]; then\n"),
                     pl.lit("  ORIGNL_DIR=${ROOT_DIR}/../../../..\n"),
@@ -1357,11 +1361,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("    echo ''\n"),
                     pl.lit("    rm -f \"${ORIGNL_FILE}\"\n"),
                     pl.lit("    mv -f \"${TRNSCD_FILE}\" \"${MERGED_FILE}\"\n"),
-
-                    # TODO: mv ._defaults_ananlaysed*TRANS_mkv.yaml ._defaults_merged*mkv.yaml, work for Plex and normal, if doesnt exist, touch one, rename all pre-existing ones in bulk, then have clean delete them
-                    # pl.lit("    echo \"${ROOT_DIR}/../"), pl.col("File Stem"), pl.lit("_mkv.yaml\"\n"),
-
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
+                    pl.lit("      TRNSCD_STEM=\"$(basename \"${TRNSCD_FILE}\")\"\n"),
+                    pl.lit("      TRNSCD_DEFTS=\"$(dirname \"${TRNSCD_FILE}\")/._defaults_analysed_${TRNSCD_STEM%.*}_mkv.yaml\"\n"),
+                    pl.lit("      MERGED_DEFTS=\"${ORIGNL_DIR}/._defaults_merged_"), pl.col("File Stem"), pl.lit("_mkv.yaml\"\n"),
+                    pl.lit("      if [ -f \"$TRNSCD_DEFTS\" ]; then\n"),
+                    pl.lit("        mv \"$TRNSCD_DEFTS\" \"$MERGED_DEFTS\"\n"),
+                    pl.lit("      else\n"),
+                    pl.lit("        touch \"$MERGED_DEFTS\"\n"),
+                    pl.lit("      fi\n"),
                     pl.lit("      echo \"./$(basename \"${TRNSCD_FILE}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIGNL_FILE}\")\"\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("    else\n"),

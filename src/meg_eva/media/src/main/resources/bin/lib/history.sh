@@ -13,6 +13,12 @@ find . -name "*TRANS*mkv" -exec rename -vf 's/__TRANSCODE_MIN//' "{}" \;
 # Merge
 open *__TRANS*mkv
 rename -vf 's/__TRANSCODE_MID//' *__TRANS*mkv
+find . -name '._defaults_analysed_*TRANS*_mkv.yaml' ! -name '*_M*_mkv.yaml'
+find . -name '._defaults_analysed_*TRANS*_mkv.yaml' ! -name '*_M*_mkv.yaml' -delete
+find . -name '._defaults_analysed_*TRANS*_mkv.yaml'
+find . -name '._defaults_analysed_*TRANS*_mkv.yaml' -exec rename -v -f 's/_analysed_/_merged_/' "{}" \;
+find . -name '._defaults_merged_*TRANS*_mkv.yaml' -exec rename -v -f 's/__TRANSCODE_.*_mkv/_mkv/' "{}" \;
+find . -name '._defaults_analysed_*TRANS*_mkv.yaml'
 
 # Extract RAR files
 ROOT_DIR=$PWD

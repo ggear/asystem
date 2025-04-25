@@ -59,7 +59,7 @@ class InternetTest(unittest.TestCase):
     def test_analyse_ignore(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "35/media"),
-                                  files_action_expected=actions(rename=2, delete=1, merge=1, nothing=2))
+                                  files_action_expected=actions(rename=2, delete=1, merge=1, nothing=2), scripts={})
 
     def test_analyse_rename(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
@@ -106,14 +106,6 @@ class InternetTest(unittest.TestCase):
     #     self._test_analyse_assert(join(dir_test, "37/media"),
     #                               files_action_expected=actions(downscale=1), scripts={"downscale"})
     #
-    # def test_analyse_merge(self):
-    #     dir_test = self._test_prepare_dir("share_media_example", 1)
-    #     self._test_analyse_assert(join(dir_test, "37/media"),
-    #                               files_action_expected=actions(merge=1), scripts={"merge"})
-    #     self._test_analyse_assert(join(dir_test, "37/media"),
-    #                               files_action_expected=actions(merge=1), scripts={"merge"})
-    #     self._test_analyse_assert(join(dir_test, "37/media"),
-    #                               files_action_expected=actions(merge=1), scripts={"merge"})
 
     def test_analyse_empty(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
@@ -127,9 +119,9 @@ class InternetTest(unittest.TestCase):
     def test_analyse_sheet(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "34"),
-                                  files_action_expected=actions(rename=2, delete=1, transcode=1), clean=True)
-        self._test_analyse_assert(join(dir_test, "34/media"))
-        self._test_analyse_assert(join(dir_test, "34"))
+                                  files_action_expected=actions(rename=2, delete=1, transcode=1), clean=True, scripts={})
+        self._test_analyse_assert(join(dir_test, "34/media"), scripts={})
+        self._test_analyse_assert(join(dir_test, "34"), scripts={})
 
     def test_analyse_comprehensive(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
@@ -191,7 +183,7 @@ class InternetTest(unittest.TestCase):
 
     def test_ingress_comprehensive_1(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 1)
-        self._test_ingress(dir_test, 171)
+        self._test_ingress(dir_test, 174)
 
     def test_ingress_comprehensive_2(self):
         dir_test = self._test_prepare_dir("share_tmp_example", 2)

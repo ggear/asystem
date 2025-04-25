@@ -1,6 +1,6 @@
 pyyaml==6.0.1
 pandas==2.2.3
-polars==1.26.0
+polars==1.27.1
 pyarrow==19.0.1
 gspread==5.12.4
 gspread-pandas==3.2.3

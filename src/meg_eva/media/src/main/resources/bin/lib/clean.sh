@@ -15,6 +15,7 @@ LOG="/tmp/asystem-media-clean.log"
 echo -n "Cleaning '${WORKING_DIR}' ... "
 rm -rf ${LOG}
 find "${WORKING_DIR}" -name "._metadata_*.yaml" -type f -delete &>${LOG}
+find "${WORKING_DIR}" -name "._defaults_analysed_*_mkv.yaml" -type f -delete &>${LOG}
 for SCRIPT in "analyse" "merge" "rename" "reformat" "transcode"; do
   find "${WORKING_DIR}" -name "${SCRIPT}.sh" -type f -delete &>${LOG}
   find "${WORKING_DIR}" -name "._${SCRIPT}_*" -type d -exec rm -rf '{}' + &>${LOG}
