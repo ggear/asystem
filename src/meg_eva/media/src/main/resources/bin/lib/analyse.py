@@ -117,7 +117,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     file_path_root_target_relative = file_path_root_target.replace(file_path_media, ".")
     file_path_media_is_nested = file_path_media != file_path_root_target
     file_path_scripts = file_path_root_parent
-    file_path_scripts_dirs = ("tmp", "scripts", "media", "lib")
+    file_path_scripts_dirs = ("tmp", "scripts", "media", ".lib")
     for file_path_scripts_dir in file_path_scripts_dirs:
         file_path_scripts = os.path.join(file_path_scripts, file_path_scripts_dir)
         if not os.path.isdir(file_path_scripts):
