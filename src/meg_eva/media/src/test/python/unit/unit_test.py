@@ -3,6 +3,7 @@ import sys
 sys.path.append('../../../main/python')
 
 import os
+from pathlib import Path
 import shutil
 import unittest
 import pytest
@@ -54,7 +55,7 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "31/media"),
                                   files_action_expected=actions(rename=1), scripts={"rename"})
         self._test_analyse_assert(join(dir_test, "31/media"),
-                                  files_action_expected=actions(merge=0, nothing=1), scripts={"rename"})
+                                  files_action_expected=actions(merge=0, downscale=1), scripts={"rename"})
 
     def test_analyse_ignore(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
@@ -166,7 +167,11 @@ class InternetTest(unittest.TestCase):
                 file_count = _file_count()
                 for file_root_dir, file_dirs, file_names in os.walk(dir_test):
                     for file_name in file_names:
-                        if file_name == "{}.sh".format(script):
+
+                        print(str(Path(file_root_dir).absolute()))
+
+                        if file_name == "{}.sh".format(script) and \
+                                not str(Path(file_root_dir).absolute()).endswith("/tmp/scripts/media"):
                             script_path = "\"{}\"".format( \
                                 join(file_root_dir, file_name) \
                                     .replace("$", "\\$") \

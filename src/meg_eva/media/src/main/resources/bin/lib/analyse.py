@@ -17,6 +17,7 @@ import polars as pl
 import polars.selectors as cs
 import yaml
 from ffmpeg._run import Error
+from gitdb.util import dirname
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
@@ -116,10 +117,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     file_path_root_target = file_path_root if file_path_root_is_nested else file_path_media
     file_path_root_target_relative = file_path_root_target.replace(file_path_media, ".")
     file_path_media_is_nested = file_path_media != file_path_root_target
-    file_path_scripts = os.path.join(file_path_root_parent, "tmp", "scripts")
-    if not os.path.isdir(file_path_scripts):
-        os.makedirs(file_path_scripts, exist_ok=True)
-        _set_permissions(file_path_scripts, 0o750)
+    file_path_scripts = file_path_root_parent
+    file_path_scripts_dirs = ("tmp", "scripts", "media", "lib")
+    for file_path_scripts_dir in file_path_scripts_dirs:
+        file_path_scripts = os.path.join(file_path_scripts, file_path_scripts_dir)
+        if not os.path.isdir(file_path_scripts):
+            os.makedirs(file_path_scripts, exist_ok=True)
+            _set_permissions(file_path_scripts, 0o750)
     files_analysed = 0
     metadata_list = []
     metadata_files_written = set()
@@ -1286,7 +1290,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("     \"./$(realpath --relative-to=\"${ROOT_DIR}/../../../..\" \"${FILE_ORIGNL}\") ->\" \\\n"),
                     pl.lit("     \"./$(realpath --relative-to=\"${ROOT_DIR}/../../../..\" \"${FILE_RENMED}\")\"\n"),
                     pl.lit("  if [ ! -f \"${FILE_RENMED}\" ]; then\n"),
-                    pl.lit("    mv \"${FILE_ORIGNL}\" \"${ }\"\n"),
+                    pl.lit("    mv \"${FILE_ORIGNL}\" \"${FILE_RENMED}\"\n"),
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("    else\n"),
@@ -1407,7 +1411,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         if not file_path_media_is_nested:
                             script_exec_path = script_local_row[0].replace("$", "\\$").replace("\"", "\\\"")
                             script_global_file.write(
-                                "[[ -f \"${{ROOT_DIR}}/../../../..{}\" ]] && \"${{ROOT_DIR}}/../../../..{}\"\n"
+                                "[[ -f \"${{ROOT_DIR}}/../../../../../..{}\" ]] && \"${{ROOT_DIR}}/../../../../../..{}\"\n"
                                 .format(script_exec_path, script_exec_path))
                         script_local_dir = _localise_path(script_local_row[1], file_path_root)
                         os.makedirs(script_local_dir, exist_ok=True)
@@ -1442,30 +1446,53 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                metadata_scripts_pl.filter(
                                    pl.col("File Action").str.ends_with(script.title())
                                ).select(script_metadata).rows())
-        if not file_path_media_is_nested:
-            for script_name, script_source in {
-                "analyse": """
+        script_source_header = """
 #!/usr/bin/env bash
 
 ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
+MEDIA_COMMAND={}
+        """
+        script_source_exec_local = """
+"$(${MEDIA_COMMAND})"
+        """
+        script_source_exec_remote = """
 LOG=""
 if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
     LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
-    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && asystem-media-analyse'
+    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && ${MEDIA_COMMAND}'
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
-        LOG=$(ssh "root@${HOST}" "${COMMAND}" | tee /dev/tty | grep -E "1. Rename|2. Delete|3. Merge" | grep "/share")
+        LOG=$(ssh "root@${HOST}" "${COMMAND}")
     fi
   done
 else
   cd "${ROOT_DIR}/../../media"
-  LOG=$(asystem-media-analyse | tee /dev/tty)
+  LOG=$(${MEDIA_COMMAND})
 fi
-
+        """
+        script_source_exec_print = """
+echo ${LOG}
+        """
+        if not file_path_media_is_nested:
+            for script_name, script_source in {
+                "downscale": (script_source_header.format("\"${ROOT_DIR}/bin/downscale.sh\""),
+                              script_source_exec_local),
+                "reformat": (script_source_header.format("\"${ROOT_DIR}/bin/reformat.sh\""),
+                             script_source_exec_remote, script_source_exec_print),
+                "merge": (script_source_header.format("\"${ROOT_DIR}/bin/merge.sh\""),
+                          script_source_exec_remote, script_source_exec_print),
+                "rename": (script_source_header.format("\"${ROOT_DIR}/bin/rename.sh\""),
+                           script_source_exec_remote, script_source_exec_print),
+                "transcode": (script_source_header.format("\"${ROOT_DIR}/bin/transcode.sh\""),
+                              script_source_exec_local),
+                "analyse": (
+                        script_source_header.format(
+                            "'asystem-media-analyse | tee /dev/tty | grep -E \"1. Rename|2. Delete|3. Merge\" | grep \"/share\"'"
+                        ), script_source_exec_remote, """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
 declare -a RENAME_DIRS
 declare -A RENAME_DIRS_SET
@@ -1525,13 +1552,14 @@ for MERGE_DIR in "${MERGE_DIRS[@]}"; do
 done
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
 asystem-media-space
-                """,
+                        """),
             }.items():
-                script_path = _localise_path(os.path.join(file_path_scripts, "{}.sh".format(script_name)), file_path_root)
+                script_path = _localise_path(os.path.join(dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
                 if verbose:
                     print("#enriched-dataframe -> {} ... ".format(script_path), end='', flush=True)
                 with open(script_path, 'w') as script_file:
-                    script_file.write(script_source.strip() + "\n")
+                    for script_source_section in script_source:
+                        script_file.write(script_source_section.strip() + "\n\n")
                 _set_permissions(script_path, 0o750)
                 if verbose:
                     print("done", flush=True)
