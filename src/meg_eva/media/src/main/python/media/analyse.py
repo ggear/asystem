@@ -13,7 +13,6 @@ import polars as pl
 import polars.selectors as cs
 import yaml
 from ffmpeg._run import Error
-from gitdb.util import dirname
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
@@ -1550,7 +1549,7 @@ echo "+-------------------------------------------------------------------------
 asystem-media-space
                         """),
             }.items():
-                script_path = _localise_path(os.path.join(dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
+                script_path = _localise_path(os.path.join(os.path.dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
                 if verbose:
                     print("#enriched-dataframe -> {} ... ".format(script_path), end='', flush=True)
                 with open(script_path, 'w') as script_file:
