@@ -167,9 +167,6 @@ class InternetTest(unittest.TestCase):
                 file_count = _file_count()
                 for file_root_dir, file_dirs, file_names in os.walk(dir_test):
                     for file_name in file_names:
-
-                        print(str(Path(file_root_dir).absolute()))
-
                         if file_name == "{}.sh".format(script) and \
                                 not str(Path(file_root_dir).absolute()).endswith("/tmp/scripts/media"):
                             script_path = "\"{}\"".format( \
