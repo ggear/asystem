@@ -54,8 +54,8 @@ class FileAction(str, Enum):
     MERGE = "3. Merge"
     REFORMAT = "4. Reformat"
     TRANSCODE = "5. Transcode"
-    UPSCALE = "6. Upscale"
-    DOWNSCALE = "7. Downscale"
+    DOWNSCALE = "6. Downscale"
+    UPSCALE = "7. Upscale"
     NOTHING = "8. Nothing"
 
 
