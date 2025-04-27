@@ -1448,7 +1448,7 @@ ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
-MEDIA_COMMAND={}
+MEDIA_COMMAND="{}"
         """
         script_source_exec_local = """
 "$(${MEDIA_COMMAND})"
@@ -1461,12 +1461,12 @@ if [ $(uname) == "Darwin" ]; then
     LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
     COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")""/media && ${MEDIA_COMMAND}"
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
-        LOG=$(ssh "root@${HOST}" "${COMMAND}")
+        LOG=$(ssh "root@${HOST}" "${COMMAND}" | tee /dev/tty)
     fi
   done
 else
   cd "${ROOT_DIR}/../../../media"
-  LOG=$(${MEDIA_COMMAND})
+  LOG=$(${MEDIA_COMMAND} | tee /dev/tty)
 fi
         """
         script_source_exec_print = """
@@ -1474,20 +1474,24 @@ echo ${LOG}
         """
         if not file_path_media_is_nested:
             for script_name, script_source in {
-                "downscale": (script_source_header.format("\"${ROOT_DIR}/bin/downscale.sh\""),
-                              script_source_exec_local),
-                "reformat": (script_source_header.format("\"${ROOT_DIR}/bin/reformat.sh\""),
-                             script_source_exec_remote, script_source_exec_print),
-                "merge": (script_source_header.format("\"${ROOT_DIR}/bin/merge.sh\""),
-                          script_source_exec_remote, script_source_exec_print),
-                "rename": (script_source_header.format("\"${ROOT_DIR}/bin/rename.sh\""),
-                           script_source_exec_remote, script_source_exec_print),
-                "transcode": (script_source_header.format("\"${ROOT_DIR}/bin/transcode.sh\""),
-                              script_source_exec_local),
+                "downscale": (
+                        script_source_header.format("${ROOT_DIR}/bin/downscale.sh"),
+                        script_source_exec_local),
+                "reformat": (
+                        script_source_header.format("${ROOT_DIR}/bin/reformat.sh"),
+                        script_source_exec_remote, script_source_exec_print),
+                "merge": (
+                        script_source_header.format("${ROOT_DIR}/bin/merge.sh"),
+                        script_source_exec_remote, script_source_exec_print),
+                "rename": (
+                        script_source_header.format("${ROOT_DIR}/bin/rename.sh"),
+                        script_source_exec_remote, script_source_exec_print),
+                "transcode": (
+                        script_source_header.format("${ROOT_DIR}/bin/transcode.sh"),
+                        script_source_exec_local),
                 "analyse": (
-                        script_source_header.format(
-                            "'asystem-media-analyse | tee /dev/tty | grep -E \"1. Rename|2. Delete|3. Merge\" | grep \"/share\"'"
-                        ), script_source_exec_remote, """
+                        script_source_header.format("asystem-media-analyse"),
+                        script_source_exec_remote, """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
 declare -a RENAME_DIRS
 declare -A RENAME_DIRS_SET
@@ -1495,6 +1499,7 @@ declare -a DELETE_DIRS
 declare -A DELETE_DIRS_SET
 declare -a MERGE_DIRS
 declare -A MERGE_DIRS_SET
+LOG=$(echo ${LOG} | grep -E "1. Rename|2. Delete|3. Merge" | grep "/share")
 readarray -t LOG_LINES <<<"$LOG"
 for LOG_LINE in "${LOG_LINES[@]}"; do
   RENAME_DIR=$(grep "1. Rename"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
