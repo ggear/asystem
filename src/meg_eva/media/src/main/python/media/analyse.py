@@ -1421,6 +1421,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 print("skipping file currently transcoding")
                                 print("#enriched-dataframe -> {} ... ".format(script_global_path), end='', flush=True)
                         _set_permissions(script_local_path, 0o750)
+                if not file_path_media_is_nested:
+                    script_global_file.write("echo '' && echo ''\n")
+                    script_global_file.write(BASH_ECHO_HEADER)
+                    script_global_file.write("echo 'Completed [{}]'\n".format(_script_name))
+                    script_global_file.write(BASH_ECHO_HEADER)
+                    script_global_file.write("echo '' && echo ''\n")
             finally:
                 if not file_path_media_is_nested and script_global_file is not None:
                     script_global_file.flush()
@@ -1481,12 +1487,12 @@ fi
                 "merge": (
                         script_source_header.format(
                             "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
-                            "'/tmp/scripts/media/.lib/merge.sh"
+                            "'/tmp/scripts/media/.lib/merge.sh'"
                         ), script_source_exec_remote),
                 "rename": (
                         script_source_header.format(
                             "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
-                            "'/tmp/scripts/media/.lib/rename.sh"
+                            "'/tmp/scripts/media/.lib/rename.sh'"
                         ), script_source_exec_remote),
                 "transcode": (
                         script_source_header.format(
