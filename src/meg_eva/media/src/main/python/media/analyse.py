@@ -1457,7 +1457,7 @@ ROOT_DIR=$(dirname "$(readlink -f "$0")")
 MEDIA_COMMAND={}
         """
         script_source_exec_local = """
-"$(${MEDIA_COMMAND})"
+${MEDIA_COMMAND}
         """
         script_source_exec_remote = """
 LOG=""
