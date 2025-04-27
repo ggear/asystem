@@ -9,5 +9,5 @@ if [ -n "${SHARE_DIR_MEDIA}" ]; then
 elif [ -n "${SHARE_DIR}" ]; then
   "${SHARE_DIR}/tmp/script/transcode.sh"
 else
-  for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${_SHARE_DIR}/tmp/scripts/transcode.sh"; done
+  for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${_SHARE_DIR}/tmp/scripts/media/transcode.sh"; done
 fi

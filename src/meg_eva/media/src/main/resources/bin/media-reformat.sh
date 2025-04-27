@@ -9,5 +9,5 @@ if [ -n "${SHARE_DIR_MEDIA}" ]; then
 elif [ -n "${SHARE_DIR}" ]; then
   "${SHARE_DIR}/tmp/script/reformat.sh"
 else
-  for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${_SHARE_DIR}/tmp/scripts/reformat.sh"; done
+  for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${_SHARE_DIR}/tmp/scripts/media/reformat.sh"; done
 fi
