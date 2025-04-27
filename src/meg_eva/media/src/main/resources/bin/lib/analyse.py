@@ -1452,7 +1452,7 @@ ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
-MEDIA_COMMAND="{}"
+MEDIA_COMMAND={}
         """
         script_source_exec_local = """
 "$(${MEDIA_COMMAND})"
@@ -1476,17 +1476,28 @@ fi
         if not file_path_media_is_nested:
             for script_name, script_source in {
                 "downscale": (
-                        script_source_header.format("${ROOT_DIR}/.lib/downscale.sh"), script_source_exec_local),
+                        script_source_header.format(
+                            "\"${ROOT_DIR}/.lib/downscale.sh\""), script_source_exec_local),
                 "reformat": (
-                        script_source_header.format("${ROOT_DIR}/.lib/reformat.sh"), script_source_exec_remote),
+                        script_source_header.format(
+                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
+                            "'/tmp/scripts/media/.lib/reformat.sh'"), script_source_exec_remote),
                 "merge": (
-                        script_source_header.format("${ROOT_DIR}/.lib/merge.sh"), script_source_exec_remote),
+                        script_source_header.format(
+                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
+                            "'/tmp/scripts/media/.lib/merge.sh"
+                        ), script_source_exec_remote),
                 "rename": (
-                        script_source_header.format("${ROOT_DIR}/.lib/rename.sh"), script_source_exec_remote),
+                        script_source_header.format(
+                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
+                            "'/tmp/scripts/media/.lib/rename.sh"
+                        ), script_source_exec_remote),
                 "transcode": (
-                        script_source_header.format("${ROOT_DIR}/.lib/transcode.sh"), script_source_exec_local),
+                        script_source_header.format(
+                            "\"${ROOT_DIR}/.lib/transcode.sh\""), script_source_exec_local),
                 "analyse": (
-                        script_source_header.format("asystem-media-analyse"), script_source_exec_remote, """
+                        script_source_header.format(
+                            "'asystem-media-analyse'"), script_source_exec_remote, """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
 declare -a RENAME_DIRS
 declare -A RENAME_DIRS_SET
