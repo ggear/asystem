@@ -1490,12 +1490,12 @@ fi
                         script_source_header.format(
                             "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
                             "'/tmp/scripts/media/.lib/merge.sh'"
-                        ), script_source_exec_remote, "asystem-media-refresh"),
+                        ), script_source_exec_remote, "asystem-media-refresh && \"${ROOT_DIR}/analyse.sh\""),
                 "rename": (
                         script_source_header.format(
                             "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
                             "'/tmp/scripts/media/.lib/rename.sh'"
-                        ), script_source_exec_remote, "asystem-media-refresh"),
+                        ), script_source_exec_remote, "asystem-media-refresh && \"${ROOT_DIR}/analyse.sh\""),
                 "transcode": (
                         script_source_header.format(
                             "\"${ROOT_DIR}/.lib/transcode.sh\""
