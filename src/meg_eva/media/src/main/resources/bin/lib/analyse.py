@@ -1462,14 +1462,16 @@ LOG=""
 if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
-    LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"' | wc -l'
-    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../..")")"'/media && ${MEDIA_COMMAND}'
+    LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../../..")")"' | wc -l'
+    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../../..")")"'/media && ${MEDIA_COMMAND}'
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
         LOG=$(ssh "root@${HOST}" "${COMMAND}")
+    else
+        echo "Could not find share on remote server, not executing"
     fi
   done
 else
-  cd "${ROOT_DIR}/../../media"
+  cd "${ROOT_DIR}/../../../../media"
   LOG=$(${MEDIA_COMMAND})
 fi
         """
