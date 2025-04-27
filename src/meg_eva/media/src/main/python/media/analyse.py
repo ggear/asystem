@@ -1469,29 +1469,20 @@ else
   LOG=$(${MEDIA_COMMAND} | tee /dev/tty)
 fi
         """
-        script_source_exec_print = """
-echo ${LOG}
-        """
         if not file_path_media_is_nested:
             for script_name, script_source in {
                 "downscale": (
-                        script_source_header.format("${ROOT_DIR}/bin/downscale.sh"),
-                        script_source_exec_local),
+                        script_source_header.format("${ROOT_DIR}/.lib/downscale.sh"), script_source_exec_local),
                 "reformat": (
-                        script_source_header.format("${ROOT_DIR}/bin/reformat.sh"),
-                        script_source_exec_remote, script_source_exec_print),
+                        script_source_header.format("${ROOT_DIR}/.lib/reformat.sh"), script_source_exec_remote),
                 "merge": (
-                        script_source_header.format("${ROOT_DIR}/bin/merge.sh"),
-                        script_source_exec_remote, script_source_exec_print),
+                        script_source_header.format("${ROOT_DIR}/.lib/merge.sh"), script_source_exec_remote),
                 "rename": (
-                        script_source_header.format("${ROOT_DIR}/bin/rename.sh"),
-                        script_source_exec_remote, script_source_exec_print),
+                        script_source_header.format("${ROOT_DIR}/.lib/rename.sh"), script_source_exec_remote),
                 "transcode": (
-                        script_source_header.format("${ROOT_DIR}/bin/transcode.sh"),
-                        script_source_exec_local),
+                        script_source_header.format("${ROOT_DIR}/.lib/transcode.sh"), script_source_exec_local),
                 "analyse": (
-                        script_source_header.format("asystem-media-analyse"),
-                        script_source_exec_remote, """
+                        script_source_header.format("asystem-media-analyse"), script_source_exec_remote, """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
 declare -a RENAME_DIRS
 declare -A RENAME_DIRS_SET
@@ -1499,8 +1490,8 @@ declare -a DELETE_DIRS
 declare -A DELETE_DIRS_SET
 declare -a MERGE_DIRS
 declare -A MERGE_DIRS_SET
-LOG=$(echo ${LOG} | grep -E "1. Rename|2. Delete|3. Merge" | grep "/share")
-readarray -t LOG_LINES <<<"$LOG"
+LOG=$(echo "${LOG}" | grep -E "1. Rename|2. Delete|3. Merge" | grep "/share")
+readarray -t LOG_LINES <<<"${LOG}"
 for LOG_LINE in "${LOG_LINES[@]}"; do
   RENAME_DIR=$(grep "1. Rename"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
   if [ -n "${RENAME_DIR}" ]; then
