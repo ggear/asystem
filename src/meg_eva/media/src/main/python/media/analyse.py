@@ -1479,27 +1479,31 @@ fi
             for script_name, script_source in {
                 "downscale": (
                         script_source_header.format(
-                            "\"${ROOT_DIR}/.lib/downscale.sh\""), script_source_exec_local),
+                            "\"${ROOT_DIR}/.lib/downscale.sh\""
+                        ), script_source_exec_local),
                 "reformat": (
                         script_source_header.format(
                             "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
-                            "'/tmp/scripts/media/.lib/reformat.sh'"), script_source_exec_remote),
+                            "'/tmp/scripts/media/.lib/reformat.sh'"
+                        ), script_source_exec_remote),
                 "merge": (
                         script_source_header.format(
                             "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
                             "'/tmp/scripts/media/.lib/merge.sh'"
-                        ), script_source_exec_remote),
+                        ), script_source_exec_remote, "asystem-media-refresh"),
                 "rename": (
                         script_source_header.format(
                             "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
                             "'/tmp/scripts/media/.lib/rename.sh'"
-                        ), script_source_exec_remote),
+                        ), script_source_exec_remote, "asystem-media-refresh"),
                 "transcode": (
                         script_source_header.format(
-                            "\"${ROOT_DIR}/.lib/transcode.sh\""), script_source_exec_local),
+                            "\"${ROOT_DIR}/.lib/transcode.sh\""
+                        ), script_source_exec_local),
                 "analyse": (
                         script_source_header.format(
-                            "'asystem-media-analyse'"), script_source_exec_remote, """
+                            "'asystem-media-analyse'"
+                        ), script_source_exec_remote, """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
 declare -a RENAME_DIRS
 declare -A RENAME_DIRS_SET
