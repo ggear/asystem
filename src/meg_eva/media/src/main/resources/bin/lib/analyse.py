@@ -1466,8 +1466,6 @@ if [ $(uname) == "Darwin" ]; then
     COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")""/media && ${MEDIA_COMMAND}"
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
         LOG=$(ssh "root@${HOST}" "${COMMAND}")
-    else
-        echo "Could not find share on remote server, not executing"
     fi
   done
 else
