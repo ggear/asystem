@@ -7,7 +7,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -n "${SHARE_DIR_MEDIA}" ]; then
   find . -name merge.sh -exec "{}" \;
 elif [ -n "${SHARE_DIR}" ]; then
-  "${SHARE_DIR}/tmp/script/media/merge.sh"
+  "${SHARE_DIR}/tmp/scripts/media/merge.sh"
 else
   for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${_SHARE_DIR}/tmp/scripts/media/merge.sh"; done
 fi
