@@ -20,7 +20,7 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-BITRATE_CI = 0.4
+BITRATE_CI = 0.3
 BITRATE_SCALE_MIN = 0.8
 BITRATE_SCALE_MAX = 1.2
 BITRATE_SCALE_HVEC = 1.5
@@ -1435,8 +1435,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 if not file_path_media_is_nested and script_global_file is not None:
                     script_global_file.flush()
                     script_global_file.close()
-            if not file_path_media_is_nested:
-                _set_permissions(script_global_path, 0o750)
+                    _set_permissions(script_global_path, 0o750)
                 if verbose:
                     print("done", flush=True)
 
@@ -1576,17 +1575,17 @@ asystem-media-space
                         ), script_source_exec_local),
                 "reformat": (
                         script_source_header.format(
-                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
+                            "\"${SHARE_ROOT}/\"\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
                             "'/tmp/scripts/media/.lib/reformat.sh'"
                         ), script_source_exec_remote),
                 "merge": (
                         script_source_header.format(
-                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
+                            "\"${SHARE_ROOT}/\"\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
                             "'/tmp/scripts/media/.lib/merge.sh'"
                         ), script_source_exec_remote, script_source_exec_refresh),
                 "rename": (
                         script_source_header.format(
-                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
+                            "\"${SHARE_ROOT}/\"\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
                             "'/tmp/scripts/media/.lib/rename.sh'"
                         ), script_source_exec_remote, script_source_exec_refresh),
                 "transcode": (
