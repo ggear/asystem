@@ -20,7 +20,7 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-BITRATE_CI = 0.3
+BITRATE_CI = 0.4
 BITRATE_SCALE_MIN = 0.8
 BITRATE_SCALE_MAX = 1.2
 BITRATE_SCALE_HVEC = 1.5
@@ -1479,35 +1479,16 @@ else
   LOG=$(${MEDIA_COMMAND} | tee /dev/tty)
 fi
         """
-        if not file_path_media_is_nested:
-            for script_name, script_source in {
-                "downscale": (
-                        script_source_header.format(
-                            "\"${ROOT_DIR}/.lib/downscale.sh\""
-                        ), script_source_exec_local),
-                "reformat": (
-                        script_source_header.format(
-                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
-                            "'/tmp/scripts/media/.lib/reformat.sh'"
-                        ), script_source_exec_remote),
-                "merge": (
-                        script_source_header.format(
-                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
-                            "'/tmp/scripts/media/.lib/merge.sh'"
-                        ), script_source_exec_remote, "asystem-media-refresh && \"${ROOT_DIR}/analyse.sh\""),
-                "rename": (
-                        script_source_header.format(
-                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
-                            "'/tmp/scripts/media/.lib/rename.sh'"
-                        ), script_source_exec_remote, "asystem-media-refresh && \"${ROOT_DIR}/analyse.sh\""),
-                "transcode": (
-                        script_source_header.format(
-                            "\"${ROOT_DIR}/.lib/transcode.sh\""
-                        ), script_source_exec_local),
-                "analyse": (
-                        script_source_header.format(
-                            "'asystem-media-analyse'"
-                        ), script_source_exec_remote, """
+        script_source_exec_refresh = """
+echo ''
+asystem-media-refresh
+echo ''
+"${ROOT_DIR}/analyse.sh"
+echo ''
+asystem-media-space
+echo ''
+        """
+        script_source_exec_analyse = """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
 declare -a RENAME_DIRS
 declare -A RENAME_DIRS_SET
@@ -1568,7 +1549,50 @@ for MERGE_DIR in "${MERGE_DIRS[@]}"; do
 done
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
 asystem-media-space
-                        """),
+        """
+        if not file_path_media_is_nested:
+            for script_name, script_source in {
+
+
+
+
+
+
+                # TODO: Provide implementation
+                ".lib/analyse": (
+                        "echo test",
+                        "echo test"),
+
+
+
+
+                "analyse": (
+                        script_source_header.format(
+                            "'asystem-media-analyse'"
+                        ), script_source_exec_remote, script_source_exec_analyse),
+                "downscale": (
+                        script_source_header.format(
+                            "\"${ROOT_DIR}/.lib/downscale.sh\""
+                        ), script_source_exec_local),
+                "reformat": (
+                        script_source_header.format(
+                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
+                            "'/tmp/scripts/media/.lib/reformat.sh'"
+                        ), script_source_exec_remote),
+                "merge": (
+                        script_source_header.format(
+                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
+                            "'/tmp/scripts/media/.lib/merge.sh'"
+                        ), script_source_exec_remote, script_source_exec_refresh),
+                "rename": (
+                        script_source_header.format(
+                            "'${SHARE_ROOT}/'\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
+                            "'/tmp/scripts/media/.lib/rename.sh'"
+                        ), script_source_exec_remote, script_source_exec_refresh),
+                "transcode": (
+                        script_source_header.format(
+                            "\"${ROOT_DIR}/.lib/transcode.sh\""
+                        ), script_source_exec_local),
             }.items():
                 script_path = _localise_path(os.path.join(os.path.dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
                 if verbose:
