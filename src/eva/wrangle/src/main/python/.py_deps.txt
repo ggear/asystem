@@ -3,11 +3,11 @@ datetime==5.5
 numpy==2.2.5
 pyarrow==19.0.1
 pandas==2.2.3
-polars==1.27.1
+polars==1.29.0
 tabulate==0.9.0
 paho-mqtt==1.6.1
 dropbox==11.36.2
-yfinance==0.2.55
+yfinance==0.2.57
 pdftotext==2.2.2
 xlsx2csv==0.8.4
 gspread==5.12.4

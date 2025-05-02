@@ -5,8 +5,8 @@
 ################################################################################
 diskutil list /dev/disk2
 diskutil unmountDisk force /dev/disk2
-wget http://debian.mirror.digitalpacific.com.au/debian-cd/12.4.0/amd64/iso-cd/debian-12.4.0-amd64-netinst.iso
-dd if=/Users/graham/Desktop/debian-12.4.0-amd64-netinst.iso bs=1m | /usr/local/bin/pv /Users/graham/Desktop/debian-12.4.0-amd64-netinst.iso | dd of=/dev/disk2 bs=1m
+wget http://debian.mirror.digitalpacific.com.au/debian-cd/12.10.0/amd64/iso-cd/debian-12.10.0-amd64-netinst.iso
+dd if=/Users/graham/Desktop/debian-12.10.0-amd64-netinst.iso bs=1m | pv /Users/graham/Desktop/debian-12.10.0-amd64-netinst.iso | dd of=/dev/disk2 bs=1m
 
 ################################################################################
 # Install system
