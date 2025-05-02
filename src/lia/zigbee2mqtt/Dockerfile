@@ -11,7 +11,7 @@ RUN \
     apk add --upgrade --no-cache vim=9.1.1105-r0 && \
     apk add --upgrade --no-cache jq=1.7.1-r0 && \
     apk add --upgrade --no-cache py3-pip=24.3.1-r0 && \
-    apk add --upgrade --no-cache python3=3.12.9-r0 && \
+    apk add --upgrade --no-cache python3=3.12.10-r0 && \
     apk add --upgrade --no-cache mosquitto-clients=2.0.20-r0 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
