@@ -23,6 +23,7 @@ x-common: &common
   volumes:
     - ${SERVICE_DATA_DIR}:/config
     - ${SERVICE_DATA_DIR}/bootstrap.sh:/asystem/etc/bootstrap.sh
+    - ${SERVICE_DATA_DIR}/checkalive.sh:/asystem/etc/checkalive.sh
     - ${SERVICE_DATA_DIR}/checkready.sh:/asystem/etc/checkready.sh
   logging:
     driver: "json-file"
