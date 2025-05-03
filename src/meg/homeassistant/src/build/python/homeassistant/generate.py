@@ -320,6 +320,9 @@ if __name__ == "__main__":
     env = load_env()
     metadata_hass_df = load_entity_metadata()
 
+    write_bootstrap(working_dir=join(DIR_ROOT, "src/main/resources/data"))
+    write_healthcheck(working_dir=join(DIR_ROOT, "src/main/resources/data"))
+
     # Verify entity IDs
     metadata_verify_df = metadata_hass_df[
         (metadata_hass_df["index"] > 0) &
