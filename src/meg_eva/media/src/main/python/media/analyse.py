@@ -1453,7 +1453,7 @@ ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
-SCRIPT_DIR="${SHARE_ROOT}/$(basename "$(realpath "${ROOT_DIR}/../../..")")/tmp/scripts/media/.lib"
+SCRIPT_DIR="${{SHARE_ROOT}}/$(basename "$(realpath "${{ROOT_DIR}}/../../..")")/tmp/scripts/media/.lib"
 SCRIPT_CMD='{}'
         """
         script_source_exec_local = """
