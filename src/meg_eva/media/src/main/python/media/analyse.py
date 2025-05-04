@@ -1453,10 +1453,10 @@ ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
-MEDIA_COMMAND={}
+MEDIA_COMMAND='{}'
         """
         script_source_exec_local = """
-${MEDIA_COMMAND}
+eval ${MEDIA_COMMAND}
         """
         script_source_exec_remote = """
 LOG=""
@@ -1464,7 +1464,7 @@ if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
     LOCAL='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
-    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")""/media && ${MEDIA_COMMAND}"
+    COMMAND='. $(asystem-media-home)/.env_media; cd ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")""/media && eval ${MEDIA_COMMAND}"
     if [ $(ssh "root@${HOST}" "${LOCAL}") -gt 0 ]; then
         LOG=$(ssh "root@${HOST}" "${COMMAND}" | tee /dev/tty)
     fi
@@ -1548,45 +1548,34 @@ asystem-media-space
         if not file_path_media_is_nested:
             for script_name, script_source in {
 
-
-
-
-
-
                 # TODO: Provide implementation
                 ".lib/analyse": (
                         "echo test",
                         "echo test"),
 
-
-
-
                 "analyse": (
                         script_source_header.format(
-                            "'asystem-media-analyse'"
+                            'asystem-media-analyse'
                         ), script_source_exec_remote, script_source_exec_analyse),
                 "downscale": (
                         script_source_header.format(
-                            "\"${ROOT_DIR}/.lib/downscale.sh\""
+                            '"${ROOT_DIR}/.lib/downscale.sh"'
                         ), script_source_exec_local),
                 "reformat": (
                         script_source_header.format(
-                            "\"${SHARE_ROOT}/\"\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
-                            "'/tmp/scripts/media/.lib/reformat.sh'"
+                            '"${SHARE_ROOT}/$(basename "$(realpath "${ROOT_DIR}/../../..")")/tmp/scripts/media/.lib/reformat.sh"'
                         ), script_source_exec_remote),
                 "merge": (
                         script_source_header.format(
-                            "\"${SHARE_ROOT}/\"\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
-                            "'/tmp/scripts/media/.lib/merge.sh'"
+                            '"${SHARE_ROOT}/$(basename "$(realpath "${ROOT_DIR}/../../..")")/tmp/scripts/media/.lib/merge.sh"'
                         ), script_source_exec_remote, script_source_exec_refresh),
                 "rename": (
                         script_source_header.format(
-                            "\"${SHARE_ROOT}/\"\"$(basename \"$(realpath \"${ROOT_DIR}/../../..\")\")\"" +
-                            "'/tmp/scripts/media/.lib/rename.sh'"
+                            '"${SHARE_ROOT}/$(basename "$(realpath "${ROOT_DIR}/../../..")")/tmp/scripts/media/.lib/rename.sh"'
                         ), script_source_exec_remote, script_source_exec_refresh),
                 "transcode": (
                         script_source_header.format(
-                            "\"${ROOT_DIR}/.lib/transcode.sh\""
+                            '"${ROOT_DIR}/.lib/transcode.sh"'
                         ), script_source_exec_local),
             }.items():
                 script_path = _localise_path(os.path.join(os.path.dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
