@@ -1564,23 +1564,23 @@ asystem-media-space
                         ), script_source_exec_remote, script_source_exec_analyse),
                 "downscale": (
                         script_source_header.format(
-                            '"${ROOT_DIR}/.lib/downscale.sh"'
+                            'downscale.sh'
                         ), script_source_exec_local),
                 "reformat": (
                         script_source_header.format(
-                            '"${SHARE_ROOT}/$(basename "$(realpath "${ROOT_DIR}/../../..")")/tmp/scripts/media/.lib/reformat.sh"'
+                            'reformat.sh'
                         ), script_source_exec_remote),
                 "merge": (
                         script_source_header.format(
-                            '"${SHARE_ROOT}/$(basename "$(realpath "${ROOT_DIR}/../../..")")/tmp/scripts/media/.lib/merge.sh"'
+                            'merge.sh'
                         ), script_source_exec_remote, script_source_exec_refresh),
                 "rename": (
                         script_source_header.format(
-                            '"${SHARE_ROOT}/$(basename "$(realpath "${ROOT_DIR}/../../..")")/tmp/scripts/media/.lib/rename.sh"'
+                            '/rename.sh'
                         ), script_source_exec_remote, script_source_exec_refresh),
                 "transcode": (
                         script_source_header.format(
-                            '"${ROOT_DIR}/.lib/transcode.sh"'
+                            'transcode.sh'
                         ), script_source_exec_local),
             }.items():
                 script_path = _localise_path(os.path.join(os.path.dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
