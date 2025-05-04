@@ -1559,29 +1559,23 @@ asystem-media-space
                         "echo test"),
 
                 "analyse": (
-                        script_source_header.format(
-                            'asystem-media-analyse'
-                        ), script_source_exec_remote, script_source_exec_analyse),
+                        script_source_header.format('asystem-media-analyse'),
+                        script_source_exec_remote, script_source_exec_analyse),
                 "downscale": (
-                        script_source_header.format(
-                            'downscale.sh'
-                        ), script_source_exec_local),
+                        script_source_header.format('downscale.sh'),
+                        script_source_exec_local),
                 "reformat": (
-                        script_source_header.format(
-                            'reformat.sh'
-                        ), script_source_exec_remote),
+                        script_source_header.format('reformat.sh'),
+                        script_source_exec_remote),
                 "merge": (
-                        script_source_header.format(
-                            'merge.sh'
-                        ), script_source_exec_remote, script_source_exec_refresh),
+                        script_source_header.format('merge.sh'),
+                        script_source_exec_remote, script_source_exec_refresh),
                 "rename": (
-                        script_source_header.format(
-                            '/rename.sh'
-                        ), script_source_exec_remote, script_source_exec_refresh),
+                        script_source_header.format('/rename.sh'),
+                        script_source_exec_remote, script_source_exec_refresh),
                 "transcode": (
-                        script_source_header.format(
-                            'transcode.sh'
-                        ), script_source_exec_local),
+                        script_source_header.format('transcode.sh'),
+                        script_source_exec_local),
             }.items():
                 script_path = _localise_path(os.path.join(os.path.dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
                 if verbose:
