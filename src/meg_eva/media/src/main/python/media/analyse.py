@@ -1453,7 +1453,7 @@ ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
-SCRIPT_DIR="${{SHARE_ROOT}}/$(basename "$(realpath "${{ROOT_DIR}}/../../..")")/tmp/scripts/media/.lib"
+SCRIPT_DIR='${{SHARE_ROOT}}/$(basename "$(realpath "${{ROOT_DIR}}/../../..")")/tmp/scripts/media/.lib'
 SCRIPT_CMD='{}'
         """
         script_source_exec_local = """
@@ -1464,9 +1464,9 @@ LOG=""
 if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST_NAME="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
-    HOST_SHARES='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
-    HOST_CMD='. $(asystem-media-home)/.env_media; '"cd ${SCRIPT_DIR} && eval ${SCRIPT_CMD}"
-    if [ $(ssh "root@${HOST_NAME}" "${HOST_SHARES}") -gt 0 ]; then
+    HOST_DIRS='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
+    HOST_CMD='. $(asystem-media-home)/.env_media; '"cd $(eval ${SCRIPT_DIR}) && eval ${SCRIPT_CMD}"
+    if [ $(ssh "root@${HOST_NAME}" "${HOST_DIRS}") -gt 0 ]; then
         LOG=$(ssh "root@${HOST_NAME}" "${HOST_CMD}" | tee /dev/tty)
     fi
   done
