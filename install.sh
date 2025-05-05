@@ -29,8 +29,8 @@ if [ ! -d "$SERVICE_HOME" ]; then
   fi
   rm -rf $SERVICE_HOME_OLDEST
 fi
+[ "$(ls -A data | wc -l)" -gt 0 ] && cp -rfpv $(find data -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
-[ "$(ls -A data | wc -l)" -gt 0 ] && cp -rfp $(find data -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 touch .env
 chmod 600 .env
 [ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
