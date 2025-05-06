@@ -1457,7 +1457,7 @@ SCRIPT_DIR="$(basename "$(realpath "${{ROOT_DIR}}/../../..")")/tmp/scripts/media
 SCRIPT_CMD="{}"
         """
         script_source_exec_local = """
-eval ${SCRIPT_CMD}
+${SCRIPT_CMD}
         """
         script_source_exec_remote = """
 LOG=""
@@ -1471,8 +1471,8 @@ if [ $(uname) == "Darwin" ]; then
     fi
   done
 else
-  cd "${SCRIPT_DIR}"
-  LOG=$(eval ${SCRIPT_CMD} | tee /dev/tty)
+  cd "${SHARE_ROOT}/${SCRIPT_DIR}"
+  LOG=$(${SCRIPT_CMD} | tee /dev/tty)
 fi
         """
         script_source_exec_refresh = """
