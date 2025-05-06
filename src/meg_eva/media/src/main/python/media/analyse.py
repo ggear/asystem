@@ -1458,7 +1458,7 @@ SCRIPT_DIR="$(basename "$(realpath "${{ROOT_DIR}}/../../..")")/tmp/scripts/media
 SCRIPT_CMD="{}"
         """
         script_source_exec_local = """
-${SCRIPT_CMD}
+"${SHARE_ROOT}/${SCRIPT_DIR}/${SCRIPT_CMD}"
         """
         script_source_exec_remote = """
 LOG=""
