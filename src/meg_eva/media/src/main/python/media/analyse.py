@@ -87,6 +87,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             metadata_spread_data.clear_sheet(sheet=sheet)
 
     sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_guid
+    file_path_root = os.path.abspath(file_path_root)
     if clean and file_path_root == "/share":
         print("Truncating '{}' ... ".format(sheet_url), end="", flush=True)
         _truncate_sheet(sheet_url)
