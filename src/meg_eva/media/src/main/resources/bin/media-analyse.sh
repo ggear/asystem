@@ -8,7 +8,7 @@ if [ -n "${SHARE_DIR_MEDIA}" ]; then
   "${ROOT_DIR}/lib/clean.sh" "${PWD}"
   "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${PWD}" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
 elif [ -n "${SHARE_DIR}" ]; then
-  "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}/media" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
+  "${SHARE_DIR}/tmp/scripts/media/analyse.sh"
 else
-  for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${_SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}"; done
+  for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${_SHARE_DIR}/tmp/scripts/media/analyse.sh"; done
 fi
