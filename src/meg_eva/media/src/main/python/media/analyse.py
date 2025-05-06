@@ -1484,6 +1484,9 @@ asystem-media-space
 echo ''
         """
         script_source_exec_analyse = """
+"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "$(realpath "${ROOT_DIR}/../../../../media")" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
+        """
+        script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
 declare -a RENAME_DIRS
 declare -A RENAME_DIRS_SET
@@ -1549,10 +1552,10 @@ asystem-media-space
             for script_name, script_source in {
                 ".lib/analyse": (
                         script_source_header.format("analyse.sh"),
-                        '"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${ROOT_DIR}/../../../../media" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose'),
+                        script_source_exec_analyse),
                 "analyse": (
                         script_source_header.format("analyse.sh"),
-                        script_source_exec_remote, script_source_exec_analyse),
+                        script_source_exec_remote, script_source_exec_summarise),
                 "downscale": (
                         script_source_header.format("downscale.sh"),
                         script_source_exec_local),
