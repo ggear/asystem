@@ -1465,7 +1465,7 @@ LOG=""
 if [ -f /dev/tty ]; then
     LOG_DEV=/dev/tty
 else
-    LOG_DEV=/dev/none
+    LOG_DEV=/dev/null
 fi    
 if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
