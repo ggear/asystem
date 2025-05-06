@@ -1551,7 +1551,7 @@ asystem-media-space
                 # TODO: Provide implementation
                 ".lib/analyse": (
                         script_source_header.format("analyse.sh"),
-                        "asystem-media-analyse"),
+                        "cd ${ROOT_DIR}/../../../../media && asystem-media-analyse"),
 
                 "analyse": (
                         script_source_header.format("analyse.sh"),
