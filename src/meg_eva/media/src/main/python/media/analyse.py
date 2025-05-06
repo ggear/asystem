@@ -1485,7 +1485,10 @@ asystem-media-space
 echo ''
         """
         script_source_exec_analyse = """
-"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "$(realpath "${ROOT_DIR}/../../../../media")" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
+MEDIA_DIR="$(realpath "${ROOT_DIR}/../../../../media")"
+
+"$(asystem-media-home)/lib/clean.sh" "${MEDIA_DIR}"
+"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${MEDIA_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
         """
         script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
