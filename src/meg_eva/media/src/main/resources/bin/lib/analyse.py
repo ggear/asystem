@@ -1554,7 +1554,8 @@ asystem-media-space
 
                 # TODO: Provide implementation
                 ".lib/analyse": (
-                        "asystem-media-analyse"),
+                        "asystem-media-analyse",
+                        ""),
 
                 "analyse": (
                         script_source_header.format("asystem-media-analyse.sh"),
