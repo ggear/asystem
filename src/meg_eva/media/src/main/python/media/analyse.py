@@ -1462,11 +1462,12 @@ SCRIPT_CMD="{}"
         """
         script_source_exec_remote = """
 LOG=""
-if [ -f /dev/tty ]; then
+
+if sh -c ": >/dev/tty" >/dev/null 2>/dev/null; then
     LOG_DEV=/dev/tty
 else
     LOG_DEV=/dev/null
-fi    
+fi
 if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST_NAME="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
@@ -1555,7 +1556,6 @@ for MERGE_DIR in "${MERGE_DIRS[@]}"; do
    echo "cd ${MERGE_DIR}"
 done
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
-asystem-media-space
         """
         if not file_path_media_is_nested:
             for script_name, script_source in {
