@@ -1553,7 +1553,7 @@ asystem-media-space
             for script_name, script_source in {
                 ".lib/analyse": (
                         script_source_header.format("analyse.sh"),
-                        '"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}/media" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose'),
+                        '"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${ROOT_DIR}/../../../../media" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose'),
                 "analyse": (
                         script_source_header.format("analyse.sh"),
                         script_source_exec_remote, script_source_exec_analyse),
