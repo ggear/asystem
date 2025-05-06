@@ -1554,11 +1554,10 @@ asystem-media-space
 
                 # TODO: Provide implementation
                 ".lib/analyse": (
-                        "echo test",
-                        "echo test"),
+                        "asystem-media-analyse"),
 
                 "analyse": (
-                        script_source_header.format("asystem-media-analyse"),
+                        script_source_header.format("asystem-media-analyse.sh"),
                         script_source_exec_remote, script_source_exec_analyse),
                 "downscale": (
                         script_source_header.format("downscale.sh"),
