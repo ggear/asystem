@@ -1500,6 +1500,11 @@ MEDIA_DIR="$(realpath "${ROOT_DIR}/../../../../media")"
 "$(asystem-media-home)/lib/clean.sh" "${MEDIA_DIR}"
 "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${MEDIA_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
         """
+        script_source_exec_normalise = """
+SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
+
+"$(asystem-media-home)/lib/clean.sh" "${SHARE_DIR}"
+        """
         script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
 declare -a RENAME_DIRS
@@ -1566,9 +1571,15 @@ echo "+-------------------------------------------------------------------------
                 ".lib/analyse": (
                         script_source_header.format("analyse.sh"),
                         script_source_exec_analyse),
+                ".lib/normalise": (
+                        script_source_header.format("normalise.sh"),
+                        script_source_exec_normalise),
                 "analyse": (
                         script_source_header.format("analyse.sh"),
                         script_source_exec_remote, script_source_exec_summarise),
+                "normalise": (
+                        script_source_header.format("normalise.sh"),
+                        script_source_exec_remote),
                 "downscale": (
                         script_source_header.format("downscale.sh"),
                         script_source_exec_local),
