@@ -1481,12 +1481,6 @@ else
   LOG=$("${SHARE_ROOT}/${SCRIPT_DIR}/${SCRIPT_CMD}" | tee "${LOG_DEV}")
 fi
         """
-        script_source_exec_refresh = """
-"$(asystem-media-home)/lib/media-refresh.sh"
-"${ROOT_DIR}/analyse.sh"
-"$(asystem-media-home)/lib/media-space.sh"
-echo ''
-        """
         script_source_exec_analyse = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
 "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}/media" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
@@ -1588,10 +1582,10 @@ echo "+-------------------------------------------------------------------------
                         script_source_exec_remote),
                 "merge": (
                         script_source_header.format("merge.sh"),
-                        script_source_exec_remote, script_source_exec_refresh),
+                        script_source_exec_remote),
                 "rename": (
                         script_source_header.format("rename.sh"),
-                        script_source_exec_remote, script_source_exec_refresh),
+                        script_source_exec_remote),
                 "transcode": (
                         script_source_header.format("transcode.sh"),
                         script_source_exec_local),
