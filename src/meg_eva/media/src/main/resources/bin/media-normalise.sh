@@ -7,7 +7,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 if [ -n "${SHARE_DIR_MEDIA}" ]; then
   "${ROOT_DIR}/lib/normalise.sh" "${PWD}"
 elif [ -n "${SHARE_DIR}" ]; then
-  "${ROOT_DIR}/lib/normalise.sh" "${SHARE_DIR}"
+  "${SHARE_DIR}/tmp/scripts/media/normalise.sh"
 else
-  for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${ROOT_DIR}/lib/normalise.sh" "${_SHARE_DIR}"; done
+  for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do "${_SHARE_DIR}/tmp/scripts/media/normalise.sh"; done
 fi
