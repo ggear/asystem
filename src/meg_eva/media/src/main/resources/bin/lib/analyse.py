@@ -1500,6 +1500,11 @@ MEDIA_DIR="$(realpath "${ROOT_DIR}/../../../../media")"
 "$(asystem-media-home)/lib/clean.sh" "${MEDIA_DIR}"
 "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${MEDIA_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
         """
+        script_source_exec_clean = """
+SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
+
+"$(asystem-media-home)/lib/clean.sh" "${SHARE_DIR}"
+        """
         script_source_exec_normalise = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
 
@@ -1568,18 +1573,24 @@ echo "+-------------------------------------------------------------------------
         """
         if not file_path_media_is_nested:
             for script_name, script_source in {
-                ".lib/analyse": (
-                        script_source_header.format("analyse.sh"),
-                        script_source_exec_analyse),
+                ".lib/clean": (
+                        script_source_header.format("clean.sh"),
+                        script_source_exec_clean),
                 ".lib/normalise": (
                         script_source_header.format("normalise.sh"),
                         script_source_exec_normalise),
-                "analyse": (
+                ".lib/analyse": (
                         script_source_header.format("analyse.sh"),
-                        script_source_exec_remote, script_source_exec_summarise),
+                        script_source_exec_analyse),
+                "clean": (
+                        script_source_header.format("clean.sh"),
+                        script_source_exec_remote),
                 "normalise": (
                         script_source_header.format("normalise.sh"),
                         script_source_exec_remote),
+                "analyse": (
+                        script_source_header.format("analyse.sh"),
+                        script_source_exec_remote, script_source_exec_summarise),
                 "downscale": (
                         script_source_header.format("downscale.sh"),
                         script_source_exec_local),
