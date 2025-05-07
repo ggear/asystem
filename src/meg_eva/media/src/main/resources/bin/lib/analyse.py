@@ -1503,7 +1503,7 @@ MEDIA_DIR="$(realpath "${ROOT_DIR}/../../../../media")"
         script_source_exec_normalise = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
 
-"$(asystem-media-home)/lib/clean.sh" "${SHARE_DIR}"
+"$(asystem-media-home)/lib/normalise.sh" "${SHARE_DIR}"
         """
         script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
