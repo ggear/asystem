@@ -1474,7 +1474,7 @@ if [ $(uname) == "Darwin" ]; then
     HOST_DIRS='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
     HOST_CMD='. $(asystem-media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD}"
     if [ $(ssh "root@${HOST_NAME}" "${HOST_DIRS}") -gt 0 ]; then
-        echo "Executing '${SCRIPT_CMD}' remotely ..."
+        echo "Executing remotely ..."
         LOG=$(ssh "root@${HOST_NAME}" "${HOST_CMD}" | tee "${LOG_DEV}")
     fi
   done
