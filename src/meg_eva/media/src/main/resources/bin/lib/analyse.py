@@ -1466,7 +1466,6 @@ SCRIPT_CMD="{}"
         """
         script_source_exec_remote = """
 LOG=""
-
 if sh -c ": >/dev/tty" >/dev/null 2>/dev/null; then
     LOG_DEV=/dev/tty
 else
@@ -1487,28 +1486,21 @@ else
 fi
         """
         script_source_exec_refresh = """
-echo ''
-asystem-media-refresh
-echo ''
+"$(asystem-media-home)/lib/media-refresh.sh"
 "${ROOT_DIR}/analyse.sh"
-echo ''
-asystem-media-space
+"$(asystem-media-home)/lib/media-space.sh"
 echo ''
         """
         script_source_exec_analyse = """
-MEDIA_DIR="$(realpath "${ROOT_DIR}/../../../../media")"
-
-"$(asystem-media-home)/lib/clean.sh" "${MEDIA_DIR}"
-"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${MEDIA_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
+SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
+"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}/media" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
         """
         script_source_exec_clean = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
-
 "$(asystem-media-home)/lib/clean.sh" "${SHARE_DIR}"
         """
         script_source_exec_normalise = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
-
 "$(asystem-media-home)/lib/normalise.sh" "${SHARE_DIR}"
         """
         script_source_exec_summarise = """
