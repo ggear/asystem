@@ -12,3 +12,4 @@ asystem-media-transcode
 asystem-media-clean
 asystem-media-refresh
 asystem-media-analyse
+asystem-media-space
