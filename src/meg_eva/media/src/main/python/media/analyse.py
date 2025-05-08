@@ -1470,7 +1470,7 @@ if [ $(uname) == "Darwin" ]; then
   for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
     HOST_NAME="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
     HOST_DIRS='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
-    HOST_CMD='. $(asystem-media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD}"
+    HOST_CMD='. $(asystem-media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} ${1}"
     if [ $(ssh "root@${HOST_NAME}" "${HOST_DIRS}") -gt 0 ]; then
         echo "Executing remotely ..."
         LOG=$(ssh "root@${HOST_NAME}" "${HOST_CMD}" | tee "${LOG_DEV}")
@@ -1481,8 +1481,10 @@ else
 fi
         """
         script_source_exec_analyse = """
-SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
-"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}/media" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
+SHARE_DIR="${1:-/media}"
+SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")${SHARE_DIR}"
+
+"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
         """
         script_source_exec_clean = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
