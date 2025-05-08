@@ -1485,7 +1485,7 @@ else
 fi
         """
         script_source_exec_analyse = """
-VERBOSE="${1:---quiet}"
+VERBOSE="${1:---verbose}"
 SHARE_DIR="${2:-$(realpath "${ROOT_DIR}/../../../..")/media}"
 "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${VERBOSE}" "${SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" 
         """
