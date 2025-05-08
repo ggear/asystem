@@ -14,6 +14,6 @@ elif [ -n "${SHARE_DIR}" ]; then
   if [ -f "${SHARE_DIR}/${SCRIPT_FILE}" ]; then "${SHARE_DIR}/${SCRIPT_FILE}" --verbose "media"; else "${PYTHON_DIR}/python" "${SCRIPT_PATH}" --verbose "${SHARE_DIR}/media" "${MEDIA_GOOGLE_SHEET_GUID}"; fi
 else
   for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do
-    if [ -f "${_SHARE_DIR}/${SCRIPT_FILE}" ]; then "${_SHARE_DIR}/${SCRIPT_FILE}" --quiet; else "${PYTHON_DIR}/python" "${SCRIPT_PATH}" --quiet "${_SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}"; fi
+    if [ -f "${_SHARE_DIR}/${SCRIPT_FILE}" ]; then "${_SHARE_DIR}/${SCRIPT_FILE}" --quiet; else "${PYTHON_DIR}/python" "${SCRIPT_PATH}" --quiet "${_SHARE_DIR}/media" "${MEDIA_GOOGLE_SHEET_GUID}"; fi
   done
 fi
