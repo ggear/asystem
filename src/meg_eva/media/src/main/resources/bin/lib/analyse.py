@@ -1487,7 +1487,6 @@ fi
         script_source_exec_analyse = """
 SHARE_DIR="${1:-/media}"
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")${SHARE_DIR}"
-
 "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
         """
         script_source_exec_clean = """
