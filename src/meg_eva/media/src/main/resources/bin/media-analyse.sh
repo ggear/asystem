@@ -4,9 +4,9 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 . "${ROOT_DIR}/.env_media"
 
-SCRIPT_NAME="analyse.sh"
-SCRIPT_PATH="${LIB_ROOT}/${SCRIPT_NAME}"
-SCRIPT_FILE="tmp/scripts/media/${SCRIPT_NAME}"
+SCRIPT_NAME="analyse"
+SCRIPT_PATH="${LIB_ROOT}/${SCRIPT_NAME}.py"
+SCRIPT_FILE="tmp/scripts/media/${SCRIPT_NAME}.sh"
 if [ -n "${SHARE_DIR_MEDIA}" ]; then
   "${ROOT_DIR}/lib/clean.sh" "${PWD}"
   "${PYTHON_DIR}/python" "${SCRIPT_PATH}" "${PWD}" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
