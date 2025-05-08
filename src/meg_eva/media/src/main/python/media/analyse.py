@@ -1323,7 +1323,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("fi\n"),
                     pl.lit("[[ \"$(basename \"$0\")\" == \"reformat.sh\" ]] && TRANSCODE_VIDEO='--copy-video'\n"),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
-                    pl.lit("  '"), pl.col("Transcode Video"), pl.lit(" \\\n"),
+                    pl.lit("  "), pl.col("Transcode Video"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Subtitle"), pl.lit("\n"),
                     pl.lit("if [ $? -eq 0 ]; then\n"),
