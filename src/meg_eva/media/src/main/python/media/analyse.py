@@ -102,9 +102,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         return -2, get_file_actions_dict()
     file_path_root_parent = file_path_root_re.groups()[0]
     file_path_root_is_nested = file_path_root != file_path_root_parent
-
-    print("{} {} {}".format(file_path_root, file_path_root_parent, file_path_root_is_nested))
-
     file_path_media = os.path.join(file_path_root_parent, "media")
     if not os.path.isdir(file_path_media):
         print("Error: path [{}] does not exist".format(file_path_media))
@@ -1485,7 +1482,8 @@ fi
         """
         script_source_exec_analyse = """
 SHARE_DIR="${1:-$(realpath "${ROOT_DIR}/../../../..")/media}"
-"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" --verbose
+VERBOSE="${2:-}"
+"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" "${VERBOSE}"
         """
         script_source_exec_clean = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
