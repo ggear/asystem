@@ -1481,9 +1481,9 @@ else
 fi
         """
         script_source_exec_analyse = """
-SHARE_DIR="${1:-$(realpath "${ROOT_DIR}/../../../..")/media}"
-VERBOSE="${2:-}"
-"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" "${VERBOSE}"
+VERBOSE="${1:-}"
+SHARE_DIR="${2:-$(realpath "${ROOT_DIR}/../../../..")/media}"
+"${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${VERBOSE}" "${SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" 
         """
         script_source_exec_clean = """
 SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
