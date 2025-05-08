@@ -1481,7 +1481,7 @@ else
 fi
         """
         script_source_exec_analyse = """
-VERBOSE="${1:-}"
+VERBOSE="${1:---quiet}"
 SHARE_DIR="${2:-$(realpath "${ROOT_DIR}/../../../..")/media}"
 "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" "${VERBOSE}" "${SHARE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}" 
         """
@@ -1799,6 +1799,7 @@ def get_file_actions_dict(rename=0, delete=0, merge=0, reformat=0, transcode=0, 
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
+    argument_parser.add_argument("--quiet", default=True, action="store_true")
     argument_parser.add_argument("--verbose", default=False, action="store_true")
     argument_parser.add_argument("--clean", default=False, action="store_true")
     argument_parser.add_argument("directory")
@@ -1808,5 +1809,5 @@ if __name__ == "__main__":
         Path(arguments.directory).absolute().as_posix(),
         arguments.sheetguid,
         arguments.clean,
-        arguments.verbose
+        arguments.verbose and not arguments.quiet
     )[0] < 0 else 0)
