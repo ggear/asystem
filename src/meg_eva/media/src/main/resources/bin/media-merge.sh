@@ -8,7 +8,7 @@ SCRIPT_NAME="merge.sh"
 SCRIPT_PATH="${ROOT_DIR}/lib/${SCRIPT_NAME}"
 SCRIPT_FILE="tmp/scripts/media/${SCRIPT_NAME}"
 if [ -n "${SHARE_DIR_MEDIA}" ]; then
-  "${SCRIPT_PATH}" "${PWD}"
+  find . -name ${SCRIPT_NAME} -exec "{}" \;
 elif [ -n "${SHARE_DIR}" ]; then
   if [ -f "${SHARE_DIR}/${SCRIPT_FILE}" ]; then "${SHARE_DIR}/${SCRIPT_FILE}"; else "${SCRIPT_PATH}" "${SHARE_DIR}"; fi
 else
