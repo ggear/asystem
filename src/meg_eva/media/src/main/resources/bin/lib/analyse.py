@@ -1498,7 +1498,7 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
 "$(asystem-media-home)/lib/normalise.sh" "${SHARE_DIR}"
         """
         script_source_exec_summarise = """
-echo -n "Processing '$(dirname $(dirname "${ROOT_DIR}"))/media' ... "
+echo -n "Processing '$(dirname($(dirname $(dirname "${ROOT_DIR}")))' ... "
 declare -a RENAME_DIRS
 declare -A RENAME_DIRS_SET
 declare -a DELETE_DIRS
