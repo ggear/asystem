@@ -103,7 +103,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
     file_path_root_parent = file_path_root_re.groups()[0]
     file_path_root_is_nested = file_path_root != file_path_root_parent
 
-    print("{} {}".format(file_path_root, file_path_root_parent))
+    print("{} {} {}".format(file_path_root, file_path_root_parent, file_path_root_is_nested))
 
     file_path_media = os.path.join(file_path_root_parent, "media")
     if not os.path.isdir(file_path_media):
