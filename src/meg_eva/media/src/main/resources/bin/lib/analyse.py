@@ -1813,5 +1813,5 @@ if __name__ == "__main__":
         Path(arguments.directory).absolute().as_posix(),
         arguments.sheetguid,
         arguments.clean,
-        arguments.verbose and not arguments.quiet
+        arguments.verbose or not arguments.quiet
     )[0] < 0 else 0)
