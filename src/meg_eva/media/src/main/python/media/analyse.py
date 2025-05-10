@@ -1456,7 +1456,7 @@ ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
-killall -9 ffmpeg 2>&1 >/dev/null
+killall -9 ffmpeg >/dev/null 2>/dev/null
 
 SCRIPT_DIR="$(basename "$(realpath "${{ROOT_DIR}}/../../..")")/tmp/scripts/media/.lib"
 SCRIPT_CMD="{}"
