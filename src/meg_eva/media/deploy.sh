@@ -14,6 +14,7 @@ echo "Server [${HOST}] media truncate completed" && echo "----------------------
 for HOST in ${HOSTS}; do
   HOST="$(grep ${HOST} ${ROOT_DIR}/../../../.hosts | tr '=' ' ' | tr ',' ' ' | awk '{ print $2 }')-${HOST}"
   echo "------------------------------------------------------------" && echo "Server [${HOST}] media operations starting"
+  ssh -o StrictHostKeyChecking=no -t -t -q root@${HOST} "/root/install/media/latest/bin/media-normalise.sh"
   ssh -o StrictHostKeyChecking=no -t -t -q root@${HOST} "/root/install/media/latest/bin/media-clean.sh"
   ssh -o StrictHostKeyChecking=no -t -t -q root@${HOST} "/root/install/media/latest/bin/media-analyse.sh"
   ssh -o StrictHostKeyChecking=no -t -t -q root@${HOST} "/root/install/media/latest/bin/media-space.sh"
