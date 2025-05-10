@@ -16,5 +16,4 @@ else
     if [ -f "${_SHARE_DIR}/${SCRIPT_FILE}" ]; then "${_SHARE_DIR}/${SCRIPT_FILE}"; else "${SCRIPT_PATH}" "${_SHARE_DIR}"; fi
   done
 fi
-echo "" && asystem-media-refresh
-
+echo "" && asystem-media-refresh && asystem-media-clean
