@@ -25,6 +25,7 @@ BITRATE_RES_KBPS = {
     "FHD": 4000,  # <2160 @HVEC
     "UHD": 8000,  # >2160 @HVEC
 }
+# INFO: https://github.com/lisamelton/other_video_transcoding/blob/b063ef953eaaf0c0a36530ff97d8aa4e477973d5/other-transcode.rb#L1064
 
 MEDIA_YEAR_NUMBER_REGEXP = r"\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
 MEDIA_SEASON_NUMBER_REGEXP = r"Season ([0-9]?[0-9]+)"
@@ -1432,8 +1433,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     script_global_file.flush()
                     script_global_file.close()
                     _set_permissions(script_global_path, 0o750)
-                if verbose:
-                    print("done", flush=True)
+                if not file_path_media_is_nested:
+                    if verbose:
+                        print("done", flush=True)
 
         for script in MEDIA_FILE_SCRIPTS:
             script_metadata = [
