@@ -1319,7 +1319,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("if [ ! -f \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (missing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
-                    pl.lit("if [[ $(hostname) == macmini* ]]; then\n"),
+                    pl.lit("if [[ $(hostname) == macmini* ]] && [[ \"$(basename \"$0\")\" == \"transcode.sh\" ]] ; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (macmini): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("[[ \"$(basename \"$0\")\" == \"reformat.sh\" ]] && TRANSCODE_VIDEO='--copy-video'\n"),
