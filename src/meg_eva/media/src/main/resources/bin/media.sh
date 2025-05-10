@@ -9,7 +9,4 @@ asystem-media-analyse
 asystem-media-rename
 asystem-media-reformat
 asystem-media-transcode
-asystem-media-clean
-asystem-media-refresh
-asystem-media-analyse
 asystem-media-space
