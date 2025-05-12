@@ -55,7 +55,7 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "31/media"),
                                   files_action_expected=actions(rename=1), scripts={"rename"})
         self._test_analyse_assert(join(dir_test, "31/media"),
-                                  files_action_expected=actions(merge=0, downscale=1), scripts={"rename"})
+                                  files_action_expected=actions(merge=0, nothing=1), scripts={"rename"})
 
     def test_analyse_ignore(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
@@ -65,11 +65,11 @@ class InternetTest(unittest.TestCase):
     def test_analyse_rename(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "37/media"),
-                                  files_action_expected=actions(rename=47, merge=5, nothing=11), scripts={"rename"})
+                                  files_action_expected=actions(rename=47, merge=5, upscale=7, nothing=4), scripts={"rename"})
         self._test_analyse_assert(join(dir_test, "37/media"),
-                                  files_action_expected=actions(rename=37, delete=8, merge=5, upscale=1, nothing=12), scripts={"rename"})
+                                  files_action_expected=actions(rename=19, delete=8, merge=5, upscale=29, nothing=2), scripts={"rename"})
         self._test_analyse_assert(join(dir_test, "37/media"),
-                                  files_action_expected=actions(rename=32, delete=8, merge=5, upscale=3, nothing=15), scripts={"rename"})
+                                  files_action_expected=actions(rename=19, delete=8, merge=5, upscale=29, nothing=2), scripts={"rename"})
 
     def test_analyse_merge(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
