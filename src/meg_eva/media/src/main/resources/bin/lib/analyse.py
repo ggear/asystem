@@ -25,9 +25,9 @@ BITRATE_SCALE_MIN = 0.8
 BITRATE_SCALE_MAX = 1.2
 BITRATE_SCALE_HVEC = 1.5
 BITRATE_RES_KBPS = {
-    "HD": 2000,  # <1080 @HVEC
-    "FHD": 4000,  # <2160 @HVEC
-    "UHD": 8000,  # >2160 @HVEC
+    "HD": 3000,  # <1080 @HVEC
+    "FHD": 6000,  # <2160 @HVEC
+    "UHD": 12000,  # >2160 @HVEC
 }
 # INFO: https://github.com/lisamelton/other_video_transcoding/blob/b063ef953eaaf0c0a36530ff97d8aa4e477973d5/other-transcode.rb#L1064
 
@@ -1179,6 +1179,18 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
             [
                 (
                     pl.when(
+                        (pl.col("Video 1 Codec") != "HEVC")
+                    ).then(
+                        pl.lit(BITRATE_SCALE_HVEC)
+                    ).otherwise(
+                        pl.lit(1)
+                    )
+                ).alias("Transcode Video Scaling Factor")
+            ]
+        ).with_columns(
+            [
+                (
+                    pl.when(
                         (pl.col("Video 1 Colour") == "HDR")
                     ).then(
                         pl.lit("--copy-video")
@@ -1187,7 +1199,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     ).then(
                         pl.concat_str([
                             pl.lit("--target "),
-                            pl.col("Video 1 Bitrate Max (Kbps)"),
+                            (pl.col("Video 1 Bitrate Max (Kbps)").cast(pl.Int32) / pl.col("Transcode Video Scaling Factor")).cast(pl.Int32),
                             pl.lit(" --hevc"),
                         ])
                     ).when(
@@ -1195,13 +1207,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     ).then(
                         pl.concat_str([
                             pl.lit("--target "),
-                            pl.col("Video 1 Bitrate Mid (Kbps)"),
+                            (pl.col("Video 1 Bitrate Mid (Kbps)").cast(pl.Int32) / pl.col("Transcode Video Scaling Factor")).cast(pl.Int32),
                             pl.lit(" --hevc"),
                         ])
                     ).otherwise(
                         pl.concat_str([
                             pl.lit("--target "),
-                            pl.col("Video 1 Bitrate Min (Kbps)"),
+                            (pl.col("Video 1 Bitrate Min (Kbps)").cast(pl.Int32) / pl.col("Transcode Video Scaling Factor")).cast(pl.Int32),
                             pl.lit(" --hevc --1080p"),
                         ])
                     )
@@ -1260,6 +1272,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
+                    pl.lit("ROOT_DIR_PARENT=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Renaming: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
@@ -1284,7 +1297,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  echo '' && echo -n 'Skipped (not-executed): ' && date\n"),
                     pl.lit("fi\n"),
                     pl.lit("if [ \""), pl.col("Rename File"), pl.lit("\" != \"\" ]; then\n"),
-                    pl.lit("  ROOT_DIR_PARENT=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("  FILE_ORIGNL=\"${ROOT_DIR_PARENT}/"), pl.col("File Name"), pl.lit("\"\n"),
                     pl.lit("  FILE_RENMED=\"${ROOT_DIR_PARENT}/"), pl.col("Rename File"), pl.lit("\"\n"),
                     pl.lit("  echo '' && echo \\\n"),
@@ -1308,6 +1320,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
+                    pl.lit("ROOT_DIR_PARENT=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Merging: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
@@ -1324,7 +1337,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("  ORIGNL_FILE=\"$(find \"${ORIGNL_DIR}\" ! -name *." +
                            " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
                            " -name \""), pl.col("File Stem"), pl.lit("\\.*\")\"\n"),
-                    pl.lit("  ROOT_DIR_PARENT=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("  TRNSCD_FILE=\"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
                     pl.lit("  MERGED_FILE=\"${ORIGNL_DIR}/"), pl.col("File Stem"), pl.lit(".mkv\"\n"),
                     pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ] &&\n"),
@@ -1360,6 +1372,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n\n"),
+                    pl.lit("ROOT_DIR_PARENT=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
@@ -1380,7 +1393,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("if [[ $(hostname) == macmini* ]] && [[ \"$(basename \"$0\")\" == \"transcode.sh\" ]] ; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (poor-hardware): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
-                    pl.lit("ROOT_DIR_PARENT=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
                     pl.lit("[[ \"$(basename \"$0\")\" == \"reformat.sh\" ]] && TRANSCODE_VIDEO='--copy-video'\n"),
                     pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
