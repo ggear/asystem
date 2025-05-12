@@ -67,9 +67,9 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "37/media"),
                                   files_action_expected=actions(rename=47, merge=5, nothing=11), scripts={"rename"})
         self._test_analyse_assert(join(dir_test, "37/media"),
-                                  files_action_expected=actions(rename=19, delete=8, merge=5, upscale=10, nothing=21), scripts={"rename"})
+                                  files_action_expected=actions(rename=37, delete=8, merge=5, upscale=1, nothing=12), scripts={"rename"})
         self._test_analyse_assert(join(dir_test, "37/media"),
-                                  files_action_expected=actions(rename=19, delete=8, merge=5, upscale=10, nothing=21), scripts={"rename"})
+                                  files_action_expected=actions(rename=32, delete=8, merge=5, upscale=3, nothing=15), scripts={"rename"})
 
     def test_analyse_merge(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
