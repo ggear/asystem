@@ -20,10 +20,13 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-BITRATE_MARGIN = 0.3
+BITRATE_MARGIN = 0.35
 BITRATE_HVEC_SCALE = 1.5
-BITRATE_MIN_SCALE = 0.8
-BITRATE_MAX_SCALE = 1.2
+
+BITRATE_MIN_SCALE = 0.8 # 0.15 x 5 = 0.75
+BITRATE_MID_SCALE = 1.0 # 0.15 x 6 = 0.90
+BITRATE_MAX_SCALE = 1.2 # 0.15 x 9 = 1.20
+
 BITRATE_MID_RATE_KBPS = {
     "HD": 3000,  # <1080
     "FHD": 6000,  # <2160
