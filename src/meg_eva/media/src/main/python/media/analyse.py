@@ -16,14 +16,20 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-BITRATE_MARGIN = 0.35
+BITRATE_XXXXXXXX1 = 0.0  # 0.15 x 1 = 0.15 @720
+BITRATE_XXXXXXXX2 = 0.0  # 0.15 x 2 = 0.30 @720
+BITRATE_XXXXXXXX3 = 0.0  # 0.15 x 3 = 0.45 @720
+BITRATE_XXXXXXXX4 = 0.0  # 0.15 x 4 = 0.60 @1080
+BITRATE_MIN_SCALE = 0.8  # 0.15 x 5 = 0.75 @1080
+BITRATE_MID_SCALE = 1.0  # 0.15 x 6 = 0.90 @1080
+BITRATE_XXXXXXXX7 = 0.0  # 0.15 x 7 = 1.05 @1080
+BITRATE_MAX_SCALE = 1.2  # 0.15 x 8 = 1.20 @1080
+BITRATE_XXXXXXXX9 = 0.0  # 0.15 x 9 = 1.35 @2160
+
 BITRATE_HVEC_SCALE = 1.5
-
-BITRATE_MIN_SCALE = 0.8 # 0.15 x 5 = 0.75
-BITRATE_MID_SCALE = 1.0 # 0.15 x 6 = 0.90
-BITRATE_MAX_SCALE = 1.2 # 0.15 x 9 = 1.20
-
-BITRATE_MID_RATE_KBPS = {
+BITRATE_SIZE_SCALE = 0.35
+BITRATE_QUALITY_SCALE = 0.15
+BITRATE_UNSCALED_KBPS = {
     "HD": 3000,  # <1080
     "FHD": 6000,  # <2160
     "UHD": 12000,  # >2160
@@ -835,13 +841,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.when(
                     (
                             pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) >
-                            ((1 + BITRATE_MARGIN) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
+                            ((1 + BITRATE_SIZE_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
                     )
                 ).then(pl.lit("Large"))
                 .when(
                     (
                             pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) <
-                            ((1 - BITRATE_MARGIN) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
+                            ((1 - BITRATE_SIZE_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
                     )
                 ).then(pl.lit("Small"))
                 .otherwise(pl.lit("Right"))
@@ -1715,11 +1721,11 @@ def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
             quality_scale = BITRATE_MAX_SCALE
     _width = int(_width)
     if _width <= 1280:
-        bitrate_target = BITRATE_MID_RATE_KBPS["HD"]
+        bitrate_target = BITRATE_UNSCALED_KBPS["HD"]
     elif _width <= 1920:
-        bitrate_target = BITRATE_MID_RATE_KBPS["FHD"]
+        bitrate_target = BITRATE_UNSCALED_KBPS["FHD"]
     else:
-        bitrate_target = BITRATE_MID_RATE_KBPS["UHD"]
+        bitrate_target = BITRATE_UNSCALED_KBPS["UHD"]
     hevc_scale = BITRATE_HVEC_SCALE if _codec != "HEVC" else 1
     bitrate_target = bitrate_target * quality_scale * hevc_scale
     bitrate_target = bitrate_target if _bitrate is None else min(int(_bitrate), bitrate_target)
