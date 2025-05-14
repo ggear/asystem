@@ -35,7 +35,7 @@ sed -i '' 's/\/local\/community/\/local\/custom_ui/g' "${ROOT_DIR}/src/main/reso
 wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/leaflet.js.map" "https://unpkg.com/leaflet@1.9.2/dist/leaflet.js.map"
 
 # Notes: https://github.com/thomasloven/lovelace-layout-card/releases
-VERSION=v2.4.6
+VERSION=v2.4.5
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-layout-card" "thomasloven/lovelace-layout-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
