@@ -30,9 +30,9 @@ BITRATE_HVEC_SCALE = 1.5
 BITRATE_SIZE_SCALE = 0.30
 BITRATE_QUALITY_SCALE = 0.15
 BITRATE_UNSCALED_KBPS = {
-    "HD": 3000,  # <1080
-    "FHD": 6000,  # <2160
-    "UHD": 12000,  # >2160
+    "HD": 3000,  # <=720, <=Quality-3
+    "FHD": 6000,  # <=1080, <=Quality-8
+    "UHD": 12000,  # >=2160, ==Quality-9
 }
 # INFO: https://github.com/lisamelton/other_video_transcoding/blob/b063ef953eaaf0c0a36530ff97d8aa4e477973d5/other-transcode.rb#L1064
 
@@ -1002,7 +1002,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Stem").is_duplicated()) &
                     (~pl.struct(
                         pl.col("File Stem"),
-                        pl.col("Duration (hours)").cast(pl.Float32).round_sig_figs(2),
+                        (pl.col("Duration (hours)").cast(pl.Float32) * 60 * 6).round(0),
                     ).is_duplicated())
                 ).then(pl.lit("Corrupt"))
                 .otherwise(pl.col("File State"))
