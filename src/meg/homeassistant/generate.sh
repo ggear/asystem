@@ -35,7 +35,7 @@ sed -i '' 's/\/local\/community/\/local\/custom_ui/g' "${ROOT_DIR}/src/main/reso
 wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/leaflet.js.map" "https://unpkg.com/leaflet@1.9.2/dist/leaflet.js.map"
 
 # Notes: https://github.com/thomasloven/lovelace-layout-card/releases
-VERSION=v2.4.5
+VERSION=v2.4.6
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-layout-card" "thomasloven/lovelace-layout-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
@@ -84,7 +84,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/bramstroker/homeassistant-powercalc/releases
-VERSION=v1.17.11
+VERSION=v1.17.12
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "powercalc-component" "ggear/homeassistant-powercalc" "ggear-powercalc" "https://github.com/bramstroker/homeassistant-powercalc.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/powercalc"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
