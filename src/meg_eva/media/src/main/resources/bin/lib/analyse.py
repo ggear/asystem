@@ -21,11 +21,11 @@ from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
 QUALITY_MIN = 3  # <=720
-QUALITY_MID = 8  # <=1080
+QUALITY_MID = 8  # ==1080
 QUALITY_MAX = 9  # >=2160
-BITRATE_HVEC_SCALE = 1.5  # Effciency factor
+BITRATE_HVEC_SCALE = 1.5  # H265 efficiency factor
 BITRATE_SIZE_SCALE = 0.30  # Margin when assessing size
-BITRATE_QUALITY_SCALE = 0.15  # Scaling factor against quality
+BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 BITRATE_UNSCALED_KBPS = {
     "HD": 3000,  # <=720, <=QUALITY_MIN
     "FHD": 6000,  # <=1080, <=QUALITY_MID
@@ -499,7 +499,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 str(file_stream_video_bitrate)
                             file_stream_video["bitrate_target__Kbps"] = \
                                 _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
-                                             file_target_quality, file_stream_video_bitrate)
+                                             file_target_quality)
                     else:
                         del file_stream_video["bitrate_estimate__Kbps"]
                         del file_stream_video["bitrate_target__Kbps"]
