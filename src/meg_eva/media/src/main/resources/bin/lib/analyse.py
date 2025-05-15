@@ -1180,11 +1180,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ).with_columns(
             [
                 (
+                    # pl.when(
+                    #     (pl.col("Video 1 Colour") == "HDR")
+                    # ).then(
+                    #     pl.lit("--copy-video")
+                    # ).when(
                     pl.when(
-                        (pl.col("Video 1 Colour") == "HDR")
-                    ).then(
-                        pl.lit("--copy-video")
-                    ).when(
                         (pl.col("Target Quality").cast(pl.Int32) < 4)
                     ).then(
                         pl.concat_str([pl.lit("--hevc --720p --target "), pl.col("Transcode Video Bitrate"), ])
