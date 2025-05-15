@@ -23,8 +23,8 @@ from polars.exceptions import ColumnNotFoundError
 BITRATE_XXXXXXXX1 = 0.0  # 0.15 x 1 = 0.15 @720
 BITRATE_XXXXXXXX2 = 0.0  # 0.15 x 2 = 0.30 @720
 BITRATE_XXXXXXXX3 = 0.0  # 0.15 x 3 = 0.45 @720
-BITRATE_XXXXXXXX4 = 0.0  # 0.15 x 4 = 0.60 @1080
-BITRATE_MIN_SCALE = 0.8  # 0.15 x 5 = 0.75 @1080
+BITRATE_MIN_SCALE = 0.8  # 0.15 x 4 = 0.60 @1080
+BITRATE_XXXXXXXX5 = 0.0  # 0.15 x 5 = 0.75 @1080
 BITRATE_MID_SCALE = 1.0  # 0.15 x 6 = 0.90 @1080
 BITRATE_XXXXXXXX7 = 0.0  # 0.15 x 7 = 1.05 @1080
 BITRATE_MAX_SCALE = 1.2  # 0.15 x 8 = 1.20 @1080
@@ -276,10 +276,27 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                                 _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
                                     if verbose else None, _message="file requires renaming to [{}]" \
                                                .format(file_name_rename), _context=file_path)
+
+            def _set_default_str(_file_defaults_dict, _file_defaults_key, _bounding_set=None, _formatter=str.title):
+                _file_defaults_dict[_file_defaults_key] = _formatter(
+                    _file_defaults_dict[_file_defaults_key].replace(" ", "") \
+                        if isinstance(_file_defaults_dict[_file_defaults_key], str) else str(_file_defaults_dict[_file_defaults_key]))
+                if _bounding_set is not None and _file_defaults_dict[_file_defaults_key] not in _bounding_set:
+                    raise Exception("Invalid {}: {}".format(_file_defaults_key, file_defaults_dict[_file_defaults_key]))
+
+            def _set_default_numeric(_file_defaults_dict, _file_defaults_key, _bounding_lower=None, _bounding_upper=None):
+                _file_defaults_dict[_file_defaults_key] = _file_defaults_dict[_file_defaults_key].replace(" ", "") \
+                    if isinstance(_file_defaults_dict[_file_defaults_key], str) else str(_file_defaults_dict[_file_defaults_key])
+                if _file_defaults_dict[_file_defaults_key] != "" and (
+                        not _file_defaults_dict[_file_defaults_key].isnumeric() or
+                        (_bounding_lower is not None and int(_file_defaults_dict[_file_defaults_key]) < _bounding_lower) or
+                        (_bounding_upper is not None and int(_file_defaults_dict[_file_defaults_key]) > _bounding_upper)):
+                    raise Exception("Invalid {}: {}".format(_file_defaults_key, _file_defaults_dict[_file_defaults_key]))
+
             if not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
                     "transcode_action": "Defer",
-                    "target_quality": "Mid",
+                    "target_quality": "6",
                     "target_video": "",
                     "target_audios": "",
                     "target_subtitles": "",
@@ -300,27 +317,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         with open(file_defaults_path, 'r') as file_defaults:
                             try:
                                 file_defaults_dict.update(_unwrap_lists(yaml.safe_load(file_defaults)))
-                                file_defaults_dict["transcode_action"] = file_defaults_dict["transcode_action"].title()
-                                if file_defaults_dict["transcode_action"] not in {"Defer", "Ignore", "Merged"}:
-                                    raise Exception("Invalid transcode action: {}".format(file_defaults_dict["transcode_action"]))
-                                file_defaults_dict["target_quality"] = file_defaults_dict["target_quality"].title()
-                                if file_defaults_dict["target_quality"] not in {"Min", "Mid", "Max"}:
-                                    raise Exception("Invalid target quality: {}".format(file_defaults_dict["target_quality"]))
-                                file_defaults_dict["target_video"] = file_defaults_dict["target_video"]
-                                if file_defaults_dict["target_video"] != "" and \
-                                        not file_defaults_dict["target_video"].replace(" ", "").isnumeric():
-                                    raise Exception("Invalid target video: {}".format(file_defaults_dict["target_video"]))
-                                file_defaults_dict["target_audios"] = file_defaults_dict["target_audios"]
-                                if file_defaults_dict["target_audios"] != "" and \
-                                        not file_defaults_dict["target_audios"].replace(" ", "").isnumeric():
-                                    raise Exception("Invalid target audios: {}".format(file_defaults_dict["target_audios"]))
-                                file_defaults_dict["target_subtitles"] = file_defaults_dict["target_subtitles"]
-                                if file_defaults_dict["target_subtitles"] != "" and \
-                                        not file_defaults_dict["target_subtitles"].replace(" ", "").isnumeric():
-                                    raise Exception("Invalid target subtitles: {}".format(file_defaults_dict["target_subtitles"]))
-                                file_defaults_dict["target_channels"] = str(int(file_defaults_dict["target_channels"]))
-                                file_defaults_dict["native_lang"] = file_defaults_dict["native_lang"].lower()
-                                file_defaults_dict["target_lang"] = file_defaults_dict["target_lang"].lower()
+                                _set_default_str(file_defaults_dict, "transcode_action", {"Defer", "Ignore", "Merged"})
+                                _set_default_numeric(file_defaults_dict, "target_quality", 1, 9)
+                                _set_default_numeric(file_defaults_dict, "target_video")
+                                _set_default_numeric(file_defaults_dict, "target_audios")
+                                _set_default_numeric(file_defaults_dict, "target_subtitles")
+                                _set_default_numeric(file_defaults_dict, "target_channels")
+                                _set_default_str(file_defaults_dict, "native_lang", _formatter=str.lower)
+                                _set_default_str(file_defaults_dict, "target_lang", _formatter=str.lower)
                             except Exception as exception:
                                 file_defaults_load_failed = True
                                 _print_message(_message="skipping file due to defaults metadata file [{}] load error [{}]" \
@@ -446,9 +450,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             file_probe_stream_filtered["bitrate_estimate__Kbps"] = file_stream_bitrate \
                                 if file_stream_bitrate > 0 else -1
                             file_probe_stream_filtered["bitrate_target__Kbps"] = -1
-                            file_probe_stream_filtered["bitrate_min__Kbps"] = -1
-                            file_probe_stream_filtered["bitrate_mid__Kbps"] = -1
-                            file_probe_stream_filtered["bitrate_max__Kbps"] = -1
                         elif file_probe_stream_type == "audio":
                             file_stream_codec = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
@@ -500,30 +501,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                         if file_stream_video_bitrate < 0:
                             file_stream_video["bitrate_estimate__Kbps"] = ""
                             file_stream_video["bitrate_target__Kbps"] = ""
-                            file_stream_video["bitrate_min__Kbps"] = ""
-                            file_stream_video["bitrate_mid__Kbps"] = ""
-                            file_stream_video["bitrate_max__Kbps"] = ""
                         else:
                             file_stream_video["bitrate_estimate__Kbps"] = \
                                 str(file_stream_video_bitrate)
                             file_stream_video["bitrate_target__Kbps"] = \
                                 _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
-                                             file_target_quality)
-                            file_stream_video["bitrate_min__Kbps"] = \
-                                _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
-                                             "Min", file_stream_video_bitrate)
-                            file_stream_video["bitrate_mid__Kbps"] = \
-                                _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
-                                             "Mid", file_stream_video_bitrate)
-                            file_stream_video["bitrate_max__Kbps"] = \
-                                _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
-                                             "Max", file_stream_video_bitrate)
+                                             file_target_quality, file_stream_video_bitrate)
                     else:
                         del file_stream_video["bitrate_estimate__Kbps"]
                         del file_stream_video["bitrate_target__Kbps"]
-                        del file_stream_video["bitrate_min__Kbps"]
-                        del file_stream_video["bitrate_mid__Kbps"]
-                        del file_stream_video["bitrate_max__Kbps"]
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
                 for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
@@ -743,9 +729,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         "Video 1 Width",
         "Video 1 Bitrate Estimate (Kbps)",
         "Video 1 Bitrate Target (Kbps)",
-        "Video 1 Bitrate Min (Kbps)",
-        "Video 1 Bitrate Mid (Kbps)",
-        "Video 1 Bitrate Max (Kbps)",
         "Audio 1 Index",
         "Audio 1 Index Audio",
         "Audio 1 Codec",
@@ -846,12 +829,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (
                             pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) >
                             ((1 + BITRATE_SIZE_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
+                    ) |
+                    (
+                            ((pl.col("Target Quality").cast(pl.Int32) < 4) & (pl.col("Video 1 Width").cast(pl.Int32) >= 1280)) |
+                            ((pl.col("Target Quality").cast(pl.Int32) < 9) & (pl.col("Video 1 Width").cast(pl.Int32) >= 1920))
                     )
                 ).then(pl.lit("Large"))
                 .when(
                     (
                             pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) <
                             ((1 - BITRATE_SIZE_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
+                    ) |
+                    (
+                            ((pl.col("Target Quality").cast(pl.Int32) < 9) & (pl.col("Video 1 Width").cast(pl.Int32) < 1920)) |
+                            ((pl.col("Target Quality").cast(pl.Int32) > 8) & (pl.col("Video 1 Width").cast(pl.Int32) < 3840))
                     )
                 ).then(pl.lit("Small"))
                 .otherwise(pl.lit("Right"))
@@ -1190,11 +1181,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.when(
                         (pl.col("Video 1 Codec") != "HEVC")
                     ).then(
-                        pl.lit(BITRATE_HVEC_SCALE)
+                        (pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Int32) / pl.lit(BITRATE_HVEC_SCALE)).cast(pl.Int32)
                     ).otherwise(
-                        pl.lit(1)
+                        pl.col("Video 1 Bitrate Target (Kbps)")
                     )
-                ).alias("Transcode Video Scaling Factor")
+                ).alias("Transcode Video Bitrate")
             ]
         ).with_columns(
             [
@@ -1204,27 +1195,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     ).then(
                         pl.lit("--copy-video")
                     ).when(
-                        (pl.col("Target Quality") == "Max")
+                        (pl.col("Target Quality").cast(pl.Int32) < 4)
                     ).then(
-                        pl.concat_str([
-                            pl.lit("--target "),
-                            (pl.col("Video 1 Bitrate Max (Kbps)").cast(pl.Int32) / pl.col("Transcode Video Scaling Factor")).cast(pl.Int32),
-                            pl.lit(" --hevc"),
-                        ])
+                        pl.concat_str([pl.lit("--hevc --720p --target "), pl.col("Transcode Video Bitrate"), ])
                     ).when(
-                        (pl.col("Target Quality") == "Mid")
+                        (pl.col("Target Quality").cast(pl.Int32) < 9)
                     ).then(
-                        pl.concat_str([
-                            pl.lit("--target "),
-                            (pl.col("Video 1 Bitrate Mid (Kbps)").cast(pl.Int32) / pl.col("Transcode Video Scaling Factor")).cast(pl.Int32),
-                            pl.lit(" --hevc"),
-                        ])
+                        pl.concat_str([pl.lit("--hevc --1080p --target "), pl.col("Transcode Video Bitrate"), ])
                     ).otherwise(
-                        pl.concat_str([
-                            pl.lit("--target "),
-                            (pl.col("Video 1 Bitrate Min (Kbps)").cast(pl.Int32) / pl.col("Transcode Video Scaling Factor")).cast(pl.Int32),
-                            pl.lit(" --hevc --1080p"),
-                        ])
+                        pl.concat_str([pl.lit("--hevc --target "), pl.col("Transcode Video Bitrate"), ])
                     )
                 ).alias("Transcode Video"),
                 (
@@ -1717,12 +1696,6 @@ echo "+-------------------------------------------------------------------------
 
 
 def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
-    quality_scale = 1
-    if _quality is not None:
-        if _quality.upper() == "MIN":
-            quality_scale = BITRATE_MIN_SCALE
-        elif _quality.upper() == "MAX":
-            quality_scale = BITRATE_MAX_SCALE
     _width = int(_width)
     if _width <= 1280:
         bitrate_target = BITRATE_UNSCALED_KBPS["HD"]
@@ -1731,6 +1704,7 @@ def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
     else:
         bitrate_target = BITRATE_UNSCALED_KBPS["UHD"]
     hevc_scale = BITRATE_HVEC_SCALE if _codec != "HEVC" else 1
+    quality_scale = (6 if _quality is None or _quality == "" else int(_quality)) * BITRATE_QUALITY_SCALE
     bitrate_target = bitrate_target * quality_scale * hevc_scale
     bitrate_target = bitrate_target if _bitrate is None else min(int(_bitrate), bitrate_target)
     return str(round(bitrate_target))

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+SERVICE_HOM E=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
 cd ${SERVICE_INSTALL} || exit
@@ -36,16 +36,16 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
   for SHARE_DIR_SCOPE in "kids" "docos" "comedy"; do
     for SHARE_DIR_TYPE in "movies" "series"; do
       cat <<EOF >"${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}/._defaults.yaml"
-- target_quality: Min
+- target_quality: 4
 EOF
     done
   done
   cat <<EOF >"${SHARE_DIR}/media/parents/movies/._defaults.yaml"
-- target_quality: Mid
-- target_channels: '5'
+- target_quality: 6
+- target_channels: 5
 EOF
   cat <<EOF >"${SHARE_DIR}/media/parents/series/._defaults.yaml"
-- target_quality: Min
+- target_quality: 4
 EOF
 done
 
