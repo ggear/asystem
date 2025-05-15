@@ -20,16 +20,6 @@ from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
 
-BITRATE_XXXXXXXX1 = 0.0  # 0.15 x 1 = 0.15 @720
-BITRATE_XXXXXXXX2 = 0.0  # 0.15 x 2 = 0.30 @720
-BITRATE_XXXXXXXX3 = 0.0  # 0.15 x 3 = 0.45 @720
-BITRATE_MIN_SCALE = 0.8  # 0.15 x 4 = 0.60 @1080
-BITRATE_XXXXXXXX5 = 0.0  # 0.15 x 5 = 0.75 @1080
-BITRATE_MID_SCALE = 1.0  # 0.15 x 6 = 0.90 @1080
-BITRATE_XXXXXXXX7 = 0.0  # 0.15 x 7 = 1.05 @1080
-BITRATE_MAX_SCALE = 1.2  # 0.15 x 8 = 1.20 @1080
-BITRATE_XXXXXXXX9 = 0.0  # 0.15 x 9 = 1.35 @2160
-
 BITRATE_HVEC_SCALE = 1.5
 BITRATE_SIZE_SCALE = 0.30
 BITRATE_QUALITY_SCALE = 0.15
