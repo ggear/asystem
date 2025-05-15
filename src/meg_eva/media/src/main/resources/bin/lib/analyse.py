@@ -1687,13 +1687,21 @@ echo "+-------------------------------------------------------------------------
 
 
 def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
-    _width = int(_width)
+    if _quality is not None and _quality != "":
+        if int(_quality) < 4:
+            _width = 1280
+        elif int(_quality) < 9:
+            _width = 1920
+        else:
+            _width = 3840
+    _width = int(_width) if isinstance(_width, str) else _width
     if _width <= 1280:
         bitrate_target = BITRATE_UNSCALED_KBPS["HD"]
     elif _width <= 1920:
         bitrate_target = BITRATE_UNSCALED_KBPS["FHD"]
     else:
         bitrate_target = BITRATE_UNSCALED_KBPS["UHD"]
+
     hevc_scale = BITRATE_HVEC_SCALE if _codec != "HEVC" else 1
     quality_scale = (6 if _quality is None or _quality == "" else int(_quality)) * BITRATE_QUALITY_SCALE
     bitrate_target = bitrate_target * quality_scale * hevc_scale
