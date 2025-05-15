@@ -1180,11 +1180,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
         ).with_columns(
             [
                 (
-                    # pl.when(
-                    #     (pl.col("Video 1 Colour") == "HDR")
-                    # ).then(
-                    #     pl.lit("--copy-video")
-                    # ).when(
                     pl.when(
                         (pl.col("Target Quality").cast(pl.Int32) < 4)
                     ).then(
@@ -1321,8 +1316,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                            " -name \""), pl.col("File Stem"), pl.lit("\\.*\")\"\n"),
                     pl.lit("  TRNSCD_FILE=\"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
                     pl.lit("  MERGED_FILE=\"${ORIGNL_DIR}/"), pl.col("File Stem"), pl.lit(".mkv\"\n"),
+                    pl.lit("  META_FILE=\"${ROOT_DIR}/../"
+                           "._metadata_"), pl.col("File Stem"), pl.lit("_"), pl.col("File Extension"), pl.lit(".yaml\"\n"),
                     pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ] &&\n"),
                     pl.lit("       [ $(find \"${ORIGNL_DIR}\" -name \"$(basename \"${TRNSCD_FILE}\")\" | wc -l) -eq 1 ]; then\n"),
+                    pl.lit("    if [ $(grep 'colour: HDR' \"${META_FILE}\" | wc -l) -gt 0 ]; then \n"),
+                    pl.lit("       echo '' && echo -n 'Skipped (check-transcode): ' && date && exit 0\n"),
+                    pl.lit("    fi\n"),
                     pl.lit("    echo ''\n"),
                     pl.lit("    rm -f \"${ORIGNL_FILE}\"\n"),
                     pl.lit("    mv -f \"${TRNSCD_FILE}\" \"${MERGED_FILE}\"\n"),
