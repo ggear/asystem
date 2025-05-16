@@ -20,8 +20,8 @@ QUALITY_MIN = 3  # <=720
 QUALITY_MID = 8  # ==1080
 QUALITY_MAX = 9  # >=2160
 BITRATE_HVEC_SCALE = 1.5  # H265 efficiency factor
-BITRATE_SIZE_UPPER_SCALE = 0.3  # Margin when assessing large size
-BITRATE_SIZE_LOWER_SCALE = 0.3  # Margin when assessing small size
+BITRATE_SIZE_UPPER_SCALE = 0.35  # Margin when assessing large size
+BITRATE_SIZE_LOWER_SCALE = 0.35  # Margin when assessing small size
 BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 BITRATE_UNSCALED_KBPS = {
     "HD": 3000,  # <=720, <=QUALITY_MIN
@@ -1011,11 +1011,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit(FileAction.DELETE.value))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
-                    (pl.col("File Size") != "Right")
+                    (pl.col("File Size") == "Small")
                 ).then(pl.lit(FileAction.CHECK.value))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
-                    (pl.col("File Size") == "Right")
+                    (pl.col("File Size") != "Small")
                 ).then(pl.lit(FileAction.MERGE.value))
                 .when(
                     (
