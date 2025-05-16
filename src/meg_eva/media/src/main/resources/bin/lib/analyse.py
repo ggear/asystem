@@ -24,7 +24,8 @@ QUALITY_MIN = 3  # <=720
 QUALITY_MID = 8  # ==1080
 QUALITY_MAX = 9  # >=2160
 BITRATE_HVEC_SCALE = 1.5  # H265 efficiency factor
-BITRATE_SIZE_SCALE = 0.3  # Margin when assessing size
+BITRATE_SIZE_UPPER_SCALE = 0.3  # Margin when assessing large size
+BITRATE_SIZE_LOWER_SCALE = 0.3  # Margin when assessing small size
 BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 BITRATE_UNSCALED_KBPS = {
     "HD": 3000,  # <=720, <=QUALITY_MIN
@@ -821,7 +822,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 pl.when(
                     (
                             pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) >
-                            ((1 + BITRATE_SIZE_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
+                            ((1 + BITRATE_SIZE_UPPER_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
                     ) |
                     (
                             ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MIN) & (pl.col("Video 1 Width").cast(pl.Int32) > 1280)) |
@@ -831,7 +832,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 .when(
                     (
                             pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) <
-                            ((1 - BITRATE_SIZE_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
+                            ((1 - BITRATE_SIZE_LOWER_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
                     ) |
                     (
                             ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MID) & (pl.col("Video 1 Width").cast(pl.Int32) <= 1600)) |
@@ -1029,16 +1030,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Size") == "Large")
                 ).then(pl.lit(FileAction.DOWNSCALE.value))
                 .when(
+                    (pl.col("File Version") != "Ignored") &
                     (pl.col("Metadata State") == "Messy")
                 ).then(pl.lit(FileAction.REFORMAT.value))
                 .when(
                     (
-                            (pl.col("File Version") != "Merged") &
                             (pl.col("File Version") != "Ignored") &
                             (pl.col("File Size") == "Small")
                     ) |
                     (
-                            (pl.col("File Version") != "Merged") &
                             (pl.col("File Version") != "Ignored") &
                             (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
                     )
