@@ -1549,7 +1549,7 @@ declare -a CHECK_DIRS
 declare -A CHECK_DIRS_SET
 declare -a MERGE_DIRS
 declare -A MERGE_DIRS_SET
-LOG=$(echo "${LOG}" | grep -E "1. Rename|2. Delete|3. Merge" | grep "/share")
+LOG=$(echo "${LOG}" | grep -E "1. Rename|2. Delete|3. Check|4. Merge" | grep "/share")
 readarray -t LOG_LINES <<<"${LOG}"
 for LOG_LINE in "${LOG_LINES[@]}"; do
   RENAME_DIR=$(grep "1. Rename"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
