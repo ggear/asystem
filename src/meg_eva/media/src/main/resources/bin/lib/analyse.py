@@ -1726,7 +1726,7 @@ def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
         elif int(_quality) <= QUALITY_MID:
             _width = 1920
         else:
-            _width = 3840
+            _width = 2560
     _width = int(_width) if isinstance(_width, str) else _width
     if _width <= 1280:
         bitrate_target = BITRATE_UNSCALED_KBPS["HD"]
