@@ -55,7 +55,7 @@ BASH_ECHO_HEADER = ("echo \""
 class FileAction(str, Enum):
     RENAME = "1. Rename"
     DELETE = "2. Delete"
-    MERGE = "3. Check"
+    CHECK = "3. Check"
     MERGE = "4. Merge"
     REFORMAT = "5. Reformat"
     TRANSCODE = "6. Transcode"
