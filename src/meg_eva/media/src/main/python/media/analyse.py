@@ -55,12 +55,13 @@ BASH_ECHO_HEADER = ("echo \""
 class FileAction(str, Enum):
     RENAME = "1. Rename"
     DELETE = "2. Delete"
-    MERGE = "3. Merge"
-    REFORMAT = "4. Reformat"
-    TRANSCODE = "5. Transcode"
-    DOWNSCALE = "6. Downscale"
-    UPSCALE = "7. Upscale"
-    NOTHING = "8. Nothing"
+    MERGE = "3. Check"
+    MERGE = "4. Merge"
+    REFORMAT = "5. Reformat"
+    TRANSCODE = "6. Transcode"
+    DOWNSCALE = "7. Downscale"
+    UPSCALE = "8. Upscale"
+    NOTHING = "9. Nothing"
 
 
 def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
@@ -1009,7 +1010,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("File Version") == "Duplicate")
                 ).then(pl.lit(FileAction.DELETE.value))
                 .when(
-                    (pl.col("File Version") == "Transcoded")
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("File Size") != "Right")
+                ).then(pl.lit(FileAction.CHECK.value))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("File Size") == "Right")
                 ).then(pl.lit(FileAction.MERGE.value))
                 .when(
                     (
@@ -1539,6 +1545,8 @@ declare -a RENAME_DIRS
 declare -A RENAME_DIRS_SET
 declare -a DELETE_DIRS
 declare -A DELETE_DIRS_SET
+declare -a CHECK_DIRS
+declare -A CHECK_DIRS_SET
 declare -a MERGE_DIRS
 declare -A MERGE_DIRS_SET
 LOG=$(echo "${LOG}" | grep -E "1. Rename|2. Delete|3. Merge" | grep "/share")
@@ -1551,6 +1559,10 @@ for LOG_LINE in "${LOG_LINES[@]}"; do
   DELETE_DIR=$(grep "2. Delete"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
   if [ -n "${DELETE_DIR}" ]; then
     DELETE_DIRS_SET["${DELETE_DIR}"]=1
+  fi
+  CHECK_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
+  if [ -n "${CHECK_DIR}" ]; then
+    CHECK_DIRS_SET["${CHECK_DIR}"]=1
   fi
   MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
   if [ -n "${MERGE_DIR}" ]; then
@@ -1566,6 +1578,11 @@ for DELETE_DIR in "${!DELETE_DIRS_SET[@]}"; do
   DELETE_DIRS+=("'${SHARE_ROOT}${DELETE_DIR}'")
 done
 IFS=$'\\n' DELETE_DIRS=($(sort <<<"${DELETE_DIRS[*]}"))
+unset IFS
+for CHECK_DIR in "${!CHECK_DIRS_SET[@]}"; do
+  CHECK_DIRS+=("'${SHARE_ROOT}${CHECK_DIR}'")
+done
+IFS=$'\\n' CHECK_DIRS=($(sort <<<"${CHECK_DIRS[*]}"))
 unset IFS
 for MERGE_DIR in "${!MERGE_DIRS_SET[@]}"; do
   MERGE_DIRS+=("'${SHARE_ROOT}${MERGE_DIR}'")
@@ -1585,6 +1602,12 @@ echo "Deletes to run in directory ... "
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
 for DELETE_DIR in "${DELETE_DIRS[@]}"; do
    echo "cd ${DELETE_DIR}"
+done
+echo "+----------------------------------------------------------------------------------------------------------------------------+"
+echo "Checks to run in directory ... "
+echo "+----------------------------------------------------------------------------------------------------------------------------+"
+for CHECK_DIR in "${CHECK_DIRS[@]}"; do
+   echo "cd ${CHECK_DIR}"
 done
 echo "+----------------------------------------------------------------------------------------------------------------------------+"
 echo "Merges to run in directory ... "
