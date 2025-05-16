@@ -1357,7 +1357,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("      echo \"./$(basename \"${TRNSCD_FILE}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIGNL_FILE}\")\"\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
-                    pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/\n"),
+                    pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("    else\n"),
                     pl.lit("      echo '' && echo -n 'Failed (mv): ' && date && exit 1\n"),
