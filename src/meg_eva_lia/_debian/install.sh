@@ -11,6 +11,7 @@ apt-get upgrade -y --without-new-pkgs
 # Packages install
 ################################################################################
 apt-get -y --allow-downgrades install jq=1.6-2.1
+apt-get -y --allow-downgrades install yq=3.1.0-3
 apt-get -y --allow-downgrades install xq=1.0.0-2+b5
 apt-get -y --allow-downgrades install duf=0.8.1-1+b6
 apt-get -y --allow-downgrades install ntp=1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1+deb12u1

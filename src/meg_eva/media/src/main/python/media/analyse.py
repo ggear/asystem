@@ -20,11 +20,11 @@ QUALITY_MIN = 3  # <=720
 QUALITY_MID = 8  # ==1080
 QUALITY_MAX = 9  # >=2160
 BITRATE_HVEC_SCALE = 1.5  # H265 efficiency factor
-BITRATE_SIZE_SCALE = 0.30  # Margin when assessing size
+BITRATE_SIZE_SCALE = 0.25  # Margin when assessing size
 BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 BITRATE_UNSCALED_KBPS = {
     "HD": 3000,  # <=720, <=QUALITY_MIN
-    "FHD": 6000,  # <=1080, <=QUALITY_MID
+    "FHD": 6000,  # ==1080, <=QUALITY_MID
     "UHD": 12000,  # >=2160, >=QUALITY_MAX
 }
 # INFO: https://github.com/lisamelton/other_video_transcoding/blob/b063ef953eaaf0c0a36530ff97d8aa4e477973d5/other-transcode.rb#L1064
@@ -820,8 +820,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             ((1 + BITRATE_SIZE_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
                     ) |
                     (
-                            ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MIN) & (pl.col("Video 1 Width").cast(pl.Int32) >= 1280)) |
-                            ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MID) & (pl.col("Video 1 Width").cast(pl.Int32) >= 1920))
+                            ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MIN) & (pl.col("Video 1 Width").cast(pl.Int32) > 1280)) |
+                            ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MID) & (pl.col("Video 1 Width").cast(pl.Int32) > 1920))
                     )
                 ).then(pl.lit("Large"))
                 .when(
@@ -1182,6 +1182,19 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.when(
                         (pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MIN)
                     ).then(
+                        pl.lit("720p")
+                    ).when(
+                        (pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MID)
+                    ).then(
+                        pl.lit("1080p")
+                    ).otherwise(
+                        pl.lit("4K+")
+                    )
+                ).alias("Transcode Video Resolution"),
+                (
+                    pl.when(
+                        (pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MIN)
+                    ).then(
                         pl.concat_str([pl.lit("--hevc --720p --target "), pl.col("Transcode Video Bitrate"), ])
                     ).when(
                         (pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MID)
@@ -1246,7 +1259,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n\n"),
+                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
+                    pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
+                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Renaming: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
@@ -1296,7 +1311,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n\n"),
+                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
+                    pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
+                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Merging: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
@@ -1315,11 +1332,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                            " -name \""), pl.col("File Stem"), pl.lit("\\.*\")\"\n"),
                     pl.lit("  TRNSCD_FILE=\"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
                     pl.lit("  MERGED_FILE=\"${ORIGNL_DIR}/"), pl.col("File Stem"), pl.lit(".mkv\"\n"),
-                    pl.lit("  META_FILE=\"${ROOT_DIR}/../"
-                           "._metadata_"), pl.col("File Stem"), pl.lit("_"), pl.col("File Extension"), pl.lit(".yaml\"\n"),
                     pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ] &&\n"),
                     pl.lit("       [ $(find \"${ORIGNL_DIR}\" -name \"$(basename \"${TRNSCD_FILE}\")\" | wc -l) -eq 1 ]; then\n"),
-                    pl.lit("    if [ $(grep 'colour: HDR' \"${META_FILE}\" | wc -l) -gt 0 ]; then \n"),
+                    pl.lit("    if [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                           "select(.colour) | .colour' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" == \"HDR\" ]; then \n"),
                     pl.lit("       echo '' && echo -n 'Skipped (check-transcode): ' && date && exit 0\n"),
                     pl.lit("    fi\n"),
                     pl.lit("    echo ''\n"),
@@ -1355,14 +1371,25 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n\n"),
+                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
+                    pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
+                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Transcoding: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
                         .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo -n 'Verifying \"files\" at ' && date\n"),
+                    pl.lit("echo -n 'Transcoding at ' && date\n"),
+                    pl.lit("echo 'Transcoding with quality "), pl.col("Target Quality"), pl.lit("'\n"),
+                    pl.lit("echo 'Transcoding with codec HVEC from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                           "select(.codec) | .codec' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
+                    pl.lit("echo 'Transcoding with resolution "), pl.col("Transcode Video Resolution"), pl.lit(
+                        " from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                        "select(.resolution) | .resolution' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
+                    pl.lit("echo 'Transcoding with bitrate "), pl.col("Transcode Video Bitrate"), pl.lit(
+                        " Kbps from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                        "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps\n"),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
@@ -1461,7 +1488,7 @@ ROOT_DIR=$(dirname "$(readlink -f "$0")")
 
 . $(asystem-media-home)/.env_media
 
-killall -9 ffmpeg >/dev/null 2>/dev/null
+[[ $(hostname) == macmini* ]] && killall -9 ffmpeg >/dev/null 2>/dev/null
 
 SCRIPT_DIR="$(basename "$(realpath "${{ROOT_DIR}}/../../..")")/tmp/scripts/media/.lib"
 SCRIPT_CMD="{}"
