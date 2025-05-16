@@ -834,8 +834,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                             ((1 - BITRATE_SIZE_SCALE) * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
                     ) |
                     (
-                            ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MID) & (pl.col("Video 1 Width").cast(pl.Int32) < 1920)) |
-                            ((pl.col("Target Quality").cast(pl.Int32) >= QUALITY_MAX) & (pl.col("Video 1 Width").cast(pl.Int32) < 3840))
+                            ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MID) & (pl.col("Video 1 Width").cast(pl.Int32) <= 1600)) |
+                            ((pl.col("Target Quality").cast(pl.Int32) >= QUALITY_MAX) & (pl.col("Video 1 Width").cast(pl.Int32) <= 1920))
                     )
                 ).then(pl.lit("Small"))
                 .otherwise(pl.lit("Right"))
@@ -1033,11 +1033,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 ).then(pl.lit(FileAction.REFORMAT.value))
                 .when(
                     (
+                            (pl.col("File Version") != "Merged") &
                             (pl.col("File Version") != "Ignored") &
                             (pl.col("File Size") == "Small")
                     ) |
                     (
-                        (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
+                            (pl.col("File Version") != "Merged") &
+                            (pl.col("File Version") != "Ignored") &
+                            (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
                     )
                 ).then(pl.lit(FileAction.UPSCALE.value))
                 .otherwise(pl.lit(FileAction.NOTHING.value))
