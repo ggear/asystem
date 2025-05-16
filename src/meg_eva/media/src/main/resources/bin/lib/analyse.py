@@ -25,7 +25,7 @@ QUALITY_MID = 8  # ==1080
 QUALITY_MAX = 9  # >=2160
 BITRATE_HVEC_SCALE = 1.5  # H265 efficiency factor over H264
 BITRATE_SIZE_LOWER_SCALE = 0.65  # Margin when assessing small size
-BITRATE_SIZE_UPPER_SCALE = 0.35  # Margin when assessing large size
+BITRATE_SIZE_UPPER_SCALE = 1.35  # Margin when assessing large size
 BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 BITRATE_UNSCALED_KBPS = {
     "HD": 3000,  # <=720, <=QUALITY_MIN
