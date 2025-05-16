@@ -1560,11 +1560,11 @@ for LOG_LINE in "${LOG_LINES[@]}"; do
   if [ -n "${DELETE_DIR}" ]; then
     DELETE_DIRS_SET["${DELETE_DIR}"]=1
   fi
-  CHECK_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
+  CHECK_DIR=$(grep "3. Check"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
   if [ -n "${CHECK_DIR}" ]; then
     CHECK_DIRS_SET["${CHECK_DIR}"]=1
   fi
-  MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
+  MERGE_DIR=$(grep "4. Merge"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
   if [ -n "${MERGE_DIR}" ]; then
     MERGE_DIRS_SET["${MERGE_DIR}"]=1
   fi
