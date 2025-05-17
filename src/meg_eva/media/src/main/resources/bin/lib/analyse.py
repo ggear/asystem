@@ -24,7 +24,7 @@ QUALITY_MIN = 3  # <=720
 QUALITY_MID = 8  # ==1080
 QUALITY_MAX = 9  # >=2160
 BITRATE_HVEC_SCALE = 1.5  # H265 efficiency factor over H264
-BITRATE_SIZE_LOWER_SCALE = 0.45  # Margin when assessing small size
+BITRATE_SIZE_LOWER_SCALE = 0.30  # Margin when assessing small size
 BITRATE_SIZE_UPPER_SCALE = 1.35  # Margin when assessing large size
 BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 BITRATE_UNSCALED_KBPS = {
@@ -336,7 +336,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                 file_defaults_merged_path = os.path.join(
                     file_dir_path, "._defaults_merged_{}_{}.yaml".format(
                         file_name_sans_extension, file_extension))
-                if os.path.isfile(file_defaults_merged_path):
+                if os.path.isfile(file_defaults_merged_path) and file_defaults_dict["transcode_action"] != "Ignore":
                     file_defaults_dict["transcode_action"] = "Merged"
                 file_transcode_action = file_defaults_dict["transcode_action"]
                 file_target_quality = file_defaults_dict["target_quality"]
@@ -770,11 +770,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     (pl.col("Version Directory").str.starts_with("Plex Versions"))
                 ).then(pl.lit("Transcoded"))
                 .when(
-                    (pl.col("Transcode Action") == "Merged")
-                ).then(pl.lit("Merged"))
-                .when(
                     (pl.col("Transcode Action") == "Ignore")
                 ).then(pl.lit("Ignored"))
+                .when(
+                    (pl.col("Transcode Action") == "Merged")
+                ).then(pl.lit("Merged"))
                 .otherwise(pl.lit("Original"))
             ).alias("File Version"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
