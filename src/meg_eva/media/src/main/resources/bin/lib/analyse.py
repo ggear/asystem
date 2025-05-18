@@ -1274,7 +1274,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
                     pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
-                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\" 2>/dev/null\n\n"),
+                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Renaming: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
@@ -1326,7 +1326,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
                     pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
-                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\" 2>/dev/null\n\n"),
+                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Merging: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
@@ -1342,11 +1342,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                            " -name \""), pl.col("File Stem"), pl.lit("*\" 2>/dev/null | wc -l) -le 2 ]; then\n"),
                     pl.lit("  ORIGNL_FILE=\"$(find \"${ORIGNL_DIR}\" ! -name *." +
                            " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
-                           " -name \""), pl.col("File Stem"), pl.lit("\\.*\")\" 2>/dev/null\n"),
+                           " -name \""), pl.col("File Stem"), pl.lit("\\.*\" 2>/dev/null)\"\n"),
                     pl.lit("  TRNSCD_FILE=\"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
                     pl.lit("  MERGED_FILE=\"${ORIGNL_DIR}/"), pl.col("File Stem"), pl.lit(".mkv\"\n"),
                     pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ] &&\n"),
-                    pl.lit("       [ $(find \"${ORIGNL_DIR}\" -name \"$(basename \"${TRNSCD_FILE}\")\" 2>/dev/null"
+                    pl.lit("       [ $(find \"${ORIGNL_DIR}\" -name \"$(basename \"${TRNSCD_FILE}\" 2>/dev/null)\""
                            " | wc -l) -eq 1 ]; then\n"),
                     pl.lit("    if [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                            "select(.colour) | .colour' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" == \"HDR\" ]; then \n"),
@@ -1387,7 +1387,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
                     pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
-                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\" 2>/dev/null\n\n"),
+                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
