@@ -1017,7 +1017,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit(FileAction.CHECK.value))
                 .when(
                     (pl.col("File Version") == "Transcoded") & (
-                            (pl.lit(not force)) |
+                            (pl.lit(force)) |
                             (pl.col("File Size") != "Small")
                     )
                 ).then(pl.lit(FileAction.MERGE.value))
