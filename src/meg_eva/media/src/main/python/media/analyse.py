@@ -1349,7 +1349,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ] &&\n"),
                     pl.lit("       [ $(find \"${ORIGNL_DIR}\" -maxdepth 1 -name \"$(basename \"${TRNSCD_FILE}\" 2>/dev/null)\""
                            " | wc -l) -eq 1 ]; then\n"),
-                    pl.lit("    if [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                    pl.lit("    if [ " + str(force) + " == 'True' ] && [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                            "select(.colour) | .colour' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" == \"HDR\" ]; then \n"),
                     pl.lit("       echo '' && echo -n 'Skipped (check-transcode): ' && date && exit 0\n"),
                     pl.lit("    fi\n"),
