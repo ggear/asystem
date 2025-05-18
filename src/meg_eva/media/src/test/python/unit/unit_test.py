@@ -26,7 +26,7 @@ class InternetTest(unittest.TestCase):
     def test_analyse_simple(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom Of Heaven (2005)"),
-                                  files_action_expected=actions(downscale=1), scripts={})
+                                  files_action_expected=actions(reformat=1), scripts={})
 
     def test_analyse_subtitles(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
