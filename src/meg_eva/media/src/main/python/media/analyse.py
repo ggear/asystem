@@ -1010,14 +1010,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File Version") == "Duplicate")
                 ).then(pl.lit(FileAction.DELETE.value))
                 .when(
-                    (pl.lit(not force)) & (
-                            (pl.col("File Version") == "Transcoded") &
+                    (pl.col("File Version") == "Transcoded") & (
+                            (pl.lit(not force)) &
                             (pl.col("File Size") == "Small")
                     )
                 ).then(pl.lit(FileAction.CHECK.value))
                 .when(
-                    (pl.lit(force)) | (
-                            (pl.col("File Version") == "Transcoded") &
+                    (pl.col("File Version") == "Transcoded") & (
+                            (pl.lit(not force)) |
                             (pl.col("File Size") != "Small")
                     )
                 ).then(pl.lit(FileAction.MERGE.value))
