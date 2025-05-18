@@ -1272,7 +1272,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, defaults=False, verbose=Fa
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("cd \"ROOT_DIR_BASE\"\n"),
+                    pl.lit("cd \"${ROOT_DIR_BASE}\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
                     pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
                         .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
@@ -1326,7 +1326,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, defaults=False, verbose=Fa
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("cd \"ROOT_DIR_BASE\"\n"),
+                    pl.lit("cd \"${ROOT_DIR_BASE}\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
                     pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
                         .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
