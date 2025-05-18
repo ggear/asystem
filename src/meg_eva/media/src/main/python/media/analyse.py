@@ -1266,7 +1266,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, defaults=False, verbose=Fa
             [
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
-                    pl.lit("cd ..\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
@@ -1320,7 +1319,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, defaults=False, verbose=Fa
                 ]).alias("Rename Script Source"),
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
-                    pl.lit("cd ..\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
