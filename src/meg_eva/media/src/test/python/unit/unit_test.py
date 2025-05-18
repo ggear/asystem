@@ -78,7 +78,7 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=20,
                                   files_action_expected=actions(rename=0, delete=3, check=9, upscale=8), scripts={"merge"})
         self._test_analyse_assert(join(dir_test, "41/media"),
-                                  files_action_expected=actions(rename=0, delete=3, check=9, upscale=8), scripts={"merge"})
+                                  files_action_expected=actions(rename=0, delete=3, check=0, upscale=17), scripts={"merge"}, force=True)
 
     def test_analyse_transcode(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
@@ -141,8 +141,8 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(abspath(join(dir_test, "19/tmp")), files_expected=-3, files_action_expected=actions())
         self._test_analyse_assert(join(dir_test, "10/tmp"), files_expected=-4, files_action_expected=actions())
 
-    def _test_analyse_assert(self, dir_test, files_expected=None, files_expected_scripts=None, files_action_expected=None,
-                             asserts=True, scripts=MEDIA_FILE_SCRIPTS, extensions=MEDIA_FILE_EXTENSIONS, clean=False):
+    def _test_analyse_assert(self, dir_test, files_expected=None, files_expected_scripts=None, files_action_expected=None, asserts=True,
+                             scripts=MEDIA_FILE_SCRIPTS, extensions=MEDIA_FILE_EXTENSIONS, clean=False, force=False, defaults=False):
 
         def _file_count():
             file_count = 0
@@ -155,7 +155,7 @@ class InternetTest(unittest.TestCase):
         sheet_guid = os.getenv("MEDIA_GOOGLE_SHEET_GUID")
         if clean:
             self.assertEqual(0, analyse._analyse("/share", sheet_guid, clean=True, verbose=True)[0])
-        files_actual, files_action_actual = analyse._analyse(dir_test, sheet_guid, verbose=True)
+        files_actual, files_action_actual = analyse._analyse(dir_test, sheet_guid, verbose=True, force=force, defaults=defaults)
         if asserts:
             self.assertEqual(_file_count() if files_expected is None else files_expected, files_actual)
             if files_expected is not None:
