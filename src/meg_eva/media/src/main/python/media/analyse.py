@@ -64,7 +64,7 @@ class FileAction(str, Enum):
     NOTHING = "9. Nothing"
 
 
-def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
+def _analyse(file_path_root, sheet_guid, clean=False, defaults=False, verbose=False):
     def _print_message(_prefix=None, _message=None, _context=None,
                        _header=True, _footer=True, _no_header_footer=False):
         hanging_header = False
@@ -1307,6 +1307,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/ 2>/dev/null\n"),
+                    pl.lit("      sleep 1\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("    else\n"),
                     pl.lit("      echo '' && echo -n 'Failed (mv): ' && date && exit 1\n"),
@@ -1367,6 +1368,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, verbose=False):
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/ 2>/dev/null\n"),
+                    pl.lit("      sleep 1\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("    else\n"),
                     pl.lit("      echo '' && echo -n 'Failed (mv): ' && date && exit 1\n"),
@@ -1855,7 +1857,7 @@ def _print_df(data_df):
         print(data_df)
 
 
-def get_file_actions_dict(rename=0, delete=0, merge=0, reformat=0, transcode=0, upscale=0, downscale=0, nothing=0):
+def get_file_actions_dict(rename=0, delete=0, check=0, merge=0, reformat=0, transcode=0, upscale=0, downscale=0, nothing=0):
     files_action = {_file_action.value: 0 for _file_action in FileAction}
     for var in vars().copy():
         if var != files_action:
@@ -1867,9 +1869,10 @@ def get_file_actions_dict(rename=0, delete=0, merge=0, reformat=0, transcode=0, 
 
 if __name__ == "__main__":
     argument_parser = argparse.ArgumentParser()
+    argument_parser.add_argument("--clean", default=False, action="store_true")
+    argument_parser.add_argument("--defaults", default=False, action="store_true")
     argument_parser.add_argument("--quiet", default=True, action="store_true")
     argument_parser.add_argument("--verbose", default=False, action="store_true")
-    argument_parser.add_argument("--clean", default=False, action="store_true")
     argument_parser.add_argument("directory")
     argument_parser.add_argument("sheetguid")
     arguments = argument_parser.parse_args()
@@ -1877,5 +1880,6 @@ if __name__ == "__main__":
         Path(arguments.directory).absolute().as_posix(),
         arguments.sheetguid,
         arguments.clean,
+        arguments.defaults,
         arguments.verbose or not arguments.quiet
     )[0] < 0 else 0)
