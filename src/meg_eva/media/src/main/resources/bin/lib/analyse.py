@@ -1272,6 +1272,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, defaults=False, verbose=Fa
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
+                    pl.lit("cd \"ROOT_DIR_BASE\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
                     pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
                         .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
@@ -1307,7 +1308,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, defaults=False, verbose=Fa
                     pl.lit("  if [ ! -f \"${FILE_RENMED}\" ]; then\n"),
                     pl.lit("    mv \"${FILE_ORIGNL}\" \"${FILE_RENMED}\"\n"),
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
-                    pl.lit("      cd \"${ROOT_DIR_BASE}\"\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/ 2>/dev/null\n"),
@@ -1326,6 +1326,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, defaults=False, verbose=Fa
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
+                    pl.lit("cd \"ROOT_DIR_BASE\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
                     pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
                         .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
@@ -1368,7 +1369,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, defaults=False, verbose=Fa
                     pl.lit("        touch \"$MERGED_DEFTS\"\n"),
                     pl.lit("      fi\n"),
                     pl.lit("      echo \"./$(basename \"${TRNSCD_FILE}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIGNL_FILE}\")\"\n"),
-                    pl.lit("      cd \"${ROOT_DIR_BASE}\"\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("      rm -rf \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/ 2>/dev/null\n"),
