@@ -1305,13 +1305,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("RENME_DIR=\""), pl.col("Media Directory"), pl.lit("/\"\\\n"),
                     pl.lit("\""), pl.col("Media Scope"), pl.lit("/"), pl.col("Media Type"), pl.lit("\"\n"),
                     pl.lit("RENME_DIR=\"${ROOT_DIR%%${RENME_DIR}*}${RENME_DIR}\"\n"),
-
-
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh 2>/dev/null\n"),
-
-
                     pl.lit("if [ \""), pl.col("Rename Directory"), pl.lit("\" != \"\" ]; then\n"),
                     pl.lit("  echo 'Renaming of directory must be validated and executed manually:' && echo ''\n"),
                     pl.lit("  if [ \""), pl.col("Rename Directory"), pl.lit("\" != \"" + TOKEN_UNKNOWABLE + "\" ]; then\n"),
@@ -1359,19 +1355,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("else\n"),
                     pl.lit("  ORIGNL_DIR=\"$(realpath \"${ROOT_DIR}/..\")\"\n"),
                     pl.lit("fi\n"),
-
                     pl.lit("CHECK_REQUIRED=\"False\"\n"),
-                    pl.lit("if [ " + str(force) + " != 'True' ] && [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
+                    pl.lit("if [ \"" + str(force) + "\" != 'True' ] && [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
                            "select(.colour_range) | .colour_range' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" == \"HDR\" ]; then \n"),
                     pl.lit("  CHECK_REQUIRED=\"True\"\n"),
                     pl.lit("fi\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh 2>/dev/null\n"),
+                    # pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
+                    # pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
+                    # pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh 2>/dev/null\n"),
                     pl.lit(" if [ \"${CHECK_REQUIRED}\" == \"True\" ]; then\n}"),
                     pl.lit("  echo '' && echo -n 'Skipped (check-transcode): ' && date && exit 0\n"),
                     pl.lit("fi\n"),
-
                     pl.lit("if [ $(find \"${ORIGNL_DIR}\" ! -name *." +
                            " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
                            " -type f -name \""), pl.col("File Stem"), pl.lit("*\" 2>/dev/null | wc -l) -eq 2 ]; then\n"),
