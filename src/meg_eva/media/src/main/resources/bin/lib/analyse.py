@@ -385,8 +385,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_probe_stream_filtered["codec"] = file_probe_stream_video_codec
                             file_probe_stream_filtered["profile"] = file_probe_stream["profile"].title() \
                                 if "profile" in file_probe_stream else ""
-
-
                             file_probe_stream_filtered["colour_range"] = "HDR" \
                                 if ("color_primaries" in file_probe_stream and
                                     file_probe_stream["color_primaries"].lower() in {
@@ -403,15 +401,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                                         "p210",
                                         "v210",
                                         "v410",
-                                        "",
                                     }) else "8"
                             file_probe_stream_filtered["colour_spec"] = file_probe_stream["color_primaries"].lower() \
                                 if "color_primaries" in file_probe_stream else ""
                             file_probe_stream_filtered["pixel_format"] = file_probe_stream["pix_fmt"].lower() \
                                 if "pix_fmt" in file_probe_stream else ""
-
-
-
                             file_probe_stream_video_field_order = "i"
                             if "field_order" in file_probe_stream:
                                 if file_probe_stream["field_order"] == "progressive":
