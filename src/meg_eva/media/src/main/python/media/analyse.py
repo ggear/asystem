@@ -1356,14 +1356,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  ORIGNL_DIR=\"$(realpath \"${ROOT_DIR}/..\")\"\n"),
                     pl.lit("fi\n"),
                     pl.lit("CHECK_REQUIRED=\"False\"\n"),
-                    pl.lit("if [ \"" + str(force) + "\" != 'True' ] && [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
+                    pl.lit("if [ \"" + str(force) + "\" != \"True\" ] && [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
                            "select(.colour_range) | .colour_range' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" == \"HDR\" ]; then \n"),
                     pl.lit("  CHECK_REQUIRED=\"True\"\n"),
                     pl.lit("fi\n"),
                     # pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     # pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
                     # pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh 2>/dev/null\n"),
-                    pl.lit(" if [ \"${CHECK_REQUIRED}\" == \"True\" ]; then\n}"),
+                    pl.lit(" if [ \"${CHECK_REQUIRED}\" == \"True\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (check-transcode): ' && date && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("if [ $(find \"${ORIGNL_DIR}\" ! -name *." +
