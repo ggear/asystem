@@ -385,19 +385,31 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_probe_stream_filtered["codec"] = file_probe_stream_video_codec
                             file_probe_stream_filtered["profile"] = file_probe_stream["profile"].title() \
                                 if "profile" in file_probe_stream else ""
-
-
-                            file_probe_stream_filtered["colour_spec"] = file_probe_stream["color_primaries"] \
+                            file_probe_stream_filtered["colour_spec"] = file_probe_stream["color_primaries"].lower() \
                                 if "color_primaries" in file_probe_stream else ""
+
                             file_probe_stream_filtered["colour_range"] = "HDR" \
                                 if ("color_primaries" in file_probe_stream and
-                                    file_probe_stream["color_primaries"] in {"bt2020", "bt2100"}) else "SDR"
-                            file_probe_stream_filtered["pixel_format"] = file_probe_stream["pix_fmt"] \
+                                    file_probe_stream["color_primaries"].lower() in {
+                                        "bt2020",
+                                        "bt2100",
+                                    }) else "SDR"
+
+                            file_probe_stream_filtered["pixel_format"] = file_probe_stream["pix_fmt"].lower() \
                                 if "pix_fmt" in file_probe_stream else ""
+
                             file_probe_stream_filtered["pixel_depth"] = "10" \
                                 if ("pix_fmt" in file_probe_stream and
-                                    file_probe_stream["pix_fmt"] in {"yuv420p10le"}) else "8"
-
+                                    file_probe_stream["pix_fmt"].lower() in {
+                                        "yuv420p10le",
+                                        "yuv422p10le",
+                                        "yuv444p10",
+                                        "p010",
+                                        "p210",
+                                        "v210",
+                                        "v410",
+                                        "",
+                                    }) else "8"
 
                             file_probe_stream_video_field_order = "i"
                             if "field_order" in file_probe_stream:
