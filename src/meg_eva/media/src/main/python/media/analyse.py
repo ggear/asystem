@@ -381,9 +381,32 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_probe_stream_filtered["codec"] = file_probe_stream_video_codec
                             file_probe_stream_filtered["profile"] = file_probe_stream["profile"].title() \
                                 if "profile" in file_probe_stream else ""
-                            file_probe_stream_filtered["colour"] = "HDR" \
-                                if ("color_primaries" in file_probe_stream and \
-                                    file_probe_stream["color_primaries"] == "bt2020") else "SDR"
+                            file_probe_stream_filtered["colour_spec"] = file_probe_stream["color_primaries"].lower() \
+                                if "color_primaries" in file_probe_stream else ""
+
+                            file_probe_stream_filtered["colour_range"] = "HDR" \
+                                if ("color_primaries" in file_probe_stream and
+                                    file_probe_stream["color_primaries"].lower() in {
+                                        "bt2020",
+                                        "bt2100",
+                                    }) else "SDR"
+
+                            file_probe_stream_filtered["pixel_format"] = file_probe_stream["pix_fmt"].lower() \
+                                if "pix_fmt" in file_probe_stream else ""
+
+                            file_probe_stream_filtered["pixel_depth"] = "10" \
+                                if ("pix_fmt" in file_probe_stream and
+                                    file_probe_stream["pix_fmt"].lower() in {
+                                        "yuv420p10le",
+                                        "yuv422p10le",
+                                        "yuv444p10",
+                                        "p010",
+                                        "p210",
+                                        "v210",
+                                        "v410",
+                                        "",
+                                    }) else "8"
+
                             file_probe_stream_video_field_order = "i"
                             if "field_order" in file_probe_stream:
                                 if file_probe_stream["field_order"] == "progressive":
@@ -716,7 +739,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
         "Metadata Loaded",
         "Video 1 Index",
         "Video 1 Codec",
-        "Video 1 Colour",
+        "Video 1 Colour Range",
         "Video 1 Width",
         "Video 1 Bitrate Estimate (Kbps)",
         "Video 1 Bitrate Target (Kbps)",
@@ -1350,7 +1373,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("       [ $(find \"${ORIGNL_DIR}\" -name \"$(basename \"${TRNSCD_FILE}\" 2>/dev/null)\""
                            " | wc -l) -eq 1 ]; then\n"),
                     pl.lit("    if [ " + str(force) + " != 'True' ] && [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
-                           "select(.colour) | .colour' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" == \"HDR\" ]; then \n"),
+                           "select(.colour_range) | .colour_range' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" == \"HDR\" ]; then \n"),
                     pl.lit("       echo '' && echo -n 'Skipped (check-transcode): ' && date && exit 0\n"),
                     pl.lit("    fi\n"),
                     pl.lit("    echo ''\n"),
