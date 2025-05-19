@@ -1362,10 +1362,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("fi\n"),
                     pl.lit("if [ $(find \"${ORIGNL_DIR}\" ! -name *." +
                            " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
-                           " -name \""), pl.col("File Stem"), pl.lit("*\" 2>/dev/null | wc -l) -le 2 ]; then\n"),
+                           " -type f -name \""), pl.col("File Stem"), pl.lit("*\" 2>/dev/null | wc -l) -eq 2 ]; then\n"),
                     pl.lit("  ORIGNL_FILE=\"$(find \"${ORIGNL_DIR}\" ! -name *." +
                            " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
-                           " -name \""), pl.col("File Stem"), pl.lit("\\.*\" 2>/dev/null)\"\n"),
+                           " -type f -name \""), pl.col("File Stem"), pl.lit("\\.*\" 2>/dev/null)\"\n"),
                     pl.lit("  TRNSCD_FILE=\"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
                     pl.lit("  MERGED_FILE=\"${ORIGNL_DIR}/"), pl.col("File Stem"), pl.lit(".mkv\"\n"),
                     pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ] &&\n"),
