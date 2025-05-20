@@ -56,11 +56,11 @@ class FileAction(str, Enum):
     RENAME = "1. Rename"
     DELETE = "2. Delete"
     CHECK = "3. Check"
-    MERGE = "4. Merge"
-    REFORMAT = "5. Reformat"
-    TRANSCODE = "6. Transcode"
-    DOWNSCALE = "7. Downscale"
-    UPSCALE = "8. Upscale"
+    UPSCALE = "4. Upscale"
+    MERGE = "5. Merge"
+    REFORMAT = "6. Reformat"
+    TRANSCODE = "7. Transcode"
+    DOWNSCALE = "8. Downscale"
     NOTHING = "9. Nothing"
 
 
