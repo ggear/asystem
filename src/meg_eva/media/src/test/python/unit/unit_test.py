@@ -75,10 +75,14 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_merge(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=20,
-                                  files_action_expected=actions(rename=0, delete=3, check=9, upscale=8), scripts={"merge"})
+        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=22,
+                                  files_action_expected=actions(delete=3, merge=10, upscale=8, downscale=1), scripts={"merge"})
         self._test_analyse_assert(join(dir_test, "41/media"),
-                                  files_action_expected=actions(rename=0, delete=3, check=0, upscale=17), scripts={"merge"}, force=True)
+                                  files_action_expected=actions(delete=3, merge=9, upscale=8, nothing=1), scripts={"merge"})
+        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=21,
+                                  files_action_expected=actions(delete=3, merge=9, upscale=8, nothing=1), scripts={"merge"}, force=True)
+        self._test_analyse_assert(join(dir_test, "41/media"),
+                                  files_action_expected=actions(delete=3, merge=6, upscale=8, nothing=1), scripts={"merge"})
 
     def test_analyse_transcode(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)

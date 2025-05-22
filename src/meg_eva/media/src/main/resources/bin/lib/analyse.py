@@ -463,6 +463,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_probe_stream_filtered["bitrate_estimate__Kbps"] = file_stream_bitrate \
                                 if file_stream_bitrate > 0 else -1
                             file_probe_stream_filtered["bitrate_target__Kbps"] = -1
+                            file_probe_stream_filtered["bitrate_target_size"] = ""
                         elif file_probe_stream_type == "audio":
                             file_stream_codec = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
@@ -501,28 +502,35 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         stream["index_{}".format(stream_label)] = str(stream_index)
                 file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
                 for file_stream_video_index, file_stream_video in enumerate(file_probe_streams_filtered["video"]):
-                    if file_stream_video_index == 0:
-                        file_stream_video_bitrate = file_stream_video["bitrate_estimate__Kbps"]
-                        if file_stream_video_bitrate < 0:
-                            if file_probe_bitrate > 0:
-                                file_stream_audio_bitrate = 0
-                                for file_stream_audio in file_probe_streams_filtered["audio"]:
-                                    file_stream_audio_bitrate += int(file_stream_audio["bitrate__Kbps"]) \
-                                        if file_stream_audio["bitrate__Kbps"] != "" else 192
-                                file_stream_video_bitrate = file_probe_bitrate - file_stream_audio_bitrate \
-                                    if file_probe_bitrate > file_stream_audio_bitrate else 0
-                        if file_stream_video_bitrate < 0:
-                            file_stream_video["bitrate_estimate__Kbps"] = ""
-                            file_stream_video["bitrate_target__Kbps"] = ""
-                        else:
-                            file_stream_video["bitrate_estimate__Kbps"] = \
-                                str(file_stream_video_bitrate)
-                            file_stream_video["bitrate_target__Kbps"] = \
-                                _get_bitrate(file_stream_video["codec"], file_stream_video["width"],
-                                             file_target_quality)
+                    file_stream_video_bitrate = file_stream_video["bitrate_estimate__Kbps"]
+                    if file_stream_video_bitrate < 0:
+                        if file_probe_bitrate > 0:
+                            file_stream_audio_bitrate = 0
+                            for file_stream_audio in file_probe_streams_filtered["audio"]:
+                                file_stream_audio_bitrate += int(file_stream_audio["bitrate__Kbps"]) \
+                                    if file_stream_audio["bitrate__Kbps"] != "" else 192
+                            file_stream_video_bitrate = file_probe_bitrate - file_stream_audio_bitrate \
+                                if file_probe_bitrate > file_stream_audio_bitrate else 0
+                    if file_stream_video_bitrate < 0:
+                        file_stream_video["bitrate_estimate__Kbps"] = ""
+                        file_stream_video["bitrate_target__Kbps"] = ""
                     else:
-                        del file_stream_video["bitrate_estimate__Kbps"]
-                        del file_stream_video["bitrate_target__Kbps"]
+                        file_stream_video["bitrate_estimate__Kbps"] = \
+                            str(file_stream_video_bitrate)
+                        file_stream_video_bitrate_target = \
+                            _get_bitrate(file_stream_video["codec"], file_stream_video["width"], file_target_quality)
+                        file_stream_video["bitrate_target__Kbps"] = str(file_stream_video_bitrate_target)
+                        if (file_stream_video_bitrate > (BITRATE_SIZE_UPPER_SCALE * file_stream_video_bitrate_target) or
+                                ((int(file_target_quality) <= QUALITY_MIN and file_probe_stream_video_width > 1280) or
+                                 (int(file_target_quality) <= QUALITY_MID and file_probe_stream_video_width > 1920))):
+                            file_stream_video["bitrate_target_size"] = "Large"
+                        elif (file_stream_video_bitrate < (BITRATE_SIZE_LOWER_SCALE * file_stream_video_bitrate_target) or
+                              (int(file_target_quality) > 1 and (int(file_target_quality) <= QUALITY_MID and
+                                                                 file_probe_stream_video_width <= 1600) or
+                               (int(file_target_quality) >= QUALITY_MAX and file_probe_stream_video_width <= 1920))):
+                            file_stream_video["bitrate_target_size"] = "Small"
+                        else:
+                            file_stream_video["bitrate_target_size"] = "Right"
                 file_probe_streams_filtered_audios = []
                 file_probe_streams_filtered_audios_supplementary = []
                 for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
@@ -742,6 +750,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
         "Video 1 Width",
         "Video 1 Bitrate Estimate (Kbps)",
         "Video 1 Bitrate Target (Kbps)",
+        "Video 1 Bitrate Target Size",
         "Audio 1 Index",
         "Audio 1 Index Audio",
         "Audio 1 Codec",
@@ -837,29 +846,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 .otherwise(pl.lit("Complete"))
             ).alias("File State"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
-            (
-                pl.when(
-                    (
-                            pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) >
-                            (BITRATE_SIZE_UPPER_SCALE * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
-                    ) |
-                    (
-                            ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MIN) & (pl.col("Video 1 Width").cast(pl.Int32) > 1280)) |
-                            ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MID) & (pl.col("Video 1 Width").cast(pl.Int32) > 1920))
-                    )
-                ).then(pl.lit("Large"))
-                .when(
-                    (
-                            pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Float32) <
-                            (BITRATE_SIZE_LOWER_SCALE * pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Float32))
-                    ) |
-                    (
-                            ((pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MID) & (pl.col("Video 1 Width").cast(pl.Int32) <= 1600)) |
-                            ((pl.col("Target Quality").cast(pl.Int32) >= QUALITY_MAX) & (pl.col("Video 1 Width").cast(pl.Int32) <= 1920))
-                    )
-                ).then(pl.lit("Small"))
-                .otherwise(pl.lit("Right"))
-            ).alias("File Size"))
+            pl.col("Video 1 Bitrate Target Size").alias("File Size")
+        )
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
@@ -1032,16 +1020,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File Version") == "Duplicate")
                 ).then(pl.lit(FileAction.DELETE.value))
                 .when(
-                    (pl.col("File Version") == "Transcoded") & (
-                            (pl.lit(not force)) &
-                            (pl.col("File Size") == "Small")
-                    )
-                ).then(pl.lit(FileAction.CHECK.value))
-                .when(
-                    (pl.col("File Version") == "Transcoded") & (
-                            (pl.lit(force)) |
-                            (pl.col("File Size") != "Small")
-                    )
+                    (pl.col("File Version") == "Transcoded")
                 ).then(pl.lit(FileAction.MERGE.value))
                 .when(
                     (
@@ -1295,8 +1274,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
-                    pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
-                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
+                    pl.lit("ORIGNL_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
+                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Renaming: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
@@ -1309,9 +1288,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("RENME_DIR=\""), pl.col("Media Directory"), pl.lit("/\"\\\n"),
                     pl.lit("\""), pl.col("Media Scope"), pl.lit("/"), pl.col("Media Type"), pl.lit("\"\n"),
                     pl.lit("RENME_DIR=\"${ROOT_DIR%%${RENME_DIR}*}${RENME_DIR}\"\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh 2>/dev/null\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
                     pl.lit("if [ \""), pl.col("Rename Directory"), pl.lit("\" != \"\" ]; then\n"),
                     pl.lit("  echo 'Renaming of directory must be validated and executed manually:' && echo ''\n"),
                     pl.lit("  if [ \""), pl.col("Rename Directory"), pl.lit("\" != \"" + TOKEN_UNKNOWABLE + "\" ]; then\n"),
@@ -1346,12 +1325,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
-                    pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
-                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
+                    pl.lit("ROOT_FILE_NAME='"), pl.col("File Name").str.replace_all("'", "'\\''"), pl.lit("'\n"),
+                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Merging: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
+                    pl.lit("echo \"Merging: ${ROOT_FILE_NAME} @ '"), pl.col("File Directory Local") \
                         .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("if [[ ${ROOT_DIR} == *\"/Plex Versions/\"* ]]; then\n"),
@@ -1359,28 +1337,45 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("else\n"),
                     pl.lit("  ORIGNL_DIR=\"$(realpath \"${ROOT_DIR}/..\")\"\n"),
                     pl.lit("fi\n"),
-                    pl.lit("CHECK_REQUIRED=\"False\"\n"),
-                    pl.lit("if [ \"" + str(force) + "\" != \"True\" ] && [ \"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
-                           "select(.colour_range) | .colour_range' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" == \"HDR\" ]; then \n"),
-                    pl.lit("  CHECK_REQUIRED=\"True\"\n"),
+                    pl.lit("ORIGNL_FILE_META=\"$(find \"${ORIGNL_DIR}\" " +
+                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*__TRANSCODE_*')\"\n"),
+                    pl.lit("TRNSCD_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
+                           "-name \"._metadata_${ROOT_FILE_NAME%.*}*.yaml\")\"\n"),
+                    pl.lit("CHECK_REQUIRED=\"\"\n"),
+                    pl.lit("if [ \"" + str(force) + "\" != \"True\" ]; then\n"),
+                    pl.lit("  if [ \"${ORIGNL_FILE_META}\" == \"\" ] || [ ! -f \"${ORIGNL_FILE_META}\" ]; then \n"),
+                    pl.lit("    CHECK_REQUIRED=\"original-metadata-file-not-found\"\n"),
+                    pl.lit("  fi\n"),
+                    pl.lit("  if [ \"${TRNSCD_FILE_META}\" == \"\" ] || [ ! -f \"${TRNSCD_FILE_META}\" ]; then \n"),
+                    pl.lit("    CHECK_REQUIRED=\"transcoded-metadata-file-not-found\"\n"),
+                    pl.lit("  fi\n"),
+                    pl.lit("  COLOUR_RANGE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
+                           "select(.colour_range) | .colour_range' \"${ORIGNL_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:lower:]' '[:upper:]')\"\n"),
+                    pl.lit("  if [ \"${COLOUR_RANGE}\" == \"HDR\" ]; then \n"),
+                    pl.lit("    CHECK_REQUIRED=\"HDR-encoding\"\n"),
+                    pl.lit("  fi\n"),
+                    pl.lit("  BITRATE_TARGET_SIZE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
+                           "select(.bitrate_target_size) | .bitrate_target_size' \"${TRNSCD_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:upper:]' '[:lower:]')\"\n"),
+                    pl.lit("  if [ \"${BITRATE_TARGET_SIZE}\" != \"right\" ]; then \n"),
+                    pl.lit("    CHECK_REQUIRED=\"${BITRATE_TARGET_SIZE}-bitrate\"\n"),
+                    pl.lit("  fi\n"),
                     pl.lit("fi\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml 2>/dev/null\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh 2>/dev/null\n"),
-                    pl.lit(" if [ \"${CHECK_REQUIRED}\" == \"True\" ]; then\n"),
-                    pl.lit("  echo '' && echo -n 'Skipped (check-transcode): ' && date && exit 0\n"),
-                    pl.lit("fi\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
                     pl.lit("if [ $(find \"${ORIGNL_DIR}\" ! -name *." +
                            " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
-                           " -type f -name \""), pl.col("File Stem"), pl.lit("*\" 2>/dev/null | wc -l) -eq 2 ]; then\n"),
+                           " -type f -name \"${ROOT_FILE_STEM}*\" | wc -l) -le 2 ] && " +
+                           "[ $(find \"${ORIGNL_DIR}\" -name \"${ROOT_FILE_NAME}\" | wc -l) -eq 1 ]; then\n"),
                     pl.lit("  ORIGNL_FILE=\"$(find \"${ORIGNL_DIR}\" ! -name *." +
                            " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
-                           " -type f -name \""), pl.col("File Stem"), pl.lit("\\.*\" 2>/dev/null)\"\n"),
-                    pl.lit("  TRNSCD_FILE=\"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\"\n"),
-                    pl.lit("  MERGED_FILE=\"${ORIGNL_DIR}/"), pl.col("File Stem"), pl.lit(".mkv\"\n"),
-                    pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ] &&\n"),
-                    pl.lit("       [ $(find \"${ORIGNL_DIR}\" -name \"$(basename \"${TRNSCD_FILE}\" 2>/dev/null)\""
-                           " | wc -l) -eq 1 ]; then\n"),
+                           " -type f -name \"${ROOT_FILE_STEM}\\.*\")\"\n"),
+                    pl.lit("  TRNSCD_FILE=\"${ROOT_DIR}/../${ROOT_FILE_NAME}\"\n"),
+                    pl.lit("  MERGED_FILE=\"${ORIGNL_DIR}/${ROOT_FILE_STEM}.mkv\"\n"),
+                    pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ]; then\n"),
+                    pl.lit("    if [ \"${CHECK_REQUIRED}\" != \"\" ]; then\n"),
+                    pl.lit("      echo '' && echo -n \"Skipped (check-${CHECK_REQUIRED}): \" && date && exit 0\n"),
+                    pl.lit("    fi\n"),
                     pl.lit("    echo ''\n"),
                     pl.lit("    rm -f \"${ORIGNL_FILE}\"\n"),
                     pl.lit("    mv -f \"${TRNSCD_FILE}\" \"${MERGED_FILE}\"\n"),
@@ -1388,7 +1383,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("      TRNSCD_STEM=\"$(basename \"${TRNSCD_FILE}\")\"\n"),
                     pl.lit("      TRNSCD_DEFTS=\"$(dirname \"${TRNSCD_FILE}\")/" + \
                            "._defaults_analysed_${TRNSCD_STEM%.*}_${TRNSCD_STEM##*.}.yaml\"\n"),
-                    pl.lit("      MERGED_DEFTS=\"${ORIGNL_DIR}/._defaults_merged_"), pl.col("File Stem"), pl.lit("_mkv.yaml\"\n"),
+                    pl.lit("      MERGED_DEFTS=\"${ORIGNL_DIR}/._defaults_merged_${ROOT_FILE_STEM}_mkv.yaml\"\n"),
                     pl.lit("      if [ -f \"$TRNSCD_DEFTS\" ]; then\n"),
                     pl.lit("        mv -f \"$TRNSCD_DEFTS\" \"$MERGED_DEFTS\"\n"),
                     pl.lit("      else\n"),
@@ -1412,8 +1407,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
-                    pl.lit("ROOT_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
-                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*' 2>/dev/null)\"\n\n"),
+                    pl.lit("ORIGNL_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
+                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
@@ -1423,13 +1418,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
                     pl.lit("echo 'Transcoding with quality "), pl.col("Target Quality"), pl.lit("'\n"),
                     pl.lit("echo 'Transcoding with codec HVEC from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                           "select(.codec) | .codec' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
+                           "select(.codec) | .codec' \"${ORIGNL_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
                     pl.lit("echo 'Transcoding with resolution "), pl.col("Transcode Video Resolution"), pl.lit(
                         " from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                        "select(.resolution) | .resolution' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
+                        "select(.resolution) | .resolution' \"${ORIGNL_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
                     pl.lit("echo 'Transcoding with bitrate "), pl.col("Transcode Video Bitrate"), pl.lit(
                         " Kbps from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                        "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ROOT_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps\n"),
+                        "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ORIGNL_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps\n"),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
@@ -1788,7 +1783,7 @@ def _get_bitrate(_codec, _width, _quality=None, _bitrate=None):
     quality_scale = (6 if _quality is None or _quality == "" else int(_quality)) * BITRATE_QUALITY_SCALE
     bitrate_target = bitrate_target * quality_scale * hevc_scale
     bitrate_target = bitrate_target if _bitrate is None else min(int(_bitrate), bitrate_target)
-    return str(round(bitrate_target))
+    return round(bitrate_target)
 
 
 def _normalise_name(_name):
