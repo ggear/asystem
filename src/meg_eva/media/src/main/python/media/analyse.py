@@ -54,14 +54,13 @@ BASH_ECHO_HEADER = ("echo \""
 
 class FileAction(str, Enum):
     RENAME = "1. Rename"
-    DELETE = "2. Delete"
-    CHECK = "3. Check"
-    UPSCALE = "4. Upscale"
-    MERGE = "5. Merge"
-    REFORMAT = "6. Reformat"
-    TRANSCODE = "7. Transcode"
-    DOWNSCALE = "8. Downscale"
-    NOTHING = "9. Nothing"
+    CHECK = "2. Check"
+    UPSCALE = "3. Upscale"
+    MERGE = "4. Merge"
+    REFORMAT = "5. Reformat"
+    TRANSCODE = "6. Transcode"
+    DOWNSCALE = "7. Downscale"
+    NOTHING = "8. Nothing"
 
 
 def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=False, verbose=False):
@@ -1014,7 +1013,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File State") == "Corrupt") |
                     (pl.col("File State") == "Incomplete") |
                     (pl.col("File Version") == "Duplicate")
-                ).then(pl.lit(FileAction.DELETE.value))
+                ).then(pl.lit(FileAction.CHECK.value))
                 .when(
                     (pl.col("File Version") == "Transcoded")
                 ).then(pl.lit(FileAction.MERGE.value))
