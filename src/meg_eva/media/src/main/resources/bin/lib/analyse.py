@@ -1273,12 +1273,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
-                    pl.lit("ORIGNL_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
-                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\"\n\n"),
+                    pl.lit("ROOT_FILE_NAME='"), pl.col("File Name").str.replace_all("'", "'\\''"), pl.lit("'\n"),
+                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Renaming: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
+                    pl.lit("echo \"Renaming: ${ROOT_FILE_NAME} @ '"), pl.col("File Directory Local") \
                         .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("BASE_DIR=\""), pl.col("Base Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
@@ -1303,7 +1302,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  echo '' && echo -n 'Skipped (not-executed): ' && date\n"),
                     pl.lit("fi\n"),
                     pl.lit("if [ \""), pl.col("Rename File"), pl.lit("\" != \"\" ]; then\n"),
-                    pl.lit("  FILE_ORIGNL=\"${ROOT_DIR_BASE}/"), pl.col("File Name"), pl.lit("\"\n"),
+                    pl.lit("  FILE_ORIGNL=\"${ROOT_DIR_BASE}/${ROOT_FILE_NAME}\"\n"),
                     pl.lit("  FILE_RENMED=\"${ROOT_DIR_BASE}/"), pl.col("Rename File"), pl.lit("\"\n"),
                     pl.lit("  echo '' && echo \\\n"),
                     pl.lit("     \"./$(realpath --relative-to=\"${ROOT_DIR}/../../../..\" \"${FILE_ORIGNL}\") ->\" \\\n"),
@@ -1333,29 +1332,29 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("if [[ ${ROOT_DIR} == *\"/Plex Versions/\"* ]]; then\n"),
-                    pl.lit("  ORIGNL_DIR=\"$(realpath \"${ROOT_DIR}/../../../..\")\"\n"),
+                    pl.lit("  ORIG_DIR=\"$(realpath \"${ROOT_DIR}/../../../..\")\"\n"),
                     pl.lit("else\n"),
-                    pl.lit("  ORIGNL_DIR=\"$(realpath \"${ROOT_DIR}/..\")\"\n"),
+                    pl.lit("  ORIG_DIR=\"$(realpath \"${ROOT_DIR}/..\")\"\n"),
                     pl.lit("fi\n"),
-                    pl.lit("ORIGNL_FILE_META=\"$(find \"${ORIGNL_DIR}\" " +
+                    pl.lit("ORIG_FILE_META=\"$(find \"${ORIG_DIR}\" " +
                            "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*__TRANSCODE_*')\"\n"),
-                    pl.lit("TRNSCD_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
+                    pl.lit("TRAN_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
                            "-name \"._metadata_${ROOT_FILE_NAME%.*}*.yaml\")\"\n"),
                     pl.lit("CHECK_REQUIRED=\"\"\n"),
                     pl.lit("if [ \"" + str(force) + "\" != \"True\" ]; then\n"),
-                    pl.lit("  if [ \"${ORIGNL_FILE_META}\" == \"\" ] || [ ! -f \"${ORIGNL_FILE_META}\" ]; then \n"),
+                    pl.lit("  if [ \"${ORIG_FILE_META}\" == \"\" ] || [ ! -f \"${ORIG_FILE_META}\" ]; then \n"),
                     pl.lit("    CHECK_REQUIRED=\"original-metadata-file-not-found\"\n"),
                     pl.lit("  fi\n"),
-                    pl.lit("  if [ \"${TRNSCD_FILE_META}\" == \"\" ] || [ ! -f \"${TRNSCD_FILE_META}\" ]; then \n"),
+                    pl.lit("  if [ \"${TRAN_FILE_META}\" == \"\" ] || [ ! -f \"${TRAN_FILE_META}\" ]; then \n"),
                     pl.lit("    CHECK_REQUIRED=\"transcoded-metadata-file-not-found\"\n"),
                     pl.lit("  fi\n"),
                     pl.lit("  COLOUR_RANGE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
-                           "select(.colour_range) | .colour_range' \"${ORIGNL_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:lower:]' '[:upper:]')\"\n"),
+                           "select(.colour_range) | .colour_range' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:lower:]' '[:upper:]')\"\n"),
                     pl.lit("  if [ \"${COLOUR_RANGE}\" == \"HDR\" ]; then \n"),
                     pl.lit("    CHECK_REQUIRED=\"HDR-encoding\"\n"),
                     pl.lit("  fi\n"),
                     pl.lit("  BITRATE_TARGET_SIZE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
-                           "select(.bitrate_target_size) | .bitrate_target_size' \"${TRNSCD_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:upper:]' '[:lower:]')\"\n"),
+                           "select(.bitrate_target_size) | .bitrate_target_size' \"${TRAN_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:upper:]' '[:lower:]')\"\n"),
                     pl.lit("  if [ \"${BITRATE_TARGET_SIZE}\" != \"right\" ]; then \n"),
                     pl.lit("    CHECK_REQUIRED=\"${BITRATE_TARGET_SIZE}-bitrate\"\n"),
                     pl.lit("  fi\n"),
@@ -1363,33 +1362,30 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
-                    pl.lit("if [ $(find \"${ORIGNL_DIR}\" ! -name *." +
-                           " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
-                           " -type f -name \"${ROOT_FILE_STEM}*\" | wc -l) -le 2 ] && " +
-                           "[ $(find \"${ORIGNL_DIR}\" -name \"${ROOT_FILE_NAME}\" | wc -l) -eq 1 ]; then\n"),
-                    pl.lit("  ORIGNL_FILE=\"$(find \"${ORIGNL_DIR}\" ! -name *." +
-                           " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
-                           " -type f -name \"${ROOT_FILE_STEM}\\.*\")\"\n"),
-                    pl.lit("  TRNSCD_FILE=\"${ROOT_DIR}/../${ROOT_FILE_NAME}\"\n"),
-                    pl.lit("  MERGED_FILE=\"${ORIGNL_DIR}/${ROOT_FILE_STEM}.mkv\"\n"),
-                    pl.lit("  if [ -f \"${ORIGNL_FILE}\" ] && [ -f \"${TRNSCD_FILE}\" ]; then\n"),
+                    pl.lit("if [ $(find \"${ORIG_DIR}\" ! -name *." +
+                           " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) + " -type f -name \"${ROOT_FILE_STEM}*\" | wc -l) -le 2 ] && " +
+                           "[ $(find \"${ORIG_DIR}\" -name \"${ROOT_FILE_NAME}\" | wc -l) -eq 1 ]; then\n"),
+                    pl.lit("  ORIG_FILE=\"$(find \"${ORIG_DIR}\" ! -name *." +
+                           " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) + " -type f -name \"${ROOT_FILE_STEM}\\.*\")\"\n"),
+                    pl.lit("  TRAN_FILE=\"${ROOT_DIR}/../${ROOT_FILE_NAME}\"\n"),
+                    pl.lit("  MERG_FILE=\"${ORIG_DIR}/${ROOT_FILE_STEM}.mkv\"\n"),
+                    pl.lit("  if [ -f \"${ORIG_FILE}\" ] && [ -f \"${TRAN_FILE}\" ]; then\n"),
                     pl.lit("    if [ \"${CHECK_REQUIRED}\" != \"\" ]; then\n"),
                     pl.lit("      echo '' && echo -n \"Skipped (check-${CHECK_REQUIRED}): \" && date && exit 0\n"),
                     pl.lit("    fi\n"),
                     pl.lit("    echo ''\n"),
-                    pl.lit("    rm -f \"${ORIGNL_FILE}\"\n"),
-                    pl.lit("    mv -f \"${TRNSCD_FILE}\" \"${MERGED_FILE}\"\n"),
+                    pl.lit("    rm -f \"${ORIG_FILE}\"\n"),
+                    pl.lit("    mv -f \"${TRAN_FILE}\" \"${MERG_FILE}\"\n"),
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
-                    pl.lit("      TRNSCD_STEM=\"$(basename \"${TRNSCD_FILE}\")\"\n"),
-                    pl.lit("      TRNSCD_DEFTS=\"$(dirname \"${TRNSCD_FILE}\")/" + \
-                           "._defaults_analysed_${TRNSCD_STEM%.*}_${TRNSCD_STEM##*.}.yaml\"\n"),
-                    pl.lit("      MERGED_DEFTS=\"${ORIGNL_DIR}/._defaults_merged_${ROOT_FILE_STEM}_mkv.yaml\"\n"),
-                    pl.lit("      if [ -f \"$TRNSCD_DEFTS\" ]; then\n"),
-                    pl.lit("        mv -f \"$TRNSCD_DEFTS\" \"$MERGED_DEFTS\"\n"),
+                    pl.lit("      TRAN_STEM=\"$(basename \"${TRAN_FILE}\")\"\n"),
+                    pl.lit("      TRAN_DEFTS=\"$(dirname \"${TRAN_FILE}\")/._defaults_analysed_${TRAN_STEM%.*}_${TRAN_STEM##*.}.yaml\"\n"),
+                    pl.lit("      MERG_DEFTS=\"${ORIG_DIR}/._defaults_merged_${ROOT_FILE_STEM}_mkv.yaml\"\n"),
+                    pl.lit("      if [ -f \"$TRAN_DEFTS\" ]; then\n"),
+                    pl.lit("        mv -f \"$TRAN_DEFTS\" \"$MERG_DEFTS\"\n"),
                     pl.lit("      else\n"),
-                    pl.lit("        touch \"$MERGED_DEFTS\"\n"),
+                    pl.lit("        touch \"$MERG_DEFTS\"\n"),
                     pl.lit("      fi\n"),
-                    pl.lit("      echo \"./$(basename \"${TRNSCD_FILE}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIGNL_FILE}\")\"\n"),
+                    pl.lit("      echo \"./$(basename \"${TRAN_FILE}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIG_FILE}\")\"\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("    else\n"),
                     pl.lit("      echo '' && echo -n 'Failed (mv): ' && date && exit 1\n"),
@@ -1406,25 +1402,26 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n"),
-                    pl.lit("ORIGNL_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name '._metadata_"), pl.col("File Stem") \
-                        .str.replace_all("'", "'\\''"), pl.lit("_*.yaml' ! -name '*_TRANSCODE_*')\"\n\n"),
+                    pl.lit("ROOT_FILE_NAME='"), pl.col("File Name").str.replace_all("'", "'\\''"), pl.lit("'\n"),
+                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Transcoding: "), pl.col("File Name"), pl.lit(" @ '"), pl.col("File Directory Local") \
+                    pl.lit("echo \"Transcoding: ${ROOT_FILE_NAME} @ '"), pl.col("File Directory Local") \
                         .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("ORIG_FILE_META=\"$(find \"${ORIG_DIR}\" " +
+                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*__TRANSCODE_*')\"\n"),
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
                     pl.lit("echo 'Transcoding with quality "), pl.col("Target Quality"), pl.lit("'\n"),
                     pl.lit("echo 'Transcoding with codec HVEC from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                           "select(.codec) | .codec' \"${ORIGNL_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
+                           "select(.codec) | .codec' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
                     pl.lit("echo 'Transcoding with resolution "), pl.col("Transcode Video Resolution"), pl.lit(
                         " from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                        "select(.resolution) | .resolution' \"${ORIGNL_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
+                        "select(.resolution) | .resolution' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
                     pl.lit("echo 'Transcoding with bitrate "), pl.col("Transcode Video Bitrate"), pl.lit(
                         " Kbps from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                        "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ORIGNL_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps\n"),
+                        "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps\n"),
                     pl.lit("if [ -f \"${ROOT_DIR}/../"), pl.col("Transcode File Name"), pl.lit("\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
@@ -1432,7 +1429,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  echo '' && echo -n 'Skipped (space): ' && date && echo '' && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("cd \"${ROOT_DIR}\"\n"),
-                    pl.lit("if [ ! -f \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" ]; then\n"),
+                    pl.lit("if [ ! -f \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (missing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("if [[ $(hostname) == macmini* ]] && [[ \"$(basename \"$0\")\" == \"transcode.sh\" ]] ; then\n"),
@@ -1440,7 +1437,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("fi\n"),
                     pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
                     pl.lit("[[ \"$(basename \"$0\")\" == \"reformat.sh\" ]] && TRANSCODE_VIDEO='--copy-video'\n"),
-                    pl.lit("other-transcode \"${ROOT_DIR}/../"), pl.col("File Name"), pl.lit("\" \\\n"),
+                    pl.lit("other-transcode \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" \\\n"),
                     pl.lit("  ${TRANSCODE_VIDEO} \\\n"),
                     pl.lit("  "), pl.col("Transcode Audio"), pl.lit(" \\\n"),
                     pl.lit("  "), pl.col("Transcode Subtitle"), pl.lit("\n"),
