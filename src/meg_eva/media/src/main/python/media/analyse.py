@@ -180,7 +180,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 file_season_match = re.search("/" + MEDIA_SEASON_NUMBER_REGEXP, file_base_dir)
                 file_episode_match = re.search(MEDIA_EPISODE_NAME_REGEXP, file_name)
                 if file_episode_match is not None:
-                    file_version_qualifier = "".join(file_episode_match.groups()).split("__TRANSCODE")[0]
+                    file_version_qualifier = "".join(file_episode_match.groups()).split(TOKEN_TRANSCODE)[0]
                     file_stem = "{} {}".format(file_stem, file_version_qualifier).title()
                 else:
                     file_version_qualifier = file_name_sans_extension
@@ -517,13 +517,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             _get_bitrate(file_stream_video["codec"], file_stream_video["width"], file_target_quality)
                         file_stream_video["bitrate_target__Kbps"] = str(file_stream_video_bitrate_target)
                         if (file_stream_video_bitrate > (BITRATE_SIZE_UPPER_SCALE * file_stream_video_bitrate_target) or
-                                ((int(file_target_quality) <= QUALITY_MIN and file_probe_stream_video_width > 1280) or
-                                 (int(file_target_quality) <= QUALITY_MID and file_probe_stream_video_width > 1920))):
+                                ((int(file_target_quality) <= QUALITY_MIN and int(file_stream_video["width"]) > 1280) or
+                                 (int(file_target_quality) <= QUALITY_MID and int(file_stream_video["width"]) > 1920))):
                             file_stream_video["bitrate_target_size"] = "Large"
                         elif (file_stream_video_bitrate < (BITRATE_SIZE_LOWER_SCALE * file_stream_video_bitrate_target) or
                               (int(file_target_quality) > 1 and (int(file_target_quality) <= QUALITY_MID and
-                                                                 file_probe_stream_video_width <= 1600) or
-                               (int(file_target_quality) >= QUALITY_MAX and file_probe_stream_video_width <= 1920))):
+                                                                 int(file_stream_video["width"]) <= 1600) or
+                               (int(file_target_quality) >= QUALITY_MAX and int(file_stream_video["width"]) <= 1920))):
                             file_stream_video["bitrate_target_size"] = "Small"
                         else:
                             file_stream_video["bitrate_target_size"] = "Right"
@@ -1084,27 +1084,36 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             [
                 pl.concat_str([
                     pl.col("File Name") \
-                        .str.replace_all("\"", "\\\"")
+                        .str.replace_all("`", "\\`")
                         .str.replace_all("$", "\\$", literal=True)
                 ]).alias("File Name"),
+                pl.concat_str([
+                    pl.col("Base Directory") \
+                        .str.replace_all("`", "\\`")
+                        .str.replace_all("$", "\\$", literal=True)
+                ]).alias("Base Directory"),
                 pl.concat_str([
                     pl.col("File Directory") \
                         .str.strip_prefix(" '") \
                         .str.strip_suffix("' ") \
                         .str.replace_all("'\\\\''", "'")
+                        .str.replace_all("`", "\\`")
+                        .str.replace_all("$", "\\$", literal=True)
                 ]).alias("File Directory"),
                 pl.concat_str([
                     pl.col("File Stem") \
                         .str.strip_prefix(" '") \
                         .str.strip_suffix("' ") \
                         .str.replace_all("'\\\\''", "'")
+                        .str.replace_all("`", "\\`")
+                        .str.replace_all("$", "\\$", literal=True)
                 ]).alias("File Stem"),
                 pl.concat_str([
                     pl.col("Rename File") \
                         .str.strip_prefix(" '") \
                         .str.strip_suffix("' ") \
                         .str.replace_all("'\\\\''", "'")
-                        .str.replace_all("\"", "\\\"")
+                        .str.replace_all("`", "\\`")
                         .str.replace_all("$", "\\$", literal=True)
                 ]).alias("Rename File"),
                 pl.concat_str([
@@ -1112,6 +1121,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         .str.strip_prefix(" '") \
                         .str.strip_suffix("' ") \
                         .str.replace_all("'\\\\''", "'")
+                        .str.replace_all("`", "\\`")
+                        .str.replace_all("$", "\\$", literal=True)
                 ]).alias("Rename Directory"),
             ]
         ).with_columns(
@@ -1269,42 +1280,44 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_FILE_NAME='"), pl.col("File Name").str.replace_all("'", "'\\''"), pl.lit("'\n"),
-                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n\n"),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Renaming: ${ROOT_FILE_NAME} @ '"), pl.col("File Directory Local") \
-                        .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
+                    pl.lit("echo \"Renaming: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("BASE_DIR=\""), pl.col("Base Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("BASE_DIR=(\"${BASE_DIR// /_____}\")\n"),
                     pl.lit("BASE_DIR=(${BASE_DIR//\\// })\n"),
                     pl.lit("BASE_DIR=(\"${BASE_DIR//_____/ }\")\n"),
-                    pl.lit("RENME_DIR=\""), pl.col("Media Directory"), pl.lit("/\"\\\n"),
+                    pl.lit("NEW_DIR=\""), pl.col("Media Directory"), pl.lit("/\"\\\n"),
                     pl.lit("\""), pl.col("Media Scope"), pl.lit("/"), pl.col("Media Type"), pl.lit("\"\n"),
-                    pl.lit("RENME_DIR=\"${ROOT_DIR%%${RENME_DIR}*}${RENME_DIR}\"\n"),
+                    pl.lit("NEW_DIR=\"${ROOT_DIR%%${NEW_DIR}*}${NEW_DIR}\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
-                    pl.lit("if [ \""), pl.col("Rename Directory"), pl.lit("\" != \"\" ]; then\n"),
+                    pl.lit("RENAME_DIR=\""), pl.col("Rename Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("RENAME_FILE=\""), pl.col("Rename File").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("if [ \"${RENAME_DIR}\" != \"\" ]; then\n"),
                     pl.lit("  echo 'Renaming of directory must be validated and executed manually:' && echo ''\n"),
-                    pl.lit("  if [ \""), pl.col("Rename Directory"), pl.lit("\" != \"" + TOKEN_UNKNOWABLE + "\" ]; then\n"),
-                    pl.lit("    echo cd \\\'\"${RENME_DIR}\"\\\'\n"),
-                    pl.lit("    echo [[ ! -d \\\''"), pl.col("Rename Directory"), pl.lit("'\\\' ]] \\&\\& \\\n"),
-                    pl.lit("       mv -v \\\'\"${BASE_DIR}\"\\\' \\\''"), pl.col("Rename Directory"), pl.lit("'\\\' \n"),
+                    pl.lit("  if [ \"${RENAME_DIR}\" != \"" + TOKEN_UNKNOWABLE + "\" ]; then\n"),
+                    pl.lit("    echo cd \\\'\"${NEW_DIR}\"\\\'\n"),
+                    pl.lit("    echo [[ ! -d \\\''${RENAME_DIR}'\\\' ]] \\&\\& \\\n"),
+                    pl.lit("       mv -v \\\'\"${BASE_DIR}\"\\\' \\\''${RENAME_DIR}'\\\' \n"),
                     pl.lit("  else\n"),
                     pl.lit("    echo cd \"$(realpath \"${ROOT_DIR}/../\")\"\n"),
                     pl.lit("  fi\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (not-executed): ' && date\n"),
                     pl.lit("fi\n"),
-                    pl.lit("if [ \""), pl.col("Rename File"), pl.lit("\" != \"\" ]; then\n"),
-                    pl.lit("  FILE_ORIGNL=\"${ROOT_DIR_BASE}/${ROOT_FILE_NAME}\"\n"),
-                    pl.lit("  FILE_RENMED=\"${ROOT_DIR_BASE}/"), pl.col("Rename File"), pl.lit("\"\n"),
+                    pl.lit("if [ \"${RENAME_FILE}\" != \"\" ]; then\n"),
+                    pl.lit("  ORIG_FILE=\"${ROOT_DIR_BASE}/${ROOT_FILE_NAME}\"\n"),
+                    pl.lit("  NEW_FILE=\"${ROOT_DIR_BASE}/${RENAME_FILE}\"\n"),
                     pl.lit("  echo '' && echo \\\n"),
-                    pl.lit("     \"./$(realpath --relative-to=\"${ROOT_DIR}/../../../..\" \"${FILE_ORIGNL}\") ->\" \\\n"),
-                    pl.lit("     \"./$(realpath --relative-to=\"${ROOT_DIR}/../../../..\" \"${FILE_RENMED}\")\"\n"),
-                    pl.lit("  if [ ! -f \"${FILE_RENMED}\" ]; then\n"),
-                    pl.lit("    mv \"${FILE_ORIGNL}\" \"${FILE_RENMED}\"\n"),
+                    pl.lit("     \"./$(realpath --relative-to=\"${ROOT_DIR}/../../../..\" \"${ORIG_FILE}\") ->\" \\\n"),
+                    pl.lit("     \"./$(realpath --relative-to=\"${ROOT_DIR}/../../../..\" \"${NEW_FILE}\")\"\n"),
+                    pl.lit("  if [ ! -f \"${NEW_FILE}\" ]; then\n"),
+                    pl.lit("    mv \"${ORIG_FILE}\" \"${NEW_FILE}\"\n"),
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("    else\n"),
@@ -1320,12 +1333,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_FILE_NAME='"), pl.col("File Name").str.replace_all("'", "'\\''"), pl.lit("'\n"),
-                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n\n"),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!!!!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Merging: ${ROOT_FILE_NAME} @ '"), pl.col("File Directory Local") \
-                        .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
+                    pl.lit("echo \"Merging: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("if [[ ${ROOT_DIR} == *\"/Plex Versions/\"* ]]; then\n"),
                     pl.lit("  ORIG_DIR=\"$(realpath \"${ROOT_DIR}/../../../..\")\"\n"),
@@ -1333,26 +1346,26 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  ORIG_DIR=\"$(realpath \"${ROOT_DIR}/..\")\"\n"),
                     pl.lit("fi\n"),
                     pl.lit("ORIG_FILE_META=\"$(find \"${ORIG_DIR}\" " +
-                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*__TRANSCODE_*')\"\n"),
+                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
                     pl.lit("TRAN_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
                            "-name \"._metadata_${ROOT_FILE_NAME%.*}*.yaml\")\"\n"),
                     pl.lit("CHECK_REQUIRED=\"\"\n"),
                     pl.lit("if [ \"" + str(force) + "\" != \"True\" ]; then\n"),
                     pl.lit("  if [ \"${ORIG_FILE_META}\" == \"\" ] || [ ! -f \"${ORIG_FILE_META}\" ]; then \n"),
                     pl.lit("    CHECK_REQUIRED=\"original-metadata-file-not-found\"\n"),
-                    pl.lit("  fi\n"),
-                    pl.lit("  if [ \"${TRAN_FILE_META}\" == \"\" ] || [ ! -f \"${TRAN_FILE_META}\" ]; then \n"),
+                    pl.lit("  elif [ \"${TRAN_FILE_META}\" == \"\" ] || [ ! -f \"${TRAN_FILE_META}\" ]; then \n"),
                     pl.lit("    CHECK_REQUIRED=\"transcoded-metadata-file-not-found\"\n"),
-                    pl.lit("  fi\n"),
-                    pl.lit("  COLOUR_RANGE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
+                    pl.lit("  else\n"),
+                    pl.lit("    COLOUR_RANGE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
                            "select(.colour_range) | .colour_range' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:lower:]' '[:upper:]')\"\n"),
-                    pl.lit("  if [ \"${COLOUR_RANGE}\" == \"HDR\" ]; then \n"),
-                    pl.lit("    CHECK_REQUIRED=\"HDR-encoding\"\n"),
-                    pl.lit("  fi\n"),
-                    pl.lit("  BITRATE_TARGET_SIZE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
+                    pl.lit("    if [ \"${COLOUR_RANGE}\" == \"HDR\" ]; then \n"),
+                    pl.lit("      CHECK_REQUIRED=\"HDR-encoding\"\n"),
+                    pl.lit("    fi\n"),
+                    pl.lit("    BITRATE_TARGET_SIZE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
                            "select(.bitrate_target_size) | .bitrate_target_size' \"${TRAN_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:upper:]' '[:lower:]')\"\n"),
-                    pl.lit("  if [ \"${BITRATE_TARGET_SIZE}\" != \"right\" ]; then \n"),
-                    pl.lit("    CHECK_REQUIRED=\"${BITRATE_TARGET_SIZE}-bitrate\"\n"),
+                    pl.lit("    if [ \"${BITRATE_TARGET_SIZE}\" != \"right\" ]; then \n"),
+                    pl.lit("      CHECK_REQUIRED=\"${BITRATE_TARGET_SIZE}-bitrate\"\n"),
+                    pl.lit("    fi\n"),
                     pl.lit("  fi\n"),
                     pl.lit("fi\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
@@ -1398,16 +1411,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_FILE_NAME='"), pl.col("File Name").str.replace_all("'", "'\\''"), pl.lit("'\n"),
-                    pl.lit("ROOT_FILE_STEM='"), pl.col("File Stem").str.replace_all("'", "'\\''"), pl.lit("'\n\n"),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
                     pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Transcoding: ${ROOT_FILE_NAME} @ '"), pl.col("File Directory Local") \
-                        .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
+                    pl.lit("echo \"Transcoding: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
-                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*__TRANSCODE_*')\"\n"),
+                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
                     pl.lit("echo 'Transcoding with quality "), pl.col("Target Quality"), pl.lit("'\n"),
                     pl.lit("echo 'Transcoding with codec HVEC from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
@@ -1468,14 +1481,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 for script_local_row in _script_local_rows:
                     if not any(map(lambda script_local_row_item: script_local_row_item is None, script_local_row)):
                         if not file_path_media_is_nested:
-                            script_exec_path = script_local_row[0].replace("$", "\\$").replace("\"", "\\\"")
                             script_global_file.write(
                                 "[[ -f \"${{ROOT_DIR}}/../../../../../..{}\" ]] && \"${{ROOT_DIR}}/../../../../../..{}\"\n"
-                                .format(script_exec_path, script_exec_path))
-                        script_local_dir = _localise_path(script_local_row[1], file_path_root)
+                                .format(script_local_row[0].replace("\"", "\\\""), script_local_row[0].replace("\"", "\\\"")))
+                        script_local_dir = _localise_path(script_local_row[1].replace("\\$", "$").replace("\\`", "`"), file_path_root)
                         os.makedirs(script_local_dir, exist_ok=True)
                         _set_permissions(script_local_dir, 0o750)
-                        script_local_path = _localise_path(script_local_row[0], file_path_root)
+                        script_local_path = _localise_path(script_local_row[0].replace("\\$", "$").replace("\\`", "`"), file_path_root)
                         try:
                             with open(script_local_path, 'w') as script_local_file:
                                 script_local_file.write(script_local_row[2])

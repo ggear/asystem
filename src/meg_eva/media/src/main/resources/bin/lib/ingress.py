@@ -55,8 +55,8 @@ def _process(file_path_root, verbose=False):
                         if file_year_search is not None:
                             file_dir_new = file_dir_new.replace(file_year_search.groups()[0], "") \
                                 .replace('-', ' ').strip().replace(' ', '-')
-                        file_dir_new = file_dir_new.replace('-', ' ').strip().title()
-                        file_dir_new = re.sub(r'[^a-zA-Z0-9 ]+', '', file_dir_new).strip()
+                        file_dir_new = file_dir_new.replace('-', ' ').strip()
+                        file_dir_new = re.sub(r'[^a-zA-Z0-9 ]+', '', file_dir_new).strip().title()
                         file_name_new = "{} S{}E{}.{}".format(
                             file_dir_new,
                             file_series_search_groups[1],
@@ -75,8 +75,8 @@ def _process(file_path_root, verbose=False):
                         for file_metadata in file_parents:
                             file_year_search_groups = re.findall(r"19[4-9][0-9]|20[0-9][0-9]", file_metadata)
                             if len(file_year_search_groups) > 0:
-                                file_name_new = file_metadata.split(file_year_search_groups[0])[0].replace('.', ' ').strip().title()
-                                file_name_new = re.sub(r'[^a-zA-Z0-9 ]+', '', file_name_new).strip()
+                                file_name_new = file_metadata.split(file_year_search_groups[0])[0].replace('.', ' ').strip()
+                                file_name_new = re.sub(r'[^a-zA-Z0-9 ]+', '', file_name_new).strip().title()
                                 file_name_new = "{} ({})".format(file_name_new, file_year_search_groups[0])
                                 file_path_new = "{}/{}/{}/{}.{}".format(
                                     file_path_processed,
@@ -109,7 +109,6 @@ def _process(file_path_root, verbose=False):
                             file_path_new.name[:100],
                             file_type
                         ))
-
                     suffix = 0
                     while os.path.isfile(file_path_new):
                         file_path_new = Path("{}_{}.{}".format(
