@@ -1410,7 +1410,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("echo \"Transcoding: ${ROOT_FILE_NAME} @ '"), pl.col("File Directory Local") \
                         .str.replace_all("\"", "\\\""), pl.lit("'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("ORIG_FILE_META=\"$(find \"${ORIG_DIR}\" " +
+                    pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
                            "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*__TRANSCODE_*')\"\n"),
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
                     pl.lit("echo 'Transcoding with quality "), pl.col("Target Quality"), pl.lit("'\n"),
