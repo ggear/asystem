@@ -1425,18 +1425,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
                            "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
-                    pl.lit("echo 'Transcoding with quality "), pl.col("Target Quality"), pl.lit("'\n"),
-                    pl.lit("echo 'Transcoding with codec HVEC from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                           "select(.codec) | .codec' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
-                    pl.lit("echo 'Transcoding with resolution "), pl.col("Transcode Video Resolution"), pl.lit(
-                        " from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                        "select(.resolution) | .resolution' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
-                    pl.lit("echo 'Transcoding with bitrate "), pl.col("Transcode Video Bitrate"), pl.lit(
-                        " Kbps from '\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                        "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps\n"),
-
+                    pl.lit("echo 'Transcoding with quality ["), pl.col("Target Quality"), pl.lit("]'\n"),
+                    pl.lit("echo 'Transcoding with codec [HVEC] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                           "select(.codec) | .codec' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"]\n"),
+                    pl.lit("echo 'Transcoding with resolution ["), pl.col("Transcode Video Resolution"), pl.lit(
+                        "] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                        "select(.resolution) | .resolution' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"]\n"),
+                    pl.lit("echo 'Transcoding with bitrate ["), pl.col("Transcode Video Bitrate"), pl.lit(
+                        " Kbps] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                        "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps]\n"),
                     pl.lit("TRAN_FILE_NAME=\""), pl.col("Transcode File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-
                     pl.lit("if [ -f \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
@@ -1460,9 +1458,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../${TRAN_FILE_NAME}\"\n"),
                     pl.lit("  if [ $? -eq 0 ]; then\n"),
-
-                    pl.lit("    echo \"Transcoded file with size $(du -m \"${ROOT_DIR}/../${TRAN_FILE_NAME} | awk '{printf \"%.2f\", $1/1024}') GB from $(du -m \"${ROOT_DIR}/../${TRAN_FILE_NAME} | awk '{printf \"%.2f\", $1/1024}') GB\"\n"),
-
+                    pl.lit("    echo \"Transcoded file with size "
+                           "[$(du -m \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB] from "
+                           "[$(du -m \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB]\"\n"),
                     pl.lit("    echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("  else\n"),
                     pl.lit("    echo -n 'Failed (mv): ' && date && exit 3\n"),
