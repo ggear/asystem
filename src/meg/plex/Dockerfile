@@ -1,5 +1,5 @@
-# https://forums.plex.tv/t/plex-media-server/30447
-FROM linuxserver/plex:1.41.6 AS image_upstream
+# https://www.videohelp.com/software/Plex/version-history
+FROM linuxserver/plex:1.41.7 AS image_upstream
 
 FROM image_upstream AS image_base
 USER root
