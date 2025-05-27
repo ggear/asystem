@@ -11,7 +11,7 @@ from collections import OrderedDict
 from collections.abc import MutableMapping
 from enum import Enum
 from pathlib import Path
-
+import aenum
 import ffmpeg
 import polars as pl
 import polars.selectors as cs
@@ -40,7 +40,7 @@ MEDIA_EPISODE_NUMBER_REGEXP = r".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]
 MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv", "ts"}
 MEDIA_FILE_EXTENSIONS_IGNORE = {"yaml", "sh", "srt", "png", "jpg", "jpeg", "log"}
-MEDIA_FILE_SCRIPTS = {"rename", "reformat", "transcode", "downscale", "merge"}
+MEDIA_FILE_SCRIPTS = {"rename", "check", "merge", "upscale", "reformat", "transcode", "downscale"}
 
 TOKEN_TRANSCODE = "__TRANSCODE"
 TOKEN_UNKNOWABLE = "__UNKNOWABLE"
@@ -56,11 +56,27 @@ BASH_ECHO_HEADER = ("echo \""
                     "\"\n")
 
 
+class EnumWithAttrs(aenum.AutoNumberEnum):
+    _init_ = 'label script'
+    RENAME = "Rename", True
+    CHECK = "Check", True
+    MERGE = "Merge", True
+    UPSCALE = "Upscale", True
+    REFORMAT = "Reformat", True
+    TRANSCODE = "Transcode", True
+    DOWNSCALE = "Downscale", True
+    NOTHING = "Nothing", True
+
+
+print(EnumWithAttrs.RENAME.value)
+
+
+
 class FileAction(str, Enum):
     RENAME = "1. Rename"
     CHECK = "2. Check"
-    UPSCALE = "3. Upscale"
-    MERGE = "4. Merge"
+    MERGE = "3. Merge"
+    UPSCALE = "4. Upscale"
     REFORMAT = "5. Reformat"
     TRANSCODE = "6. Transcode"
     DOWNSCALE = "7. Downscale"
@@ -271,6 +287,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                                     if verbose else None, _message="file requires renaming to [{}]" \
                                                .format(file_name_rename), _context=file_path)
 
+            # noinspection PyArgumentList
             def _set_default_str(_file_defaults_dict, _file_defaults_key, _bounding_set=None, _formatter=str.title):
                 _file_defaults_dict[_file_defaults_key] = _formatter(
                     _file_defaults_dict[_file_defaults_key].replace(" ", "") \
@@ -520,13 +537,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             _get_bitrate(file_stream_video["codec"], file_stream_video["width"], file_target_quality)
                         file_stream_video["bitrate_target__Kbps"] = str(file_stream_video_bitrate_target)
                         if (file_stream_video_bitrate > (BITRATE_SIZE_UPPER_SCALE * file_stream_video_bitrate_target) or
-                                ((int(file_target_quality) <= QUALITY_MIN and int(file_stream_video["width"]) > 1280) or
-                                 (int(file_target_quality) <= QUALITY_MID and int(file_stream_video["width"]) > 1920))):
+                                (
+                                        (int(file_target_quality) <= QUALITY_MIN and int(file_stream_video["width"]) > 1280) or
+                                        (int(file_target_quality) <= QUALITY_MID and int(file_stream_video["width"]) > 1920)
+                                )
+                        ):
                             file_stream_video["bitrate_target_size"] = "Large"
                         elif (file_stream_video_bitrate < (BITRATE_SIZE_LOWER_SCALE * file_stream_video_bitrate_target) or
-                              (int(file_target_quality) > 1 and (int(file_target_quality) <= QUALITY_MID and
-                                                                 int(file_stream_video["width"]) <= 1600) or
-                               (int(file_target_quality) >= QUALITY_MAX and int(file_stream_video["width"]) <= 1920))):
+                              (
+                                      (int(file_target_quality) > 1 and (
+                                              (int(file_target_quality) <= QUALITY_MID and int(file_stream_video["width"]) <= 1600) or
+                                              (int(file_target_quality) >= QUALITY_MAX and int(file_stream_video["width"]) <= 1920))
+                                      )
+                              )
+                        ):
                             file_stream_video["bitrate_target_size"] = "Small"
                         else:
                             file_stream_video["bitrate_target_size"] = "Right"
@@ -681,6 +705,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
         _add_field("plex_video", "")
         _add_field("file_size", "")
         _add_field("file_state", "")
+        _add_field("file_validity", "")
         _add_field("file_version", "")
         _add_field("file_action", "")
         metadata.move_to_end("file_name", last=False)
@@ -802,22 +827,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Transcode Action") == "Merged")
                 ).then(pl.lit("Merged"))
                 .otherwise(pl.lit("Original"))
-            ).alias("File Version"))
-        metadata_merged_pl = metadata_merged_pl.with_columns(
-            (
-                pl.when(
-                    ((pl.col("File Version") == "Original") | (pl.col("File Version") == "Merged")) &
-                    (~pl.col("File Stem").str.contains(".", literal=True)) &
-                    (pl.struct(
-                        pl.col("Version Directory"),
-                        pl.col("File Name") \
-                            .str.replace_all(MEDIA_YEAR_NUMBER_REGEXP, "") \
-                            .str.to_lowercase() \
-                            .str.split(".").list.first() \
-                            .str.strip_chars()
-                    ).is_duplicated())
-                ).then(pl.lit("Duplicate"))
-                .otherwise(pl.col("File Version"))
             ).alias("File Version"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
             pl.col("File Stem").count().over("File Stem").alias("Version Count")
@@ -987,9 +996,33 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit("Messy"))
                 .otherwise(pl.lit("Clean"))
             ).alias("Metadata State"))
+
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
+                    (pl.col("File State") != "Complete")
+                ).then(pl.col("File State"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Video 1 Colour Range") == "HDR")
+                ).then(pl.lit("HDR"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("File Size") != "Right")
+                ).then(pl.col("File Size"))
+                .when(
+                    ((pl.col("File Version") == "Original") | (pl.col("File Version") == "Merged")) &
+                    (~pl.col("File Stem").str.contains(".", literal=True)) &
+                    (pl.struct(
+                        pl.col("Version Directory"),
+                        pl.col("File Name") \
+                            .str.replace_all(MEDIA_YEAR_NUMBER_REGEXP, "") \
+                            .str.to_lowercase() \
+                            .str.split(".").list.first() \
+                            .str.strip_chars()
+                    ).is_duplicated())
+                ).then(pl.lit("Duplicate"))
+                .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Version Directory") == ".") &
                     (~pl.col("File Stem").is_null()) & (pl.col("File Stem") != "") &
@@ -999,9 +1032,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         pl.col("File Stem"),
                         (pl.col("Duration (hours)").cast(pl.Float32) * 60 * 6).round(0),
                     ).is_duplicated())
-                ).then(pl.lit("Corrupt"))
-                .otherwise(pl.col("File State"))
-            ).alias("File State"))
+                ).then(pl.lit("Suspect Duration"))
+                .otherwise(pl.lit("Valid"))
+            ).alias("File Validity"))
+
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
@@ -1014,9 +1048,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     )
                 ).then(pl.lit(FileAction.RENAME.value))
                 .when(
-                    (pl.col("File State") == "Corrupt") |
-                    (pl.col("File State") == "Incomplete") |
-                    (pl.col("File Version") == "Duplicate")
+                    (pl.col("File Validity") != "Valid")
                 ).then(pl.lit(FileAction.CHECK.value))
                 .when(
                     (pl.col("File Version") == "Transcoded")
@@ -1159,6 +1191,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.col("File Stem"),
                 ]).alias("Merge Script Directory"),
                 pl.concat_str([
+                    pl.col("File Directory"),
+                    pl.lit("/._check_"),
+                    pl.col("File Stem"),
+                ]).alias("Check Script Directory"),
+                pl.concat_str([
+                    pl.col("File Directory"),
+                    pl.lit("/._upscale_"),
+                    pl.col("File Stem"),
+                ]).alias("Upscale Script Directory"),
+                pl.concat_str([
                     pl.col("File Stem"),
                     pl.lit(TOKEN_TRANSCODE + "_"),
                     pl.col("Target Quality").str.to_uppercase(),
@@ -1187,6 +1229,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.col("Merge Script Directory"),
                     pl.lit("/merge.sh"),
                 ]).alias("Merge Script File"),
+                pl.concat_str([
+                    pl.col("Check Script Directory"),
+                    pl.lit("/merge.sh"),
+                ]).alias("Check Script File"),
+                pl.concat_str([
+                    pl.col("Upscale Script Directory"),
+                    pl.lit("/merge.sh"),
+                ]).alias("Upscale Script File"),
             ]
         ).with_columns(
             [
@@ -1358,17 +1408,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("    CHECK_REQUIRED=\"original-metadata-file-not-found\"\n"),
                     pl.lit("  elif [ \"${TRAN_FILE_META}\" == \"\" ] || [ ! -f \"${TRAN_FILE_META}\" ]; then \n"),
                     pl.lit("    CHECK_REQUIRED=\"transcoded-metadata-file-not-found\"\n"),
-                    pl.lit("  else\n"),
-                    pl.lit("    COLOUR_RANGE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
-                           "select(.colour_range) | .colour_range' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:lower:]' '[:upper:]')\"\n"),
-                    pl.lit("    if [ \"${COLOUR_RANGE}\" == \"HDR\" ]; then \n"),
-                    pl.lit("      CHECK_REQUIRED=\"HDR-encoding\"\n"),
-                    pl.lit("    fi\n"),
-                    pl.lit("    BITRATE_TARGET_SIZE=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | " +
-                           "select(.bitrate_target_size) | .bitrate_target_size' \"${TRAN_FILE_META}\" | sed \"s/['\\\"]//g\" | tr '[:upper:]' '[:lower:]')\"\n"),
-                    pl.lit("    if [ \"${BITRATE_TARGET_SIZE}\" != \"right\" ]; then \n"),
-                    pl.lit("      CHECK_REQUIRED=\"${BITRATE_TARGET_SIZE}-bitrate\"\n"),
-                    pl.lit("    fi\n"),
                     pl.lit("  fi\n"),
                     pl.lit("fi\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
@@ -1397,7 +1436,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("      else\n"),
                     pl.lit("        touch \"$MERG_DEFTS\"\n"),
                     pl.lit("      fi\n"),
-                    pl.lit("      echo \"./$(basename \"${TRAN_FILE}\")"), pl.lit(" -> ./$(basename "), pl.lit("\"${ORIG_FILE}\")\"\n"),
+                    pl.lit("      echo \"./$(basename \"${TRAN_FILE}\")"),
+                    pl.lit(" [$(du -m \"${MERG_FILE}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB] " + \
+                           "-> ./$(basename "), pl.lit("\"${ORIG_FILE}\")\" " + \
+                                                       "[$(du -m \"${ORIG_FILE}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB]\n"),
                     pl.lit("      echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("    else\n"),
                     pl.lit("      echo '' && echo -n 'Failed (mv): ' && date && exit 1\n"),
@@ -1458,9 +1500,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  rm -f \"${ROOT_DIR}\"/*.mkv.log\n"),
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../${TRAN_FILE_NAME}\"\n"),
                     pl.lit("  if [ $? -eq 0 ]; then\n"),
-                    pl.lit("    echo \"Transcoded file with size "
-                           "[$(du -m \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB] from "
-                           "[$(du -m \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB]\"\n"),
+                    pl.lit("      echo \"./$(basename \"${ROOT_FILE_NAME}\")"),
+                    pl.lit(" [$(du -m \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB] " + \
+                           "-> ./$(basename "), pl.lit("\"${TRAN_FILE_NAME}\")\" " + \
+                                                       "[$(du -m \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB]\n"),
                     pl.lit("    echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("  else\n"),
                     pl.lit("    echo -n 'Failed (mv): ' && date && exit 3\n"),
@@ -1470,6 +1513,34 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("fi\n"),
                     pl.lit("echo '' && exit -1\n"),
                 ]).alias("Transcode Script Source"),
+                pl.concat_str([
+                    pl.lit("#!/usr/bin/env bash\n\n"),
+                    pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
+                    pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Check!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo \"Checking: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo '' && echo -n 'Completed: ' && date && exit 0\n"),
+                ]).alias("Check Script Source"),
+                pl.concat_str([
+                    pl.lit("#!/usr/bin/env bash\n\n"),
+                    pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
+                    pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Upscale!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo \"Upscaling: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
+                    pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("echo '' && echo -n 'Completed: ' && date && exit 0\n"),
+                ]).alias("Upscale Script Source"),
             ]
         ).sort("Action Index")
 
