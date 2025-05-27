@@ -462,13 +462,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                                     file_probe_stream_video_label = "UHD"
                                     file_probe_stream_video_resolution = "8640" + file_probe_stream_video_field_order
                             file_probe_stream_filtered["label"] = file_probe_stream_video_label
+                            file_probe_stream_filtered["height"] = str(file_probe_stream_video_height) \
+                                if file_probe_stream_video_height > 0 else ""
+                            file_probe_stream_filtered["width"] = str(file_probe_stream_video_width) \
+                                if file_probe_stream_video_width > 0 else ""
                             file_probe_stream_filtered["resolution"] = file_probe_stream_video_resolution
                             file_probe_stream_filtered["resolution_target"] = ""
                             file_probe_stream_filtered["resolution_target_size"] = ""
-                            file_probe_stream_filtered["width"] = str(file_probe_stream_video_width) \
-                                if file_probe_stream_video_width > 0 else ""
-                            file_probe_stream_filtered["height"] = str(file_probe_stream_video_height) \
-                                if file_probe_stream_video_height > 0 else ""
                             file_stream_bitrate = round(int(file_probe_stream["bit_rate"]) / 10 ** 3) \
                                 if "bit_rate" in file_probe_stream else -1
                             file_probe_stream_filtered["bitrate__Kbps"] = str(file_stream_bitrate) \
@@ -537,8 +537,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             (file_stream_video_quality <= QUALITY_MID and file_stream_video_width > 1920)):
                         file_stream_video["resolution_target_size"] = "Large"
                     elif (file_stream_video_quality > 1 and (
-                            (file_stream_video_quality <= QUALITY_MID and file_stream_video_width <= 1600) or
-                            (file_stream_video_quality >= QUALITY_MAX and file_stream_video_width <= 1920))):
+                            (file_stream_video_quality <= QUALITY_MID and file_stream_video_width < 1280) or
+                            (file_stream_video_quality >= QUALITY_MAX and file_stream_video_width < 2560))):
                         file_stream_video["resolution_target_size"] = "Small"
                     else:
                         file_stream_video["resolution_target_size"] = "Right"
@@ -723,8 +723,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
         _add_field("plex_video", "")
         _add_field("file_size", "")
         _add_field("file_state", "")
-        _add_field("file_validity", "")
         _add_field("file_version", "")
+        _add_field("file_validity", "")
         _add_field("file_action", "")
         metadata.move_to_end("file_name", last=False)
         metadata_enriched_list.append(dict(metadata))
@@ -863,16 +863,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Stream Count") == "0") |
                     (pl.col("Video Count") == "0") |
                     (pl.col("Audio Count") == "0")
-                ).then(pl.lit("Incomplete"))
-                .when(
-                    (pl.col("Target Lang") != pl.col("Audio 1 Lang"))
-                ).then(pl.lit("Incomplete"))
-                .when(
-                    (pl.col("Target Lang") != "eng") &
-                    (
-                            (pl.col("Subtitle Count") == "0") |
-                            (pl.col("Subtitle Count") == "Subtitle Non-Eng Count")
-                    )
                 ).then(pl.lit("Incomplete"))
                 .otherwise(pl.lit("Complete"))
             ).alias("File State"))
@@ -1023,14 +1013,40 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             (
                 pl.when(
                     (pl.col("File State") == "Corrupt")
-                ).then(pl.lit("Invalid Corrupt"))
+                ).then(pl.lit("Corrupt"))
                 .when(
                     (pl.col("File State") == "Incomplete")
-                ).then(pl.lit("Invalid Incomplete"))
+                ).then(pl.lit("Missing Streams"))
+                .when(
+                    (pl.col("Target Lang") != pl.col("Audio 1 Lang"))
+                ).then(pl.lit("Missing Target Language"))
+                .when(
+                    (pl.col("Target Lang") != "eng") &
+                    (
+                            (pl.col("Subtitle Count") == "0") |
+                            (pl.col("Subtitle Count") == "Subtitle Non-Eng Count")
+                    )
+                ).then(pl.lit("Missing Subtitles"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Video 1 Colour Range") == "HDR")
                 ).then(pl.lit("Check HDR Colouring"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Video 1 Resolution Target Size") == "Small")
+                ).then(pl.lit("Check Low Resolution"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Video 1 Bitrate Target Size") == "Small")
+                ).then(pl.lit("Check Low Bitrate"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Video 1 Resolution Target Size") == "Large")
+                ).then(pl.lit("Check High Resolution"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Video 1 Bitrate Target Size") == "Small")
+                ).then(pl.lit("Check High Bitrate"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("File Size") == "Small")
@@ -1259,11 +1275,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ]).alias("Merge Script File"),
                 pl.concat_str([
                     pl.col("Check Script Directory"),
-                    pl.lit("/merge.sh"),
+                    pl.lit("/check.sh"),
                 ]).alias("Check Script File"),
                 pl.concat_str([
                     pl.col("Upscale Script Directory"),
-                    pl.lit("/merge.sh"),
+                    pl.lit("/upscale.sh"),
                 ]).alias("Upscale Script File"),
             ]
         ).with_columns(
@@ -1553,12 +1569,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Checking: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
+                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
+                    pl.lit("echo '' && echo 'File Metadata:'\n"),
+                    pl.lit("yq \"${ORIG_FILE_META}\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
-                    pl.lit("echo ''\n"),
-                    pl.lit("echo \"File probe reported: "), pl.col("File Validity"), pl.lit("\"\n"),
-                    pl.lit("exit 0\n"),
+                    pl.lit("echo '' && echo \"File probe reported: "), pl.col("File Validity"), pl.lit("\" && echo '' && exit 0\n"),
                 ]).alias("Check Script Source"),
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
@@ -1572,15 +1590,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Upscaling: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
+                    pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
+                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
+                    pl.lit("echo '' && echo 'File Metadata:'\n"),
+                    pl.lit("yq \"${ORIG_FILE_META}\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
-                    pl.lit("echo ''\n"),
-                    pl.lit("echo \"Video codec: "), pl.col("Video 1 Codec"), pl.lit("\"\n"),
-                    pl.lit("echo \"Video size: "), pl.col("File Size (GB)"), pl.lit(" GB\"\n"),
-                    pl.lit("echo \"Video bitrate: "), pl.col("Video 1 Bitrate Target Size"), pl.lit("\"\n"),
-                    pl.lit("echo \"Video resolution: "), pl.col("Video 1 Resolution Target Size"), pl.lit("\"\n"),
-                    pl.lit("exit 0\n"),
+                    pl.lit("echo '' && echo \"File probe reported: Small\" && echo '' && exit 0\n"),
                 ]).alias("Upscale Script Source"),
             ]
         ).sort("Action Index")
