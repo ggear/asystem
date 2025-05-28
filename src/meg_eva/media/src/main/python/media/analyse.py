@@ -562,9 +562,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_stream_video["bitrate_target_size"] = "Small"
                         else:
                             file_stream_video["bitrate_target_size"] = "Right"
-                        if file_stream_video["resolution_target_size"] == "Large" or file_stream_video["bitrate_target_size"] == "Large":
+                        if file_stream_video["resolution_target_size"] == "Large" or \
+                                file_stream_video["bitrate_target_size"] == "Large":
                             file_stream_video["target_size"] = "Large"
-                        elif file_stream_video["resolution_target_size"] == "Small" or file_stream_video["bitrate_target_size"] == "Small":
+                        elif file_stream_video["resolution_target_size"] == "Small" or \
+                                file_stream_video["bitrate_target_size"] == "Small":
                             file_stream_video["target_size"] = "Small"
                         else:
                             file_stream_video["target_size"] = "Right"
