@@ -4,8 +4,8 @@
     <SslPort>9898</SslPort>
     <EnableSsl>False</EnableSsl>
     <LaunchBrowser>True</LaunchBrowser>
-    <ApiKey>1ff54167e1de4fd59343887871faa131</ApiKey>
-    <AuthenticationMethod>None</AuthenticationMethod>
+    <ApiKey>$SONARR_API_KEY</ApiKey>
+    <AuthenticationMethod>Forms</AuthenticationMethod>
     <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
     <Branch>main</Branch>
     <LogLevel>debug</LogLevel>
