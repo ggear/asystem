@@ -1,7 +1,7 @@
 services:
   nginx:
     # Notes: https://nginx.org/en/CHANGES
-    image: nginx:1.27.4-alpine
+    image: nginx:1.28.0-alpine
     container_name: nginx
     init: true
     restart: ${SERVICE_RESTART}
