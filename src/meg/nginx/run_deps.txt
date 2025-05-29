@@ -1,6 +1,7 @@
 plex
 weewx
 mlflow
+sonarr
 sabnzbd
 grafana
 vernemq
