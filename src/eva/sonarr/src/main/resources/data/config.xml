@@ -6,7 +6,7 @@
     <LaunchBrowser>True</LaunchBrowser>
     <ApiKey>1ff54167e1de4fd59343887871faa131</ApiKey>
     <AuthenticationMethod>None</AuthenticationMethod>
-    <AuthenticationRequired>Enabled</AuthenticationRequired>
+    <AuthenticationRequired>Disabled for Local Addresses</AuthenticationRequired>
     <Branch>main</Branch>
     <LogLevel>debug</LogLevel>
     <SslCertPath></SslCertPath>
