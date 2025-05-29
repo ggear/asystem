@@ -1,5 +1,5 @@
-# Notes: https://sabnzbd.org/downloads#
-FROM linuxserver/sabnzbd:4.5.1 AS image_upstream
+# Notes: https://github.com/Sonarr/Sonarr/releases
+FROM linuxserver/sonarr:4.0.14 AS image_upstream
 
 FROM image_upstream AS image_base
 USER root
