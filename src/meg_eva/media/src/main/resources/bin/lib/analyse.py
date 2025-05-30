@@ -1628,8 +1628,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
-                    pl.lit("echo '' && echo \"File probe reported: "), pl.col("File Validity"),
-                    pl.lit("\" && echo '' && exit 0\n"),
+                    pl.lit("echo '' && echo \"File probe reported:"
+                           " "), pl.col("File Validity"), pl.lit("\" && echo '' && exit 0\n"),
                 ]).alias("Check Script Source"),
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
