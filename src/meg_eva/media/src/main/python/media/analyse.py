@@ -3,16 +3,17 @@ import os
 import re
 import string
 import sys
+import typing
 from collections import OrderedDict
 from collections.abc import MutableMapping
-from enum import Enum
 from pathlib import Path
-from aenum import AutoNumberEnum, OrderedEnum
 
 import ffmpeg
 import polars as pl
 import polars.selectors as cs
 import yaml
+from aenum import AutoNumberEnum
+# noinspection PyProtectedMember
 from ffmpeg._run import Error
 from gspread_pandas import Spread
 from polars.exceptions import ColumnNotFoundError
@@ -53,6 +54,8 @@ class FileAction(AutoNumberEnum):
         return self.name.lower() if self.has_script else None
 
 
+FileAction = FileAction  # type: typing.Union[typing.Type[FileAction], typing.Iterable]
+
 MEDIA_YEAR_NUMBER_REGEXP = r"\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
 MEDIA_SEASON_NUMBER_REGEXP = r"Season ([0-9]?[0-9]+)"
 MEDIA_EPISODE_NUMBER_REGEXP = r".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
@@ -75,6 +78,7 @@ BASH_ECHO_HEADER = ("echo \""
                     "\"\n")
 
 
+# noinspection PyUnresolvedReferences,PyUnusedLocal
 def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=False, verbose=False):
     def _print_message(_prefix=None, _message=None, _context=None,
                        _header=True, _footer=True, _no_header_footer=False):
@@ -98,9 +102,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
 
     def _truncate_sheet(_sheet_url):
         for sheet in {"Data", "Summary"}:
-            metadata_spread_data = Spread(_sheet_url, sheet=sheet)
-            metadata_spread_data.freeze(0, 0, sheet=sheet)
-            metadata_spread_data.clear_sheet(sheet=sheet)
+            metadata_spread_data_truncate = Spread(_sheet_url, sheet=sheet)
+            metadata_spread_data_truncate.freeze(0, 0, sheet=sheet)
+            metadata_spread_data_truncate.clear_sheet(sheet=sheet)
 
     sheet_url = "https://docs.google.com/spreadsheets/d/" + sheet_guid
     file_path_root = os.path.abspath(file_path_root)
@@ -212,8 +216,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     file_dir_normalised = _normalise_name(file_base_dir)
                     file_season_not_matching = file_season_match is not None and \
                                                file_episode_match is not None and \
-                                               file_episode_match.groups()[1].lstrip("0") != file_season_match.groups()[0].lstrip("0")
-                    if (file_version_dir != "." and file_version_dir.startswith("Plex Versions")) or file_season_not_matching:
+                                               file_episode_match.groups()[1].lstrip("0") != \
+                                               file_season_match.groups()[0].lstrip("0")
+                    if (file_version_dir != "." and file_version_dir.startswith(
+                            "Plex Versions")) or file_season_not_matching:
                         file_name_rename = ""
                         file_dir_rename = TOKEN_UNKNOWABLE
                         if file_season_not_matching:
@@ -226,7 +232,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                                            .format(file_version_dir), _context=file_path)
                     else:
                         file_name_normalised = file_name_normalised.replace(
-                            _normalise_name(file_base_dir) + " " + _normalise_name(file_base_dir), _normalise_name(file_base_dir))
+                            _normalise_name(file_base_dir) + " " + _normalise_name(file_base_dir),
+                            _normalise_name(file_base_dir))
                         if file_base_dir != file_dir_normalised:
                             if file_dir_normalised == "":
                                 file_dir_rename = TOKEN_UNKNOWABLE
@@ -247,14 +254,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 else:
                     file_dir_normalised = _normalise_name(file_base_dir_parent)
                     file_year_match = re.findall(MEDIA_YEAR_NUMBER_REGEXP, file_dir_normalised)
-                    if file_version_dir != "." and not file_version_dir.startswith("Plex Versions") or len(file_year_match) != 1:
+                    if file_version_dir != "." and not file_version_dir.startswith("Plex Versions") or len(
+                            file_year_match) != 1:
                         file_name_rename = ""
                         file_dir_rename = TOKEN_UNKNOWABLE
                         if len(file_year_match) != 1:
                             _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
-                                if verbose else None, _message=(
-                                "file requires year adding to name [{}]" \
-                                    if len(file_year_match) == 0 else "file has ambiguous year in name [{}]") \
+                                if verbose else None, _message=("file requires year adding to name [{}]"
+                                                                if len(
+                                file_year_match) == 0 else "file has ambiguous year in name [{}]") \
                                            .format(file_base_dir_parent), _context=file_path)
                         else:
                             _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)) \
@@ -283,18 +291,24 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             def _set_default_str(_file_defaults_dict, _file_defaults_key, _bounding_set=None, _formatter=str.title):
                 _file_defaults_dict[_file_defaults_key] = _formatter(
                     _file_defaults_dict[_file_defaults_key].replace(" ", "") \
-                        if isinstance(_file_defaults_dict[_file_defaults_key], str) else str(_file_defaults_dict[_file_defaults_key]))
+                        if isinstance(_file_defaults_dict[_file_defaults_key], str) else str(
+                        _file_defaults_dict[_file_defaults_key]))
                 if _bounding_set is not None and _file_defaults_dict[_file_defaults_key] not in _bounding_set:
                     raise Exception("Invalid {}: {}".format(_file_defaults_key, file_defaults_dict[_file_defaults_key]))
 
-            def _set_default_numeric(_file_defaults_dict, _file_defaults_key, _bounding_lower=None, _bounding_upper=None):
+            def _set_default_numeric(_file_defaults_dict, _file_defaults_key, _bounding_lower=None,
+                                     _bounding_upper=None):
                 _file_defaults_dict[_file_defaults_key] = _file_defaults_dict[_file_defaults_key].replace(" ", "") \
-                    if isinstance(_file_defaults_dict[_file_defaults_key], str) else str(_file_defaults_dict[_file_defaults_key])
+                    if isinstance(_file_defaults_dict[_file_defaults_key], str) else str(
+                    _file_defaults_dict[_file_defaults_key])
                 if _file_defaults_dict[_file_defaults_key] != "" and (
                         not _file_defaults_dict[_file_defaults_key].isnumeric() or
-                        (_bounding_lower is not None and int(_file_defaults_dict[_file_defaults_key]) < _bounding_lower) or
-                        (_bounding_upper is not None and int(_file_defaults_dict[_file_defaults_key]) > _bounding_upper)):
-                    raise Exception("Invalid {}: {}".format(_file_defaults_key, _file_defaults_dict[_file_defaults_key]))
+                        (_bounding_lower is not None and int(
+                            _file_defaults_dict[_file_defaults_key]) < _bounding_lower) or
+                        (_bounding_upper is not None and int(
+                            _file_defaults_dict[_file_defaults_key]) > _bounding_upper)):
+                    raise Exception(
+                        "Invalid {}: {}".format(_file_defaults_key, _file_defaults_dict[_file_defaults_key]))
 
             if not os.path.isfile(file_metadata_path):
                 file_defaults_dict = {
@@ -330,9 +344,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                                 _set_default_str(file_defaults_dict, "target_lang", _formatter=str.lower)
                             except Exception as exception:
                                 file_defaults_load_failed = True
-                                _print_message(_message="skipping file due to defaults metadata file [{}] load error [{}]" \
-                                               .format(file_defaults_path, exception),
-                                               _context=file_path, _no_header_footer=True)
+                                _print_message(
+                                    _message="skipping file due to defaults metadata file [{}] load error [{}]" \
+                                        .format(file_defaults_path, exception),
+                                    _context=file_path, _no_header_footer=True)
                 if file_defaults_load_failed:
                     continue
                 file_defaults_analysed_path = os.path.join(
@@ -356,15 +371,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 file_target_lang = file_defaults_dict["target_lang"]
                 try:
                     file_probe = ffmpeg.probe(file_path)
-                except Error as error:
+                except Error:
                     file_probe = {}
                 file_probe_bitrate = round(int(file_probe["format"]["bit_rate"]) / 10 ** 3) \
                     if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
                 file_probe_duration = float(file_probe["format"]["duration"]) / 60 ** 2 \
                     if ("format" in file_probe and "duration" in file_probe["format"]) else -1
-                file_probe_size = (int(file_probe["format"]["size"]) \
-                                       if ("format" in file_probe and "size" in file_probe["format"]) \
-                                       else os.path.getsize(file_path)) / 10 ** 9
+                file_probe_size = (int(file_probe["format"]["size"])
+                                   if ("format" in file_probe and "size" in file_probe["format"])
+                                   else os.path.getsize(file_path)) / 10 ** 9
                 file_probe_streams_filtered = {
                     "video": [],
                     "audio": [],
@@ -499,18 +514,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_probe_stream_filtered["lang"] = file_probe_stream["tags"]["language"].lower() \
                                 if ("tags" in file_probe_stream and "language" in file_probe_stream["tags"]
                                     and file_probe_stream["tags"]["language"].lower() != "und") else file_target_lang
-                            file_probe_stream_filtered["forced"] = ("Yes" if file_probe_stream["disposition"]["forced"] == 1 else "No") \
-                                if ("disposition" in file_probe_stream and "forced" in file_probe_stream["disposition"]) else "No"
+                            file_probe_stream_filtered["forced"] = (
+                                "Yes" if file_probe_stream["disposition"]["forced"] == 1 else "No") \
+                                if ("disposition" in file_probe_stream and "forced" in file_probe_stream[
+                                "disposition"]) else "No"
                             file_probe_stream_filtered["format"] = "Picture" if \
                                 (file_probe_stream_filtered["codec"] in {"VOB", "VOBSUB", "DVD_SUBTITLE"} or
                                  ("tags" in file_probe_stream and "width" in file_probe_stream["tags"])) else "Text"
                 for stream_label in ["video", "audio", "subtitle"]:
                     stream_index = 0
-                    file_probe_streams_filtered[stream_label].sort(key=lambda stream: stream["index"])
+                    file_probe_streams_filtered[stream_label].sort(key=lambda _stream: _stream["index"])
                     for stream in file_probe_streams_filtered[stream_label]:
                         stream_index += 1
                         stream["index_{}".format(stream_label)] = str(stream_index)
-                file_probe_streams_filtered["video"].sort(key=lambda stream: int(stream["width"]), reverse=True)
+                file_probe_streams_filtered["video"].sort(key=lambda _stream: int(_stream["width"]), reverse=True)
                 for file_stream_video_index, file_stream_video in enumerate(file_probe_streams_filtered["video"]):
                     file_stream_video_quality = int(file_target_quality)
                     file_stream_video_width = int(file_stream_video["width"])
@@ -596,8 +613,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     if len(file_probe_streams_filtered_audios_supplementary) > 0 and \
                             file_probe_streams_filtered_audios_supplementary[0]["lang"] == file_target_lang and \
                             file_probe_streams_filtered_audios_supplementary[0]["channels"] >= file_target_channels:
-                        file_probe_streams_filtered_audios.insert(0,
-                                                                  file_probe_streams_filtered_audios_supplementary.pop(0))
+                        file_probe_streams_filtered_audios.insert(
+                            0, file_probe_streams_filtered_audios_supplementary.pop(0))
                 file_probe_streams_filtered_audios.extend(file_probe_streams_filtered_audios_supplementary)
                 file_probe_streams_filtered["audio"] = file_probe_streams_filtered_audios
                 file_probe_streams_filtered_subtitles = []
@@ -608,8 +625,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         file_probe_streams_filtered_subtitles.append(file_probe_streams_filtered_subtitle)
                     else:
                         file_probe_streams_filtered_subtitles_supplementary.append(file_probe_streams_filtered_subtitle)
-                file_probe_streams_filtered_subtitles.sort(key=lambda stream: stream["index"], reverse=True)
-                file_probe_streams_filtered_subtitles_supplementary.sort(key=lambda stream: stream["index"], reverse=True)
+                file_probe_streams_filtered_subtitles.sort(key=lambda _stream: _stream["index"], reverse=True)
+                file_probe_streams_filtered_subtitles_supplementary.sort(
+                    key=lambda _stream: _stream["index"], reverse=True)
                 file_probe_streams_filtered_subtitles.extend(file_probe_streams_filtered_subtitles_supplementary)
                 file_probe_streams_filtered["subtitle"] = file_probe_streams_filtered_subtitles
                 file_probe_filtered = [
@@ -744,7 +762,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
     else:
         if verbose:
             print("#local-dataframe + {} -> #merged-dataframe ... ".format(sheet_url), end='', flush=True)
-        metadata_spread_data = Spread(sheet_url, sheet="Data")
+        metadata_spread_data: Spread = Spread(sheet_url, sheet="Data")
+        # noinspection PyProtectedMember
         metadata_sheet_list = metadata_spread_data._fix_merge_values(metadata_spread_data.sheet.get_all_values())
         if len(metadata_sheet_list) > 0:
             metadata_sheet_pl = _format_columns(pl.DataFrame(
@@ -829,7 +848,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         (pl.col("Native Lang").is_null()) | (pl.col("Native Lang") == "") |
                         (pl.col("Stream Count").is_null()) | (pl.col("Stream Count") == "") |
                         (pl.col("Video Count").is_null()) | (pl.col("Video Count") == "") |
-                        (pl.col("Video 1 Bitrate Estimate (Kbps)").is_null()) | (pl.col("Video 1 Bitrate Estimate (Kbps)") == "") |
+                        (pl.col("Video 1 Bitrate Estimate (Kbps)").is_null()) | (
+                                pl.col("Video 1 Bitrate Estimate (Kbps)") == "") |
                         (pl.col("Audio Count").is_null()) | (pl.col("Audio Count") == "")
                     ).then(pl.lit("Corrupt"))
                 ).alias("File State"))
@@ -1058,11 +1078,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (~pl.col("File Stem").str.contains(".", literal=True)) &
                     (pl.struct(
                         pl.col("Version Directory"),
-                        pl.col("File Name") \
-                            .str.replace_all(MEDIA_YEAR_NUMBER_REGEXP, "") \
-                            .str.to_lowercase() \
-                            .str.split(".").list.first() \
-                            .str.strip_chars()
+                        pl.col("File Name")
+                        .str.replace_all(MEDIA_YEAR_NUMBER_REGEXP, "")
+                        .str.to_lowercase()
+                        .str.split(".").list.first()
+                        .str.strip_chars()
                     ).is_duplicated())
                 ).then(pl.lit("Check Duplicate"))
                 .when(
@@ -1205,7 +1225,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
         ).with_columns(
             [
                 (
-                    pl.col("File Directory").map_elements(lambda _dir: _localise_path(_dir, file_path_root), return_dtype=pl.String)
+                    pl.col("File Directory").map_elements(
+                        lambda _dir: _localise_path(_dir, file_path_root), return_dtype=pl.String)
                 ).alias("File Directory Local"),
                 pl.concat_str([
                     pl.col("File Directory"),
@@ -1286,7 +1307,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.when(
                         (pl.col("Video 1 Codec") != "HEVC")
                     ).then(
-                        (pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Int32) / pl.lit(BITRATE_HVEC_SCALE)).cast(pl.Int32)
+                        (pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Int32) /
+                         pl.lit(BITRATE_HVEC_SCALE)).cast(pl.Int32)
                     ).otherwise(
                         pl.col("Video 1 Bitrate Target (Kbps)")
                     )
@@ -1375,10 +1397,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
-                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!!!!'\n")),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Renaming: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
@@ -1428,10 +1453,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
-                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!!!!'\n")),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Merging: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
@@ -1456,10 +1484,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
                     pl.lit("if [ $(find \"${ORIG_DIR}\" ! -name *." +
-                           " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) + " -type f -name \"${ROOT_FILE_STEM}*\" | wc -l) -le 2 ] && " +
+                           " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
+                           " -type f -name \"${ROOT_FILE_STEM}*\" | wc -l) -le 2 ] && " +
                            "[ $(find \"${ORIG_DIR}\" -name \"${ROOT_FILE_NAME}\" | wc -l) -eq 1 ]; then\n"),
                     pl.lit("  ORIG_FILE=\"$(find \"${ORIG_DIR}\" ! -name *." +
-                           " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) + " -type f -name \"${ROOT_FILE_STEM}\\.*\")\"\n"),
+                           " ! -name *.".join(
+                               MEDIA_FILE_EXTENSIONS_IGNORE) + " -type f -name \"${ROOT_FILE_STEM}\\.*\")\"\n"),
                     pl.lit("  TRAN_FILE=\"${ROOT_DIR}/../${ROOT_FILE_NAME}\"\n"),
                     pl.lit("  MERG_FILE=\"${ORIG_DIR}/${ROOT_FILE_STEM}.mkv\"\n"),
                     pl.lit("  if [ -f \"${ORIG_FILE}\" ] && [ -f \"${TRAN_FILE}\" ]; then\n"),
@@ -1467,13 +1497,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("      echo '' && echo -n \"Skipped (check-${CHECK_REQUIRED}): \" && date && exit 0\n"),
                     pl.lit("    fi\n"),
                     pl.lit("    echo ''\n"),
-                    pl.lit("    ORIG_FILE_SIZE=$(du -m \"${ORIG_FILE}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}')\n"),
-                    pl.lit("    TRAN_FILE_SIZE=$(du -m \"${TRAN_FILE}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}')\n"),
+                    pl.lit("    ORIG_FILE_SIZE=$(du -m \"${ORIG_FILE}\" | "
+                           "awk '{printf \"%.1f\", ($1/1024 + 0.05)}')\n"),
+                    pl.lit("    TRAN_FILE_SIZE=$(du -m \"${TRAN_FILE}\" | "
+                           "awk '{printf \"%.1f\", ($1/1024 + 0.05)}')\n"),
                     pl.lit("    rm -f \"${ORIG_FILE}\"\n"),
                     pl.lit("    mv -f \"${TRAN_FILE}\" \"${MERG_FILE}\"\n"),
                     pl.lit("    if [ $? -eq 0 ]; then\n"),
                     pl.lit("      TRAN_STEM=\"$(basename \"${TRAN_FILE}\")\"\n"),
-                    pl.lit("      TRAN_DEFTS=\"$(dirname \"${TRAN_FILE}\")/._defaults_analysed_${TRAN_STEM%.*}_${TRAN_STEM##*.}.yaml\"\n"),
+                    pl.lit("      TRAN_DEFTS=\"$(dirname \"${TRAN_FILE}\")/"
+                           "._defaults_analysed_${TRAN_STEM%.*}_${TRAN_STEM##*.}.yaml\"\n"),
                     pl.lit("      MERG_DEFTS=\"${ORIG_DIR}/._defaults_merged_${ROOT_FILE_STEM}_mkv.yaml\"\n"),
                     pl.lit("      if [ -f \"$TRAN_DEFTS\" ]; then\n"),
                     pl.lit("        mv -f \"$TRAN_DEFTS\" \"$MERG_DEFTS\"\n"),
@@ -1498,16 +1531,22 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
-                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Transcoding: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
                            "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
+                    pl.lit("if [ \"${ORIG_FILE_META}\" == \"\" ]; then \n"),
+                    pl.lit("  echo '' && echo 'Warning: Metadata file not found'&& exit 4\n"),
+                    pl.lit("fi\n"),
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
                     pl.lit("echo 'Transcoding with quality ["), pl.col("Target Quality"), pl.lit("]'\n"),
                     pl.lit("echo 'Transcoding with codec [HVEC] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
@@ -1518,7 +1557,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("echo 'Transcoding with bitrate ["), pl.col("Transcode Video Bitrate"), pl.lit(
                         " Kbps] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                         "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps]\n"),
-                    pl.lit("TRAN_FILE_NAME=\""), pl.col("Transcode File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("TRAN_FILE_NAME=\""), pl.col("Transcode File Name").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("if [ -f \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (pre-existing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
@@ -1529,7 +1569,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("if [ ! -f \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (missing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
-                    pl.lit("if [[ $(hostname) == macmini* ]] && [[ \"$(basename \"$0\")\" == \"transcode.sh\" ]] ; then\n"),
+                    pl.lit(
+                        "if [[ $(hostname) == macmini* ]] && [[ \"$(basename \"$0\")\" == \"transcode.sh\" ]] ; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (poor-hardware): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
@@ -1543,9 +1584,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  mv -f \"${ROOT_DIR}\"/*.mkv \"${ROOT_DIR}/../${TRAN_FILE_NAME}\"\n"),
                     pl.lit("  if [ $? -eq 0 ]; then\n"),
                     pl.lit("      echo \"./$(basename \"${ROOT_FILE_NAME}\")"),
-                    pl.lit(" [$(du -m \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB] " + \
+                    pl.lit(" [$(du -m \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" | "
+                           "awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB] " + \
                            "-> ./$(basename "), pl.lit("\"${TRAN_FILE_NAME}\")\" " + \
-                                                       "[$(du -m \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" | awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB]\n"),
+                                                       "[$(du -m \"${ROOT_DIR}/../${TRAN_FILE_NAME}\" | "
+                                                       "awk '{printf \"%.1f\", ($1/1024 + 0.05)}') GB]\n"),
                     pl.lit("    echo '' && echo -n 'Completed: ' && date && exit 0\n"),
                     pl.lit("  else\n"),
                     pl.lit("    echo -n 'Failed (mv): ' && date && exit 3\n"),
@@ -1559,39 +1602,54 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
-                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Check!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Check!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Checking: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
-                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
-                    pl.lit("echo '' && echo 'File Metadata:'\n"),
-                    pl.lit("yq \"${ORIG_FILE_META}\"\n"),
+                    pl.lit("FILE_META_NAME=\"._metadata_${ROOT_FILE_NAME%.*}_"
+                           "$(basename \"${ROOT_FILE_NAME}\" | rev | cut -d. -f1 | rev).yaml\"\n"),
+                    pl.lit("FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name \"${FILE_META_NAME}\")\"\n"),
+                    pl.lit("if [ \"${FILE_META}\" == \"\" ]; then \n"),
+                    pl.lit("  echo '' && echo 'Warning: Metadata file [${FILE_META_NAME}] not found'&& exit 1\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("echo '' && echo \"Metadata file '${FILE_META_NAME}':\"\n"),
+                    pl.lit("yq \"${FILE_META}\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
-                    pl.lit("echo '' && echo \"File probe reported: "), pl.col("File Validity"), pl.lit("\" && echo '' && exit 0\n"),
+                    pl.lit("echo '' && echo \"File probe reported:"
+                           " "), pl.col("File Validity"), pl.lit("\" && echo '' && exit 0\n"),
                 ]).alias("Check Script Source"),
                 pl.concat_str([
                     pl.lit("#!/usr/bin/env bash\n\n"),
                     pl.lit("ROOT_DIR=$(dirname \"$(readlink -f \"$0\")\")\n"),
                     pl.lit("ROOT_DIR_BASE=\"$(realpath \"${ROOT_DIR}/../\")\"\n"),
-                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all("\"", "\\\""), pl.lit("\"\n\n"),
-                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Upscale!!!!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit("ROOT_DIR_LOCAL=\""), pl.col("File Directory Local").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_NAME=\""), pl.col("File Name").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
+                        "\"", "\\\""), pl.lit("\"\n\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Upscale!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Upscaling: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
-                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
-                    pl.lit("echo '' && echo 'File Metadata:'\n"),
-                    pl.lit("yq \"${ORIG_FILE_META}\"\n"),
+                    pl.lit("FILE_META_NAME=\"._metadata_${ROOT_FILE_NAME%.*}_"
+                           "$(basename \"${ROOT_FILE_NAME}\" | rev | cut -d. -f1 | rev).yaml\"\n"),
+                    pl.lit("FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name \"${FILE_META_NAME}\")\"\n"),
+                    pl.lit("if [ \"${FILE_META}\" == \"\" ]; then \n"),
+                    pl.lit("  echo '' && echo 'Warning: Metadata file [${FILE_META_NAME}] not found'&& exit 1\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("echo '' && echo \"Metadata file '${FILE_META_NAME}':\"\n"),
+                    pl.lit("yq \"${FILE_META}\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
@@ -1617,11 +1675,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         if not file_path_media_is_nested:
                             script_global_file.write(
                                 "[[ -f \"${{ROOT_DIR}}/../../../../../..{}\" ]] && \"${{ROOT_DIR}}/../../../../../..{}\"\n"
-                                .format(script_local_row[0].replace("\"", "\\\""), script_local_row[0].replace("\"", "\\\"")))
-                        script_local_dir = _localise_path(script_local_row[1].replace("\\$", "$").replace("\\`", "`"), file_path_root)
+                                .format(script_local_row[0].replace("\"", "\\\""),
+                                        script_local_row[0].replace("\"", "\\\"")))
+                        script_local_dir = _localise_path(script_local_row[1].replace("\\$", "$").replace("\\`", "`"),
+                                                          file_path_root)
                         os.makedirs(script_local_dir, exist_ok=True)
                         _set_permissions(script_local_dir, 0o750)
-                        script_local_path = _localise_path(script_local_row[0].replace("\\$", "$").replace("\\`", "`"), file_path_root)
+                        script_local_path = _localise_path(script_local_row[0].replace("\\$", "$").replace("\\`", "`"),
+                                                           file_path_root)
                         try:
                             with open(script_local_path, 'w') as script_local_file:
                                 script_local_file.write(script_local_row[2])
@@ -1800,7 +1861,8 @@ echo "+-------------------------------------------------------------------------
                         script_source_header.format("transcode.sh"),
                         script_source_exec_local),
             }.items():
-                script_path = _localise_path(os.path.join(os.path.dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
+                script_path = _localise_path(
+                    os.path.join(os.path.dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
                 if verbose:
                     print("#enriched-dataframe -> {} ... ".format(script_path), end='', flush=True)
                 with open(script_path, 'w') as script_file:
@@ -1865,13 +1927,13 @@ echo "+-------------------------------------------------------------------------
                 print("Uploading '{}' ... ".format(sheet_url), end="", flush=True)
             else:
                 print("#enriched-dataframe -> {} ... ".format(sheet_url), end='', flush=True)
-            metadata_spread_data = Spread(sheet_url, sheet="Data")
-            metadata_spread_data \
+            metadata_spread_data_upload = Spread(sheet_url, sheet="Data")
+            metadata_spread_data_upload \
                 .df_to_sheet(metadata_merged_pl.to_pandas(use_pyarrow_extension_array=True),
                              sheet="Data", replace=True, index=False, add_filter=True)
-            if metadata_spread_data.get_sheet_dims()[0] > 1 and \
-                    metadata_spread_data.get_sheet_dims()[1] > 1:
-                metadata_spread_data.freeze(1, 1, sheet="Data")
+            if metadata_spread_data_upload.get_sheet_dims()[0] > 1 and \
+                    metadata_spread_data_upload.get_sheet_dims()[1] > 1:
+                metadata_spread_data_upload.freeze(1, 1, sheet="Data")
             Spread(sheet_url, sheet="Data") \
                 .df_to_sheet(metadata_summary_pl.to_pandas(use_pyarrow_extension_array=True),
                              sheet="Summary", replace=True, index=False, add_filter=True)
@@ -1977,7 +2039,9 @@ def _print_df(data_df):
         print(data_df)
 
 
-def get_file_actions_dict(rename=0, delete=0, check=0, merge=0, reformat=0, transcode=0, upscale=0, downscale=0, nothing=0):
+# noinspection PyUnusedLocal
+def get_file_actions_dict(rename=0, delete=0, check=0, merge=0, reformat=0, transcode=0, upscale=0, downscale=0,
+                          nothing=0):
     files_action = {_file_action.label: 0 for _file_action in FileAction}
     for var in vars().copy():
         if var != files_action:
