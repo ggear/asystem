@@ -160,6 +160,17 @@ class InternetTest(unittest.TestCase):
                                       nothing=1
                                   ), scripts={"merge"})
 
+    def test_analyse_upscale(self):
+        dir_test = self._test_prepare_dir("share_media_example", 1)
+        self._test_analyse_assert(join(dir_test, "53/media"),
+                                  files_action_expected=actions(
+                                      upscale=4
+                                  ), scripts={"upscale"})
+        self._test_analyse_assert(join(dir_test, "53/media"),
+                                  files_action_expected=actions(
+                                      upscale=4
+                                  ), scripts={"upscale"})
+
     def test_analyse_transcode(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "45/media"),
@@ -168,8 +179,8 @@ class InternetTest(unittest.TestCase):
                                   ), scripts={"transcode"})
         self._test_analyse_assert(join(dir_test, "45/media"),
                                   files_action_expected=actions(
-                                      check=12,
-                                      merge=3,
+                                      check=13,
+                                      merge=2,
                                       transcode=15
                                   ), scripts={"transcode"})
 

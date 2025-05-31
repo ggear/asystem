@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 
+# noinspection DuplicatedCode
 def _process(file_path_root, verbose=False):
     if not os.path.isdir(file_path_root):
         print("Error: path [{}] does not exist".format(file_path_root))
@@ -21,13 +22,15 @@ def _process(file_path_root, verbose=False):
         for file_type in ["mkv", "mp4", "avi", "m2ts", "ts"]:
             for file_path in Path(os.path.join(file_path_root, file_source)).rglob("*." + file_type):
                 file_to_be_renamed = False
-                file_path_source_relative = file_path.as_posix().replace(os.path.join(file_path_root, file_source) + "/", "")
+                file_path_source_relative = file_path.as_posix() \
+                    .replace(os.path.join(file_path_root, file_source) + "/", "")
                 if not file_path_source_relative.startswith('_'):
                     file_path_new = None
                     file_name_new = None
                     file_to_be_renamed = True
                     file_name = file_path.name
-                    file_parents = file_path_source_relative.removeprefix("series/").removeprefix("movies/").split("/")
+                    file_parents = (file_path_source_relative.removeprefix("series/")
+                                    .removeprefix("movies/").split("/"))
                     file_parents.reverse()
                     file_path_root_source = file_path.parent
                     while file_path_root_source.parent.name not in ["series", "movies", "finished"] and \
@@ -36,11 +39,14 @@ def _process(file_path_root, verbose=False):
                     if file_path_root_source.name not in ["series", "movies", "finished"]:
                         file_path_roots_to_delete.append(file_path_root_source)
                     file_series_search_groups = None
-                    file_series_search = re.search(r"(.*)[sS]([0-9]?[0-9]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
+                    file_series_search = re.search(r"(.*)[sS]([0-9]?[0-9]+)[eE]([0-9]?[0-9]+).*\." +
+                                                   file_type, file_name)
                     if file_series_search is None:
-                        file_series_search = re.search(r"(.*[^a-zA-Z0-9 ]+)[eE]([0-9]?[0-9]+).*\." + file_type, file_name)
+                        file_series_search = re.search(r"(.*[^a-zA-Z0-9 ]+)[eE]([0-9]?[0-9]+).*\." +
+                                                       file_type, file_name)
                         if file_series_search is not None:
-                            file_series_search_groups = [file_series_search.groups()[0], "01"] + list(file_series_search.groups()[1:])
+                            file_series_search_groups = ([file_series_search.groups()[0], "01"] +
+                                                         list(file_series_search.groups()[1:]))
                     else:
                         file_series_search_groups = file_series_search.groups()
                     if file_series_search_groups is not None:
@@ -71,8 +77,10 @@ def _process(file_path_root, verbose=False):
                         for file_metadata in file_parents:
                             file_year_search_groups = re.findall(r"19[4-9][0-9]|20[0-9][0-9]", file_metadata)
                             if len(file_year_search_groups) > 0:
-                                file_name_new = file_metadata.split(file_year_search_groups[0])[0].replace('.', ' ').strip()
-                                file_name_new = re.sub(r'[^a-zA-Z0-9 ]+', '', file_name_new).strip().title()
+                                file_name_new = (file_metadata.split(file_year_search_groups[0])[0]
+                                                 .replace('.', ' ').strip())
+                                file_name_new = (re.sub(r'[^a-zA-Z0-9 ]+', '', file_name_new)
+                                                 .strip().title())
                                 file_name_new = "{} ({})".format(file_name_new, file_year_search_groups[0])
                                 file_path_new = "{}/{}/{}/{}.{}".format(
                                     file_path_processed,
@@ -85,9 +93,12 @@ def _process(file_path_root, verbose=False):
                                 break
                         if file_name_new is None:
                             file_name_new = "-".join(file_parents[1:])
-                            file_name_new = "{}-{}".format(file_name_new, file_name.replace("." + file_type, ""))
-                            file_name_new = re.sub(r'[^a-zA-Z0-9 ]+', ' ', file_name_new).strip().replace(' ', '-')
-                            file_name_new = re.sub(r'[-][-]+', ' ', file_name_new).strip().replace(' ', '-')
+                            file_name_new = "{}-{}".format(file_name_new, file_name
+                                                           .replace("." + file_type, ""))
+                            file_name_new = (re.sub(r'[^a-zA-Z0-9 ]+', ' ', file_name_new)
+                                             .strip().replace(' ', '-'))
+                            file_name_new = (re.sub(r'[-][-]+', ' ', file_name_new)
+                                             .strip().replace(' ', '-'))
                             file_path_new = "{}/{}/{}/{}.{}".format(
                                 file_path_processed,
                                 file_category,
@@ -133,6 +144,7 @@ def _process(file_path_root, verbose=False):
     return files_renamed
 
 
+# noinspection DuplicatedCode
 def _set_permissions(_path, _mode=0o644):
     os.chmod(_path, _mode)
     try:

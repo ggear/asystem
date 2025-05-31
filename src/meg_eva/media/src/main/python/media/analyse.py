@@ -25,8 +25,8 @@ BITRATE_HVEC_SCALE = 1.5  # H265 efficiency factor over H264
 BITRATE_SIZE_LOWER_SCALE = 0.30  # Margin when assessing small size
 BITRATE_SIZE_UPPER_SCALE = 1.35  # Margin when assessing large size
 BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
+# Reasonable defaults: https://github.com/lisamelton/other_video_transcoding/blob/b063ef953eaaf0c0a36530ff97d8aa4e477973d5/other-transcode.rb#L1064
 BITRATE_UNSCALED_KBPS = {
-    # INFO: https://github.com/lisamelton/other_video_transcoding/blob/b063ef953eaaf0c0a36530ff97d8aa4e477973d5/other-transcode.rb#L1064
     "HD": 3000,  # <=720, <=QUALITY_MIN
     "FHD": 6000,  # ==1080, <=QUALITY_MID
     "UHD": 12000,  # >=2160, >=QUALITY_MAX
@@ -487,6 +487,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_probe_stream_filtered["bitrate_estimate__Kbps"] = file_stream_bitrate \
                                 if file_stream_bitrate > 0 else -1
                             file_probe_stream_filtered["bitrate_target__Kbps"] = ""
+                            file_probe_stream_filtered["bitrate_target_ratio"] = ""
                             file_probe_stream_filtered["bitrate_target_size"] = ""
                             file_probe_stream_filtered["target_size"] = ""
                         elif file_probe_stream_type == "audio":
@@ -573,7 +574,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             (BITRATE_HVEC_SCALE if file_stream_video["codec"] != "HEVC" else 1)
                         )
                         file_stream_video["bitrate_target__Kbps"] = str(file_stream_video_bitrate_target)
-                        if file_stream_video_bitrate > (BITRATE_SIZE_UPPER_SCALE * file_stream_video_bitrate_target):
+                        file_stream_video["bitrate_target_ratio"] = \
+                            str(round(file_stream_video_bitrate / file_stream_video_bitrate_target, 2))
+                        if file_stream_video_bitrate > (
+                                BITRATE_SIZE_UPPER_SCALE * file_stream_video_bitrate_target):
                             file_stream_video["bitrate_target_size"] = "Large"
                         elif file_stream_video_bitrate < (BITRATE_SIZE_LOWER_SCALE * file_stream_video_bitrate_target):
                             file_stream_video["bitrate_target_size"] = "Small"
@@ -820,6 +824,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
         "Audio 1 Lang",
         "Audio 1 Channels",
         "Audio 1 Surround",
+        "Audio 1 Bitrate (Kbps)",
         "Subtitle 1 Lang",
         "Subtitle 1 Codec",
         "Subtitle 1 Format",
@@ -1031,39 +1036,35 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             (
                 pl.when(
                     (pl.col("File State") == "Corrupt")
-                ).then(pl.lit("Corrupt"))
+                ).then(pl.lit("Check Corrupt Metadata"))
                 .when(
                     (pl.col("File State") == "Incomplete")
-                ).then(pl.lit("Missing Streams"))
+                ).then(pl.lit("Check Missing Streams"))
                 .when(
                     (pl.col("Target Lang") != pl.col("Audio 1 Lang"))
-                ).then(pl.lit("Missing Target Language"))
+                ).then(pl.lit("Check Missing Target Language"))
                 .when(
                     (pl.col("Target Lang") != "eng") &
                     (
                             (pl.col("Subtitle Count") == "0") |
                             (pl.col("Subtitle Count") == "Subtitle Non-Eng Count")
                     )
-                ).then(pl.lit("Missing Subtitles"))
-                .when(
-                    (pl.col("File Version") == "Transcoded") &
-                    (pl.col("Video 1 Colour Range") == "HDR")
-                ).then(pl.lit("Check HDR Colouring"))
+                ).then(pl.lit("Check Missing Subtitles"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Video 1 Resolution Target Size") == "Small")
-                ).then(pl.lit("Check Low Resolution"))
+                ).then(pl.lit("Check Low Video Resolution"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Video 1 Bitrate Target Size") == "Small")
-                ).then(pl.lit("Check Low Bitrate"))
+                ).then(pl.lit("Check Low Video Bitrate"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Video 1 Resolution Target Size") == "Large")
                 ).then(pl.lit("Check High Resolution"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
-                    (pl.col("Video 1 Bitrate Target Size") == "Small")
+                    (pl.col("Video 1 Bitrate Target Size") == "Large")
                 ).then(pl.lit("Check High Bitrate"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
@@ -1073,6 +1074,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("File Size") == "Large")
                 ).then(pl.lit("Check Large Size"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
+                ).then(pl.lit("Check Missing Audio Channels"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Target Quality") == "9") &
+                    (pl.col("Audio 1 Bitrate (Kbps)") != "") &
+                    (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640000)
+                ).then(pl.lit("Check Low Audio Bitrate"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Video 1 Colour Range") == "HDR")
+                ).then(pl.lit("Check HDR Colouring"))
                 .when(
                     ((pl.col("File Version") == "Original") | (pl.col("File Version") == "Merged")) &
                     (~pl.col("File Stem").str.contains(".", literal=True)) &
@@ -1096,6 +1111,28 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         (pl.col("Duration (hours)").cast(pl.Float32) * 60 * 6).round(0),
                     ).is_duplicated())
                 ).then(pl.lit("Check Suspect Duration"))
+                .when(
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("Video 1 Resolution Target Size") == "Small")
+                ).then(pl.lit("Upscale Low Video Resolution"))
+                .when(
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("Video 1 Bitrate Target Size") == "Small")
+                ).then(pl.lit("Upscale Low Video Bitrate"))
+                .when(
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("File Size") == "Small")
+                ).then(pl.lit("Upscale Small Size"))
+                .when(
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
+                ).then(pl.lit("Upscale Missing Audio Channels"))
+                .when(
+                    (pl.col("File Version") != "Ignored") &
+                    (pl.col("Target Quality") == "9") &
+                    (pl.col("Audio 1 Bitrate (Kbps)") != "") &
+                    (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640000)
+                ).then(pl.lit("Upscale Low Audio Bitrate"))
                 .otherwise(pl.lit("Valid"))
             ).alias("File Validity"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
@@ -1110,7 +1147,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     )
                 ).then(pl.lit(FileAction.RENAME.label))
                 .when(
-                    (pl.col("File Validity") != "Valid")
+                    (pl.col("File Validity").str.starts_with("Check"))
                 ).then(pl.lit(FileAction.CHECK.label))
                 .when(
                     (pl.col("File Version") == "Transcoded")
@@ -1134,14 +1171,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Metadata State") == "Messy")
                 ).then(pl.lit(FileAction.REFORMAT.label))
                 .when(
-                    (
-                            (pl.col("File Version") != "Ignored") &
-                            (pl.col("File Size") == "Small")
-                    ) |
-                    (
-                            (pl.col("File Version") != "Ignored") &
-                            (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
-                    )
+                    (pl.col("File Validity").str.starts_with("Upscale"))
                 ).then(pl.lit(FileAction.UPSCALE.label))
                 .otherwise(pl.lit(FileAction.NOTHING.label))
             ).alias("File Action"))
@@ -1326,7 +1356,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     ).then(
                         pl.lit("1080p")
                     ).otherwise(
-                        pl.lit("4K+")
+                        pl.lit("")
                     )
                 ).alias("Transcode Video Resolution"),
                 (
@@ -1550,10 +1580,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
                     pl.lit("echo 'Transcoding with quality ["), pl.col("Target Quality"), pl.lit("]'\n"),
                     pl.lit("echo 'Transcoding with codec [HVEC] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                           "select(.codec) | .codec' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"]\n"),
-                    pl.lit("echo 'Transcoding with resolution ["), pl.col("Transcode Video Resolution"), pl.lit(
-                        "] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
-                        "select(.resolution) | .resolution' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"]\n"),
+                           "select(.codec) | .codec' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"']'\n"),
+                    pl.lit("ORIG_RESOLUTION=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                           "select(.resolution) | .resolution' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
+                    pl.lit("if [ \""), pl.col("Transcode Video Resolution"), pl.lit("\" == \"\" ]; then\n"),
+                    pl.lit("  TARGET_RESOLUTION=\"${ORIG_RESOLUTION}\"\n"),
+                    pl.lit("else\n"),
+                    pl.lit("  TARGET_RESOLUTION=\""), pl.col("Transcode Video Resolution"), pl.lit("\"\n"),
+                    pl.lit("fi\n"),
+                    pl.lit("echo \"Transcoding with resolution [${TARGET_RESOLUTION}] from [${ORIG_RESOLUTION}]\"\n"),
                     pl.lit("echo 'Transcoding with bitrate ["), pl.col("Transcode Video Bitrate"), pl.lit(
                         " Kbps] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                         "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps]\n"),
@@ -1569,8 +1604,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("if [ ! -f \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (missing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
-                    pl.lit(
-                        "if [[ $(hostname) == macmini* ]] && [[ \"$(basename \"$0\")\" == \"transcode.sh\" ]] ; then\n"),
+                    pl.lit("if [[ $(hostname) == macmini* ]] && "
+                           "[[ \"$(basename \"$0\")\" == \"transcode.sh\" ]] ; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (poor-hardware): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
                     pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
@@ -1619,7 +1654,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("if [ \"${FILE_META}\" == \"\" ]; then \n"),
                     pl.lit("  echo '' && echo 'Warning: Metadata file [${FILE_META_NAME}] not found'&& exit 1\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo '' && echo \"Metadata file '${FILE_META_NAME}':\"\n"),
+                    pl.lit("echo '' && echo \"Metadata file:\"\n"),
                     pl.lit("yq \"${FILE_META}\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
@@ -1648,12 +1683,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("if [ \"${FILE_META}\" == \"\" ]; then \n"),
                     pl.lit("  echo '' && echo 'Warning: Metadata file [${FILE_META_NAME}] not found'&& exit 1\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo '' && echo \"Metadata file '${FILE_META_NAME}':\"\n"),
+                    pl.lit("echo '' && echo \"Metadata file:\"\n"),
                     pl.lit("yq \"${FILE_META}\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
-                    pl.lit("echo '' && echo \"File probe reported: Small\" && echo '' && exit 0\n"),
+                    pl.lit("echo '' && echo \"File probe reported:"
+                           " "), pl.col("File Validity"), pl.lit("\" && echo '' && exit 0\n"),
                 ]).alias("Upscale Script Source"),
             ]
         ).sort("Action Index")
