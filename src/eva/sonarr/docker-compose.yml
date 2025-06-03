@@ -1,24 +1,31 @@
+x-common: &common
+  image: sonarr:${SERVICE_VERSION_ABSOLUTE}
+  init: true
+  environment:
+    - TZ=Australia/Perth
+    - PUID=0
+    - PGID=0
+    - SONARR_SERVICE_PROD
+    - SONARR_HTTP_PORT
+    - SONARR_API_KEY
+    - SABNZBD_SERVICE_PROD
+    - SABNZBD_HTTP_PORT
+    - SABNZBD_API_KEY
+    - GEEK_KEY
+  volumes:
+    - ${SERVICE_DATA_DIR}:/config
+    - ${SERVICE_DATA_DIR}/downloads:/tv
+    - ${SERVICE_DATA_DIR}/downloads:/downloads
+  logging:
+    driver: "json-file"
+    options:
+      max-file: "5"
+      max-size: "100m"
 services:
   sonarr:
-    image: sonarr:${SERVICE_VERSION_ABSOLUTE}
     container_name: sonarr
-    init: false
+    <<: *common
     restart: ${SERVICE_RESTART}
-    environment:
-      - TZ=Australia/Perth
-      - PUID=0
-      - PGID=0
-      - SONARR_SERVICE_PROD
-      - SONARR_HTTP_PORT
-      - SONARR_API_KEY
-      - SABNZBD_SERVICE_PROD
-      - SABNZBD_HTTP_PORT
-      - SABNZBD_API_KEY
-      - GEEK_KEY
-    volumes:
-      - ${SERVICE_DATA_DIR}:/config
-      - ${SERVICE_DATA_DIR}/downloads:/tv
-      - ${SERVICE_DATA_DIR}/downloads:/downloads
     ports:
       - ${SONARR_HTTP_PORT}:8989
     healthcheck:
@@ -26,14 +33,18 @@ services:
       interval: 2m
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 1m
       start_interval: 10s
-    logging:
-      driver: "json-file"
-      options:
-        max-file: "5"
-        max-size: "100m"
     deploy:
       resources:
         limits:
-          memory: 512MB
+          memory: 512M
+  sonarr_bootstrap:
+    container_name: sonarr_bootstrap
+    <<: *common
+    restart: 'no'
+    entrypoint: /bin/bash
+    command:
+      - /asystem/etc/bootstrap.sh
+    depends_on:
+      - sonarr
