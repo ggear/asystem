@@ -10,11 +10,12 @@ x-common: &common
     - SABNZBD_SERVICE_PROD
     - SABNZBD_HTTP_PORT
     - SABNZBD_API_KEY
+    - SABNZBD_SHARE_DIR
     - GEEK_KEY
   volumes:
     - ${SERVICE_DATA_DIR}:/config
-    - ${SERVICE_DATA_DIR}/downloads:/tv
-    - ${SERVICE_DATA_DIR}/downloads:/downloads
+    - ${SABNZBD_SHARE_DIR}:/tv
+    - ${SABNZBD_SHARE_DIR}:/downloads
   logging:
     driver: "json-file"
     options:
