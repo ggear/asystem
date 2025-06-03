@@ -3,8 +3,8 @@ x-common: &common
   init: true
   environment:
     - TZ=Australia/Perth
-    - PUID=0
-    - PGID=0
+#    - PUID=0
+#    - PGID=0
     - SONARR_SERVICE_PROD
     - SONARR_HTTP_PORT
     - SONARR_API_KEY
