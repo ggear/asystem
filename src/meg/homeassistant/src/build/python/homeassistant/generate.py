@@ -74,7 +74,7 @@ def write_certificates(module_name=None, working_dir=None):
     script_path = abspath(join(working_dir, "certificates.sh"))
     with open(script_path, 'w') as script_file:
         script_file.write("""
-#!/bin/bash
+#!/usr/bin/env bash
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
@@ -125,7 +125,7 @@ def write_bootstrap(module_name=None, working_dir=None):
     script_path = abspath(join(working_dir, "bootstrap.sh"))
     with open(script_path, 'w') as script_file:
         script_file.write("""
-#!/bin/bash
+#!/usr/bin/env bash
 
 echo "--------------------------------------------------------------------------------"
 echo "Service is starting ..."
@@ -183,7 +183,7 @@ def write_healthcheck(module_name=None, working_dir=None):
         script_path = abspath(join(working_dir, "check{}.sh".format(script)))
         with open(script_path, 'w') as script_file:
             script_file.write("""
-#!/bin/bash
+#!/usr/bin/env bash
 
 POSITIONAL_ARGS=()
 HEALTHCHECK_VERBOSE=${{HEALTHCHECK_VERBOSE:-false}}
@@ -281,7 +281,7 @@ def write_entity_metadata(module_name, working_dir, metadata_df, topics_discover
         metadata_publish_script_path = abspath(working_dir + ".sh")
         with open(metadata_publish_script_path, 'w') as metadata_publish_script_file:
             metadata_publish_script_file.write("""
-#!/bin/bash
+#!/usr/bin/env bash
 
 ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
 
