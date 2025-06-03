@@ -31,7 +31,7 @@ set -eo pipefail
 shopt -s expand_aliases
 
 if
-  [ $(curl -X GET http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/health  -H "X-Api-Key: ${SONARR_API_KEY}" | jq 'length == 0') == "true" ]
+  [ "$(curl -X GET http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/health  -H "X-Api-Key: ${SONARR_API_KEY}" | jq 'length == 0')" == "true" ]
 then
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [sonarr] is ready :)" >&2
   exit 0
