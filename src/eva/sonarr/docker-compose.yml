@@ -42,10 +42,7 @@ services:
   sonarr_bootstrap:
     container_name: sonarr_bootstrap
     <<: *common
-    image: bash:5.2
     restart: 'no'
-    volumes:
-      - ${SERVICE_DATA_DIR}/bootstrap.sh:/asystem/etc/bootstrap.sh
     command:
       - /asystem/etc/bootstrap.sh
     depends_on:
