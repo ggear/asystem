@@ -41,7 +41,6 @@ services:
     container_name: influxdb3_bootstrap
     <<: *common
     restart: 'no'
-    entrypoint: /bin/bash
     command:
       - /asystem/etc/bootstrap.sh
     depends_on:

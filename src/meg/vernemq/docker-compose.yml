@@ -36,7 +36,6 @@ services:
     restart: 'no'
     volumes:
       - ${SERVICE_DATA_DIR}:/bootstrap
-    entrypoint: /bin/bash
     command:
       - /bootstrap/bootstrap.sh
     depends_on:

@@ -35,7 +35,6 @@ services:
     container_name: appdaemon_bootstrap
     <<: *common
     restart: 'no'
-    entrypoint: /bin/bash
     command:
       - /asystem/etc/bootstrap.sh
     depends_on:

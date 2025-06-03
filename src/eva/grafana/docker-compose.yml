@@ -62,7 +62,6 @@ services:
     container_name: grafana_bootstrap
     <<: *common
     restart: 'no'
-    entrypoint: /bin/bash
     command:
       - /asystem/etc/bootstrap.sh
     depends_on:
