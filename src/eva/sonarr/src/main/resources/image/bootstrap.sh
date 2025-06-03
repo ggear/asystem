@@ -20,7 +20,7 @@ echo "--------------------------------------------------------------------------
 
 curl -sf -X GET http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/indexer -H "X-Api-Key: ${SONARR_API_KEY}"
 
-#curl -sf -X POST http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/indexer -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json" -d '
+#curl -X POST http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/indexer -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json" -d '
 #  {
 #    "name": "NZBgeek",
 #    "enableRss": true,
@@ -36,11 +36,11 @@ curl -sf -X GET http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/indexer
 #    "fields": [
 #      {
 #        "name": "baseUrl",
-#        "value": "https://nzbgeek.info"
+#        "value": "https://api.nzbgeek.info"
 #      },
 #      {
 #        "name": "apiKey",
-#        "value": "${SABNZBD_API_KEY}"
+#        "value": "'"${GEEK_KEY}"'"
 #      }
 #    ]
 #  }

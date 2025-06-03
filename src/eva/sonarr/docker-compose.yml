@@ -11,7 +11,7 @@ services:
       - SONARR_SERVICE_PROD
       - SONARR_HTTP_PORT
       - SONARR_API_KEY
-      - SABNZBD_API_KEY
+      - GEEK_KEY
     volumes:
       - ${SERVICE_DATA_DIR}:/config
       - ${SERVICE_DATA_DIR}/downloads:/tv
