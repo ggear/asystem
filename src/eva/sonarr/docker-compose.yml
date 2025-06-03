@@ -45,7 +45,7 @@ services:
     restart: 'no'
     image: bash:5.2
     volumes:
-      - /root/install/sonarr/latest/image:/asystem/etc
+      - /root/install/sonarr/latest/image/bootstrap.sh:/asystem/etc/bootstrap.sh
     command:
       - /asystem/etc/bootstrap.sh
     depends_on:
