@@ -43,7 +43,6 @@ services:
     container_name: sonarr_bootstrap
     <<: *common
     restart: 'no'
-    image: bash:5.2
     volumes:
       - /root/install/sonarr/latest/image:/asystem/etc
     command:
