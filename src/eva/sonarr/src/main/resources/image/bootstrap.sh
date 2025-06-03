@@ -18,6 +18,7 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
+# Setup Indexer
 if [ $(curl -sf -X GET http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/indexer -H "X-Api-Key: ${SONARR_API_KEY}" | jq 'length == 1 and .[0].name == "NZBgeek"') != "true" ]; then
   curl -X POST http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/indexer -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json" -d '
 {
@@ -46,6 +47,7 @@ if [ $(curl -sf -X GET http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/
   '
 fi
 
+# Setup Downloadclient
 if [ $(curl -sf -X GET http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/downloadclient -H "X-Api-Key: ${SONARR_API_KEY}" | jq 'length == 1 and .[0].name == "SABnzbd"') != "true" ]; then
   curl -X POST http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/downloadclient -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json" -d '
 {
