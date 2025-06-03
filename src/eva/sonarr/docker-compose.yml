@@ -39,11 +39,14 @@ services:
       resources:
         limits:
           memory: 512M
-#  sonarr_bootstrap:
-#    container_name: sonarr_bootstrap
-#    <<: *common
-#    restart: 'no'
-#    command:
-#      - /asystem/etc/bootstrap.sh
-#    depends_on:
-#      - sonarr
+  sonarr_bootstrap:
+    container_name: sonarr_bootstrap
+    <<: *common
+    restart: 'no'
+    image: bash:5.2
+    volumes:
+      - /root/install/sonarr/latest/image:/asystem/etc
+    command:
+      - /asystem/etc/bootstrap.sh
+    depends_on:
+      - sonarr
