@@ -45,7 +45,6 @@ services:
     restart: 'no'
     volumes:
       - /root/install/sonarr/latest/image:/asystem/etc
-    command:
-      - /asystem/etc/bootstrap.sh
+    command: ["sleep", "1000"]
     depends_on:
       - sonarr
