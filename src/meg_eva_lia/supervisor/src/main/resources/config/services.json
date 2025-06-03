@@ -10,6 +10,7 @@
     "mlserver",
     "rhasspy",
     "influxdb3",
+    "sonarr",
     "unpoller",
     "monitor"
   ],
