@@ -42,7 +42,6 @@ services:
   sonarr_bootstrap:
     container_name: sonarr_bootstrap
     <<: *common
-    image: bash:5.2
     restart: 'no'
     command:
       - /asystem/etc/bootstrap.sh
