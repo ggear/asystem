@@ -49,7 +49,7 @@ fi
 if [ $(curl -sf -X GET http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/downloadclient -H "X-Api-Key: ${SONARR_API_KEY}" | jq 'length == 1 and .[0].name == "SABnzbd"') != "true" ]; then
   curl -X POST http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/downloadclient -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json" -d '
 {
-  "name": "SABnzbd12",
+  "name": "SABnzbd",
   "enable": true,
   "protocol": "usenet",
   "priority": 1,
