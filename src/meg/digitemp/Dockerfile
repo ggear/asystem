@@ -41,6 +41,7 @@ COPY src/main/python/ /asystem/
 # TODO: Requires Docker 25.0.0+
 #HEALTHCHECK --interval=311s --start-period=60s --start-interval=20s --timeout=20s --retries=3 CMD /bootstrap/healthcheck.sh
 HEALTHCHECK --interval=311s --start-period=60s --timeout=20s --retries=3 CMD /bootstrap/healthcheck.sh
+WORKDIR /asystem/etc
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["telegraf"]
