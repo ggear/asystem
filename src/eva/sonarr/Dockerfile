@@ -25,10 +25,9 @@ COPY target/package/main/resources/image /asystem/etc
 FROM image_base AS image_build
 RUN \
     tar -xvzf /asystem/etc/*.gz -C /opt && \
-    chmod +x /opt/Sonarr && \
     chmod +x /opt/Sonarr/Sonarr && \
     rm /asystem/etc/*.gz
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc
-ENTRYPOINT ["/opt/Sonarr/Sonaar"]
+ENTRYPOINT ["/opt/Sonarr/Sonarr"]
