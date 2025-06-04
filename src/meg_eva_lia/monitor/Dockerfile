@@ -1,5 +1,6 @@
 ARG ASYSTEM_TELEGRAF_VERSION="latest"
 
+# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 FROM telegraf:${ASYSTEM_TELEGRAF_VERSION} AS image_upstream
 
 FROM image_upstream AS image_base

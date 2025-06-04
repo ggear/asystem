@@ -40,7 +40,7 @@ services:
     container_name: postgres_bootstrap
     <<: *common
     restart: 'no'
-    command:
-      - /asystem/etc/bootstrap.sh
+    entrypoint: bash
+    command: /asystem/etc/bootstrap.sh
     depends_on:
       - postgres

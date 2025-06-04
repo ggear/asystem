@@ -1,8 +1,8 @@
-ARG ASYSTEM_PYTHON_VERSION="latest"
 ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION="slim"
 
 FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
 
+# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 ARG ASYSTEM_UNPOLLER_VERSION
 
 FROM image_upstream AS image_base
@@ -34,4 +34,5 @@ RUN \
     unpoller --version
 
 FROM image_build AS image_runtime
+WORKDIR /asystem/etc
 ENTRYPOINT [ "/usr/local/bin/unpoller" ]

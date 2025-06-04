@@ -1,6 +1,7 @@
 # Notes: https://github.com/grafana/grafana/releases
 FROM grafana/grafana:11.6.1 AS image_upstream
 
+# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 ARG ASYSTEM_GRIZZLY_VERSION
 
 FROM image_upstream AS image_base

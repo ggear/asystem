@@ -1,9 +1,9 @@
 ARG ASYSTEM_PYTHON_VERSION="latest"
 ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL="slim"
 
-# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 FROM python:${ASYSTEM_PYTHON_VERSION}-${ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL} AS image_upstream
 
+# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 ARG ASYSTEM_WEEWX_VERSION
 
 ENV WEEWX_HOME="/home/weewx"
@@ -51,4 +51,5 @@ RUN \
     cp -rf /asystem/etc/config/apache2.conf /etc/apache2
 
 FROM image_build AS image_runtime
+WORKDIR /asystem/etc
 ENTRYPOINT ["/asystem/etc/entrypoint.sh"]

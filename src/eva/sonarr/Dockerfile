@@ -1,19 +1,37 @@
-# Notes: https://github.com/Sonarr/Sonarr/releases
-FROM linuxserver/sonarr:4.0.14 AS image_upstream
+ARG ASYSTEM_PYTHON_VERSION="latest"
+ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION="slim"
+
+FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
+
+# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
+ARG ASYSTEM_SONARR_VERSION
 
 FROM image_upstream AS image_base
 USER root
 RUN \
-    apk update && \
-    apk add --upgrade --no-cache bash=5.2.37-r0 && \
-    apk add --upgrade --no-cache less=668-r0 && \
-    apk add --upgrade --no-cache curl=8.12.1-r1 && \
-    apk add --upgrade --no-cache vim=9.1.1105-r0 && \
-    apk add --upgrade --no-cache jq=1.7.1-r0 && \
-    (apk cache clean || true) && rm -rf /var/cache/apk/* && \
+    apt-get update && \
+    apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b8 && \
+    apt-get -y --no-install-recommends --allow-downgrades install less=590-2.1~deb12u2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install curl=7.88.1-10+deb12u12 && \
+    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2+deb12u2 && \
+    apt-get -y --no-install-recommends --allow-downgrades install jq=1.6-2.1 && \
+    apt-get -y --no-install-recommends --allow-downgrades install unzip=6.0-28 && \
+    apt-get -y --no-install-recommends --allow-downgrades install ffmpeg=7:5.1.6-0+deb12u1 && \
+    apt-get -y --no-install-recommends --allow-downgrades install sqlite3=3.40.1-2+deb12u1 && \
+    apt-get -y --no-install-recommends --allow-downgrades install ca-certificates=20230311 && \
+    apt-get -y --no-install-recommends --allow-downgrades install libmediainfo0v5=23.04+dfsg-1 && \
+    apt-get -y --no-install-recommends --allow-downgrades install libchromaprint-tools=1.5.1-2+b1 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
+RUN \
+    curl -L -o /tmp/sonarr.tar.gz https://github.com/Sonarr/Sonarr/releases/download/v${ASYSTEM_SONARR_VERSION}/Sonarr.main.${ASYSTEM_SONARR_VERSION}.linux-x64.tar.gz && \
+    mkdir -p /opt/sonarr && \
+    tar -xvzf /tmp/sonarr.tar.gz -C /opt/sonarr && \
+    rm /tmp/sonarr.tar.gz
 
 FROM image_build AS image_runtime
+WORKDIR /asystem/etc
+ENTRYPOINT ["/opt/sonarr/Sonarr"]

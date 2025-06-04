@@ -1,5 +1,6 @@
 x-common: &common
   image: sonarr:${SERVICE_VERSION_ABSOLUTE}
+  init: true
   environment:
     - TZ=Australia/Perth
     - PUID=0
@@ -43,9 +44,7 @@ services:
     container_name: sonarr_bootstrap
     <<: *common
     restart: 'no'
-    volumes:
-      - /root/install/sonarr/latest/image:/asystem/etc
-    command:
-      - /asystem/etc/bootstrap.sh
+    entrypoint: bash
+    command: /asystem/etc/bootstrap.sh
     depends_on:
       - sonarr

@@ -1,6 +1,7 @@
 # https://github.com/influxdata/telegraf/releases
 FROM telegraf:1.28.1 AS image_upstream
 
+# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 ARG ASYSTEM_PYTHON_VERSION
 
 FROM image_upstream AS image_base

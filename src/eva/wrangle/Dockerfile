@@ -2,6 +2,7 @@ ARG ASYSTEM_TELEGRAF_VERSION="latest"
 
 FROM telegraf:${ASYSTEM_TELEGRAF_VERSION} AS image_upstream
 
+# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 ARG ASYSTEM_PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
@@ -53,5 +54,6 @@ ENV PYTHONDONTWRITEBYTECODE=1
 #COPY src/main/resources/.gspread_pandas /etc/telegraf/.config/gspread_pandas
 #COPY src/main/resources/.google_service_account.json /etc/telegraf
 #COPY src/main/resources/entrypoint.sh /
+#WORKDIR /asystem/etc
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["telegraf"]

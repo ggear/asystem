@@ -6,3 +6,9 @@ less
 curl
 vim
 jq
+unzip
+ffmpeg
+sqlite3
+ca-certificates
+libmediainfo0v5
+libchromaprint-tools

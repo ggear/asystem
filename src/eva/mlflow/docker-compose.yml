@@ -38,7 +38,7 @@ services:
     container_name: mlflow_bootstrap
     <<: *common
     restart: 'no'
-    command:
-      - /asystem/etc/bootstrap.sh
+    entrypoint: bash
+    command: /asystem/etc/bootstrap.sh
     depends_on:
       - mlflow

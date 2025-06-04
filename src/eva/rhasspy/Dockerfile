@@ -18,3 +18,5 @@ COPY target/package/main/resources/image /asystem/etc
 #FROM image_base AS image_build
 #
 #FROM image_build AS image_runtime
+#WORKDIR /asystem/etc
+

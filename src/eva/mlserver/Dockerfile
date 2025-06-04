@@ -3,6 +3,7 @@ ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL="slim"
 
 FROM python:${ASYSTEM_PYTHON_VERSION}-${ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL} AS image_upstream
 
+# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 ARG ASYSTEM_MLFLOW_VERSION
 ARG ASYSTEM_MLSERVER_VERSION
 
@@ -32,4 +33,5 @@ RUN (python3 -m ensurepip 2> /dev/null || true) && \
     apt-get -y purge
 
 FROM image_build AS image_runtime
+WORKDIR /asystem/etc
 ENTRYPOINT ["/asystem/etc/entrypoint.sh"]
