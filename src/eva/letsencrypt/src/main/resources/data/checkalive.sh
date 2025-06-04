@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 POSITIONAL_ARGS=()
 HEALTHCHECK_VERBOSE=${HEALTHCHECK_VERBOSE:-false}
