@@ -30,6 +30,7 @@ RUN \
     curl -L -o /tmp/sonarr.tar.gz https://github.com/Sonarr/Sonarr/releases/download/v${ASYSTEM_SONARR_VERSION}/Sonarr.main.${ASYSTEM_SONARR_VERSION}.linux-x64.tar.gz && \
     mkdir -p /opt/sonarr && \
     tar -xvzf /tmp/sonarr.tar.gz -C /opt/sonarr && \
+    chmod +x /opt/sonarr/Sonarr && \
     rm /tmp/sonarr.tar.gz
 
 FROM image_build AS image_runtime
