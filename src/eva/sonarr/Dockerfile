@@ -3,9 +3,6 @@ ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION="slim"
 
 FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
 
-# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
-ARG ASYSTEM_SONARR_VERSION
-
 FROM image_upstream AS image_base
 USER root
 RUN \
@@ -27,11 +24,10 @@ COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 RUN \
-    curl -L -o /tmp/sonarr.tar.gz https://github.com/Sonarr/Sonarr/releases/download/v${ASYSTEM_SONARR_VERSION}/Sonarr.main.${ASYSTEM_SONARR_VERSION}.linux-x64.tar.gz && \
     mkdir -p /opt/sonarr && \
-    tar -xvzf /tmp/sonarr.tar.gz -C /opt/sonarr && \
+    tar -xvzf /asystem/etc/*.gz -C /opt/sonarr && \
     chmod +x /opt/sonarr/Sonarr && \
-    rm /tmp/sonarr.tar.gz
+    rm /asystem/etc/*.gz
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc
