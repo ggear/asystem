@@ -8,7 +8,7 @@
     <AuthenticationMethod>Forms</AuthenticationMethod>
     <AuthenticationRequired>DisabledForLocalAddresses</AuthenticationRequired>
     <Branch>main</Branch>
-    <LogLevel>info</LogLevel>
+    <LogLevel>Warn</LogLevel>
     <SslCertPath></SslCertPath>
     <SslCertPassword></SslCertPassword>
     <UrlBase></UrlBase>
