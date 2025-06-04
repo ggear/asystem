@@ -24,7 +24,6 @@ COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
 RUN \
-    mkdir -p /opt/sonarr && \
     tar -xvzf /asystem/etc/*.gz -C /opt && \
     chmod +x /opt/Sonarr && \
     chmod +x /opt/Sonarr/Sonarr && \
