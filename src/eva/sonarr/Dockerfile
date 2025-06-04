@@ -29,4 +29,5 @@ RUN \
     rm /asystem/etc/*.gz
 
 FROM image_build AS image_runtime
+WORKDIR /asystem/etc
 ENTRYPOINT ["/opt/Sonarr/Sonarr"]
