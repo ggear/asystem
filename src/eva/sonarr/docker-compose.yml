@@ -18,7 +18,7 @@ x-common: &common
     - ${SERVICE_DATA_DIR}:/root/.config/Sonarr
     - ${SABNZBD_SHARE_DIR}:/tv
     - ${SABNZBD_SHARE_DIR}:/downloads
-    - ${PLEX_SHARE_DIR}:${PLEX_SHARE_DIR}
+    - ${SONARR_SHARE_DIR}:/share
   logging:
     driver: "json-file"
     options:

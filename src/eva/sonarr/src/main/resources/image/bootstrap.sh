@@ -18,14 +18,15 @@ echo "--------------------------------------------------------------------------
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
-MEDIA_INDEX_MAX=5
-MEDIA_CATEGORIES=("docos" "parents" "kids" "comedy")
 MEDIA_DIRS=()
+MEDIA_CATEGORIES=("docos" "parents" "kids" "comedy")
 
-for share_num in $(seq 1 ${MEDIA_INDEX_MAX}); do
-  for category in "${MEDIA_CATEGORIES[@]}"; do
-    MEDIA_DIRS+=("/share/${share_num}/media/${category}/series")
-  done
+for share_dir in /share/*/; do
+  if [ -d "${share_dir}" ]; then
+    for category in "${MEDIA_CATEGORIES[@]}"; do
+      MEDIA_DIRS+=("${share_dir}/media/${category}/series")
+    done
+  fi
 done
 
 existing_json=$(curl -s "${SONARR_URL}/api/v3/rootfolder" -H "X-Api-Key: ${SONARR_API_KEY}")
@@ -38,7 +39,7 @@ for desired_path in "${MEDIA_DIRS[@]}"; do
       found="yes"
       break
     fi
-  done <<< "${existing_paths}"
+  done <<<"${existing_paths}"
 
   if [[ "${found}" == "yes" ]]; then
     echo "✅ Root folder already exists: ${desired_path}"

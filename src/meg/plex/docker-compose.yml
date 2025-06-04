@@ -16,7 +16,7 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}/config:/config
       - ${SERVICE_DATA_DIR}/transcode:/transcode
-      - ${PLEX_SHARE_DIR}:${PLEX_SHARE_DIR}
+      - ${PLEX_SHARE_DIR}:/share
     network_mode: host
     healthcheck:
       test: /asystem/etc/checkready.sh
