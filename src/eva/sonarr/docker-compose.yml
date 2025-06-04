@@ -14,7 +14,7 @@ x-common: &common
     - SABNZBD_SHARE_DIR
     - GEEK_KEY
   volumes:
-    - ${SERVICE_DATA_DIR}:/config
+    - ${SERVICE_DATA_DIR}:/root/.config/Sonarr
     - ${SABNZBD_SHARE_DIR}:/tv
     - ${SABNZBD_SHARE_DIR}:/downloads
   logging:
