@@ -19,34 +19,6 @@ echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
 
 ###############################################################################
-# Configure library root folder
-###############################################################################
-MEDIA_SERIES_DIR="/library"
-rootfolders=$(curl -s "${SONARR_URL}/api/v3/rootfolder" -H "X-Api-Key: ${SONARR_API_KEY}")
-echo "${rootfolders}" | jq -c '.[]' | while read -r folder; do
-  id=$(echo "${folder}" | jq -r '.id')
-  status=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${SONARR_URL}/api/v3/rootfolder/${id}" \
-    -H "X-Api-Key: ${SONARR_API_KEY}")
-  if [[ "${status}" -eq 200 ]]; then
-    echo "✅ Deleted root folder ID ${id}"
-  else
-    echo "❌ Failed to delete root folder ID ${id}, HTTP ${status}" >&2
-  fi
-done
-payload=$(jq -n --arg path "${MEDIA_SERIES_DIR}" '{ path: $path, accessible: true }')
-status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${SONARR_URL}/api/v3/rootfolder" \
-  -H "X-Api-Key: ${SONARR_API_KEY}" \
-  -H "Content-Type: application/json" \
-  -d "${payload}")
-
-if [[ "${status}" -eq 201 ]]; then
-  echo "✅ Successfully added root folder '${MEDIA_SERIES_DIR}'"
-else
-  echo "❌ Failed to add root folder '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
-fi
-###############################################################################
-
-###############################################################################
 # Configure indexer
 ###############################################################################
 indexers_json=$(curl -s "${SONARR_URL}/api/v3/indexer" -H "X-Api-Key: ${SONARR_API_KEY}")
@@ -100,54 +72,121 @@ fi
 ###############################################################################
 # Configure H265 prefered custom format
 ###############################################################################
-customformat_name="Prefer H265"
-customformat_exists=$(curl -s "${SONARR_URL}/api/v3/customFormat" -H "X-Api-Key: ${SONARR_API_KEY}" | jq -e --arg name "${customformat_name}" '.[] | select(.name == $name)' >/dev/null 2>&1 && echo "yes" || echo "no")
-if [[ "${customformat_exists}" == "yes" ]]; then
-  customformat_id=$(curl -s "${SONARR_URL}/api/v3/customFormat" -H "X-Api-Key: ${SONARR_API_KEY}" | jq -r --arg name "${customformat_name}" '.[] | select(.name == $name) | .id')
-else
-  payload=$(jq -n --arg name "${customformat_name}" '{
-    name: $name,
-    includeCustomFormatWhenRenaming: true,
-    specifications: [
-      {
-        name: "Must contain",
-        required: true,
-        implementation: "MustContainSpecification",
-        negated: false,
-        terms: [
-          { term: "265" }
-        ]
-      }
-    ]
-  }')
-  response=$(curl -s -w "%{http_code}" -o /tmp/cf_response.json -X POST "${SONARR_URL}/api/v3/customFormat" -d "${payload}" -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json")
-  http_code="${response: -3}"
-  if [[ "${http_code}" == "201" ]]; then
-    customformat_id=$(jq -r '.id' /tmp/cf_response.json)
-    echo "✅ Found custom format"
+#customformat_name="Prefer H265"
+#customformat_exists=$(curl -s "${SONARR_URL}/api/v3/customFormat" -H "X-Api-Key: ${SONARR_API_KEY}" | jq -e --arg name "${customformat_name}" '.[] | select(.name == $name)' >/dev/null 2>&1 && echo "yes" || echo "no")
+#if [[ "${customformat_exists}" == "yes" ]]; then
+#  customformat_id=$(curl -s "${SONARR_URL}/api/v3/customFormat" -H "X-Api-Key: ${SONARR_API_KEY}" | jq -r --arg name "${customformat_name}" '.[] | select(.name == $name) | .id')
+#else
+#  payload=$(jq -n --arg name "${customformat_name}" '{
+#    name: $name,
+#    includeCustomFormatWhenRenaming: true,
+#    specifications: [
+#      {
+#        name: "Must contain",
+#        required: true,
+#        implementation: "MustContainSpecification",
+#        negated: false,
+#        terms: [
+#          { term: "265" }
+#        ]
+#      }
+#    ]
+#  }')
+#  response=$(curl -s -w "%{http_code}" -o /tmp/cf_response.json -X POST "${SONARR_URL}/api/v3/customFormat" -d "${payload}" -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json")
+#  http_code="${response: -3}"
+#  if [[ "${http_code}" == "201" ]]; then
+#    customformat_id=$(jq -r '.id' /tmp/cf_response.json)
+#    echo "✅ Found custom format"
+#  else
+#    echo "❌ Failed to find custom format"
+#  fi
+#fi
+#quality_profiles=$(curl -s "${SONARR_URL}/api/v3/qualityprofile" -H "X-Api-Key: ${SONARR_API_KEY}")
+#echo "${quality_profiles}" | jq -c '.[]' | while read -r profile; do
+#  profile_id=$(echo "${profile}" | jq -r '.id')
+#  profile_name=$(echo "${profile}" | jq -r '.name')
+#  current_cfs=$(echo "${profile}" | jq '.customFormats // []')
+#  cf_ids=$(echo "${current_cfs}" | jq -r '.[].id' 2>/dev/null || echo "")
+#  has_cf="false"
+#  for id in ${cf_ids}; do
+#    if [[ "${id}" == "${customformat_id}" ]]; then
+#      has_cf="true"
+#      break
+#    fi
+#  done
+#  if [[ "${has_cf}" == "false" ]]; then
+#    updated_cfs=$(echo "${current_cfs}" | jq --argjson id "${customformat_id}" '. + [{"id": $id, "score": 100}]')
+#    updated_profile=$(echo "${profile}" | jq --argjson cfs "${updated_cfs}" '.customFormats = $cfs')
+#    response=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "${SONARR_URL}/api/v3/qualityprofile/${profile_id}" -d "${updated_profile}" -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json")
+#  fi
+#done
+###############################################################################
+
+###############################################################################
+# Configure library root folder
+###############################################################################
+MEDIA_SERIES_DIR="/library"
+rootfolders=$(curl -s "${SONARR_URL}/api/v3/rootfolder" -H "X-Api-Key: ${SONARR_API_KEY}")
+echo "${rootfolders}" | jq -c '.[]' | while read -r folder; do
+  id=$(echo "${folder}" | jq -r '.id')
+  status=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${SONARR_URL}/api/v3/rootfolder/${id}" \
+    -H "X-Api-Key: ${SONARR_API_KEY}")
+  if [[ "${status}" -eq 200 ]]; then
+    echo "✅ Deleted root folder ID ${id}"
   else
-    echo "❌ Failed to find custom format"
-  fi
-fi
-quality_profiles=$(curl -s "${SONARR_URL}/api/v3/qualityprofile" -H "X-Api-Key: ${SONARR_API_KEY}")
-echo "${quality_profiles}" | jq -c '.[]' | while read -r profile; do
-  profile_id=$(echo "${profile}" | jq -r '.id')
-  profile_name=$(echo "${profile}" | jq -r '.name')
-  current_cfs=$(echo "${profile}" | jq '.customFormats // []')
-  cf_ids=$(echo "${current_cfs}" | jq -r '.[].id' 2>/dev/null || echo "")
-  has_cf="false"
-  for id in ${cf_ids}; do
-    if [[ "${id}" == "${customformat_id}" ]]; then
-      has_cf="true"
-      break
-    fi
-  done
-  if [[ "${has_cf}" == "false" ]]; then
-    updated_cfs=$(echo "${current_cfs}" | jq --argjson id "${customformat_id}" '. + [{"id": $id, "score": 100}]')
-    updated_profile=$(echo "${profile}" | jq --argjson cfs "${updated_cfs}" '.customFormats = $cfs')
-    response=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "${SONARR_URL}/api/v3/qualityprofile/${profile_id}" -d "${updated_profile}" -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json")
+    echo "❌ Failed to delete root folder ID ${id}, HTTP ${status}" >&2
   fi
 done
+payload=$(jq -n --arg path "${MEDIA_SERIES_DIR}" '{ path: $path, accessible: true }')
+status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${SONARR_URL}/api/v3/rootfolder" \
+  -H "X-Api-Key: ${SONARR_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "${payload}")
+
+if [[ "${status}" -eq 201 ]]; then
+  echo "✅ Successfully added root folder '${MEDIA_SERIES_DIR}'"
+else
+  echo "❌ Failed to add root folder '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
+fi
+
+
+
+#payload=$(jq -n \
+#  --arg name "ImportSeries" \
+#  --arg path "${MEDIA_SERIES_DIR}" \
+#  '{ name: $name, path: $path }')
+#
+#status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${SONARR_URL}/api/v3/command" \
+#  -H "X-Api-Key: ${SONARR_API_KEY}" \
+#  -H "Content-Type: application/json" \
+#  -d "${payload}")
+#
+#if [[ "${status}" -eq 201 ]]; then
+#  echo "✅ Import from '${MEDIA_SERIES_DIR}' triggered"
+#else
+#  echo "❌ Failed to trigger import from '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
+#fi
+
+
+
+#series=$(curl -s "${SONARR_URL}/api/v3/series" -H "X-Api-Key: ${SONARR_API_KEY}")
+#echo "${series}" | jq -c '.[]' | while read -r item; do
+#  id=$(echo "${item}" | jq -r '.id')
+#  title=$(echo "${item}" | jq -r '.title')
+#  payload=$(jq -n --argjson seriesId "${id}" '{ name: "RescanSeries", seriesId: $seriesId }')
+#  status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${SONARR_URL}/api/v3/command" \
+#    -H "X-Api-Key: ${SONARR_API_KEY}" \
+#    -H "Content-Type: application/json" \
+#    -d "${payload}")
+#  if [[ "${status}" -eq 201 ]]; then
+#    echo "✅ ${title} (ID: ${id}) rescan triggered"
+#  else
+#    echo "❌ ${title} (ID: ${id}) failed to trigger rescan, HTTP ${status}" >&2
+#  fi
+#done
+
+
+
 ###############################################################################
 
 echo "--------------------------------------------------------------------------------"
