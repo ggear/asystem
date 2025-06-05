@@ -1,82 +1,42 @@
-MEDIA_DIRS=()
-MEDIA_CATEGORIES=("docos" "parents" "kids" "comedy")
-
-for share_dir in /share/*/; do
-  if [ -d "${share_dir}" ]; then
-    for category in "${MEDIA_CATEGORIES[@]}"; do
-      MEDIA_DIRS+=("${share_dir}/media/${category}/series")
-    done
-  fi
-done
-
-existing_json=$(curl -s "${SONARR_URL}/api/v3/rootfolder" -H "X-Api-Key: ${SONARR_API_KEY}")
-existing_paths=$(echo "${existing_json}" | jq -r '.[].path')
-
-for desired_path in "${MEDIA_DIRS[@]}"; do
-  found="no"
-  while IFS= read -r existing_path; do
-    if [[ "${existing_path}" == "${desired_path}" ]]; then
-      found="yes"
-      break
-    fi
-  done <<<"${existing_paths}"
-
-  if [[ "${found}" == "yes" ]]; then
-    echo "✅ Root folder already exists: ${desired_path}"
+###############################################################################
+# Configure library root folder
+###############################################################################
+MEDIA_SERIES_DIR="/library"
+rootfolders=$(curl -s "${SONARR_URL}/api/v3/rootfolder" -H "X-Api-Key: ${SONARR_API_KEY}")
+echo "${rootfolders}" | jq -c '.[]' | while read -r folder; do
+  id=$(echo "${folder}" | jq -r '.id')
+  status=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${SONARR_URL}/api/v3/rootfolder/${id}" \
+    -H "X-Api-Key: ${SONARR_API_KEY}")
+  if [[ "${status}" -eq 200 ]]; then
+    echo "✅ Deleted root folder ID ${id}"
   else
-    echo "➕ Adding root folder: ${desired_path}"
-    payload="{\"path\": \"${desired_path}\", \"accessible\": true}"
-
-    response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-      "${SONARR_URL}/api/v3/rootfolder" \
-      -d "${payload}" \
-      -H "X-Api-Key: ${SONARR_API_KEY}" \
-      -H "Content-Type: application/json")
-
-    if [[ "${response}" == "201" ]]; then
-      echo "✅ Added root folder: ${desired_path}"
-    else
-      echo "❌ Failed to add root folder: ${desired_path} (HTTP ${response})"
-    fi
+    echo "❌ Failed to delete root folder ID ${id}, HTTP ${status}" >&2
   fi
 done
+payload=$(jq -n --arg path "${MEDIA_SERIES_DIR}" '{ path: $path, accessible: true }')
+status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${SONARR_URL}/api/v3/rootfolder" \
+  -H "X-Api-Key: ${SONARR_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "${payload}")
 
-echo "${existing_json}" | jq -c '.[]' | while read -r folder; do
-  folder_path=$(echo "${folder}" | jq -r '.path')
-  folder_id=$(echo "${folder}" | jq -r '.id')
+if [[ "${status}" -eq 201 ]]; then
+  echo "✅ Successfully added root folder '${MEDIA_SERIES_DIR}'"
+else
+  echo "❌ Failed to add root folder '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
+fi
+###############################################################################
 
-  keep="no"
-  for desired in "${MEDIA_DIRS[@]}"; do
-    if [[ "${desired}" == "${folder_path}" ]]; then
-      keep="yes"
-      break
-    fi
-  done
-
-  if [[ "${keep}" == "no" ]]; then
-    echo "❌ Removing unused root folder: ${folder_path}"
-    response=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE \
-      "${SONARR_URL}/api/v3/rootfolder/${folder_id}" \
-      -H "X-Api-Key: ${SONARR_API_KEY}")
-
-    if [[ "${response}" == "200" ]]; then
-      echo "✅ Removed root folder: ${folder_path}"
-    else
-      echo "❌ Failed to remove root folder: ${folder_path} (HTTP ${response})"
-    fi
-  fi
-done
-
+###############################################################################
+# Configure indexer
+###############################################################################
 indexers_json=$(curl -s "${SONARR_URL}/api/v3/indexer" -H "X-Api-Key: ${SONARR_API_KEY}")
 exists=$(echo "${indexers_json}" | jq -e '.[] | select(.name=="NZBgeek")' >/dev/null 2>&1 && echo "yes" || echo "no")
-
 if [[ "${exists}" == "yes" ]]; then
   echo "✅ Indexer NZBgeek already exists"
 else
   echo "➕ Adding indexer NZBgeek"
   payload=$(jq -n --arg n "NZBgeek" --arg k "${GEEK_KEY}" --arg u "https://api.nzbgeek.info/api" \
     '{enableRss: true, enableSearch: true, name: $n, implementation: "Newznab", configContract: "NewznabSettings", settings: {apiUrl: $u, apiKey: $k, categories: "5000,5040,5070"}}')
-
   response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
     "${SONARR_URL}/api/v3/indexer" \
     -d "${payload}" \
@@ -89,10 +49,13 @@ else
     echo "❌ Failed to add indexer NZBgeek (HTTP ${response})"
   fi
 fi
+###############################################################################
 
+###############################################################################
+# Configure download client
+###############################################################################
 download_clients_json=$(curl -s "${SONARR_URL}/api/v3/downloadclient" -H "X-Api-Key: ${SONARR_API_KEY}")
 sab_exists=$(echo "${download_clients_json}" | jq -e '.[] | select(.name=="SABnzbd")' >/dev/null 2>&1 && echo "yes" || echo "no")
-
 if [[ "${sab_exists}" == "yes" ]]; then
   echo "✅ Download client SABnzbd already exists"
 else
@@ -112,7 +75,11 @@ else
     echo "❌ Failed to add download client SABnzbd (HTTP ${response})"
   fi
 fi
+###############################################################################
 
+###############################################################################
+# Configure H265 prefered custom format
+###############################################################################
 customformat_name="Prefer H265"
 customformat_exists=$(curl -s "${SONARR_URL}/api/v3/customFormat" -H "X-Api-Key: ${SONARR_API_KEY}" | jq -e --arg name "${customformat_name}" '.[] | select(.name == $name)' >/dev/null 2>&1 && echo "yes" || echo "no")
 if [[ "${customformat_exists}" == "yes" ]]; then
@@ -137,8 +104,9 @@ else
   http_code="${response: -3}"
   if [[ "${http_code}" == "201" ]]; then
     customformat_id=$(jq -r '.id' /tmp/cf_response.json)
+    echo "✅ Found custom format"
   else
-    exit 1
+    echo "❌ Failed to find custom format"
   fi
 fi
 quality_profiles=$(curl -s "${SONARR_URL}/api/v3/qualityprofile" -H "X-Api-Key: ${SONARR_API_KEY}")
@@ -160,3 +128,4 @@ echo "${quality_profiles}" | jq -c '.[]' | while read -r profile; do
     response=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "${SONARR_URL}/api/v3/qualityprofile/${profile_id}" -d "${updated_profile}" -H "X-Api-Key: ${SONARR_API_KEY}" -H "Content-Type: application/json")
   fi
 done
+###############################################################################
