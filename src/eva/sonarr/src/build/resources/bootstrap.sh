@@ -6,15 +6,28 @@ exists=$(echo "${indexers_json}" | jq -e '.[] | select(.name=="NZBgeek")' >/dev/
 if [[ "${exists}" == "yes" ]]; then
   echo "✅ Indexer NZBgeek already exists"
 else
-  echo "➕ Adding indexer NZBgeek"
-  payload=$(jq -n --arg n "NZBgeek" --arg k "${GEEK_KEY}" --arg u "https://api.nzbgeek.info/api" \
-    '{enableRss: true, enableSearch: true, name: $n, implementation: "Newznab", configContract: "NewznabSettings", settings: {apiUrl: $u, apiKey: $k, categories: "5000,5040,5070"}}')
   response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
     "${SONARR_URL}/api/v3/indexer" \
-    -d "${payload}" \
+    -d \
+    '{
+        "name": "NZBgeek",
+        "enableRss": true,
+        "enableAutomaticSearch": true,
+        "enableInteractiveSearch": true,
+        "supportsRss": true,
+        "supportsSearch": true,
+        "protocol": "usenet",
+        "priority": 25,
+        "implementation": "Newznab",
+        "configContract": "NewznabSettings",
+        "tags": [],
+        "fields": [
+            { "name": "baseUrl", "value": "https://api.nzbgeek.info" },
+            { "name": "apiKey", "value": "'"${GEEK_KEY}"'" }
+        ]
+    }' \
     -H "X-Api-Key: ${SONARR_API_KEY}" \
     -H "Content-Type: application/json")
-
   if [[ "${response}" == "201" ]]; then
     echo "✅ Added indexer NZBgeek"
   else
@@ -31,13 +44,32 @@ sab_exists=$(echo "${download_clients_json}" | jq -e '.[] | select(.name=="SABnz
 if [[ "${sab_exists}" == "yes" ]]; then
   echo "✅ Download client SABnzbd already exists"
 else
-  echo "➕ Adding download client SABnzbd"
-  sab_payload=$(jq -n \
-    '{name: "SABnzbd", enabled: true, protocol: "sabnzbd", host: "localhost", port: 8080, apiKey: "", username: "", password: "", category: "tv", recentPriority: 1, priority: 1, useSsl: false, tvCategory: "tv"}')
-
   response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
     "${SONARR_URL}/api/v3/downloadclient" \
-    -d "${sab_payload}" \
+    -d \
+    '{
+        "name": "SABnzbd",
+        "enable": true,
+        "protocol": "usenet",
+        "priority": 1,
+        "removeCompletedDownloads": false,
+        "removeFailedDownloads": false,
+        "fields": [
+            { "name": "host", "value": "'"${SABNZBD_SERVICE_PROD}"'" },
+            { "name": "port", "value": "'"${SABNZBD_HTTP_PORT}"'" },
+            { "name": "apiKey", "value": "'"${SABNZBD_API_KEY}"'" },
+            { "name": "username", "value": "" },
+            { "name": "password", "value": "" },
+            { "name": "category", "value": "tv" },
+            { "name": "recentTvPriority", "value": -100 },
+            { "name": "olderTvPriority", "value": -100 },
+            { "name": "seasonFolder", "value": true },
+            { "name": "addPaused", "value": false }
+        ],
+        "implementation": "Sabnzbd",
+        "configContract": "SabnzbdSettings",
+        "tags": []
+     }' \
     -H "X-Api-Key: ${SONARR_API_KEY}" \
     -H "Content-Type: application/json")
 
@@ -129,8 +161,6 @@ else
   echo "❌ Failed to add root folder '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
 fi
 
-
-
 #payload=$(jq -n \
 #  --arg name "ImportSeries" \
 #  --arg path "${MEDIA_SERIES_DIR}" \
@@ -147,8 +177,6 @@ fi
 #  echo "❌ Failed to trigger import from '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
 #fi
 
-
-
 #series=$(curl -s "${SONARR_URL}/api/v3/series" -H "X-Api-Key: ${SONARR_API_KEY}")
 #echo "${series}" | jq -c '.[]' | while read -r item; do
 #  id=$(echo "${item}" | jq -r '.id')
@@ -164,7 +192,5 @@ fi
 #    echo "❌ ${title} (ID: ${id}) failed to trigger rescan, HTTP ${status}" >&2
 #  fi
 #done
-
-
 
 ###############################################################################

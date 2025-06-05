@@ -1,0 +1,12 @@
+{
+  enableRss: true,
+  enableSearch: true,
+  name: $n,
+  implementation: "Newznab",
+  configContract: "NewznabSettings",
+  settings: {
+    apiUrl: $u,
+    apiKey: $k,
+    categories: "5000,5040,5070"
+  }
+}
