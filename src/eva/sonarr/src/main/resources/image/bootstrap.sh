@@ -102,7 +102,7 @@ fi
 ###############################################################################
 
 ###############################################################################
-# Configure H265 prefered custom format
+# Configure H265 preferred custom format
 ###############################################################################
 CF_SCORE=100
 CF_NAMEFILE_SIZE_MIN_GB=1
@@ -193,6 +193,25 @@ if [[ "${status}" -eq 201 ]]; then
   echo "✅ Successfully added root folder '${MEDIA_SERIES_DIR}'"
 else
   echo "❌ Failed to add root folder '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
+fi
+###############################################################################
+
+###############################################################################
+# Configure grab delay
+###############################################################################
+GRAB_DELAY_MIN=30
+auth_header=(-H "X-Api-Key: ${SONARR_API_KEY}")
+profile=$(curl -s "${SONARR_URL}/api/v3/delayprofile" "${auth_header[@]}" | jq '.[0]')
+profile_id=$(echo "$profile" | jq -r '.id')
+updated_profile=$(echo "$profile" | jq '.usenetDelay = '"${GRAB_DELAY_MIN}"'')
+status=$(curl -s -o /dev/null -w "%{http_code}" \
+  -X PUT "${SONARR_URL}/api/v3/delayprofile/${profile_id}" \
+  "${auth_header[@]}" -H "Content-Type: application/json" \
+  -d "$updated_profile")
+if [[ "$status" == "202" ]]; then
+  echo "✅ Usenet delay updated to ${GRAB_DELAY_MIN} min"
+else
+  echo "❌ Failed to update usenet delay (HTTP $status)"
 fi
 ###############################################################################
 
