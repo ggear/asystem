@@ -257,9 +257,15 @@
   "minUpgradeFormatScore": 1,
   "formatItems": [
     {
-      "format": 7,
-      "name": "HEVC + Size >= 1 GB",
+      "format": 5,
+      "name": "HEVC + Bitrate",
       "score": 0
+    },
+    {
+      "format": {
+        "id": 5
+      },
+      "score": 100
     }
   ],
   "id": 6
