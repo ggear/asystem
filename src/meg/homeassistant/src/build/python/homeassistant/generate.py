@@ -158,7 +158,7 @@ echo "${{MESSAGE}}"
 while ! "${{ASYSTEM_HOME}}/checkready.sh"; do
   echo "${{MESSAGE}}" && sleep 1
 done
-echo "----------" && echo "Service has started"
+echo "----------" && echo "✅ Service has started"
         """.format(
             script_bootstrap.strip(),
         ).strip())
@@ -218,10 +218,10 @@ shopt -s expand_aliases
 if
   {}
 then
-  [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "The service [{}] is {} :)" >&2
+  [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "✅ The service [{}] is {} :)" >&2
   exit 0
 else
-  [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "The service [{}] is *NOT* {} :(" >&2
+  [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "❌ The service [{}] is *NOT* {} :(" >&2
   exit 1
 fi
             """.format(
