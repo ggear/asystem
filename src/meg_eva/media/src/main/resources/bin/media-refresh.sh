@@ -8,9 +8,10 @@ SCRIPT_NAME="refresh.sh"
 SCRIPT_PATH="${ROOT_DIR}/lib/${SCRIPT_NAME}"
 SCRIPT_FILE="tmp/scripts/media/${SCRIPT_NAME}"
 if [ -n "${SHARE_DIR_MEDIA}" ]; then
-  [[ "${SHARE_DIR}" == */share/3 ]] && echo "${SCRIPT_PATH}"
+  [[ "${SHARE_DIR}" == */share/3 ]] && "${SCRIPT_PATH}" sonarr
 elif [ -n "${SHARE_DIR}" ]; then
-  [[ "${SHARE_DIR}" == */share/3 ]] && echo "${SCRIPT_PATH}"
+  [[ "${SHARE_DIR}" == */share/3 ]] && "${SCRIPT_PATH}" sonarr
 else
-  echo "${SCRIPT_PATH}"
+  "${SCRIPT_PATH}" sonarr
 fi
+"${SCRIPT_PATH}" plex
