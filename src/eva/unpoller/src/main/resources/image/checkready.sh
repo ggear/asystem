@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(curl "http://${UNPOLLER_SERVICE}:${UNPOLLER_HTTP_PORT}/api/v1/output/influxdb/events" | jq -er .influxdb.latest | cut -d 'T' -f 1)" == "$(date --rfc-3339=ns | sed 's/ /T/' | cut -d 'T' -f 1)" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [unpoller] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [unpoller] is ready :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [unpoller] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [unpoller] is *NOT* ready :(" >&2
   exit 1
 fi

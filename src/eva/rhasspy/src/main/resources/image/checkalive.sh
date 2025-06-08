@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   netcat -zw 1 ${RHASSPY_SERVICE} ${RHASSPY_API_PORT}
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [rhasspy] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [rhasspy] is alive :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [rhasspy] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [rhasspy] is *NOT* alive :(" >&2
   exit 1
 fi

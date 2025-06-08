@@ -198,33 +198,48 @@ fi
 # Refresh library
 ###############################################################################
 auth_header=(-H "X-Api-Key: ${SONARR_API_KEY}")
+payload='{"name": "DownloadedEpisodesScan"}'
 status=$(curl -s -o /dev/null -w "%{http_code}" \
   -X POST "${SONARR_URL}/api/v3/command" \
   -H "X-Api-Key: ${SONARR_API_KEY}" \
   -H "Content-Type: application/json" \
-  -d '{"name": "DownloadedEpisodesScan"}')
+  -d "${payload}")
 if [[ "$status" == 2* ]]; then
   echo "✅ Downloaded files scan triggered successfully"
 else
-  echo "❌ Failed to trigger downloaded files scan (HTTP $status)"
+  echo "failed"
+  curl -s \
+    -X POST "${SONARR_URL}/api/v3/command" \
+    -H "X-Api-Key: ${SONARR_API_KEY}" \
+    -H "Content-Type: application/json" \
+    -d "${payload}" | fold -s -w 250 | pr -to 4
+  echo "" && echo "❌ Failed to trigger downloaded files scan (HTTP $status)"
 fi
 series_ids=$(curl -s "${SONARR_URL}/api/v3/series" "${auth_header[@]}" | jq -r '.[].id')
 for series_id in $series_ids; do
+  payload='{"name": "RescanSeries", "seriesId": '"${series_id}"'}'
   status=$(curl -s -o /dev/null -w "%{http_code}" \
     -X POST "${SONARR_URL}/api/v3/command" "${auth_header[@]}" -H "Content-Type: application/json" \
-    -d '{"name": "RescanSeries", "seriesId": '"${series_id}"'}')
+    -d "${payload}")
   if [[ "$status" == 2* ]]; then
     echo "✅ Rescan started for series $series_id"
   else
-    echo "❌ Failed to start rescan for series $series_id (HTTP $status)"
+    curl -s \
+      -X POST "${SONARR_URL}/api/v3/command" "${auth_header[@]}" -H "Content-Type: application/json" \
+      -d "${payload}" | fold -s -w 250 | pr -to 4
+    echo "" && echo "❌ Failed to start rescan for series $series_id (HTTP $status)"
   fi
+  payload='{"name": "RefreshSeries", "seriesId": '"${series_id}"'}'
   status=$(curl -s -o /dev/null -w "%{http_code}" \
     -X POST "${SONARR_URL}/api/v3/command" "${auth_header[@]}" -H "Content-Type: application/json" \
-    -d '{"name": "RefreshSeries", "seriesId": '"${series_id}"'}')
+    -d "${payload}")
   if [[ "$status" == 2* ]]; then
     echo "✅ Refresh started for series $series_id"
   else
-    echo "❌ Failed to start refresh for series $series_id (HTTP $status)"
+    curl -s \
+      -X POST "${SONARR_URL}/api/v3/command" "${auth_header[@]}" -H "Content-Type: application/json" \
+      -d "${payload}" | fold -s -w 250 | pr -to 4
+    echo "" && echo "❌ Failed to start refresh for series $series_id (HTTP $status)"
   fi
 done
 ###############################################################################

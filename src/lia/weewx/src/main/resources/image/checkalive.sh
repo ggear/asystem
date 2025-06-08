@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ -f "/data/html/loopdata/loop-data.txt" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [weewx] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [weewx] is alive :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [weewx] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [weewx] is *NOT* alive :(" >&2
   exit 1
 fi

@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(jq -er .model_version /train/en_US-rhasspy/training_info.json 2>/dev/null)" == "1.0" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [rhasspy] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [rhasspy] is ready :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [rhasspy] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [rhasspy] is *NOT* ready :(" >&2
   exit 1
 fi

@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(curl -H "x-ad-access: ${APPDAEMON_TOKEN}" -H "Content-Type: application/json" "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/api/appdaemon/health" | jq -er .health)" == "OK" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [appdaemon] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [appdaemon] is ready :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [appdaemon] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [appdaemon] is *NOT* ready :(" >&2
   exit 1
 fi

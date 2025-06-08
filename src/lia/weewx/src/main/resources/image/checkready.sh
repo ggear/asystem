@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ -f "/data/html/loopdata/loop-data.txt" ] && [ $(($(date +%s) - $(stat "/data/html/loopdata/loop-data.txt" -c %Y))) -le 2 ] && [ $(($(date +%s) - $(jq -r '."current.dateTime.raw"' "/data/html/loopdata/loop-data.txt"))) -le 2 ] && [ -n "$(jq -r '."current.outTemp" | select( . != null )' "/data/html/loopdata/loop-data.txt")" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [weewx] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [weewx] is ready :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [weewx] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [weewx] is *NOT* ready :(" >&2
   exit 1
 fi

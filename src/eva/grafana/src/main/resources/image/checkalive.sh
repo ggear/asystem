@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(curl "${GRAFANA_URL}/api/health" | jq -er .database | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" == "ok" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [grafana] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [grafana] is alive :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [grafana] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [grafana] is *NOT* alive :(" >&2
   exit 1
 fi

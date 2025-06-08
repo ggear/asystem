@@ -108,4 +108,4 @@ echo "${MESSAGE}"
 while ! "${ASYSTEM_HOME}/checkready.sh"; do
   echo "${MESSAGE}" && sleep 1
 done
-echo "----------" && echo "Service has started"
+echo "----------" && echo "✅ Service has started"

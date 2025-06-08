@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(influx ping --host http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT} 2>&1)" == "OK" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [influxdb] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [influxdb] is alive :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [influxdb] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [influxdb] is *NOT* alive :(" >&2
   exit 1
 fi

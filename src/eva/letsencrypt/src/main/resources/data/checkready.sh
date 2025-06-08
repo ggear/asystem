@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ] && [ $(grep ERROR /etc/letsencrypt/logs/letsencrypt.log | wc -l) -eq 0 ] && [ $((($(date +%s) - $(stat /etc/letsencrypt/logs/letsencrypt.log -c %Y)) / 3600)) -le 25 ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [letsencrypt] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [letsencrypt] is ready :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [letsencrypt] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [letsencrypt] is *NOT* ready :(" >&2
   exit 1
 fi

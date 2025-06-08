@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   true # TODO: Provide implementation
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [nginx] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [nginx] is ready :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [nginx] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [nginx] is *NOT* ready :(" >&2
   exit 1
 fi

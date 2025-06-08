@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(curl -LI "https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}/aui/index.html" | tac | tac | head -n 1 | cut -d$' ' -f2)" == "200" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [appdaemon] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [appdaemon] is alive :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [appdaemon] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [appdaemon] is *NOT* alive :(" >&2
   exit 1
 fi

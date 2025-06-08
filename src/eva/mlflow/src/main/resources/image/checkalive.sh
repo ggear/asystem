@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(curl "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" == "OK" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [mlflow] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [mlflow] is alive :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [mlflow] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [mlflow] is *NOT* alive :(" >&2
   exit 1
 fi

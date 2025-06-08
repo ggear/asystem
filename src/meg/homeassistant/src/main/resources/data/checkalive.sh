@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(curl -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/" | jq -er .message)" == "API running." ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [homeassistant] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [homeassistant] is alive :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [homeassistant] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [homeassistant] is *NOT* alive :(" >&2
   exit 1
 fi

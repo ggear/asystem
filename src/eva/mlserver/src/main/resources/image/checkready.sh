@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   true # TODO: Provide implementation
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [mlserver] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [mlserver] is ready :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [mlserver] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [mlserver] is *NOT* ready :(" >&2
   exit 1
 fi

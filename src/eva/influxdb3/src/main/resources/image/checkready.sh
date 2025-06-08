@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ $(curl "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}/api/v3/configure/database?format=csv&show_deleted=false" | grep -c host_private) -eq 1 ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [influxdb3] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [influxdb3] is ready :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [influxdb3] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [influxdb3] is *NOT* ready :(" >&2
   exit 1
 fi

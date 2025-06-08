@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(curl "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" == "OK" ] # TODO: Provide implementation that reflects on models being served
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [mlflow] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [mlflow] is ready :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [mlflow] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [mlflow] is *NOT* ready :(" >&2
   exit 1
 fi

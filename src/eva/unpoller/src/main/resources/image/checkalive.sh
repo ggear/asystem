@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(curl "http://${UNPOLLER_SERVICE}:${UNPOLLER_HTTP_PORT}/health")" == "OK" ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [unpoller] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [unpoller] is alive :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [unpoller] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [unpoller] is *NOT* alive :(" >&2
   exit 1
 fi

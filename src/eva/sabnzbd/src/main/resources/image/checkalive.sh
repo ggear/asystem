@@ -33,9 +33,9 @@ shopt -s expand_aliases
 if
   [ "$(curl "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0" | jq -er '.pid')" -gt 0 ]
 then
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [sabnzbd] is alive :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sabnzbd] is alive :)" >&2
   exit 0
 else
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "The service [sabnzbd] is *NOT* alive :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [sabnzbd] is *NOT* alive :(" >&2
   exit 1
 fi
