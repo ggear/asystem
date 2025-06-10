@@ -1207,13 +1207,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit(FileAction.DOWNSCALE.label))
                 .otherwise(pl.lit(FileAction.NOTHING.label))
             ).alias("File Action"))
+
+
+
+
         metadata_merged_pl = pl.concat([
             metadata_merged_pl.filter(
                 (pl.col("File Action") == FileAction.RENAME.label) |
                 (pl.col("File Action") == FileAction.CHECK.label) |
                 (pl.col("File Action") == FileAction.UPSCALE.label)
-            ).sort("File Name", descending=True).with_columns(
-                pl.col("File Validity").cum_count().cast(pl.Float32).alias("Action Index Sort")
+            ).sort("File Validity", descending=True).with_columns(
+                pl.col("File Name").cum_count().cast(pl.Float32).alias("Action Index Sort")
             ),
             metadata_merged_pl.filter(
                 (pl.col("File Action") == FileAction.REFORMAT.label) |
@@ -1244,6 +1248,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
+
+
+
+
+
+
     if verbose:
         print("done", flush=True)
     if metadata_merged_pl.height > 0:
