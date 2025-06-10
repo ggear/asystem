@@ -26,7 +26,7 @@ class InternetTest(unittest.TestCase):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "10/media/parents/movies/Kingdom Of Heaven (2005)"),
                                   files_action_expected=actions(
-                                      reformat=1
+                                      upscale=1
                                   ), scripts={})
 
     def test_analyse_subtitles(self):
@@ -175,13 +175,15 @@ class InternetTest(unittest.TestCase):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "45/media"),
                                   files_action_expected=actions(
-                                      transcode=15
+                                      upscale=4,
+                                      transcode=11
                                   ), scripts={"transcode"})
         self._test_analyse_assert(join(dir_test, "45/media"),
                                   files_action_expected=actions(
-                                      check=13,
+                                      check=9,
+                                      upscale=4,
                                       merge=2,
-                                      transcode=15
+                                      transcode=11
                                   ), scripts={"transcode"})
 
     def test_analyse_downscale(self):

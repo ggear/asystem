@@ -867,9 +867,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Version Directory").str.starts_with("Plex Versions"))
                 ).then(pl.lit("Transcoded"))
                 .when(
-                    (pl.col("Transcode Action") == "Ignore")
-                ).then(pl.lit("Ignored"))
-                .when(
                     (pl.col("Transcode Action") == "Merged")
                 ).then(pl.lit("Merged"))
                 .otherwise(pl.lit("Original"))
@@ -1034,7 +1031,21 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             ).alias("Metadata State"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
+                #
+                # Rename
+                #
                 pl.when(
+                    (pl.col("Rename File") != "") &
+                    (pl.col("Rename File") != " '' ")
+                ).then(pl.lit("Rename File"))
+                .when(
+                    (pl.col("Rename Directory") != "") &
+                    (pl.col("Rename Directory") != " '' ")
+                ).then(pl.lit("Rename Directory"))
+                #
+                # Check
+                #
+                .when(
                     (pl.col("File State") == "Corrupt")
                 ).then(pl.lit("Check Corrupt Metadata"))
                 .when(
@@ -1111,82 +1122,113 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         (pl.col("Duration (hours)").cast(pl.Float32) * 60 * 6).round(0),
                     ).is_duplicated())
                 ).then(pl.lit("Check Suspect Duration"))
+                #
+                # Upscale
+                #
                 .when(
-                    (pl.col("File Version") != "Ignored") &
                     (pl.col("Video 1 Resolution Target Size") == "Small")
                 ).then(pl.lit("Upscale Low Video Resolution"))
                 .when(
-                    (pl.col("File Version") != "Ignored") &
                     (pl.col("Video 1 Bitrate Target Size") == "Small")
                 ).then(pl.lit("Upscale Low Video Bitrate"))
                 .when(
-                    (pl.col("File Version") != "Ignored") &
                     (pl.col("File Size") == "Small")
                 ).then(pl.lit("Upscale Small Size"))
                 .when(
-                    (pl.col("File Version") != "Ignored") &
                     (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
                 ).then(pl.lit("Upscale Missing Audio Channels"))
                 .when(
-                    (pl.col("File Version") != "Ignored") &
                     (pl.col("Target Quality") == "9") &
                     (pl.col("Audio 1 Bitrate (Kbps)") != "") &
                     (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640000)
                 ).then(pl.lit("Upscale Low Audio Bitrate"))
+                #
+                # Reformat
+                #
+                .when(
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit("Reformat Messy Metadata"))
+                #
+                # Transcode
+                #
+                .when(
+                    (pl.col("Plex Video") == "Transcode")
+                ).then(pl.lit("Transcode Video"))
+                .when(
+                    (pl.col("Plex Audio") == "Transcode")
+                ).then(pl.lit("Transcode Audio"))
+                .when(
+                    (pl.col("Duration (hours)").is_null())
+                ).then(pl.lit("Transcode Null Duration"))
+                .when(
+                    (pl.col("Bitrate (Kbps)").is_null())
+                ).then(pl.lit("Transcode Null Bitrate"))
+                #
+                # Downscale
+                #
+                .when(
+                    (pl.col("Video 1 Resolution Target Size") == "Large")
+                ).then(pl.lit("Downscale High Video Resolution"))
+                .when(
+                    (pl.col("Video 1 Bitrate Target Size") == "Large")
+                ).then(pl.lit("Downscale High Video Bitrate"))
+                .when(
+                    (pl.col("File Size") == "Large")
+                ).then(pl.lit("Downscale High Size"))
                 .otherwise(pl.lit("Valid"))
             ).alias("File Validity"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 pl.when(
-                    (
-                            (pl.col("Rename File") != "") &
-                            (pl.col("Rename File") != " '' ")
-                    ) | (
-                            (pl.col("Rename Directory") != "") &
-                            (pl.col("Rename Directory") != " '' ")
-                    )
+                    (pl.col("File Validity").str.starts_with("Rename"))
                 ).then(pl.lit(FileAction.RENAME.label))
                 .when(
+                    (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Check"))
                 ).then(pl.lit(FileAction.CHECK.label))
                 .when(
                     (pl.col("File Version") == "Transcoded")
                 ).then(pl.lit(FileAction.MERGE.label))
                 .when(
-                    (
-                        (pl.col("File Version") != "Ignored")
-                    ) & (
-                            (pl.col("Plex Video") == "Transcode") |
-                            (pl.col("Plex Audio") == "Transcode") |
-                            (pl.col("Duration (hours)").is_null()) |
-                            (pl.col("Bitrate (Kbps)").is_null())
-                    )
-                ).then(pl.lit(FileAction.TRANSCODE.label))
-                .when(
-                    (pl.col("File Version") != "Ignored") &
-                    (pl.col("File Size") == "Large")
-                ).then(pl.lit(FileAction.DOWNSCALE.label))
-                .when(
-                    (pl.col("File Version") != "Ignored") &
-                    (pl.col("Metadata State") == "Messy")
-                ).then(pl.lit(FileAction.REFORMAT.label))
-                .when(
+                    (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Upscale"))
                 ).then(pl.lit(FileAction.UPSCALE.label))
+                .when(
+                    (pl.col("Transcode Action") != "Ignore") &
+                    (pl.col("File Validity").str.starts_with("Reformat"))
+                ).then(pl.lit(FileAction.REFORMAT.label))
+                .when(
+                    (pl.col("Transcode Action") != "Ignore") &
+                    (pl.col("File Validity").str.starts_with("Transcode"))
+                ).then(pl.lit(FileAction.TRANSCODE.label))
+                .when(
+                    (pl.col("Transcode Action") != "Ignore") &
+                    (pl.col("File Validity").str.starts_with("Downscale"))
+                ).then(pl.lit(FileAction.DOWNSCALE.label))
                 .otherwise(pl.lit(FileAction.NOTHING.label))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
             metadata_merged_pl.filter(
+                (pl.col("File Action") == FileAction.RENAME.label) |
+                (pl.col("File Action") == FileAction.CHECK.label) |
+                (pl.col("File Action") == FileAction.UPSCALE.label)
+            ).sort("File Name", descending=True).with_columns(
+                pl.col("File Validity").cum_count().cast(pl.Float32).alias("Action Index Sort")
+            ),
+            metadata_merged_pl.filter(
+                (pl.col("File Action") == FileAction.REFORMAT.label) |
                 (pl.col("File Action") == FileAction.TRANSCODE.label) |
-                (pl.col("File Action") == FileAction.DOWNSCALE.label) |
-                (pl.col("File Action") == FileAction.REFORMAT.label)
+                (pl.col("File Action") == FileAction.DOWNSCALE.label)
             ).with_columns(
                 pl.col("File Size (GB)").cast(pl.Float32).alias("Action Index Sort")
             ),
             metadata_merged_pl.filter(
+                (pl.col("File Action") != FileAction.RENAME.label) &
+                (pl.col("File Action") != FileAction.CHECK.label) &
+                (pl.col("File Action") != FileAction.UPSCALE.label) &
+                (pl.col("File Action") != FileAction.REFORMAT.label) &
                 (pl.col("File Action") != FileAction.TRANSCODE.label) &
-                (pl.col("File Action") != FileAction.DOWNSCALE.label) &
-                (pl.col("File Action") != FileAction.REFORMAT.label)
+                (pl.col("File Action") != FileAction.DOWNSCALE.label)
             ).sort("File Name", descending=True).with_columns(
                 pl.col("File Name").cum_count().cast(pl.Float32).alias("Action Index Sort")
             )
