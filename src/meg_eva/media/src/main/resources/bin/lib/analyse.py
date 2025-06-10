@@ -1213,16 +1213,26 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
             metadata_merged_pl.filter(
+                (pl.col("File Action") == FileAction.RENAME.label) |
+                (pl.col("File Action") == FileAction.CHECK.label) |
+                (pl.col("File Action") == FileAction.UPSCALE.label)
+            ).sort("File Name", descending=True).with_columns(
+                pl.col("File Validity").cum_count().cast(pl.Float32).alias("Action Index Sort")
+            ),
+            metadata_merged_pl.filter(
+                (pl.col("File Action") == FileAction.REFORMAT.label) |
                 (pl.col("File Action") == FileAction.TRANSCODE.label) |
-                (pl.col("File Action") == FileAction.DOWNSCALE.label) |
-                (pl.col("File Action") == FileAction.REFORMAT.label)
+                (pl.col("File Action") == FileAction.DOWNSCALE.label)
             ).with_columns(
                 pl.col("File Size (GB)").cast(pl.Float32).alias("Action Index Sort")
             ),
             metadata_merged_pl.filter(
+                (pl.col("File Action") != FileAction.RENAME.label) &
+                (pl.col("File Action") != FileAction.CHECK.label) &
+                (pl.col("File Action") != FileAction.UPSCALE.label) &
+                (pl.col("File Action") != FileAction.REFORMAT.label) &
                 (pl.col("File Action") != FileAction.TRANSCODE.label) &
-                (pl.col("File Action") != FileAction.DOWNSCALE.label) &
-                (pl.col("File Action") != FileAction.REFORMAT.label)
+                (pl.col("File Action") != FileAction.DOWNSCALE.label)
             ).sort("File Name", descending=True).with_columns(
                 pl.col("File Name").cum_count().cast(pl.Float32).alias("Action Index Sort")
             )
