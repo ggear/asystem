@@ -1179,7 +1179,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 .when(
                     (pl.col("File Size") == "Large")
                 ).then(pl.lit("Downscale High Size"))
-                .otherwise(pl.lit("Valid"))
+                .otherwise(pl.lit("Valid Consistent State"))
             ).alias("File Validity"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
@@ -1994,7 +1994,7 @@ echo "+-------------------------------------------------------------------------
             _print_df(
                 metadata_merged_pl \
                     .filter((pl.col("Metadata Loaded") == "True"))
-                    .select(metadata_merged_pl.columns[:9] + ["File Directory"])
+                    .select(metadata_merged_pl.columns[:10] + ["File Directory"])
                     .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                     .fill_null("")
             )
