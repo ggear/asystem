@@ -1175,7 +1175,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 .when(
                     (pl.col("File Size") == "Large")
                 ).then(pl.lit("Downscale High Size"))
-                .otherwise(pl.lit("Valid"))
+                .otherwise(pl.lit("Valid Consistent State"))
             ).alias("File Validity"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
             (
@@ -1207,10 +1207,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit(FileAction.DOWNSCALE.label))
                 .otherwise(pl.lit(FileAction.NOTHING.label))
             ).alias("File Action"))
-
-
-
-
         metadata_merged_pl = pl.concat([
             metadata_merged_pl.filter(
                 (pl.col("File Action") == FileAction.RENAME.label) |
@@ -1248,12 +1244,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             (pl.col("Action Index Base") + pl.col("Action Index Count"))
             .alias("Action Index")
         ).drop(["Action Index Sort", "Action Index Base", "Action Index Count"]).sort("Action Index")
-
-
-
-
-
-
     if verbose:
         print("done", flush=True)
     if metadata_merged_pl.height > 0:
@@ -2000,7 +1990,7 @@ echo "+-------------------------------------------------------------------------
             _print_df(
                 metadata_merged_pl \
                     .filter((pl.col("Metadata Loaded") == "True"))
-                    .select(metadata_merged_pl.columns[:9] + ["File Directory"])
+                    .select(metadata_merged_pl.columns[:10] + ["File Directory"])
                     .with_columns(pl.col("File Directory").str.strip_chars().name.keep())
                     .fill_null("")
             )
