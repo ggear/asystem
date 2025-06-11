@@ -14,7 +14,7 @@ elif [ -n "${SHARE_DIR}" ]; then
   "${SHARE_DIR}/${SCRIPT_FILE}"
 else
   for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do
-    [[ ! -f "${_SHARE_DIR}/${SCRIPT_FILE}" ]] && asystem-media-analyse
+    [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && asystem-media-"${SCRIPT_NAME%.sh}"
     "${_SHARE_DIR}/${SCRIPT_FILE}"
   done
 fi
