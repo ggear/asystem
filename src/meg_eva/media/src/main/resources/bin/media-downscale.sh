@@ -9,11 +9,11 @@ SCRIPT_FILE="tmp/scripts/media/${SCRIPT_NAME}"
 if [ -n "${SHARE_DIR_MEDIA}" ]; then
   find . -name ${SCRIPT_NAME} -exec "{}" \; | grep -v "No such file or directory"
 elif [ -n "${SHARE_DIR}" ]; then
-  [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && asystem-media-"${SCRIPT_NAME%.sh}"
+  [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && asystem-media-analyse
   "${SHARE_DIR}/${SCRIPT_FILE}"
 else
   for _SHARE_DIR in ${SHARE_DIRS_LOCAL}; do
-    [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && asystem-media-"${SCRIPT_NAME%.sh}"
+    [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && asystem-media-analyse
     "${_SHARE_DIR}/${SCRIPT_FILE}"
   done
 fi

@@ -1953,20 +1953,26 @@ echo "+-------------------------------------------------------------------------
                 "analyse": (
                         script_source_header.format("analyse.sh"),
                         script_source_exec_remote, script_source_exec_summarise),
-                "downscale": (
-                        script_source_header.format("downscale.sh"),
-                        script_source_exec_local),
-                "reformat": (
-                        script_source_header.format("reformat.sh"),
+                "rename": (
+                        script_source_header.format("rename.sh"),
+                        script_source_exec_remote),
+                "check": (
+                        script_source_header.format("check.sh"),
                         script_source_exec_remote),
                 "merge": (
                         script_source_header.format("merge.sh"),
                         script_source_exec_remote),
-                "rename": (
-                        script_source_header.format("rename.sh"),
+                "upscale": (
+                        script_source_header.format("upscale.sh"),
+                        script_source_exec_remote),
+                "reformat": (
+                        script_source_header.format("reformat.sh"),
                         script_source_exec_remote),
                 "transcode": (
                         script_source_header.format("transcode.sh"),
+                        script_source_exec_local),
+                "downscale": (
+                        script_source_header.format("downscale.sh"),
                         script_source_exec_local),
             }.items():
                 script_path = _localise_path(os.path.join(os.path.dirname(file_path_scripts),
