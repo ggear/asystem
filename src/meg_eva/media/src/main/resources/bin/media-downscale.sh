@@ -17,4 +17,3 @@ else
     "${_SHARE_DIR}/${SCRIPT_FILE}"
   done
 fi
-echo "" && asystem-media-refresh && asystem-media-analyse
