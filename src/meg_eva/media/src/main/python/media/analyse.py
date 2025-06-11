@@ -288,13 +288,15 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                                                .format(file_name_rename), _context=file_path)
 
             # noinspection PyArgumentList
-            def _set_default_str(_file_defaults_dict, _file_defaults_key, _bounding_set=None, _formatter=str.title):
+            def _set_default_str(_file_defaults_dict, _file_defaults_key,
+                                 _bounding_set=None, _formatter=str.title):
                 _file_defaults_dict[_file_defaults_key] = _formatter(
                     _file_defaults_dict[_file_defaults_key].replace(" ", "") \
                         if isinstance(_file_defaults_dict[_file_defaults_key], str) else str(
                         _file_defaults_dict[_file_defaults_key]))
                 if _bounding_set is not None and _file_defaults_dict[_file_defaults_key] not in _bounding_set:
-                    raise Exception("Invalid {}: {}".format(_file_defaults_key, file_defaults_dict[_file_defaults_key]))
+                    raise Exception("Invalid {}: {}" \
+                                    .format(_file_defaults_key, file_defaults_dict[_file_defaults_key]))
 
             def _set_default_numeric(_file_defaults_dict, _file_defaults_key, _bounding_lower=None,
                                      _bounding_upper=None):
@@ -579,7 +581,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         if file_stream_video_bitrate > (
                                 BITRATE_SIZE_UPPER_SCALE * file_stream_video_bitrate_target):
                             file_stream_video["bitrate_target_size"] = "Large"
-                        elif file_stream_video_bitrate < (BITRATE_SIZE_LOWER_SCALE * file_stream_video_bitrate_target):
+                        elif file_stream_video_bitrate < \
+                                (BITRATE_SIZE_LOWER_SCALE * file_stream_video_bitrate_target):
                             file_stream_video["bitrate_target_size"] = "Small"
                         else:
                             file_stream_video["bitrate_target_size"] = "Right"
@@ -598,14 +601,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_probe_streams_filtered_audio["lang"] == file_target_lang:
                         file_probe_streams_filtered_audios.append(file_probe_streams_filtered_audio)
                     else:
-                        file_probe_streams_filtered_audios_supplementary.append(file_probe_streams_filtered_audio)
+                        file_probe_streams_filtered_audios_supplementary \
+                            .append(file_probe_streams_filtered_audio)
                 if len(file_probe_streams_filtered_audios) == 0:
                     file_probe_streams_filtered_audios_supplementary = []
                     for file_probe_streams_filtered_audio in file_probe_streams_filtered["audio"]:
                         if file_probe_streams_filtered_audio["lang"] == file_target_lang:
                             file_probe_streams_filtered_audios.append(file_probe_streams_filtered_audio)
                         else:
-                            file_probe_streams_filtered_audios_supplementary.append(file_probe_streams_filtered_audio)
+                            file_probe_streams_filtered_audios_supplementary \
+                                .append(file_probe_streams_filtered_audio)
 
                 def _audio_sort(_stream):
                     return _stream["channels"].zfill(2) + ("Z" if _stream["surround"] == "Atmos" else "A")
@@ -628,7 +633,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_probe_streams_filtered_subtitle["lang"] == "eng":
                         file_probe_streams_filtered_subtitles.append(file_probe_streams_filtered_subtitle)
                     else:
-                        file_probe_streams_filtered_subtitles_supplementary.append(file_probe_streams_filtered_subtitle)
+                        file_probe_streams_filtered_subtitles_supplementary \
+                            .append(file_probe_streams_filtered_subtitle)
                 file_probe_streams_filtered_subtitles.sort(key=lambda _stream: _stream["index"], reverse=True)
                 file_probe_streams_filtered_subtitles_supplementary.sort(
                     key=lambda _stream: _stream["index"], reverse=True)
@@ -727,7 +733,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         if "_" in column else column)
 
     if verbose:
-        print("{}/*/._metadata_* -> #local-dataframe ... ".format(file_path_root_target_relative), end='', flush=True)
+        print("{}/*/._metadata_* -> #local-dataframe ... " \
+              .format(file_path_root_target_relative), end='', flush=True)
     metadata_enriched_list = []
     metadata_enriched_schema = {}
     for metadata in metadata_list:
@@ -758,7 +765,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
         metadata_local_pl = pl.DataFrame()
     metadata_local_media_dirs = []
     if metadata_local_pl.width > 0:
-        metadata_local_media_dirs = [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
+        metadata_local_media_dirs = \
+            [_dir[0] for _dir in metadata_local_pl.select("Media Directory").unique().rows()]
     if verbose:
         print("#local-dataframe partition {} ... done".format(metadata_local_media_dirs), flush=True)
     if file_path_root_is_nested:
@@ -768,7 +776,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             print("#local-dataframe + {} -> #merged-dataframe ... ".format(sheet_url), end='', flush=True)
         metadata_spread_data: Spread = Spread(sheet_url, sheet="Data")
         # noinspection PyProtectedMember
-        metadata_sheet_list = metadata_spread_data._fix_merge_values(metadata_spread_data.sheet.get_all_values())
+        metadata_sheet_list = metadata_spread_data \
+            ._fix_merge_values(metadata_spread_data.sheet.get_all_values())
         if len(metadata_sheet_list) > 0:
             metadata_sheet_pl = _format_columns(pl.DataFrame(
                 data=metadata_sheet_list[1:],
@@ -834,28 +843,48 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             metadata_merged_pl = metadata_merged_pl.with_columns(
                 (
                     pl.when(
-                        (pl.col("File Name").is_null()) | (pl.col("File Name") == "") |
-                        (pl.col("File Directory").is_null()) | (pl.col("File Directory") == "") |
-                        (pl.col("File Stem").is_null()) | (pl.col("File Stem") == "") |
-                        (pl.col("File Extension").is_null()) | (pl.col("File Extension") == "") |
-                        (pl.col("Media Scope").is_null()) | (pl.col("Media Scope") == "") |
-                        (pl.col("Media Type").is_null()) | (pl.col("Media Type") == "") |
-                        (pl.col("Media Directory").is_null()) | (pl.col("Media Directory") == "") |
-                        (pl.col("Base Directory").is_null()) | (pl.col("Base Directory") == ".") |
-                        (pl.col("Container Format").is_null()) | (pl.col("Container Format") == "") |
-                        (pl.col("Duration (hours)").is_null()) | (pl.col("Duration (hours)") == "") |
-                        (pl.col("File Size (GB)").is_null()) | (pl.col("File Size (GB)") == "") |
-                        (pl.col("Bitrate (Kbps)").is_null()) | (pl.col("Bitrate (Kbps)") == "") |
-                        (pl.col("Transcode Action").is_null()) | (pl.col("Transcode Action") == "") |
-                        (pl.col("Target Quality").is_null()) | (pl.col("Target Quality") == "") |
-                        (pl.col("Target Channels").is_null()) | (pl.col("Target Channels") == "") |
-                        (pl.col("Target Lang").is_null()) | (pl.col("Target Lang") == "") |
-                        (pl.col("Native Lang").is_null()) | (pl.col("Native Lang") == "") |
-                        (pl.col("Stream Count").is_null()) | (pl.col("Stream Count") == "") |
-                        (pl.col("Video Count").is_null()) | (pl.col("Video Count") == "") |
-                        (pl.col("Video 1 Bitrate Estimate (Kbps)").is_null()) | (
-                                pl.col("Video 1 Bitrate Estimate (Kbps)") == "") |
-                        (pl.col("Audio Count").is_null()) | (pl.col("Audio Count") == "")
+                        (pl.col("File Name").is_null()) |
+                        (pl.col("File Name") == "") |
+                        (pl.col("File Directory").is_null()) |
+                        (pl.col("File Directory") == "") |
+                        (pl.col("File Stem").is_null()) |
+                        (pl.col("File Stem") == "") |
+                        (pl.col("File Extension").is_null()) |
+                        (pl.col("File Extension") == "") |
+                        (pl.col("Media Scope").is_null()) |
+                        (pl.col("Media Scope") == "") |
+                        (pl.col("Media Type").is_null()) |
+                        (pl.col("Media Type") == "") |
+                        (pl.col("Media Directory").is_null()) |
+                        (pl.col("Media Directory") == "") |
+                        (pl.col("Base Directory").is_null()) |
+                        (pl.col("Base Directory") == ".") |
+                        (pl.col("Container Format").is_null()) |
+                        (pl.col("Container Format") == "") |
+                        (pl.col("Duration (hours)").is_null()) |
+                        (pl.col("Duration (hours)") == "") |
+                        (pl.col("File Size (GB)").is_null()) |
+                        (pl.col("File Size (GB)") == "") |
+                        (pl.col("Bitrate (Kbps)").is_null()) |
+                        (pl.col("Bitrate (Kbps)") == "") |
+                        (pl.col("Transcode Action").is_null()) |
+                        (pl.col("Transcode Action") == "") |
+                        (pl.col("Target Quality").is_null()) |
+                        (pl.col("Target Quality") == "") |
+                        (pl.col("Target Channels").is_null()) |
+                        (pl.col("Target Channels") == "") |
+                        (pl.col("Target Lang").is_null()) |
+                        (pl.col("Target Lang") == "") |
+                        (pl.col("Native Lang").is_null()) |
+                        (pl.col("Native Lang") == "") |
+                        (pl.col("Stream Count").is_null()) |
+                        (pl.col("Stream Count") == "") |
+                        (pl.col("Video Count").is_null()) |
+                        (pl.col("Video Count") == "") |
+                        (pl.col("Video 1 Bitrate Estimate (Kbps)").is_null()) |
+                        (pl.col("Video 1 Bitrate Estimate (Kbps)") == "") |
+                        (pl.col("Audio Count").is_null()) |
+                        (pl.col("Audio Count") == "")
                     ).then(pl.lit("Corrupt"))
                 ).alias("File State"))
         except ColumnNotFoundError:
@@ -1939,8 +1968,8 @@ echo "+-------------------------------------------------------------------------
                         script_source_header.format("transcode.sh"),
                         script_source_exec_local),
             }.items():
-                script_path = _localise_path(
-                    os.path.join(os.path.dirname(file_path_scripts), "{}.sh".format(script_name)), file_path_root)
+                script_path = _localise_path(os.path.join(os.path.dirname(file_path_scripts),
+                                                          "{}.sh".format(script_name)), file_path_root)
                 if verbose:
                     print("#enriched-dataframe -> {} ... ".format(script_path), end='', flush=True)
                 with open(script_path, 'w') as script_file:
@@ -1963,9 +1992,12 @@ echo "+-------------------------------------------------------------------------
             if not (column.null_count() == metadata_merged_pl.height)
         ])
     metadata_summary_pl = pl.concat([
-        metadata_merged_pl.group_by(["File Action"]).agg(pl.col("File Name").count().alias("File Count")),
-        metadata_merged_pl.group_by(["Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
-        metadata_merged_pl.group_by(["File Action", "Media Type"]).agg(pl.col("File Name").count().alias("File Count")),
+        metadata_merged_pl.group_by(["File Action"]) \
+            .agg(pl.col("File Name").count().alias("File Count")),
+        metadata_merged_pl.group_by(["Media Type"]) \
+            .agg(pl.col("File Name").count().alias("File Count")),
+        metadata_merged_pl.group_by(["File Action", "Media Type"]) \
+            .agg(pl.col("File Name").count().alias("File Count")),
     ], how="diagonal_relaxed")
     metadata_summary_pl = pl.concat([
         metadata_summary_pl,
@@ -2021,7 +2053,8 @@ echo "+-------------------------------------------------------------------------
             ~pl.col("File Action").is_null() &
             pl.col("Media Type").is_null()
     ).select("File Action", "File Count").to_dicts():
-        metadata_summary_categories[metadata_summary_category["File Action"]] = metadata_summary_category["File Count"]
+        metadata_summary_categories[metadata_summary_category["File Action"]] = \
+            metadata_summary_category["File Count"]
     return files_analysed, metadata_summary_categories
 
 
@@ -2050,7 +2083,10 @@ def _normalise_name(_name):
         _name = _name.replace(name_token.lower(), name_token.upper())
     if name_episode_match is not None:
         _name = _name.replace("@@", "S{}E{}{}".format(
-            name_episode_match.groups()[1], name_episode_match.groups()[4], name_episode_match.groups()[5]))
+            name_episode_match.groups()[1],
+            name_episode_match.groups()[4],
+            name_episode_match.groups()[5]
+        ))
     return _name
 
 
