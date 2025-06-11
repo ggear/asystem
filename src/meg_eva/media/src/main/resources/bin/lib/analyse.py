@@ -1653,6 +1653,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  echo '' && echo 'Warning: Metadata file not found'&& exit 4\n"),
                     pl.lit("fi\n"),
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
+                    pl.lit("echo 'Transcoding with reason ["), pl.col("File Validity"), pl.lit("]'\n"),
                     pl.lit("echo 'Transcoding with quality ["), pl.col("Target Quality"), pl.lit("]'\n"),
                     pl.lit("echo 'Transcoding with codec [HVEC] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                            "select(.codec) | .codec' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"']'\n"),
