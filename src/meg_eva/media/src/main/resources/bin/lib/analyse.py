@@ -1887,15 +1887,15 @@ declare -A MERGE_DIRS_SET
 LOG=$(echo "${LOG}" | grep -E "1. Rename|2. Delete|3. Check|4. Merge" | grep "/share")
 readarray -t LOG_LINES <<<"${LOG}"
 for LOG_LINE in "${LOG_LINES[@]}"; do
-  RENAME_DIR=$(grep "1. Rename"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
+  RENAME_DIR=$(grep "1. Rename"  <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
   if [ -n "${RENAME_DIR}" ]; then
     RENAME_DIRS_SET["${RENAME_DIR}"]=1
   fi
-  CHECK_DIR=$(grep "3. Check"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
+  CHECK_DIR=$(grep "3. Check"  <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
   if [ -n "${CHECK_DIR}" ]; then
     CHECK_DIRS_SET["${CHECK_DIR}"]=1
   fi
-  MERGE_DIR=$(grep "4. Merge"  <<< "$LOG_LINE" | cut -d'|' -f11 | xargs | sed -e "s/^\\/share//")
+  MERGE_DIR=$(grep "4. Merge"  <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
   if [ -n "${MERGE_DIR}" ]; then
     MERGE_DIRS_SET["${MERGE_DIR}"]=1
   fi
