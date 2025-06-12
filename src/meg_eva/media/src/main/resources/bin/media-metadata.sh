@@ -11,9 +11,8 @@ if [ -n "${SHARE_DIR_MEDIA}" ]; then
   fi
 fi
 if [ -n "${DEFAULTS_FILE}" ]; then
-  if [ ! -f "${DEFAULTS_FILE}" ] || [ $(grep "Generated defaults" "${DEFAULTS_FILE}" | wc -l) -eq 0 ]; then
-    cat >>"${DEFAULTS_FILE}" <<EOF
-# Generated defaults V1
+  if [ ! -f "${DEFAULTS_FILE}" ]; then
+    cat >"${DEFAULTS_FILE}" <<EOF
 #- transcode_action: Ignore
 #- target_quality: 6
 #- target_channels: 2
@@ -22,7 +21,8 @@ if [ -n "${DEFAULTS_FILE}" ]; then
 EOF
   fi
   echo "" && echo "Metadata file:" && cat ._metadata_*.yaml
-  echo "" && echo "Defaults file: vi ${DEFAULTS_FILE}"
+  echo "" && echo "Defaults file:" && cat "${DEFAULTS_FILE}"
+  echo "" && echo "vi ${DEFAULTS_FILE}"
   echo ""
 else
   echo "Not in media file root directory, not doing anything!"
