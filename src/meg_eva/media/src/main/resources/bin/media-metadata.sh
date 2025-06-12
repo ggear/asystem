@@ -6,7 +6,9 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 DEFAULTS_FILE=""
 if [ -n "${SHARE_DIR_MEDIA}" ]; then
-  if [ "$(basename "$(dirname "$(pwd)")")" == "movies" ] || [ "$(basename "$(dirname "$(dirname "$(pwd)")")")" == "series" ]; then
+  if [ "$(basename "$(dirname "$(pwd)")")" == "movies" ] ||
+    [ "$(basename "$(dirname "$(pwd)")")" == "series" ] ||
+    [ "$(basename "$(dirname "$(dirname "$(pwd)")")")" == "series" ]; then
     DEFAULTS_FILE="._defaults.yaml"
   fi
 fi
@@ -20,10 +22,12 @@ if [ -n "${DEFAULTS_FILE}" ]; then
 #- native_lang: eng
 EOF
   fi
-  echo "" && echo "Metadata file:" && cat ._metadata_*.yaml
+  if [ $(find . -name "._metadata_*.yaml" -type f | wc -l) -le 11 ]; then
+    find . -name "._metadata_*.yaml" -type f -exec echo "" \; -exec echo "Metadata file:" \; -exec cat {} \;
+  fi
   echo "" && echo "Defaults file:" && cat "${DEFAULTS_FILE}"
-  echo "" && echo "vi ${DEFAULTS_FILE}"
+  echo "" && echo "Defaults edit:" && echo "vi ${DEFAULTS_FILE}"
   echo ""
 else
-  echo "Not in media file root directory, not doing anything!"
+  echo "" && echo "Error: Not in media file root directory, not doing anything!" && echo ""
 fi
