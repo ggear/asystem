@@ -1224,16 +1224,16 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit(FileAction.UPSCALE.label))
                 .when(
                     (pl.col("Transcode Action") != "Ignore") &
-                    (pl.col("File Validity").str.starts_with("Reformat"))
-                ).then(pl.lit(FileAction.REFORMAT.label))
-                .when(
-                    (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Transcode"))
                 ).then(pl.lit(FileAction.TRANSCODE.label))
                 .when(
                     (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Downscale"))
                 ).then(pl.lit(FileAction.DOWNSCALE.label))
+                .when(
+                    (pl.col("Transcode Action") != "Ignore") &
+                    (pl.col("File Validity").str.starts_with("Reformat"))
+                ).then(pl.lit(FileAction.REFORMAT.label))
                 .otherwise(pl.lit(FileAction.NOTHING.label))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
@@ -1913,25 +1913,27 @@ done
 IFS=$'\\n' MERGE_DIRS=($(sort <<<"${MERGE_DIRS[*]}"))
 unset IFS
 echo "done"
-echo "+----------------------------------------------------------------------------------------------------------------------------+"
-echo "Renames to run in directory ... "
-echo "+----------------------------------------------------------------------------------------------------------------------------+"
-for RENAME_DIR in "${RENAME_DIRS[@]}"; do
-   echo "cd ${RENAME_DIR}"
-done
-echo "+----------------------------------------------------------------------------------------------------------------------------+"
-echo "Checks to run in directory ... "
-echo "+----------------------------------------------------------------------------------------------------------------------------+"
-for CHECK_DIR in "${CHECK_DIRS[@]}"; do
-   echo "cd ${CHECK_DIR}"
-done
-echo "+----------------------------------------------------------------------------------------------------------------------------+"
-echo "Merges to run in directory ... "
-echo "+----------------------------------------------------------------------------------------------------------------------------+"
-for MERGE_DIR in "${MERGE_DIRS[@]}"; do
-   echo "cd ${MERGE_DIR}"
-done
-echo "+----------------------------------------------------------------------------------------------------------------------------+"
+if [ "${#RENAME_DIRS[@]}" -gt 0 ] || [ "${#CHECK_DIRS[@]}" -gt 0 ] || [ "${#MERGE_DIRS[@]}" -gt 0 ]; then
+    echo "+----------------------------------------------------------------------------------------------------------------------------+"
+    echo "Renames to run in directory ... "
+    echo "+----------------------------------------------------------------------------------------------------------------------------+"
+    for RENAME_DIR in "${RENAME_DIRS[@]}"; do
+       echo "cd ${RENAME_DIR}"
+    done
+    echo "+----------------------------------------------------------------------------------------------------------------------------+"
+    echo "Checks to run in directory ... "
+    echo "+----------------------------------------------------------------------------------------------------------------------------+"
+    for CHECK_DIR in "${CHECK_DIRS[@]}"; do
+       echo "cd ${CHECK_DIR}"
+    done
+    echo "+----------------------------------------------------------------------------------------------------------------------------+"
+    echo "Merges to run in directory ... "
+    echo "+----------------------------------------------------------------------------------------------------------------------------+"
+    for MERGE_DIR in "${MERGE_DIRS[@]}"; do
+       echo "cd ${MERGE_DIR}"
+    done
+    echo "+----------------------------------------------------------------------------------------------------------------------------+"
+fi
         """
         if not file_path_media_is_nested:
             for script_name, script_source in {
