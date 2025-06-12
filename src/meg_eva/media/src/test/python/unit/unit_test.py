@@ -79,12 +79,11 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_ignore(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "35/media"),
+        self._test_analyse_assert(join(dir_test, "54/media"),
                                   files_action_expected=actions(
-                                      rename=2,
                                       check=1,
-                                      merge=1,
-                                      nothing=2
+                                      downscale=1,
+                                      nothing=4
                                   ), scripts={})
 
     def test_analyse_rename(self):
