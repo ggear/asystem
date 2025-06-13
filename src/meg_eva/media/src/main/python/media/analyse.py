@@ -1110,14 +1110,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Target Quality") == "9") &
                     (pl.col("Audio 1 Bitrate (Kbps)") != "") &
-                    (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640000)
+                    (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640)
                 ).then(pl.lit("Check Low Audio Bitrate"))
-                .when(
-                    (pl.col("File Version") == "Transcoded") &
-                    (pl.col("Target Quality") == "9") &
-                    (pl.col("Audio 1 Bitrate (Kbps)") != "") &
-                    (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640000)
-                ).then(pl.lit("Upscale Low Audio Bitrate"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Version Directory") == ".") &
