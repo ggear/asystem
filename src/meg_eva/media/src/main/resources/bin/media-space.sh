@@ -11,4 +11,4 @@ elif [ -n "${SHARE_DIR}" ]; then
   SHARE_DIRS_SPACE="${SHARE_DIR}"
 fi
 echo "Space summary ... "
-duf -style ascii -output  mountpoint,size,used,avail,usage ${SHARE_DIRS_SPACE}
+duf -width 250 -style ascii -output  mountpoint,size,used,avail,usage ${SHARE_DIRS_SPACE}
