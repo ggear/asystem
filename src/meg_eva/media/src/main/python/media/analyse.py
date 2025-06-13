@@ -1114,8 +1114,21 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit("Check Low Audio Bitrate"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
-                    (pl.col("Video 1 Colour Range") == "HDR")
-                ).then(pl.lit("Check HDR Colouring"))
+                    (pl.col("Target Quality") == "9") &
+                    (pl.col("Audio 1 Bitrate (Kbps)") != "") &
+                    (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640000)
+                ).then(pl.lit("Upscale Low Audio Bitrate"))
+                .when(
+                    (pl.col("File Version") == "Transcoded") &
+                    (pl.col("Version Directory") == ".") &
+                    (~pl.col("File Stem").is_null()) & (pl.col("File Stem") != "") &
+                    (~pl.col("Duration (hours)").is_null()) & (pl.col("Duration (hours)") != "") &
+                    (pl.col("File Stem").is_duplicated()) &
+                    (~pl.struct(
+                        pl.col("File Stem"),
+                        (pl.col("Duration (hours)").cast(pl.Float32) * 60 * 6).round(0),
+                    ).is_duplicated())
+                ).then(pl.lit("Check Suspect Duration"))
                 .when(
                     ((pl.col("File Version") == "Original") | (pl.col("File Version") == "Merged")) &
                     (~pl.col("File Stem").str.contains(".", literal=True)) &
@@ -1130,15 +1143,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit("Check Duplicate"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
-                    (pl.col("Version Directory") == ".") &
-                    (~pl.col("File Stem").is_null()) & (pl.col("File Stem") != "") &
-                    (~pl.col("Duration (hours)").is_null()) & (pl.col("Duration (hours)") != "") &
-                    (pl.col("File Stem").is_duplicated()) &
-                    (~pl.struct(
-                        pl.col("File Stem"),
-                        (pl.col("Duration (hours)").cast(pl.Float32) * 60 * 6).round(0),
-                    ).is_duplicated())
-                ).then(pl.lit("Check Suspect Duration"))
+                    (pl.col("Video 1 Colour Range") == "HDR")
+                ).then(pl.lit("Check HDR Colouring"))
                 #
                 # Reformat
                 #
@@ -1193,11 +1199,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 .when(
                     (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
                 ).then(pl.lit("Upscale Missing Audio Channels"))
-                .when(
-                    (pl.col("Target Quality") == "9") &
-                    (pl.col("Audio 1 Bitrate (Kbps)") != "") &
-                    (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640000)
-                ).then(pl.lit("Upscale Low Audio Bitrate"))
                 .otherwise(pl.lit("Valid Consistent State"))
             ).alias("File Validity"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
