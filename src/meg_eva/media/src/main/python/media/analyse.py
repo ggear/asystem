@@ -1100,20 +1100,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit("Check Low Video Bitrate"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
-                    (pl.col("Video 1 Resolution Target Size") == "Large")
-                ).then(pl.lit("Check High Resolution"))
-                .when(
-                    (pl.col("File Version") == "Transcoded") &
-                    (pl.col("Video 1 Bitrate Target Size") == "Large")
-                ).then(pl.lit("Check High Bitrate"))
-                .when(
-                    (pl.col("File Version") == "Transcoded") &
                     (pl.col("File Size") == "Small")
                 ).then(pl.lit("Check Small Size"))
-                .when(
-                    (pl.col("File Version") == "Transcoded") &
-                    (pl.col("File Size") == "Large")
-                ).then(pl.lit("Check Large Size"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
@@ -1218,7 +1206,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File Validity").str.starts_with("Rename"))
                 ).then(pl.lit(FileAction.RENAME.label))
                 .when(
-                    (pl.col("Transcode Action") != "Ignore") &
+                    (not force) &
                     (pl.col("File Validity").str.starts_with("Check"))
                 ).then(pl.lit(FileAction.CHECK.label))
                 .when(
