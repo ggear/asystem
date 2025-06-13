@@ -1152,31 +1152,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     ).is_duplicated())
                 ).then(pl.lit("Check Suspect Duration"))
                 #
-                # Upscale
-                #
-                .when(
-                    (pl.col("Video 1 Resolution Target Size") == "Small")
-                ).then(pl.lit("Upscale Low Video Resolution"))
-                .when(
-                    (pl.col("Video 1 Bitrate Target Size") == "Small")
-                ).then(pl.lit("Upscale Low Video Bitrate"))
-                .when(
-                    (pl.col("File Size") == "Small")
-                ).then(pl.lit("Upscale Small Size"))
-                .when(
-                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
-                ).then(pl.lit("Upscale Missing Audio Channels"))
-                .when(
-                    (pl.col("Target Quality") == "9") &
-                    (pl.col("Audio 1 Bitrate (Kbps)") != "") &
-                    (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640000)
-                ).then(pl.lit("Upscale Low Audio Bitrate"))
-                #
                 # Reformat
                 #
                 .when(
-                    (pl.col("Metadata State") == "Messy")
-                ).then(pl.lit("Reformat Messy Metadata"))
+                    (pl.col("Video Count").cast(pl.Int32) > 1)
+                ).then(pl.lit("Reformat Multiple Video Streams"))
                 #
                 # Transcode
                 #
@@ -1204,6 +1184,32 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 .when(
                     (pl.col("File Size") == "Large")
                 ).then(pl.lit("Downscale High Size"))
+                #
+                # Reformat
+                #
+                .when(
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit("Reformat Messy Metadata"))
+                #
+                # Upscale
+                #
+                .when(
+                    (pl.col("Video 1 Resolution Target Size") == "Small")
+                ).then(pl.lit("Upscale Low Video Resolution"))
+                .when(
+                    (pl.col("Video 1 Bitrate Target Size") == "Small")
+                ).then(pl.lit("Upscale Low Video Bitrate"))
+                .when(
+                    (pl.col("File Size") == "Small")
+                ).then(pl.lit("Upscale Small Size"))
+                .when(
+                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
+                ).then(pl.lit("Upscale Missing Audio Channels"))
+                .when(
+                    (pl.col("Target Quality") == "9") &
+                    (pl.col("Audio 1 Bitrate (Kbps)") != "") &
+                    (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) <= 640000)
+                ).then(pl.lit("Upscale Low Audio Bitrate"))
                 .otherwise(pl.lit("Valid Consistent State"))
             ).alias("File Validity"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
@@ -1220,10 +1226,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit(FileAction.MERGE.label))
                 .when(
                     (pl.col("Transcode Action") != "Ignore") &
-                    (pl.col("File Validity").str.starts_with("Upscale"))
-                ).then(pl.lit(FileAction.UPSCALE.label))
-                .when(
-                    (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Transcode"))
                 ).then(pl.lit(FileAction.TRANSCODE.label))
                 .when(
@@ -1234,6 +1236,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Reformat"))
                 ).then(pl.lit(FileAction.REFORMAT.label))
+                .when(
+                    (pl.col("Transcode Action") != "Ignore") &
+                    (pl.col("File Validity").str.starts_with("Upscale"))
+                ).then(pl.lit(FileAction.UPSCALE.label))
                 .otherwise(pl.lit(FileAction.NOTHING.label))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
