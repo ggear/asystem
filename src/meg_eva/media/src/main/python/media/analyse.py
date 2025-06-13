@@ -1892,7 +1892,7 @@ for LOG_LINE in "${LOG_LINES[@]}"; do
   if [ -n "${MERGE_DIR}" ]; then
     MERGE_DIRS_SET["${MERGE_DIR}"]=1
   fi
-  UPSCALE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
+  UPSCALE_DIR=$(grep "4. Upscale"  <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
   if [ -n "${UPSCALE_DIR}" ]; then
     UPSCALE_DIRS_SET["${UPSCALE_DIR}"]=1
   fi
