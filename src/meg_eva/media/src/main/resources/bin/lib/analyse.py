@@ -404,11 +404,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             if "index" in file_probe_stream else ""
                         file_probe_stream_filtered["index_{}".format(file_probe_stream_type)] = ""
                         if file_probe_stream_type == "video":
-
-                            print("")
-                            print(file_probe_stream)
-                            print("")
-
                             file_probe_stream_video_codec = file_probe_stream["codec_name"].upper() \
                                 if "codec_name" in file_probe_stream else ""
                             if "H264" in file_probe_stream_video_codec or "AVC" in file_probe_stream_video_codec:
