@@ -1408,18 +1408,18 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     )
                 ).alias("Transcode Video Bitrate")
             ]
-        # ).with_columns(
-        #     [
-        #         (
-        #             pl.when(
-        #                 (pl.col("Transcode Video Bitrate").cast(pl.Int32) <= pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
-        #             ).then(
-        #                 pl.col("Transcode Video Bitrate")
-        #             ).otherwise(
-        #                 pl.col("Video 1 Bitrate Estimate (Kbps)")
-        #             )
-        #         ).alias("Transcode Video Bitrate")
-        #     ]
+        ).with_columns(
+            [
+                (
+                    pl.when(
+                        (pl.col("Transcode Video Bitrate").cast(pl.Int32) <= pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
+                    ).then(
+                        pl.col("Transcode Video Bitrate")
+                    ).otherwise(
+                        pl.col("Video 1 Bitrate Estimate (Kbps)")
+                    )
+                ).alias("Transcode Video Bitrate")
+            ]
         ).with_columns(
             [
                 (
