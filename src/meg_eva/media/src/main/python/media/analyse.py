@@ -1408,6 +1408,18 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             [
                 (
                     pl.when(
+                        (pl.col("Transcode Video Bitrate").cast(pl.Int32) <= pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
+                    ).then(
+                        pl.col("Transcode Video Bitrate")
+                    ).otherwise(
+                        pl.col("Video 1 Bitrate Estimate (Kbps)")
+                    )
+                ).alias("Transcode Video Bitrate")
+            ]
+        ).with_columns(
+            [
+                (
+                    pl.when(
                         (pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MIN)
                     ).then(
                         pl.lit("720p")
@@ -1473,9 +1485,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             [
                 (
                     pl.when(
-                        (pl.col("Audio 1 Surround") == "Atmos")
+                        (pl.col("Target Quality") == "9") &
+                        (pl.col("Audio 1 Bitrate (Kbps)") != "") &
+                        (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) >= 768)
                     ).then(
-                        pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --eac3")])
+                        pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --surround-bitrate 768 --eac3")])
+                    ).when(
+                        (pl.col("Target Quality") == "9") &
+                        (pl.col("Audio 1 Bitrate (Kbps)") != "") &
+                        (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) >= 640)
+                    ).then(
+                        pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --surround-bitrate 640 --eac3")])
                     ).otherwise(
                         pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --eac3")])
                     )
