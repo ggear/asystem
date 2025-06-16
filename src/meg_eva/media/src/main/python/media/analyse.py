@@ -40,8 +40,8 @@ class FileAction(AutoNumberEnum):
     CHECK = True
     MERGE = True
     UPSCALE = True
-    REFORMAT = True
     TRANSCODE = True
+    REFORMAT = True
     DOWNSCALE = True
     NOTHING = False
 
@@ -1135,10 +1135,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         .str.strip_chars()
                     ).is_duplicated())
                 ).then(pl.lit("Check Duplicate"))
-                .when(
-                    (pl.col("File Version") == "Transcoded") &
-                    (pl.col("Video 1 Colour Range") == "HDR")
-                ).then(pl.lit("Check HDR Colouring"))
+
+                # TODO: Disable, as ffmpeg seems to deal with HDR content well now
+                # .when(
+                #     (pl.col("File Version") == "Transcoded") &
+                #     (pl.col("Video 1 Colour Range") == "HDR")
+                # ).then(pl.lit("Check HDR Colouring"))
+
                 #
                 # Reformat
                 #
@@ -1408,7 +1411,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             [
                 (
                     pl.when(
-                        (pl.col("Transcode Video Bitrate").cast(pl.Int32) <= pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
+                        (pl.col("Transcode Video Bitrate").cast(pl.Int32) <= pl.col(
+                            "Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
                     ).then(
                         pl.col("Transcode Video Bitrate")
                     ).otherwise(
