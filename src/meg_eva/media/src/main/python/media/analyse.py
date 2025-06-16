@@ -552,7 +552,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     if ((file_stream_video_quality <= QUALITY_MIN and file_stream_video_width > 1280) or
                             (file_stream_video_quality <= QUALITY_MID and file_stream_video_width > 1920)):
                         file_stream_video["resolution_target_size"] = "Large"
-                    elif (file_stream_video_quality > 1 and (
+                    elif (file_stream_video_quality > QUALITY_MIN and (
                             (file_stream_video_quality <= QUALITY_MID and file_stream_video_width < 1280) or
                             (file_stream_video_quality >= QUALITY_MAX and file_stream_video_width < 2560))):
                         file_stream_video["resolution_target_size"] = "Small"
