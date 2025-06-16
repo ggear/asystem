@@ -1095,6 +1095,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     )
                 ).then(pl.lit("Check Missing Subtitles"))
                 .when(
+                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
+                ).then(pl.lit("Check Missing Audio Channels"))
+                .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Video 1 Resolution Target Size") == "Small")
                 ).then(pl.lit("Check Low Video Resolution"))
@@ -1106,10 +1109,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("File Size") == "Small")
                 ).then(pl.lit("Check Small Size"))
-                .when(
-                    (pl.col("File Version") == "Transcoded") &
-                    (pl.col("Audio 1 Channels") < pl.col("Target Channels"))
-                ).then(pl.lit("Check Missing Audio Channels"))
                 .when(
                     (pl.col("File Version") == "Transcoded") &
                     (pl.col("Target Quality") == "9") &
