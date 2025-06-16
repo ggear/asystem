@@ -35,12 +35,12 @@ BITRATE_UNSCALED_KBPS = {
 
 class FileAction(AutoNumberEnum):
     _init_ = 'has_script'
-    __order__ = 'RENAME CHECK MERGE UPSCALE REFORMAT TRANSCODE DOWNSCALE NOTHING'
+    __order__ = 'RENAME CHECK MERGE TRANSCODE UPSCALE REFORMAT DOWNSCALE NOTHING'
     RENAME = True
     CHECK = True
     MERGE = True
-    UPSCALE = True
     TRANSCODE = True
+    UPSCALE = True
     REFORMAT = True
     DOWNSCALE = True
     NOTHING = False
