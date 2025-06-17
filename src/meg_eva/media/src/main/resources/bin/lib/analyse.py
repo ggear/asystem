@@ -1486,15 +1486,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             [
                 (
                     pl.when(
-                        (pl.col("Target Quality") == "9") &
-                        (pl.col("Audio 1 Bitrate (Kbps)") != "") &
-                        (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) >= 768)
-                    ).then(
-                        pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --surround-bitrate 768 --eac3")])
-                    ).when(
-                        (pl.col("Target Quality") == "9") &
-                        (pl.col("Audio 1 Bitrate (Kbps)") != "") &
-                        (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) >= 640)
+                        (pl.col("Target Quality") == "9") & (
+                                (pl.col("Audio 1 Codec") == "DTS") | (
+                                (pl.col("Audio 1 Bitrate (Kbps)") != "") &
+                                (pl.col("Audio 1 Bitrate (Kbps)").cast(pl.Int32) >= 640)
+                        ))
                     ).then(
                         pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --surround-bitrate 640 --eac3")])
                     ).otherwise(
