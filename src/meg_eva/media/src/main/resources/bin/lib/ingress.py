@@ -43,8 +43,9 @@ def _process(file_path_root, verbose=False):
                     if file_path_root_source.name not in ["series", "movies", "finished"]:
                         file_path_roots_to_delete.append(file_path_root_source)
                     file_series_search_groups = None
-                    file_series_search = re.search(r"(.*)[sS]([0-9]?[0-9]+)[eE]([0-9]?[0-9]+).*\." +
-                                                   file_type, file_name)
+                    file_series_search = re.search(
+                        r"(.*)[sS]([0-9]?[0-9]+)[eE]([0-9]?[0-9]+)(?:-[eE]*([0-9]?[0-9]+))*.*\." +
+                        file_type, file_name)
                     if file_series_search is None:
                         file_series_search = re.search(r"(.*[^a-zA-Z0-9 ]+)[eE]([0-9]?[0-9]+).*\." +
                                                        file_type, file_name)
@@ -63,17 +64,19 @@ def _process(file_path_root, verbose=False):
                                 .replace('-', ' ').strip().replace(' ', '-')
                         file_dir_new = file_dir_new.replace('-', ' ').strip()
                         file_dir_new = re.sub(r'[^a-zA-Z0-9 ]+', '', file_dir_new).strip().title()
-                        file_name_new = "{} S{}E{}.{}".format(
+                        file_name_new = "{} S{}E{}{}.{}".format(
                             file_dir_new,
                             file_series_search_groups[1],
                             file_series_search_groups[2],
+                            "" if file_series_search_groups[3] is None else \
+                                "-{}".format(file_series_search_groups[3]),
                             file_type
                         )
                         file_path_new = "{}/{}/{}/Season {}/{}".format(
                             file_path_processed,
                             file_category,
                             file_dir_new,
-                            int(file_series_search_groups[1]),
+                            int("%02d" % int(file_series_search_groups[1])),
                             file_name_new
                         )
                     else:
