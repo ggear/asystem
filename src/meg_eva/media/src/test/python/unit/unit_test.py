@@ -316,6 +316,10 @@ class InternetTest(unittest.TestCase):
         dir_test = self._test_prepare_dir("share_tmp_example", 5)
         self._test_ingress(dir_test, 8)
 
+    def test_ingress_comprehensive_6(self):
+        dir_test = self._test_prepare_dir("share_tmp_example", 6)
+        self._test_ingress(dir_test, 5)
+
     def _test_ingress(self, dir_test, files_renamed):
         self.assertEqual(files_renamed, ingress._process(join(dir_test, "1/tmp"), True))
         self.assertEqual(0, ingress._process(join(dir_test, "1/tmp"), True))
