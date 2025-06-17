@@ -10,6 +10,9 @@ asystem-media-rename
 asystem-media-merge
 asystem-media-check
 asystem-media-upscale
+asystem-media-reformat
+asystem-media-transcode
+asystem-media-downscale
 asystem-media-refresh
 asystem-media-analyse
 asystem-media-space
