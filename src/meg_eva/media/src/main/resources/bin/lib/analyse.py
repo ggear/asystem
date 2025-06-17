@@ -1138,13 +1138,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         .str.strip_chars()
                     ).is_duplicated())
                 ).then(pl.lit("Check Duplicate"))
-
-                # TODO: Disable, as ffmpeg seems to deal with HDR content well now
-                # .when(
-                #     (pl.col("File Version") == "Transcoded") &
-                #     (pl.col("Video 1 Colour Range") == "HDR")
-                # ).then(pl.lit("Check HDR Colouring"))
-
                 #
                 # Reformat
                 #
@@ -1208,6 +1201,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit(FileAction.RENAME.label))
                 .when(
                     (not force) &
+                    (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Check"))
                 ).then(pl.lit(FileAction.CHECK.label))
                 .when(
