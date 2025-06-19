@@ -553,7 +553,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             (file_stream_video_quality <= QUALITY_MID and file_stream_video_width > 1920)):
                         file_stream_video["resolution_target_size"] = "Large"
                     elif (file_stream_video_quality > QUALITY_MIN and (
-                            (file_stream_video_quality <= QUALITY_MID and file_stream_video_width < 1280) or
+                            (file_stream_video_quality <= QUALITY_MID and file_stream_video_width < 1600) or
                             (file_stream_video_quality >= QUALITY_MAX and file_stream_video_width < 2560))):
                         file_stream_video["resolution_target_size"] = "Small"
                     else:
@@ -1517,9 +1517,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("NEW_DIR=\""), pl.col("Media Directory"), pl.lit("/\"\\\n"),
                     pl.lit("\""), pl.col("Media Scope"), pl.lit("/"), pl.col("Media Type"), pl.lit("\"\n"),
                     pl.lit("NEW_DIR=\"${ROOT_DIR%%${NEW_DIR}*}${NEW_DIR}\"\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_\"*.yaml\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_\"*.yaml\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}\"/._*/*.sh\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
                     pl.lit("RENAME_DIR=\""), pl.col("Rename Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("RENAME_FILE=\""), pl.col("Rename File").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("if [ \"${RENAME_DIR}\" != \"\" ]; then\n"),
