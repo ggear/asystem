@@ -31,7 +31,7 @@ BITRATE_SIZE_UPPER_SCALE = 1.35  # Margin when assessing large size
 BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 # Reasonable defaults: https://github.com/lisamelton/other_video_transcoding/blob/b063ef953eaaf0c0a36530ff97d8aa4e477973d5/other-transcode.rb#L1064
 BITRATE_UNSCALED_KBPS = {
-    "HD": 3000,  # <=720, <=QUALITY_MIN
+    "HD": 5000,  # <=720, <=QUALITY_MIN
     "FHD": 6000,  # ==1080, <=QUALITY_MID
     "UHD": 12000,  # >=2160, >=QUALITY_MAX
 }
@@ -1521,7 +1521,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("NEW_DIR=\""), pl.col("Media Directory"), pl.lit("/\"\\\n"),
                     pl.lit("\""), pl.col("Media Scope"), pl.lit("/"), pl.col("Media Type"), pl.lit("\"\n"),
                     pl.lit("NEW_DIR=\"${ROOT_DIR%%${NEW_DIR}*}${NEW_DIR}\"\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
+                        pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
                     pl.lit("RENAME_DIR=\""), pl.col("Rename Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),

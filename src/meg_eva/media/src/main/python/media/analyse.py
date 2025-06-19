@@ -27,7 +27,7 @@ BITRATE_SIZE_UPPER_SCALE = 1.35  # Margin when assessing large size
 BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 # Reasonable defaults: https://github.com/lisamelton/other_video_transcoding/blob/b063ef953eaaf0c0a36530ff97d8aa4e477973d5/other-transcode.rb#L1064
 BITRATE_UNSCALED_KBPS = {
-    "HD": 3000,  # <=720, <=QUALITY_MIN
+    "HD": 5000,  # <=720, <=QUALITY_MIN
     "FHD": 6000,  # ==1080, <=QUALITY_MID
     "UHD": 12000,  # >=2160, >=QUALITY_MAX
 }
