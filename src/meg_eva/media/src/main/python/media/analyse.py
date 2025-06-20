@@ -1196,6 +1196,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("File Validity").str.starts_with("Rename"))
                 ).then(pl.lit(FileAction.RENAME.label))
                 .when(
+                    (pl.col("File Validity").str.starts_with("Reformat"))
+                ).then(pl.lit(FileAction.REFORMAT.label))
+                .when(
                     (not force) &
                     (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Check"))
@@ -1211,10 +1214,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Downscale"))
                 ).then(pl.lit(FileAction.DOWNSCALE.label))
-                .when(
-                    (pl.col("Transcode Action") != "Ignore") &
-                    (pl.col("File Validity").str.starts_with("Reformat"))
-                ).then(pl.lit(FileAction.REFORMAT.label))
                 .when(
                     (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Upscale"))
