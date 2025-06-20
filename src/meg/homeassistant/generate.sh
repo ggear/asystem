@@ -49,7 +49,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/apexcharts-card"
 wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/apexcharts-card/apexcharts-card.js" "https://github.com/RomRider/apexcharts-card/releases/download/${VERSION}/apexcharts-card.js"
 
 # Notes: https://github.com/kalkih/mini-graph-card/releases
-VERSION=v0.12.1
+VERSION=v0.13.0
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "mini-graph-card" "kalkih/mini-graph-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card"
@@ -77,14 +77,14 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/basnijholt/adaptive-lighting/releases
-VERSION=v1.25.0
+VERSION=v1.26.0
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "adaptive-lighting-component" "basnijholt/adaptive-lighting" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/adaptive_lighting"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/bramstroker/homeassistant-powercalc/releases
-VERSION=v1.17.12
+VERSION=v1.17.14
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "powercalc-component" "ggear/homeassistant-powercalc" "ggear-powercalc" "https://github.com/bramstroker/homeassistant-powercalc.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/powercalc"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
