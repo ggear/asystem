@@ -15,8 +15,6 @@ fi
 if [ -n "${MEDIA_FILE_DIR}" ]; then
   asystem-media-clean
   "${PYTHON_DIR}/python" "${LIB_ROOT}/analyse.py" --verbose --force "${MEDIA_FILE_DIR}" "${MEDIA_GOOGLE_SHEET_GUID}"
-  asystem-media-merge
-  asystem-media-analyse
 else
   echo "" && echo "Error: Not in media file root directory, not doing anything!" && echo ""
 fi
