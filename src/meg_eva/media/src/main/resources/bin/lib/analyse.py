@@ -1930,7 +1930,7 @@ for name in "${OP_NAMES[@]}"; do
 done
 
 # Filter log once
-LOG=$(echo "${LOG}" | grep -E "1\. Rename|2\. Check|3\. Merge|4\. Upscale" | grep "/share")
+LOG=$(echo "${LOG}" | grep -E "1\\. Rename|2\\. Check|3\\. Merge|4\\. Upscale" | grep "/share")
 readarray -t LOG_LINES <<< "${LOG}"
 
 # Process each operation
