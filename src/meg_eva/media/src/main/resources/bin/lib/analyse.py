@@ -1947,12 +1947,6 @@ for name in "${OP_NAMES[@]}"; do
     fi
 done
         """
-
-
-        print("")
-        print(script_source_exec_summarise)
-        print("")
-
         if not file_path_media_is_nested:
             for script_name, script_source in {
                 ".lib/clean": (
