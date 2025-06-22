@@ -1939,9 +1939,6 @@ for name in "${OP_NAMES[@]}"; do
         break
     fi
 done
-if [ "${#RENAME_DIRS[@]}" -gt 0 ] || [ "${#CHECK_DIRS[@]}" -gt 0 ] || [ "${#MERGE_DIRS[@]}" -gt 0 ] || [ "${#UPSCALE_DIRS[@]}" -gt 0 ]; then
-    echo "+----------------------------------------------------------------------------------------------------------------------------+"
-fi
         """
         if not file_path_media_is_nested:
             for script_name, script_source in {
