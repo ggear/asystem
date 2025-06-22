@@ -1880,8 +1880,12 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
         """
         script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname $(dirname "${ROOT_DIR}")))/media' ... "
-declare -a OP_NAMES=("Rename" "Check" "Merge" "Upscale")
 declare -a OP_CODES=("1. Rename" "2. Check" "3. Merge" "4. Upscale")
+declare -a OP_NAMES=()
+for code in "${OP_CODES[@]}"; do
+    name="${code#*. }"
+    OP_NAMES+=("$name")
+done
 process_operation_dirs() {
     local operation_pattern="$1"
     local var_prefix="$2"
