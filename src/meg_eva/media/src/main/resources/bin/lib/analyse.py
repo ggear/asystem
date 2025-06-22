@@ -1856,17 +1856,17 @@ else
     LOG_DEV=/dev/null
 fi
 if [ $(uname) == "Darwin" ]; then
-  for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
-    HOST_NAME="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
-    HOST_DIRS='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
-    HOST_CMD='. $(asystem-media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} $@"
-    if [ $(ssh "root@${HOST_NAME}" "${HOST_DIRS}") -gt 0 ]; then
-        echo "Executing remotely ... "
-        LOG=$(ssh "root@${HOST_NAME}" "${HOST_CMD}" | tee "${LOG_DEV}")
-    fi
-  done
+    for LABEL in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
+        HOST_NAME="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
+        HOST_DIRS='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
+        HOST_CMD='. $(asystem-media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} $@"
+        if [ $(ssh "root@${HOST_NAME}" "${HOST_DIRS}") -gt 0 ]; then
+            echo "Executing remotely ... "
+            LOG=$(ssh "root@${HOST_NAME}" "${HOST_CMD}" | tee "${LOG_DEV}")
+        fi
+    done
 else
-  LOG=$("${SHARE_ROOT}/${SCRIPT_DIR}/${SCRIPT_CMD}" $@ | tee "${LOG_DEV}")
+    LOG=$("${SHARE_ROOT}/${SCRIPT_DIR}/${SCRIPT_CMD}" $@ | tee "${LOG_DEV}")
 fi
         """
         script_source_exec_analyse = """
@@ -1884,73 +1884,47 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
         """
         script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname $(dirname "${ROOT_DIR}")))/media' ... "
-readonly SEPARATOR="+-------------------------------------------------------------------------------------------------------------------------+"
-readonly SHARE_PATH_PREFIX="/share"
-readonly OPERATIONS=(
-    "1. Rename"
-    "2. Check"
-    "3. Merge"
-    "4. Upscale"
-)
-declare -A dir_sets
-declare -A dir_arrays
-for op in "${OPERATIONS[@]}"; do
-    op_name=$(echo "$op" | cut -d' ' -f2 | tr '[:upper:]' '[:lower:]')
-    dir_sets["$op_name"]=()
-    dir_arrays["$op_name"]=()
-done
-LOG=$(echo "${LOG}" | grep -E "$(IFS=\\|; echo "${OPERATIONS[*]}")" | grep "/share")
+#!/bin/bash
+
+declare -A operation_sets
+declare -A operation_arrays
+readonly SEPARATOR="+----------------------------------------------------------------------------------------------------------------------------+"
+readonly -a OPERATIONS=([rename]=1 [check]=2 [merge]=3 [upscale]=4)
+
+LOG=$(echo "${LOG}" | grep -E "1. Rename|2. Check|3. Merge|4. Upscale" | grep "/share")
 readarray -t log_lines <<<"${LOG}"
-process_directory() {
-    local operation=$1
-    local log_line=$2
-    local dir=$(grep "$operation" <<< "$log_line" | cut -d'|' -f12 | xargs | sed -e "s|^${SHARE_PATH_PREFIX}||")
-    if [ -n "$dir" ]; then
-        local op_name=$(echo "$operation" | cut -d' ' -f2 | tr '[:upper:]' '[:lower:]')
-        dir_sets["$op_name,$dir"]=1
-    fi
-}
-build_sorted_array() {
-    local op_name=$1
-    local -n dirs=${dir_arrays[$op_name]}
-    for dir in "${!dir_sets[@]}"; do
-        if [[ $dir == $op_name,* ]]; then
-            actual_dir=${dir#*,}
-            dirs+=("'${SHARE_ROOT}${actual_dir}'")
-        fi
+
+for line in "${log_lines[@]}"; do
+    for op in "${!OPERATIONS[@]}"; do
+        dir=$(grep "${OPERATIONS[$op]}. ${op^}" <<< "$line" | cut -d'|' -f12 | xargs | sed -e "s/^\/share//")
+        [[ -n "${dir}" ]] && operation_sets["${op}::${dir}"]=1
     done
-    IFS=$'\\n' dirs=($(sort <<<"${dirs[*]}"))
+done
+
+for op in "${!OPERATIONS[@]}"; do
+    declare -a "array_${op}=()"
+    for key in "${!operation_sets[@]}"; do
+        [[ $key == ${op}::* ]] && eval "array_${op}+=('${SHARE_ROOT}${key#${op}::}')"
+    done
+    IFS=$'\n' eval "array_${op}=(\$(sort <<<\"\${array_${op}[*]}\")"
     unset IFS
-}
-print_directory_list() {
-    local operation=$1
-    local -n dirs=${dir_arrays[$operation]}
-    if [ "${#dirs[@]}" -gt 0 ]; then
-        echo "$SEPARATOR"
-        echo "${operation^}s to run in directory ... "
-        echo "$SEPARATOR"
-        for dir in "${dirs[@]}"; do
-            echo "cd ${dir}"
-        done
-    fi
-}
-for log_line in "${log_lines[@]}"; do
-    for op in "${OPERATIONS[@]}"; do
-        process_directory "$op" "$log_line"
-    done
 done
-for op in "${OPERATIONS[@]}"; do
-    op_name=$(echo "$op" | cut -d' ' -f2 | tr '[:upper:]' '[:lower:]')
-    build_sorted_array "$op_name"
-done
+
 echo "done"
-for op in "${OPERATIONS[@]}"; do
-    op_name=$(echo "$op" | cut -d' ' -f2 | tr '[:upper:]' '[:lower:]')
-    print_directory_list "$op_name"
+
+for op in "${!OPERATIONS[@]}"; do
+    eval "size=\${#array_${op}[@]}"
+    if ((size > 0)); then
+        echo "$SEPARATOR"
+        echo "${op^}s to run in directory ... "
+        echo "$SEPARATOR"
+        eval "for dir in \"\${array_${op}[@]}\"; do echo \"cd \$dir\"; done"
+    fi
 done
-for op in "${OPERATIONS[@]}"; do
-    op_name=$(echo "$op" | cut -d' ' -f2 | tr '[:upper:]' '[:lower:]')
-    if [ "${#dir_arrays[$op_name][@]}" -gt 0 ]; then
+
+for op in "${!OPERATIONS[@]}"; do
+    eval "size=\${#array_${op}[@]}"
+    if ((size > 0)); then
         echo "$SEPARATOR"
         break
     fi
