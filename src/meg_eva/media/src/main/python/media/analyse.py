@@ -1880,8 +1880,6 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
         """
         script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname $(dirname "${ROOT_DIR}")))/media' ... "
-#!/bin/bash
-
 declare -A operation_sets
 declare -A operation_arrays
 readonly SEPARATOR="+----------------------------------------------------------------------------------------------------------------------------+"
@@ -1892,7 +1890,7 @@ readarray -t log_lines <<<"${LOG}"
 
 for line in "${log_lines[@]}"; do
     for op in "${!OPERATIONS[@]}"; do
-        dir=$(grep "${OPERATIONS[$op]}. ${op^}" <<< "$line" | cut -d'|' -f12 | xargs | sed -e "s/^\/share//")
+        dir=$(grep "${OPERATIONS[$op]}. ${op^}" <<< "$line" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
         [[ -n "${dir}" ]] && operation_sets["${op}::${dir}"]=1
     done
 done
@@ -1902,24 +1900,24 @@ for op in "${!OPERATIONS[@]}"; do
     for key in "${!operation_sets[@]}"; do
         [[ $key == ${op}::* ]] && eval "array_${op}+=('${SHARE_ROOT}${key#${op}::}')"
     done
-    IFS=$'\n' eval "array_${op}=(\$(sort <<<\"\${array_${op}[*]}\")"
+    IFS=$'\\n' eval "array_${op}=(\\$(sort <<<\\"\\${array_${op}[*]}\\")"
     unset IFS
 done
 
 echo "done"
 
 for op in "${!OPERATIONS[@]}"; do
-    eval "size=\${#array_${op}[@]}"
+    eval "size=\\${#array_${op}[@]}"
     if ((size > 0)); then
         echo "$SEPARATOR"
         echo "${op^}s to run in directory ... "
         echo "$SEPARATOR"
-        eval "for dir in \"\${array_${op}[@]}\"; do echo \"cd \$dir\"; done"
+        eval "for dir in \\"\\${array_${op}[@]}\\"; do echo \\"cd \\$dir\\"; done"
     fi
 done
 
 for op in "${!OPERATIONS[@]}"; do
-    eval "size=\${#array_${op}[@]}"
+    eval "size=\\${#array_${op}[@]}"
     if ((size > 0)); then
         echo "$SEPARATOR"
         break
