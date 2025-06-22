@@ -1923,35 +1923,37 @@ display_operation_summary() {
 declare -a OP_NAMES=("Rename" "Check" "Merge" "Upscale")
 declare -a OP_CODES=("1. Rename" "2. Check" "3. Merge" "4. Upscale")
 
-# Declare associative and indexed arrays dynamically
+# Declare arrays dynamically
 for name in "${OP_NAMES[@]}"; do
     declare -a "${name^^}_DIRS=()"
     declare -A "${name^^}_DIRS_SET=()"
 done
 
-# Filter log once
+# Filter log
 LOG=$(echo "${LOG}" | grep -E "1\\. Rename|2\\. Check|3\\. Merge|4\\. Upscale" | grep "/share")
 readarray -t LOG_LINES <<< "${LOG}"
 
-# Process each operation
+# Process operation logs
 for i in "${!OP_NAMES[@]}"; do
     process_operation_dirs "${OP_CODES[$i]}" "${OP_NAMES[$i]^^}"
 done
 
 echo "done"
 
-# Display each summary
+# Display summaries
 for name in "${OP_NAMES[@]}"; do
     display_operation_summary "${name}s" "${name^^}"
 done
 
-# Final banner if anything to do
+# Final banner if any directories present
 for name in "${OP_NAMES[@]}"; do
-    if (( ${#{"${name^^}_DIRS"}[@]} > 0 )); then
+    declare -n dir_array="${name^^}_DIRS"
+    if (( ${#dir_array[@]} > 0 )); then
         echo "+----------------------------------------------------------------------------------------------------------------------------+"
         break
     fi
 done
+
 
 if [ "${#RENAME_DIRS[@]}" -gt 0 ] || [ "${#CHECK_DIRS[@]}" -gt 0 ] || [ "${#MERGE_DIRS[@]}" -gt 0 ] || [ "${#UPSCALE_DIRS[@]}" -gt 0 ]; then
     echo "+----------------------------------------------------------------------------------------------------------------------------+"
