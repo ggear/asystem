@@ -1879,8 +1879,11 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
 "$(asystem-media-home)/lib/normalise.sh" "${SHARE_DIR}"
         """
         script_source_exec_summarise = """
+declare -a OP_CODES=({})
+        """.format(" ".join(["\"{}\"".format(_file_action.label)
+                             for _file_action in FileAction if _file_action != FileAction.NOTHING])
+                   ) + """
 echo -n "Processing '$(dirname $(dirname $(dirname "${ROOT_DIR}")))/media' ... "
-declare -a OP_CODES=("1. Rename" "2. Check" "3. Merge" "4. Upscale" "5. Transcode" "6. Reformat" "7. Downscale")
 IFS='|'
 OP_CODES_REGEXP="${OP_CODES[*]}"
 unset IFS
