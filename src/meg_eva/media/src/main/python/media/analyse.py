@@ -1881,6 +1881,9 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
         script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname $(dirname "${ROOT_DIR}")))/media' ... "
 declare -a OP_CODES=("1. Rename" "2. Check" "3. Merge" "4. Upscale" "5. Transcode" "6. Reformat" "7. Downscale")
+IFS='|'
+OP_CODES_REGEXP="${OP_CODES[*]}"
+unset IFS
 declare -a OP_NAMES=()
 for code in "${OP_CODES[@]}"; do
     name="${code#*. }"
@@ -1920,7 +1923,7 @@ for name in "${OP_NAMES[@]}"; do
     declare -a "${name^^}_DIRS=()"
     declare -A "${name^^}_DIRS_SET=()"
 done
-LOG=$(echo "${LOG}" | grep -E "1\\. Rename|2\\. Check|3\\. Merge|4\\. Upscale" | grep "/share")
+LOG=$(echo "${LOG}" | grep -E "${OP_CODES_REGEXP}" | grep "/share")
 readarray -t LOG_LINES <<< "${LOG}"
 for i in "${!OP_NAMES[@]}"; do
     process_operation_dirs "${OP_CODES[$i]}" "${OP_NAMES[$i]^^}"
