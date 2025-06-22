@@ -1880,87 +1880,60 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
         """
         script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname $(dirname "${ROOT_DIR}")))/media' ... "
-declare -a RENAME_DIRS
-declare -A RENAME_DIRS_SET
-declare -a CHECK_DIRS
-declare -A CHECK_DIRS_SET
-declare -a MERGE_DIRS
-declare -A MERGE_DIRS_SET
-declare -a UPSCALE_DIRS
-declare -A UPSCALE_DIRS_SET
+
+process_operation_dirs() {
+    local operation_pattern="$1"
+    local var_prefix="$2"
+    local -n dirs_array_ref="${var_prefix}_DIRS"
+    local -n dirs_set_ref="${var_prefix}_DIRS_SET"
+    
+    for LOG_LINE in "${LOG_LINES[@]}"; do
+        local dir=$(grep "$operation_pattern" <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
+        if [ -n "${dir}" ]; then
+            dirs_set_ref["${dir}"]=1
+        fi
+    done
+    
+    for dir in "${!dirs_set_ref[@]}"; do
+        dirs_array_ref+=("'${SHARE_ROOT}${dir}'")
+    done
+    IFS=$'\\n' dirs_array_ref=($(sort <<<"${dirs_array_ref[*]}"))
+    unset IFS
+}
+
+display_operation_summary() {
+    local operation_name="$1"
+    local var_prefix="$2"
+    local -n dirs_array_ref="${var_prefix}_DIRS"
+    
+    if [ "${#dirs_array_ref[@]}" -gt 0 ]; then
+        echo "+----------------------------------------------------------------------------------------------------------------------------+"
+        echo "${operation_name} to run in directory ... "
+        echo "+----------------------------------------------------------------------------------------------------------------------------+"
+        for dir in "${dirs_array_ref[@]}"; do
+           echo "cd ${dir}"
+        done
+    fi
+}
+
+declare -a RENAME_DIRS CHECK_DIRS MERGE_DIRS UPSCALE_DIRS
+declare -A RENAME_DIRS_SET CHECK_DIRS_SET MERGE_DIRS_SET UPSCALE_DIRS_SET
+
 LOG=$(echo "${LOG}" | grep -E "1. Rename|2. Check|3. Merge|4. Upscale" | grep "/share")
 readarray -t LOG_LINES <<<"${LOG}"
-for LOG_LINE in "${LOG_LINES[@]}"; do
-  RENAME_DIR=$(grep "1. Rename"  <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
-  if [ -n "${RENAME_DIR}" ]; then
-    RENAME_DIRS_SET["${RENAME_DIR}"]=1
-  fi
-  CHECK_DIR=$(grep "2. Check"  <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
-  if [ -n "${CHECK_DIR}" ]; then
-    CHECK_DIRS_SET["${CHECK_DIR}"]=1
-  fi
-  MERGE_DIR=$(grep "3. Merge"  <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
-  if [ -n "${MERGE_DIR}" ]; then
-    MERGE_DIRS_SET["${MERGE_DIR}"]=1
-  fi
-  UPSCALE_DIR=$(grep "4. Upscale"  <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
-  if [ -n "${UPSCALE_DIR}" ]; then
-    UPSCALE_DIRS_SET["${UPSCALE_DIR}"]=1
-  fi
-done
-for RENAME_DIR in "${!RENAME_DIRS_SET[@]}"; do
-  RENAME_DIRS+=("'${SHARE_ROOT}${RENAME_DIR}'")
-done
-IFS=$'\\n' RENAME_DIRS=($(sort <<<"${RENAME_DIRS[*]}"))
-unset IFS
-for CHECK_DIR in "${!CHECK_DIRS_SET[@]}"; do
-  CHECK_DIRS+=("'${SHARE_ROOT}${CHECK_DIR}'")
-done
-IFS=$'\\n' CHECK_DIRS=($(sort <<<"${CHECK_DIRS[*]}"))
-unset IFS
-for MERGE_DIR in "${!MERGE_DIRS_SET[@]}"; do
-  MERGE_DIRS+=("'${SHARE_ROOT}${MERGE_DIR}'")
-done
-IFS=$'\\n' MERGE_DIRS=($(sort <<<"${MERGE_DIRS[*]}"))
-unset IFS
-for UPSCALE_DIR in "${!UPSCALE_DIRS_SET[@]}"; do
-  UPSCALE_DIRS+=("'${SHARE_ROOT}${UPSCALE_DIR}'")
-done
-IFS=$'\\n' UPSCALE_DIRS=($(sort <<<"${UPSCALE_DIRS[*]}"))
-unset IFS
+
+process_operation_dirs "1. Rename" "RENAME"
+process_operation_dirs "2. Check" "CHECK"
+process_operation_dirs "3. Merge" "MERGE"
+process_operation_dirs "4. Upscale" "UPSCALE"
+
 echo "done"
-if [ "${#RENAME_DIRS[@]}" -gt 0 ]; then
-    echo "+----------------------------------------------------------------------------------------------------------------------------+"
-    echo "Renames to run in directory ... "
-    echo "+----------------------------------------------------------------------------------------------------------------------------+"
-    for RENAME_DIR in "${RENAME_DIRS[@]}"; do
-       echo "cd ${RENAME_DIR}"
-    done
-fi
-if [ "${#CHECK_DIRS[@]}" -gt 0 ]; then
-    echo "+----------------------------------------------------------------------------------------------------------------------------+"
-    echo "Checks to run in directory ... "
-    echo "+----------------------------------------------------------------------------------------------------------------------------+"
-    for CHECK_DIR in "${CHECK_DIRS[@]}"; do
-       echo "cd ${CHECK_DIR}"
-    done
-fi
-if [ "${#MERGE_DIRS[@]}" -gt 0 ]; then
-    echo "+----------------------------------------------------------------------------------------------------------------------------+"
-    echo "Merges to run in directory ... "
-    echo "+----------------------------------------------------------------------------------------------------------------------------+"
-    for MERGE_DIR in "${MERGE_DIRS[@]}"; do
-       echo "cd ${MERGE_DIR}"
-    done
-fi
-if [ "${#UPSCALE_DIRS[@]}" -gt 0 ]; then
-    echo "+----------------------------------------------------------------------------------------------------------------------------+"
-    echo "Upscales to run in directory ... "
-    echo "+----------------------------------------------------------------------------------------------------------------------------+"
-    for UPSCALE_DIR in "${UPSCALE_DIRS[@]}"; do
-       echo "cd ${UPSCALE_DIR}"
-    done
-fi
+
+display_operation_summary "Renames" "RENAME"
+display_operation_summary "Checks" "CHECK"
+display_operation_summary "Merges" "MERGE"
+display_operation_summary "Upscales" "UPSCALE"
+
 if [ "${#RENAME_DIRS[@]}" -gt 0 ] || [ "${#CHECK_DIRS[@]}" -gt 0 ] || [ "${#MERGE_DIRS[@]}" -gt 0 ] || [ "${#UPSCALE_DIRS[@]}" -gt 0 ]; then
     echo "+----------------------------------------------------------------------------------------------------------------------------+"
 fi
