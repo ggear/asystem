@@ -1882,7 +1882,7 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
 declare -a OP_CODES=({})
         """.format(" ".join(["\"{}\"".format(_file_action.label)
                              for _file_action in FileAction if _file_action != FileAction.NOTHING])
-                   ) + """
+                   ).strip() + """
 echo -n "Processing '$(dirname $(dirname $(dirname "${ROOT_DIR}")))/media' ... "
 IFS='|'
 OP_CODES_REGEXP="${OP_CODES[*]}"
@@ -1943,12 +1943,6 @@ for name in "${OP_NAMES[@]}"; do
     fi
 done
         """
-
-
-        print("")
-        print(script_source_exec_summarise)
-        print("")
-
         if not file_path_media_is_nested:
             for script_name, script_source in {
                 ".lib/clean": (
