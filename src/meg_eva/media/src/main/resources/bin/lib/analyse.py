@@ -1899,7 +1899,7 @@ for op in "${OPERATIONS[@]}"; do
     dir_sets["$op_name"]=()
     dir_arrays["$op_name"]=()
 done
-LOG=$(echo "${LOG}" | grep -E "$(IFS=\|; echo "${OPERATIONS[*]}")" | grep "/share")
+LOG=$(echo "${LOG}" | grep -E "$(IFS=\\|; echo "${OPERATIONS[*]}")" | grep "/share")
 readarray -t log_lines <<<"${LOG}"
 process_directory() {
     local operation=$1
@@ -1919,7 +1919,7 @@ build_sorted_array() {
             dirs+=("'${SHARE_ROOT}${actual_dir}'")
         fi
     done
-    IFS=$'\n' dirs=($(sort <<<"${dirs[*]}"))
+    IFS=$'\\n' dirs=($(sort <<<"${dirs[*]}"))
     unset IFS
 }
 print_directory_list() {
