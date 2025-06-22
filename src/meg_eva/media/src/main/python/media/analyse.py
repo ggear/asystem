@@ -1880,32 +1880,29 @@ SHARE_DIR="$(realpath "${ROOT_DIR}/../../../..")"
         """
         script_source_exec_summarise = """
 echo -n "Processing '$(dirname $(dirname $(dirname "${ROOT_DIR}")))/media' ... "
-
+declare -a OP_NAMES=("Rename" "Check" "Merge" "Upscale")
+declare -a OP_CODES=("1. Rename" "2. Check" "3. Merge" "4. Upscale")
 process_operation_dirs() {
     local operation_pattern="$1"
     local var_prefix="$2"
     local -n dirs_array_ref="${var_prefix}_DIRS"
     local -n dirs_set_ref="${var_prefix}_DIRS_SET"
-    
     for LOG_LINE in "${LOG_LINES[@]}"; do
         local dir=$(grep "$operation_pattern" <<< "$LOG_LINE" | cut -d'|' -f12 | xargs | sed -e "s/^\\/share//")
         if [ -n "${dir}" ]; then
             dirs_set_ref["${dir}"]=1
         fi
     done
-    
     for dir in "${!dirs_set_ref[@]}"; do
         dirs_array_ref+=("'${SHARE_ROOT}${dir}'")
     done
     IFS=$'\\n' dirs_array_ref=($(sort <<<"${dirs_array_ref[*]}"))
     unset IFS
 }
-
 display_operation_summary() {
     local operation_name="$1"
     local var_prefix="$2"
     local -n dirs_array_ref="${var_prefix}_DIRS"
-    
     if [ "${#dirs_array_ref[@]}" -gt 0 ]; then
         echo "+----------------------------------------------------------------------------------------------------------------------------+"
         echo "${operation_name} to run in directory ... "
@@ -1915,33 +1912,19 @@ display_operation_summary() {
         done
     fi
 }
-
-declare -a OP_NAMES=("Rename" "Check" "Merge" "Upscale")
-declare -a OP_CODES=("1. Rename" "2. Check" "3. Merge" "4. Upscale")
-
-# Declare arrays dynamically
 for name in "${OP_NAMES[@]}"; do
     declare -a "${name^^}_DIRS=()"
     declare -A "${name^^}_DIRS_SET=()"
 done
-
-# Filter log
 LOG=$(echo "${LOG}" | grep -E "1\\. Rename|2\\. Check|3\\. Merge|4\\. Upscale" | grep "/share")
 readarray -t LOG_LINES <<< "${LOG}"
-
-# Process operation logs
 for i in "${!OP_NAMES[@]}"; do
     process_operation_dirs "${OP_CODES[$i]}" "${OP_NAMES[$i]^^}"
 done
-
 echo "done"
-
-# Display summaries
 for name in "${OP_NAMES[@]}"; do
     display_operation_summary "${name}s" "${name^^}"
 done
-
-# Final banner if any directories present
 for name in "${OP_NAMES[@]}"; do
     declare -n dir_array="${name^^}_DIRS"
     if (( ${#dir_array[@]} > 0 )); then
@@ -1949,8 +1932,6 @@ for name in "${OP_NAMES[@]}"; do
         break
     fi
 done
-
-
 if [ "${#RENAME_DIRS[@]}" -gt 0 ] || [ "${#CHECK_DIRS[@]}" -gt 0 ] || [ "${#MERGE_DIRS[@]}" -gt 0 ] || [ "${#UPSCALE_DIRS[@]}" -gt 0 ]; then
     echo "+----------------------------------------------------------------------------------------------------------------------------+"
 fi
