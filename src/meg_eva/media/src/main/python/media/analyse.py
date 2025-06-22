@@ -1900,7 +1900,7 @@ for op in "${!OPERATIONS[@]}"; do
     for key in "${!operation_sets[@]}"; do
         [[ $key == ${op}::* ]] && eval "array_${op}+=('${SHARE_ROOT}${key#${op}::}')"
     done
-    IFS=$'\\n' eval "array_${op}=(\\$(sort <<<\\"\\${array_${op}[*]}\\""))"
+    eval "array_${op}=(\\$(IFS=\\$'\\n' sort <<<\\"\\${array_${op}[*]}\\")"
     unset IFS
 done
 
