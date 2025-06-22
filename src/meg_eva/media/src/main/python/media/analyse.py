@@ -1972,7 +1972,7 @@ done
                     print("#enriched-dataframe -> {} ... ".format(script_path), end='', flush=True)
                 with open(script_path, 'w') as script_file:
                     for script_source_section in script_source:
-                        script_file.write(script_source_section.strip() + "\n\n")
+                        script_file.write(script_source_section.strip() + "\n\\n")
                 _set_permissions(script_path, 0o750)
                 if verbose:
                     print("done", flush=True)
