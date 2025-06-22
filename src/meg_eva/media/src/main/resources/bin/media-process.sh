@@ -7,7 +7,6 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 asystem-media-normalise
 asystem-media-analyse
 asystem-media-rename
-asystem-media-merge
 asystem-media-check
 asystem-media-upscale
 asystem-media-reformat
