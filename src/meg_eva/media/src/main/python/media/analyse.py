@@ -1656,6 +1656,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
                     pl.lit("echo 'Transcoding with reason ["), pl.col("File Validity"), pl.lit("]'\n"),
                     pl.lit("echo 'Transcoding with quality ["), pl.col("Target Quality"), pl.lit("]'\n"),
+                    pl.lit("echo 'Transcoding with size ['$(du -m \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" | "
+                           "awk '{printf \"%.1f\", ($1/1024 + 0.05)}')' GB]'\n"),
                     pl.lit("echo 'Transcoding with codec [HVEC] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                            "select(.codec) | .codec' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"']'\n"),
                     pl.lit("ORIG_RESOLUTION=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
