@@ -1667,7 +1667,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("ORIG_RESOLUTION=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                            "select(.resolution) | .resolution' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
                     pl.lit("if [ \""), pl.col("Transcode Video Resolution"), pl.lit("\" == \"\" ]; then\n"),
-                    pl.lit("  TARGET_RESOLUTION=\"${ORIG_RESOLUTION}\"\n"),
+                    pl.lit("  TARGET_RESOLUTION=\"$(echo \"${ORIG_RESOLUTION}\" | sed 's/i$/p/')\"\n"),
                     pl.lit("else\n"),
                     pl.lit("  TARGET_RESOLUTION=\""), pl.col("Transcode Video Resolution"), pl.lit("\"\n"),
                     pl.lit("fi\n"),
