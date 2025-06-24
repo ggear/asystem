@@ -1222,6 +1222,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Transcode Action") != "Ignore") &
                     (pl.col("File Validity").str.starts_with("Upscale"))
                 ).then(pl.lit(FileAction.UPSCALE.label))
+                .when(
+                    force
+                ).then(pl.lit(FileAction.REFORMAT.label))
                 .otherwise(pl.lit(FileAction.NOTHING.label))
             ).alias("File Action"))
         metadata_merged_pl = pl.concat([
