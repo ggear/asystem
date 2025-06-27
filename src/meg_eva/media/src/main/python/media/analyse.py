@@ -1184,7 +1184,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Metadata State") == "Messy")
                 ).then(pl.lit("Reformat Messy Metadata"))
                 .when(
-                    (pl.col("Media Scope") == "kids") &
                     (pl.col("Audio 1 Codec") == "EAC3") &
                     (pl.col("Audio 1 Surround") != "Atmos")
                 ).then(pl.lit("Reformat EAC3"))
