@@ -1188,6 +1188,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Metadata State") == "Messy")
                 ).then(pl.lit("Reformat Messy Metadata"))
                 .when(
+                    (pl.col("Audio 1 Codec") != "EAC3")
+                ).then(pl.lit("Reformat EAC3"))
+                .when(
                     (pl.col("File Extension") != "mkv")
                 ).then(pl.lit("Reformat Non-MKV"))
                 #
