@@ -1173,10 +1173,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).then(pl.lit("Downscale High Size"))
                 .when(
                     (pl.col("Media Type") == "movies") &
+                    (pl.col("Quality").cast(pl.Int16) <= 6) &
                     (pl.col("File Size (GB)").cast(pl.Float32) > 9)
                 ).then(pl.lit("Downscale High Size Non-HVEC"))
                 .when(
                     (pl.col("Media Type") == "series") &
+                    (pl.col("Quality").cast(pl.Int16) <= 4) &
                     (pl.col("File Size (GB)").cast(pl.Float32) > 2)
                 ).then(pl.lit("Downscale High Size Non-HVEC"))
                 #
