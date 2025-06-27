@@ -72,7 +72,30 @@ nohup mkdir -p "/media/usbdrive/Shows/${SERIES}" && rsync -avhPr --no-perms --no
   "/media/usbdrive/Shows/${SERIES}" &
 disown
 
-# TODO: Update all for find and cull to only useful commands
+# Delete subtitles
+for f in *.mkv; do ffmpeg -i "$f" -map 0 -map -0:s -c copy -y "temp.mkv" && mv "temp.mkv" "$f"; done
+
+# Add subtitles
+pip install subliminal ffsubsync
+subliminal download -l en *.mkv
+for f in *.mkv; do
+  s="${f%.mkv}.en.srt"
+  if [ -f "$s" ]; then
+    echo "Syncing $s to $f"
+    ffsubsync "$f" -i "$s" -o "${f%.mkv}.en.synced.srt"
+  else
+    echo "Subtitle $s not found for $f"
+  fi
+done
+for f in *.mkv; do
+  s="${f%.mkv}.en.synced.srt"
+  [ -f "$s" ] && ffmpeg -i "$f" -i "$s" -map 0 -map 1 -c copy \
+    -metadata:s:s:0 language=eng -metadata:s:s:0 title="English" \
+    -y "temp.mkv" && mv "temp.mkv" "$f"
+done
+rm -rf *.srt
+
+# Process video
 ffmpeg -i "input.mov" -vcodec hevc_videotoolbox -b:v 500k -n "output.mov"
 ffmpeg -i "input.mov" -vcodec h264_videotoolbox -b:v 500k -n "output.mov"
 ffmpeg -f concat -i files.txt -c copy -aspect 16/9 output.mkv
