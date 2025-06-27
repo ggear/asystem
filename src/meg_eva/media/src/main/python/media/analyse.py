@@ -1167,20 +1167,38 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 .when(
                     (pl.col("File Size") == "Large")
                 ).then(pl.lit("Downscale High Size"))
+
+
+
+
                 .when(
                     (pl.col("Media Type") == "movies") &
                     (pl.col("File Size (GB)").cast(pl.Float32) > 9)
                 ).then(pl.lit("Downscale High Size Non-HVEC"))
                 .when(
                     (pl.col("Media Type") == "series") &
-                    (pl.col("File Size (GB)").cast(pl.Float32) > 2)
+                    (pl.col("File Size (GB)").cast(pl.Float32) > 1.6)
                 ).then(pl.lit("Downscale High Size Non-HVEC"))
+
+
+
+
+
                 #
                 # Reformat
                 #
                 .when(
                     (pl.col("Metadata State") == "Messy")
                 ).then(pl.lit("Reformat Messy Metadata"))
+
+
+
+                .when(
+                    (pl.col("File Extension") != "mkv")
+                ).then(pl.lit("Reformat Non-MKV"))
+
+
+
                 #
                 # Upscale
                 #
