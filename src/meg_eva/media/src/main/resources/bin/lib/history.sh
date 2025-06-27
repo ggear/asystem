@@ -95,6 +95,11 @@ for f in *.mkv; do
 done
 rm -rf *.srt
 
+# Audio EAC3 to AC3
+ffmpeg -i 'Youre Cordially Invited (2025).mkv' \
+  -map 0 -c:v copy -c:s copy -c:a ac3 -b:a 640k \
+  'Youre Cordially Invited (2025)_ac3.mkv'
+
 # Process video
 ffmpeg -i "input.mov" -vcodec hevc_videotoolbox -b:v 500k -n "output.mov"
 ffmpeg -i "input.mov" -vcodec h264_videotoolbox -b:v 500k -n "output.mov"
