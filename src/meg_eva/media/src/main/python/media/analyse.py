@@ -1701,10 +1701,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("if [ ! -f \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" ]; then\n"),
                     pl.lit("  echo '' && echo -n 'Skipped (missing): ' && date && echo '' && exit 0\n"),
                     pl.lit("fi\n"),
-                    pl.lit("if [[ $(hostname) == macmini* ]] && "
-                           "[[ \"$(basename \"$0\")\" == \"transcode.sh\" ]] ; then\n"),
-                    pl.lit("  echo '' && echo -n 'Skipped (poor-hardware): ' && date && echo '' && exit 0\n"),
-                    pl.lit("fi\n"),
                     pl.lit("TRANSCODE_VIDEO='"), pl.col("Transcode Video"), pl.lit("'\n"),
                     pl.lit("[[ \"$(basename \"$0\")\" == \"reformat.sh\" ]] && TRANSCODE_VIDEO='--copy-video'\n"),
                     pl.lit("other-transcode \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" \\\n"),
