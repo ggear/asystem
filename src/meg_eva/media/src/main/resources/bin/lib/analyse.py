@@ -1518,10 +1518,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         (pl.col("Audio 1 Surround") == "Atmos")
                     ).then(
                         pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --eac3")])
-                    ).when(
-                        (pl.col("Audio 1 Codec") == "AAC")
-                    ).then(
-                        pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --aac-only")])
+                    # ).when(
+                    #     (pl.col("Audio 1 Codec") == "AAC")
+                    # ).then(
+                    #     pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --aac-only")])
                     ).otherwise(
                         pl.col("Transcode Audio")
                     )
