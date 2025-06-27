@@ -1508,8 +1508,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         ))
                     ).then(
                         pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --surround-bitrate 640 --eac3")])
-                    ).otherwise(
+                    )
+                    .when(
+                        (pl.col("Audio 1 Surround") == "Atmos")
+                    ).then(
                         pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --eac3")])
+                    ).otherwise(
+                        pl.col("Transcode Audio")
                     )
                 ).alias("Transcode Audio")
             ]
