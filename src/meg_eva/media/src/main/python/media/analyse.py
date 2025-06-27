@@ -1423,8 +1423,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             [
                 (
                     pl.when(
-                        (pl.col("Transcode Video Bitrate").cast(pl.Int32) <= pl.col(
-                            "Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
+                        (pl.col("Transcode Video Bitrate").cast(pl.Int32) <=
+                         pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
                     ).then(
                         pl.col("Transcode Video Bitrate")
                     ).otherwise(
@@ -1449,6 +1449,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).alias("Transcode Video Resolution"),
                 (
                     pl.when(
+                        (pl.col("Transcode Video Bitrate") == pl.col("Video 1 Bitrate Estimate (Kbps)"))
+                    ).then(
+                        pl.lit("--copy-video")
+                    ).when(
                         (pl.col("Target Quality").cast(pl.Int32) <= QUALITY_MIN)
                     ).then(
                         pl.concat_str([pl.lit("--hevc --720p --target "), pl.col("Transcode Video Bitrate"), ])
