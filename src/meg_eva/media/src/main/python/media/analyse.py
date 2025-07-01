@@ -1156,6 +1156,19 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.col("Bitrate (Kbps)").is_null())
                 ).then(pl.lit("Transcode Null Bitrate"))
                 #
+                # Reformat
+                #
+                .when(
+                    (pl.col("Metadata State") == "Messy")
+                ).then(pl.lit("Reformat Messy Metadata"))
+                .when(
+                    (pl.col("Audio 1 Codec") == "EAC3") &
+                    (pl.col("Audio 1 Surround") != "Atmos")
+                ).then(pl.lit("Reformat EAC3"))
+                .when(
+                    (pl.col("File Extension") != "mkv")
+                ).then(pl.lit("Reformat Non-MKV"))
+                #
                 # Downscale
                 #
                 .when(
@@ -1180,19 +1193,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             )
                     )
                 ).then(pl.lit("Downscale High Size Non-HEVC"))
-                #
-                # Reformat
-                #
-                .when(
-                    (pl.col("Metadata State") == "Messy")
-                ).then(pl.lit("Reformat Messy Metadata"))
-                .when(
-                    (pl.col("Audio 1 Codec") == "EAC3") &
-                    (pl.col("Audio 1 Surround") != "Atmos")
-                ).then(pl.lit("Reformat EAC3"))
-                .when(
-                    (pl.col("File Extension") != "mkv")
-                ).then(pl.lit("Reformat Non-MKV"))
                 #
                 # Upscale
                 #
