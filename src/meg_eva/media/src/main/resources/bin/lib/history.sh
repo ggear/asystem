@@ -100,6 +100,15 @@ ffmpeg -i 'Youre Cordially Invited (2025).mkv' \
   -map 0 -c:v copy -c:s copy -c:a ac3 -b:a 640k \
   'Youre Cordially Invited (2025)_ac3.mkv'
 
+# Convert to MKV container
+for f in *.avi; do
+  ffmpeg -fflags +genpts -i "$f" -c copy "${f%.avi}__TRANSCODE_MKV.mkv"
+done
+
+# Nohup a script
+nohup asystem-media-reformat >/tmp/asystem-media-clean.log 2>&1 &
+disown
+
 # Process video
 ffmpeg -i "input.mov" -vcodec hevc_videotoolbox -b:v 500k -n "output.mov"
 ffmpeg -i "input.mov" -vcodec h264_videotoolbox -b:v 500k -n "output.mov"
