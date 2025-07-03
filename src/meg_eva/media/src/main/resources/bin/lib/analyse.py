@@ -506,6 +506,8 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_stream_channels = int(file_probe_stream["channels"]) \
                                 if "channels" in file_probe_stream else 2
                             file_probe_stream_filtered["channels"] = str(file_stream_channels)
+                            file_probe_stream_filtered["layout"] = file_probe_stream["channel_layout"] \
+                                if "channel_layout" in file_probe_stream else ""
                             file_probe_stream_filtered["surround"] = "Atmos" if (
                                     ("profile" in file_probe_stream and
                                      "atmos" in file_probe_stream["profile"].lower()) or
