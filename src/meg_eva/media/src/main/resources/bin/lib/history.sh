@@ -100,9 +100,38 @@ ffmpeg -i 'Youre Cordially Invited (2025).mkv' \
   -map 0 -c:v copy -c:s copy -c:a ac3 -b:a 640k \
   'Youre Cordially Invited (2025)_ac3.mkv'
 
-# Convert to MKV container
+# Convert AVI to MKV container, addint timing data
 for f in *.avi; do
   ffmpeg -fflags +genpts -i "$f" -c copy "${f%.avi}__TRANSCODE_MKV.mkv"
+done
+
+# Remove broken subtitles
+temp_sub="temp_sub.srt"
+find . -type f -name '*.mkv' -print0 | while IFS= read -r -d '' file; do
+  echo "Processing file: [$file]"
+  map_args=("-map" "0")
+  changed=0
+  while IFS= read -r idx; do
+    if ffmpeg -v error -y -i "$file" -map 0:s:$idx -c:s srt "$temp_sub" >/dev/null 2>&1; then
+      if [ ! -s "$temp_sub" ]; then
+        map_args+=("-map" "-0:s:$idx")
+        changed=1
+      fi
+    else
+      map_args+=("-map" "-0:s:$idx")
+      changed=1
+    fi
+  done < <(ffprobe -v error -select_streams s -show_entries stream=index -of csv=p=0 "$file")
+  rm -f "$temp_sub"
+  if [ "$changed" -eq 1 ]; then
+    dir=$(dirname "$file")
+    base=$(basename "$file" .mkv)
+    out="$dir/${base}__TRANSCODE_SUB.mkv"
+    ffmpeg -loglevel error -y -i "$file" "${map_args[@]}" -c copy "$out" >/dev/null 2>&1
+    echo "✅ Changed: $file → ${base}__TRANSCODE_SUB.mkv"
+  else
+    echo "➖ Unchanged: $file"
+  fi
 done
 
 # Nohup a script
