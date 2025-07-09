@@ -60,16 +60,19 @@ class FileAction(AutoNumberEnum):
 
 FileAction = FileAction  # type: typing.Union[typing.Type[FileAction], typing.Iterable]
 
+TOKEN_SMALL = "__SMALL"
+TOKEN_LARGE = "__LARGE"
+TOKEN_TRANSCODE = "__TRANSCODE"
+TOKEN_UNKNOWABLE = "__UNKNOWABLE"
+
 MEDIA_YEAR_NUMBER_REGEXP = r"\(19[4-9][0-9]\)|\(20[0-9][0-9]\)"
 MEDIA_SEASON_NUMBER_REGEXP = r"Season ([0-9]?[0-9]+)"
-MEDIA_EPISODE_NUMBER_REGEXP = r".*([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
-MEDIA_EPISODE_NAME_REGEXP = MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
+MEDIA_EPISODE_NUMBER_REGEXP = r"([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[0-9]+)(.*)"
+MEDIA_EPISODE_NAME_REGEXP = r".*" + MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
+MEDIA_PROFILE_REGEXP = r"(" + TOKEN_SMALL + r"|" + TOKEN_LARGE + r")$"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv", "ts"}
 MEDIA_FILE_EXTENSIONS_IGNORE = {"yaml", "sh", "srt", "png", "jpg", "jpeg", "log"}
 MEDIA_FILE_SCRIPTS = [_file_action.script for _file_action in FileAction if _file_action.has_script]
-
-TOKEN_TRANSCODE = "__TRANSCODE"
-TOKEN_UNKNOWABLE = "__UNKNOWABLE"
 
 BASH_EXIT_HANDLER = "shopt -s expand_aliases\n" \
                     "[[ $(uname) == 'Darwin' ]] && alias echo=gecho\n" \
@@ -207,6 +210,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         file_stem = file_name_sans_extension.title()
                     else:
                         file_stem = "{} {}".format(file_stem, file_version_qualifier).title()
+            else:
+                for token in [TOKEN_SMALL, TOKEN_LARGE]:
+                    if token in file_name:
+                        file_stem += token
             file_version_qualifier = file_version_qualifier.lower()
             file_dir_rename = ""
             file_name_rename = ""
@@ -356,6 +363,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                                     _context=file_path, _no_header_footer=True)
                 if file_defaults_load_failed:
                     continue
+                if re.search(TOKEN_SMALL, file_name) is not None:
+                    file_defaults_dict["target_quality"] = "3"
+                if re.search(TOKEN_LARGE, file_name) is not None:
+                    file_defaults_dict["target_quality"] = "9"
                 file_defaults_analysed_path = os.path.join(
                     file_dir_path, "._defaults_analysed_{}_{}.yaml".format(
                         file_name_sans_extension, file_extension))
@@ -1680,7 +1691,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
                            "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
                     pl.lit("if [ \"${ORIG_FILE_META}\" == \"\" ]; then \n"),
-                    pl.lit("  echo '' && echo 'Warning: Metadata file not found'&& exit 4\n"),
+                    pl.lit("  echo '' && echo \"Warning: Metadata file not found\" && exit 4\n"),
                     pl.lit("fi\n"),
                     pl.lit("echo -n 'Transcoding at ' && date\n"),
                     pl.lit("echo 'Transcoding with reason ["), pl.col("File Validity"), pl.lit("]'\n"),
@@ -1758,7 +1769,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                            "$(basename \"${ROOT_FILE_NAME}\" | rev | cut -d. -f1 | rev).yaml\"\n"),
                     pl.lit("FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name \"${FILE_META_NAME}\")\"\n"),
                     pl.lit("if [ \"${FILE_META}\" == \"\" ]; then \n"),
-                    pl.lit("  echo '' && echo 'Warning: Metadata file [${FILE_META_NAME}] not found'&& exit 1\n"),
+                    pl.lit("  echo '' && echo \"Warning: Metadata file [${FILE_META_NAME}] not found\" && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("echo '' && echo \"Metadata file:\"\n"),
                     pl.lit("cat \"${FILE_META}\"\n"),
@@ -1787,7 +1798,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                            "$(basename \"${ROOT_FILE_NAME}\" | rev | cut -d. -f1 | rev).yaml\"\n"),
                     pl.lit("FILE_META=\"$(find \"${ROOT_DIR_BASE}\" -name \"${FILE_META_NAME}\")\"\n"),
                     pl.lit("if [ \"${FILE_META}\" == \"\" ]; then \n"),
-                    pl.lit("  echo '' && echo 'Warning: Metadata file [${FILE_META_NAME}] not found'&& exit 1\n"),
+                    pl.lit("  echo '' && echo \"Warning: Metadata file [${FILE_META_NAME}] not found\" && exit 1\n"),
                     pl.lit("fi\n"),
                     pl.lit("echo '' && echo \"Metadata file:\"\n"),
                     pl.lit("cat \"${FILE_META}\"\n"),
@@ -2105,11 +2116,17 @@ done
 
 
 def _normalise_name(_name):
-    _name = _name.replace("@", " ")
-    name_episode_match = re.search(MEDIA_EPISODE_NUMBER_REGEXP, _name)
+    name_profile_match = re.search(MEDIA_PROFILE_REGEXP, _name)
+    if name_profile_match is not None:
+        _name = re.sub(MEDIA_PROFILE_REGEXP, "", _name)
+    name_episode_match = re.search(MEDIA_EPISODE_NUMBER_REGEXP + "$", _name)
     if name_episode_match is not None:
-        _name = _name.replace("".join(name_episode_match.groups()), "@@")
-    _name = _name.replace(".", " ").replace("-", " ").replace("_", " ").replace("/", " / ")
+        _name = re.sub(MEDIA_EPISODE_NUMBER_REGEXP + "$", "", _name)
+    _name = _name \
+        .replace(".", " ") \
+        .replace("-", " ") \
+        .replace("_", " ") \
+        .replace("/", " / ")
     _name = string.capwords(re.sub(" +", " ", _name).strip()) \
         .replace(" / ", "/")
     for name_token in {
@@ -2128,11 +2145,13 @@ def _normalise_name(_name):
         _name = _name.replace(name_token.upper(), name_token.upper())
         _name = _name.replace(name_token.lower(), name_token.upper())
     if name_episode_match is not None:
-        _name = _name.replace("@@", "S{}E{}{}".format(
+        _name += " S{}E{}{}".format(
             name_episode_match.groups()[1],
             name_episode_match.groups()[4],
             name_episode_match.groups()[5]
-        ))
+        )
+    if name_profile_match is not None:
+        _name += name_profile_match.groups()[0]
     return _name
 
 

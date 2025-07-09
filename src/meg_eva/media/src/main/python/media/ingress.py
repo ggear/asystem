@@ -64,7 +64,7 @@ def _process(file_path_root, verbose=False):
                             file_dir_new,
                             file_series_search_groups[1],
                             file_series_search_groups[2],
-                            "" if file_series_search_groups[3] is None else \
+                            "" if len(file_series_search_groups) < 4 else \
                                 "-{}".format(file_series_search_groups[3]),
                             file_type
                         )

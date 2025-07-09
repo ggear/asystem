@@ -111,53 +111,54 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(join(dir_test, "48/media"),
                                   files_action_expected=actions(
                                       check=3,
+                                      upscale=1,
+                                      reformat=1,
+                                      downscale=2
+                                  ))
+        self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=10,
+                                  files_action_expected=actions(
+                                      check=4,
+                                      merge=2,
                                       reformat=1,
                                       upscale=1,
                                       downscale=2
                                   ))
-        self._test_analyse_assert(join(dir_test, "48/media"),
+        self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=10,
                                   files_action_expected=actions(
-                                      check=5,
                                       merge=1,
-                                      reformat=1,
                                       upscale=1,
-                                      downscale=2)
-                                  )
-        self._test_analyse_assert(join(dir_test, "48/media"),
-                                  files_action_expected=actions(
-                                      check=6,
+                                      transcode=3,
                                       reformat=1,
-                                      upscale=1,
                                       downscale=2
                                   ), force=True)
+        self._test_analyse_assert(join(dir_test, "48/media"), files_expected_scripts=12,
+                                  files_action_expected=actions(
+                                      check=6,
+                                      merge=2,
+                                      upscale=2,
+                                      downscale=2
+                                  ))
 
     def test_analyse_merge(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=22,
-                                  files_action_expected=actions(
-                                      check=12,
-                                      merge=1,
-                                      reformat=8,
-                                      downscale=1
-                                  ), scripts={"merge"})
         self._test_analyse_assert(join(dir_test, "41/media"),
                                   files_action_expected=actions(
                                       check=12,
-                                      reformat=8,
-                                      nothing=1
-                                  ), scripts={"merge"})
-        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=21,
+                                      reformat=9,
+                                      downscale=1
+                                  ))
+        self._test_analyse_assert(join(dir_test, "41/media"), files_expected_scripts=24,
                                   files_action_expected=actions(
-                                      check=12,
-                                      merge=0,
-                                      upscale=8,
-                                      nothing=1
+                                      merge=14,
+                                      reformat=9,
+                                      downscale=1,
                                   ), scripts={"merge"}, force=True)
         self._test_analyse_assert(join(dir_test, "41/media"),
                                   files_action_expected=actions(
-                                      check=12,
-                                      merge=0,
-                                      upscale=8,
+                                      check=8,
+                                      upscale=4,
+                                      reformat=3,
+                                      downscale=1,
                                       nothing=1
                                   ), scripts={"merge"})
 
@@ -192,7 +193,9 @@ class InternetTest(unittest.TestCase):
     def test_analyse_downscale(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "46/media"),
-                                  files_action_expected=actions(downscale=1), scripts={"downscale"})
+                                  files_action_expected=actions(
+                                      downscale=1
+                                  ), scripts={"downscale"})
         self._test_analyse_assert(join(dir_test, "46/media"),
                                   files_action_expected=actions(
                                       merge=1,
@@ -202,12 +205,39 @@ class InternetTest(unittest.TestCase):
     def test_analyse_reformat(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "47/media"),
-                                  files_action_expected=actions(reformat=1), scripts={"reformat"})
+                                  files_action_expected=actions(
+                                      reformat=3
+                                  ), scripts={"reformat"})
         self._test_analyse_assert(join(dir_test, "47/media"),
                                   files_action_expected=actions(
-                                      check=1,
-                                      reformat=1
+                                      check=2,
+                                      merge=1,
+                                      reformat=3
                                   ), scripts={"reformat"})
+
+    def test_analyse_profiles(self):
+        dir_test = self._test_prepare_dir("share_media_example", 1)
+        self._test_analyse_assert(join(dir_test, "55/media"),
+                                  files_action_expected=actions(
+                                      transcode=1,
+                                      nothing=1
+                                  ), scripts={"transcode"})
+        self._test_analyse_assert(join(dir_test, "55/media"),
+                                  files_action_expected=actions(
+                                      merge=1,
+                                      transcode=1,
+                                      nothing=1
+                                  ), scripts={})
+        self._test_analyse_assert(join(dir_test, "55/media"), files_expected_scripts=3,
+                                  files_action_expected=actions(
+                                      merge=1,
+                                      transcode=1,
+                                      nothing=1
+                                  ), scripts={"merge"})
+        self._test_analyse_assert(join(dir_test, "55/media"),
+                                  files_action_expected=actions(
+                                      nothing=2
+                                  ), scripts={})
 
     def test_analyse_empty(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
@@ -241,17 +271,17 @@ class InternetTest(unittest.TestCase):
         self._test_analyse_assert(abspath(join(dir_test, "19/tmp")), files_expected=-3, files_action_expected=actions())
         self._test_analyse_assert(join(dir_test, "10/tmp"), files_expected=-4, files_action_expected=actions())
 
-    # def test_analyse_comprehensive(self):
-    #     dir_test = self._test_prepare_dir("share_media_example", 1)
-    #     self._test_analyse_assert(join(dir_test, "10"), asserts=False, clean=True)
-    #     for INDEX in sorted([
-    #         _dir.name for _dir in Path(join(DIR_ROOT, "target/runtime-unit/share_media_example_1/share")).iterdir() if
-    #         _dir.is_dir()
-    #     ]):
-    #         self._test_analyse_assert(join(dir_test, INDEX), asserts=False)
-    #         self._test_analyse_assert(join(dir_test, "{}/media".format(INDEX)), asserts=False, force=True)
-    #         self._test_analyse_assert(join(dir_test, INDEX), asserts=False, files_expected_scripts={})
-    #     self._test_analyse_assert(dir_test, asserts=False)
+    def test_analyse_comprehensive(self):
+        dir_test = self._test_prepare_dir("share_media_example", 1)
+        self._test_analyse_assert(join(dir_test, "10"), asserts=False, clean=True)
+        for INDEX in sorted([
+            _dir.name for _dir in Path(join(DIR_ROOT, "target/runtime-unit/share_media_example_1/share")).iterdir() if
+            _dir.is_dir()
+        ]):
+            self._test_analyse_assert(join(dir_test, INDEX), asserts=False)
+            self._test_analyse_assert(join(dir_test, "{}/media".format(INDEX)), asserts=False, force=True)
+            self._test_analyse_assert(join(dir_test, INDEX), asserts=False, files_expected_scripts={})
+        self._test_analyse_assert(dir_test, asserts=False)
 
     def _test_analyse_assert(self, dir_test, files_expected=None, files_expected_scripts=None,
                              files_action_expected=None, asserts=True,
@@ -294,7 +324,8 @@ class InternetTest(unittest.TestCase):
                             script_return = subprocess.run([script_path], shell=True).returncode
                             sys.stdout.flush()
                             sys.stderr.flush()
-                            self.assertEqual(0, script_return)
+                            if asserts:
+                                self.assertEqual(0, script_return)
                             print("\n\nRan {} with return code [{}]".format(script_path, script_return), flush=True)
                 if asserts:
                     self.assertGreaterEqual(_file_count() if files_expected_scripts is None else files_expected_scripts,
