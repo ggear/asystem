@@ -34,6 +34,13 @@ cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/"* "${ROOT
 sed -i '' 's/\/local\/community/\/local\/custom_ui/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/bom-radar-card.js"
 wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/leaflet.js.map" "https://unpkg.com/leaflet@1.9.2/dist/leaflet.js.map"
 
+# Notes: https://github.com/bremor/bureau_of_meteorology/releases
+VERSION=1.3.6
+pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bureau_of_meteorology-component" "bremor/bureau_of_meteorology" "${VERSION}"
+rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/bureau_of_meteorology"
+mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
+cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology" "${ROOT_DIR}/src/main/resources/data/custom_components"
+
 # Notes: https://github.com/thomasloven/lovelace-layout-card/releases
 VERSION=v2.4.6
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-layout-card" "thomasloven/lovelace-layout-card" "${VERSION}"
@@ -68,13 +75,6 @@ pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "average-component" "limych/ha-av
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/average"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/average-component/custom_components/average" "${ROOT_DIR}/src/main/resources/data/custom_components"
-
-# Notes: https://github.com/bremor/bureau_of_meteorology/releases
-VERSION=1.3.0
-pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bureau_of_meteorology-component" "bremor/bureau_of_meteorology" "${VERSION}"
-rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/bureau_of_meteorology"
-mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
-cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/basnijholt/adaptive-lighting/releases
 VERSION=v1.26.0

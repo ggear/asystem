@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, tzinfo
 
 import iso8601
-import pytz
+import zoneinfo
 from homeassistant.components.weather import Forecast, WeatherEntity, WeatherEntityFeature
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfSpeed, UnitOfTemperature
@@ -15,7 +15,7 @@ from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from pytz import timezone
+from zoneinfo import ZoneInfo
 
 from . import BomDataUpdateCoordinator
 from .const import (
@@ -76,10 +76,10 @@ class WeatherBase(WeatherEntity):
         self._update_callback()
 
     async def async_forecast_daily(self) -> list[Forecast]:
-        tzinfo = pytz.timezone(self.collector.locations_data["data"]["timezone"])
+        tzinfo = zoneinfo.ZoneInfo(self.collector.locations_data["data"]["timezone"])
         return [
             Forecast(
-                datetime=iso8601.parse_date(data["date"]).astimezone(tzinfo).isoformat(),
+                datetime=iso8601.parse_date(data["date"]).astimezone(tzinfo).replace(tzinfo=None).isoformat(),
                 native_temperature=data["temp_max"],
                 condition=MAP_CONDITION[data["icon_descriptor"]],
                 templow=data["temp_min"],
@@ -90,10 +90,10 @@ class WeatherBase(WeatherEntity):
         ]
 
     async def async_forecast_hourly(self) -> list[Forecast]:
-        tzinfo = pytz.timezone(self.collector.locations_data["data"]["timezone"])
+        tzinfo = zoneinfo.ZoneInfo(self.collector.locations_data["data"]["timezone"])
         return [
             Forecast(
-                datetime=iso8601.parse_date(data["time"]).astimezone(tzinfo).isoformat(),
+                datetime=iso8601.parse_date(data["time"]).astimezone(tzinfo).replace(tzinfo=None).isoformat(),
                 native_temperature=data["temp"],
                 condition=MAP_CONDITION[data["icon_descriptor"]],
                 native_precipitation=data["rain_amount_max"],
@@ -102,7 +102,7 @@ class WeatherBase(WeatherEntity):
                 native_wind_speed=data["wind_speed_kilometre"],
                 wind_gust_speed=data["wind_gust_speed_kilometre"],
                 humidity=data["relative_humidity"],
-                uv=data["uv"],
+                uv_index=data["uv"],
             )
             for data in self.collector.hourly_forecasts_data["data"]
         ]
