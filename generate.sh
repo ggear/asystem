@@ -50,19 +50,23 @@ function pull_repo() {
       echo "Git pull failed, sleeping to avoid Github throttling ..."
       sleep 90
     done
-    git -c advice.detachedHead=false checkout "${CHECKOUT_LABEL}" 2>/dev/null
-    git status
     REPO_DIR="$(cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME}" && pwd)"
     REPO_LABEL="$(basename "$(dirname "${INVOKING_DIR}")")"/"$(basename "${INVOKING_DIR}"):${REPO_NAME}"
-    echo -n "Module repository [${REPO_LABEL}] is being verified at [${REPO_DIR}] ... "
-    TAG_CHECKED_OUT="$(git tag --points-at HEAD | grep -iv untagged | head -n 1)"
-    TAG_MOST_RECENT="$(git tag --sort=creatordate | grep -iv dev | grep -iv beta | grep -v stable | grep -iv rc | grep -iv a0 | grep -iv 0a | grep -iv b0 | grep -iv 0b | tail -n 1)"
-    [[ $(git branch | grep "ggear" | wc -l) -gt 0 ]] && TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
-    [[ "${TAG_CHECKED_OUT}" == "" ]] && TAG_CHECKED_OUT="$(git branch --show-current)" && TAG_MOST_RECENT="$(git branch --show-current)"
-    [[ "${TAG_MOST_RECENT}" == "" ]] && TAG_MOST_RECENT="${TAG_CHECKED_OUT}"
-    echo "current tag [${TAG_CHECKED_OUT}] and upstream [${TAG_MOST_RECENT}]"
-    [[ "${TAG_CHECKED_OUT}" == "${TAG_MOST_RECENT}" ]] && echo "Module [${REPO_LABEL}] [INFO] is up to date with version [${TAG_CHECKED_OUT}]"
-    [[ "${TAG_CHECKED_OUT}" != "${TAG_MOST_RECENT}" ]] && echo "Module [${REPO_LABEL}] [WARN] requires update from version [${TAG_CHECKED_OUT}] to [${TAG_MOST_RECENT}]"
+    git -c advice.detachedHead=false checkout "${CHECKOUT_LABEL}"
+    if [ $(git status | grep 'HEAD detached at ' | wc -l) -eq 0 ]; then
+      echo "" && echo "Module repository [${REPO_LABEL}] failed to checkout [${CHECKOUT_LABEL}]" && echo ""
+    else
+      git status
+      echo -n "Module repository [${REPO_LABEL}] is being verified at [${REPO_DIR}] ... "
+      TAG_CHECKED_OUT="$(git status | head -n 1 | sed -E 's/^HEAD detached at //')"
+      TAG_MOST_RECENT="$(git tag --sort=creatordate | grep -iv dev | grep -iv beta | grep -v stable | grep -iv rc | grep -iv a0 | grep -iv 0a | grep -iv b0 | grep -iv 0b | tail -n 1)"
+      [[ $(git branch | grep "ggear" | wc -l) -gt 0 ]] && TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
+      [[ "${TAG_CHECKED_OUT}" == "" ]] && TAG_CHECKED_OUT="$(git branch --show-current)" && TAG_MOST_RECENT="$(git branch --show-current)"
+      [[ "${TAG_MOST_RECENT}" == "" ]] && TAG_MOST_RECENT="${TAG_CHECKED_OUT}"
+      echo "current tag [${TAG_CHECKED_OUT}] and upstream [${TAG_MOST_RECENT}]"
+      [[ "${TAG_CHECKED_OUT}" == "${TAG_MOST_RECENT}" ]] && echo "Module [${REPO_LABEL}] [INFO] is up to date with version [${TAG_CHECKED_OUT}]"
+      [[ "${TAG_CHECKED_OUT}" != "${TAG_MOST_RECENT}" ]] && echo "Module [${REPO_LABEL}] [WARN] requires update from version [${TAG_CHECKED_OUT}] to [${TAG_MOST_RECENT}]"
+    fi
   fi
   cd "${INVOKING_DIR}"
 }

@@ -10,5 +10,5 @@ pull_repo "${ROOT_DIR}" "${1}" "sonarr" "sonarr" "sonarr/sonarr" "v${SONARR_VERS
 if [ ! -f "${ROOT_DIR}/src/main/resources/image/Sonarr.main.${SONARR_VERSION}.linux-x64.tar.gz" ]; then
   mkdir -p "${ROOT_DIR}/src/main/resources/image"
   rm -rf "${ROOT_DIR}/src/main/resources/image/"*.gz
-  wget -q -O "${ROOT_DIR}/src/main/resources/image/Sonarr.main.${SONARR_VERSION}.linux-x64.tar.gz" "https://github.com/Sonarr/Sonarr/releases/download/v${SONARR_VERSION}/Sonarr.main.${SONARR_VERSION}.linux-x64.tar.gz"
+  curl -fL -o "${ROOT_DIR}/src/main/resources/image/Sonarr.main.${SONARR_VERSION}.linux-x64.tar.gz" "https://github.com/Sonarr/Sonarr/releases/download/v${SONARR_VERSION}/Sonarr.main.${SONARR_VERSION}.linux-x64.tar.gz"
 fi
