@@ -189,7 +189,7 @@
       name: Server Rack
       icon: mdi:server
     - entity: switch.ceiling_network_switch_plug
-      name: Network Switch
+      name: Ceiling Network Devices
       icon: mdi:server-network
     - entity: fan.rack_fans_plug
       name: Rack Fans

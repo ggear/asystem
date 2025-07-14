@@ -1,17 +1,18 @@
 # Notes: https://github.com/AppDaemon/appdaemon/releases
-FROM acockburn/appdaemon:4.4.2 AS image_upstream
+FROM acockburn/appdaemon:4.5.11 AS image_upstream
 
 FROM image_upstream AS image_base
 USER root
 RUN \
     apk update && \
-    apk add --upgrade --no-cache bash=5.2.15-r0 && \
-    apk add --upgrade --no-cache less=608-r1 && \
-    apk add --upgrade --no-cache curl=8.9.0-r0 && \
-    apk add --upgrade --no-cache vim=9.0.0999-r0 && \
-    apk add --upgrade --no-cache jq=1.6-r2 && \
+    apk add --upgrade --no-cache bash=5.2.37-r0 && \
+    apk add --upgrade --no-cache less=668-r0 && \
+    apk add --upgrade --no-cache curl=8.12.1-r1 && \
+    apk add --upgrade --no-cache vim=9.1.1105-r0 && \
+    apk add --upgrade --no-cache jq=1.7.1-r0 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
+COPY src/main/python /asystem/bin/python
 COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build

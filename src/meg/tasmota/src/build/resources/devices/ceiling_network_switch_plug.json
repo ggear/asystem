@@ -3,7 +3,7 @@
     "templatename": "SONOFF POWR316D",
     "devicename": "ceiling_network_switch_plug",
     "friendlyname": [
-        "Network Switch"
+        "Ceiling Network Devices"
     ],
     "mqtt_host": "vernemq.local.janeandgraham.com",
     "mqtt_port": "32404",
