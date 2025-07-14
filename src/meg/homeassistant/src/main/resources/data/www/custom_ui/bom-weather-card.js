@@ -47,7 +47,7 @@ class BOMWeatherCard extends Lit {
       </style>
       <ha-card class = "card">
         <span class="icon bigger" id="icon-bigger" style="background: none, url(${this._hass.hassUrl("/local/custom_ui/bom-weather-card/icons/weather_icons/" + (this.config.static_icons ? "static" : "animated") + "/" + this.weatherIcons[this.current.conditions] + ".svg")}) no-repeat; background-size: contain;">${this.current.conditions}</span>
-        <span id="temperature-text">${this.current.temperature}</span><span class="tempc">${this.getUOM('temperature')}</span>
+        <span class="temp" id="temperature-text">${this.current.temperature}</span><span class="tempc">${this.getUOM('temperature')}</span>
         ${currentText}
         ${apparentTemp}
         ${separator}
