@@ -3,6 +3,7 @@ x-common: &common
   init: true
   environment:
     - TZ=Australia/Perth
+    - APPDAEMON_IP
     - APPDAEMON_SERVICE
     - APPDAEMON_HTTP_PORT
     - APPDAEMON_TOKEN
