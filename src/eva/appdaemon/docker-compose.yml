@@ -19,8 +19,8 @@ services:
     container_name: appdaemon
     <<: *common
     restart: ${SERVICE_RESTART}
-    ports:
-      - ${APPDAEMON_HTTP_PORT}:${APPDAEMON_HTTP_PORT}
+#    ports:
+#      - ${APPDAEMON_HTTP_PORT}:${APPDAEMON_HTTP_PORT}
     healthcheck:
       test: /asystem/etc/checkready.sh
       interval: 2m
