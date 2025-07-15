@@ -116,7 +116,7 @@ lovelace:
   resources:
     - url: '/local/custom_ui/bom-radar-card.js?v=v3.0.2-HACKED-V6'
       type: 'module'
-    - url: '/local/custom_ui/bom-weather-card.js?v=0.90a-HACKED-V2'
+    - url: '/local/custom_ui/bom-weather-card.js?v=0.90a-HACKED-V3'
       type: 'module'
     - url: '/local/custom_ui/layout-card/layout-card.js?v=2.4.4'
       type: 'module'

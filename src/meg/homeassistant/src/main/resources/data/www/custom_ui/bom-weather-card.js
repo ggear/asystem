@@ -48,7 +48,7 @@ class BOMWeatherCard extends Lit {
       <ha-card class = "card">
         <span class="icon bigger" id="icon-bigger" style="background: none, url(${this._hass.hassUrl("/local/custom_ui/bom-weather-card/icons/weather_icons/" + (this.config.static_icons ? "static" : "animated") + "/" + this.weatherIcons[this.current.conditions] + ".svg")}) no-repeat; background-size: contain;">${this.current.conditions}</span>
         <!-- HACK: Add right/margin-top styles to position correctly given CSS changes-->
-        <span class="temp" style="right: 0.9em !important; margin-top: -30px !important;" id="temperature-text">${this.current.temperature}</span><span class="tempc">${this.getUOM('temperature')}</span>
+        <span class="temp" style="right: 0.9em !important; margin-top: -28px !important;" id="temperature-text">${this.current.temperature}</span><span class="tempc">${this.getUOM('temperature')}</span>
         ${currentText}
         ${apparentTemp}
         ${separator}
