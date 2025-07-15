@@ -13,7 +13,7 @@ admin:
 hadashboard:
 http:
   password: ${APPDAEMON_TOKEN}
-  url: https://${APPDAEMON_IP}:${APPDAEMON_HTTP_PORT}
+  url: https://${APPDAEMON_SERVICE}:${APPDAEMON_HTTP_PORT}
   ssl_certificate: /asystem/etc/certificate.pem
   ssl_key: /asystem/etc/.key.pem
   transport: ws
