@@ -64,8 +64,8 @@ def _process(file_path_root, verbose=False):
                             file_dir_new,
                             file_series_search_groups[1],
                             file_series_search_groups[2],
-                            "" if len(file_series_search_groups) < 4 else \
-                                "-{}".format(file_series_search_groups[3]),
+                            "" if (len(file_series_search_groups) < 4 or file_series_search_groups[3] is None) \
+                                else "-{}".format(file_series_search_groups[3]),
                             file_type
                         )
                         file_path_new = "{}/{}/{}/Season {}/{}".format(
