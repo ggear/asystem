@@ -1,7 +1,6 @@
 {
   "macmini-eva": [
     "letsencrypt",
-    "appdaemon",
     "sabnzbd",
     "mlflow",
     "grafana",
