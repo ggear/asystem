@@ -829,9 +829,6 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
     for group in sorted(grouped_modules):
         sorted_modules.extend(grouped_modules[group])
     module_services = [_get_service(module) for module in sorted_modules]
-    if len(set(module_services)) != len(module_services):
-        raise Exception("Non-unique service names {} detected in module definitions"
-                        .format([service for service, count in collections.Counter(module_services).items() if count > 1]))
     return sorted_modules
 
 

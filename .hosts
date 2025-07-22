@@ -1,4 +1,5 @@
-net=udm,arm64
+dar=udm,arm64
+gui=udm,arm64
 rae=macbook,arm64
 lia=raspbpi,arm64
 bea=macmini,x86_64

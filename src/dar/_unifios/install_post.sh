@@ -4,7 +4,7 @@
 ################################################################################
 # Device provision
 ################################################################################
-# Name -> udm-net
+# Name -> udm-dar
 # Devices -> Adopt all
 # Wireless -> Create BertAndErnie/$UNIFI_WIRELESS_BERT_AND_ERNIE
 
@@ -46,7 +46,6 @@
 # Settings -> System -> Advanced -> Email Services -> False
 # Settings -> System -> Advanced -> Wireless Connectivity -> Wireless Meshing -> False
 # Settings -> System -> Advanced -> Device Authentication -> Keys
-
 
 # Settings -> Networks -> IPv6 Support -> False
 # Settings -> Networks -> IGMP Snooping -> False
