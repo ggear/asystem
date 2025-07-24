@@ -1,0 +1,32 @@
+{
+  "raspbpi-jen": [
+    "zigbee2mqtt",
+    "weewx",
+    "monitor"
+  ],
+  "macmini-meg": [
+    "homeassistant",
+    "mariadb",
+    "vernemq",
+    "postgres",
+    "internet",
+    "nginx",
+    "digitemp",
+    "plex",
+    "monitor"
+  ],
+  "macmini-may": [
+    "monitor",
+    "letsencrypt",
+    "sabnzbd",
+    "mlflow",
+    "grafana",
+    "influxdb",
+    "wrangle",
+    "mlserver",
+    "rhasspy",
+    "influxdb3",
+    "sonarr",
+    "unpoller"
+  ]
+}

@@ -86,12 +86,12 @@
 - type: entities
   title: Host Availability
   entities:
-    - entity: binary_sensor.host_eva_availability
-      name: Mac Mini Eva
+    - entity: binary_sensor.host_may_availability
+      name: Mac Mini May
     - entity: binary_sensor.host_meg_availability
       name: Mac Mini Meg
-    - entity: binary_sensor.host_lia_availability
-      name: Raspberry Pi Lia
+    - entity: binary_sensor.host_jen_availability
+      name: Raspberry Pi Jen
 ################################################################################
 - type: custom:layout-break
 ################################################################################
@@ -114,8 +114,8 @@
     - entity: sensor.compensation_sensor_rack_bottom_temperature
       name: Rack Bottom
       icon: mdi:thermometer
-    - entity: sensor.compensation_sensor_host_eva_temperature
-      name: Mac Mini Eva
+    - entity: sensor.compensation_sensor_host_may_temperature
+      name: Mac Mini May
       icon: mdi:thermometer
     - entity: sensor.compensation_sensor_host_meg_temperature
       name: Mac Mini Meg
@@ -134,8 +134,8 @@
     - entity: sensor.template_wardrobe_temperature_proxy
       name: Wardrobe Ambient
       icon: mdi:thermometer
-    - entity: sensor.compensation_sensor_host_lia_temperature
-      name: Raspberry Pi Lia
+    - entity: sensor.compensation_sensor_host_jen_temperature
+      name: Raspberry Pi Jen
       icon: mdi:thermometer
 ################################################################################
 - type: entities
@@ -182,8 +182,8 @@
     - entity: switch.deck_freezer_plug
       name: Deck Freezer
       icon: mdi:fridge-top
-    - entity: switch.server_lia_plug
-      name: Server Lia
+    - entity: switch.server_jen_plug
+      name: Server Jen
       icon: mdi:server
     - entity: switch.rack_outlet_plug
       name: Server Rack

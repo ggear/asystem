@@ -8,6 +8,3 @@ may=macmini,x86_64,dar
 meg=macmini,x86_64,dar
 rae=macbook,arm64,dar
 zac=raspbpi,arm64,dar
-
-lia=raspbpi,arm64,dar
-eva=macmini,x86_64,dar

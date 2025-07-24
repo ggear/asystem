@@ -1,0 +1,22 @@
+{
+  "object_id": "host_jen_temperature",
+  "unique_id": "host_jen_temperature",
+  "name": "Host Jen Temperature",
+  "state_class": "measurement",
+  "unit_of_measurement": "°C",
+  "device_class": "temperature",
+  "icon": "mdi:thermometer",
+  "force_update": "false",
+  "state_topic": "telegraf/raspbpi-jen/monitor/sensors",
+  "value_template": "{{ (value_json[\"metrics\"] | selectattr('tags.feature', 'eq', 'temp1') | map(attribute='fields.temp_input') | first | default(None) | float(None)) if (value_json['metrics'] is defined) else (states('sensor.host_jen_temperature') | float(None)) }}",
+  "qos": "1",
+  "device": {
+    "via_device": "Monitor",
+    "identifiers": "telegraf-wardrobe-jen-temperature",
+    "name": "Wardrobe Jen Temperature",
+    "model": "Sensors",
+    "manufacturer": "Telegraf",
+    "sw_version": "ASYSTEM_VERSION",
+    "suggested_area": "Wardrobe"
+  }
+}
