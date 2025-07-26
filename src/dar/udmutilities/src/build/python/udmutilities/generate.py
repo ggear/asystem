@@ -9,7 +9,7 @@ import requests
 import urllib3
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-sys.path.insert(0, join(next(glob(f"{DIR_ROOT}/../../*/homeassistant"), ""), "src/build/python"))
+sys.path.insert(0, join(next(iter(glob(f"{DIR_ROOT}/../../*/homeassistant")), ""), "src/build/python"))
 
 from homeassistant.generate import load_entity_metadata
 from homeassistant.generate import load_env
