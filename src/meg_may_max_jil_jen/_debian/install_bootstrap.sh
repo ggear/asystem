@@ -32,7 +32,7 @@ systemctl restart ssh
 # reboot now
 
 ################################################################################
-# Legacy USB NIC setup (No longer used) via ssh graham@${HOST_TYPE}-${HOST_NAME}
+# Legacy USB NIC steup (No longer used) via ssh graham@${HOST_TYPE}-${HOST_NAME}
 ################################################################################
 apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
 INTERFACE=$(lshw -C network -short 2>/dev/null | grep enx | tr -s ' ' | cut -d' ' -f2)
@@ -55,6 +55,13 @@ echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/aut
 # Setup
 ################################################################################
 cd "/Users/graham/Code/asystem/"
-for i in {0..9}; do FAB_SKIP_GROUP_ALLBUT=0 FAB_SKIP_DELTA=true fab rel; done
-FAB_SKIP_GROUP_ALLBUT=1 FAB_SKIP_DELTA=true fab rel
+FAB_SKIP_GROUP_ALLBUT=0 FAB_SKIP_DELTA=true fab rel
+FAB_SKIP_GROUP_ALLBUT=10 FAB_SKIP_DELTA=true fab rel
+FAB_SKIP_GROUP_ALLBUT=11 FAB_SKIP_DELTA=true fab rel
+FAB_SKIP_GROUP_ALLBUT=12 FAB_SKIP_DELTA=true fab rel
+
+FAB_SKIP_GROUP_ALLBUT=13 FAB_SKIP_DELTA=true fab rel
+FAB_SKIP_GROUP_ALLBUT=14 FAB_SKIP_DELTA=true fab rel
+FAB_SKIP_GROUP_ALLBUT=15 FAB_SKIP_DELTA=true fab rel
+
 # reboot now
