@@ -9,7 +9,7 @@
 cd "/Users/graham/Code/asystem/"
 for i in {0..1}; do
   FAB_SKIP_GROUP_ALLBUT=$i FAB_SKIP_DELTA=true fab rel
-  echo "" && read -n 1 -s -r -p "Press any key to continue ..."
+  echo "" && read -n 1 -s -r -p "Press any key to continue ..." && echo ""
 done
 
 FAB_SKIP_GROUP_ALLBUT=10 FAB_SKIP_DELTA=true fab rel
