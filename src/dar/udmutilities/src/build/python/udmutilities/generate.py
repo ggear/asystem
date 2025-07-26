@@ -133,38 +133,14 @@ if __name__ == "__main__":
     #             metadata_dhcp_ips[metadata_dhcp_ip]
     #         ))
 
-    # INFO: Possible host and domain naming schemes:
+    # INFO: Host and domain naming schemes:
     #
-    # home.janeandgraham.com
-    # homeassistant.janeandgraham.com
-    # homeassistant.local.janeandgraham.com
-    # homeassistant
-    # macmini-meg.local.janeandgraham.com
-    # macmini-meg.local
-    # macmini-meg
-    #
-    # home.janeandgraham.com
-    # homeassistant.janeandgraham.com
+    # home.dar.janeandgraham.com
+    # homeassistant.dar.janeandgraham.com
     # homeassistant.lan.janeandgraham.com
     # homeassistant
     # macmini-meg.lan.janeandgraham.com
-    # macmini-meg.local
-    # macmini-meg
-    #
-    # home.wan.janeandgraham.com
-    # homeassistant.cdn.janeandgraham.com
-    # homeassistant.lan.janeandgraham.com
-    # homeassistant
-    # macmini-meg.lan.janeandgraham.com
-    # macmini-meg.local
-    # macmini-meg
-    #
-    # home.public.janeandgraham.com
-    # homeassistant.private.proxy.janeandgraham.com
-    # homeassistant.private.service.janeandgraham.com
-    # homeassistant
-    # macmini-meg.private.host.janeandgraham.com
-    # macmini-meg.local
+    # macmini-meg.lan
     # macmini-meg
 
     metadata_dhcpaliases_path = abspath(join(dnsmasq_conf_root_path, "dhcp.dhcpServers-aliases.conf"))

@@ -55,6 +55,7 @@ pgsrip ./*.mkv
 
 # Copy between shares
 rsync -avhPr /share/3/media/kids /share/2/media
+rsync -avhPrL --no-o --no-g /share/3/media/kids /media/usbdrive/kids
 
 # Copy media to usb-drive
 find "/share/*/media/parents/movies -name *Hope*mkv" -exec echo "     '{}' \\" \;

@@ -3,35 +3,35 @@
 ################################################################################
 # Bootable USB
 ################################################################################
-diskutil list /dev/disk2
-diskutil unmountDisk force /dev/disk2
-wget http://debian.mirror.digitalpacific.com.au/debian-cd/12.10.0/amd64/iso-cd/debian-12.10.0-amd64-netinst.iso
-dd if=/Users/graham/Desktop/debian-12.10.0-amd64-netinst.iso bs=1m | pv /Users/graham/Desktop/debian-12.10.0-amd64-netinst.iso | dd of=/dev/disk2 bs=1m
+USB_DEV="/dev/disk4"
+DEBIAN_VERSION="12.11.0"
+cd "/Users/graham/Desktop"
+wget "https://debian.mirror.digitalpacific.com.au/debian-cd/${DEBIAN_VERSION}/amd64/iso-cd/debian-${DEBIAN_VERSION}-amd64-netinst.iso"
+diskutil list "${USB_DEV}"
+[[ $(diskutil list "${USB_DEV}" | grep 'external' | wc -l) -eq 1 ]] && diskutil unmountDisk force "${USB_DEV}"
+[[ $(diskutil list "${USB_DEV}" | grep 'external' | wc -l) -eq 1 ]] && sudo dd "if=/Users/graham/Desktop/debian-${DEBIAN_VERSION}-amd64-netinst.iso" bs=1m | pv "/Users/graham/Desktop/debian-${DEBIAN_VERSION}-amd64-netinst.iso" | sudo dd "of=${USB_DEV}" bs=1m
 
 ################################################################################
 # Install system
 ################################################################################
 # Install (non-graphical)
-# Dont load proprietary media
-# Set host to ${HOST_TYPE}-${HOST_NAME}.janeandgraham.com
+# Set host to ${HOST_TYPE}-${HOST_NAME}
+# Set domain name to lan.janeandgraham.com
 # Create user Graham Gear (graham)
 # Guided entire disk and setup LVM create partitions at 450GB, /tmp, /var, /home, max, force UEFI
 # Install SSH server, standard sys utils
 
 ################################################################################
-# Install packages
+# Boostrap environment via ssh graham@${HOST_TYPE}-${HOST_NAME}
 ################################################################################
-# Run install_upgrade.sh script
-# Run install.sh apt-get install commands
-
-################################################################################
-# SSH config
-################################################################################
+su -
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 systemctl restart ssh
+# Copy install_upgrade.sh to shell and run
+# Copy install.sh apt-get install commands to shell and run
 
 ################################################################################
-# Network (USB)
+# Legacy USB NIC steup (No longer used) via ssh graham@${HOST_TYPE}-${HOST_NAME}
 ################################################################################
 apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
 INTERFACE=$(lshw -C network -short 2>/dev/null | grep enx | tr -s ' ' | cut -d' ' -f2)
@@ -49,3 +49,8 @@ ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153"
 EOF
 chmod -x /etc/udev/rules.d/10-usb-network-realtek.rules
 echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/autosuspend -exec echo -n {}": " \; -exec cat {} \; | grep ": \-1")
+
+################################################################################
+# Setup
+################################################################################
+cd ${HOME}/Code/asystem/src/*/_keys && fab rel
