@@ -133,7 +133,7 @@ locale-gen en_AU.UTF-8
 ################################################################################
 # Shell setup
 ################################################################################
-cat <<EOF >"${HOME}/.bashrc"
+cat <<EOF >"/root/.bashrc"
 # .bashrc
 
 export LC_COLLATE=C
@@ -372,7 +372,7 @@ SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{produ
 EOF
 chmod -x /etc/udev/rules.d/99-usb-serial.rules
 udevadm control --reload-rules && udevadm trigger && sleep 2
-ls -la /dev/ttyUSB*
+ls -la /dev/ttyUSB* 2>/dev/null || true
 
 ################################################################################
 # Digitemp
