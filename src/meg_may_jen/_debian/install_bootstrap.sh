@@ -29,6 +29,7 @@ sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd
 systemctl restart ssh
 # Copy install_upgrade.sh to shell and run
 # Copy install.sh apt-get install commands to shell and run
+# reboot now
 
 ################################################################################
 # Legacy USB NIC steup (No longer used) via ssh graham@${HOST_TYPE}-${HOST_NAME}
@@ -56,3 +57,6 @@ echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/aut
 cd ${HOME}/Code/asystem/src/*/_users && fab rel
 cd ${HOME}/Code/asystem/src/*/_keys && fab rel
 cd ${HOME}/Code/asystem/src/*/_debian && fab rel
+cd ${HOME}/Code/asystem/src/*/_debian_mac && fab rel
+
+# reboot now
