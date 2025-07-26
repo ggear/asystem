@@ -1,4 +1,4 @@
-import glob
+from glob import glob as glob
 import os
 import re
 import sys
@@ -9,9 +9,7 @@ import requests
 import urllib3
 
 DIR_ROOT = abspath(join(dirname(realpath(__file__)), "../../../.."))
-for dir_module in glob.glob(join(DIR_ROOT, "../../*/*")):
-    if dir_module.endswith("homeassistant"):
-        sys.path.insert(0, join(dir_module, "src/build/python"))
+sys.path.insert(0, join(next(glob(f"{DIR_ROOT}/../../*/homeassistant"), ""), "src/build/python"))
 
 from homeassistant.generate import load_entity_metadata
 from homeassistant.generate import load_env
@@ -46,7 +44,7 @@ if __name__ == "__main__":
         raise Exception("Build generate script [udmutilities] found non-unique IP addresses!")
     if not metadata_dhcp_df.loc[metadata_dhcp_df["connection_mac"] != '', :]["connection_mac"].is_unique:
         raise Exception("Build generate script [udmutilities] found non-unique MAC addresses!")
-    for dnsmasq_conf_path in glob.glob(join(dnsmasq_conf_root_path, "{}*".format(DNSMASQ_CONF_PREFIX))):
+    for dnsmasq_conf_path in glob(join(dnsmasq_conf_root_path, "{}*".format(DNSMASQ_CONF_PREFIX))):
         os.remove(dnsmasq_conf_path)
     unifi_mac_name = {}
     unifi_session = requests.Session()
