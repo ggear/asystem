@@ -50,18 +50,3 @@ ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0bda", ATTR{idProduct}=="8153"
 EOF
 chmod -x /etc/udev/rules.d/10-usb-network-realtek.rules
 echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/autosuspend -exec echo -n {}": " \; -exec cat {} \; | grep ": \-1")
-
-################################################################################
-# Setup
-################################################################################
-cd "/Users/graham/Code/asystem/"
-FAB_SKIP_GROUP_ALLBUT=0 FAB_SKIP_DELTA=true fab rel
-FAB_SKIP_GROUP_ALLBUT=10 FAB_SKIP_DELTA=true fab rel
-FAB_SKIP_GROUP_ALLBUT=11 FAB_SKIP_DELTA=true fab rel
-FAB_SKIP_GROUP_ALLBUT=12 FAB_SKIP_DELTA=true fab rel
-
-FAB_SKIP_GROUP_ALLBUT=13 FAB_SKIP_DELTA=true fab rel
-FAB_SKIP_GROUP_ALLBUT=14 FAB_SKIP_DELTA=true fab rel
-FAB_SKIP_GROUP_ALLBUT=15 FAB_SKIP_DELTA=true fab rel
-
-# reboot now
