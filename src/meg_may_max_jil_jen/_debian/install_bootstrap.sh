@@ -55,6 +55,6 @@ echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/aut
 # Setup
 ################################################################################
 cd "/Users/graham/Code/asystem/"
-FAB_SKIP_GROUP_ALLBUT=0 FAB_SKIP_DELTA=true fab rel
+for i in {0..9}; do FAB_SKIP_GROUP_ALLBUT=0 FAB_SKIP_DELTA=true fab rel; done
 FAB_SKIP_GROUP_ALLBUT=1 FAB_SKIP_DELTA=true fab rel
 # reboot now
