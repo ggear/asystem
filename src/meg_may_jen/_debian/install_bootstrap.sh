@@ -53,4 +53,5 @@ echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/aut
 ################################################################################
 # Setup
 ################################################################################
+cd ${HOME}/Code/asystem/src/*/_users && fab rel
 cd ${HOME}/Code/asystem/src/*/_keys && fab rel
