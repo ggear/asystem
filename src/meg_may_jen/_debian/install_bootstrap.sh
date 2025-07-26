@@ -32,7 +32,7 @@ systemctl restart ssh
 # reboot now
 
 ################################################################################
-# Legacy USB NIC steup (No longer used) via ssh graham@${HOST_TYPE}-${HOST_NAME}
+# Legacy USB NIC setup (No longer used) via ssh graham@${HOST_TYPE}-${HOST_NAME}
 ################################################################################
 apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
 INTERFACE=$(lshw -C network -short 2>/dev/null | grep enx | tr -s ' ' | cut -d' ' -f2)
@@ -54,9 +54,7 @@ echo "Power management disabled for: "$(find -L /sys/bus/usb/devices/*/power/aut
 ################################################################################
 # Setup
 ################################################################################
-cd ${HOME}/Code/asystem/src/*/_users && fab rel
-cd ${HOME}/Code/asystem/src/*/_keys && fab rel
-cd ${HOME}/Code/asystem/src/*/_debian && fab rel
-cd ${HOME}/Code/asystem/src/*/_debian_mac && fab rel
-
+cd "/Users/graham/Code/asystem/"
+FAB_SKIP_GROUP_ALLBUT=0 FAB_SKIP_DELTA=true fab rel
+FAB_SKIP_GROUP_ALLBUT=1 FAB_SKIP_DELTA=true fab rel
 # reboot now
