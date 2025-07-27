@@ -6,7 +6,7 @@
 install_all() {
   local start_index=$1
   local end_index=$2
-  local last_index=0
+  local last_index=${start_index}
   local list_only=${3:-true}
   cd "/Users/graham/Code/asystem/"
   for i in $(seq ${start_index} ${end_index}); do
