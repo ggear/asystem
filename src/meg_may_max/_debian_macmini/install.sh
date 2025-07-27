@@ -55,25 +55,9 @@ lvdisplay /dev/$(hostname)-vg/home
 df -h /home
 
 ################################################################################
-# Install SSD (entire disk to be allocated)
-################################################################################
-if fdisk -l /dev/sda >/dev/null 2>&1 && ! fdisk -l /dev/sda1 >/dev/null 2>&1; then
-  fdisk -l
-  blkid /dev/sda
-  parted /dev/sda
-  # mklabel gpt
-  # mkpart primary 0% 100%
-  # quit
-  mkfs.ext4 -m 0 -T largefile4 /dev/sda1
-  tune2fs -m 0 /dev/sda1
-  blkid /dev/sda1
-fi
-fdisk -l /dev/sda1
-
-################################################################################
 # Network (Onboard)
 ################################################################################
-echo "macvlan" | sudo tee -a /etc/modules
+echo "macvlan" | tee -a /etc/modules
 INTERFACE=$(lshw -C network -short -c network 2>/dev/null | tr -s ' ' | cut -d' ' -f2 | grep -v 'path\|=\|network')
 if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "auto eth0." /etc/network/interfaces | wc -l) -eq 0 ]; then
   MACADDRESS_SUFFIX="$(ifconfig "${INTERFACE}" | grep ether | tr -s ' ' | cut -d' ' -f3 | cut -d':' -f2-)"

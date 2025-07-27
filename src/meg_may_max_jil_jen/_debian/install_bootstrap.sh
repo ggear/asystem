@@ -32,6 +32,22 @@ systemctl restart ssh
 # reboot now
 
 ################################################################################
+# Install SSD (entire disk to be allocated)
+################################################################################
+if fdisk -l /dev/sda >/dev/null 2>&1 && ! fdisk -l /dev/sda1 >/dev/null 2>&1; then
+  fdisk -l
+  blkid /dev/sda
+  parted /dev/sda
+  # mklabel gpt
+  # mkpart primary 0% 100%
+  # quit
+  mkfs.ext4 -m 0 -T largefile4 /dev/sda1
+  tune2fs -m 0 /dev/sda1
+  blkid /dev/sda1
+fi
+fdisk -l /dev/sda1
+
+################################################################################
 # Legacy USB NIC steup (No longer used) via ssh graham@${HOST_TYPE}-${HOST_NAME}
 ################################################################################
 apt-get install -y --allow-downgrades 'firmware-realtek=20210315-3'
