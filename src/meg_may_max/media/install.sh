@@ -6,7 +6,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 cd ${SERVICE_INSTALL} || exit
 
 if [ $(ffprobe 2>&1 | grep "${MEDIA_FFMPEG_VERSION}" | wc -l) -eq 0 ]; then
-  apt update && apt install -y libx265-dev libx264-dev
+  apt-get update && apt-get install -y libx265-dev libx264-dev
   cd /usr/local/lib
   [[ ! -d "./ffmpeg" ]] && git clone git://git.videolan.org/ffmpeg.git
   cd ffmpeg
