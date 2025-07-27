@@ -19,10 +19,15 @@ install() {
   if [ "${last_index}" -gt 0 ]; then
     for i in $(seq ${start_index} ${last_index}); do
       FAB_SKIP_GROUP_ALLBUT=${i} FAB_SKIP_DELTA=true fab rel
-      echo "" && echo "" && echo -e "Press any key to install next service ... \n\n\n" && read -n 1 -s -r
+      [[ $i != ${last_index} ]] && echo "" && echo "" && echo -e "Press any key to install next service ... \n\n\n" && read -n 1 -s -r
     done
   fi
 }
 
-install 0 9
-install 10 19
+if [ $# -eq 2 ]; then
+  install "$1" "$2"
+else
+  install 0 9
+  install 10 19
+  install 20 29
+fi
