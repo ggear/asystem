@@ -23,7 +23,7 @@ install_all() {
     echo "" && echo "" && echo -e "Press any key to install all services ... \n\n\n" && read -n 1 -s -r
     if [ "${last_index}" -gt 0 ]; then
       for i in $(seq ${start_index} ${last_index}); do
-        FAB_SKIP_GROUP_ALLBUT=${i} FAB_SKIP_DELTA=true fab rel
+        FAB_SKIP_GROUP_ALLBUT=${i} FAB_SKIP_DELTA=true FAB_SKIP_TESTS=true fab rel
         [[ $i != ${last_index} ]] && echo "" && echo "" && echo -e "Press any key to install next service ... \n\n\n" && read -n 1 -s -r
       done
     fi
