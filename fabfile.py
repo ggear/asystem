@@ -289,12 +289,13 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                    filter_host=filter_host, is_release=is_release)
         _print_footer(module, "generate env", host=filter_host)
     generate_pythonpath = [dirname(abspath(__file__))]
-    for module in _get_modules(context, "src/build/python/*/generate.py", "*/*"):
+    for module in _get_modules(context, "src/build/python/*/generate.py", "*/*", filter_groups=False):
         generate_pythonpath.append(join(ROOT_MODULE_DIR, module, "src/build/python"))
     for module in _get_modules(context, "src/build/python/*/generate.py", filter_changes=False):
         _print_header(module, "generate python script", host=filter_host)
         _run_local(context, "PYTHONPATH={} python {}/{}/src/build/python/{}/generate.py" \
                    .format(":".join(generate_pythonpath), ROOT_MODULE_DIR, module, _name(module)), ROOT_DIR)
+
         _print_footer(module, "generate python script", host=filter_host)
     for module in _get_modules(context, "generate.sh", filter_changes=False):
         _print_header(module, "generate shell script", host=filter_host)
@@ -844,7 +845,7 @@ def _get_modules_by_hosts(filter_path=None, filter_module=None):
     return modules
 
 
-def _get_modules(context, filter_path=None, filter_module=None, filter_changes=True):
+def _get_modules(context, filter_path=None, filter_module=None, filter_changes=True, filter_groups=True):
     working_modules = []
     if filter_module is None:
         filter_changes = filter_changes if \
@@ -879,8 +880,10 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
     for module in working_modules:
         group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
         group = int(group_path.read_text().strip()) if group_path.exists() else -1
-        if (FAB_SKIP_GROUP_BELOW not in os.environ or int(os.environ[FAB_SKIP_GROUP_BELOW]) > group) and \
-                (FAB_SKIP_GROUP_ABOVE not in os.environ or int(os.environ[FAB_SKIP_GROUP_ABOVE]) < group):
+        if not filter_groups or (
+                (FAB_SKIP_GROUP_BELOW not in os.environ or int(os.environ[FAB_SKIP_GROUP_BELOW]) > group) and \
+                (FAB_SKIP_GROUP_ABOVE not in os.environ or int(os.environ[FAB_SKIP_GROUP_ABOVE]) < group)
+        ):
             if group not in grouped_modules:
                 grouped_modules[group] = [module]
             else:

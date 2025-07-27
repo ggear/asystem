@@ -12,8 +12,7 @@ install_all() {
   for i in $(seq ${start_index} ${end_index}); do
     service_name_csv=$(
       FAB_SKIP_GROUP_ALLBUT=${i} FAB_SKIP_DELTA=true fab cle |
-        grep "CLEAN TRANSIENTS SUCCESSFUL" | cut -d' ' -f4 | cut -d'-' -f1,2 | paste -sd, - |
-        sed 's/,/, /g' | tr ',' '\n' | sed 's/.*-\([^-, ]*\)$/\1/' | paste -sd', ' -
+        grep "CLEAN TRANSIENTS SUCCESSFUL" | cut -d' ' -f4 | cut -d'-' -f1,2 | paste -sd, - | sed -E 's/[^,-]+-([^,]+)/\1/g' | sed 's/,/, /g'
     )
     if [[ -n "${service_name_csv}" ]]; then
       last_index=${i}
