@@ -1,13 +1,9 @@
 #!/bin/bash
 ###############################################################################
-# Generic module install script, to be invoked by the Fabric management script
+# Install all modules
 ###############################################################################
 
-################################################################################
-# Setup network devices
-################################################################################
-
-initialise() {
+install() {
   local start_index=$1
   local end_index=$2
   local last_index=0
@@ -19,13 +15,14 @@ initialise() {
       echo "Service Group [${i}] found [${service_name_csv}]"
     fi
   done
-  echo "" && echo "" && echo -e "Press any key to release all services ... \n\n\n" && read -n 1 -s -r
+  echo "" && echo "" && echo -e "Press any key to install all services ... \n\n\n" && read -n 1 -s -r
   if [ "${last_index}" -gt 0 ]; then
     for i in $(seq ${start_index} ${last_index}); do
       FAB_SKIP_GROUP_ALLBUT=${i} FAB_SKIP_DELTA=true fab rel
-      echo "" && echo "" && echo -e "Press any key to release next service ... \n\n\n" && read -n 1 -s -r
+      echo "" && echo "" && echo -e "Press any key to install next service ... \n\n\n" && read -n 1 -s -r
     done
   fi
 }
 
-initialise 0 9
+install 0 9
+install 10 19
