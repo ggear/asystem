@@ -3,7 +3,6 @@ gui=udm,arm64,gui
 jen=raspbpi,arm64,dar
 jil=raspbpi,arm64,gui
 mad=macmini,x86_64,dar
-mae=macmini,x86_64,dar
 max=macmini,x86_64,dar
 may=macmini,x86_64,dar
 meg=macmini,x86_64,dar

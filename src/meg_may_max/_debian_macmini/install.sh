@@ -1,12 +1,62 @@
 #!/bin/bash
 
 ################################################################################
-# Intel network card
+# Packages
+################################################################################
+apt-get update
+apt-get install -y --allow-downgrades 'mbpfan=2.3.0-1+b1'
+apt-get install -y --allow-downgrades 'libc6-i386=2.36-9+deb12u10'
+apt-get install -y --allow-downgrades 'intel-microcode=3.20250512.1~deb12u1'
+
+################################################################################
+# Network
 ################################################################################
 if [ -f /etc/default/grub ] && [ $(grep "intel_iommu=on iommu=pt" /etc/default/grub | wc -l) -eq 0 ]; then
   sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet/GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt/' /etc/default/grub
   update-grub
 fi
+INTERFACE=$(lshw -C network -short -c network 2>/dev/null | tr -s ' ' | cut -d' ' -f2 | grep -v 'path\|=\|network')
+if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "auto eth0." /etc/network/interfaces | wc -l) -eq 0 ]; then
+  MACADDRESS_SUFFIX="$(ifconfig "${INTERFACE}" | grep ether | tr -s ' ' | cut -d' ' -f3 | cut -d':' -f2-)"
+  if [ "${INTERFACE}" != "" ]; then
+    cat <<EOF >>/etc/network/interfaces
+
+rename ${INTERFACE}=eth0
+
+auto eth0
+iface eth0 inet dhcp
+
+#auto eth0.3
+#iface eth0.3 inet dhcp
+#    vlan-raw-device eth0
+#    pre-up ip link set eth0.3 address 3a:${MACADDRESS_SUFFIX}
+#
+#auto eth0.4
+#iface eth0.4 inet dhcp
+#    vlan-raw-device eth0
+#    pre-up ip link set eth0.4 address 4a:${MACADDRESS_SUFFIX}
+
+EOF
+  fi
+fi
+systemctl stop wpa_supplicant.service
+systemctl disable wpa_supplicant.service
+grep -q '^8021q' /etc/modules 2>/dev/null || echo '8021q' | tee -a /etc/modules
+grep -q '^macvlan' /etc/modules 2>/dev/null || echo 'macvlan' | tee -a /etc/modules
+grep -q '^blacklist bcma-pci-bridge' /etc/modprobe.d/blacklist-wifi.conf 2>/dev/null || echo 'blacklist bcma-pci-bridge' | sudo tee -a /etc/modprobe.d/blacklist-wifi.conf
+
+################################################################################
+# Bluetooth
+################################################################################
+systemctl stop bluetooth.service
+systemctl disable bluetooth.service
+systemctl mask bluetooth.service
+grep -q '^blacklist bluetooth' /etc/modprobe.d/blacklist-bluetooth.conf 2>/dev/null || echo 'blacklist bluetooth' | sudo tee -a /etc/modprobe.d/blacklist-bluetooth.conf
+
+################################################################################
+# Regenerate initramfs
+################################################################################
+update-initramfs -u
 
 ################################################################################
 # Volumes LVM standard (assumes drive > 500GB)
@@ -55,30 +105,16 @@ lvdisplay /dev/$(hostname)-vg/home
 df -h /home
 
 ################################################################################
-# Network (Onboard)
+# Fan
 ################################################################################
-echo "macvlan" | tee -a /etc/modules
-INTERFACE=$(lshw -C network -short -c network 2>/dev/null | tr -s ' ' | cut -d' ' -f2 | grep -v 'path\|=\|network')
-if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "auto eth0." /etc/network/interfaces | wc -l) -eq 0 ]; then
-  MACADDRESS_SUFFIX="$(ifconfig "${INTERFACE}" | grep ether | tr -s ' ' | cut -d' ' -f3 | cut -d':' -f2-)"
-  if [ "${INTERFACE}" != "" ]; then
-    cat <<EOF >>/etc/network/interfaces
-
-rename ${INTERFACE}=eth0
-
-auto eth0
-iface eth0 inet dhcp
-
-#auto eth0.3
-#iface eth0.3 inet dhcp
-#    vlan-raw-device eth0
-#    pre-up ip link set eth0.3 address 3a:${MACADDRESS_SUFFIX}
-#
-#auto eth0.4
-#iface eth0.4 inet dhcp
-#    vlan-raw-device eth0
-#    pre-up ip link set eth0.4 address 4a:${MACADDRESS_SUFFIX}
-
+cat <<EOF >/etc/mbpfan.conf
+[general]
+min_fan_speed = 1800
+max_fan_speed = 6500
+low_temp = 40
+high_temp = 60
+max_temp = 65
+polling_interval = 1
 EOF
-  fi
-fi
+curl -sf https://raw.githubusercontent.com/linux-on-mac/mbpfan/49f544fd8d596fa13d5525a5b042eee311568c67/mbpfan.service -o /etc/systemd/system/mbpfan.service
+systemctl enable mbpfan.service

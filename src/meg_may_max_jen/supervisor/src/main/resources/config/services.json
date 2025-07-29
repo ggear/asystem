@@ -1,10 +1,6 @@
 {
-  "raspbpi-jen": [
-    "zigbee2mqtt",
-    "weewx",
-    "monitor"
-  ],
   "macmini-meg": [
+    "monitor",
     "homeassistant",
     "mariadb",
     "vernemq",
@@ -12,8 +8,7 @@
     "internet",
     "nginx",
     "digitemp",
-    "plex",
-    "monitor"
+    "plex"
   ],
   "macmini-may": [
     "monitor",
@@ -25,8 +20,15 @@
     "wrangle",
     "mlserver",
     "rhasspy",
-    "influxdb3",
     "sonarr",
     "unpoller"
+  ],
+  "macmini-max": [
+    "monitor"
+  ],
+  "raspbpi-jen": [
+    "monitor",
+    "zigbee2mqtt",
+    "weewx"
   ]
 }

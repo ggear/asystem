@@ -25,6 +25,8 @@ export DOCKER_CLI_HINTS=false
 export BASH_SILENCE_DEPRECATION_WARNING=1
 export PYTHONDONTWRITEBYTECODE=1
 
+bash_sync_history() { HISTFILE=~/.bash_history; history -a; history -c; history -r; }
+PROMPT_COMMAND="bash_sync_history"
 bind '"\e[A":history-search-backward'
 bind '"\e[B":history-search-forward'
 
@@ -33,7 +35,7 @@ alias grep="grep --line-buffered"
 alias fab="fab -e"
 alias dns-cache-flush="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"
 alias ssh-copy-id='sshcopyid_func'
-function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh ; cat >>.ssh/authorized_keys' ;}
+function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh; cat >>.ssh/authorized_keys'; }
 
 export PYTHON_HOME="${HOME}/.conda/envs/python3"
 

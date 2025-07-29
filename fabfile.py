@@ -26,6 +26,7 @@ FAB_SKIP_DELTA = 'FAB_SKIP_DELTA'
 FAB_SKIP_GROUP_BELOW = 'FAB_SKIP_GROUP_BELOW'
 FAB_SKIP_GROUP_ABOVE = 'FAB_SKIP_GROUP_ABOVE'
 FAB_SKIP_GROUP_ALLBUT = 'FAB_SKIP_GROUP_ALLBUT'
+FAB_SKIP_HOST_ALLBUT = 'FAB_SKIP_HOST_ALLBUT'
 
 if FAB_SKIP_GROUP_ALLBUT in os.environ:
     os.environ[FAB_SKIP_GROUP_BELOW] = str(int(os.environ[FAB_SKIP_GROUP_ALLBUT]) + 1)
@@ -54,10 +55,14 @@ def backup(context):
 
 @task(aliases=["pll", "u"] + ["pull"[0:i] for i in range(3, len("pull"))])
 def pull(context):
-    # TODO!
-    # _clean(context)
-    # _backup(context)
+    _clean(context)
+    _backup(context)
     _pull(context)
+
+
+@task(aliases=["lst"] + ["list"[0:i] for i in range(1, len("list"))])
+def list(context):
+    _list(context)
 
 
 @task(aliases=["gnr"] + ["generate"[0:i] for i in range(1, len("generate"))])
@@ -223,6 +228,52 @@ def _pull(context):
     _print_header("asystem", "pull package versions to update")
     _run_local(context, "pip list --outdated | grep 'Package\\|{}'".format("\\|".join(py_deps_dict.keys())))
     _print_footer("asystem", "pull package versions to update")
+
+
+def _list(context):
+    _print_header("asystem", "list modules")
+    group_service_dict = {}
+    host_group_service_dict = {}
+    for module in _get_modules(context, ".group", filter_changes=False):
+        group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
+        group = group_path.read_text().strip()
+        service = _get_service(module)
+        if group.lstrip('-').isnumeric() and int(group) >= -1:
+            for _ in _get_host_labels(module):
+                if group not in group_service_dict:
+                    group_service_dict[group] = set()
+                group_service_dict[group].add(service)
+            for host in ["{} [{}-{}, {}, {}]".format(
+                    _host,
+                    HOSTS[_host][0],
+                    _host,
+                    HOSTS[_host][1],
+                    HOSTS[_host][2],
+            ) for _host in _get_host_labels(module)]:
+                if host not in host_group_service_dict:
+                    host_group_service_dict[host] = {}
+                if group not in host_group_service_dict[host]:
+                    host_group_service_dict[host][group] = {}
+                host_group_service_dict[host][group][service] = service
+        else:
+            raise Exception(
+                "Error in group file [{}], erroneous group number [{}]".format(group_path, group))
+    print("############################################################")
+    print("Services by group:")
+    print("############################################################")
+    print("groups:")
+    for group in sorted(group_service_dict.keys()):
+        print("  {}: {}".format(group, ", ".join(sorted(group_service_dict[group]))))
+    print("############################################################")
+    print("Services by host and group:")
+    print("############################################################")
+    for host in sorted(host_group_service_dict.keys()):
+        print("{}:".format(host))
+        for group in sorted(host_group_service_dict[host].keys()):
+            services = sorted(host_group_service_dict[host][group].keys())
+            print("  {}: {}".format(group, ", ".join(services)))
+    print("############################################################")
+    _print_footer("asystem", "list modules")
 
 
 def _generate(context, filter_module=None, filter_changes=True, filter_host=None, is_release=False, is_pull=False):
@@ -851,7 +902,8 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
         filter_changes = filter_changes if \
             (FAB_SKIP_DELTA not in os.environ and
              FAB_SKIP_GROUP_BELOW not in os.environ and
-             FAB_SKIP_GROUP_ABOVE not in os.environ) \
+             FAB_SKIP_GROUP_ABOVE not in os.environ and
+             FAB_SKIP_HOST_ALLBUT not in os.environ) \
             else False
         working_dirs = _run_local(context, "pwd", hide='out').stdout.strip().split('/')
         root_dir_index = working_dirs.index("asystem")
@@ -882,7 +934,8 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
         group = int(group_path.read_text().strip()) if group_path.exists() else -1
         if not filter_groups or (
                 (FAB_SKIP_GROUP_BELOW not in os.environ or int(os.environ[FAB_SKIP_GROUP_BELOW]) > group) and \
-                (FAB_SKIP_GROUP_ABOVE not in os.environ or int(os.environ[FAB_SKIP_GROUP_ABOVE]) < group)
+                (FAB_SKIP_GROUP_ABOVE not in os.environ or int(os.environ[FAB_SKIP_GROUP_ABOVE]) < group) and \
+                (FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] in _get_host_labels(module))
         ):
             if group not in grouped_modules:
                 grouped_modules[group] = [module]
@@ -927,6 +980,10 @@ def _get_host(module):
 
 def _get_host_label(host):
     return host.split("-")[1]
+
+
+def _get_host_labels(module):
+    return module.split("/")[0].split("_")
 
 
 def _get_hosts(module):
