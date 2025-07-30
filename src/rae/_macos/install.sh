@@ -21,7 +21,7 @@ export LC_ALL=C ls
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS="--color=auto"
-alias ls="gls $LS_OPTIONS"
+alias ls="gls ${LS_OPTIONS}"
 
 export DOCKER_CLI_HINTS=false
 export BASH_SILENCE_DEPRECATION_WARNING=1
@@ -55,7 +55,7 @@ cat <<EOF >/var/root/.profile
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS="--color=auto"
-alias ls="ls $LS_OPTIONS"
+alias ls="ls ${LS_OPTIONS}"
 EOF
 mkdir -p /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chown graham /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
