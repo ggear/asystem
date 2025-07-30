@@ -13,6 +13,8 @@ printf '\e[?2004l'
 tput rmam
 # tput smam
 
+export HISTFILE=~/.bash_history
+
 export PS1='\u@\h:\w\$ '
 
 export LC_ALL=C ls
@@ -25,7 +27,7 @@ export DOCKER_CLI_HINTS=false
 export BASH_SILENCE_DEPRECATION_WARNING=1
 export PYTHONDONTWRITEBYTECODE=1
 
-bash_sync_history() { HISTFILE=~/.bash_history; history -a; history -c; history -r; }
+bash_sync_history() { history -a; history -c; history -r; }
 PROMPT_COMMAND="bash_sync_history"
 bind '"\e[A":history-search-backward'
 bind '"\e[B":history-search-forward'
