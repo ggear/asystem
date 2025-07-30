@@ -20,8 +20,8 @@ export PS1='\u@\h:\w\$ '
 export LC_ALL=C ls
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
-export LS_OPTIONS='--color=auto'
-alias ls='gls $LS_OPTIONS'
+export LS_OPTIONS="--color=auto"
+alias ls="gls $LS_OPTIONS"
 
 export DOCKER_CLI_HINTS=false
 export BASH_SILENCE_DEPRECATION_WARNING=1
@@ -36,7 +36,7 @@ alias edit="/Applications/Sublime\ Text.app/Contents/SharedSupport/bin/subl"
 alias grep="grep --line-buffered"
 alias fab="fab -e"
 alias dns-cache-flush="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"
-alias ssh-copy-id='sshcopyid_func'
+alias ssh-copy-id="sshcopyid_func"
 function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh; cat >>.ssh/authorized_keys'; }
 
 export PYTHON_HOME="${HOME}/.conda/envs/python3"
@@ -54,8 +54,8 @@ cat <<EOF >/var/root/.profile
 
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
-export LS_OPTIONS='--color=auto'
-alias ls='ls $LS_OPTIONS'
+export LS_OPTIONS="--color=auto"
+alias ls="ls $LS_OPTIONS"
 EOF
 mkdir -p /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chown graham /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
