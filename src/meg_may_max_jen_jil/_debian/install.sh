@@ -144,6 +144,11 @@ alias ls='ls \$LS_OPTIONS'
 alias uptime=tuptime
 
 EOF
+if [ $(grep "history-search" /etc/bash.bashrc | wc -l) -eq 0 ]; then
+  echo "" >>/etc/bash.bashrc
+  echo "bind '\"\e[A\":history-search-backward'" >>/etc/bash.bashrc
+  echo "bind '\"\e[B\":history-search-forward'" >>/etc/bash.bashrc
+fi
 
 ################################################################################
 # Disable hardware
@@ -184,15 +189,6 @@ fi
 if [ $(grep "vm.swappiness" /etc/sysctl.conf | wc -l) -eq 0 ]; then
   echo "vm.swappiness = 1" >>/etc/sysctl.conf
   sysctl vm.swappiness=1
-fi
-
-################################################################################
-# Shell
-################################################################################
-if [ $(grep "history-search" /etc/bash.bashrc | wc -l) -eq 0 ]; then
-  echo "" >>/etc/bash.bashrc
-  echo "bind '\"\e[A\":history-search-backward'" >>/etc/bash.bashrc
-  echo "bind '\"\e[B\":history-search-forward'" >>/etc/bash.bashrc
 fi
 
 ################################################################################
