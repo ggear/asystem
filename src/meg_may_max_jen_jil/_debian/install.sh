@@ -133,7 +133,7 @@ locale-gen en_AU.UTF-8
 ################################################################################
 # Shell setup
 ################################################################################
-cat <<EOF >"/root/.bashrc"
+cat <<'EOF' >"/root/.bashrc"
 # .bashrc
 
 export LC_COLLATE=C
@@ -196,7 +196,7 @@ fi
 ################################################################################
 # Power
 ################################################################################
-cat <<EOF >/etc/systemd/system/powertop.service
+cat <<'EOF' >/etc/systemd/system/powertop.service
 [Unit]
 Description=PowerTOP auto tune
 
@@ -216,7 +216,7 @@ systemctl enable powertop.service
 # Monitoring
 ################################################################################
 mkdir -p /home/graham/.config/htop
-cat <<EOF >/home/graham/.config/htop/htoprc
+cat <<'EOF' >/home/graham/.config/htop/htoprc
 fields=0 48 17 18 38 39 40 2 46 47 49 1
 sort_key=46
 sort_direction=-1
@@ -262,7 +262,7 @@ ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
 ################################################################################
 # Avahi
 ################################################################################
-cat <<EOF >/etc/avahi/avahi-daemon.conf
+cat <<'EOF' >/etc/avahi/avahi-daemon.conf
 [server]
 use-ipv6=no
 allow-interfaces=lan0
@@ -336,7 +336,7 @@ fi
 [ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
 docker system prune --volumes -f 2>/dev/null
 mkdir -p /etc/docker
-cat <<EOF >/etc/docker/daemon.json
+cat <<'EOF' >/etc/docker/daemon.json
 {
   "default-address-pools" : [
     {
@@ -350,7 +350,7 @@ EOF
 ################################################################################
 # Devices
 ################################################################################
-cat <<EOF >/etc/udev/rules.d/98-usb-edgetpu.rules
+cat <<'EOF' >/etc/udev/rules.d/98-usb-edgetpu.rules
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", MODE="0664", TAG+="uaccess"
 SUBSYSTEMS=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0664", TAG+="uaccess"
 EOF
@@ -363,7 +363,7 @@ for DEV in $(find /dev -name ttyUSB?); do
   udevadm info -a -n ${DEV} | grep {serial} | head -1
   udevadm info -a -n ${DEV} | grep {product} | head -1
 done
-cat <<EOF >/etc/udev/rules.d/99-usb-serial.rules
+cat <<'EOF' >/etc/udev/rules.d/99-usb-serial.rules
 SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", ATTRS{product}=="USB-Serial Controller", SYMLINK+="ttyUSBTempProbe"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{product}=="CP2102 USB to UART Bridge Controller", SYMLINK+="ttyUSBVantagePro2"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{product}=="Sonoff Zigbee 3.0 USB Dongle Plus", SYMLINK+="ttyUSBZB3DongleP"
