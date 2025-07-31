@@ -43,7 +43,7 @@ services:
     container_name: zigbee2mqtt_bootstrap
     <<: *common
     restart: 'no'
-    entrypoint: /bin/sh
+    entrypoint: bash
     command: /asystem/etc/bootstrap.sh
     depends_on:
       - zigbee2mqtt
