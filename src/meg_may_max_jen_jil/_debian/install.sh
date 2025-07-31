@@ -140,6 +140,8 @@ export LC_COLLATE=C
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
+export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+
 alias ls='ls \$LS_OPTIONS'
 alias uptime=tuptime
 
