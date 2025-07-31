@@ -4,7 +4,7 @@
 # Volumes LVM share
 ################################################################################
 SHARE_GUID="10"
-SHARE_SIZE="400M"
+SHARE_SIZE="400G"
 if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
   vgdisplay
   if ! lvdisplay /dev/$(hostname)-vg/share-${SHARE_GUID} >/dev/null 2>&1; then
@@ -44,7 +44,7 @@ UUID=360cc974-b634-49d8-9be6-7ef209a0f16b     /boot               ext2    noatim
 /dev/mapper/macmini--max--vg-home             /home               ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 /dev/mapper/macmini--max--vg-tmp              /tmp                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 /dev/mapper/macmini--max--vg-var              /var                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-#/dev/mapper/macmini--max--vg-share--2         /share/6            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+/dev/mapper/macmini--max--vg-share--10        /share/10           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 #UUID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX     /share/7            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 //macmini-may/share-1                         /share/5            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 //macmini-may/share-2                         /share/4            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
