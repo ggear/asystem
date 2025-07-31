@@ -53,8 +53,8 @@ UUID=100f5ef4-e75d-41f4-bcb9-aaa84c03209a     /share/5            ext4    noatim
 EOF
 systemctl stop remote-fs.target
 systemctl daemon-reload
-for SHARE_DIR in $(grep /share /etc/fstab | grep cifs | awk 'BEGIN{FS=OFS=" "}{print $2}'); do umount -f ${SHARE_DIR} >/dev/null 2>&1; done
-for SHARE_DIR in $(grep /share /etc/fstab | awk 'BEGIN{FS=OFS=" "}{print $2}'); do mkdir -p ${SHARE_DIR}; done
+for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do mkdir -p ${SHARE_DIR}; done
+for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep cifs | awk 'BEGIN{FS=OFS=" "}{print $2}'); do umount -f ${SHARE_DIR} >/dev/null 2>&1; done
 mount -a
 systemctl start remote-fs.target
 echo "" && echo "" && df -h / /var /tmp /home /share/* && echo "" && echo ""

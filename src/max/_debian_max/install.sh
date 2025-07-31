@@ -46,16 +46,16 @@ UUID=360cc974-b634-49d8-9be6-7ef209a0f16b     /boot               ext2    noatim
 /dev/mapper/macmini--max--vg-var              /var                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 /dev/mapper/macmini--max--vg-share--10        /share/10           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 #UUID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX     /share/7            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-//macmini-may/share-1                         /share/5            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-//macmini-may/share-2                         /share/4            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-//macmini-may/share-3                         /share/5            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
+//macmini-may/share-1                         /share/1            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
+//macmini-may/share-2                         /share/2            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
+//macmini-may/share-3                         /share/3            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 //macmini-meg/share-4                         /share/4            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 //macmini-meg/share-5                         /share/5            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 EOF
 systemctl stop remote-fs.target
 systemctl daemon-reload
-for SHARE_DIR in $(grep /share /etc/fstab | awk 'BEGIN{FS=OFS=" "}{print $2}'); do mkdir -p ${SHARE_DIR}; done
-for SHARE_DIR in $(grep /share /etc/fstab | grep cifs | awk 'BEGIN{FS=OFS=" "}{print $2}'); do umount -f ${SHARE_DIR} >/dev/null 2>&1; done
+for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do mkdir -p ${SHARE_DIR}; done
+for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep cifs | awk 'BEGIN{FS=OFS=" "}{print $2}'); do umount -f ${SHARE_DIR} >/dev/null 2>&1; done
 mount -a
 systemctl start remote-fs.target
 echo "" && echo "" && df -h / /var /tmp /home /share/* && echo "" && echo ""
