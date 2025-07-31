@@ -93,4 +93,4 @@ systemctl enable smbd
 systemctl restart nmbd
 systemctl enable nmbd
 
-echo "" && echo "" && du -hd 0 /share/* && echo "" && echo ""
+echo "" && echo "" && du -hd 0 /share/* 2>/dev/null && echo "" && echo ""
