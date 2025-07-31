@@ -3,6 +3,7 @@ frontend:
   enabled: true
   port: $ZIGBEE2MQTT_HTTP_PORT
   url: 'http://$ZIGBEE2MQTT_SERVICE:$ZIGBEE2MQTT_HTTP_PORT'
+  package: zigbee2mqtt-windfront
 mqtt:
   version: 5
   base_topic: zigbee
