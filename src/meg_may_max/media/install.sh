@@ -23,7 +23,7 @@ fi
 
 cd ${SERVICE_INSTALL} || exit
 
-for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
   mkdir -p ${SHARE_DIR}/tmp/scripts
   for SHARE_DIR_SCOPE in "kids" "parents" "docos" "comedy"; do
     for SHARE_DIR_TYPE in "audio" "movies" "series"; do
@@ -32,7 +32,7 @@ for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{p
   done
 done
 
-for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
   for SHARE_DIR_SCOPE in "kids" "docos" "comedy"; do
     for SHARE_DIR_TYPE in "movies" "series"; do
       cat <<EOF >"${SHARE_DIR}/media/${SHARE_DIR_SCOPE}/${SHARE_DIR_TYPE}/._defaults.yaml"

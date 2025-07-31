@@ -35,7 +35,7 @@ cat <<EOF >/etc/samba/smb.conf
   fruit:wipe_intentionally_left_blank_rfork = yes
 
 EOF
-for SHARE_DIR in $(grep /share /etc/fstab | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
+for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
   SHARE_INDEX=$(echo ${SHARE_DIR} | awk 'BEGIN{FS=OFS="/"}{print $3}')
   rm -rf ${SHARE_DIR}/lost+found
   mkdir -p ${SHARE_DIR}/backup/data
