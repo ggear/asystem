@@ -1087,9 +1087,8 @@ def _get_env(env_path):
 def _substitute_env(context, env_path, source_path, destination_path, header=None):
     env = _get_env(env_path)
     env.update(GLOBAL_ENV)
-
     del env["USER"]
-
+    del env["HOME"]
     print(". {} && envsubst {}->{}".format(env_path, source_path, destination_path))
     os.makedirs(dirname(destination_path), exist_ok=True)
     Path(destination_path).write_text(("" if header is None else header) + \

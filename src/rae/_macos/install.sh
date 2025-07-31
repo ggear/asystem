@@ -6,7 +6,7 @@
 mkdir -p ~/Temp ~/Code ~/Backup
 rm -rf .zprofile .zsh_history .zsh_sessions
 rm -rf /Users/graham/.profile
-cat <<EOF >/Users/graham/.bash_profile
+cat <<'EOF' >/Users/graham/.bash_profile
 # .bash_profile
 
 printf '\e[?2004l'
@@ -49,7 +49,7 @@ export GOPATH="${HOME}/.go"
 export PATH=${GOROOT}/bin:${CARGO_HOME}/bin:${PYTHON_HOME}/bin:/Library/Conda/anaconda3/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
 
 EOF
-cat <<EOF >/var/root/.profile
+cat <<'EOF' >/var/root/.profile
 # .profile
 
 export CLICOLOR=1
