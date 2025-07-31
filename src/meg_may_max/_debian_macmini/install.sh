@@ -43,6 +43,7 @@ systemctl stop wpa_supplicant.service
 systemctl disable wpa_supplicant.service
 grep -q '^8021q' /etc/modules 2>/dev/null || echo '8021q' | tee -a /etc/modules
 grep -q '^macvlan' /etc/modules 2>/dev/null || echo 'macvlan' | tee -a /etc/modules
+grep -q '^blacklist applesmc' /etc/modprobe.d/blacklist-wifi.conf 2>/dev/null || echo 'blacklist applesmc' | sudo tee -a /etc/modprobe.d/blacklist-applesmc.conf
 grep -q '^blacklist bcma-pci-bridge' /etc/modprobe.d/blacklist-wifi.conf 2>/dev/null || echo 'blacklist bcma-pci-bridge' | sudo tee -a /etc/modprobe.d/blacklist-wifi.conf
 
 ################################################################################
