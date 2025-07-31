@@ -26,5 +26,6 @@ RUN (python3 -m ensurepip 2> /dev/null || true) && \
     pip3 cache purge
 
 FROM image_build AS image_runtime
+WORKDIR /asystem/etc
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD [ "/sbin/tini", "--", "node", "index.js"]
+CMD [ "/sbin/tini", "--", "node", "/app/index.js"]
