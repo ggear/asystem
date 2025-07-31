@@ -26,7 +26,6 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 # Mounts
 ################################################################################
-blkid /dev/sda1
 cat <<EOF >/etc/fstab
 # /etc/fstab: static file system information.
 #
