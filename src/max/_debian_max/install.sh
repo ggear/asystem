@@ -4,7 +4,7 @@
 # Volumes LVM share
 ################################################################################
 SHARE_GUID="10"
-SHARE_SIZE="400MB"
+SHARE_SIZE="400M"
 if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
   vgdisplay
   if ! lvdisplay /dev/$(hostname)-vg/share-${SHARE_GUID} >/dev/null 2>&1; then
