@@ -28,7 +28,7 @@ export BASH_SILENCE_DEPRECATION_WARNING=1
 export PYTHONDONTWRITEBYTECODE=1
 
 bash_sync_history() { history -a; history -c; history -r; }
-PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: $(pwd)\007" && bash_sync_history'
+PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007" && bash_sync_history'
 bind '"\e[A":history-search-backward'
 bind '"\e[B":history-search-forward'
 
