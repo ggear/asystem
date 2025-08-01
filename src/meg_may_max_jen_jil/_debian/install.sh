@@ -141,17 +141,17 @@ export LC_COLLATE=C
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
+
 export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+bind '"\e[A":history-search-backward'
+bind '"\e[B":history-search-forward'
 
 alias ls='ls ${LS_OPTIONS}'
 alias uptime=tuptime
 
+export PATH=/root/.pyenv/bin:${PATH}
+
 EOF
-if [ $(grep "history-search" /etc/bash.bashrc | wc -l) -eq 0 ]; then
-  echo "" >>/etc/bash.bashrc
-  echo "bind '\"\e[A\":history-search-backward'" >>/etc/bash.bashrc
-  echo "bind '\"\e[B\":history-search-forward'" >>/etc/bash.bashrc
-fi
 
 ################################################################################
 # Disable hardware
@@ -312,9 +312,6 @@ git checkout master
 git pull --all
 git checkout v2.6.5
 ./src/configure && make -C src
-if [ $(grep "pyenv" /root/.bashrc | wc -l) -eq 0 ]; then
-  echo 'export PATH=${PATH}:/root/.pyenv/bin' >>/root/.bashrc
-fi
 source /root/.bashrc
 cd /tmp
 
