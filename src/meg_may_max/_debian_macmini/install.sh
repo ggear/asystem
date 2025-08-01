@@ -19,7 +19,7 @@ INTERFACE=$(lshw -C network -short -c network 2>/dev/null | tr -s ' ' | cut -d' 
 if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "auto eth0." /etc/network/interfaces | wc -l) -eq 0 ]; then
   MACADDRESS_SUFFIX="$(ifconfig "${INTERFACE}" | grep ether | tr -s ' ' | cut -d' ' -f3 | cut -d':' -f2-)"
   if [ "${INTERFACE}" != "" ]; then
-    cat <<EOF >>/etc/network/interfaces
+    cat <<'EOF' >>/etc/network/interfaces
 
 rename ${INTERFACE}=eth0
 
@@ -53,6 +53,18 @@ systemctl stop bluetooth.service
 systemctl disable bluetooth.service
 systemctl mask bluetooth.service
 grep -q '^blacklist bluetooth' /etc/modprobe.d/blacklist-bluetooth.conf 2>/dev/null || echo 'blacklist bluetooth' | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
+
+################################################################################
+# Thunderbolt
+################################################################################
+mkdir -p /etc/boltd
+cat <<'EOF' >/etc/boltd/bolt.conf
+[Authorization]
+auto=yes
+EOF
+systemctl restart bolt
+systemctl status bolt
+boltctl
 
 ################################################################################
 # Regenerate initramfs
@@ -108,7 +120,7 @@ df -h /home
 ################################################################################
 # Fan
 ################################################################################
-cat <<EOF >/etc/mbpfan.conf
+cat <<'EOF' >/etc/mbpfan.conf
 [general]
 min_fan_speed = 1800
 max_fan_speed = 6500

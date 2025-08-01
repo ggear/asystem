@@ -59,6 +59,7 @@ apt-get -y --allow-downgrades install inotify-tools=3.22.6.0-4
 apt-get -y --allow-downgrades install htop=3.2.2-2
 apt-get -y --allow-downgrades install iotop=0.6-42-ga14256a-0.1+b2
 apt-get -y --allow-downgrades install hdparm=9.65+ds-1
+apt-get -y --allow-downgrades install bolt=0.9.5-1
 apt-get -y --allow-downgrades install stress-ng=0.15.06-2
 apt-get -y --allow-downgrades install memtester=4.6.0-1
 apt-get -y --allow-downgrades install linux-cpupower=6.1.140-1
@@ -309,10 +310,10 @@ fi
 cd /root/.pyenv
 git checkout master
 git pull --all
-git checkout v2.4.17
+git checkout v2.6.5
 ./src/configure && make -C src
 if [ $(grep "pyenv" /root/.bashrc | wc -l) -eq 0 ]; then
-  echo 'export PATH=$PATH:/root/.pyenv/bin\n' >>/root/.bashrc
+  echo 'export PATH=${PATH}:/root/.pyenv/bin' >>/root/.bashrc
 fi
 source /root/.bashrc
 cd /tmp

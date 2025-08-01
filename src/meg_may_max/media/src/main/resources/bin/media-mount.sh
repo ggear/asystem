@@ -5,7 +5,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 . "${ROOT_DIR}/.env_media"
 
 if [ $(uname) == "Darwin" ]; then
-  for _SHARE in macmini-may,1 macmini-may,2 macmini-may,3 macmini-meg,4 macmini-meg,5; do
+  for _SHARE in macmini-max,10 macmini-may,2 macmini-may,3 macmini-meg,4 macmini-meg,5; do
     IFS=","
     set -- ${_SHARE}
     mkdir -p ~/Desktop/share/${2}

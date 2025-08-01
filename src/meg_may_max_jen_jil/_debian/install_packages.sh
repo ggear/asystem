@@ -53,6 +53,7 @@ ASYSTEM_PACKAGES=(
   htop
   iotop
   hdparm
+  bolt
   stress-ng
   memtester
   linux-cpupower
