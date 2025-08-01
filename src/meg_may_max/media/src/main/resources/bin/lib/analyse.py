@@ -1550,7 +1550,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         "\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
                         "\"", "\\\""), pl.lit("\"\n\n"),
-                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Rename!'\n")),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Renaming!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Renaming: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
@@ -1606,7 +1606,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         "\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
                         "\"", "\\\""), pl.lit("\"\n\n"),
-                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merge!'\n")),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Merging!'\n")),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("echo \"Merging: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
@@ -1684,22 +1684,28 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         "\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("ROOT_FILE_STEM=\""), pl.col("File Stem").str.replace_all(
                         "\"", "\\\""), pl.lit("\"\n\n"),
-                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing Transcode!'\n  rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
+                    pl.lit("[ \"$(basename \"$0\")\" == \"reformat.sh\" ] && SCRIPT_VERB=Reformatting\n"),
+                    pl.lit("[ \"$(basename \"$0\")\" == \"downscale.sh\" ] && SCRIPT_VERB=Downscaling\n"),
+                    pl.lit("[ \"$(basename \"$0\")\" == \"transcode.sh\" ] && SCRIPT_VERB=Transcoding\n"),
+                    pl.lit(BASH_EXIT_HANDLER.format("  echo 'Killing '${SCRIPT_VERB}'!'\n  "
+                                                    "rm -f \"${ROOT_DIR}\"/*.mkv*\n")),
                     pl.lit("rm -f \"${ROOT_DIR}\"/*.mkv*\n\n"),
                     pl.lit(BASH_ECHO_HEADER),
-                    pl.lit("echo \"Transcoding: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
+                    pl.lit("echo \"${SCRIPT_VERB}: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
-                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
+                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" +
+                           TOKEN_TRANSCODE + "_*')\"\n"),
                     pl.lit("if [ \"${ORIG_FILE_META}\" == \"\" ]; then \n"),
                     pl.lit("  echo '' && echo \"Warning: Metadata file not found\" && exit 4\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo -n 'Transcoding at ' && date\n"),
-                    pl.lit("echo 'Transcoding with reason ["), pl.col("File Validity"), pl.lit("]'\n"),
-                    pl.lit("echo 'Transcoding with quality ["), pl.col("Target Quality"), pl.lit("]'\n"),
-                    pl.lit("echo 'Transcoding with size ['$(du -m \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" | "
+                    pl.lit("echo -n ${SCRIPT_VERB}' at ' && date\n"),
+                    pl.lit("echo ${SCRIPT_VERB}' with reason ["), pl.col("File Validity"), pl.lit("]'\n"),
+                    pl.lit("echo ${SCRIPT_VERB}' with quality ["), pl.col("Target Quality"), pl.lit("]'\n"),
+                    pl.lit("echo ${SCRIPT_VERB}' with size ['$(du -m \"${ROOT_DIR}/../${ROOT_FILE_NAME}\" | "
                            "awk '{printf \"%.1f\", ($1/1024 + 0.05)}')' GB]'\n"),
-                    pl.lit("echo 'Transcoding with codec [HVEC] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
+                    pl.lit("echo ${SCRIPT_VERB}' with codec [HVEC] from ["
+                           "'\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                            "select(.codec) | .codec' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"']'\n"),
                     pl.lit("ORIG_RESOLUTION=\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                            "select(.resolution) | .resolution' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\"\n"),
@@ -1710,8 +1716,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("else\n"),
                     pl.lit("  TARGET_RESOLUTION=\""), pl.col("Transcode Video Resolution"), pl.lit("\"\n"),
                     pl.lit("fi\n"),
-                    pl.lit("echo \"Transcoding with resolution [${TARGET_RESOLUTION}] from [${ORIG_RESOLUTION}]\"\n"),
-                    pl.lit("echo 'Transcoding with bitrate ["), pl.col("Transcode Video Bitrate"), pl.lit(
+                    pl.lit("echo ${SCRIPT_VERB}' with resolution ['${TARGET_RESOLUTION}'] from ["
+                           "'${ORIG_RESOLUTION}']'\n"),
+                    pl.lit("echo ${SCRIPT_VERB}' with bitrate ["), pl.col("Transcode Video Bitrate"), pl.lit(
                         " Kbps] from ['\"$(yq '.[].video? | select(.) | .[0].\"1\"[] | "
                         "select(.bitrate_estimate__Kbps) | .bitrate_estimate__Kbps' \"${ORIG_FILE_META}\" | sed \"s/['\\\"]//g\")\" Kbps]\n"),
                     pl.lit("TRAN_FILE_NAME=\""), pl.col("Transcode File Name").str.replace_all(
