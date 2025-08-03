@@ -115,10 +115,11 @@ apt-get -y --purge autoremove
 ################################################################################
 # Localisation
 ################################################################################
-export LANGUAGE=en_AU.UTF-8
-export LANG=en_AU.UTF-8
-export LC_ALL=en_AU.UTF-8
+sed -i -E '/^#|^$/!{/en_AU.UTF-8 UTF-8/!s/^/#/}' /etc/locale.gen
 locale-gen en_AU.UTF-8
+echo "LANG=en_AU.UTF-8" > /etc/default/locale
+update-locale LANG=en_AU.UTF-8
+locale
 
 ################################################################################
 # Shell setup
@@ -238,13 +239,6 @@ grep -q '^blacklist applesmc' /etc/modprobe.d/blacklist-wifi.conf 2>/dev/null ||
 grep -q '^blacklist bcma-pci-bridge' /etc/modprobe.d/blacklist-wifi.conf 2>/dev/null || echo 'blacklist bcma-pci-bridge' | tee -a /etc/modprobe.d/blacklist-wifi.conf
 
 ################################################################################
-# Keyboard
-################################################################################
-echo 'ACTION=="add", SUBSYSTEM=="usb", KERNEL=="1-1.4.1", ATTR{idVendor}=="04d9", ATTR{idProduct}=="0006", ATTR{power/control}="on"' | tee /etc/udev/rules.d/99-holtek-keyboard.rules >/dev/null
-udevadm control --reload
-udevadm trigger
-
-################################################################################
 # Power
 ################################################################################
 cat <<'EOF' >/etc/systemd/system/powertop.service
@@ -262,6 +256,16 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 systemctl enable powertop
+# INFO: Warning, this is aggressive and overides the below keyboard udev rule such the keyboard goes to sleep all the time, annoying!
+#systemctl stop powertop
+#systemctl disable powertop
+
+################################################################################
+# Keyboard
+################################################################################
+echo 'ACTION=="add", SUBSYSTEM=="usb", KERNEL=="1-1.4.1", ATTR{idVendor}=="04d9", ATTR{idProduct}=="0006", ATTR{power/control}="on"' | tee /etc/udev/rules.d/99-holtek-keyboard.rules >/dev/null
+udevadm control --reload
+udevadm trigger
 
 ################################################################################
 # Bluetooth
