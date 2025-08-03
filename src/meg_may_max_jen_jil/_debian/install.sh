@@ -261,7 +261,7 @@ ExecStart=/usr/sbin/powertop --auto-tune
 WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
-systemctl enable powertop.service
+systemctl enable powertop
 
 ################################################################################
 # Bluetooth
