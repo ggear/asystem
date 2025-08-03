@@ -187,12 +187,12 @@ fi
 ################################################################################
 # Network
 ################################################################################
-sudo systemctl stop NetworkManager
-sudo systemctl disable NetworkManager
-sudo systemctl mask NetworkManager
-sudo systemctl stop ModemManager
-sudo systemctl disable ModemManager
-sudo systemctl mask ModemManager
+systemctl stop NetworkManager
+systemctl disable NetworkManager
+systemctl mask NetworkManager
+systemctl stop ModemManager
+systemctl disable ModemManager
+systemctl mask ModemManager
 
 ################################################################################
 # Power
