@@ -185,6 +185,16 @@ if [ $(grep "vm.swappiness" /etc/sysctl.conf | wc -l) -eq 0 ]; then
 fi
 
 ################################################################################
+# Network
+################################################################################
+sudo systemctl stop NetworkManager
+sudo systemctl disable NetworkManager
+sudo systemctl mask NetworkManager
+sudo systemctl stop ModemManager
+sudo systemctl disable ModemManager
+sudo systemctl mask ModemManager
+
+################################################################################
 # Power
 ################################################################################
 cat <<'EOF' >/etc/systemd/system/powertop.service
