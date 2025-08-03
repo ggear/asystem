@@ -356,11 +356,9 @@ sensors-detect --auto
 ################################################################################
 # Printing
 ################################################################################
-if [ ! -d /opt/brother/drivers ]; then
-  systemctl stop cups
-  systemctl disable cups
-  systemctl mask cups
-fi
+systemctl stop cups
+systemctl disable cups
+systemctl mask cups
 
 ################################################################################
 # Docker
