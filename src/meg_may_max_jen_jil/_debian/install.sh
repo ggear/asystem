@@ -301,6 +301,7 @@ sensors-detect --auto
 if [ ! -d /opt/brother/drivers ]; then
   systemctl stop cups
   systemctl disable cups
+  systemctl mask cups
 fi
 
 ################################################################################
