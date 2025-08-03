@@ -10,6 +10,7 @@ apt-get upgrade -y --without-new-pkgs
 ################################################################################
 # Packages install
 ################################################################################
+apt-get -y --allow-downgrades install ifupdown=0.8.41
 apt-get -y --allow-downgrades install jq=1.6-2.1
 apt-get -y --allow-downgrades install yq=3.1.0-3
 apt-get -y --allow-downgrades install xq=1.0.0-2+b5
@@ -187,12 +188,61 @@ fi
 ################################################################################
 # Network
 ################################################################################
+mkdir -p /etc/network
+INTERFACE=$(lshw -C network -short -c network 2>/dev/null | grep -i ethernet | tr -s ' ' | cut -d' ' -f2 | grep -v 'path\|=\|network')
+if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "auto eth0." /etc/network/interfaces | wc -l) -eq 0 ]; then
+  MACADDRESS_SUFFIX="$(ifconfig "${INTERFACE}" | grep ether | tr -s ' ' | cut -d' ' -f3 | cut -d':' -f2-)"
+  if [ "${INTERFACE}" != "" ]; then
+    cat <<EOF >/etc/network/interfaces
+# interfaces(5) file used by ifup(8) and ifdown(8)
+# Include files from /etc/network/interfaces.d:
+
+source /etc/network/interfaces.d/*
+
+rename ${INTERFACE}=eth0
+
+auto eth0
+iface eth0 inet dhcp
+
+#auto eth0.3
+#iface eth0.3 inet dhcp
+#    vlan-raw-device eth0
+#    pre-up ip link set eth0.3 address 3a:${MACADDRESS_SUFFIX}
+#
+#auto eth0.4
+#iface eth0.4 inet dhcp
+#    vlan-raw-device eth0
+#    pre-up ip link set eth0.4 address 4a:${MACADDRESS_SUFFIX}
+
+EOF
+  fi
+fi
+systemctl start networking
+systemctl enable networking
+systemctl status networking
 systemctl stop NetworkManager
 systemctl disable NetworkManager
 systemctl mask NetworkManager
 systemctl stop ModemManager
 systemctl disable ModemManager
 systemctl mask ModemManager
+systemctl stop systemd-networkd
+systemctl disable systemd-networkd
+systemctl mask systemd-networkd
+systemctl stop wpa_supplicant
+systemctl disable wpa_supplicant
+systemctl mask wpa_supplicant
+grep -q '^8021q' /etc/modules 2>/dev/null || echo '8021q' | tee -a /etc/modules
+grep -q '^macvlan' /etc/modules 2>/dev/null || echo 'macvlan' | tee -a /etc/modules
+grep -q '^blacklist applesmc' /etc/modprobe.d/blacklist-wifi.conf 2>/dev/null || echo 'blacklist applesmc' | tee -a /etc/modprobe.d/blacklist-applesmc.conf
+grep -q '^blacklist bcma-pci-bridge' /etc/modprobe.d/blacklist-wifi.conf 2>/dev/null || echo 'blacklist bcma-pci-bridge' | tee -a /etc/modprobe.d/blacklist-wifi.conf
+
+################################################################################
+# Keyboard
+################################################################################
+echo 'ACTION=="add", SUBSYSTEM=="usb", KERNEL=="1-1.4.1", ATTR{idVendor}=="04d9", ATTR{idProduct}=="0006", ATTR{power/control}="on"' | tee /etc/udev/rules.d/99-holtek-keyboard.rules >/dev/null
+udevadm control --reload
+udevadm trigger
 
 ################################################################################
 # Power
@@ -212,6 +262,14 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 systemctl enable powertop.service
+
+################################################################################
+# Bluetooth
+################################################################################
+systemctl stop bluetooth.service
+systemctl disable bluetooth.service
+systemctl mask bluetooth.service
+grep -q '^blacklist bluetooth' /etc/modprobe.d/blacklist-bluetooth.conf 2>/dev/null || echo 'blacklist bluetooth' | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
 
 ################################################################################
 # Monitoring

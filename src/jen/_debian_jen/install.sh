@@ -6,12 +6,17 @@
 [ ! -f /etc/modprobe.d/blacklist-brcmfmac.conf ] && echo "blacklist brcmfmac" | tee -a /etc/modprobe.d/blacklist-brcmfmac.conf
 
 ################################################################################
-# Samba
+# Unused services
 ################################################################################
-service smbd stop
+systemctl stop smbd
 systemctl disable smbd
-service nmbd stop
+systemctl mask smbd
+systemctl stop nmbd
 systemctl disable nmbd
+systemctl mask nmbd
+systemctl stop smartmontools
+systemctl disable smartmontools
+systemctl mask smartmontools
 
 ################################################################################
 # Regenerate initramfs

@@ -4,6 +4,7 @@
 # Install packages
 ################################################################################
 ASYSTEM_PACKAGES=(
+  ifupdown
   jq
   yq
   xq
