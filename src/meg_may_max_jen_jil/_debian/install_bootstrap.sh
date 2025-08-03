@@ -25,6 +25,7 @@ diskutil list "${USB_DEV}"
 # Boostrap environment via ssh graham@${HOST_TYPE}-${HOST_NAME}
 ################################################################################
 su -
+sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
 sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 systemctl restart ssh
 # Copy install_upgrade.sh to shell and run
@@ -34,18 +35,41 @@ systemctl restart ssh
 ################################################################################
 # Install SSD (entire disk to be allocated)
 ################################################################################
-if fdisk -l /dev/sda >/dev/null 2>&1 && ! fdisk -l /dev/sda1 >/dev/null 2>&1; then
-  fdisk -l
-  blkid /dev/sda
-  parted /dev/sda
-  # mklabel gpt
-  # mkpart primary 0% 100%
-  # quit
-  mkfs.ext4 -m 0 -T largefile4 /dev/sda1
-  tune2fs -m 0 /dev/sda1
-  blkid /dev/sda1
+dev_recent=$(ls -lt /dev/disk/by-id/ | grep usb | head -n 1 | awk '{print $NF}')
+if [ -n "${dev_recent}" ]; then
+  dev_path="/dev/$(lsblk -no pkname "$(readlink -f /dev/disk/by-id/"${dev_recent}")")"
+  dev_name=$(basename "${dev_path}")
+  echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR && echo ""
+  if [ -b "${dev_path}" ]; then
+    echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR "${dev_path}" && echo ""
+    dmesg | grep "${dev_name}" | tail -n 10
+    echo "" && echo ""
+    echo "################################################################################"
+    echo "Found USB block device: ${dev_path}"
+    echo "################################################################################"
+    echo ""
+  else
+    echo "Resolved device is not a block device: ${dev_path}"
+  fi
+else
+  echo "No USB block devices found in /dev/disk/by-id/"
 fi
-fdisk -l /dev/sda1
+if [ -n "${dev_path}" ]; then
+  echo "" && fdisk -l "${dev_path}" && echo ""
+  if fdisk -l "${dev_path}" >/dev/null 2>&1 && ! fdisk -l "${dev_path}"1 >/dev/null 2>&1; then
+    parted "${dev_path}"
+    # mklabel gpt
+    # mkpart primary 0% 100%
+    # quit
+    echo "" && fdisk -l "${dev_path}" && echo ""
+    mkfs.ext4 -m 0 -T largefile4 "${dev_path}"1
+    tune2fs -m 0 "${dev_path}"1
+    blkid "${dev_path}"1
+    # Update /etc/fstab in _debain_$HOST service
+  else
+    echo "USB block device has existing file system: ${dev_path}"
+  fi
+fi
 
 ################################################################################
 # Legacy USB NIC steup (No longer used) via ssh graham@${HOST_TYPE}-${HOST_NAME}

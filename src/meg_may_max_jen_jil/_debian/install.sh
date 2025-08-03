@@ -104,18 +104,6 @@ apt-get -y --allow-downgrades install libevent-dev=2.1.12-stable-8
 apt-get -y --allow-downgrades install libcurl4-openssl-dev=7.88.1-10+deb12u12
 
 ################################################################################
-# Grub config
-################################################################################
-if [ -f /etc/default/grub ] && [ $(grep "GRUB_TIMEOUT=10" /etc/default/grub | wc -l) -eq 0 ]; then
-  sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=10/' /etc/default/grub
-  update-grub
-fi
-if [ -f /etc/default/grub ] && [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq 0 ]; then
-  sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="cdgroup_enable=memory swapaccount=1"/' /etc/default/grub
-  update-grub
-fi
-
-################################################################################
 # Packages purge
 ################################################################################
 systemctl stop unattended-upgrades
@@ -263,31 +251,6 @@ mkdir -p /root/.config/htop && rm -rf /root/.config/htop/htoprc
 ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
 
 ################################################################################
-# Avahi
-################################################################################
-cat <<'EOF' >/etc/avahi/avahi-daemon.conf
-[server]
-use-ipv6=no
-allow-interfaces=lan0
-[publish]
-publish-hinfo=no
-publish-workstation=no
-[reflector]
-enable-reflector=no
-EOF
-#systemctl disable avahi-daemon.socket
-#systemctl disable avahi-daemon.service
-#systemctl stop avahi-daemon.service
-systemctl enable avahi-daemon.socket
-systemctl enable avahi-daemon.service
-systemctl restart avahi-daemon.service
-systemctl status avahi-daemon.service
-avahi-browse -a -t
-#avahi-browse _home-assistant._tcp -t -r
-#avahi-publish -v -s "Home" _home-assistant._tcp 32401 "Testing"
-#dns-sd -L Home _home-assistant._tcp local
-
-################################################################################
 # Time
 ################################################################################
 systemctl mask systemd-timesyncd.service
@@ -346,42 +309,6 @@ cat <<'EOF' >/etc/docker/daemon.json
   ]
 }
 EOF
-
-################################################################################
-# Devices
-################################################################################
-cat <<'EOF' >/etc/udev/rules.d/98-usb-edgetpu.rules
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a6e", ATTRS{idProduct}=="089a", MODE="0664", TAG+="uaccess"
-SUBSYSTEMS=="usb", ATTRS{idVendor}=="18d1", ATTRS{idProduct}=="9302", MODE="0664", TAG+="uaccess"
-EOF
-chmod -x /etc/udev/rules.d/98-usb-edgetpu.rules
-lsusb
-for DEV in $(find /dev -name ttyUSB?); do
-  udevadm info ${DEV} | grep "P: "
-  udevadm info -a -n ${DEV} | grep {idVendor} | head -1
-  udevadm info -a -n ${DEV} | grep {idProduct} | head -1
-  udevadm info -a -n ${DEV} | grep {serial} | head -1
-  udevadm info -a -n ${DEV} | grep {product} | head -1
-done
-cat <<'EOF' >/etc/udev/rules.d/99-usb-serial.rules
-SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", ATTRS{product}=="USB-Serial Controller", SYMLINK+="ttyUSBTempProbe"
-SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{product}=="CP2102 USB to UART Bridge Controller", SYMLINK+="ttyUSBVantagePro2"
-SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", ATTRS{product}=="Sonoff Zigbee 3.0 USB Dongle Plus", SYMLINK+="ttyUSBZB3DongleP"
-EOF
-chmod -x /etc/udev/rules.d/99-usb-serial.rules
-udevadm control --reload-rules && udevadm trigger && sleep 2
-ls -la /dev/ttyUSB* 2>/dev/null || true
-
-################################################################################
-# Digitemp
-################################################################################
-if [ -L /dev/ttyUSBTempProbe ]; then
-  mkdir -p /etc/digitemp
-  digitemp_DS9097 -i -s /dev/ttyUSBTempProbe -c /etc/digitemp/temp_probe.conf
-  digitemp_DS9097 -a -c /etc/digitemp/temp_probe.conf
-else
-  rm -rf /etc/digitemp*
-fi
 
 ################################################################################
 # Uptime
