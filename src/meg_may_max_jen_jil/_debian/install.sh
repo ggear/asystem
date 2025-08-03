@@ -4,8 +4,8 @@
 # Packages upgrade
 ################################################################################
 cd /tmp
+apt-get clean
 apt-get update
-apt-get upgrade -y --without-new-pkgs
 
 ################################################################################
 # Packages install
@@ -89,7 +89,7 @@ apt-get -y --allow-downgrades install xz-utils=5.4.1-1
 apt-get -y --allow-downgrades install tk-dev=8.6.13
 apt-get -y --allow-downgrades install zlib1g-dev=1:1.2.13.dfsg-1
 apt-get -y --allow-downgrades install llvm=1:14.0-55.7~deb12u1
-apt-get -y --allow-downgrades install libssl-dev=3.0.16-1~deb12u1
+apt-get -y --allow-downgrades install libssl-dev=3.0.17-1~deb12u1
 apt-get -y --allow-downgrades install libbz2-dev=1.0.8-5+b1
 apt-get -y --allow-downgrades install libreadline-dev=8.2-1.3
 apt-get -y --allow-downgrades install libsqlite3-dev=3.40.1-2+deb12u1
