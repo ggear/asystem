@@ -35,7 +35,7 @@ systemctl restart ssh
 ################################################################################
 # Install SSD (entire disk to be allocated)
 ################################################################################
-dev_recent=$(ls -lt /dev/disk/by-id/ | grep usb | head -n 1 | awk '{print $NF}')
+dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
 if [ -n "${dev_recent}" ]; then
   dev_path="/dev/$(lsblk -no pkname "$(readlink -f /dev/disk/by-id/"${dev_recent}")")"
   dev_name=$(basename "${dev_path}")
