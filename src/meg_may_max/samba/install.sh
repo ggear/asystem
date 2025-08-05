@@ -10,6 +10,7 @@ for share_automount_unit in $(systemctl list-units --type=automount --no-legend 
 done
 systemctl daemon-reload
 systemctl reset-failed
+systemctl list-units --type=automount --no-legend
 
 for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do
   mkdir -p ${SHARE_DIR}
