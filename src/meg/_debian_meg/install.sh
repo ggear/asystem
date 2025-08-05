@@ -31,5 +31,3 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 blkid
 cp -rvf ${SERVICE_INSTALL}/fstab /etc/fstab
-for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do mkdir -p ${SHARE_DIR}; done
-mount -a && df -h / /var /tmp /home /share/*
