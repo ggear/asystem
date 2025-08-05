@@ -11,11 +11,11 @@ if [ $(hostname) == "macbook-lyn" ]; then
     host_name="$(grep "^${host_label}=" "${hosts_file}" | cut -d'=' -f2 | cut -d',' -f1)-${host_label}"
     for share_index in $(grep -v '^#' ${fstab_file} | awk '/\/share/ && /ext4/ {print $2}' | sed 's|/share/||'); do
       share_dir="${HOME}/Desktop/share/${share_index}"
-      echo -n "Mounting //GUEST:@${host_name}/share-${share_index} at ${share_dir} ... "
+      share_samba="//GUEST:@${host_name}/share-${share_index}"
+      echo -n "Mounting ${share_samba} ... "
       mkdir -p ${share_dir}
-      chmod 755 ${share_dir}
       diskutil unmount force ${share_dir} &>/dev/null
-      mount_smbfs -o soft,nodatacache,nodatacache //GUEST:@${host_name}/share-${share_index} ${share_dir}
+      mount_smbfs -o soft,nodatacache,nodatacache ${share_samba} ${share_dir}
       echo "done"
     done
   done

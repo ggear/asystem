@@ -29,10 +29,8 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 # Mounts
 ################################################################################
+blkid
 cp -rvf ${SERVICE_INSTALL}/fstab /etc/fstab
-systemctl stop remote-fs.target
-systemctl daemon-reload
 for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do mkdir -p ${SHARE_DIR}; done
-mount -a
-systemctl start remote-fs.target
-echo "" && echo "" && df -h / /var /tmp /home /share/* && echo "" && echo ""
+mount -a && df -h / /var /tmp /home /share/*
+

@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+
 ################################################################################
 # Volumes LVM share
 ################################################################################
@@ -26,35 +29,7 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 # Mounts
 ################################################################################
-blkid /dev/sda1
-cat <<EOF >/etc/fstab
-# /etc/fstab: static file system information.
-#
-# Use 'blkid' to print the universally unique identifier for a
-# device; this may be used with UUID= as a more robust way to name devices
-# that works even if disks are added and removed. See fstab(5).
-#
-# systemd generates mount units based on this file, see systemd.mount(5).
-# Please run 'systemctl daemon-reload' after making changes here.
-#
-# <file system>                               <mount point>       <type>  <options>                                                                                                                                        <dump>  <pass>
-UUID=5240-B518                                /boot/efi           vfat    umask=0077                                                                                                                                       0       1
-UUID=e3bc7d29-8172-45b7-82b1-f6c19a0619bd     /boot               ext2    noatime,defaults                                                                                                                                 0       2
-/dev/mapper/macmini--may--vg-swap_1           none                swap    sw                                                                                                                                               0       0
-/dev/mapper/macmini--may--vg-root             /                   ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       1
-/dev/mapper/macmini--may--vg-home             /home               ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-/dev/mapper/macmini--may--vg-tmp              /tmp                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-/dev/mapper/macmini--may--vg-var              /var                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-/dev/mapper/macmini--may--vg-share--2         /share/2            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-UUID=581f84d8-9411-4059-92a2-18ea5e1fabd7     /share/22           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-UUID=4ae1477d-6e38-4b5f-8492-79f5072dcc8d     /share/3            ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-//macmini-meg/share-4                         /share/4            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-//macmini-meg/share-5                         /share/5            cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,file_mode=0640,dir_mode=0750,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-EOF
-systemctl stop remote-fs.target
-systemctl daemon-reload
+blkid
+cp -rvf ${SERVICE_INSTALL}/fstab /etc/fstab
 for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do mkdir -p ${SHARE_DIR}; done
-for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep cifs | awk 'BEGIN{FS=OFS=" "}{print $2}'); do umount -f ${SHARE_DIR} >/dev/null 2>&1; done
-mount -a
-systemctl start remote-fs.target
-echo "" && echo "" && df -h / /var /tmp /home /share/* && echo "" && echo ""
+mount -a && df -h / /var /tmp /home /share/*

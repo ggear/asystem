@@ -88,9 +88,17 @@ EOF
   #EOF
 
 done
-systemctl restart smbd
-systemctl enable smbd
-systemctl restart nmbd
-systemctl enable nmbd
 
-echo "" && echo "" && du -hd 0 /share/* 2>/dev/null && echo "" && echo ""
+systemctl stop smbd
+systemctl stop nmbd
+systemctl stop remote-fs.target
+
+systemctl start smbd
+systemctl start nmbd
+systemctl start remote-fs.target
+
+systemctl enable smbd
+systemctl enable nmbd
+systemctl enable remote-fs.target
+
+systemctl daemon-reload
