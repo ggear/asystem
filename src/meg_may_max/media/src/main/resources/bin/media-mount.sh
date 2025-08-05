@@ -6,7 +6,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 if [ $(hostname) == "macbook-lyn" ]; then
   hosts_file=$(realpath "${LIB_ROOT}/../../../../../../../.hosts")
-  for fstab_file in $(find "${LIB_ROOT}/../../../../../.." ! -path */target/* -name fstab); do
+  for fstab_file in $(find "${LIB_ROOT}/../../../../../.." ! -path */target/* -name fstab | sort); do
     host_label=$(basename $(realpath "${fstab_file}/../../../../.."))
     host_name="$(grep "^${host_label}=" "${hosts_file}" | cut -d'=' -f2 | cut -d',' -f1)-${host_label}"
     for share_index in $(grep -v '^#' ${fstab_file} | awk '/\/share/ && /ext4/ {print $2}' | sed 's|/share/||'); do
