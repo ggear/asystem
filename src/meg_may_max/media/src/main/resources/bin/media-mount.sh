@@ -15,8 +15,7 @@ if [ $(hostname) == "macbook-lyn" ]; then
       echo -n "Mounting ${share_samba} ... "
       mkdir -p ${share_dir}
       diskutil unmount force ${share_dir} &>/dev/null
-      mount_smbfs -o soft,nodatacache,nodatacache ${share_samba} ${share_dir}
-      echo "done"
+      mount_smbfs -o soft,nodatacache,nodatacache ${share_samba} ${share_dir} && echo "done"
     done
   done
 else
