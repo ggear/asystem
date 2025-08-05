@@ -93,7 +93,7 @@ systemctl stop smbd
 systemctl stop nmbd
 systemctl stop remote-fs.target
 
-for share_automount_unit in $(systemctl list-units --type=automount --no-legend | awk '/share-[0-9]+\.automount$/ {print $2}'); do
+for share_automount_unit in $(systemctl list-units --type=automount --no-legend | awk '/share-[0-9]+\.automount$/ {print $1}'); do
   systemctl stop "$share_automount_unit"
   systemctl disable "$share_automount_unit"
 done
