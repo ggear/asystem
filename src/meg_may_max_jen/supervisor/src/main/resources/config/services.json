@@ -7,24 +7,24 @@
     "postgres",
     "internet",
     "nginx",
-    "digitemp",
-    "plex"
+    "digitemp"
   ],
   "macmini-may": [
     "monitor",
     "letsencrypt",
     "sabnzbd",
-    "mlflow",
     "grafana",
     "influxdb",
     "wrangle",
-    "mlserver",
-    "rhasspy",
     "sonarr",
     "unpoller"
   ],
   "macmini-max": [
-    "monitor"
+    "monitor",
+    "mlflow",
+    "mlserver",
+    "plex",
+    "rhasspy"
   ],
   "raspbpi-jen": [
     "monitor",

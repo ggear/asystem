@@ -10,7 +10,6 @@ apt-get update
 ################################################################################
 # Packages install
 ################################################################################
-apt-get -y --allow-downgrades install ifupdown=0.8.41
 apt-get -y --allow-downgrades install jq=1.6-2.1
 apt-get -y --allow-downgrades install yq=3.1.0-3
 apt-get -y --allow-downgrades install xq=1.0.0-2+b5
@@ -21,6 +20,8 @@ apt-get -y --allow-downgrades install usbutils=1:014-1+deb12u1
 apt-get -y --allow-downgrades install dnsutils=1:9.18.33-1~deb12u2
 apt-get -y --allow-downgrades install ntpdate=1:4.2.8p15+dfsg-2~1.2.2+dfsg1-1+deb12u1
 apt-get -y --allow-downgrades install ntfs-3g=1:2022.10.3-1+deb12u2
+apt-get -y --allow-downgrades install ifupdown=0.8.41
+apt-get -y --allow-downgrades install nvme-cli=2.4+really2.3-3
 apt-get -y --allow-downgrades install acl=2.3.1-3
 apt-get -y --allow-downgrades install unrar=1:6.2.6-1+deb12u1
 apt-get -y --allow-downgrades install rsync=3.2.7-1+deb12u2
@@ -120,30 +121,6 @@ locale-gen en_AU.UTF-8
 echo "LANG=en_AU.UTF-8" > /etc/default/locale
 update-locale LANG=en_AU.UTF-8
 locale
-
-################################################################################
-# Shell setup
-################################################################################
-cat <<'EOF' >"/root/.bashrc"
-# .bashrc
-
-export LC_COLLATE=C
-export CLICOLOR=1
-export LSCOLORS=ExFxCxDxBxegedabagacad
-export LS_OPTIONS='--color=auto'
-export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
-
-alias ls='ls ${LS_OPTIONS}'
-alias uptime=tuptime
-
-export PATH=/root/.pyenv/bin:${PATH}
-
-EOF
-if [ $(grep "history-search" /etc/bash.bashrc | wc -l) -eq 0 ]; then
-  echo "" >>/etc/bash.bashrc
-  echo "bind '\"\e[A\":history-search-backward'" >>/etc/bash.bashrc
-  echo "bind '\"\e[B\":history-search-forward'" >>/etc/bash.bashrc
-fi
 
 ################################################################################
 # Disable hardware

@@ -4,7 +4,6 @@
 # Install packages
 ################################################################################
 ASYSTEM_PACKAGES=(
-  ifupdown
   jq
   yq
   xq
@@ -15,6 +14,8 @@ ASYSTEM_PACKAGES=(
   dnsutils
   ntpdate
   ntfs-3g
+  ifupdown
+  nvme-cli
   acl
   unrar
   rsync

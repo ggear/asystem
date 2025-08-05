@@ -5,6 +5,9 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 
 cd ${SERVICE_INSTALL} || exit
 
+################################################################################
+# Users setup
+################################################################################
 user_add() {
   if [ -d "${3}" ]; then
     if [ ${4} ]; then
@@ -27,12 +30,6 @@ EOF
     fi
   fi
 }
-
-user_add 'root' 'root' '/' false
-user_add 'root' 'root' '/var/' false
-user_add 'graham' 'users' '/home/' true
-user_add 'graham' 'staff' '/Users/' true
-
 key_copy() {
   if [ -d "${3}${1}" ]; then
     mkdir -p ${3}${1}/.ssh
@@ -42,8 +39,34 @@ key_copy() {
     chgrp -R ${2} ${3}${1}/.ssh 2>/dev/null || true
   fi
 }
-
+user_add 'root' 'root' '/' false
+user_add 'root' 'root' '/var/' false
+user_add 'graham' 'users' '/home/' true
+user_add 'graham' 'staff' '/Users/' true
 key_copy 'root' 'root' '/'
 key_copy 'root' 'root' '/var/'
 key_copy 'graham' 'users' '/home/'
 key_copy 'graham' 'staff' '/Users/'
+
+################################################################################
+# Shell setup
+################################################################################
+cat <<'EOF' >"/root/.bashrc"
+# .bashrc
+
+export LC_COLLATE=C
+export CLICOLOR=1
+export LSCOLORS=ExFxCxDxBxegedabagacad
+export LS_OPTIONS='--color=auto'
+export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+
+alias ls='ls ${LS_OPTIONS}'
+
+export PATH=/root/.pyenv/bin:${PATH}
+
+EOF
+if [ $(grep "history-search" /etc/bash.bashrc | wc -l) -eq 0 ]; then
+  echo "" >>/etc/bash.bashrc
+  echo "bind '\"\e[A\":history-search-backward'" >>/etc/bash.bashrc
+  echo "bind '\"\e[B\":history-search-forward'" >>/etc/bash.bashrc
+fi

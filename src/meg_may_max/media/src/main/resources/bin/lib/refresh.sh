@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
@@ -6,70 +6,65 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 PLEX_URL="http://${PLEX_SERVICE_PROD}:${PLEX_HTTP_PORT}"
 
-# 🔧 Define Plex library names (TYPES) and matching folder scopes
-SCOPES=("docos" "kids")
-TYPES=("Series" "Movies")
-
-# ⛓ Loop over each Plex library and scope
-for i in "${!TYPES[@]}"; do
-  TYPE="${TYPES[$i]}"         # e.g. Series
-  SCOPE="${SCOPES[$i]}"       # e.g. parents
-  TYPE_LC=$(echo "$TYPE" | tr '[:upper:]' '[:lower:]')
-
-  echo "🔍 Processing Plex library: $TYPE (scope: $SCOPE)"
-
-  # 🎯 Get section ID
-  SECTION_XML=$(curl -s "${PLEX_URL}/library/sections?X-Plex-Token=${PLEX_TOKEN}")
-  SECTION_ID=$(echo "$SECTION_XML" | xmllint --xpath "//Directory[@title='${TYPE}']/@key" - 2>/dev/null | sed -E 's/[^0-9]*//g')
-
-  echo $SECTION_XML
-  echo curl -s "${PLEX_URL}/library/sections?X-Plex-Token=${PLEX_TOKEN}"
-
-  if [ -n "$SECTION_ID" ]; then
-    echo "📚 Found section ID: $SECTION_ID"
-
-    # 📂 Get current paths
-    EXISTING_PATHS=$(curl -s "${PLEX_URL}/library/sections/${SECTION_ID}?X-Plex-Token=${PLEX_TOKEN}" |
-      xmllint --xpath "//Location/@path" - 2>/dev/null |
-      sed -E 's/path="/\n/g' | sed '/^$/d;s/"//g')
-    EXISTING_GREP=$(printf "%s\n" ${EXISTING_PATHS})
-
-    # 🔍 Discover matching directories (e.g. /share/.../parents/series)
-    find ${SHARE_ROOT} -maxdepth 4 -path "*/${SCOPE}/${TYPE_LC}" | sort | while read -r dir; do
-      if ! echo "$EXISTING_GREP" | grep -Fxq "$dir"; then
-        echo "➕ Adding NEW path: $dir"
-#        RESP=$(curl -s -w "%{http_code}" -o /tmp/plex_add_out \
-#          -X PUT "${PLEX_URL}/library/sections/${SECTION_ID}/locations" \
-#          -H "X-Plex-Token: ${PLEX_TOKEN}" \
-#          --data-urlencode "path=${dir}")
-#        if [ "$RESP" != "200" ]; then
-#          echo "❌ Failed to add: $dir (HTTP $RESP)"
-#          cat /tmp/plex_add_out
-#        fi
-      else
-        echo "✅ Already exists, skipping: $dir"
-      fi
-    done
-
-    # ✅ Always trigger scan
-    echo "🔄 Triggering scan on section $SECTION_ID (always)"
-    curl -s -w "%{http_code}" -o /tmp/plex_scan_out \
-      "${PLEX_URL}/library/sections/${SECTION_ID}/refresh?X-Plex-Token=${PLEX_TOKEN}" |
-      grep -q '^200$' || {
-      echo "❌ Scan failed for section $SECTION_ID"
-      cat /tmp/plex_scan_out
-    }
-
-  else
-    echo "❌ Could not find Plex library: $TYPE"
-  fi
+declare -A SCOPES_MAP
+declare -A TYPES_MAP
+SCOPE_TYPE_DIRS=$(find ${SHARE_ROOT}/*/media -mindepth 2 -maxdepth 2 -type d ! -path */audio | tr ' ' '\n')
+for path in $SCOPE_TYPE_DIRS; do
+  SCOPES_MAP["$(echo "$path" | awk -F'/' '{print $(NF-1)}')"]=1
+  TYPES_MAP["$(echo "$path" | awk -F'/' '{print $NF}')"]=1
 done
+SCOPES=($(printf "%s\n" "${!SCOPES_MAP[@]}" | sort))
+TYPES=($(printf "%s\n" "${!TYPES_MAP[@]}" | sort))
+for i in "${!SCOPES[@]}"; do
+  lower="${SCOPES[i],,}"
+  SCOPES[i]="${lower^}"
+done
+for i in "${!TYPES[@]}"; do
+  lower="${TYPES[i],,}"
+  TYPES[i]="${lower^}"
+done
+
+for i in "${!TYPES[@]}"; do
+  for j in "${!SCOPES[@]}"; do
+    TYPE="${TYPES[$i]}"
+    SCOPE="${SCOPES[$j]}"
+    echo $SCOPE $TYPE
+  done
+done
+
+LIBRARIES_XML=$(curl -s "${PLEX_URL}/library/sections?X-Plex-Token=${PLEX_TOKEN}" | xmllint --format -)
+echo "$LIBRARIES_XML" | xmllint --format - |
+  sed -n '/<Directory /,/<\/Directory>/p' |
+  awk '
+    /<Directory / {
+      # Extract title attribute from Directory start tag
+      match($0, /title="[^"]+"/)
+      title = substr($0, RSTART+7, RLENGTH-8)
+      next
+    }
+    /<Location / {
+      # Extract path attribute
+      match($0, /path="[^"]+"/)
+      path = substr($0, RSTART+6, RLENGTH-7)
+      print title "|" path
+    }
+  ' | while IFS="|" read -r title path; do
+
+  #  echo "$title: $path"
+  if [[ -n "${TYPES_MAP[$title]}" ]]; then
+    echo "'$title' exists in TYPES_MAP"
+  else
+    echo "'$title' does NOT exist in TYPES_MAP"
+  fi
+
+done
+
+exit 1
 
 #echo -n "Refreshing 'http://${PLEX_SERVICE_PROD}/libraries' ... "
 #for PLEX_LIBRARY_KEY in $(curl -sf http://${PLEX_SERVICE_PROD}:${PLEX_HTTP_PORT}/library/sections?X-Plex-Token=${PLEX_TOKEN} | xq -x '/MediaContainer/Directory/@key'); do
 #  curl -sf http://${PLEX_SERVICE_PROD}:${PLEX_HTTP_PORT}/library/sections/${PLEX_LIBRARY_KEY}/refresh?X-Plex-Token=${PLEX_TOKEN}
 #done
-#echo "done"
 
 # TODO: Only enable if sonarr automatic download does not break
 #  echo -n "Refreshing 'http://${SONARR_SERVICE_PROD}/libraries' ... "
