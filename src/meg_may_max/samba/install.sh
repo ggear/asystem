@@ -1,6 +1,28 @@
 #!/bin/bash
 
 ################################################################################
+# Mounts
+################################################################################
+systemctl stop smbd
+systemctl stop nmbd
+systemctl stop remote-fs.target
+
+for share_automount_unit in $(systemctl list-units --type=automount --no-legend | awk '/share-[0-9]+\.automount$/ {print $1}'); do
+  systemctl stop "$share_automount_unit"
+  systemctl disable "$share_automount_unit"
+done
+systemctl daemon-reload
+systemctl reset-failed
+
+for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do
+  mkdir -p ${SHARE_DIR}
+  umount -f ${SHARE_DIR} 2>/dev/null
+done
+mount -a
+echo "" && mount | grep /share
+echo "" && df -h /share/* && echo ""
+
+################################################################################
 # Samba
 ################################################################################
 cat <<EOF >/etc/samba/smb.conf
@@ -89,27 +111,6 @@ EOF
 
 done
 
-systemctl stop smbd
-systemctl stop nmbd
-systemctl stop remote-fs.target
-
-for share_automount_unit in $(systemctl list-units --type=automount --no-legend | awk '/share-[0-9]+\.automount$/ {print $1}'); do
-  systemctl stop "$share_automount_unit"
-  systemctl disable "$share_automount_unit"
-done
-systemctl daemon-reload
-systemctl reset-failed
-
-# umount all cifs
-
-for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do mkdir -p ${SHARE_DIR}; done
-mount -a
-echo "" && echo "Mounts:" && mount | grep /share
-echo "" && echo "Disk Usages:" && df -h / /var /tmp /home /share/* && echo ""
-
-
-
-
 systemctl start smbd
 systemctl start nmbd
 systemctl start remote-fs.target
@@ -117,5 +118,3 @@ systemctl start remote-fs.target
 systemctl enable smbd
 systemctl enable nmbd
 systemctl enable remote-fs.target
-
-systemctl daemon-reload
