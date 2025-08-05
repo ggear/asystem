@@ -832,7 +832,7 @@ def _release(context):
                 print("Copying release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
                            .format(ssh_pass, host, install, install))
-                _run_local(context, "{}scp -qpr target/release/.  root@{}:{}"
+                _run_local(context, "{}scp -qpr target/release/*  root@{}:{}"
                            .format(ssh_pass, host, install), module)
                 print("Installing release to {} ... ".format(host))
                 _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
