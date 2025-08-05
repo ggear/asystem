@@ -1,5 +1,8 @@
 #!/bin/bash
 
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+
 ################################################################################
 # Volumes LVM share
 ################################################################################
@@ -26,7 +29,7 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 # Mounts
 ################################################################################
-cp -rvf ./fstab /etc/fstab
+cp -rvf ${SERVICE_INSTALL}/fstab /etc/fstab
 systemctl stop remote-fs.target
 systemctl daemon-reload
 for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do mkdir -p ${SHARE_DIR}; done
