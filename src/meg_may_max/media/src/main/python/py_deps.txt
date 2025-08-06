@@ -3,6 +3,7 @@ pyyaml
 pandas
 polars
 pyarrow
+plexapi
 gspread
 gspread-pandas
 ffmpeg-python
