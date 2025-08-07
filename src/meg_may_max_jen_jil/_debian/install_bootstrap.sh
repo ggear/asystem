@@ -37,7 +37,7 @@ systemctl restart ssh
 ################################################################################
 dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
 if [ -n "${dev_recent}" ]; then
-  dev_path="/dev/$(lsblk -no pkname "$(readlink -f /dev/disk/by-id/"${dev_recent}")")"
+  dev_path="/dev/$(lsblk -no pkname "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
   dev_name=$(basename "${dev_path}")
   echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR && echo ""
   if [ -b "${dev_path}" ]; then
@@ -55,13 +55,13 @@ else
   echo "No USB block devices found in /dev/disk/by-id/"
 fi
 if [ -n "${dev_path}" ]; then
-  echo "" && fdisk -l "${dev_path}" && echo ""
+  echo "" && fdisk -l "${dev_path}" && echo "" && lsblk "${dev_path}" && echo ""
   if fdisk -l "${dev_path}" >/dev/null 2>&1 && ! fdisk -l "${dev_path}"1 >/dev/null 2>&1; then
     parted "${dev_path}"
     # mklabel gpt
     # mkpart primary 0% 100%
     # quit
-    echo "" && fdisk -l "${dev_path}" && echo ""
+    echo "" && fdisk -l "${dev_path}" && echo "" && lsblk "${dev_path}" && echo ""
     mkfs.ext4 -m 0 -T largefile4 "${dev_path}"1
     tune2fs -m 0 "${dev_path}"1
     blkid "${dev_path}"1

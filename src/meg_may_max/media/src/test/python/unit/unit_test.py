@@ -10,6 +10,7 @@ import pytest
 from media import analyse
 from media.analyse import get_file_actions_dict as actions
 from media import ingress
+from media import refresh
 from os.path import *
 from jproperties import Properties
 import subprocess
@@ -358,6 +359,68 @@ class InternetTest(unittest.TestCase):
     def _test_ingress(self, dir_test, files_renamed):
         self.assertEqual(files_renamed, ingress._process(join(dir_test, "1/tmp"), True))
         self.assertEqual(0, ingress._process(join(dir_test, "1/tmp"), True))
+
+    def test_refresh_happy(self):
+        dir_test = self._test_prepare_dir("share_media_example", 2)
+        print(dir_test)
+        self._test_refresh(join(dir_test, ".."), {
+            "Docos Movies": [
+                join(dir_test, "10/media/docos/movies"),
+                join(dir_test, "20/media/docos/movies"),
+                join(dir_test, "30/media/docos/movies"),
+            ]
+        })
+
+    def test_refresh_sad(self):
+        dir_test = self._test_prepare_dir("share_media_example", 2)
+        self._test_refresh("/invalid/shares", return_value=1)
+        self._test_refresh("/invalid/shares", {}, return_value=1)
+        self._test_refresh("/invalid/shares", {
+            "My Shows": ["/invalid/shares/1/media/my/shows", "/invalid/shares/2/media"],
+            "My Movies": ["/invalid/shares/1/media/my/movies", "/invalid/shares/2/media"],
+        }, return_value=1)
+        self._test_refresh("/tmp", return_value=1)
+        self._test_refresh("/tmp", {}, return_value=1)
+        self._test_refresh("/tmp", {
+            "My Shows": ["/invalid/shares/1/media/my/shows", "/invalid/shares/2/media"],
+            "My Movies": ["/invalid/shares/1/media/my/movies", "/invalid/shares/2/media"],
+        }, return_value=1)
+        self._test_refresh(join(dir_test, ".."), {
+            "Kids Movies": [join(dir_test, "10/media/kids/movies"), ]
+        }, return_value=1)
+
+    def _test_refresh(self, dir_test, library_paths={}, return_value=0):
+        class MockPlexLibrarySection:
+            def __init__(self, title, locations):
+                self.title = title
+                self.locations = locations
+
+            def update(self):
+                pass
+
+            def analyze(self):
+                pass
+
+            def edit(self, location):
+                self.locations = location
+
+        class MockPlexLibrary:
+            def __init__(self, library_paths):
+                self.sections_list = [
+                    MockPlexLibrarySection(title, locations)
+                    for title, locations in library_paths.items()
+                ]
+
+            def sections(self):
+                return self.sections_list
+
+        class MockPlexServer:
+            def __init__(self, base_url, library_paths):
+                self._baseurl = base_url
+                self.library = MockPlexLibrary(library_paths)
+
+        self.assertEqual(return_value, refresh._refresh(
+            MockPlexServer("http://mocked.plex.com", library_paths), dir_test))
 
     def _test_prepare_dir(self, label, index):
         dir_test = join(DIR_ROOT, "target/runtime-unit/{}_{}/share".format(label, index))

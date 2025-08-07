@@ -14,4 +14,3 @@ elif [ -n "${SHARE_DIR}" ]; then
 else
   "${SCRIPT_PATH}" sonarr
 fi
-"${SCRIPT_PATH}" plex
