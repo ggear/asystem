@@ -1900,9 +1900,11 @@ if [ $(uname) == "Darwin" ]; then
         HOST_NAME="$(grep "${LABEL}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${LABEL}"
         HOST_DIRS='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"$(basename "$(realpath "${ROOT_DIR}/../../..")")"' | wc -l'
         HOST_CMD='. $(asystem-media-home)/.env_media; ${SHARE_ROOT}/'"${SCRIPT_DIR}/${SCRIPT_CMD} $@"
-        if [ $(ssh "root@${HOST_NAME}" "${HOST_DIRS}") -gt 0 ]; then
-            echo "Executing remotely ... "
-            LOG=$(ssh "root@${HOST_NAME}" "${HOST_CMD}" | tee "${LOG_DEV}")
+        if host "${HOST_NAME}" >/dev/null 2>&1; then
+            if [ $(ssh "root@${HOST_NAME}" "${HOST_DIRS}") -gt 0 ]; then
+                echo "Executing remotely ... "
+                LOG=$(ssh "root@${HOST_NAME}" "${HOST_CMD}" | tee "${LOG_DEV}")
+            fi
         fi
     done
 else

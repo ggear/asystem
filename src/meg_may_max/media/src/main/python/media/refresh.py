@@ -78,13 +78,6 @@ def _get_filesystem_paths(_share_root, _min_depth=2, _max_depth=2, _excludes={'a
 
 
 def _refresh(_plex_server, _share_root):
-    # TODO: Remove this when .env is in place
-    # from dotenv import load_dotenv
-    # load_dotenv(os.path.join(os.path.dirname(__file__), '../../../../.env'))
-    # _plex_url = "https://plex.janeandgraham.com"
-    # _plex_token = os.environ['PLEX_TOKEN']
-    # _share_root = "/Users/graham/Desktop"
-
     try:
         plex_paths = _get_plex_paths(_plex_server)
         filesystem_paths = _get_filesystem_paths(_share_root)
@@ -93,7 +86,7 @@ def _refresh(_plex_server, _share_root):
                 if plex_paths[library_name] != library_paths:
                     _set_paths_plex(_plex_server, library_name, library_paths)
             else:
-                raise Exception(f"Library [{library_name}] not found on filesystem")
+                raise Exception(f"Library [{library_name}] not found in plex")
         _refresh_plex_libraries(_plex_server)
     except Exception as exception:
         print(f"Error: {exception}")
@@ -102,6 +95,14 @@ def _refresh(_plex_server, _share_root):
 
 
 if __name__ == "__main__":
+    # TODO: Remove this when .env is in place
+    # from dotenv import load_dotenv
+    # load_dotenv(os.path.join(os.path.dirname(__file__), '../../../../.env'))
+    # _plex_url = "https://plex.janeandgraham.com"
+    # _plex_token = os.environ['PLEX_TOKEN']
+    # _share_root = "/Users/graham/Desktop"
+    # _refresh(PlexServer(_plex_url, _plex_token), _share_root)
+
     argument_parser = argparse.ArgumentParser()
     argument_parser.add_argument("url")
     argument_parser.add_argument("token")
