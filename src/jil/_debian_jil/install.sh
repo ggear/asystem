@@ -9,6 +9,7 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 blkid
 cp -rvf ${SERVICE_INSTALL}/fstab /etc/fstab
 mkdir -p /backup/1 /backup/2
+grep -q 'usb-storage.quirks=174c:235c:u' /boot/cmdline.txt || sed -i '1 s/$/ usb-storage.quirks=174c:235c:u/' /boot/cmdline.txt
 
 ################################################################################
 # Wireless
