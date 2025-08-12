@@ -31,3 +31,4 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 blkid
 cp -rvf ${SERVICE_INSTALL}/fstab /etc/fstab
+systemctl daemon-reload
