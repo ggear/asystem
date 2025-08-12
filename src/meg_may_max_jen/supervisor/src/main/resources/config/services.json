@@ -7,7 +7,8 @@
     "postgres",
     "internet",
     "nginx",
-    "digitemp"
+    "digitemp",
+    "plex"
   ],
   "macmini-may": [
     "monitor",
@@ -23,7 +24,6 @@
     "monitor",
     "mlflow",
     "mlserver",
-    "plex",
     "rhasspy"
   ],
   "raspbpi-jen": [

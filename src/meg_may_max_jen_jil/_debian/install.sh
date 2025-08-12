@@ -118,7 +118,7 @@ apt-get -y --purge autoremove
 ################################################################################
 sed -i -E '/^#|^$/!{/en_AU.UTF-8 UTF-8/!s/^/#/}' /etc/locale.gen
 locale-gen en_AU.UTF-8
-echo "LANG=en_AU.UTF-8" > /etc/default/locale
+echo "LANG=en_AU.UTF-8" >/etc/default/locale
 update-locale LANG=en_AU.UTF-8
 locale
 
@@ -253,6 +253,27 @@ systemctl mask bluetooth.service
 grep -q '^blacklist bluetooth' /etc/modprobe.d/blacklist-bluetooth.conf 2>/dev/null || echo 'blacklist bluetooth' | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
 
 ################################################################################
+# Sound
+################################################################################
+BLACKLIST_FILE="/etc/modprobe.d/alsa-blacklist.conf"
+MODULES=(
+  snd_bcm2835
+  snd_pcm
+  snd_seq
+  snd_timer
+  snd
+  snd_soc_core
+  snd_seq_device
+  snd_pcm_oss
+  snd_mixer_oss
+)
+[ ! -f "$BLACKLIST_FILE" ] && touch "$BLACKLIST_FILE"
+for mod in "${MODULES[@]}"; do
+  grep -qx "$mod" "$BLACKLIST_FILE" || echo "blacklist $mod" | tee -a "$BLACKLIST_FILE" >/dev/null
+done
+systemctl mask alsa-utils.service alsa-restore.service alsa-state.service
+
+################################################################################
 # Monitoring
 ################################################################################
 mkdir -p /home/graham/.config/htop
@@ -366,24 +387,24 @@ tuptime
 ################################################################################
 # Boot
 ################################################################################
-#BOOT_ERRORS=$(
-#  journalctl -b | grep -i error |
-#    grep -v "ACPI Error: Needed type" |
-#    grep -v "ACPI Error: AE_AML_OPERAND_TYPE" |
-#    grep -v "ACPI Error: Aborting method" |
-#    grep -v "20200925" |
-#    grep -v "remount-ro" | grep -v "smartd" |
-#    grep -v "Clock Unsynchronized" |
-#    grep -v "dockerd" | grep -v "containerd" |
-#    grep -v "/usr/lib/gnupg/scdaemon" |
-#    grep -v "Temporary failure in name resolution"
-#)
-#echo "################################################################################"
-#if [ "${BOOT_ERRORS}" == "" ]; then
-#  echo "No Boot errors, yay!"
-#else
-#  echo "Boot errors encountered, boo!"
-#  echo "################################################################################"
-#  echo "${BOOT_ERRORS}"
-#fi
-#echo "################################################################################" || [ "${BOOT_ERRORS}" == "" ]
+BOOT_ERRORS=$(
+  journalctl -b | grep -i error |
+    grep -v "ACPI Error: Needed type" |
+    grep -v "ACPI Error: AE_AML_OPERAND_TYPE" |
+    grep -v "ACPI Error: Aborting method" |
+    grep -v "20200925" |
+    grep -v "remount-ro" | grep -v "smartd" |
+    grep -v "Clock Unsynchronized" |
+    grep -v "dockerd" | grep -v "containerd" |
+    grep -v "/usr/lib/gnupg/scdaemon" |
+    grep -v "Temporary failure in name resolution"
+)
+echo "################################################################################"
+if [ "${BOOT_ERRORS}" == "" ]; then
+  echo "No Boot errors, yay!"
+else
+  echo "Boot errors encountered, boo!"
+  echo "################################################################################"
+  echo "${BOOT_ERRORS}"
+fi
+echo "################################################################################" || [ "${BOOT_ERRORS}" == "" ]

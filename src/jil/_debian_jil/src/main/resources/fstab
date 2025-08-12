@@ -11,5 +11,4 @@
 proc                                          /proc               proc    defaults                                                                                                                                         0       0
 PARTUUID=bdce3ecc-01                          /boot/firmware      vfat    defaults                                                                                                                                         0       2
 PARTUUID=bdce3ecc-02                          /                   ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       1
-UUID=e7f2ec65-4915-4b92-b2d9-f11d73e70794     /backup/1           ext4    defaults,noatime,nodiratime,errors=remount-ro,nofail,x-systemd.device-timeout=30                                                                 0       2
-UUID=bd5b8067-d6d2-467e-b4b8-7ce638aeb56b     /backup/2           ext4    defaults,noatime,nodiratime,errors=remount-ro,nofail,x-systemd.device-timeout=30                                                                 0       2
+UUID=e7f2ec65-4915-4b92-b2d9-f11d73e70794     /mnt/backup         ext4    defaults,noatime,nodiratime,errors=remount-ro,nofail,x-systemd.device-timeout=30                                                                 0       2
