@@ -84,7 +84,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # Notes: https://github.com/bramstroker/homeassistant-powercalc/releases
-VERSION=v1.17.14
+VERSION=v1.17.15
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "powercalc-component" "ggear/homeassistant-powercalc" "ggear-powercalc" "https://github.com/bramstroker/homeassistant-powercalc.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/powercalc"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"

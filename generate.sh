@@ -53,7 +53,7 @@ function pull_repo() {
     REPO_DIR="$(cd "${INVOKING_DIR}/../../../.deps/${MODULE_NAME}/${REPO_NAME}" && pwd)"
     REPO_LABEL="$(basename "$(dirname "${INVOKING_DIR}")")"/"$(basename "${INVOKING_DIR}"):${REPO_NAME}"
     git -c advice.detachedHead=false checkout "${CHECKOUT_LABEL}"
-    if [ $(git status | grep 'HEAD detached at ' | wc -l) -eq 0 ]; then
+    if [ $(git status | grep "${CHECKOUT_LABEL}" | wc -l) -eq 0 ]; then
       echo "" && echo "Module repository [${REPO_LABEL}] failed to checkout [${CHECKOUT_LABEL}]" && echo ""
     else
       git status
