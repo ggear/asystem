@@ -9,7 +9,7 @@
 #
 # <file system>                               <mount point>       <type>  <options>                                                                                                                                        <dump>  <pass>
 UUID=5240-B518                                /boot/efi           vfat    umask=0077                                                                                                                                       0       1
-UUID=e3bc7d29-8172-45b7-82b1-f6c19a0619bd     /boot               ext2    noatime,defaults                                                                                                                                 0       2
+UUID=e3bc7d29-8172-45b7-82b1-f6c19a0619bd     /boot               ext2    defaults,noatime                                                                                                                                 0       2
 /dev/mapper/macmini--may--vg-swap_1           none                swap    sw                                                                                                                                               0       0
 /dev/mapper/macmini--may--vg-root             /                   ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       1
 /dev/mapper/macmini--may--vg-home             /home               ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2

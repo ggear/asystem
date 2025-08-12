@@ -1,5 +1,15 @@
 #!/bin/bash
 
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+
+################################################################################
+# Mounts
+################################################################################
+blkid
+cp -rvf ${SERVICE_INSTALL}/fstab /etc/fstab
+mkdir -p /backup/1 /backup/2
+
 ################################################################################
 # Wireless
 ################################################################################
