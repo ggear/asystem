@@ -1,0 +1,15 @@
+# /etc/fstab: static file system information.
+#
+# Use 'blkid' to print the universally unique identifier for a
+# device; this may be used with UUID= as a more robust way to name devices
+# that works even if disks are added and removed. See fstab(5).
+#
+# systemd generates mount units based on this file, see systemd.mount(5).
+# Please run 'systemctl daemon-reload' after making changes here.
+#
+# <file system>                               <mount point>       <type>  <options>                                                                                                                                        <dump>  <pass>
+LABEL=RASPIFIRM                               /boot/firmware      vfat    rw                                                                                                                                               0       2
+LABEL=RASPIROOT                               /                   ext4    rw                                                                                                                                               0       1
+#UUID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX     /backup/80          ext4    defaults,errors=remount-ro,nofail,x-systemd.device-timeout=30                                                                                    0       2
+
+

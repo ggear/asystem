@@ -30,5 +30,6 @@ lvdisplay | grep 'LV Size'
 # Mounts
 ################################################################################
 blkid
-cp -rvf ${SERVICE_INSTALL}/fstab /etc/fstab
 systemctl daemon-reload
+for _dir in $(grep -v '^#' /etc/fstab | grep '/share\|/backup' | awk '{print $2}'); do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
+
