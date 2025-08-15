@@ -17,11 +17,13 @@ while read -r name type size tran mountpoint; do
   [[ "$type" != "disk" ]] && continue
   [[ "$tran" == "usb" ]] && continue
   dev="/dev/$name"
+
+  # Hardcoded to Macmini 2014
   if [[ "$tran" == "nvme" ]] || [[ "$name" =~ ^nvme ]]; then
-    iface="NVMe"
+    iface="NVMe 2.5 GT/s x2 (8 Gbps)"
     mountpoint="/"
   else
-    iface="SATA"
+    iface="SATA III (6 Gbps)"
     mountpoint=$(mount | grep "^$dev" | awk '{print $3}')
   fi
   mountpoint=${mountpoint:-"Not Mounted"}
@@ -97,7 +99,7 @@ done | sort | cut -d' ' -f2); do
     errors) echo "  SMART Errors: $value" ;;
     rating) [[ $value != "NA" ]] && echo "  Rated TBW: $value TB" ;;
     life) [[ -n $value ]] && echo "  Life Used: $value%" ;;
-    smart) [[ $value == "unavailable" ]] && echo "  SMART: unavailable" ;;
+    smart) [[ $value == "unavailable" ]] && echo "  SMART: Unavailable" ;;
     esac
   done
   echo
