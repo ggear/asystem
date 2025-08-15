@@ -38,8 +38,8 @@ while read dev size tran; do
     speed=$(lsusb -t | grep -Eo '5000M|480M|12M' | head -n1)
     case $speed in
     5000M) speed_h="USB 3.0 (5 Gbps)" ;;
-    480M) speed_h="USB 2.0 (480 Mbps)" ;;
-    12M) speed_h="USB 1.1 (12 Mbps)" ;;
+    480M) speed_h="USB 2.0 (4,8 Gbps)" ;;
+    12M) speed_h="USB 1.1 (0.12 Gbps)" ;;
     *) speed_h="Unknown" ;;
     esac
     dev="/dev/${part%%[0-9]*}"

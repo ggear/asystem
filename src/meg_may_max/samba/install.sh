@@ -1,28 +1,6 @@
 #!/bin/bash
 
 ################################################################################
-# Mounts
-################################################################################
-systemctl list-units --type=automount --no-legend
-for share_automount_unit in $(systemctl list-units --type=automount --no-legend | awk '/share-[0-9]+\.automount$/ {print $1}'); do
-  systemctl stop "$share_automount_unit"
-  systemctl disable "$share_automount_unit"
-done
-systemctl daemon-reload
-systemctl reset-failed
-systemctl list-units --type=automount --no-legend
-
-for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | awk '{print $2}'); do
-  mkdir -p ${SHARE_DIR}
-  chmod 750 ${SHARE_DIR}
-  chown graham:users ${SHARE_DIR}
-  umount -f ${SHARE_DIR} 2>/dev/null
-done
-mount -a
-echo "" && mount | grep /share
-echo "" && df -h /share/* && echo ""
-
-################################################################################
 # Samba
 ################################################################################
 cat <<EOF >/etc/samba/smb.conf
