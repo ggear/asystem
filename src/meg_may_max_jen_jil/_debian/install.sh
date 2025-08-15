@@ -274,6 +274,25 @@ done
 systemctl mask alsa-utils.service alsa-restore.service alsa-state.service
 
 ################################################################################
+# USB
+################################################################################
+echo "USB block devices"
+lsblk -o NAME,SIZE,TRAN -nr | grep usb | while read dev size tran; do
+  for part in $(lsblk -ln -o NAME /dev/$dev | tail -n +2); do
+    mp=$(findmnt -nr -S /dev/$part -o TARGET)
+    [ -z "$mp" ] && continue
+    speed=$(lsusb -t | grep -Eo '5000M|480M|12M' | head -n1)
+    case $speed in
+    5000M) speed_h="USB 3.0 (5 Gbps)" ;;
+    480M) speed_h="USB 2.0 (480 Mbps)" ;;
+    12M) speed_h="USB 1.1 (12 Mbps)" ;;
+    *) speed_h="Unknown" ;;
+    esac
+    echo "  - /dev/$part ($size) mounted at $mp, speed: $speed_h"
+  done
+done
+
+################################################################################
 # Monitoring
 ################################################################################
 mkdir -p /home/graham/.config/htop

@@ -10,6 +10,6 @@
 # <file system>                               <mount point>       <type>  <options>                                                                                                                                        <dump>  <pass>
 LABEL=RASPIFIRM                               /boot/firmware      vfat    rw                                                                                                                                               0       2
 LABEL=RASPIROOT                               /                   ext4    rw                                                                                                                                               0       1
-#UUID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX     /backup/80          ext4    defaults,errors=remount-ro,nofail,x-systemd.device-timeout=30                                                                                    0       2
+#UUID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX     /backup             ext4    defaults,errors=remount-ro,nofail,x-systemd.device-timeout=30                                                                                    0       2
 
 
