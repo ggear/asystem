@@ -33,41 +33,68 @@ systemctl restart ssh
 # reboot now
 
 ################################################################################
+# Resize LVM share
+################################################################################
+#SHARE_GUID="share_05"
+#SHARE_SIZE="3.1TB"
+if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
+  vgdisplay
+  if ! lvdisplay /dev/$(hostname)-vg/${SHARE_GUID} >/dev/null 2>&1; then
+    lvcreate -L ${SHARE_SIZE} -n ${SHARE_GUID} $(hostname)-vg
+    mkfs.ext4 -m 0 -T largefile4 /dev/$(hostname)-vg/${SHARE_GUID}
+  fi
+  lvdisplay /dev/$(hostname)-vg/${SHARE_GUID}
+  lvextend -L ${SHARE_SIZE} /dev/$(hostname)-vg/${SHARE_GUID}
+  resize2fs /dev/$(hostname)-vg/${SHARE_GUID}
+  tune2fs -m 0 /dev/$(hostname)-vg/${SHARE_GUID}
+  tune2fs -l /dev/$(hostname)-vg/${SHARE_GUID} | grep 'Block size:'
+  tune2fs -l /dev/$(hostname)-vg/${SHARE_GUID} | grep 'Block count:'
+  tune2fs -l /dev/$(hostname)-vg/${SHARE_GUID} | grep 'Reserved block count:'
+  lvdisplay /dev/$(hostname)-vg/${SHARE_GUID}
+fi
+vgdisplay | grep 'Free  PE / Size'
+lvdisplay | grep 'LV Size'
+
+################################################################################
 # Install SSD (entire disk to be allocated)
 ################################################################################
-dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
-if [ -n "${dev_recent}" ]; then
-  dev_path="/dev/$(lsblk -no pkname "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
-  dev_name=$(basename "${dev_path}")
-  echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR && echo ""
-  if [ -b "${dev_path}" ]; then
-    echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR "${dev_path}" && echo ""
-    dmesg | grep "${dev_name}" | tail -n 10
-    echo "" && echo ""
-    echo "################################################################################"
-    echo "Found USB block device: ${dev_path}"
-    echo "################################################################################"
-    echo ""
+#SHARE_GUID="share_05"
+if [ -n "${SHARE_GUID}" ]; then
+  dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
+  if [ -n "${dev_recent}" ]; then
+    dev_path="/dev/$(lsblk -no pkname "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
+    dev_name=$(basename "${dev_path}")
+    echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR && echo ""
+    if [ -b "${dev_path}" ]; then
+      echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR "${dev_path}" && echo ""
+      dmesg | grep "${dev_name}" | tail -n 10
+      echo "" && echo ""
+      echo "################################################################################"
+      echo "Found USB block device: ${dev_path}"
+      echo "################################################################################"
+      echo ""
+    else
+      echo "Resolved device is not a block device: ${dev_path}"
+    fi
   else
-    echo "Resolved device is not a block device: ${dev_path}"
+    echo "No USB block devices found in /dev/disk/by-id/"
   fi
-else
-  echo "No USB block devices found in /dev/disk/by-id/"
-fi
-if [ -n "${dev_path}" ]; then
-  echo "" && fdisk -l "${dev_path}" && echo "" && lsblk "${dev_path}" && echo ""
-  if fdisk -l "${dev_path}" >/dev/null 2>&1 && ! fdisk -l "${dev_path}"1 >/dev/null 2>&1; then
-    parted "${dev_path}"
-    # mklabel gpt
-    # mkpart primary 0% 100%
-    # quit
+  if [ -n "${dev_path}" ]; then
     echo "" && fdisk -l "${dev_path}" && echo "" && lsblk "${dev_path}" && echo ""
-    mkfs.ext4 -m 0 -T largefile4 "${dev_path}"1
-    tune2fs -m 0 "${dev_path}"1
-    blkid "${dev_path}"1
-    # Update /etc/fstab in _debain_$HOST service
-  else
-    echo "USB block device has existing file system: ${dev_path}"
+    if fdisk -l "${dev_path}" >/dev/null 2>&1 && ! fdisk -l "${dev_path}"1 >/dev/null 2>&1; then
+      parted "${dev_path}"
+      # mklabel gpt
+      # mkpart primary 0% 100%
+      # quit
+      echo "" && fdisk -l "${dev_path}" && echo "" && lsblk "${dev_path}" && echo ""
+      mkfs.ext4 -m 0 -T largefile4 "${dev_path}"1
+      tune2fs -m 0 "${dev_path}"1
+      parted "${dev_path}" name 1 ${SHARE_GUID}
+      blkid "${dev_path}"1
+      # Update /etc/fstab in _debain_$HOST service
+    else
+      echo "USB block device has existing file system: ${dev_path}"
+    fi
   fi
 fi
 

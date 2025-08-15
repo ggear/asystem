@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
 
 POSITIONAL_ARGS=()
 HEALTHCHECK_VERBOSE=${HEALTHCHECK_VERBOSE:-false}

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
 
 ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
 

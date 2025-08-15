@@ -15,23 +15,11 @@ UUID=e3bc7d29-8172-45b7-82b1-f6c19a0619bd     /boot               ext2    defaul
 /dev/mapper/macmini--may--vg-home             /home               ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 /dev/mapper/macmini--may--vg-tmp              /tmp                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 /dev/mapper/macmini--may--vg-var              /var                ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-/dev/mapper/macmini--may--vg-share--20        /share/20           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-UUID=4ae1477d-6e38-4b5f-8492-79f5072dcc8d     /share/21           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-UUID=581f84d8-9411-4059-92a2-18ea5e1fabd7     /share/22           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-UUID=9e874279-56fd-4e50-96ae-ba475f2fd864     /share/23           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
-#//macmini-max/share-10                        /share/10           cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,dir_mode=0777,file_mode=0666,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-//macmini-meg/share-30                        /share/30           cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,dir_mode=0777,file_mode=0666,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-//macmini-meg/share-31                        /share/31           cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,dir_mode=0777,file_mode=0666,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-#UUID=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX     /backup/20          ext4    defaults,errors=remount-ro,noauto                                                                                                                0       2
-
-
-
-
 /dev/mapper/macmini--may--vg-share_05         /share/30           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 PARTLABEL=share_06                            /share/31           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 #PARTLABEL=share_07                            /share/32           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+PARTLABEL=share_03                            /share/33           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
+PARTLABEL=share_04                            /share/34           ext4    noatime,commit=600,errors=remount-ro                                                                                                             0       2
 //macmini-meg/share-40                        /share/40           cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,dir_mode=0777,file_mode=0666,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 //macmini-meg/share-41                        /share/41           cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,dir_mode=0777,file_mode=0666,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-//macmini-meg/share-42                        /share/42           cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,dir_mode=0777,file_mode=0666,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
-//macmini-meg/share-43                        /share/43           cifs    guest,uid=graham,gid=users,rw,noperm,iocharset=utf8,dir_mode=0777,file_mode=0666,vers=3.0,nofail,x-systemd.automount,x-systemd.idle-timeout=0s   0       0
 #PARTLABEL=backup_05                           /backup             ext4    noatime,errors=remount-ro,noauto                                                                                                                0       2

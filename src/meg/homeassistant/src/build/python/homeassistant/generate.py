@@ -75,6 +75,9 @@ def write_certificates(module_name=None, working_dir=None):
     with open(script_path, 'w') as script_file:
         script_file.write("""
 #!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
@@ -110,6 +113,64 @@ exit 0
           .format(module_name, script_path))
 
 
+def write_volumes():
+    root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
+    script_path = join(root_dir, "src/main/resources/volumes.sh")
+    if not isdir(dirname(script_path)):
+        os.makedirs(dirname(script_path), exist_ok=True)
+    with open(script_path, 'w') as script_file:
+        script_file.write("""
+#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
+
+blkid
+fstab_file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fstab"
+if [ -f "$fstab_file" ]; then
+  echo && echo "#######################################################################################"
+  echo "Could not find fstab file [${fstab_file}]"
+  echo "#######################################################################################" && echo
+  exit 1
+fi
+cp -rvf "$fstab_file" /etc/fstab
+systemctl stop smbd
+for _dir in $(mount | grep /share | awk '{print $3}'); do umount -f ${_dir}; done
+[ -n "$(find /share -mindepth 2 -type f 2>/dev/null)" ] && {
+  echo && echo "#######################################################################################"
+  echo "Could not unmount all shares"
+  echo "#######################################################################################" && echo
+  exit 1
+}
+find /share -mindepth 1 -type d -empty -delete
+for _dir in $(grep -v '^#' /etc/fstab | grep '/share\\|/backup' | awk '{print $2}'); do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
+if mount -a 2>/tmp/mount_errors.log; then
+  echo "All /etc/fstab entries mounted successfully"
+else
+  echo && echo "#######################################################################################"
+  echo "Errors encountered mounting /etc/fstab entries:"
+  echo "#######################################################################################" && echo
+  cat /tmp/mount_errors.log
+  exit 1
+fi
+systemctl daemon-reload
+systemctl start smbd
+systemctl list-units --type=automount --no-legend | grep 'share-'
+for share_automount_unit in $(systemctl list-units --type=automount --no-legend | grep 'share-' | awk '/share-[0-9]+\\.automount$/ {print $2}'); do
+  systemctl stop "$share_automount_unit"
+  systemctl disable "$share_automount_unit"
+done
+systemctl daemon-reload
+systemctl reset-failed
+systemctl list-units --type=automount --no-legend
+duf /share/*
+
+echo "✅ Volumes configured"
+        """.strip())
+    os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
+    print("Build generate script [{}] script persisted to [{}]"
+          .format(basename(root_dir), script_path))
+
 def write_bootstrap(module_name=None, working_dir=None):
     root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
     if module_name is None:
@@ -126,6 +187,9 @@ def write_bootstrap(module_name=None, working_dir=None):
     with open(script_path, 'w') as script_file:
         script_file.write("""
 #!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
 
 echo "--------------------------------------------------------------------------------"
 echo "Service is starting ..."
@@ -184,6 +248,9 @@ def write_healthcheck(module_name=None, working_dir=None):
         with open(script_path, 'w') as script_file:
             script_file.write("""
 #!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
 
 POSITIONAL_ARGS=()
 HEALTHCHECK_VERBOSE=${{HEALTHCHECK_VERBOSE:-false}}
@@ -282,6 +349,9 @@ def write_entity_metadata(module_name, working_dir, metadata_df, topics_discover
         with open(metadata_publish_script_path, 'w') as metadata_publish_script_file:
             metadata_publish_script_file.write("""
 #!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
 
 ROOT_DIR="$(dirname $(readlink -f "$0"))/mqtt"
 
