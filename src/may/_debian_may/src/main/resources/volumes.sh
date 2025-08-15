@@ -11,7 +11,7 @@ if [ ! -f "$fstab_file" ]; then
   exit 1
 fi
 cp -rvf "$fstab_file" /etc/fstab
-systemctl stop smbd
+command -v smbd >/dev/null && systemctl stop smbd
 for _dir in $(mount | grep /share | awk '{print $3}'); do umount -f ${_dir}; done
 [ -n "$(find /share -mindepth 2 -type f 2>/dev/null)" ] && {
   echo && echo "#######################################################################################"
@@ -21,6 +21,7 @@ for _dir in $(mount | grep /share | awk '{print $3}'); do umount -f ${_dir}; don
 }
 find /share -mindepth 1 -type d -empty -delete
 for _dir in $(grep -v '^#' /etc/fstab | grep '/share\|/backup' | awk '{print $2}'); do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
+command -v smbd >/dev/null && systemctl start smbd
 if mount -a 2>/tmp/mount_errors.log; then
   echo "All /etc/fstab entries mounted successfully"
 else
@@ -31,7 +32,6 @@ else
   exit 1
 fi
 systemctl daemon-reload
-systemctl start smbd
 systemctl list-units --type=automount --no-legend | grep 'share-'
 for share_automount_unit in $(systemctl list-units --type=automount --no-legend | grep 'share-' | awk '/share-[0-9]+\.automount$/ {print $2}'); do
   systemctl stop "$share_automount_unit"
