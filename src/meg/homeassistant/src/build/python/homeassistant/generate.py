@@ -161,7 +161,7 @@ done
 systemctl daemon-reload
 systemctl reset-failed
 systemctl list-units --type=automount --no-legend
-duf /share/*
+duf -width 250 -style ascii -output  mountpoint,size,used,avail,usage /share/*
 
 echo "✅ Volumes configured"
         """.strip())
