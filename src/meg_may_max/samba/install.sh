@@ -96,3 +96,5 @@ systemctl start remote-fs.target
 systemctl enable smbd
 systemctl enable nmbd
 systemctl enable remote-fs.target
+
+duf -width 250 -style ascii -output  mountpoint,size,used,avail,usage /share/*
