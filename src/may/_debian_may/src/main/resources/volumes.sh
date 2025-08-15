@@ -3,9 +3,8 @@
 # WARNING: This file is written by the build process, any manual edits will be lost!
 ################################################################################
 
-blkid
 fstab_file="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/fstab"
-if [ -f "$fstab_file" ]; then
+if [ ! -f "$fstab_file" ]; then
   echo && echo "#######################################################################################"
   echo "Could not find fstab file [${fstab_file}]"
   echo "#######################################################################################" && echo
