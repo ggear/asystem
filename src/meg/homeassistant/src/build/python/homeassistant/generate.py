@@ -151,7 +151,6 @@ else
   echo "Errors encountered mounting /etc/fstab entries:"
   echo "#######################################################################################" && echo
   cat /tmp/mount_errors.log
-  exit 1
 fi
 systemctl daemon-reload
 systemctl list-units --type=automount --no-legend | grep 'share-'
