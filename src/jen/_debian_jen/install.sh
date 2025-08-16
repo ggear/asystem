@@ -11,7 +11,7 @@ ${SERVICE_INSTALL}/volumes.sh || exit 1
 ################################################################################
 # Storage
 ################################################################################
-grep -q 'usb-storage.quirks=174c:235c:u' /boot/cmdline.txt || sed -i '1 s/$/ usb-storage.quirks=174c:235c:u/' /boot/cmdline.txt
+grep -q 'usb-storage.quirks=174c:235c:u' /boot/cmdline.txt || sed -i '1 s/$/ usb-storage.quirks=174c:235c:u/' /boot/firmware/cmdline.txt
 
 ################################################################################
 # Wireless
@@ -21,7 +21,12 @@ grep -q 'usb-storage.quirks=174c:235c:u' /boot/cmdline.txt || sed -i '1 s/$/ usb
 ################################################################################
 # Bluetooth
 ################################################################################
-grep -qxF 'dtoverlay=disable-bt' /boot/firmware/config.txt || echo 'dtoverlay=disable-bt' | tee -a /boot/firmware/config.txt && systemctl disable --now hciuart.service
+grep -qxF 'DISABLE_BT=1' /etc/default/raspi-firmware || echo 'DISABLE_BT=1' | tee -a /etc/default/raspi-firmware && systemctl disable --now hciuart.service
+
+################################################################################
+# Image
+################################################################################
+update-initramfs -u -k all
 
 ################################################################################
 # Unused services

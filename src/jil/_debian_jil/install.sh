@@ -14,7 +14,7 @@ ${SERVICE_INSTALL}/volumes.sh || exit 1
 ################################################################################
 # Storage
 ################################################################################
-grep -q 'usb-storage.quirks=174c:235c:u' /boot/cmdline.txt || sed -i '1 s/$/ usb-storage.quirks=174c:235c:u/' /boot/cmdline.txt
+grep -q 'usb-storage.quirks=174c:235c:u' /boot/firmware/cmdline.txt || sed -i '1 s/$/ usb-storage.quirks=174c:235c:u/' /boot/firmware/cmdline.txt
 
 ################################################################################
 # Wireless
