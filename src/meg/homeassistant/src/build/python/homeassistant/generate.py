@@ -41,7 +41,9 @@ def load_env(root_dir=None):
 def load_modules(load_disabled=True, load_infrastrcture=True):
     modules = {}
     host_labels_names = {line.split("=")[0]: line.split("=")[-1].split(",")
-                         for line in Path(join(dirname(abspath(join(DIR_ROOT, "../.."))), ".hosts")).read_text().strip().split("\n")}
+                         for line in
+                         Path(join(dirname(abspath(join(DIR_ROOT, "../.."))), ".hosts")).read_text().strip().split(
+                             "\n")}
     for module in glob.glob(abspath(join(DIR_ROOT, "../../*/*"))):
         group_path = Path(join(module, ".group"))
         if (load_disabled or (isfile(group_path) and group_path.read_text().strip().isdigit() and
@@ -49,7 +51,8 @@ def load_modules(load_disabled=True, load_infrastrcture=True):
                 (load_infrastrcture or not basename(module).startswith("_")):
             env = load_env(module)
             name = basename(module)
-            hosts = ["{}-{}".format(host_labels_names[host_label][0], host_label) for host_label in basename(dirname(module)).split("_")]
+            hosts = ["{}-{}".format(host_labels_names[host_label][0], host_label) for host_label in
+                     basename(dirname(module)).split("_")]
             modules[name] = [hosts, env]
     return modules
 
@@ -141,8 +144,8 @@ for _dir in $(mount | grep /share | awk '{print $3}'); do umount -f ${_dir}; don
   echo "#######################################################################################" && echo
   exit 1
 }
-find /share -mindepth 1 -type d -empty -delete 2>/dev/null
-for _dir in $(grep -v '^#' /etc/fstab | grep '/share\\|/backup' | awk '{print $2}'); do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
+[ -d "/share" ] && find /share -mindepth 1 -type d -empty -delete 2>/dev/null
+for _dir in $(grep -v '^#' /etc/fstab | grep '/share\\|/backup' | awk '{print $2}'); do [ ! -d "${_dir}" ] && mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
 command -v smbd >/dev/null && systemctl start smbd
 if mount -a 2>/tmp/mount_errors.log; then
   echo "All /etc/fstab entries mounted successfully"
@@ -161,13 +164,15 @@ done
 systemctl daemon-reload
 systemctl reset-failed
 systemctl list-units --type=automount --no-legend
-duf -width 250 -style ascii -output  mountpoint,size,used,avail,usage /share/*
+[ -d "/share" ] && [ "$(find /share -mindepth 1 -type d 2>/dev/null)" ] && \
+    duf -width 250 -style ascii -output mountpoint,size,used,avail,usage /share/*
 
 echo "✅ Volumes configured"
         """.strip())
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]"
           .format(basename(root_dir), script_path))
+
 
 def write_bootstrap(module_name=None, working_dir=None):
     root_dir = abspath(join(dirname(realpath(realpath(sys.argv[0]))), "../../../.."))
@@ -304,7 +309,8 @@ fi
 def write_entity_metadata(module_name, working_dir, metadata_df, topics_discovery, topics_data):
     if len(metadata_df) > 0:
         metadata_df = metadata_df.copy()
-        metadata_columns = [column for column in metadata_df.columns if (column.startswith("device_") and column != "device_class")]
+        metadata_columns = [column for column in metadata_df.columns if
+                            (column.startswith("device_") and column != "device_class")]
         metadata_columns_rename = {column: column.replace("device_", "") for column in metadata_columns}
         if exists(working_dir):
             shutil.rmtree(working_dir)
@@ -414,21 +420,26 @@ if __name__ == "__main__":
                 })
             if state_response.status_code == 200:
                 hours_since_update = (time.time() - (time.mktime(datetime.datetime.strptime(
-                    state_response.json()["last_updated"].split('+')[0], '%Y-%m-%dT%H:%M:%S.%f').timetuple()) + 8 * 60 * 60)) / (60 * 60)
+                    state_response.json()["last_updated"].split('+')[0],
+                    '%Y-%m-%dT%H:%M:%S.%f').timetuple()) + 8 * 60 * 60)) / (60 * 60)
                 if hours_since_update > 6:
-                    print("Build generate script [homeassistant] entity metadata [{}.{}] not recently updated, [{:.1f}] hours"
-                          .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"], hours_since_update),
-                          file=sys.stderr if \
-                              "hass_display_mode" in metadata_verify_dict and \
-                              metadata_verify_dict["entity_namespace"] == "sensor"
-                          else sys.stdout)
+                    print(
+                        "Build generate script [homeassistant] entity metadata [{}.{}] not recently updated, [{:.1f}] hours"
+                        .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"],
+                                hours_since_update),
+                        file=sys.stderr if \
+                            "hass_display_mode" in metadata_verify_dict and \
+                            metadata_verify_dict["entity_namespace"] == "sensor"
+                        else sys.stdout)
                 else:
                     print("Build generate script [homeassistant] entity metadata [{}.{}] verified"
                           .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]))
             else:
-                if "hass_display_mode" in metadata_verify_dict and metadata_verify_dict["entity_namespace"] not in ["action"]:
+                if "hass_display_mode" in metadata_verify_dict and metadata_verify_dict["entity_namespace"] not in [
+                    "action"]:
                     print("Build generate script [homeassistant] entity metadata [{}.{}] not found"
-                          .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]), file=sys.stderr)
+                          .format(metadata_verify_dict["entity_namespace"], metadata_verify_dict["unique_id"]),
+                          file=sys.stderr)
         except Exception as exception:
             print("Build generate script [homeassistant] could not connect to HASS with error [{}]".format(exception))
 
@@ -537,7 +548,8 @@ if __name__ == "__main__":
                              energy_powercalc_labels[energy_sensor_label] + metadata_hass_friendly_name_suffix)
         for energy_meter_label in energy_meter_labels:
             _add_energy_plug("{}_energy_{}".format(metadata_hass_unique_id, energy_meter_label),
-                             energy_meter_labels[energy_meter_label] + metadata_hass_friendly_name_suffix, "mdi:counter")
+                             energy_meter_labels[energy_meter_label] + metadata_hass_friendly_name_suffix,
+                             "mdi:counter")
     metadata_customise_df = metadata_hass_df[
         (metadata_hass_df["index"] > 0) &
         (metadata_hass_df["entity_status"] == "Enabled") &
@@ -554,10 +566,12 @@ if __name__ == "__main__":
                 energy_group_unique_id = metadata_hass_row[energy_group].replace(" &", "").replace(" ", "_").lower()
                 for energy_sensor_label in energy_powercalc_labels:
                     _add_energy_plug("{}_{}".format(energy_group_unique_id, energy_sensor_label),
-                                     "{} {}".format(metadata_hass_row[energy_group], energy_powercalc_labels[energy_sensor_label]))
+                                     "{} {}".format(metadata_hass_row[energy_group],
+                                                    energy_powercalc_labels[energy_sensor_label]))
                 for energy_meter_label in energy_meter_labels:
                     _add_energy_plug("{}_energy_{}".format(energy_group_unique_id, energy_meter_label),
-                                     "{} {}".format(metadata_hass_row[energy_group], energy_meter_labels[energy_meter_label],
+                                     "{} {}".format(metadata_hass_row[energy_group],
+                                                    energy_meter_labels[energy_meter_label],
                                                     "mdi:counter"))
     metadata_customise_path = abspath(join(DIR_ROOT, "src/main/resources/data/customise.yaml"))
     with open(metadata_customise_path, 'w') as metadata_customise_file:
@@ -624,7 +638,8 @@ compensation:
         metadata_compensation_file.write("  " + """
   #####################################################################################
         """.strip() + "\n")
-        print("Build generate script [homeassistant] entity compensation persisted to [{}]".format(metadata_compensation_path))
+        print("Build generate script [homeassistant] entity compensation persisted to [{}]".format(
+            metadata_compensation_path))
 
         # Build inputs YAML
         metadata_inputs_df = metadata_hass_df[
@@ -683,7 +698,8 @@ input_boolean:
         })
     metadata_network_devices_dicts = [row.dropna().to_dict() for index, row in metadata_network_devices_df.iterrows()]
     metadata_network_devices_dicts = sorted(metadata_network_devices_dicts,
-                                            key=lambda metadata_network_devices_dict: metadata_network_devices_dict['IP'])
+                                            key=lambda metadata_network_devices_dict: metadata_network_devices_dict[
+                                                'IP'])
     metadata_network_devices_path = abspath(join(DIR_ROOT, "src/main/resources/data/network_devices.json"))
     with open(metadata_network_devices_path, 'w') as metadata_network_devices_file:
         metadata_network_devices_file.write(json.dumps(metadata_network_devices_dicts, indent=2))
@@ -748,9 +764,11 @@ fan:
             """.strip() + "\n")
             for metadata_alias_dict in metadata_alias_dicts:
                 metadata_alias_room = metadata_alias_dict["suggested_area_override"] \
-                    if "suggested_area_override" in metadata_alias_dict else metadata_alias_dict["device_suggested_area"]
+                    if "suggested_area_override" in metadata_alias_dict else metadata_alias_dict[
+                    "device_suggested_area"]
                 metadata_alias_room_name = metadata_alias_dict["suggested_area_override_name"] \
-                    if "suggested_area_override_name" in metadata_alias_dict else metadata_alias_dict["device_suggested_area"]
+                    if "suggested_area_override_name" in metadata_alias_dict else metadata_alias_dict[
+                    "device_suggested_area"]
                 metadata_alias_aliases = ["{}{}{}".format(metadata_alias_room_name,
                                                           "" if alias.startswith("s ") else " ", alias)
                                           for alias in metadata_alias_dict["google_aliases"].split(',')]
@@ -824,7 +842,8 @@ template:
         (metadata_hass_df["connection_ip"].str.len() > 0)
         ]
     metadata_media_google_dicts = [row.dropna().to_dict()
-                                   for index, row in metadata_media_df.query("device_via_device == 'Google'").iterrows()]
+                                   for index, row in
+                                   metadata_media_df.query("device_via_device == 'Google'").iterrows()]
     metadata_media_sonos_dicts = [row.dropna().to_dict()
                                   for index, row in metadata_media_df.query("device_via_device == 'Sonos'").iterrows()]
     metadata_media_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/media.yaml"))
@@ -839,7 +858,8 @@ template:
 # cast:
 #  known_hosts: {}
         """.format(
-            ','.join(sorted(map(str, [metadata_media_dict['connection_ip'] for metadata_media_dict in metadata_media_google_dicts])))
+            ','.join(sorted(map(str, [metadata_media_dict['connection_ip'] for metadata_media_dict in
+                                      metadata_media_google_dicts])))
         ).strip() + "\n")
         metadata_media_file.write("""
 #######################################################################################
@@ -870,7 +890,8 @@ sonos:
     hosts:
         """.strip() + "\n")
         for metadata_media_sonos_dict in \
-                sorted(metadata_media_sonos_dicts, key=lambda metadata_media_sonos_dicts: metadata_media_sonos_dicts['connection_ip']):
+                sorted(metadata_media_sonos_dicts,
+                       key=lambda metadata_media_sonos_dicts: metadata_media_sonos_dicts['connection_ip']):
             metadata_media_file.write("      " + """
       - {}
             """.format(
@@ -908,7 +929,8 @@ sonos:
             for metadata_lock_dict in metadata_lock_dicts
         ])
         metadata_state_all_on_template = " and ".join([
-            "states('binary_sensor.template_{}') == 'on'".format(metadata_lock_dict["unique_id"].replace("_lock", "_state"))
+            "states('binary_sensor.template_{}') == 'on'".format(
+                metadata_lock_dict["unique_id"].replace("_lock", "_state"))
             for metadata_lock_dict in metadata_lock_dicts
         ])
         metadata_security_path = abspath(join(DIR_ROOT, "src/main/resources/data/custom_packages/security.yaml"))
@@ -942,7 +964,8 @@ template:
             """.strip() + "\n")
             for metadata_lock_dict in metadata_lock_dicts:
                 metadata_lock = metadata_lock_dict["unique_id"]
-                metadata_contact = "template_" + metadata_lock_dict["unique_id"].replace("_lock", "_sensor_contact_last")
+                metadata_contact = "template_" + metadata_lock_dict["unique_id"].replace("_lock",
+                                                                                         "_sensor_contact_last")
                 metadata_security_file.write("      " + """
       #################################################################################
       - unique_id: {}
@@ -1001,8 +1024,10 @@ template:
           {{% endif %}}
                 """.format(
                     metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", ""),
-                    metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace("_last", "").lower(),
-                    metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace("_last", "").lower(),
+                    metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace(
+                        "_last", "").lower(),
+                    metadata_contact_dict["unique_id"].replace("contact", "battery").replace("template_", "").replace(
+                        "_last", "").lower(),
                     metadata_contact_dict["unique_id"].replace("contact", "battery"),
                 ).strip() + "\n")
             metadata_security_file.write("""
@@ -1230,14 +1255,20 @@ automation:
                     metadata_contact_dict["unique_id"].replace("_", " ").title(),
                     metadata_contact_dict["unique_id"],
                     metadata_contact_dict["unique_id"],
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
+                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last",
+                                                                                        "_lock"),
+                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last",
+                                                                                        "_lock"),
                     metadata_contact_dict["unique_id"],
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
+                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last",
+                                                                                        "_lock"),
+                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last",
+                                                                                        "_lock"),
                     metadata_contact_dict["unique_id"],
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
-                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last", "_lock"),
+                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last",
+                                                                                        "_lock"),
+                    metadata_contact_dict["unique_id"].replace("template_", "").replace("_sensor_contact_last",
+                                                                                        "_lock"),
                 ).strip() + "\n")
             for metadata_lock_dict in metadata_lock_dicts:
                 metadata_security_file.write("  " + """
@@ -1455,7 +1486,8 @@ automation:
         entity_id: input_boolean.lighting_reset_adaptive_lighting_{}
                 """.format(
                     device_config["color_temp_startup"] if "color_temp_startup" in device_config else 366,
-                    int(device_config["hue_power_on_brightness"] / 254 * 100) if "hue_power_on_brightness" in device_config else 100,
+                    int(device_config[
+                            "hue_power_on_brightness"] / 254 * 100) if "hue_power_on_brightness" in device_config else 100,
                     metadata_lighting_dict["unique_id"],
                     reset_double_trigger_timeout,
                     metadata_lighting_dict["unique_id"],
@@ -1612,8 +1644,10 @@ automation:
               topic: "zigbee/{}"
               payload: '{{ "last_seen": null, "linkquality": 0, "state": null, "update": {{ "installed_version": null, "latest_version": null, "state": null }}, "update_available": false }}'
             """.format(
-                metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
-                metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage", "last_seen"),
+                metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage",
+                                                                                       "last_seen"),
+                metadata_diagnostic_dict["unique_id"].replace("template_", "").replace("linkquality_percentage",
+                                                                                       "last_seen"),
                 len(metadata_diagnostic_dicts) + 5,
                 metadata_diagnostic_dict["friendly_name"],
             ).strip() + "\n")
@@ -1755,7 +1789,8 @@ powercalc:
                             ).strip() + "\n")
                             for dict in metadata_electricity_dicts[dict_group1][dict_group2][dict_group3][dict_group4]:
                                 dict_config = \
-                                    ("\n                      " + dict["powercalc_config"].replace("\n", "\n                      ")) \
+                                    ("\n                      " + dict["powercalc_config"].replace("\n",
+                                                                                                   "\n                      ")) \
                                         if "powercalc_config" in dict else ""
                                 metadata_electricity_file.write("                    " + """
                     - entity_id: {}.{}{}{}
@@ -1785,7 +1820,8 @@ template:
                 metadata_electricity_proxy_state = "states('media_player.{}') != \"unavailable\"".format(
                     metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
                 ) if (metadata_electricity_proxy_type == "media_player" and
-                      "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict["device_model"] == "Move"
+                      "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict[
+                          "device_model"] == "Move"
                       ) else (
                     "states('{}.{}')".format(
                         metadata_electricity_proxy_type,
@@ -1800,7 +1836,8 @@ template:
                     metadata_electricity_proxy_dict["unique_id"].replace("template_", ""),
                     metadata_electricity_proxy_state,
                 ).strip() + "\n")
-                if "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict["device_model"] == "STARKVIND":
+                if "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict[
+                    "device_model"] == "STARKVIND":
                     metadata_electricity_file.write("        " + """
         attributes:
           fan_speed: >-
@@ -1810,7 +1847,8 @@ template:
                         metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
                         metadata_electricity_proxy_dict["unique_id"].replace("template_", "").replace("_proxy", ""),
                     ).strip() + "\n")
-                if "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict["device_model"] == "Move":
+                if "device_model" in metadata_electricity_proxy_dict and metadata_electricity_proxy_dict[
+                    "device_model"] == "Move":
                     metadata_electricity_file.write("        " + """
         attributes:
           charging_state: >-
@@ -1922,7 +1960,9 @@ script:
   entities:
                     """.format(
                         domain,
-                        ("\n  icon: " + metadata_lovelace_graph_dicts[0]["icon"]) if "icon" in metadata_lovelace_graph_dicts[0] else ""
+                        ("\n  icon: " + metadata_lovelace_graph_dicts[0]["icon"]) if "icon" in
+                                                                                     metadata_lovelace_graph_dicts[
+                                                                                         0] else ""
                     ).strip() + "\n")
                     for metadata_lovelace_graph_dict in metadata_lovelace_graph_dicts:
                         metadata_lovelace_file.write("    " + ("""
@@ -1936,7 +1976,8 @@ script:
                 if metadata_lovelace_group_domain_dicts[group][domain]:
                     metadata_lovelace_first_display_mode = None
                     for metadata_lovelace_dict in metadata_lovelace_group_domain_dicts[group][domain]:
-                        metadata_lovelace_current_display_mode = metadata_lovelace_dict["hass_display_mode"].split("_")[0]
+                        metadata_lovelace_current_display_mode = metadata_lovelace_dict["hass_display_mode"].split("_")[
+                            0]
                         if metadata_lovelace_current_display_mode != metadata_lovelace_first_display_mode:
                             metadata_lovelace_first_display_mode = metadata_lovelace_current_display_mode
                             metadata_lovelace_first_dict = metadata_lovelace_dict
@@ -1962,7 +2003,8 @@ script:
                                 metadata_lovelace_file.write("  " + """
   entities:
                                 """.strip() + "\n")
-                        if "hass_display_type" not in metadata_lovelace_dict or metadata_lovelace_dict["hass_display_type"] == "entities":
+                        if "hass_display_type" not in metadata_lovelace_dict or metadata_lovelace_dict[
+                            "hass_display_type"] == "entities":
                             metadata_lovelace_file.write("    " + ("""
     - entity: {}.{}
       name: {}
