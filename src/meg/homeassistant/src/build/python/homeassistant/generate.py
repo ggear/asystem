@@ -134,7 +134,7 @@ if [ ! -f "$fstab_file" ]; then
   exit 1
 fi
 cp -rvf "$fstab_file" /etc/fstab
-command -v smbd >/dev/null && systemctl stop smbd
+systemctl list-unit-files smbd.service | grep -q enabled && systemctl is-active --quiet smbd && systemctl stop smbd
 for _dir in /share /backup; do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
 for _dir in $(mount | grep '/share\\|/backup' | awk '{print $3}'); do umount -f ${_dir}; done
 [ "$(find /share /backup -mindepth 2 -maxdepth 2 | wc -l)" -gt 0 ] && {
@@ -144,7 +144,7 @@ for _dir in $(mount | grep '/share\\|/backup' | awk '{print $3}'); do umount -f 
 find /share -mindepth 1 -maxdepth 1 -type d -empty -delete
 find /backup -mindepth 1 -maxdepth 1 -type d -empty -delete
 for _dir in $(grep -v '^#' /etc/fstab | grep '/share\\|/backup' | awk '{print $2}'); do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
-command -v smbd >/dev/null && systemctl start smbd
+systemctl list-unit-files smbd.service | grep -q enabled && ! systemctl is-active --quiet smbd && systemctl start smbd
 if mount -a 2>/tmp/mount_errors.log; then
   echo "All /etc/fstab entries mounted successfully"
 else
@@ -156,14 +156,12 @@ mount -a -O noauto
 [ "$(find /backup -mindepth 2 -maxdepth 2)" ] && duf -width 250 -style ascii -output mountpoint,size,used,avail,usage,filesystem /backup/*
 awk '$4 ~ /noauto/ {print $2}' /etc/fstab | while read mp; do mountpoint -q "$mp" && umount -f "$mp"; done
 systemctl daemon-reload
-systemctl list-units --type=automount --no-legend | grep 'share-'
 for share_automount_unit in $(systemctl list-units --type=automount --no-legend | grep 'share-' | awk '/share-[0-9]+\\.automount$/ {print $2}'); do
   systemctl stop "$share_automount_unit"
   systemctl disable "$share_automount_unit"
 done
 systemctl daemon-reload
 systemctl reset-failed
-systemctl list-units --type=automount --no-legend
 
 echo && echo "✅ Volumes configured" && echo
         """.strip())
