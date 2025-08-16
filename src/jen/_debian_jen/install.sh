@@ -13,12 +13,14 @@ ${SERVICE_INSTALL}/volumes.sh || exit 1
 #################################################################################
 touch /boot/firmware/config.txt && [ ! -f /boot/firmware/config.txt.bak ] && cp -v /boot/firmware/config.txt /boot/firmware/config.txt.bak
 touch /etc/default/raspi-firmware-custom && [ ! -f /etc/default/raspi-firmware-custom.bak ] && cp -v /etc/default/raspi-firmware-custom /etc/default/raspi-firmware-custom.bak
-grep -qxF '^DISABLE_BT=1' /etc/default/raspi-firmware-custom || echo 'DISABLE_BT=1' | tee -a /etc/default/raspi-firmware-custom
-grep -qxF '^DISABLE_WIFI=1' /etc/default/raspi-firmware-custom || echo 'DISABLE_WIFI=1' | tee -a /etc/default/raspi-firmware-custom
-grep -qxF '^dtoverlay=disable-bt' /etc/default/raspi-firmware-custom || echo 'dtoverlay=disable-bt' | tee -a /etc/default/raspi-firmware-custom
-grep -qxF '^dtoverlay=disable-wifi' /etc/default/raspi-firmware-custom || echo 'dtoverlay=disable-wifi' | tee -a /etc/default/raspi-firmware-custom
+grep -qxF 'DISABLE_BT=1' /etc/default/raspi-firmware-custom || echo 'DISABLE_BT=1' | tee -a /etc/default/raspi-firmware-custom
+grep -qxF 'DISABLE_WIFI=1' /etc/default/raspi-firmware-custom || echo 'DISABLE_WIFI=1' | tee -a /etc/default/raspi-firmware-custom
+grep -qxF 'dtoverlay=disable-bt' /etc/default/raspi-firmware-custom || echo 'dtoverlay=disable-bt' | tee -a /etc/default/raspi-firmware-custom
+grep -qxF 'dtoverlay=disable-wifi' /etc/default/raspi-firmware-custom || echo 'dtoverlay=disable-wifi' | tee -a /etc/default/raspi-firmware-custom
+cat /etc/default/raspi-firmware-custom
 touch /etc/default/raspi-extra-cmdline && [ ! -f /etc/default/raspi-extra-cmdline.bak ] && cp -v /etc/default/raspi-extra-cmdline /etc/default/raspi-extra-cmdline.bak
 grep -qxF 'usb-storage.quirks=174c:235c:u' /etc/default/raspi-extra-cmdline || echo -n ' usb-storage.quirks=174c:235c:u' >>/etc/default/raspi-extra-cmdline
+cat /etc/default/raspi-extra-cmdline
 update-initramfs -u -k all
 diff -u /boot/firmware/config.txt /boot/firmware/config.txt.bak
 
