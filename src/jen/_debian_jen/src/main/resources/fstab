@@ -10,6 +10,6 @@
 # <file system>                               <mount point>       <type>  <options>                                                                                                                                        <dump>  <pass>
 LABEL=RASPIFIRM                               /boot/firmware      vfat    rw                                                                                                                                               0       2
 LABEL=RASPIROOT                               /                   ext4    rw                                                                                                                                               0       1
-#PARTLABEL=backup_01                           /backup             ext4    noatime,errors=remount-ro,noauto                                                                                                                0       2
+#PARTLABEL=backup_01                           /backup/90          ext4    noatime,errors=remount-ro,noauto                                                                                                                0       2
 
 
