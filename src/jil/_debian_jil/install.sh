@@ -24,7 +24,7 @@ grep -q 'usb-storage.quirks=174c:235c:u' /boot/firmware/cmdline.txt || sed -i '1
 ################################################################################
 # Bluetooth
 ################################################################################
-grep -qxF 'dtoverlay=disable-bt' /boot/firmware/config.txt || echo 'dtoverlay=disable-bt' | tee -a /boot/firmware/config.txt && systemctl disable --now hciuart.service
+grep -qxF 'dtoverlay=disable-bt' /boot/firmware/config.txt || echo 'dtoverlay=disable-bt' | tee -a /boot/firmware/config.txt
 
 ################################################################################
 # Image

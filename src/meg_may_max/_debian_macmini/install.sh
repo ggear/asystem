@@ -41,9 +41,9 @@ systemctl status bolt
 boltctl
 
 ################################################################################
-# Regenerate initramfs
+# Image
 ################################################################################
-update-initramfs -u
+update-initramfs -u -k all
 
 ################################################################################
 # Volumes LVM standard (assumes drive > 500GB)

@@ -21,7 +21,7 @@ grep -q 'usb-storage.quirks=174c:235c:u' /boot/firmware/cmdline.txt || sed -i '1
 ################################################################################
 # Bluetooth
 ################################################################################
-grep -qxF 'DISABLE_BT=1' /etc/default/raspi-firmware || echo 'DISABLE_BT=1' | tee -a /etc/default/raspi-firmware && systemctl disable --now hciuart.service
+grep -qxF 'DISABLE_BT=1' /etc/default/raspi-firmware || echo 'DISABLE_BT=1' | tee -a /etc/default/raspi-firmware
 
 ################################################################################
 # Image
