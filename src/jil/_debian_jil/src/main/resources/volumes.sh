@@ -19,7 +19,7 @@ for _dir in $(mount | grep /share | awk '{print $3}'); do umount -f ${_dir}; don
   echo "#######################################################################################" && echo
   exit 1
 }
-find /share -mindepth 1 -type d -empty -delete
+find /share -mindepth 1 -type d -empty -delete 2>/dev/null
 for _dir in $(grep -v '^#' /etc/fstab | grep '/share\|/backup' | awk '{print $2}'); do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
 command -v smbd >/dev/null && systemctl start smbd
 if mount -a 2>/tmp/mount_errors.log; then

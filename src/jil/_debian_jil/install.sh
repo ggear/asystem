@@ -38,8 +38,3 @@ systemctl mask nmbd
 systemctl stop smartmontools
 systemctl disable smartmontools
 systemctl mask smartmontools
-
-################################################################################
-# Regenerate initramfs
-################################################################################
-update-initramfs -u
