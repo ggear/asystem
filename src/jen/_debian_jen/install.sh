@@ -20,6 +20,10 @@ grep -qxF 'dtoverlay=disable-wifi' /etc/default/raspi-firmware-custom || echo 'd
 echo "/etc/default/raspi-firmware-custom:" && cat /etc/default/raspi-firmware-custom
 update-initramfs -u -k all
 diff -u /boot/firmware/config.txt /boot/firmware/config.txt.bak
+if [ ! -f /etc/modprobe.d/blacklist-brcmfmac.conf ]; then
+  echo "blacklist brcmfmac" | tee -a /etc/modprobe.d/blacklist-brcmfmac.conf
+  echo "blacklist bcm2835-wifi" | tee -a /etc/modprobe.d/blacklist-brcmfmac.conf
+fi
 
 ################################################################################
 # Unused services
