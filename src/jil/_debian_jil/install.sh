@@ -9,13 +9,6 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 ${SERVICE_INSTALL}/volumes.sh || exit 1
 
 
-#/etc/default/raspi-extra-cmdline
-
-
-################################################################################
-# Storage
-################################################################################
-grep -q 'usb-storage.quirks=174c:235c:u' /boot/firmware/cmdline.txt || sed -i '1 s/$/ usb-storage.quirks=174c:235c:u/' /boot/firmware/cmdline.txt
 
 ################################################################################
 # Wireless
