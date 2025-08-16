@@ -12,7 +12,7 @@ cp -rvf "$fstab_file" /etc/fstab
 command -v smbd >/dev/null && systemctl stop smbd
 for _dir in /share /backup; do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
 for _dir in $(mount | grep '/share\|/backup' | awk '{print $3}'); do umount -f ${_dir}; done
-[ "$(find /share /backup -mindepth 2 -maxdepth 2)" -gt 0 ] && {
+[ "$(find /share /backup -mindepth 2 -maxdepth 2 | wc -l)" -gt 0 ] && {
   echo && echo "❌ Could not unmount all shares" && echo
   exit 1
 }
