@@ -8,6 +8,10 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 ################################################################################
 ${SERVICE_INSTALL}/volumes.sh || exit 1
 
+
+#/etc/default/raspi-extra-cmdline
+
+
 ################################################################################
 # Storage
 ################################################################################
