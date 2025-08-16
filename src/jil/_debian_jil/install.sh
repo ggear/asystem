@@ -16,7 +16,7 @@ grep -qxF 'DISABLE_BT=1' /boot/firmware/config.txt || echo 'DISABLE_BT=1' | tee 
 grep -qxF 'DISABLE_WIFI=1' /boot/firmware/config.txt || echo 'DISABLE_WIFI=1' | tee -a /boot/firmware/config.txt
 grep -qxF 'dtoverlay=disable-bt' /boot/firmware/config.txt || echo 'dtoverlay=disable-bt' | tee -a /boot/firmware/config.txt
 grep -qxF 'dtoverlay=disable-wifi' /boot/firmware/config.txt || echo 'dtoverlay=disable-wifi' | tee -a /boot/firmware/config.txt
-diff -u /boot/firmware/config.txt /boot/firmware/config.txt.bak
+diff -u /boot/firmware/config.txt.bak /boot/firmware/config.txt
 if [ ! -f /etc/modprobe.d/blacklist-brcmfmac.conf ]; then
   echo "blacklist brcmfmac" | tee -a /etc/modprobe.d/blacklist-brcmfmac.conf
   echo "blacklist bcm2835-wifi" | tee -a /etc/modprobe.d/blacklist-brcmfmac.conf
