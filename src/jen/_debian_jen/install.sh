@@ -8,35 +8,27 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 ################################################################################
 ${SERVICE_INSTALL}/volumes.sh || exit 1
 
-################################################################################
-# Storage
-################################################################################
-grep -q 'usb-storage.quirks=174c:235c:u' /boot/firmware/cmdline.txt || sed -i '1 s/$/ usb-storage.quirks=174c:235c:u/' /boot/firmware/cmdline.txt
-
-################################################################################
-# Wireless
-################################################################################
-[ ! -f /etc/modprobe.d/blacklist-brcmfmac.conf ] && echo "blacklist brcmfmac" | tee -a /etc/modprobe.d/blacklist-brcmfmac.conf
-
-################################################################################
-# Bluetooth
-################################################################################
-grep -qxF 'DISABLE_BT=1' /etc/default/raspi-firmware || echo 'DISABLE_BT=1' | tee -a /etc/default/raspi-firmware
-
-################################################################################
-# Image
-################################################################################
+#################################################################################
+# Firmware/Kernel config
+#################################################################################
+touch /boot/firmware/config.txt && [ ! -f /boot/firmware/config.txt.bak ] && cp -v /boot/firmware/config.txt /boot/firmware/config.txt.bak
+touch /etc/default/raspi-firmware-custom && [ ! -f /etc/default/raspi-firmware-custom.bak ] && cp -v /etc/default/raspi-firmware-custom /etc/default/raspi-firmware-custom.bak
+grep -qxF 'dtoverlay=disable-bt' /etc/default/raspi-firmware-custom || echo 'dtoverlay=disable-bt' | tee -a /etc/default/raspi-firmware-custom
+grep -qxF 'dtoverlay=disable-wifi' /etc/default/raspi-firmware-custom || echo 'dtoverlay=disable-wifi' | tee -a /etc/default/raspi-firmware-custom
+touch /etc/default/raspi-extra-cmdline && [ ! -f /etc/default/raspi-extra-cmdline.bak ] && cp -v /etc/default/raspi-extra-cmdline /etc/default/raspi-extra-cmdline.bak
+grep -qxF 'usb-storage.quirks=174c:235c:u' /etc/default/raspi-extra-cmdline || echo -n ' usb-storage.quirks=174c:235c:u' >>/etc/default/raspi-extra-cmdline
 update-initramfs -u -k all
+diff /boot/firmware/config.txt /boot/firmware/config.txt.bak
 
 ################################################################################
 # Unused services
 ################################################################################
-systemctl stop smbd
-systemctl disable smbd
-systemctl mask smbd
-systemctl stop nmbd
-systemctl disable nmbd
-systemctl mask nmbd
-systemctl stop smartmontools
-systemctl disable smartmontools
-systemctl mask smartmontools
+for _service in smbd nmbd smartmontools bluetooth wpa_supplicant; do
+  if systemctl list-unit-files "$_service.service" >/dev/null 2>&1; then
+    echo -n "Stopping $_service ... " && (systemctl stop "$_service" 2>/dev/null || true) && echo "done"
+    echo -n "Disabling $_service ... " && (systemctl disable "$_service" 2>/dev/null || true) && echo "done"
+    echo -n "Masking $_service ... " && (systemctl mask "$_service" 2>/dev/null || true) && echo "done"
+  else
+    echo "Service $_service not found, skipping."
+  fi
+done

@@ -3,9 +3,6 @@
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
-SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
-SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
-
 ################################################################################
 # Volumes
 ################################################################################
@@ -34,12 +31,12 @@ update-initramfs -u -k all
 ################################################################################
 # Unused services
 ################################################################################
-systemctl stop smbd
-systemctl disable smbd
-systemctl mask smbd
-systemctl stop nmbd
-systemctl disable nmbd
-systemctl mask nmbd
-systemctl stop smartmontools
-systemctl disable smartmontools
-systemctl mask smartmontools
+for _service in smbd nmbd smartmontools hciuart bluetooth wpa_supplicant; do
+  if systemctl list-unit-files "$_service.service" >/dev/null 2>&1; then
+    echo -n "Stopping $_service ... " && (systemctl stop "$_service" 2>/dev/null || true) && echo "done"
+    echo -n "Disabling $_service ... " && (systemctl disable "$_service" 2>/dev/null || true) && echo "done"
+    echo -n "Masking $_service ... " && (systemctl mask "$_service" 2>/dev/null || true) && echo "done"
+  else
+    echo "Service $_service not found, skipping."
+  fi
+done
