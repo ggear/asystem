@@ -3,13 +3,13 @@
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+
 ################################################################################
-# Mounts
+# Volumes
 ################################################################################
-blkid
-cp -rvf ${SERVICE_INSTALL}/fstab /etc/fstab
-systemctl daemon-reload
-for _dir in $(grep -v '^#' /etc/fstab | grep '/share\|/backup' | awk '{print $2}'); do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
+${SERVICE_INSTALL}/volumes.sh || exit 1
 
 ################################################################################
 # Storage

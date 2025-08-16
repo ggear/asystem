@@ -60,6 +60,7 @@ export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
 export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 
+alias dmesg='dmesg -T'
 alias ls='ls ${LS_OPTIONS}'
 
 export PATH=/root/.pyenv/bin:${PATH}
