@@ -164,7 +164,6 @@ for share_automount_unit in $(systemctl list-units --type=automount --no-legend 
 done
 systemctl daemon-reload
 systemctl reset-failed
-
 echo && echo "✅ Volumes configured" && echo
 
 declare -A ratings=(
