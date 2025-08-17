@@ -11,22 +11,27 @@ apt-get install -y --allow-downgrades 'intel-microcode=3.20250512.1~deb12u1'
 ################################################################################
 # Grub config
 ################################################################################
-if [ -f /etc/default/grub ] && [ $(grep "GRUB_TIMEOUT=10" /etc/default/grub | wc -l) -eq 0 ]; then
-  sed -i 's/GRUB_TIMEOUT=5/GRUB_TIMEOUT=10/' /etc/default/grub
-  update-grub
-fi
-if [ -f /etc/default/grub ] && [ $(grep "cdgroup_enable=memory swapaccount=1" /etc/default/grub | wc -l) -eq 0 ]; then
-  sed -i 's/GRUB_CMDLINE_LINUX=""/GRUB_CMDLINE_LINUX="cdgroup_enable=memory swapaccount=1"/' /etc/default/grub
-  update-grub
-fi
-
-################################################################################
-# Network
-################################################################################
-if [ -f /etc/default/grub ] && [ $(grep "intel_iommu=on iommu=pt" /etc/default/grub | wc -l) -eq 0 ]; then
-  sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet/GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt/' /etc/default/grub
-  update-grub
-fi
+[ ! -f /etc/default/grub.bak ] && cp -v /etc/default/grub /etc/default/grub.bak
+grep -q '^GRUB_TIMEOUT=' /etc/default/grub || echo 'GRUB_TIMEOUT=10' >>/etc/default/grub
+sed -i '/^GRUB_TIMEOUT=/c\GRUB_TIMEOUT=10' /etc/default/grub || echo 'GRUB_TIMEOUT=10' >>/etc/default/grub
+grep -q '^GRUB_CMDLINE_LINUX=' /etc/default/grub || echo 'GRUB_CMDLINE_LINUX=""' >>/etc/default/grub
+sed -i -E '/^GRUB_CMDLINE_LINUX=/{
+  /cgroup_enable=memory/! s/"$/ cgroup_enable=memory"/
+  /swapaccount=1/! s/"$/ swapaccount=1"/
+}' /etc/default/grub
+grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub || echo 'GRUB_CMDLINE_LINUX_DEFAULT=""' >>/etc/default/grub
+sed -i -E '/^GRUB_CMDLINE_LINUX_DEFAULT=/{
+  /acpi_osi=!/! s/"$/ acpi_osi=!"/
+  /acpi_osi=\\"Windows 2015\\"/! s/"$/ acpi_osi=\\"Windows 2015\\""/
+  /acpi_backlight=vendor/! s/"$/ acpi_backlight=vendor"/
+  /pcie_aspm=force/! s/"$/ pcie_aspm=force"/
+  /intel_iommu=on/! s/"$/ intel_iommu=on"/
+  /iommu=pt/! s/"$/ iommu=pt"/
+}' /etc/default/grub
+sed -i -E 's/^(GRUB_CMDLINE_LINUX(_DEFAULT)?)="\s+/\1="/' /etc/default/grub
+diff -u /etc/default/grub.bak /etc/default/grub
+grub-mkconfig -o /dev/null
+update-grub
 
 ################################################################################
 # Thunderbolt

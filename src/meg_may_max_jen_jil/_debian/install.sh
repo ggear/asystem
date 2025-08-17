@@ -126,6 +126,7 @@ locale
 # Disable hardware
 ################################################################################
 [ ! -f /etc/modprobe.d/blacklist-b43.conf ] && echo "blacklist b43" | tee -a /etc/modprobe.d/blacklist-b43.conf
+[ ! -f /etc/modprobe.d/blacklist-r8152.conf ] && echo "blacklist r8152" | tee /etc/modprobe.d/blacklist-r8152.conf
 [ ! -f /etc/modprobe.d/blacklist-btusb.conf ] && echo "blacklist btusb" | tee -a /etc/modprobe.d/blacklist-btusb.conf
 if [ ! -f /etc/modprobe.d/blacklist-video.conf ]; then
   echo "blacklist nvidia" | tee -a /etc/modprobe.d/blacklist-video.conf
@@ -150,6 +151,7 @@ if [ ! -f /etc/modprobe.d/blacklist-snd.conf ]; then
   echo "blacklist snd_hda_codec_generic" | tee -a /etc/modprobe.d/blacklist-snd.conf
   echo "blacklist snd_hda_codec_cirrus" | tee -a /etc/modprobe.d/blacklist-snd.conf
 fi
+update-initramfs -u -k all
 
 ################################################################################
 # Defaults
