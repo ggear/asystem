@@ -11,10 +11,10 @@ elif [ -n "${SHARE_DIR}" ]; then
   SHARE_DIRS_SPACE="${SHARE_DIR}"
 fi
 echo "Space summary ... "
-
 # INFO: Hack before I add totals to duf fork and potentially push upstream
 SHARE_USAGE_CMD="duf -width 250 -style ascii -output mountpoint,size,used,avail,usage ${SHARE_DIRS_SPACE}"
 if [ $(uname) == "Darwin" ]; then
+  asystem-media-mount
   ${SHARE_USAGE_CMD} && ${SHARE_USAGE_CMD} | awk '
 /\| \/Users/ {
     gsub(/\|/, "", $0)

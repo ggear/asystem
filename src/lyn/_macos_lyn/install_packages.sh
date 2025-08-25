@@ -6,7 +6,6 @@
 HOMEBREW_PREFIX=/Library/Home/Homebrew /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
 brew update
 brew install \
-  r \
   pv \
   jq \
   yq \
@@ -25,7 +24,6 @@ brew install \
   poppler \
   telnet \
   poppler \
-  rstudio \
   regclient \
   mosquitto \
   coreutils \

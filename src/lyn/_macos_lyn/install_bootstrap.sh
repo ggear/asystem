@@ -74,13 +74,6 @@
 # Remove all unnecessary apps using Clean My Mac
 
 ################################################################################
-# Kiwi Settings
-################################################################################
-# Kiwi -> Preferences -> Accounts -> graham.gear@gmail.com -> Blue
-# Kiwi -> Preferences -> Notifications -> Use / Sound -> Off
-# Kiwi -> Preferences -> General -> Save download files to -> ~/Desktop
-
-################################################################################
 # Sublime Settings
 ################################################################################
 cat <<EOF >"/Users/graham/Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings"

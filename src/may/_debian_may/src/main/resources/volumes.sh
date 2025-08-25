@@ -10,7 +10,7 @@ if [ ! -f "$fstab_file" ]; then
 fi
 [ ! -f /etc/fstab.bak ] && cp -v /etc/fstab /etc/fstab.bak
 cp -rvf "$fstab_file" /etc/fstab
-diff -u /etc/fstab.bak /etc/fstab
+diff -uw /etc/fstab.bak /etc/fstab
 ! systemctl list-unit-files smbd.service | grep -q masked && systemctl is-active --quiet smbd && systemctl stop smbd
 for _dir in /share /backup; do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
 for _dir in $(mount | grep '/share\|/backup' | awk '{print $3}'); do umount -f ${_dir}; done
@@ -39,5 +39,4 @@ for share_automount_unit in $(systemctl list-units --type=automount --no-legend 
 done
 systemctl daemon-reload
 systemctl reset-failed
-
 echo && echo "✅ Volumes configured" && echo

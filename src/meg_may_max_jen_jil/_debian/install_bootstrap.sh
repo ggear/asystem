@@ -58,27 +58,27 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 # Install SSD (entire disk to be allocated)
 ################################################################################
-#SHARE_GUID="share_05"
-if [ -n "${SHARE_GUID}" ]; then
-  dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
-  if [ -n "${dev_recent}" ]; then
-    dev_path="/dev/$(lsblk -no pkname "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
-    dev_name=$(basename "${dev_path}")
-    echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR && echo ""
-    if [ -b "${dev_path}" ]; then
-      echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR "${dev_path}" && echo ""
-      dmesg | grep "${dev_name}" | tail -n 10
-      echo "" && echo ""
-      echo "################################################################################"
-      echo "Found USB block device: ${dev_path}"
-      echo "################################################################################"
-      echo ""
-    else
-      echo "Resolved device is not a block device: ${dev_path}"
-    fi
+SHARE_GUID="share_10"
+dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
+if [ -n "${dev_recent}" ]; then
+  dev_path="/dev/$(lsblk -no $(echo "${dev_recent}" | grep -q '[0-9]$' && echo 'pk')name "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
+  dev_name=$(basename "${dev_path}")
+  echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR && echo ""
+  if [ -b "${dev_path}" ]; then
+    echo "" && lsblk -o NAME,KNAME,TRAN,SIZE,MOUNTPOINT,MODEL,SERIAL,VENDOR "${dev_path}" && echo ""
+    dmesg | grep "${dev_name}" | tail -n 10
+    echo "" && echo ""
+    echo "################################################################################"
+    echo "Found USB block device: ${dev_path}"
+    echo "################################################################################"
+    echo ""
   else
-    echo "No USB block devices found in /dev/disk/by-id/"
+    echo "Resolved device is not a block device: ${dev_path}"
   fi
+else
+  echo "No USB block devices found in /dev/disk/by-id/"
+fi
+if [ -n "${SHARE_GUID}" ]; then
   if [ -n "${dev_path}" ]; then
     echo "" && fdisk -l "${dev_path}" && echo "" && lsblk "${dev_path}" && echo ""
     if fdisk -l "${dev_path}" >/dev/null 2>&1 && ! fdisk -l "${dev_path}"1 >/dev/null 2>&1; then
