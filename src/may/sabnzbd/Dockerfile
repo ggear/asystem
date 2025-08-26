@@ -8,7 +8,7 @@ RUN \
     apk add --upgrade --no-cache bash=5.2.37-r0 && \
     apk add --upgrade --no-cache less=679-r0 && \
     apk add --upgrade --no-cache curl=8.14.1-r1 && \
-    apk add --upgrade --no-cache vim=9.1.1415-r0 && \
+    apk add --upgrade --no-cache vim=9.1.1566-r0 && \
     apk add --upgrade --no-cache jq=1.8.0-r0 && \
     (apk cache clean || true) && rm -rf /var/cache/apk/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
