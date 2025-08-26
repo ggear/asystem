@@ -54,10 +54,21 @@ EOF
 cat <<'EOF' >/var/root/.profile
 # .profile
 
+printf '\e[?2004l'
+tput rmam
+# tput smam
+
+export PS1='\u@\h:\w\$ '
+
+export LC_ALL=C ls
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS="--color=auto"
-alias ls="ls ${LS_OPTIONS}"
+alias ls="gls ${LS_OPTIONS}"
+
+export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+bind '"\e[A":history-search-backward'
+bind '"\e[B":history-search-forward'
 EOF
 mkdir -p /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
 chown graham /Users/graham/Backup /Users/graham/Code /Users/graham/Temp
