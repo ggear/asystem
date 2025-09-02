@@ -58,6 +58,7 @@ export LC_COLLATE=C
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS='--color=auto'
+PS1='[\[\e[01;35m\]\u@\h\[\e[00m\] \W]\$ '
 export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 
 alias dmesg='dmesg -T'
