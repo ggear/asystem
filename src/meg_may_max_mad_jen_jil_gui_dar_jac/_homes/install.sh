@@ -66,8 +66,13 @@ alias ls='ls ${LS_OPTIONS}'
 export PATH=/root/.pyenv/bin:${PATH}
 
 EOF
-if [ $(grep "history-search" /etc/bash.bashrc | wc -l) -eq 0 ]; then
-  echo "" >>/etc/bash.bashrc
-  echo "bind '\"\e[A\":history-search-backward'" >>/etc/bash.bashrc
-  echo "bind '\"\e[B\":history-search-forward'" >>/etc/bash.bashrc
+
+[[ -f /etc/bashrc ]] && GLOBAL_BASHRC=/etc/bashrc
+[[ -f /etc/bash.bashrc ]] && GLOBAL_BASHRC=/etc/bash.bashrc
+if [ -n "${GLOBAL_BASHRC}" ]; then
+  if [ $(grep "history-search" ${GLOBAL_BASHRC} | wc -l) -eq 0 ]; then
+    echo "" >>${GLOBAL_BASHRC}
+    echo "bind '\"\e[A\":history-search-backward'" >>${GLOBAL_BASHRC}
+    echo "bind '\"\e[B\":history-search-forward'" >>${GLOBAL_BASHRC}
+  fi
 fi
