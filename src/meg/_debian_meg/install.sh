@@ -7,4 +7,3 @@ SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOL
 # Volumes
 ################################################################################
 ${SERVICE_INSTALL}/volumes.sh || exit 1
-
