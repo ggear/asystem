@@ -78,7 +78,7 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 # Shares
 ################################################################################
-SHARE_GUID="share_10"
+SHARE_GUID="share_08"
 dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
 if [ -n "${dev_recent}" ]; then
   dev_path="/dev/$(lsblk -no $(echo "${dev_recent}" | grep -q '[0-9]$' && echo 'pk')name "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
