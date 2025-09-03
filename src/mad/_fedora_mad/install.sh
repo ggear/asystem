@@ -10,7 +10,7 @@ set -x
 # Update
 ################################################################################
 cd /tmp
-dnf-3 update -y
+dnf-3 makecache --quiet
 
 ################################################################################
 # Packages
@@ -37,7 +37,7 @@ dnf-3 install --quiet -y inotify-tools-4.23.9.0
 dnf-3 install --quiet -y powertop-2.15
 dnf-3 install --quiet -y python3-3.13.7
 dnf-3 install --quiet -y python3-pip-24.3.1
-dnf-3 install --quiet -y vim-enhanced-9.1.1706
+dnf-3 install --quiet -y vim-enhanced-9.1.1723
 dnf-3 install --quiet -y nano-8.3
 dnf-3 install --quiet -y screen-5.0.1
 dnf-3 install --quiet -y tmux-3.5a
