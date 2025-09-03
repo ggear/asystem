@@ -273,6 +273,7 @@ rm -rf /root/.pyenv || true
 cp -rvf ${SERVICE_INSTALL}/pyenv /root/.pyenv
 cd /root/.pyenv
 ./src/configure && make -C src
+ln -s /root/.pyenv/libexec/pyenv /root/.pyenv/bin/pyenv
 source /root/.bashrc
 cd /tmp
 
