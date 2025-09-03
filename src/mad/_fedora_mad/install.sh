@@ -270,18 +270,12 @@ locale
 #################################################################################
 ## Python
 #################################################################################
-#[[ ! -d /root/.pyenv ]] && git clone https://github.com/pyenv/pyenv.git /root/.pyenv
-#cd /root/.pyenv
-#git checkout master
-#git pull --all
-#git checkout v2.6.7
-#
-## TODO: Make this work
-##git checkout ${PYENV_VERSION}
-#
-#./src/configure && make -C src
-#source /root/.bashrc
-#cd /tmp
+rm -rf /root/.pyenv || true
+cp -rvf ${SERVICE_INSTALL}/pyenv /root/.pyenv
+cd /root/.pyenv
+./src/configure && make -C src
+source /root/.bashrc
+cd /tmp
 
 ################################################################################
 # Monitoring
@@ -388,7 +382,7 @@ BOOT_ERRORS=$(
     grep -v "dracut" |
     grep -v "brcmfmac" |
     grep -v "phy0" |
-    grep -v "snd-pcm"
+    grep -v "snd-pcm" || true
 )
 echo "################################################################################"
 if [ "${BOOT_ERRORS}" == "" ]; then
