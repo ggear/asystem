@@ -33,7 +33,7 @@ ASYSTEM_PACKAGES_DNF=(
   usbutils
   smartmontools
   htop
-  iotop
+  iotop-c
   ethtool
   lm_sensors
   efivar
@@ -46,12 +46,12 @@ ASYSTEM_PACKAGES_DNF=(
   powertop
   python3
   python3-pip
-  vim
+  vim-enhanced
   nano
   screen
   tmux
   curl
-  wget
+  wget2-wget
   unrar
   rsync
   mediainfo
@@ -73,7 +73,7 @@ ASYSTEM_PACKAGES_DNF=(
   libnotify-devel
   libevent-devel
   openssl-devel
-  zlib-devel
+  zlib-ng-compat-devel
   bzip2-devel
   readline-devel
   sqlite-devel
@@ -83,7 +83,7 @@ ASYSTEM_PACKAGES_DNF=(
   autoconf
   automake
   libtool
-  pkgconfig
+  pkgconf-pkg-config
   yasm
   nasm
   net-tools

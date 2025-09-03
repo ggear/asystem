@@ -23,7 +23,7 @@ dnf-3 install -y util-linux-2.40.4
 dnf-3 install -y usbutils-018
 dnf-3 install -y smartmontools-7.5
 dnf-3 install -y htop-3.4.1
-dnf-3 install -y iotop-
+dnf-3 install -y iotop-c-1.30
 dnf-3 install -y ethtool-6.15
 dnf-3 install -y lm_sensors-3.6.0
 dnf-3 install -y efivar-39
@@ -36,12 +36,12 @@ dnf-3 install -y inotify-tools-4.23.9.0
 dnf-3 install -y powertop-2.15
 dnf-3 install -y python3-3.13.7
 dnf-3 install -y python3-pip-24.3.1
-dnf-3 install -y vim-
+dnf-3 install -y vim-enhanced-9.1.1706
 dnf-3 install -y nano-8.3
 dnf-3 install -y screen-5.0.1
 dnf-3 install -y tmux-3.5a
 dnf-3 install -y curl-8.11.1
-dnf-3 install -y wget-
+dnf-3 install -y wget2-wget-2.2.0
 dnf-3 install -y unrar-0.3.1
 dnf-3 install -y rsync-3.4.1
 dnf-3 install -y mediainfo-25.04
@@ -63,7 +63,7 @@ dnf-3 install -y gtk2-devel-2.24.33
 dnf-3 install -y libnotify-devel-0.8.6
 dnf-3 install -y libevent-devel-2.1.12
 dnf-3 install -y openssl-devel-3.2.4
-dnf-3 install -y zlib-devel-
+dnf-3 install -y zlib-ng-compat-devel-2.2.5
 dnf-3 install -y bzip2-devel-1.0.8
 dnf-3 install -y readline-devel-8.2
 dnf-3 install -y sqlite-devel-3.47.2
@@ -73,7 +73,7 @@ dnf-3 install -y xz-devel-5.8.1
 dnf-3 install -y autoconf-2.72
 dnf-3 install -y automake-1.17
 dnf-3 install -y libtool-2.5.4
-dnf-3 install -y pkgconfig-
+dnf-3 install -y pkgconf-pkg-config-2.3.0
 dnf-3 install -y yasm-1.3.0^20250625git121ab15
 dnf-3 install -y nasm-2.16.03
 dnf-3 install -y net-tools-2.0
@@ -98,9 +98,9 @@ dnf-3 install -y expect-5.45.4
 dnf-3 install -y gambas3-ide-3.20.2
 dnf-3 install -y gettext-0.23.1
 dnf-3 install -y git-2.51.0
-dnf-3 install -y git2cl-3.0
 dnf-3 install -y git-annex-10.20250320
 dnf-3 install -y git-cola-4.14.0
+dnf-3 install -y git2cl-3.0
 dnf-3 install -y gitg-45~20250512gitf7501bc
 dnf-3 install -y gtranslator-48.0
 dnf-3 install -y highlight-4.13
