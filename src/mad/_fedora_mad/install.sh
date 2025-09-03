@@ -1,7 +1,9 @@
 #!/bin/bash
 
-SERVICE_HOME-/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
-SERVICE_INSTALL-/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
+
+set -e
 
 ################################################################################
 # Update
@@ -126,11 +128,64 @@ dnf-3 install -y translate-toolkit-3.14.5
 dnf-3 install -y utrac-0.3.0
 
 ################################################################################
+# Kernel
+################################################################################
+[ ! -f /etc/default/grub.bak ] && cp /etc/default/grub /etc/default/grub.bak
+grep -q 'selinux=0' /etc/default/grub || sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/"$/ selinux=0 systemd.unit=multi-user.target console=tty1"/' /etc/default/grub
+echo "/etc/default/grub:" && diff -u /etc/default/grub.bak /etc/default/grub
+grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
+echo "/etc/kernel/cmdline:" && cat /etc/kernel/cmdline
+echo "/proc/cmdline:" && cat /proc/cmdline
+if [ -f /etc/selinux/config ]; then
+  [ ! -f /etc/selinux/config.bak ] && cp /etc/selinux/config /etc/selinux/config.bak
+  sed 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config >/etc/selinux/config.tmp
+  mv /etc/selinux/config.tmp /etc/selinux/config
+  diff -u /etc/selinux/config.bak /etc/selinux/config
+  setenforce 0 2>/dev/null || true
+fi
+tee /etc/sysctl.d/99-disable-ipv6.conf <<EOF
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 1
+EOF
+
+################################################################################
 # Modules
 ################################################################################
 tee /etc/modprobe.d/blacklist-sound.conf <<EOF
+blacklist snd
 blacklist snd_pcm
 blacklist snd_seq
+blacklist snd_hwdep
+blacklist snd_timer
+blacklist snd_pcm_oss
+blacklist snd_bcm2835
+blacklist snd_compress
+blacklist snd_soc_core
+blacklist snd_hda_core
+blacklist snd_mixer_oss
+blacklist snd_hda_intel
+blacklist snd_hda_codec
+blacklist snd_seq_device
+blacklist snd_intel_dspcfg
+blacklist snd_hda_codec_hdmi
+blacklist snd_hda_codec_cirrus
+blacklist snd_hda_codec_generic
+blacklist soundcore
+blacklist soundwire_intel
+blacklist ledtrig_audio
+EOF
+tee /etc/modprobe.d/blacklist-video.conf <<EOF
+blacklist nvidia
+blacklist radeon
+blacklist nouveau
+EOF
+tee /etc/modprobe.d/blacklist-wifi.conf <<EOF
+blacklist b43
+blacklist r8152
+EOF
+tee /etc/modprobe.d/blacklist-bluetooth.conf <<EOF
+blacklist bluetooth
 EOF
 tee /etc/modprobe.d/brcmfmac-ignore.conf <<EOF
 options brcmfmac fwload_disable=1
@@ -143,30 +198,63 @@ dracut -f
 # Services
 ################################################################################
 systemctl list-units --type=service --state=running
-for _service in docker; do
-  systemctl enable ${_service}
-  systemctl start ${_service}
-  systemctl status ${_service}
+services_to_enable=(
+  docker
+  chronyd
+  systemd-resolved
+)
+for _service in "${services_to_enable[@]}"; do
+  if systemctl list-unit-files | grep -q "^$_service"; then
+    systemctl enable "$_service"
+    systemctl start "$_service"
+    systemctl --no-pager status "$_service"
+  else
+    echo "Error: Service not found: $_service"
+    exit 1
+  fi
 done
-for _service in ModemManager polkit gssproxy speakersafetyd firewalld bluetooth wpa_supplicant abrt-journal-core abrt-oops abrt-xorg abrtd systemd-vconsole-setup; do
-  systemctl disable ${_service} 2>/dev/null
-  systemctl mask ${_service}
-  systemctl stop ${_service}
+services_to_disable=(
+  polkit
+  gssproxy
+  speakersafetyd
+  firewalld
+  bluetooth
+  wpa_supplicant
+  abrt-journal-core
+  abrt-oops
+  abrt-xorg
+  abrtd
+  systemd-vconsole-setup
+  cups.path
+  cups
+  ModemManager
+)
+for _service in "${services_to_disable[@]}"; do
+  if systemctl list-unit-files | grep -q "^$_service"; then
+    systemctl disable "$_service" 2>/dev/null
+    systemctl mask "$_service"
+    systemctl stop "$_service" 2>/dev/null
+    echo "Disabled and masked: $_service"
+  fi
 done
 systemctl list-units --type=service --state=running
 
 ################################################################################
 # Network
 ################################################################################
-nmcli radio wifi off
-wifi_dev=$(nmcli -t -f DEVICE,TYPE device | grep ':wifi' | cut -d: -f1 | grep -v '^p2p')
 tee /etc/NetworkManager/conf.d/10-no-wifi.conf >/dev/null <<EOF
 [device]
 wifi.scan-rand-mac-address=no
 
-[keyfile]
-unmanaged-devices=interface-name:$wifi_dev
+[radio]
+wifi=disabled
 EOF
+mkdir -p /etc/tmpfiles.d
+tee /etc/tmpfiles.d/systemd-resolve.conf <<EOF
+d /run/systemd/resolve 0755 systemd-resolve systemd-resolve -
+EOF
+systemd-tmpfiles --create /etc/tmpfiles.d/systemd-resolve.conf
+systemctl restart systemd-resolved
 
 ################################################################################
 # Locale
@@ -179,268 +267,108 @@ export LC_ALL=en_AU.UTF-8
 locale
 
 #################################################################################
-## Disable hardware
-#################################################################################
-#[ ! -f /etc/modprobe.d/blacklist-b43.conf ] && echo "blacklist b43" | tee -a /etc/modprobe.d/blacklist-b43.conf
-#[ ! -f /etc/modprobe.d/blacklist-r8152.conf ] && echo "blacklist r8152" | tee /etc/modprobe.d/blacklist-r8152.conf
-#[ ! -f /etc/modprobe.d/blacklist-btusb.conf ] && echo "blacklist btusb" | tee -a /etc/modprobe.d/blacklist-btusb.conf
-#if [ ! -f /etc/modprobe.d/blacklist-video.conf ]; then
-#  echo "blacklist nvidia" | tee -a /etc/modprobe.d/blacklist-video.conf
-#  echo "blacklist radeon" | tee -a /etc/modprobe.d/blacklist-video.conf
-#  echo "blacklist nouveau" | tee -a /etc/modprobe.d/blacklist-video.conf
-#fi
-#if [ ! -f /etc/modprobe.d/blacklist-snd.conf ]; then
-#  echo "blacklist soundcore" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_timer" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_pcm" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_hwdep" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_hda_core" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_hda_codec" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_compress" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_soc_core" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist soundwire_intel" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_intel_dspcfg" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_hda_intel" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_hda_codec_hdmi" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist ledtrig_audio" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_hda_codec_generic" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#  echo "blacklist snd_hda_codec_cirrus" | tee -a /etc/modprobe.d/blacklist-snd.conf
-#fi
-#update-initramfs -u -k all
-#
-#################################################################################
-## Defaults
-#################################################################################
-#if [ $(grep "net.ipv6.conf.all.disable_ipv6" /etc/sysctl.conf | wc -l) -eq 0 ]; then
-#  echo "net.ipv6.conf.all.disable_ipv6 = 1" >>/etc/sysctl.conf
-#  sysctl -p
-#fi
-#if [ $(grep "vm.swappiness" /etc/sysctl.conf | wc -l) -eq 0 ]; then
-#  echo "vm.swappiness = 1" >>/etc/sysctl.conf
-#  sysctl vm.swappiness=1
-#fi
-#
-#################################################################################
-## Network
-#################################################################################
-#mkdir -p /etc/network
-#INTERFACE=$(lshw -C network -short -c network 2>/dev/null | grep -i ethernet | tr -s ' ' | cut -d' ' -f2 | grep -v 'path\|=\|network')
-#if [ "${INTERFACE}" != "" ] && ifconfig "${INTERFACE}" >/dev/null && [ $(grep "auto eth0." /etc/network/interfaces | wc -l) -eq 0 ]; then
-#  MACADDRESS_SUFFIX="$(ifconfig "${INTERFACE}" | grep ether | tr -s ' ' | cut -d' ' -f3 | cut -d':' -f2-)"
-#  if [ "${INTERFACE}" != "" ]; then
-#    cat <<EOF >/etc/network/interfaces
-## interfaces(5) file used by ifup(8) and ifdown(8)
-## Include files from /etc/network/interfaces.d:
-#
-#source /etc/network/interfaces.d/*
-#
-#rename ${INTERFACE}=eth0
-#
-#auto eth0
-#iface eth0 inet dhcp
-#
-##auto eth0.3
-##iface eth0.3 inet dhcp
-##    vlan-raw-device eth0
-##    pre-up ip link set eth0.3 address 3a:${MACADDRESS_SUFFIX}
-##
-##auto eth0.4
-##iface eth0.4 inet dhcp
-##    vlan-raw-device eth0
-##    pre-up ip link set eth0.4 address 4a:${MACADDRESS_SUFFIX}
-#
-#EOF
-#  fi
-#fi
-#systemctl start networking
-#systemctl enable networking
-#systemctl status networking
-#systemctl stop NetworkManager
-#systemctl disable NetworkManager
-#systemctl mask NetworkManager
-#systemctl stop ModemManager
-#systemctl disable ModemManager
-#systemctl mask ModemManager
-#systemctl stop systemd-networkd
-#systemctl disable systemd-networkd
-#systemctl mask systemd-networkd
-#systemctl stop wpa_supplicant
-#systemctl disable wpa_supplicant
-#systemctl mask wpa_supplicant
-#grep -q '^8021q' /etc/modules 2>/dev/null || echo '8021q' | tee -a /etc/modules
-#grep -q '^macvlan' /etc/modules 2>/dev/null || echo 'macvlan' | tee -a /etc/modules
-#grep -q '^blacklist applesmc' /etc/modprobe.d/blacklist-wifi.conf 2>/dev/null || echo 'blacklist applesmc' | tee -a /etc/modprobe.d/blacklist-applesmc.conf
-#grep -q '^blacklist bcma-pci-bridge' /etc/modprobe.d/blacklist-wifi.conf 2>/dev/null || echo 'blacklist bcma-pci-bridge' | tee -a /etc/modprobe.d/blacklist-wifi.conf
-#
-#################################################################################
-## Power
-#################################################################################
-#cat <<'EOF' >/etc/systemd/system/powertop.service
-#[Unit]
-#Description=PowerTOP auto tune
-#
-#[Service]
-#Type=oneshot
-#Environment="TERM=dumb"
-#RemainAfterExit=true
-#ExecStart=/usr/sbin/powertop --auto-tune
-#
-#[Install]
-#WantedBy=multi-user.target
-#EOF
-#systemctl daemon-reload
-#systemctl enable powertop
-## INFO: Warning, this is aggressive and overides the below keyboard udev rule such the keyboard goes to sleep all the time, annoying!
-##systemctl stop powertop
-##systemctl disable powertop
-#
-#################################################################################
-## Keyboard
-#################################################################################
-#echo 'ACTION=="add", SUBSYSTEM=="usb", KERNEL=="1-1.4.1", ATTR{idVendor}=="04d9", ATTR{idProduct}=="0006", ATTR{power/control}="on"' | tee /etc/udev/rules.d/99-holtek-keyboard.rules >/dev/null
-#udevadm control --reload
-#udevadm trigger
-#
-#################################################################################
-## Bluetooth
-#################################################################################
-#systemctl stop bluetooth.service
-#systemctl disable bluetooth.service
-#systemctl mask bluetooth.service
-#grep -q '^blacklist bluetooth' /etc/modprobe.d/blacklist-bluetooth.conf 2>/dev/null || echo 'blacklist bluetooth' | tee -a /etc/modprobe.d/blacklist-bluetooth.conf
-#
-#################################################################################
-## Sound
-#################################################################################
-#BLACKLIST_FILE="/etc/modprobe.d/alsa-blacklist.conf"
-#MODULES=(
-#  snd_bcm2835
-#  snd_pcm
-#  snd_seq
-#  snd_timer
-#  snd
-#  snd_soc_core
-#  snd_seq_device
-#  snd_pcm_oss
-#  snd_mixer_oss
-#)
-#[ ! -f "$BLACKLIST_FILE" ] && touch "$BLACKLIST_FILE"
-#for mod in "${MODULES[@]}"; do
-#  grep -qx "$mod" "$BLACKLIST_FILE" || echo "blacklist $mod" | tee -a "$BLACKLIST_FILE" >/dev/null
-#done
-#systemctl mask alsa-utils.service alsa-restore.service alsa-state.service
-#
-#################################################################################
-## Monitoring
-#################################################################################
-#mkdir -p /home/graham/.config/htop
-#cat <<'EOF' >/home/graham/.config/htop/htoprc
-#fields=0 48 17 18 38 39 40 2 46 47 49 1
-#sort_key=46
-#sort_direction=-1
-#tree_sort_key=0
-#tree_sort_direction=1
-#hide_kernel_threads=1
-#hide_userland_threads=0
-#shadow_other_users=0
-#show_thread_names=0
-#show_program_path=1
-#highlight_base_name=1
-#highlight_megabytes=1
-#highlight_threads=1
-#highlight_changes=0
-#highlight_changes_delay_secs=5
-#find_comm_in_cmdline=1
-#strip_exe_from_cmdline=1
-#show_merged_command=0
-#tree_view=0
-#tree_view_always_by_pid=0
-#header_margin=1
-#detailed_cpu_time=0
-#cpu_count_from_one=0
-#show_cpu_usage=1
-#show_cpu_frequency=1
-#show_cpu_temperature=1
-#degree_fahrenheit=0
-#update_process_names=0
-#account_guest_in_cpu_meter=0
-#color_scheme=0
-#enable_mouse=1
-#delay=10
-#left_meters=LeftCPUs Memory Swap
-#left_meter_modes=1 1 1
-#right_meters=RightCPUs Tasks LoadAverage Uptime
-#right_meter_modes=1 2 2 2
-#hide_function_bar=0
-#EOF
-#chown -R graham:graham /home/graham/.config
-#mkdir -p /root/.config/htop && rm -rf /root/.config/htop/htoprc
-#ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
-#
-#################################################################################
-## Time
-#################################################################################
-#systemctl mask systemd-timesyncd.service
-#timedatectl set-timezone "Australia/Perth"
-#sed -i 's/0.debian.pool.ntp.org/216.239.35.0/g' /etc/ntpsec/ntp.conf
-#sed -i 's/1.debian.pool.ntp.org/216.239.35.4/g' /etc/ntpsec/ntp.conf
-#sed -i 's/2.debian.pool.ntp.org/216.239.35.8/g' /etc/ntpsec/ntp.conf
-#sed -i 's/3.debian.pool.ntp.org/216.239.35.12/g' /etc/ntpsec/ntp.conf
-#mkdir -p /var/log/ntpsec
-#chown ntpsec:ntpsec /var/log/ntpsec
-#systemctl daemon-reload
-#systemctl restart ntpsec.service
-#systemctl status ntpsec.service
-#ntpq -p
-#
-#################################################################################
 ## Python
 #################################################################################
-#if [ ! -d /root/.pyenv ]; then
-#  git clone https://github.com/pyenv/pyenv.git /root/.pyenv
-#fi
+#[[ ! -d /root/.pyenv ]] && git clone https://github.com/pyenv/pyenv.git /root/.pyenv
 #cd /root/.pyenv
 #git checkout master
 #git pull --all
-#git checkout v2.6.5
+#git checkout v2.6.7
+#
+## TODO: Make this work
+##git checkout ${PYENV_VERSION}
+#
 #./src/configure && make -C src
 #source /root/.bashrc
 #cd /tmp
-#
-#################################################################################
-## Temperature
-#################################################################################
-#sensors-detect --auto
-#
-#################################################################################
-## Printing
-#################################################################################
-#systemctl stop cups
-#systemctl disable cups
-#systemctl mask cups
-#
-#################################################################################
-## Docker
-#################################################################################
-#[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
-#docker system prune --volumes -f 2>/dev/null
-#mkdir -p /etc/docker
-#cat <<'EOF' >/etc/docker/daemon.json
-#{
-#  "default-address-pools" : [
-#    {
-#      "base" : "172.16.0.0/12",
-#      "size" : 24
-#    }
-#  ]
-#}
-#EOF
-#
-#################################################################################
-## Uptime
-#################################################################################
-#tuptime
+
+################################################################################
+# Monitoring
+################################################################################
+mkdir -p /home/graham/.config/htop
+cat <<'EOF' >/home/graham/.config/htop/htoprc
+fields=0 48 17 18 38 39 40 2 46 47 49 1
+sort_key=46
+sort_direction=-1
+tree_sort_key=0
+tree_sort_direction=1
+hide_kernel_threads=1
+hide_userland_threads=0
+shadow_other_users=0
+show_thread_names=0
+show_program_path=1
+highlight_base_name=1
+highlight_megabytes=1
+highlight_threads=1
+highlight_changes=0
+highlight_changes_delay_secs=5
+find_comm_in_cmdline=1
+strip_exe_from_cmdline=1
+show_merged_command=0
+tree_view=0
+tree_view_always_by_pid=0
+header_margin=1
+detailed_cpu_time=0
+cpu_count_from_one=0
+show_cpu_usage=1
+show_cpu_frequency=1
+show_cpu_temperature=1
+degree_fahrenheit=0
+update_process_names=0
+account_guest_in_cpu_meter=0
+color_scheme=0
+enable_mouse=1
+delay=10
+left_meters=LeftCPUs Memory Swap
+left_meter_modes=1 1 1
+right_meters=RightCPUs Tasks LoadAverage Uptime
+right_meter_modes=1 2 2 2
+hide_function_bar=0
+EOF
+chown -R graham:graham /home/graham/.config
+mkdir -p /root/.config/htop && rm -rf /root/.config/htop/htoprc
+ln -s /home/graham/.config/htop/htoprc /root/.config/htop/htoprc
+
+################################################################################
+# Time
+################################################################################
+cp -n /etc/chrony.conf /etc/chrony.conf.bak
+for server in 0.au.pool.ntp.org 1.au.pool.ntp.org 2.au.pool.ntp.org 3.au.pool.ntp.org; do
+  grep -q "^server $server" /etc/chrony.conf || echo "server $server iburst" | tee -a /etc/chrony.conf >/dev/null
+done
+diff -u /etc/chrony.conf.bak /etc/chrony.conf
+systemctl restart chronyd
+chronyc -a makestep
+chronyc tracking
+chronyc sources
+chronyc -a sourcestats
+chronyc -a activity
+
+################################################################################
+# Sensors
+################################################################################
+sensors-detect --auto
+
+################################################################################
+# Docker
+################################################################################
+mkdir -p /etc/docker
+cat <<'EOF' >/etc/docker/daemon.json
+{
+  "default-address-pools" : [
+    {
+      "base" : "172.16.0.0/12",
+      "size" : 24
+    }
+  ]
+}
+EOF
+systemctl restart docker
+docker run --rm busybox ifconfig eth0
+docker run --rm busybox nslookup google.com
+docker run --rm busybox nslookup $(hostname)
+[ $(docker images -a -q | wc -l) -gt 0 ] && docker rmi -f $(docker images -a -q) 2>/dev/null
+docker system prune --volumes -f 2>/dev/null
 
 ################################################################################
 # Boot
