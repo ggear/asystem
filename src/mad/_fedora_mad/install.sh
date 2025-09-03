@@ -3,8 +3,7 @@
 SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
-set -e
-set -x
+set -ex
 
 ################################################################################
 # Update
@@ -267,9 +266,9 @@ export LANG=en_AU.UTF-8
 export LC_ALL=en_AU.UTF-8
 locale
 
-#################################################################################
-## Python
-#################################################################################
+################################################################################
+# Python
+################################################################################
 rm -rf /root/.pyenv || true
 cp -rvf ${SERVICE_INSTALL}/pyenv /root/.pyenv
 cd /root/.pyenv
