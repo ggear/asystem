@@ -4,6 +4,7 @@ SERVICE_HOME=/home/asystem/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
 set -e
+set -x
 
 ################################################################################
 # Update
@@ -132,7 +133,7 @@ dnf-3 install -y utrac-0.3.0
 ################################################################################
 [ ! -f /etc/default/grub.bak ] && cp /etc/default/grub /etc/default/grub.bak
 grep -q 'selinux=0' /etc/default/grub || sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/"$/ selinux=0 systemd.unit=multi-user.target console=tty1"/' /etc/default/grub
-echo "/etc/default/grub:" && diff -u /etc/default/grub.bak /etc/default/grub
+echo "/etc/default/grub:" && diff -u /etc/default/grub.bak /etc/default/grub || true
 grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
 echo "/etc/kernel/cmdline:" && cat /etc/kernel/cmdline
 echo "/proc/cmdline:" && cat /proc/cmdline
@@ -140,7 +141,7 @@ if [ -f /etc/selinux/config ]; then
   [ ! -f /etc/selinux/config.bak ] && cp /etc/selinux/config /etc/selinux/config.bak
   sed 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config >/etc/selinux/config.tmp
   mv /etc/selinux/config.tmp /etc/selinux/config
-  diff -u /etc/selinux/config.bak /etc/selinux/config
+  diff -u /etc/selinux/config.bak /etc/selinux/config || true
   setenforce 0 2>/dev/null || true
 fi
 tee /etc/sysctl.d/99-disable-ipv6.conf <<EOF
@@ -336,7 +337,7 @@ cp -n /etc/chrony.conf /etc/chrony.conf.bak
 for server in 0.au.pool.ntp.org 1.au.pool.ntp.org 2.au.pool.ntp.org 3.au.pool.ntp.org; do
   grep -q "^server $server" /etc/chrony.conf || echo "server $server iburst" | tee -a /etc/chrony.conf >/dev/null
 done
-diff -u /etc/chrony.conf.bak /etc/chrony.conf
+diff -u /etc/chrony.conf.bak /etc/chrony.conf || true
 systemctl restart chronyd
 chronyc -a makestep
 chronyc tracking
