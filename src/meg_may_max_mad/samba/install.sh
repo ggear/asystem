@@ -89,12 +89,8 @@ EOF
 
 done
 
-systemctl start smbd
-systemctl start nmbd
-systemctl start remote-fs.target
-
-systemctl enable smbd
-systemctl enable nmbd
-systemctl enable remote-fs.target
+for _smb in smb.service smbd.service nmb.service nmbd.service remote-fs.target; do
+  systemctl list-unit-files ${_smb} | grep -q ${_smb} && systemctl enable ${_smb} && systemctl start ${_smb} && systemctl --no-pager status ${_smb}
+done
 
 [ -d /share ] && ls -d /share/* >/dev/null 2>&1 && duf -width 250 -style ascii -output mountpoint,size,used,avail,usage /share/*
