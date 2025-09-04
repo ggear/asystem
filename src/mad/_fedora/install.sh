@@ -259,58 +259,23 @@ cat >/etc/tmpfiles.d/systemd-resolve.conf <<'EOF'
 EOF
 [ ! -f /etc/NetworkManager/NetworkManager.conf.bak ] && cp /etc/NetworkManager/NetworkManager.conf /etc/NetworkManager/NetworkManager.conf.bak
 tee /etc/NetworkManager/NetworkManager.conf <<'EOF'
-# Configuration file for NetworkManager.
-#
-# See "man 5 NetworkManager.conf" for details.
-#
-# The directories /usr/lib/NetworkManager/conf.d/ and /run/NetworkManager/conf.d/
-# can contain additional .conf snippets installed by packages. These files are
-# read before NetworkManager.conf and have thus lowest priority.
-# The directory /etc/NetworkManager/conf.d/ can contain additional .conf
-# snippets. Those snippets are merged last and overwrite the settings from this main
-# file.
-#
-# The files within one conf.d/ directory are read in asciibetical order.
-#
-# You can prevent loading a file /usr/lib/NetworkManager/conf.d/NAME.conf
-# by having a file NAME.conf in either /run/NetworkManager/conf.d/ or /etc/NetworkManager/conf.d/.
-# Likewise, snippets from /run can be prevented from loading by placing
-# a file with the same name in /etc/NetworkManager/conf.d/.
-#
-# If two files define the same key, the one that is read afterwards will overwrite
-# the previous one.
+# Edited, original at '/etc/NetworkManager/NetworkManager.conf.bak'
 
 [main]
-#plugins=keyfile,ifcfg-rh
 dns=default
+rc-manager=dhclient
 
 [logging]
-# When debugging NetworkManager, enabling debug logging is of great help.
-#
-# Logfiles contain no passwords and little sensitive information. But please
-# check before posting the file online. You can also personally hand over the
-# logfile to a NM developer to treat it confidential. Meet us on #nm on Libera.Chat.
-#
-# You can also change the log-level at runtime via
-#   $ nmcli general logging level TRACE domains ALL
-# However, usually it's cleaner to enable debug logging
-# in the configuration and restart NetworkManager so that
-# debug logging is enabled from the start.
-#
-# You will find the logfiles in syslog, for example via
-#   $ journalctl -u NetworkManager
-#
-# Please post full logfiles for bug reports without pre-filtering or truncation.
-# Also, for debugging the entire `journalctl` output can be interesting. Don't
-# limit unnecessarily with `journalctl -u`. Exceptions are if you are worried
-# about private data. Check before posting logfiles!
-#
-# Note that debug logging of NetworkManager can be quite verbose. Some messages
-# might be rate-limited by the logging daemon (see RateLimitIntervalSec, RateLimitBurst
-# in man journald.conf). Please disable rate-limiting before collecting debug logs!
-#
-#level=TRACE
-#domains=ALL
+level=INFO
+
+[device]
+wifi.scan-rand-mac-address=no
+wifi.disabled=yes
+
+[connectivity]
+uri=
+interval=0
+
 EOF
 diff -u /etc/NetworkManager/NetworkManager.conf.bak /etc/NetworkManager/NetworkManager.conf || true
 if [ -L /etc/resolv.conf ] || [ -f /etc/resolv.conf ]; then
@@ -425,9 +390,8 @@ After=NetworkManager.service
 Requires=NetworkManager.service
 EOF
 systemctl daemon-reload
-systemctl restart NetworkManager
+systemctl reenable docker
 systemctl restart docker
-systemctl reenable NetworkManager docker
 mkdir -p /etc/docker
 cat <<'EOF' >/etc/docker/daemon.json
 {
