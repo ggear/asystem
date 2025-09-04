@@ -5,8 +5,9 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
-pull_repo "${ROOT_DIR}" "${1}" "python" "pyenv" "pyenv/pyenv" "${PYENV_VERSION}"
+# Notes: https://github.com/pyenv/pyenv/releases
+VERSION=v2.6.7
+pull_repo "${ROOT_DIR}" "${1}" "python" "pyenv" "pyenv/pyenv" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/pyenv"
 mkdir -p "${ROOT_DIR}/src/main/resources"
 cp -rvf "${ROOT_DIR}/../../../.deps/python/pyenv" "${ROOT_DIR}/src/main/resources"
