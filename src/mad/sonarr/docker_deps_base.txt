@@ -7,7 +7,6 @@ curl
 vim
 jq
 unzip
-libc6
 ffmpeg
 sqlite3
 ca-certificates

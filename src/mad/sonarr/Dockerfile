@@ -7,6 +7,8 @@ FROM image_upstream AS image_base
 USER root
 RUN \
     apt-get update && \
+    apt-get -y --no-install-recommends --allow-downgrades install qemu-user-static && \
+    apt-get -y --no-install-recommends --allow-downgrades install libc6:amd64 && \
     apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b8 && \
     apt-get -y --no-install-recommends --allow-downgrades install less=590-2.1~deb12u2 && \
     apt-get -y --no-install-recommends --allow-downgrades install curl=7.88.1-10+deb12u12 && \
