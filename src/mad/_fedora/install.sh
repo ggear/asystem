@@ -386,8 +386,10 @@ sensors-detect --auto
 mkdir -p /etc/systemd/system/docker.service.d
 tee /etc/systemd/system/docker.service.d/override.conf <<'EOF'
 [Unit]
-After=NetworkManager.service
-Requires=NetworkManager.service
+After=NetworkManager-wait-online.service
+Wants=NetworkManager-wait-online.service
+[Service]
+ExecStartPre=/bin/sh -c 'ls /share/* || true; sleep 1'
 EOF
 systemctl daemon-reload
 systemctl reenable docker

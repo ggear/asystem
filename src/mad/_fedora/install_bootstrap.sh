@@ -78,7 +78,7 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 # Shares
 ################################################################################
-SHARE_GUID="share_08"
+SHARE_GUID="share_10"
 dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
 if [ -n "${dev_recent}" ]; then
   dev_path="/dev/$(lsblk -no $(echo "${dev_recent}" | grep -q '[0-9]$' && echo 'pk')name "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
@@ -107,7 +107,8 @@ if [ -n "${SHARE_GUID}" ]; then
       # mkpart primary 0% 100%
       # quit
       echo "" && fdisk -l "${dev_path}" && echo "" && lsblk "${dev_path}" && echo ""
-      mkfs.ext4 -m 0 -T largefile4 "${dev_path}"1
+      # mkfs.ext4 -m 0 -T largefile4 "${dev_path}"1
+      mkfs.ext4 -m 0 -T largefile4 -E nodiscard "${dev_path}"1
       tune2fs -m 0 "${dev_path}"1
       parted "${dev_path}" name 1 ${SHARE_GUID}
       blkid "${dev_path}"1
