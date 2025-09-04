@@ -6,6 +6,7 @@ FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
 FROM image_upstream AS image_base
 USER root
 RUN \
+    dpkg --add-architecture amd64 && \
     apt-get update && \
     apt-get -y --no-install-recommends --allow-downgrades install qemu-user-static && \
     apt-get -y --no-install-recommends --allow-downgrades install libc6:amd64 && \
