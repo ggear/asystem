@@ -9,7 +9,6 @@ SERVICE_HOME_OLDEST=$(find $(dirname ${SERVICE_HOME}) -maxdepth 1 -mindepth 1 ! 
 SERVICE_INSTALL=/var/lib/asystem/install/${SERVICE_NAME}/${SERVICE_VERSION_ABSOLUTE}
 
 cd ${SERVICE_INSTALL} || exit
-if [ "$(stat -f -c %T ${SERVICE_HOME})" = "btrfs" ]; then chattr +C ${SERVICE_HOME}; fi
 [ -f "./install_prep.sh" ] && chmod +x ./install_prep.sh && ./install_prep.sh || true
 cd ${SERVICE_INSTALL} || exit
 [ -f "${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz" ] && docker image load -i ${SERVICE_NAME}-${SERVICE_VERSION_ABSOLUTE}.tar.gz
@@ -21,15 +20,16 @@ if [ -f "docker-compose.yml" ]; then
   docker system prune --volumes -f 2>&1 >/dev/null
 fi
 if [ ! -d "$SERVICE_HOME" ]; then
+  mkdir -p "${SERVICE_HOME}"
+  chmod 777 "${SERVICE_HOME}"
+  if [ "$(stat -f -c %T ${SERVICE_HOME})" = "btrfs" ]; then chattr +C ${SERVICE_HOME}; fi
   if [ -d "$SERVICE_HOME_OLD" ]; then
     echo "Copying old home to new ... "
-    cp -rfp "$SERVICE_HOME_OLD" "$SERVICE_HOME"
-  else
-    mkdir -p "${SERVICE_HOME}"
-    chmod 777 "${SERVICE_HOME}"
+    cp -rfpa "$SERVICE_HOME_OLD/." "$SERVICE_HOME"
   fi
   rm -rf $SERVICE_HOME_OLDEST
 fi
+
 [ "$(ls -A data | wc -l)" -gt 0 ] && cp -rfpv $(find data -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
 touch .env
