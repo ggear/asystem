@@ -312,7 +312,7 @@ dns=default
 #level=TRACE
 #domains=ALL
 EOF
-diff -u /etc/NetworkManager/NetworkManager.conf.bak /etc/NetworkManager/NetworkManager.conf
+diff -u /etc/NetworkManager/NetworkManager.conf.bak /etc/NetworkManager/NetworkManager.conf || true
 if [ -L /etc/resolv.conf ] || [ -f /etc/resolv.conf ]; then
   rm -f /etc/resolv.conf
 fi
