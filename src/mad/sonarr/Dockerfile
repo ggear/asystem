@@ -27,6 +27,7 @@ RUN \
 COPY target/package/main/resources/image /asystem/etc
 
 FROM image_base AS image_build
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=true
 RUN \
     tar -xvzf /asystem/etc/*.gz -C /opt && \
     chmod +x /opt/Sonarr/Sonarr && \
