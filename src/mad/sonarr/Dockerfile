@@ -10,13 +10,13 @@ RUN \
     apt-get update && \
     apt-get -y --no-install-recommends --allow-downgrades install qemu-user-static && \
     apt-get -y --no-install-recommends --allow-downgrades install libc6:amd64 && \
+    apt-get -y --no-install-recommends --allow-downgrades install libstdc++6:amd64 && \
     apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b8 && \
     apt-get -y --no-install-recommends --allow-downgrades install less=590-2.1~deb12u2 && \
     apt-get -y --no-install-recommends --allow-downgrades install curl=7.88.1-10+deb12u12 && \
     apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2+deb12u2 && \
     apt-get -y --no-install-recommends --allow-downgrades install jq=1.6-2.1 && \
     apt-get -y --no-install-recommends --allow-downgrades install unzip=6.0-28 && \
-    apt-get -y --no-install-recommends --allow-downgrades install libc6=2.36-9+deb12u10 && \
     apt-get -y --no-install-recommends --allow-downgrades install ffmpeg=7:5.1.7-0+deb12u1 && \
     apt-get -y --no-install-recommends --allow-downgrades install sqlite3=3.40.1-2+deb12u1 && \
     apt-get -y --no-install-recommends --allow-downgrades install ca-certificates=20230311+deb12u1 && \
@@ -34,4 +34,4 @@ RUN \
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc
-ENTRYPOINT ["/opt/Sonarr/Sonarr", "--nobrowser"]
+ENTRYPOINT ["/usr/bin/qemu-x86_64-static", "/opt/Sonarr/Sonarr", "--nobrowser"]
