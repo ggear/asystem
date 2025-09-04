@@ -11,7 +11,7 @@ fi
 [ ! -f /etc/fstab.bak ] && cp -v /etc/fstab /etc/fstab.bak
 cp -rvf "$fstab_file" /etc/fstab
 diff -uw /etc/fstab.bak /etc/fstab
-! systemctl list-unit-files smbd.service | grep -q masked && systemctl is-active --quiet smbd && systemctl stop smbd
+for _smb in smb.service smbd.service; do ! systemctl list-unit-files ${_smb} | grep -q masked && systemctl is-active --quiet ${_smb} && systemctl stop ${_smb}; done
 for _dir in /share /backup; do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
 for _dir in $(mount | grep '/share\|/backup' | awk '{print $3}'); do umount -f ${_dir}; done
 [ "$(find /share /backup -mindepth 2 -maxdepth 2 | wc -l)" -gt 0 ] && {
@@ -21,7 +21,7 @@ for _dir in $(mount | grep '/share\|/backup' | awk '{print $3}'); do umount -f $
 find /share -mindepth 1 -maxdepth 1 -type d -empty -delete
 find /backup -mindepth 1 -maxdepth 1 -type d -empty -delete
 for _dir in $(grep -v '^#' /etc/fstab | grep '/share\|/backup' | awk '{print $2}'); do mkdir -p ${_dir} && chmod 750 ${_dir} && chown graham:users ${_dir}; done
-! systemctl list-unit-files smbd.service | grep -q masked && ! systemctl is-active --quiet smbd && systemctl start smbd
+for _smb in smb.service smbd.service; do systemctl list-unit-files ${_smb} | grep -q ${_smb} && ! systemctl list-unit-files ${_smb} | grep -q masked && ! systemctl is-active --quiet ${_smb} && systemctl start ${_smb}; done
 if mount -a 2>/tmp/mount_errors.log; then
   echo "All /etc/fstab entries mounted successfully"
 else

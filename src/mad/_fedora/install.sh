@@ -391,9 +391,6 @@ Wants=NetworkManager-wait-online.service
 [Service]
 ExecStartPre=/bin/sh -c 'ls /share/* || true; sleep 1'
 EOF
-systemctl daemon-reload
-systemctl reenable docker
-systemctl restart docker
 mkdir -p /etc/docker
 cat <<'EOF' >/etc/docker/daemon.json
 {
@@ -405,7 +402,18 @@ cat <<'EOF' >/etc/docker/daemon.json
   ]
 }
 EOF
+systemctl daemon-reload
+systemctl reenable docker
 systemctl restart docker
+DOCKER_DIR="/var/lib/docker"
+DOCKER_DIR_NOCOW="/var/lib/docker_nocow"
+if [ "$(stat -f -c %T "$DOCKER_DIR")" == "btrfs" ]; then
+  systemctl stop docker
+  [ ! -d "$DOCKER_DIR_NOCOW" ] && mkdir -p "$DOCKER_DIR_NOCOW" && chattr +C "$DOCKER_DIR_NOCOW"
+  [ -d "$DOCKER_DIR" ] && [ ! -L "$DOCKER_DIR" ] && rsync -aHAX --remove-source-files "$DOCKER_DIR"/ "$DOCKER_DIR_NOCOW"/ && rm -rf "$DOCKER_DIR"
+  [ ! -L "$DOCKER_DIR" ] && ln -s "$DOCKER_DIR_NOCOW" "$DOCKER_DIR"
+  systemctl start docker
+fi
 docker run --rm busybox ifconfig eth0
 docker run --rm busybox nslookup google.com
 docker run --rm busybox nslookup $(hostname)
