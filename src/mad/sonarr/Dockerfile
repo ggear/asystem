@@ -34,4 +34,4 @@ RUN \
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc
-ENTRYPOINT ["/usr/bin/qemu-x86_64-static", "/opt/Sonarr/Sonarr", "--nobrowser"]
+ENTRYPOINT ["/opt/Sonarr/Sonarr", "--nobrowser"]
