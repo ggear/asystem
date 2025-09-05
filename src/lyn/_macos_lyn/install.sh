@@ -13,6 +13,8 @@ printf '\e[?2004l'
 tput rmam
 # tput smam
 
+defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool TRUE
+
 export PS1='\u@\h:\w\$ '
 
 export LC_ALL=C ls

@@ -26,13 +26,41 @@ cat <<EOF >/etc/samba/smb.conf
   map to guest = bad user
   usershare allow guests = yes
   mdns name = mdns
-  vfs objects = fruit streams_xattr
-  fruit:delete_empty_adfiles = yes
+
+  # macOS optimisations
+  veto files = /.DS_Store/._*/.TemporaryItems/.Trashes/
+  delete veto files = yes
+  vfs objects = catia fruit streams_xattr
   fruit:metadata = stream
-  fruit:model = TimeCapsule9,119
+  fruit:resource = file
+  fruit:encoding = native
   fruit:posix_rename = yes
-  fruit:veto_appledouble = no
+  fruit:veto_appledouble = yes
   fruit:wipe_intentionally_left_blank_rfork = yes
+  fruit:delete_empty_adfiles = yes
+  fruit:zero_file_id = yes
+  fruit:copyfile = yes
+  fruit:model = MacSamba
+  #fruit:model = TimeCapsule9,119
+
+  # Performance
+  aio read size = 1
+  aio write size = 1
+  aio max threads = 100
+  min receivefile size = 16384
+  use sendfile = yes
+  write cache size = 262144
+  strict sync = no
+  sync always = no
+
+  # Encoding
+  unix charset = UTF-8
+  dos charset = CP437
+
+  # Linux-friendly
+  map archive = no
+  map hidden = no
+  map readonly = no
 
 EOF
 for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do

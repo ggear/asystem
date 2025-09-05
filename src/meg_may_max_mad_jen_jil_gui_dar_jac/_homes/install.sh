@@ -23,6 +23,25 @@ ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC17bbhX9GtT/YyDrYO98Q9xzfyhn3WtBbftpFJ1yTm
 EOF
         chmod 600 ${3}${1}/.ssh/authorized_keys
       fi
+      cat <<'EOF' >"${3}${1}/.bashrc"
+# .bashrc
+
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export LC_COLLATE=C
+export CLICOLOR=1
+export LSCOLORS=ExFxCxDxBxegedabagacad
+export LS_OPTIONS='--color=auto'
+export PS1="\[\e[95m\]\u@\h\[\e[0m\]:\w\$ "
+export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
+
+bind '"\e[A":history-search-backward'
+bind '"\e[B":history-search-forward'
+
+alias dmesg='dmesg -T'
+alias ls='ls ${LS_OPTIONS}'
+
+EOF
       chown ${1} "${3}${1}" 2>/dev/null || true
       chgrp ${2} "${3}${1}" 2>/dev/null || true
       chown -R ${1} "${3}${1}/.ssh" 2>/dev/null || true
@@ -30,6 +49,7 @@ EOF
     fi
   fi
 }
+
 key_copy() {
   if [ -d "${3}${1}" ]; then
     mkdir -p ${3}${1}/.ssh
@@ -39,6 +59,7 @@ key_copy() {
     chgrp -R ${2} ${3}${1}/.ssh 2>/dev/null || true
   fi
 }
+
 user_add 'root' 'root' '/' false
 user_add 'root' 'root' '/var/' false
 user_add 'graham' 'users' '/home/' true
@@ -47,33 +68,3 @@ key_copy 'root' 'root' '/'
 key_copy 'root' 'root' '/var/'
 key_copy 'graham' 'users' '/home/'
 key_copy 'graham' 'staff' '/Users/'
-
-################################################################################
-# Shell setup
-################################################################################
-cat <<'EOF' >"/root/.bashrc"
-# .bashrc
-
-export LC_COLLATE=C
-export CLICOLOR=1
-export LSCOLORS=ExFxCxDxBxegedabagacad
-export LS_OPTIONS='--color=auto'
-export PS1="\[\e[95m\]\u@\h\[\e[0m\]:\w\$ "
-export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
-
-alias dmesg='dmesg -T'
-alias ls='ls ${LS_OPTIONS}'
-
-export PATH=/root/.pyenv/bin:${PATH}
-
-EOF
-
-[[ -f /etc/bashrc ]] && GLOBAL_BASHRC=/etc/bashrc
-[[ -f /etc/bash.bashrc ]] && GLOBAL_BASHRC=/etc/bash.bashrc
-if [ -n "${GLOBAL_BASHRC}" ]; then
-  if [ $(grep "history-search" ${GLOBAL_BASHRC} | wc -l) -eq 0 ]; then
-    echo "" >>${GLOBAL_BASHRC}
-    echo "bind '\"\e[A\":history-search-backward'" >>${GLOBAL_BASHRC}
-    echo "bind '\"\e[B\":history-search-forward'" >>${GLOBAL_BASHRC}
-  fi
-fi
