@@ -136,6 +136,9 @@ find . -type f -name '*.mkv' -print0 | while IFS= read -r -d '' file; do
   fi
 done
 
+# Find in files
+find . -type f ! -path "*/mad/_fedora/src/main/resources/pyenv/*" -exec grep -H 'pyenv' {} +
+
 # Nohup a script
 nohup asystem-media-reformat >/tmp/asystem-media-clean.log 2>&1 &
 disown

@@ -35,11 +35,13 @@ export LS_OPTIONS='--color=auto'
 export PS1="\[\e[95m\]\u@\h\[\e[0m\]:\w\$ "
 export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
 
-bind '"\e[A":history-search-backward'
-bind '"\e[B":history-search-forward'
+bind '"\e[A": history-search-backward' 2>/dev/null
+bind '"\e[B": history-search-forward' 2>/dev/null
 
 alias dmesg='dmesg -T'
 alias ls='ls ${LS_OPTIONS}'
+
+PATH=/root/.pyenv/bin:${PATH}
 
 EOF
       chown ${1} "${3}${1}" 2>/dev/null || true
