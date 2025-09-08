@@ -44,18 +44,19 @@ cat <<EOF >/etc/samba/smb.conf
   #fruit:model = TimeCapsule9,119
 
   # Performance
-  aio read size = 0
-  aio write size = 0
-  aio max threads = 100
-  strict sync = no
-  sync always = no
-  kernel oplocks = no
+  sync always = yes
+  strict sync = yes
   strict locking = yes
+  strict allocate = yes
   oplocks = no
   level2 oplocks = no
+  kernel oplocks = no
   use sendfile = yes
   min receivefile size = 16384
   write cache size = 262144
+  aio read size = 0
+  aio write size = 0
+  aio max threads = 100
 
   # Optional: reduce caching for directory listings
   max xmit = 65535
@@ -98,6 +99,7 @@ for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BE
   directory mask = 0777
   force create mode = 0666
   force directory mode = 0777
+
 EOF
 
   # TODO: Disable Time Machine share until we want it again
