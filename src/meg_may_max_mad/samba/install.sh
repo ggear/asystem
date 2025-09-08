@@ -28,7 +28,7 @@ cat <<EOF >/etc/samba/smb.conf
   mdns name = mdns
 
   # macOS optimisations
-  veto files = /.DS_Store/._*/.TemporaryItems/.Trashes/
+  veto files = /.DS_Store/.TemporaryItems/.Trashes/
   delete veto files = yes
   vfs objects = catia fruit streams_xattr
   fruit:metadata = stream
@@ -70,6 +70,7 @@ cat <<EOF >/etc/samba/smb.conf
   map archive = no
   map hidden = no
   map readonly = no
+  map system = no
 
 EOF
 for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
