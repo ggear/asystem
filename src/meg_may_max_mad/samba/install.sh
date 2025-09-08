@@ -27,7 +27,7 @@ cat <<EOF >/etc/samba/smb.conf
   usershare allow guests = yes
   mdns name = mdns
 
-  # macOS optimisations
+  # macOS
   veto files = /.DS_Store/.TemporaryItems/.Trashes/
   delete veto files = yes
   vfs objects = catia fruit streams_xattr
@@ -45,7 +45,7 @@ cat <<EOF >/etc/samba/smb.conf
 
   # Performance
   sync always = yes
-  strict sync = yes
+  strict sync = no
   strict locking = yes
   strict allocate = yes
   oplocks = no
@@ -54,8 +54,8 @@ cat <<EOF >/etc/samba/smb.conf
   use sendfile = yes
   min receivefile size = 16384
   write cache size = 262144
-  aio read size = 0
-  aio write size = 0
+  aio read size = 1M
+  aio write size = 1M
   aio max threads = 100
 
   # Optional: reduce caching for directory listings
