@@ -86,11 +86,10 @@ for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BE
   writeable = yes
   force user = graham
   force group = users
-  create mask = 0640
-  directory mask = 0750
-  force create mode = 0640
-  force directory mode = 0750
-
+  create mask = 0666
+  directory mask = 0777
+  force create mode = 0666
+  force directory mode = 0777
 EOF
 
   # TODO: Disable Time Machine share until we want it again
