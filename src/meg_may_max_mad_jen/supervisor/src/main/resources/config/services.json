@@ -21,12 +21,12 @@
     "monitor"
   ],
   "macmini-mad": [
+    "sabnzbd",
     "plex",
     "monitor"
   ],
   "macmini-may": [
     "letsencrypt",
-    "sabnzbd",
     "grafana",
     "influxdb",
     "wrangle",

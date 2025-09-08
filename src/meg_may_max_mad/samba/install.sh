@@ -44,14 +44,22 @@ cat <<EOF >/etc/samba/smb.conf
   #fruit:model = TimeCapsule9,119
 
   # Performance
-  aio read size = 1
-  aio write size = 1
+  aio read size = 0
+  aio write size = 0
   aio max threads = 100
-  min receivefile size = 16384
-  use sendfile = yes
-  write cache size = 262144
   strict sync = no
   sync always = no
+  kernel oplocks = no
+  strict locking = yes
+  oplocks = no
+  level2 oplocks = no
+  use sendfile = yes
+  min receivefile size = 16384
+  write cache size = 262144
+
+  # Optional: reduce caching for directory listings
+  max xmit = 65535
+  deadtime = 15
 
   # Encoding
   unix charset = UTF-8
