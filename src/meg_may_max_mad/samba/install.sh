@@ -128,7 +128,7 @@ EOF
 done
 
 for _smb in smb.service smbd.service nmb.service nmbd.service remote-fs.target; do
-  systemctl list-unit-files ${_smb} | grep -q ${_smb} && systemctl enable ${_smb} && systemctl start ${_smb} && systemctl --no-pager status ${_smb}
+  systemctl list-unit-files ${_smb} | grep -q ${_smb} && systemctl enable ${_smb} && systemctl restart ${_smb} && systemctl --no-pager status ${_smb}
 done
 
 [ -d /share ] && ls -d /share/* >/dev/null 2>&1 && duf -width 250 -style ascii -output mountpoint,size,used,avail,usage /share/*
