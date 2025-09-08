@@ -28,8 +28,8 @@ cat <<EOF >/etc/samba/smb.conf
   mdns name = mdns
 
   # macOS optimisations
-  #veto files = /.DS_Store/.TemporaryItems/.Trashes/
-  #delete veto files = yes
+  veto files = /.DS_Store/.TemporaryItems/.Trashes/
+  delete veto files = yes
   vfs objects = catia fruit streams_xattr
   fruit:metadata = stream
   fruit:resource = file
