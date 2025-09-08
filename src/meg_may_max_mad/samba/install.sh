@@ -35,7 +35,7 @@ cat <<EOF >/etc/samba/smb.conf
   fruit:resource = file
   fruit:encoding = native
   fruit:posix_rename = yes
-  fruit:veto_appledouble = yes
+  fruit:veto_appledouble = no
   fruit:wipe_intentionally_left_blank_rfork = yes
   fruit:delete_empty_adfiles = yes
   fruit:zero_file_id = yes
