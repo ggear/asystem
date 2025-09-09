@@ -7,6 +7,7 @@ declare -A ratings=(
   ["CT4000MX500SSD1"]=1000
   ["CT2000MX500SSD1"]=700
   ["CT1000MX500SSD1"]=360
+  ["APPLE SSD AP0512Z"]=300
   ["CT500MX500SSD1"]=180
   ["CT480BX500SSD1"]=120
   ["CT4000P3PSSD8"]=800
@@ -19,13 +20,16 @@ declare -A devices=()
 while read -r name type size tran mountpoint; do
   [[ "$type" != "disk" ]] && continue
   [[ "$tran" == "usb" ]] && continue
-  dev="/dev/$name"
-
-  # Hardcoded to Macmini 2014
-  if [[ "$tran" == "nvme" ]] || [[ "$name" =~ ^nvme ]]; then
-    iface="NVMe 2.5 GT/s x2 (8 Gbps)"
+  dev="/dev/${name%%n[0-9]*}"
+  if [[ "$tran" == "nvme" ]]; then
     mountpoint="/"
-  else
+    if [[ -f "/proc/device-tree/model" ]] && grep -q "Apple Mac mini (M2 Pro, 2023)" "/proc/device-tree/model"; then
+    size=$(df -h / | awk 'NR==2 {print $2}')
+      iface="NVMe 16.0 GT/s x4 (63 Gbps)"
+    elif [[ -f "/sys/class/dmi/id/product_name" ]] && grep -q "Macmini7,1" "/sys/class/dmi/id/product_name"; then
+      iface="NVMe 2.5 GT/s x2 (8 Gbps)"
+    fi
+  elif [[ "$tran" == "sata" ]]; then
     iface="SATA III (6 Gbps)"
     mountpoint=$(mount | grep "^$dev" | awk '{print $3}')
   fi
@@ -38,11 +42,13 @@ while read dev size tran; do
   for part in $(lsblk -ln -o NAME /dev/$dev | tail -n +2); do
     mp=$(findmnt -nr -S /dev/$part -o TARGET)
     [[ -z "$mp" ]] || [[ "$mp" == /boot* ]] && continue
-    speed=$(lsusb -t | grep -Eo '5000M|480M|12M' | head -n1)
+    dev_num=$(udevadm info --query=property --name=/dev/$part | grep DEVPATH | sed -n 's|.*/usb\([0-9]\+\)/.*|\1|p')
+    speed=$(lsusb -t | grep -E "Bus 0*$dev_num" -A1 | grep -Eo '10000M|5000M|480M|12M' | head -n1)
     case $speed in
-    5000M) speed_h="USB 3.0 (5 Gbps)" ;;
-    480M) speed_h="USB 2.0 (4,8 Gbps)" ;;
-    12M) speed_h="USB 1.1 (0.12 Gbps)" ;;
+    10000M) speed_h="USB 3.1 Gen 2 (10 Gbps)" ;;
+    5000M) speed_h="USB 3.0 Gen 1 (5 Gbps)" ;;
+    480M) speed_h="USB 2.0 (0.5 Gbps)" ;;
+    12M) speed_h="USB 1.1 (0.01 Gbps)" ;;
     *) speed_h="Unknown" ;;
     esac
     dev="/dev/${part%%[0-9]*}"
@@ -72,7 +78,10 @@ while read -r dev size; do
   if [[ -n $rating && $rating != "NA" && -n $tbw ]]; then
     life=$(awk -v t="$tbw" -v r="$rating" 'BEGIN{printf "%.2f", t/r*100}')
   fi
-  devices[$dev]+="${devices[$dev]:+;}model=$model;tbw=${tbw:-N/A};errors=${errors:-0};rating=$rating;life=$life"
+  dev="${dev%%n[0-9]*}"
+  if [[ ! "${devices[$dev]}" =~ "model=" ]]; then
+    devices[$dev]+="${devices[$dev]:+;}model=$model;tbw=${tbw:-N/A};errors=${errors:-0};rating=$rating;life=$life"
+  fi
 done < <(lsblk -ndo NAME,TYPE,SIZE | awk '$2=="disk"{print "/dev/"$1, $3}')
 
 # Print all device information

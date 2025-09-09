@@ -26,8 +26,27 @@ cat <<EOF >/etc/samba/smb.conf
   map to guest = bad user
   usershare allow guests = yes
   mdns name = mdns
-
-  # macOS
+  unix charset = UTF-8
+  dos charset = CP437
+  sync always = yes
+  strict sync = no
+  strict locking = yes
+  strict allocate = yes
+  deadtime = 15
+  oplocks = no
+  level2 oplocks = no
+  kernel oplocks = no
+  use sendfile = yes
+  min receivefile size = 16384
+  write cache size = 262144
+  max xmit = 65535
+  aio read size = 1M
+  aio write size = 1M
+  aio max threads = 100
+  map archive = no
+  map hidden = no
+  map readonly = no
+  map system = no
   veto files = /.DS_Store/.TemporaryItems/.Trashes/
   delete veto files = yes
   vfs objects = catia fruit streams_xattr
@@ -42,35 +61,6 @@ cat <<EOF >/etc/samba/smb.conf
   fruit:copyfile = yes
   fruit:model = MacSamba
   #fruit:model = TimeCapsule9,119
-
-  # Performance
-  sync always = yes
-  strict sync = no
-  strict locking = yes
-  strict allocate = yes
-  oplocks = no
-  level2 oplocks = no
-  kernel oplocks = no
-  use sendfile = yes
-  min receivefile size = 16384
-  write cache size = 262144
-  aio read size = 1M
-  aio write size = 1M
-  aio max threads = 100
-
-  # Optional: reduce caching for directory listings
-  max xmit = 65535
-  deadtime = 15
-
-  # Encoding
-  unix charset = UTF-8
-  dos charset = CP437
-
-  # Linux-friendly
-  map archive = no
-  map hidden = no
-  map readonly = no
-  map system = no
 
 EOF
 for SHARE_DIR in $(grep -v '^#' /etc/fstab | grep '/share' | grep ext4 | awk 'BEGIN{FS=OFS=" "}{print $2}'); do
