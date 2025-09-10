@@ -419,11 +419,9 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 function echo_package_install_commands {{
-  set -e
-  set -o pipefail
   [[ "$(which apt-get)" != "" ]] &&
     PKG="apt-get" &&
-    PKG_UPDATE="apt-get update" &&
+    PKG_UPDATE="DEBIAN_FRONTEND=noninteractive apt-get update" &&
     PKG_BOOTSTRAP="apt-get -y install bsdmainutils" &&
     PKG_VERSION="apt show" &&
     PKG_VERSION_GREP="Version" &&
@@ -447,6 +445,7 @@ function echo_package_install_commands {{
     {}
   )
   set -x
+  export DEBIAN_FRONTEND=noninteractive
   $PKG_UPDATE
   $PKG_BOOTSTRAP
   for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BASE[@]}}"; do $PKG_INSTALL "$ASYSTEM_PACKAGE" 2>/dev/null; done

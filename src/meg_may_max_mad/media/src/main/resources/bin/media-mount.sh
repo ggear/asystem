@@ -4,7 +4,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 . "${ROOT_DIR}/.env_media"
 
-if [ $(hostname) == "macbook-lyn" ]; then
+if [ $(hostname) == "macbook-roe" ]; then
   hosts_file=$(realpath "${LIB_ROOT}/../../../../../../../.hosts")
   for fstab_file in $(find "${LIB_ROOT}/../../../../../.." ! -path '*/target/*' -name fstab | sort); do
     host_label=$(basename $(realpath "${fstab_file}/../../../../.."))

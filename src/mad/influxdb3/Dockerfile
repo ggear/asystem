@@ -4,13 +4,12 @@ FROM influxdb:3.4.1-enterprise AS image_upstream
 FROM image_upstream AS image_base
 USER root
 RUN \
-    apt-get update && \
-    apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b7 && \
-    apt-get -y --no-install-recommends --allow-downgrades install less=590-2.1~deb12u2 && \
-    apt-get -y --no-install-recommends --allow-downgrades install curl=7.88.1-10+deb12u12 && \
-    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2+deb12u2 && \
-    apt-get -y --no-install-recommends --allow-downgrades install jq=1.6-2.1 && \
-    apt-get -y --no-install-recommends --allow-downgrades install netcat-openbsd=1.219-1 && \
+    DEBIAN_FRONTEND=noninteractive apt-get update && \
+    apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.21-2ubuntu4 && \
+    apt-get -y --no-install-recommends --allow-downgrades install less=590-2ubuntu2.1 && \
+    apt-get -y --no-install-recommends --allow-downgrades install curl=8.5.0-2ubuntu10.6 && \
+    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.1.0016-1ubuntu7.8 && \
+    apt-get -y --no-install-recommends --allow-downgrades install jq=1.7.1-3ubuntu0.24.04.1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 COPY target/package/main/resources/image /asystem/etc
