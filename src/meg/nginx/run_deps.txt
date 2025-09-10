@@ -6,7 +6,6 @@ sabnzbd
 grafana
 vernemq
 influxdb
-influxdb3
 mlserver
 unpoller
 postgres
