@@ -1,5 +1,4 @@
 from homeassistant.generate import *
-from homeassistant.generate import write_entity_metadata
 
 pd.options.mode.chained_assignment = None
 
