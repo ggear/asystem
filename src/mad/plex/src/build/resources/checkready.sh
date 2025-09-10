@@ -1,0 +1,1 @@
+[ $(curl -sf "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity" | xq -e '/MediaContainer/@claimed') == "1" ] && [ $(find /share -mindepth 1 -maxdepth 1 | wc -l) -eq $(find /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l) ]
