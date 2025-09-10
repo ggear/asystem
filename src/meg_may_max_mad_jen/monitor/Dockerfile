@@ -20,5 +20,6 @@ RUN \
     cp /asystem/etc/telegraf.conf /etc/telegraf/telegraf.conf
 
 FROM image_build AS image_runtime
+WORKDIR /asystem/etc
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["telegraf"]
