@@ -12,6 +12,7 @@ x-common: &common
     - INFLUXDB3_ENTERPRISE_CLUSTER_ID=cluster_1
     - INFLUXDB3_ENTERPRISE_COMPACTOR_ID=compactor_1
     - INFLUXDB3_ENTERPRISE_RUN_COMPACTIONS=true
+    - LD_PRELOAD=
     - INFLUX_USE_SYSTEM_MALLOC=1
   volumes:
     - ${SERVICE_DATA_DIR}:/asystem/mnt
