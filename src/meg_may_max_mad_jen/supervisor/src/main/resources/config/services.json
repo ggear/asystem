@@ -30,6 +30,7 @@
     "grafana",
     "influxdb",
     "wrangle",
+    "influxdb3",
     "sonarr",
     "unpoller",
     "monitor"
