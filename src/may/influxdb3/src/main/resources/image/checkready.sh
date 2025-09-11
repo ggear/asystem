@@ -34,7 +34,7 @@ set -eo pipefail
 shopt -s expand_aliases
 
 if
-  true #[ $(curl "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}/api/v3/configure/database?format=csv&show_deleted=false" | grep -c host_private) -eq 1 ]
+  [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_DATA_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOST_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PUBLIC}" --token "${INFLUXDB3_TOKEN_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_DATA_PUBLIC}" --token "${INFLUXDB3_TOKEN_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PRIVATE}" --token "${INFLUXDB3_TOKEN_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOST_PRIVATE}" --token "${INFLUXDB3_TOKEN_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ]
 then
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [influxdb3] is ready :)" >&2
   exit 0
