@@ -5,6 +5,7 @@ x-common: &common
     - TZ=Australia/Perth
     - INFLUXDB3_SERVICE
     - INFLUXDB3_API_PORT
+    - INFLUXDB3_API_URL
     - INFLUXDB3_HTTP_BIND_ADDR=0.0.0.0:8181
     - INFLUXDB3_OBJECT_STORE=file
     - INFLUXDB3_DB_DIR=/asystem/mnt
