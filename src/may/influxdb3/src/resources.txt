@@ -1,1 +1,2 @@
 ../install.sh
+main/resources/data/cluster_1/init.json

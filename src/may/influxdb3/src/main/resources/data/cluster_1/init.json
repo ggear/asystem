@@ -1,0 +1,34 @@
+{
+  "create_databases": [
+    "${INFLUXDB3_DATABASE_HOME_PUBLIC}",
+    "${INFLUXDB3_DATABASE_DATA_PUBLIC}",
+    "${INFLUXDB3_DATABASE_HOME_PRIVATE}",
+    "${INFLUXDB3_DATABASE_HOST_PRIVATE}"
+  ],
+  "tokens": [
+    {
+      "token": "${INFLUXDB3_TOKEN_ADMIN}",
+      "name": "_admin",
+      "expiry_millis": 4913324421613,
+      "permissions": [
+        "*:*:*"
+      ]
+    },
+    {
+      "token": "${INFLUXDB3_TOKEN_PUBLIC}",
+      "name": "public",
+      "expiry_millis": 4913324845378,
+      "permissions": [
+        "db:${INFLUXDB3_DATABASE_HOME_PUBLIC},${INFLUXDB3_DATABASE_DATA_PUBLIC}:read"
+      ]
+    },
+    {
+      "token": "${INFLUXDB3_TOKEN_PRIVATE}",
+      "name": "private",
+      "expiry_millis": 4913324670337,
+      "permissions": [
+        "db:${INFLUXDB3_DATABASE_HOME_PRIVATE},${INFLUXDB3_DATABASE_HOST_PRIVATE}:read"
+      ]
+    }
+  ]
+}

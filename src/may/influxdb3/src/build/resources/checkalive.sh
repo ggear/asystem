@@ -1,2 +1,1 @@
-true
-#curl "http://${INFLUXDB3_SERVICE}:${INFLUXDB3_API_PORT}/api/v3/configure/database?format=csv&show_deleted=false" >/dev/null 2>&1
+[ "$(curl "$INFLUXDB3_HOST_URL/health" --header "Authorization: Bearer $INFLUXDB3_AUTH_TOKEN")" == "OK" ]

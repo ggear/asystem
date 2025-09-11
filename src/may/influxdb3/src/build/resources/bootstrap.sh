@@ -1,6 +1,4 @@
-influxdb3 create token --admin --host ${INFLUXDB3_API_URL} | grep -v "token name already exists, _admin" || true
-
-
-sleep 100000
-
-# TODO: Work out if a REST API exists to create databases, else raise feature request for REST API doc or HTTP_BIND_ADDRESS respect, or both
+#if ! influxdb3 show tokens --format json 2>/dev/null | jq -e '.[] | select(.name=="_admin")' >/dev/null; then
+#  influxdb3 create token --admin
+#fi
+influxdb3 show tokens
