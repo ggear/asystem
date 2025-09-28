@@ -18,7 +18,7 @@ PERIODS = OrderedDict([
 ])
 COLUMNS = ["{} {}".format(label, period).strip() for label in LABELS for period in ([""] + list(PERIODS.keys()))]
 
-RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls/f04hist.xlsx"
+RETAIL_URL = "https://www.rba.gov.au/statistics/tables/xls-hist/f01dhist.xls"
 INFLATION_URL = "https://www.rba.gov.au/statistics/tables/xls/g01hist.xlsx"
 
 DRIVE_KEY = "10mcrUb5eMn4wz5t0e98-G2uN26v7Km5tyBui2sTkCe8"
