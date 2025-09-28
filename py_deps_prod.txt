@@ -14,7 +14,7 @@ pathlib2==2.3.7.post1
 pytz==2025.2
 datetime==5.5
 python-dateutil==2.9.0.post0
-types-python-dateutil==2.9.0.20250708
+types-python-dateutil==2.9.0.20250822
 
 pandas==2.2.3
 polars==1.29.0
@@ -42,7 +42,7 @@ plexapi==4.17.0
 dnspython==2.4.2
 paho-mqtt==1.6.1
 dropbox==11.36.2
-yfinance==0.2.65
+yfinance==0.2.66
 pydigitemp==1.4.1
 python-kasa==0.5.3
 osxphotos==0.67.10

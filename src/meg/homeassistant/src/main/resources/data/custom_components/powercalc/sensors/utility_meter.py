@@ -258,6 +258,11 @@ class VirtualUtilityMeter(UtilityMeterSensor, BaseEntity):
         return self._attr_unique_id
 
     @property
+    def suggested_display_precision(self) -> int | None:
+        """Return the suggested number of decimal digits for display."""
+        return self.rounding_digits
+
+    @property
     def native_value(self) -> StateType | Decimal:
         """Return the state of the sensor."""
         value = self._state if hasattr(self, "_state") else self._attr_native_value  # pre HA 2024.12 value was stored in _state

@@ -110,6 +110,12 @@ class LinearStrategy(PowerCalculationStrategyInterface):
 
         return Decimal(power)
 
+    def is_enabled(self, entity_state: State) -> bool:
+        """Return if this strategy is enabled based on entity state."""
+        if self._source_entity.domain == media_player.DOMAIN and entity_state.state is not STATE_PLAYING:  # noqa: SIM103
+            return False
+        return True
+
     def get_min_calibrate(self, value: int) -> tuple[int, float]:
         """Get closest lower value from calibration table."""
         return min(self._calibration or (), key=lambda v: (v[0] > value, value - v[0]))
@@ -172,7 +178,7 @@ class LinearStrategy(PowerCalculationStrategyInterface):
             return None
 
     def get_value_from_attribute(self, entity_state: State) -> int | None:
-        value: int | None = entity_state.attributes.get(self._attribute)
+        value: int | None = entity_state.attributes.get(self._attribute)  # type: ignore[arg-type]
         if value is None:
             _LOGGER.warning(
                 "No %s attribute for entity: %s",
@@ -196,7 +202,7 @@ class LinearStrategy(PowerCalculationStrategyInterface):
         if CONF_ATTRIBUTE in self._config:
             return str(self._config.get(CONF_ATTRIBUTE))
 
-        entity_domain = entity_state.domain  # type: ignore[attr-defined]
+        entity_domain = entity_state.domain
         return ENTITY_ATTRIBUTE_MAPPING.get(entity_domain)
 
     async def validate_config(self) -> None:
