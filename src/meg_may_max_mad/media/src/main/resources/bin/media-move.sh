@@ -44,7 +44,7 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
             target_file="${share_type_dest}/${file#${share_type_dir}/}"
             mv -v "${source_file}" "${target_file}"
           done
-          find "${share_current_dir}" -mindepth 1 -type d -empty -delete 2>/dev/null
+          find "${share_current_dir}" -mindepth 1 -type d -empty -delete
         fi
       done
     else
@@ -54,10 +54,13 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
     if [ $(mount | grep "${share_dir}" | grep -v "//" | wc -l) -gt 0 ]; then
       if [[ $(echo "${share_suffix}" | grep -o "/" | wc -l) -ge 2 ]]; then
         share_dest="/share/${DEST_SHARE_INDEX}/media/${DEST_SHARE_SCOPE}/$(echo ${share_suffix} | cut -d '/' -f3-)"
+        share_rsync="rsync -avhPr \"${current_dir}/"'*" "'"${share_dest}\""
+        echo "${share_rsync}"
         mkdir -p "${share_dest}"
-        rsync -avhPr "${current_dir}/"* "${share_dest}"
+        eval "${share_rsync}"
         if [ $? -eq 0 ]; then
           rm -rvf "${current_dir}/"*
+          find "${current_dir}/.." -type d -empty -delete
         else
           echo "Error: Failed to rsync files from [${current_dir}] to [${share_dest}]"
         fi
