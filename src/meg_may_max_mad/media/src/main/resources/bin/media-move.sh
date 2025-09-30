@@ -53,9 +53,14 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
   else
     if [ $(mount | grep "${share_dir}" | grep -v "//" | wc -l) -gt 0 ]; then
       if [[ $(echo "${share_suffix}" | grep -o "/" | wc -l) -ge 2 ]]; then
-        echo ${share_dir}
-        echo ${share_suffix}
-        echo rsync -avhPr /share/3/media/kids /share/2/media
+        share_dest="/share/${DEST_SHARE_INDEX}/media/${DEST_SHARE_SCOPE}/$(echo ${share_suffix} | cut -d '/' -f3-)"
+        echo mkdir -p "${share_dest}"
+        echo rsync -avhPr "${current_dir}/"* "${share_dest}"
+        if [ $? -eq 0 ]; then
+          echo rm -rvf "${current_dir}/"*
+        else
+          echo "Error: Failed to rsync files from [${current_dir}] to [${share_dest}]"
+        fi
       else
         echo "Error: Current directory [${current_dir}] is a share, but not nested in a library"
       fi
