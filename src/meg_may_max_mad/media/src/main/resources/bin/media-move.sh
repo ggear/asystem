@@ -4,8 +4,10 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 . "${ROOT_DIR}/.env_media"
 
+DEST_SHARE_SCOPE="${1:-"parents"}"
+DEST_SHARE_INDEX="${2:-"11"}"
+
 current_dir="${PWD}"
-share_scope="${1:-parents}"
 if [[ "${current_dir}" == *"/share/"* ]]; then
   share_prefix="${current_dir%%/share/*}"
   share_suffix="${current_dir#${share_prefix}/share/}"
@@ -13,7 +15,7 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
   share_dir="${share_prefix}/share/${share_index}"
   share_suffix="${share_suffix#${share_index}/*}"
   if [[ "${share_suffix}" != "${share_index}" && ! "${share_suffix}" =~ ^media.* ]]; then
-    share_dest="${share_dir}/media/${share_scope}"
+    share_dest="${share_dir}/media/${DEST_SHARE_SCOPE}"
     if [ -d "${share_dest}" ]; then
       for share_type in series movies; do
         share_type_dir=""
@@ -21,7 +23,7 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
           share_current_dir="${current_dir}"
           share_type_dir="${current_dir%%/${share_type}/*}/${share_type}"
         else
-          share_suffix_find="$(find "${current_dir}" -name ${share_type} -type d)"
+          share_suffix_find="$(find "${current_dir}" -name "${share_type}" -type d)"
           if [ ! -z "${share_suffix_find}" ]; then
             share_current_dir="${share_suffix_find}"
             share_type_dir="${share_suffix_find}"
@@ -49,8 +51,18 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
       echo "Error: Share directory [${share_dest}] does not exist"
     fi
   else
-    echo "Error: Not in non-root share directory"
+    if [ $(mount | grep "${share_dir}" | grep -v "//" | wc -l) -gt 0 ]; then
+      if [[ $(echo "${share_suffix}" | grep -o "/" | wc -l) -ge 2 ]]; then
+        echo ${share_dir}
+        echo ${share_suffix}
+        echo rsync -avhPr /share/3/media/kids /share/2/media
+      else
+        echo "Error: Current directory [${current_dir}] is a share, but not nested in a library"
+      fi
+    else
+      echo "Error: Current directory [${current_dir}] is not directly attached"
+    fi
   fi
 else
-  echo "Error: Not in share directory"
+  echo "Error: Current directory [${current_dir}] is not a share"
 fi
