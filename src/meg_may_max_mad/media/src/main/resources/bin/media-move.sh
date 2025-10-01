@@ -65,6 +65,10 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
         mkdir -p "${share_dest}"
         "${share_rsync[@]}"
 
+share_rsync="rsync -avhPr \"${current_dir}/\" \"${share_dest}/\""
+mkdir -p "${share_dest}"
+bash -c "$share_rsync"
+
         if [ $? -eq 0 ]; then
           rm -rvf "${current_dir}/"*
           find "${current_dir}/.." -type d -empty -delete
