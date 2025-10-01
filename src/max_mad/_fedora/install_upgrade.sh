@@ -5,7 +5,6 @@
 ################################################################################
 CURRENT_RELEASE=$(sed -n 's/.*release[[:space:]]\+\([0-9]\+\).*/\1/p' /etc/fedora-release)
 LATEST_RELEASE=$(curl -s -L https://fedoraproject.org/releases.json | jq -r '[.[].version|select(test("^[0-9]+$"))]|max')
-dnf-3 upgrade --refresh -y
 echo "" && echo "#######################################################################################"
 if [ "$CURRENT_RELEASE" -eq "$LATEST_RELEASE" ]; then
   echo "Current Fedora release [${CURRENT_RELEASE}] is already the latest, no upgrade required"
