@@ -1,5 +1,5 @@
 # Notes: https://docs.influxdata.com/influxdb3/enterprise/release-notes
-FROM influxdb:3.5.0-enterprise AS image_upstream
+FROM influxdb:3.4.1-enterprise AS image_upstream
 
 FROM image_upstream AS image_base
 USER root
