@@ -54,10 +54,17 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
     if [ $(mount | grep "${share_dir}" | grep -v "//" | wc -l) -gt 0 ]; then
       if [[ $(echo "${share_suffix}" | grep -o "/" | wc -l) -ge 2 ]]; then
         share_dest="/share/${DEST_SHARE_INDEX}/media/${DEST_SHARE_SCOPE}/$(echo ${share_suffix} | cut -d '/' -f3-)"
-        share_rsync="rsync -avhPr \"${current_dir}/*\" \"${share_dest}\""
-        echo "${share_rsync}"
+
+#        share_rsync="rsync -avhPr \"${current_dir}/*\" \"${share_dest}\""
+#        echo "${share_rsync}"
+#        mkdir -p "${share_dest}"
+#        eval "${share_rsync}"
+
+        share_rsync=(rsync -avhPr "${current_dir}/" "${share_dest}/")
+        echo "${share_rsync[@]}"
         mkdir -p "${share_dest}"
-        eval "${share_rsync}"
+        "${share_rsync[@]}"
+
         if [ $? -eq 0 ]; then
           rm -rvf "${current_dir}/"*
           find "${current_dir}/.." -type d -empty -delete
