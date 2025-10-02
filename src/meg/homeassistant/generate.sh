@@ -63,7 +63,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card"
 wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js" "https://github.com/kalkih/mini-graph-card/releases/download/${VERSION}/mini-graph-card-bundle.js"
 
 # Notes: https://github.com/pnbruckner/ha-sun2/releases
-VERSION=3.3.5
+VERSION=3.4.1
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "sun2-component" "pnbruckner/ha-sun2" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/sun2"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
