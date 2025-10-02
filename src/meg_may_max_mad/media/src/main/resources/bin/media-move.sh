@@ -51,8 +51,11 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
       echo "Error: Share directory [${share_dest}] does not exist"
     fi
   else
-    if [ $(mount | grep "${share_dir}" | grep -v "//" | wc -l) -gt 0 ]; then
-      if [[ $(echo "${share_suffix}" | grep -o "/" | wc -l) -ge 2 ]]; then
+    if [[ $(echo "${share_suffix}" | grep -o "/" | wc -l) -ge 2 ]]; then
+
+
+
+      if [ $(mount | grep "${share_dir}" | grep -v "//" | wc -l) -gt 0 ]; then
         share_dest="/share/${DEST_SHARE_INDEX}/media/${DEST_SHARE_SCOPE}/$(echo ${share_suffix} | cut -d '/' -f3-)"
         share_rsync=(rsync -avhPr "${current_dir}/" "${share_dest}/")
         echo "${share_rsync[@]}"
@@ -65,10 +68,13 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
           echo "Error: Failed to rsync files from [${current_dir}] to [${share_dest}]"
         fi
       else
-        echo "Error: Current directory [${current_dir}] is a share, but not nested in a library"
+        echo "Error: Current directory [${current_dir}] is not directly attached"
       fi
+
+
+
     else
-      echo "Error: Current directory [${current_dir}] is not directly attached"
+      echo "Error: Current directory [${current_dir}] is a share, but not nested in a library"
     fi
   fi
 else
