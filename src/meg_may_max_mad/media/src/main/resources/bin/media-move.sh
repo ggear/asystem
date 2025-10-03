@@ -53,12 +53,30 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
   else
     if [[ $(echo "${share_suffix}" | grep -o "/" | wc -l) -ge 2 ]]; then
 
+      share_ssh=""
+      if [ $(mount | grep "${share_dir}" | grep "//" | wc -l) -gt 0 ]; then
+        for share_label in $(basename "$(realpath $(asystem-media-home)/../../../../..)" | tr "_" "\\n"); do
+          share_host="$(grep "${share_label}" "$(asystem-media-home)/../../../../../../../.hosts" | cut -d "=" -f 2 | cut -d "," -f 1)""-${share_label}"
+          share_current_dir_host='. $(asystem-media-home)/.env_media; echo ${SHARE_DIRS_LOCAL} | grep ${SHARE_ROOT}/'"${share_index}"' | wc -l'
+          if host "${share_host}" >/dev/null 2>&1; then
+            if [ $(ssh "root@${share_host}" "${share_current_dir_host}") -gt 0 ]; then
+              share_ssh="ssh root@${share_host}"
+            fi
+          fi
+        done
+      fi
+      if [ $(mount | grep "${share_dir}" | grep "//" | wc -l) -gt 0 ] && [ -z "${share_ssh}" ]; then
+        echo "Error: Current directory [${current_dir}] is not directly attached"
+      else
 
-
-      if [ $(mount | grep "${share_dir}" | grep -v "//" | wc -l) -gt 0 ]; then
+        echo $share_ssh
         share_dest="/share/${DEST_SHARE_INDEX}/media/${DEST_SHARE_SCOPE}/$(echo ${share_suffix} | cut -d '/' -f3-)"
+
+
         share_rsync=(rsync -avhPr "${current_dir}/" "${share_dest}/")
         echo "${share_rsync[@]}"
+
+
         mkdir -p "${share_dest}"
         "${share_rsync[@]}"
         if [ $? -eq 0 ]; then
@@ -67,13 +85,29 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
         else
           echo "Error: Failed to rsync files from [${current_dir}] to [${share_dest}]"
         fi
-      else
-        echo "Error: Current directory [${current_dir}] is not directly attached"
+
+
+
       fi
 
-
+      #      if [ $(mount | grep "${share_dir}" | grep -v "//" | wc -l) -gt 0 ]; then
+      #        share_dest="/share/${DEST_SHARE_INDEX}/media/${DEST_SHARE_SCOPE}/$(echo ${share_suffix} | cut -d '/' -f3-)"
+      #        share_rsync=(rsync -avhPr "${current_dir}/" "${share_dest}/")
+      #        echo "${share_rsync[@]}"
+      #        mkdir -p "${share_dest}"
+      #        "${share_rsync[@]}"
+      #        if [ $? -eq 0 ]; then
+      #          rm -rvf "${current_dir}/"*
+      #          find "${current_dir}/.." -type d -empty -delete
+      #        else
+      #          echo "Error: Failed to rsync files from [${current_dir}] to [${share_dest}]"
+      #        fi
+      #      else
+      #        echo "Error: Current directory [${current_dir}] is not directly attached"
+      #      fi
 
     else
+
       echo "Error: Current directory [${current_dir}] is a share, but not nested in a library"
     fi
   fi

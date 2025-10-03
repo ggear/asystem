@@ -38,6 +38,16 @@ http {
 
   server_tokens off;
 
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header X-XSS-Protection "1; mode=block" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header Referrer-Policy "no-referrer-when-unsafe" always;
+  add_header Content-Security-Policy "default-src 'self' http: https: data: blob: 'unsafe-inline'" always;
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+  
+  limit_req_zone $binary_remote_addr zone=one:10m rate=30r/m;
+  limit_conn_zone $binary_remote_addr zone=addr:10m;
+
   client_body_buffer_size 25k;
   client_header_buffer_size 25k;
   client_max_body_size 25k;
@@ -88,9 +98,22 @@ http {
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS} ssl ipv6only=off;
     server_name *.janeandgraham.com;
+    
+    limit_req zone=one burst=10 nodelay;
+    limit_conn addr 10;
+    
     ssl_certificate /etc/nginx/certificate.pem;
     ssl_certificate_key /etc/nginx/.key.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_timeout 1d;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_tickets off;
+    ssl_ecdh_curve secp384r1;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:
+                 ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:
+                 ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305';
+
   }
 
   # Remote domain redirect
@@ -119,7 +142,8 @@ http {
             scheme_key = "{}_HTTP_SCHEME".format(name.upper())
             scheme_value = modules[name][1][scheme_key] if scheme_key in modules[name][1] else "http://"
             console_context_key = "{}_HTTP_CONSOLE_CONTEXT".format(name.upper())
-            console_context_value = modules[name][1][console_context_key] if console_context_key in modules[name][1] else ""
+            console_context_value = modules[name][1][console_context_key] if console_context_key in modules[name][
+                1] else ""
             nginx_port_key = "NGINX_PORT_INTERNAL_HTTPS"
             nginx_port_value = modules["nginx"][1][nginx_port_key]
             if port_key in modules[name][1] and name != "nginx":
