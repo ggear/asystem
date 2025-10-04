@@ -4,8 +4,10 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 . "${ROOT_DIR}/.env_media"
 
-DEST_SHARE_SCOPE="${1:-"parents"}"
-DEST_SHARE_INDEX="${2:-"11"}"
+# Notes: Command line parameter acts as destination share index for "rsync workflow",
+# or destination share scope for "mv workflow", defaulting to below if not passed
+SHARE_INDEX_DESTINATION_DEFAULT="11"
+SHARE_SCOPE_DESTINATION_DEFAULT="parents"
 
 current_dir="${PWD}"
 if [[ "${current_dir}" == *"/share/"* ]]; then
@@ -15,8 +17,12 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
   share_dir="${share_prefix}/share/${share_index}"
   share_suffix="${share_suffix#${share_index}/*}"
   if [[ "${share_suffix}" != "${share_index}" && ! "${share_suffix}" =~ ^media.* ]]; then
-    share_dest="${share_dir}/media/${DEST_SHARE_SCOPE}"
-    if [ -d "${share_dest}" ]; then
+
+    # START: mv workflow
+    share_dest="${share_dir}/media/${1:-${SHARE_SCOPE_DESTINATION_DEFAULT}}"
+    if [ ! -d "${share_dest}" ]; then
+      echo "Error: Share directory [${share_dest}] does not exist"
+    else
       for share_type in series movies; do
         share_type_dir=""
         if [[ "${share_suffix}" == *"/${share_type}/"* ]]; then
@@ -47,10 +53,12 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
           find "${share_current_dir}" -mindepth 1 -type d -empty -delete
         fi
       done
-    else
-      echo "Error: Share directory [${share_dest}] does not exist"
     fi
+    # END: mv workflow
+
   else
+
+    # START: rsync workflow
     if [[ $(echo "${share_suffix}" | grep -o "/" | wc -l) -ge 2 ]]; then
       share_ssh=""
       if [ $(mount | grep "${share_dir}" | grep "//" | wc -l) -gt 0 ]; then
@@ -65,25 +73,41 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
         done
       fi
       if [ $(mount | grep "${share_dir}" | grep "//" | wc -l) -gt 0 ] && [ -z "${share_ssh}" ]; then
-        echo "Error: Current directory [${current_dir}] is not directly attached, nor can it be founf on any SAMBA share"
+        echo "Error: Current directory [${current_dir}] is not directly attached, nor can it be found on any SAMBA share"
       else
         share_src="/share/${share_index}/${share_suffix}/"
-        share_dest="/share/${DEST_SHARE_INDEX}/media/${DEST_SHARE_SCOPE}/$(echo ${share_suffix} | cut -d '/' -f3-)/"
-        eval "${share_ssh}" bash -s "${share_src}" "${share_dest}" <<'EOF'
-set -vx
-mkdir -p "${2}"
-share_rsync=(rsync -avhPr "${1}" "${2}")
-if "${share_rsync[@]}"; then
-    rm -rvf "${1}/"*
-    find "${1}/.." -type d -empty -delete
+        share_index_dest="${1:-${SHARE_INDEX_DESTINATION_DEFAULT}}"
+        if ! [[ "$share_index_dest" =~ ^[0-9]+$ ]]; then
+          echo "Error: Share index [${share_index_dest}] is not an integer"
+        else
+          share_dest="/share/${share_index_dest}/media/$(echo ${share_suffix} | cut -d '/' -f2-)/"
+          eval "${share_ssh}" bash -s "${share_src}" "${share_dest}" <<'EOF'
+if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
+  if [[ "${1}" == /share/* ]] && [[ $(echo "${1}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${1}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
+     [[ "${2}" == /share/* ]] && [[ $(echo "${2}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${2}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
+    share_rsync=(rsync -avhPr --info=progress2 "${1}" "${2}")
+    set -vx
+    mkdir -p "${2}"
+    if "${share_rsync[@]}"; then
+      rm -rvf "${1}"*
+      find "${1}.." -type d -empty -delete
+    else
+      echo "Error: Failed to rsync files from source [${1}] to destination [${2}]"
+    fi
+  else
+    echo "Error: Source [${1}] and or destination [${2}] paths are invalid"
+  fi
 else
-    echo "Error: Failed to rsync files from [${1}] to [${2}]"
+    echo "Error: Source [${1}] and or destination [${2}] paths are null"
 fi
 EOF
+        fi
       fi
     else
       echo "Error: Current directory [${current_dir}] is a share, but not nested in a library"
     fi
+    # END: rsync workflow
+
   fi
 else
   echo "Error: Current directory [${current_dir}] is not a share"
