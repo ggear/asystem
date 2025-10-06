@@ -2,13 +2,6 @@
 #######################################################################################
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
-if netcat -zw 1 10.0.4.77 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [kitchen_fridge_plug] at [10.0.4.77] ... '
-	kasa --host 10.0.4.77 --type plug alias 'Kitchen Fridge Plug'
-	kasa --host 10.0.4.77 --type plug led 'True'
-else
-	echo '' && echo 'Skipping config for device [kitchen_fridge_plug] at [http://10.0.4.77/?] given it is unresponsive'
-fi
 if netcat -zw 1 10.0.4.78 9999 2>/dev/null; then
 	echo '' && echo 'Processing config for device [deck_freezer_plug] at [10.0.4.78] ... '
 	kasa --host 10.0.4.78 --type plug alias 'Deck Freezer Plug'
@@ -57,5 +50,12 @@ if netcat -zw 1 10.0.4.87 9999 2>/dev/null; then
 	kasa --host 10.0.4.87 --type plug led 'True'
 else
 	echo '' && echo 'Skipping config for device [garden_sewerage_blower_plug] at [http://10.0.4.87/?] given it is unresponsive'
+fi
+if netcat -zw 1 10.0.4.93 9999 2>/dev/null; then
+	echo '' && echo 'Processing config for device [rack_backup_plug] at [10.0.4.93] ... '
+	kasa --host 10.0.4.93 --type plug alias 'Rack Backup Plug'
+	kasa --host 10.0.4.93 --type plug led 'True'
+else
+	echo '' && echo 'Skipping config for device [rack_backup_plug] at [http://10.0.4.93/?] given it is unresponsive'
 fi
 echo ''

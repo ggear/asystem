@@ -176,12 +176,12 @@
     - entity: switch.kitchen_dish_washer_plug
       name: Dish Washer
       icon: mdi:dishwasher
-    - entity: switch.kitchen_fridge_plug
-      name: Kitchen Fridge
-      icon: mdi:fridge-outline
     - entity: switch.deck_freezer_plug
       name: Deck Freezer
       icon: mdi:fridge-top
+    - entity: switch.rack_backup_plug
+      name: Backup Storage
+      icon: mdi:server
     - entity: switch.server_jen_plug
       name: Server Jen
       icon: mdi:server

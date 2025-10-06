@@ -1,13 +1,5 @@
 [
   {
-    "Name": "Kitchen Fridge Plug",
-    "Manufacturer": "TPLink",
-    "Model": "HS110",
-    "VLAN": "net_Isolated_br4_10-0-4-0-24",
-    "IP": "10.0.4.77",
-    "MAC": "ac:84:c6:54:96:50"
-  },
-  {
     "Name": "Deck Freezer Plug",
     "Manufacturer": "TPLink",
     "Model": "HS110",
@@ -62,5 +54,13 @@
     "VLAN": "net_Isolated_br4_10-0-4-0-24",
     "IP": "10.0.4.87",
     "MAC": "ac:84:c6:0d:1b:9c"
+  },
+  {
+    "Name": "Rack Backup Plug",
+    "Manufacturer": "TPLink",
+    "Model": "HS110",
+    "VLAN": "net_Isolated_br4_10-0-4-0-24",
+    "IP": "10.0.4.93",
+    "MAC": "50:d4:f7:3a:5a:e3"
   }
 ]
