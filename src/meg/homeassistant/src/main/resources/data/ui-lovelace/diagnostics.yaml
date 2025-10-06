@@ -179,14 +179,14 @@
     - entity: switch.deck_freezer_plug
       name: Deck Freezer
       icon: mdi:fridge-top
-    - entity: switch.rack_backup_plug
-      name: Backup Storage
-      icon: mdi:server
     - entity: switch.server_jen_plug
       name: Server Jen
       icon: mdi:server
     - entity: switch.rack_outlet_plug
       name: Server Rack
+      icon: mdi:server
+    - entity: switch.rack_backup_plug
+      name: Server Backup
       icon: mdi:server
     - entity: switch.ceiling_network_switch_plug
       name: Ceiling Network Devices
