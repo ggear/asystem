@@ -1,6 +1,28 @@
 #!/bin/bash
 
 ################################################################################
+# Image
+################################################################################
+# Type
+FEDORA_ARCH="x86_64"
+FEDORA_FORMAT="iso"
+#FEDORA_ARCH="aarch64"
+#FEDORA_FORMAT="raw.xz"
+# Versions
+#FEDORA_VERSION="42-1.1"
+#FEDORA_IMAGE_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/42/Server/x86_64/iso/Fedora-Server-netinst-${FEDORA_ARCH}-${FEDORA_VERSION}.${FEDORA_FORMAT}"
+FEDORA_VERSION="latest"
+FEDORA_IMAGE_URL="$(curl -s https://fedoraproject.org/releases.json | jq -r --arg arch "$FEDORA_ARCH" --arg var "$FEDORA_VARIANT" --arg fmt "$FEDORA_FORMAT" '[.[] | select((.arch==$arch) and (.variant==$var) and (.version | test("Beta") | not) and (.link | test($fmt)))] | sort_by(.version) | last | .link')"
+# Files
+FEDORA_IMAGE_FILE="/Users/graham/Desktop/fedora-${FEDORA_ARCH}-${FEDORA_VERSION}.${FEDORA_FORMAT}"
+wget "${FEDORA_IMAGE_URL}" -O "${FEDORA_IMAGE_FILE}"
+# Write
+USB_DEV="/dev/disk4"
+diskutil list "${USB_DEV}"
+[[ $(diskutil list "${USB_DEV}" | grep 'external' | wc -l) -eq 1 ]] && diskutil unmountDisk force "${USB_DEV}"
+[[ $(diskutil list "${USB_DEV}" | grep 'external' | wc -l) -eq 1 ]] && sudo dd "if=${FEDORA_IMAGE_FILE}" bs=4m | pv "${FEDORA_IMAGE_FILE}" | sudo dd "of=${USB_DEV}" bs=4m
+
+################################################################################
 # SSH
 ################################################################################
 sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
