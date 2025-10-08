@@ -1189,7 +1189,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                                     (pl.col("File Size (GB)").cast(pl.Float32) > 9)
                             ) | (
                                     (pl.col("Media Type") == "series") &
-                                    (pl.col("Target Quality").cast(pl.Int16) <= 6) &
+                                    (pl.col("Target Quality").cast(pl.Int16) <= 4) &
                                     (pl.col("File Size (GB)").cast(pl.Float32) > 2)
                             )
                     )
