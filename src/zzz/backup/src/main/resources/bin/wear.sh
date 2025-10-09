@@ -2,16 +2,18 @@
 
 set -e
 
+# Drive Total Bytes Written (TBW) rating in TB
 declare -A ratings=(
   ["Lexar SSD NM790 4TB"]=3000
   ["CT4000MX500SSD1"]=1000
+  ["CT4000P3PSSD8"]=800
   ["CT2000MX500SSD1"]=700
+  ["CT2000P2SSD8"]=400
   ["CT1000MX500SSD1"]=360
   ["APPLE SSD AP0512Z"]=300
   ["CT500MX500SSD1"]=180
+  ["KINGSTON SA400S37480G"]=160
   ["CT480BX500SSD1"]=120
-  ["CT4000P3PSSD8"]=800
-  ["CT2000P2SSD8"]=400
   ["ST2000LM007-1R8174"]=NA
 )
 declare -A devices=()
@@ -24,7 +26,7 @@ while read -r name type size tran mountpoint; do
   if [[ "$tran" == "nvme" ]]; then
     mountpoint="/"
     if [[ -f "/proc/device-tree/model" ]] && grep -q "Apple Mac mini (M2 Pro, 2023)" "/proc/device-tree/model"; then
-    size=$(df -h / | awk 'NR==2 {print $2}')
+      size=$(df -h / | awk 'NR==2 {print $2}')
       iface="NVMe 16.0 GT/s x4 (63 Gbps)"
     elif [[ -f "/sys/class/dmi/id/product_name" ]] && grep -q "Macmini7,1" "/sys/class/dmi/id/product_name"; then
       iface="NVMe 2.5 GT/s x2 (8 Gbps)"

@@ -100,7 +100,7 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 # Shares
 ################################################################################
-SHARE_GUID="share_10"
+DRIVE_GUID="backup_04"
 dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
 if [ -n "${dev_recent}" ]; then
   dev_path="/dev/$(lsblk -no $(echo "${dev_recent}" | grep -q '[0-9]$' && echo 'pk')name "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
@@ -120,24 +120,23 @@ if [ -n "${dev_recent}" ]; then
 else
   echo "No USB block devices found in /dev/disk/by-id/"
 fi
-if [ -n "${SHARE_GUID}" ]; then
+if [ -n "${DRIVE_GUID}" ]; then
   if [ -n "${dev_path}" ]; then
-    echo "" && fdisk -l "${dev_path}" && echo "" && lsblk "${dev_path}" && echo ""
-    if fdisk -l "${dev_path}" >/dev/null 2>&1 && ! fdisk -l "${dev_path}"1 >/dev/null 2>&1; then
-      parted "${dev_path}"
-      # mklabel gpt
-      # mkpart primary 0% 100%
-      # quit
-      echo "" && fdisk -l "${dev_path}" && echo "" && lsblk "${dev_path}" && echo ""
-      # mkfs.ext4 -m 0 -T largefile4 "${dev_path}"1
-      mkfs.ext4 -m 0 -T largefile4 -E nodiscard "${dev_path}"1
-      tune2fs -m 0 "${dev_path}"1
-      parted "${dev_path}" name 1 ${SHARE_GUID}
-      blkid "${dev_path}"1
-      # Update /etc/fstab in _debain_$HOST service
+    echo "" && echo "" && fdisk -l "${dev_path}"
+    parted --script "${dev_path}" \
+      mklabel gpt \
+      mkpart primary 0% 100%
+    parted "${dev_path}" name 1 ${DRIVE_GUID}
+    echo "" && echo "" && fdisk -l "${dev_path}"
+    blkid "${dev_path}"1
+    if [[ "${DRIVE_GUID}" == backup* ]]; then
+      mkfs.ext4 -m 0 -O dir_index,extent,^has_journal -E nodiscard "${dev_path}1"
+    elif [[ "${DRIVE_GUID}" == share* ]]; then
+      mkfs.ext4 -m 0 -O fast_commit,dir_index,extent,^has_journal -E nodiscard "${dev_path}1"
     else
-      echo "USB block device has existing file system: ${dev_path}"
+      echo "Unknown drive GUID [${DRIVE_GUID}]"
     fi
+    tune2fs -m 0 "${dev_path}"1
   fi
 fi
 
