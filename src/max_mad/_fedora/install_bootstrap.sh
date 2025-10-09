@@ -100,7 +100,7 @@ lvdisplay | grep 'LV Size'
 ################################################################################
 # Shares
 ################################################################################
-DRIVE_GUID="backup_04"
+DRIVE_GUID="share_11"
 dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
 if [ -n "${dev_recent}" ]; then
   dev_path="/dev/$(lsblk -no $(echo "${dev_recent}" | grep -q '[0-9]$' && echo 'pk')name "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
@@ -123,6 +123,10 @@ fi
 if [ -n "${DRIVE_GUID}" ]; then
   if [ -n "${dev_path}" ]; then
     echo "" && echo "" && fdisk -l "${dev_path}"
+  fi
+fi
+if [ -n "${DRIVE_GUID}" ]; then
+  if [ -n "${dev_path}" ]; then
     parted --script "${dev_path}" \
       mklabel gpt \
       mkpart primary 0% 100%
