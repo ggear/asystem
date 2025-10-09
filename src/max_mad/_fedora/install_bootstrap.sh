@@ -12,15 +12,37 @@ FEDORA_FORMAT="iso"
 #FEDORA_VERSION="42-1.1"
 #FEDORA_IMAGE_URL="https://download.fedoraproject.org/pub/fedora/linux/releases/42/Server/x86_64/iso/Fedora-Server-netinst-${FEDORA_ARCH}-${FEDORA_VERSION}.${FEDORA_FORMAT}"
 FEDORA_VERSION="latest"
-FEDORA_IMAGE_URL="$(curl -s https://fedoraproject.org/releases.json | jq -r --arg arch "$FEDORA_ARCH" --arg var "$FEDORA_VARIANT" --arg fmt "$FEDORA_FORMAT" '[.[] | select((.arch==$arch) and (.variant==$var) and (.version | test("Beta") | not) and (.link | test($fmt)))] | sort_by(.version) | last | .link')"
+FEDORA_IMAGE_URL="$(curl -s https://fedoraproject.org/releases.json | jq -r --arg arch "$FEDORA_ARCH" --arg format "$FEDORA_FORMAT" '
+    map(select(
+      .arch == $arch
+      and .variant == "Server"
+      and (.version | test("Beta") | not)
+      and (.link | test($format))
+    ))
+    | sort_by(.version | tonumber)
+    | last
+    | .link // "No stable release found"
+')"
 # Files
 FEDORA_IMAGE_FILE="/Users/graham/Desktop/fedora-${FEDORA_ARCH}-${FEDORA_VERSION}.${FEDORA_FORMAT}"
 wget "${FEDORA_IMAGE_URL}" -O "${FEDORA_IMAGE_FILE}"
 # Write
 USB_DEV="/dev/disk4"
+diskutil list
 diskutil list "${USB_DEV}"
 [[ $(diskutil list "${USB_DEV}" | grep 'external' | wc -l) -eq 1 ]] && diskutil unmountDisk force "${USB_DEV}"
 [[ $(diskutil list "${USB_DEV}" | grep 'external' | wc -l) -eq 1 ]] && sudo dd "if=${FEDORA_IMAGE_FILE}" bs=4m | pv "${FEDORA_IMAGE_FILE}" | sudo dd "of=${USB_DEV}" bs=4m
+
+################################################################################
+# Install
+################################################################################
+# Language -> English UK
+# Network & Host Name -> Host Name: ${HOST_TYPE}-${HOST_NAME}
+# Installation Destination -> Custom -> LVM add automatic partitions, the adjust size of '/' then add '/home', '/var', '/tmp', all as ext4
+# Software Selection -> Headless Management, System Tools
+# Time and Date -> Australia / Perth, Automatic
+# Root Account -> Enable, Allow login
+# User Creation -> Graham Gear, graham
 
 ################################################################################
 # SSH

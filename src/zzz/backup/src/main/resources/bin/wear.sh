@@ -73,7 +73,7 @@ while read -r dev size; do
     tbw=$(smartctl -a "$dev" 2>/dev/null | awk '$1 == 246 {printf "%.3f", ($10 * 512)/1e12}')
     errors=$(smartctl -a "$dev" 2>/dev/null | awk '$1==5 || $1==197 || $1==198 || $1==187 {sum+=$10} END{print sum+0}')
   else
-    tbw=$(smartctl -a "$dev" 2>/dev/null | awk '$1 == 241 {printf "%.3f", ($10 * 512)/1e12}')
+    tbw=$(smartctl -a "$dev" 2>/dev/null | awk '$1 == 241 || {printf "%.3f", ($10 * 512)/1e12}')
     errors=$(smartctl -a "$dev" 2>/dev/null | awk '$1==5 || $1==197 || $1==198 || $1==187 {sum+=$10} END{print sum+0}')
   fi
   life=""
