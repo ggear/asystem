@@ -140,6 +140,9 @@ if [ -n "${DRIVE_GUID}" ]; then
     else
       echo "Unknown drive GUID [${DRIVE_GUID}]"
     fi
+    tune2fs -O ^has_journal "${dev_path}"1
+    fsck.ext4 -f "${dev_path}"1
+    tune2fs -O dir_index,extent,fast_commit "${dev_path}"1
     tune2fs -m 0 "${dev_path}"1
   fi
 fi
