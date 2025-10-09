@@ -41,7 +41,7 @@ diskutil list "${USB_DEV}"
 # Installation Destination -> Custom -> LVM add automatic partitions, the adjust size of '/' then add '/home', '/var', '/tmp', all as ext4
 # Software Selection -> Headless Management, System Tools
 # Time and Date -> Australia / Perth, Automatic
-# Root Account -> Enable, Allow login
+# Root Account -> Enable, Allow SSH login
 # User Creation -> Graham Gear, graham
 
 ################################################################################
@@ -51,7 +51,12 @@ sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_
 sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
 sed -i 's/^PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-systemctl reload sshd && systemctl status sshd
+
+################################################################################
+# Packages
+################################################################################
+# Copy install_upgrade.sh to shell and run
+# Copy install.sh apt-get install commands to shell and run
 
 ################################################################################
 # Btrfs
@@ -67,40 +72,10 @@ if mount | grep -q 'type btrfs'; then
 fi
 
 ################################################################################
-# tmpfs
-################################################################################
-if mount | grep -q 'type tmpfs'; then
-  mkdir -p /etc/systemd/system/tmp.mount.d
-  sudo tee /etc/systemd/system/tmp.mount.d/override.conf >/dev/null <<'EOF'
-[Mount]
-Options=mode=1777,strictatime,size=2G
-EOF
-  systemctl daemon-reexec
-  systemctl restart tmp.mount
-  mount | grep /tmp
-  df -h /tmp
-fi
-
-################################################################################
-# Swap
-################################################################################
-echo "vm.swappiness=10" | sudo tee /etc/sysctl.d/99-swap.conf
-if [ -f /var/swap/swapfile ]; then
-  if [ "$(stat -c%s /var/swap/swapfile 2>/dev/null || echo 0)" -ne 1073741824 ]; then
-    swapoff /var/swap/swapfile 2>/dev/null
-    rm -f /var/swap/swapfile
-    fallocate -l 1G /var/swap/swapfile
-    chmod 600 /var/swap/swapfile
-    mkswap /var/swap/swapfile
-    swapon /var/swap/swapfile
-  fi
-fi
-
-################################################################################
 # LVM
 ################################################################################
-#SHARE_GUID="share_05"
-#SHARE_SIZE="3.1TB"
+SHARE_GUID="share_05"
+SHARE_SIZE="3.1TB"
 if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
   vgdisplay
   if ! lvdisplay /dev/$(hostname)-vg/${SHARE_GUID} >/dev/null 2>&1; then

@@ -17,8 +17,8 @@ fi
 echo "#######################################################################################" && echo ""
 dnf-3 install -y dnf-plugins-core
 dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-dnf-3 install https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
-dnf-3 install https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+dnf-3 install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+dnf-3 install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
 dnf-3 upgrade --refresh -y
 
 ################################################################################
@@ -106,6 +106,6 @@ echo "" && echo "###############################################################
 echo "Base image install commands:"
 echo "#######################################################################################" && echo ""
 for _package in "${ASYSTEM_PACKAGES_DNF[@]}"; do
-  echo "dnf-3 install --quiet -y '${_package}-$(dnf info "${_package}" 2>/dev/null | awk '/^Version/ {print $3}')'"
+  echo "dnf-3 install -y '${_package}-$(dnf info "${_package}" 2>/dev/null | awk '/^Version/ {print $3}')'"
 done
 echo "" && echo "#######################################################################################"
