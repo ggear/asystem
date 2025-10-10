@@ -45,12 +45,9 @@ diskutil list "${USB_DEV}"
 # User Creation -> Graham Gear, graham
 
 ################################################################################
-# SSH
+# Mounts
 ################################################################################
-sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
-sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
-sed -i 's/^PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+# Standardise fstab format
 
 ################################################################################
 # Packages
@@ -59,9 +56,17 @@ sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/ssh
 # Copy install.sh apt-get install commands to shell and run
 
 ################################################################################
-# Btrfs
+# SSH
 ################################################################################
-if mount | grep -q 'type btrfs'; then
+sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config
+sed -i 's/^#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config
+sed -i 's/^PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+sed -i 's/^#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
+
+################################################################################
+# Filesystem (BTRFS)
+################################################################################
+if mount | grep -q '/ type btrfs'; then
   btrfs subvolume list /
   btrfs quota enable /
   btrfs qgroup show /
@@ -72,7 +77,33 @@ if mount | grep -q 'type btrfs'; then
 fi
 
 ################################################################################
-# LVM
+# Filesystem (LVM/EXT4)
+################################################################################
+resize_lv() {
+  local vg_name="$1"
+  local lv_name="$2"
+  local lv_size="$3"
+  local lv_dev="/dev/${vg_name}/${lv_name}"
+  lv_size_current="$(lvdisplay ${lv_dev} 2>/dev/null | grep 'LV Size' | awk '{print int($3)}')"
+  if [ -z "${lv_size_current}" ]; then
+    echo "Error: Could not find LV [${lv_name}]"
+  else
+    lvextend -L "${lv_size}GB" ${lv_dev}
+    resize2fs ${lv_dev}
+    lv_size_current="$(lvdisplay ${lv_dev} 2>/dev/null | grep 'LV Size' | awk '{print int($3)}')"
+    echo "${lv_dev} Size: ${lv_size_current} GB"
+  fi
+}
+if [ $(vgs --headings none | wc -l) -gt 0 ]; then
+  vg_name=$(vgs --noheadings -o vg_name | xargs)
+  resize_lv "${vg_name}" "root" "25"
+  resize_lv "${vg_name}" "var" "30"
+  resize_lv "${vg_name}" "tmp" "1"
+  resize_lv "${vg_name}" "home" "335"
+fi
+
+################################################################################
+# Shares (Internal)
 ################################################################################
 SHARE_GUID="share_05"
 SHARE_SIZE="3.1TB"
@@ -91,13 +122,14 @@ if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
   tune2fs -l /dev/$(hostname)-vg/${SHARE_GUID} | grep 'Reserved block count:'
   lvdisplay /dev/$(hostname)-vg/${SHARE_GUID}
 fi
+vgdisplay | grep 'VG Size'
 vgdisplay | grep 'Free  PE / Size'
 lvdisplay | grep 'LV Size'
 
 ################################################################################
-# Shares
+# Shares (External)
 ################################################################################
-DRIVE_GUID="share_11"
+DRIVE_GUID="share_07"
 dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
 if [ -n "${dev_recent}" ]; then
   dev_path="/dev/$(lsblk -no $(echo "${dev_recent}" | grep -q '[0-9]$' && echo 'pk')name "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"

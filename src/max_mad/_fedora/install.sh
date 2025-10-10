@@ -197,23 +197,10 @@ sudo udevadm trigger
 dracut -f --quiet
 
 ################################################################################
-# tmpfs
-################################################################################
-if mount | grep /tmp | grep -q 'tmpfs'; then
-  mkdir -p /etc/systemd/system/tmp.mount.d
-  sudo tee /etc/systemd/system/tmp.mount.d/override.conf >/dev/null <<'EOF'
-[Mount]
-Options=mode=1777,strictatime,size=2G
-EOF
-  systemctl daemon-reexec
-  systemctl restart tmp.mount
-  mount | grep /tmp
-  df -h /tmp
-fi
-
-################################################################################
 # Swap
 ################################################################################
+# For <8GB RAM use RAM based zram swap, else file based swap
+swapon --show
 echo "vm.swappiness=10" | sudo tee /etc/sysctl.d/99-swap.conf
 if [ -f /var/swap/swapfile ]; then
   if [ "$(stat -c%s /var/swap/swapfile 2>/dev/null || echo 0)" -ne 1073741824 ]; then
@@ -224,6 +211,23 @@ if [ -f /var/swap/swapfile ]; then
     mkswap /var/swap/swapfile
     swapon /var/swap/swapfile
   fi
+fi
+
+################################################################################
+# Tmp
+################################################################################
+# For <8GB RAM use file based tmp, else RAM based tmpfs tmp
+mount | grep /tmp
+if mount | grep /tmp | grep -q 'tmpfs'; then
+  mkdir -p /etc/systemd/system/tmp.mount.d
+  sudo tee /etc/systemd/system/tmp.mount.d/override.conf >/dev/null <<'EOF'
+[Mount]
+Options=mode=1777,strictatime,size=2G
+EOF
+  systemctl daemon-reexec
+  systemctl restart tmp.mount
+  mount | grep /tmp
+  df -h /tmp
 fi
 
 ################################################################################

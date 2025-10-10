@@ -69,14 +69,16 @@ while read -r dev size; do
   if smartctl -i "$dev" 2>/dev/null | grep -qi nvme; then
     tbw=$(smartctl -a "$dev" 2>/dev/null | awk -F'[][]' '/Data Units Written:/ {gsub(/,/,"",$2); print $2}')
     errors=$(smartctl -a "$dev" 2>/dev/null | awk '/Error Information Log Entries:/ {print $6}')
-  elif smartctl -i "$dev" 2>/dev/null | grep -qi "SSD"; then
-    tbw=$(smartctl -a "$dev" 2>/dev/null | awk '$1 == 246 {printf "%.3f", ($10 * 512)/1e12}')
-    errors=$(smartctl -a "$dev" 2>/dev/null | awk '$1==5 || $1==197 || $1==198 || $1==187 {sum+=$10} END{print sum+0}')
   else
-    tbw=$(smartctl -a "$dev" 2>/dev/null | awk '$1 == 241 || {printf "%.3f", ($10 * 512)/1e12}')
-    errors=$(smartctl -a "$dev" 2>/dev/null | awk '$1==5 || $1==197 || $1==198 || $1==187 {sum+=$10} END{print sum+0}')
+    tbw=$(smartctl -a "$dev" 2>/dev/null | awk '$1 == 241 {printf "%.3f", $10/1e3}')
+    if [ -z "$tbw" ]; then
+      tbw=$(smartctl -a "$dev" 2>/dev/null | awk '$1 == 246 {printf "%.3f", $10*512/1e12}')
+    fi
+    errors=$(smartctl -a "$dev" 2>/dev/null | awk '$1==1 {$10}')
   fi
   life=""
+  tbw=${tbw%TB}
+  tbw=${tbw// /}
   if [[ -n $rating && $rating != "NA" && -n $tbw ]]; then
     life=$(awk -v t="$tbw" -v r="$rating" 'BEGIN{printf "%.2f", t/r*100}')
   fi
