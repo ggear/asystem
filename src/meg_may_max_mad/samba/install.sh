@@ -38,7 +38,6 @@ cat <<EOF >/etc/samba/smb.conf
   kernel oplocks = no
   use sendfile = yes
   min receivefile size = 16384
-  write cache size = 262144
   max xmit = 65535
   aio read size = 1M
   aio write size = 1M
