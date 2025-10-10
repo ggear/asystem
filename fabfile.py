@@ -792,65 +792,66 @@ def _release(context):
         ), env={"HOME": os.environ["HOME"]})
     for module in modules:
         for host in _get_hosts(module):
-            _clean(context, filter_module=module, filter_host=host)
-            _generate(context, filter_module=module, filter_host=host, is_release=True)
-            _build(context, filter_module=module, filter_host=host, is_release=True)
-            _package(context, filter_module=module, filter_host=host, is_release=True)
-            _print_header(module, "release", host=host)
-            host_up = True
-            try:
-                ssh_pass = _ssh_pass(context, host)
-            except:
-                host_up = False
-            group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
-            if group_path.exists() and group_path.read_text().strip().isnumeric() and \
-                    int(group_path.read_text().strip()) >= 0 and host_up:
-                _run_local(context, "mkdir -p target/release", module)
-                _run_local(context,
-                           "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
-                if isfile(join(ROOT_MODULE_DIR, module, "Dockerfile")):
-                    file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
-                    print("docker -> target/release/{}".format(file_image))
-                    _run_local(context, "docker image save {}:{} | pigz -9 > {}"
-                               .format(
-                        _name(module),
-                        _get_versions()[0],
-                        file_image
-                    ), join(module, "target/release"))
-                if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/main/resources/*")):
-                    _run_local(context, "cp -rvfp target/package/main/resources/. target/release", module)
-                _run_local(context, "mkdir -p target/release/data", module)
-                _run_local(context, "mkdir -p target/release/image", module)
-                Path(join(ROOT_MODULE_DIR, module, "target/release/hosts")) \
-                    .write_text("\n".join(["{}-{}".format(HOSTS[host][0], host) for host in HOSTS]) + "\n")
-                if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/install*")):
-                    _run_local(context, "cp -rvfp target/package/install* target/release", module)
+            if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == host:
+                _clean(context, filter_module=module, filter_host=host)
+                _generate(context, filter_module=module, filter_host=host, is_release=True)
+                _build(context, filter_module=module, filter_host=host, is_release=True)
+                _package(context, filter_module=module, filter_host=host, is_release=True)
+                _print_header(module, "release", host=host)
+                host_up = True
+                try:
+                    ssh_pass = _ssh_pass(context, host)
+                except:
+                    host_up = False
+                group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
+                if group_path.exists() and group_path.read_text().strip().isnumeric() and \
+                        int(group_path.read_text().strip()) >= 0 and host_up:
+                    _run_local(context, "mkdir -p target/release", module)
+                    _run_local(context,
+                               "cp -rvfp docker-compose.yml target/release", module, hide='err', warn=True)
+                    if isfile(join(ROOT_MODULE_DIR, module, "Dockerfile")):
+                        file_image = "{}-{}.tar.gz".format(_name(module), _get_versions()[0])
+                        print("docker -> target/release/{}".format(file_image))
+                        _run_local(context, "docker image save {}:{} | pigz -9 > {}"
+                                   .format(
+                            _name(module),
+                            _get_versions()[0],
+                            file_image
+                        ), join(module, "target/release"))
+                    if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/main/resources/*")):
+                        _run_local(context, "cp -rvfp target/package/main/resources/. target/release", module)
+                    _run_local(context, "mkdir -p target/release/data", module)
+                    _run_local(context, "mkdir -p target/release/image", module)
+                    Path(join(ROOT_MODULE_DIR, module, "target/release/hosts")) \
+                        .write_text("\n".join(["{}-{}".format(HOSTS[host][0], host) for host in HOSTS]) + "\n")
+                    if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/install*")):
+                        _run_local(context, "cp -rvfp target/package/install* target/release", module)
+                    else:
+                        _run_local(context, "touch target/release/install.sh", module)
+                    install = "{}/{}/{}".format(INSTALL_DIR, _get_service(module), _get_versions()[0])
+                    print("Copying release to {} ... ".format(host))
+                    _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
+                               .format(ssh_pass, host, install, install))
+                    _run_local(context, "{}scp -qpr target/release/.  root@{}:{}"
+                               .format(ssh_pass, host, install), module)
+                    print("Installing release to {} ... ".format(host))
+                    _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
+                               .format(ssh_pass, host, install, install, install))
+                    _run_local(context, "{}ssh -q root@{} 'chmod +x {}/install.sh && {}/install.sh'"
+                               .format(ssh_pass, host, install, install))
+                    _run_local(context, "{}ssh -q root@{} 'docker system prune --volumes -f'"
+                               .format(ssh_pass, host), hide='err', warn=True)
+                    _run_local(context, "{}ssh -q root@{} "
+                                        "'find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
+                                        "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
+                                        "xargs rm -rf'"
+                               .format(ssh_pass, host, install, install), hide='err', warn=True)
+                    install_local_path = Path(join(ROOT_MODULE_DIR, module, "install_local.sh"))
+                    if install_local_path.exists():
+                        _run_local(context, install_local_path)
                 else:
-                    _run_local(context, "touch target/release/install.sh", module)
-                install = "{}/{}/{}".format(INSTALL_DIR, _get_service(module), _get_versions()[0])
-                print("Copying release to {} ... ".format(host))
-                _run_local(context, "{}ssh -q root@{} 'rm -rf {} && mkdir -p {}'"
-                           .format(ssh_pass, host, install, install))
-                _run_local(context, "{}scp -qpr target/release/.  root@{}:{}"
-                           .format(ssh_pass, host, install), module)
-                print("Installing release to {} ... ".format(host))
-                _run_local(context, "{}ssh -q root@{} 'rm -f {}/../latest && ln -sfv {} {}/../latest'"
-                           .format(ssh_pass, host, install, install, install))
-                _run_local(context, "{}ssh -q root@{} 'chmod +x {}/install.sh && {}/install.sh'"
-                           .format(ssh_pass, host, install, install))
-                _run_local(context, "{}ssh -q root@{} 'docker system prune --volumes -f'"
-                           .format(ssh_pass, host), hide='err', warn=True)
-                _run_local(context, "{}ssh -q root@{} "
-                                    "'find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | sort | "
-                                    "head -n $(($(find $(dirname {}) -maxdepth 1 -mindepth 1 ! -name latest 2>/dev/null | wc -l) - 2)) | "
-                                    "xargs rm -rf'"
-                           .format(ssh_pass, host, install, install), hide='err', warn=True)
-                install_local_path = Path(join(ROOT_MODULE_DIR, module, "install_local.sh"))
-                if install_local_path.exists():
-                    _run_local(context, install_local_path)
-            else:
-                print("Module ignored")
-            _print_footer(module, "release", host=host)
+                    print("Module ignored")
+                _print_footer(module, "release", host=host)
     _get_versions_next_snapshot()
     if FAB_SKIP_GIT not in os.environ:
         print("Pushing repository ...")
