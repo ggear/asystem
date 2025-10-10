@@ -798,7 +798,7 @@ def _release(context):
             print(host)
             print("")
 
-            if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == host:
+            if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == host.split('-')[1]:
                 _clean(context, filter_module=module, filter_host=host)
                 _generate(context, filter_module=module, filter_host=host, is_release=True)
                 _build(context, filter_module=module, filter_host=host, is_release=True)
