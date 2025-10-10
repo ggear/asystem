@@ -792,6 +792,12 @@ def _release(context):
         ), env={"HOME": os.environ["HOME"]})
     for module in modules:
         for host in _get_hosts(module):
+
+            print("")
+            print(os.environ[FAB_SKIP_HOST_ALLBUT] )
+            print(host)
+            print("")
+
             if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == host:
                 _clean(context, filter_module=module, filter_host=host)
                 _generate(context, filter_module=module, filter_host=host, is_release=True)
