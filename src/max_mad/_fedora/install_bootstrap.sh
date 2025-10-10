@@ -25,7 +25,7 @@ FEDORA_IMAGE_URL="$(curl -s https://fedoraproject.org/releases.json | jq -r --ar
 ')"
 # Files
 FEDORA_IMAGE_FILE="/Users/graham/Desktop/fedora-${FEDORA_ARCH}-${FEDORA_VERSION}.${FEDORA_FORMAT}"
-wget "${FEDORA_IMAGE_URL}" -O "${FEDORA_IMAGE_FILE}"
+[[ ! -f "${FEDORA_IMAGE_FILE}" ]] && wget "${FEDORA_IMAGE_URL}" -O "${FEDORA_IMAGE_FILE}"
 # Write
 USB_DEV="/dev/disk4"
 diskutil list

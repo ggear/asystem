@@ -330,6 +330,7 @@ if ! locale -a | grep -q '^en_AU\.utf8$'; then
 fi
 export LANG=en_AU.UTF-8
 export LC_ALL=en_AU.UTF-8
+localectl set-locale LANG=en_AU.UTF-8
 locale
 
 ################################################################################
