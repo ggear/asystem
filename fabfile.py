@@ -270,7 +270,7 @@ def _list(context):
     print("Services by host and group:")
     print("############################################################")
     for host in sorted(host_group_service_dict.keys()):
-        if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == host:
+        if FAB_SKIP_HOST_ALLBUT not in os.environ or host.startswith(os.environ[FAB_SKIP_HOST_ALLBUT]):
             print("{}:".format(host))
             for group in sorted(host_group_service_dict[host].keys()):
                 services = sorted(host_group_service_dict[host][group].keys())
