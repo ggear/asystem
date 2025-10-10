@@ -270,10 +270,11 @@ def _list(context):
     print("Services by host and group:")
     print("############################################################")
     for host in sorted(host_group_service_dict.keys()):
-        print("{}:".format(host))
-        for group in sorted(host_group_service_dict[host].keys()):
-            services = sorted(host_group_service_dict[host][group].keys())
-            print("  {}: {}".format(group, ", ".join(services)))
+        if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == host:
+            print("{}:".format(host))
+            for group in sorted(host_group_service_dict[host].keys()):
+                services = sorted(host_group_service_dict[host][group].keys())
+                print("  {}: {}".format(group, ", ".join(services)))
     print("############################################################")
     _print_footer("asystem", "list modules")
 
@@ -792,7 +793,7 @@ def _release(context):
         ), env={"HOME": os.environ["HOME"]})
     for module in modules:
         for host in _get_hosts(module):
-            if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == host.split('-')[1]:
+            if FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] == _get_host_label(host):
                 _clean(context, filter_module=module, filter_host=host)
                 _generate(context, filter_module=module, filter_host=host, is_release=True)
                 _build(context, filter_module=module, filter_host=host, is_release=True)
