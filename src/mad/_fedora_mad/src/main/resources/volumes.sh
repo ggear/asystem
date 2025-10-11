@@ -120,7 +120,8 @@ while read -r dev size; do
     life=$(awk -v t="$tbw" -v r="$rating" 'BEGIN{printf "%.2f", t/r*100}')
   fi
   dev="${dev%%n[0-9]*}"
-  tbw="${tbw} TB"
+  tbw="${tbw}T"
+  rating="${rating}T"
   life="${life}%"
   if [[ ! "${devices[$dev]}" =~ "model=" ]]; then
     devices[$dev]+="${devices[$dev]:+;}model=$model;tbw=${tbw:-N/A};errors=${errors:-0};rating=$rating;life=$life"
