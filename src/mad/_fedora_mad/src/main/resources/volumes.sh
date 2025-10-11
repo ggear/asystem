@@ -138,7 +138,11 @@ for dev in "${!devices[@]}"; do
     fi
 
     if [[ $key == "mount" && $value == "/" ]]; then
-      devices[$dev]=${devices[$dev]/mount=\//mount=/some/share}
+      mount="/"
+      if [ $(grep /dev /etc/fstab | grep /share | wc -l) -gt 0 ]; then
+        mount="$(grep /dev /etc/fstab | grep /share | awk '{print $2}')"
+      fi
+      devices[$dev]=${devices[$dev]/mount=\//mount=$mount}
     fi
 
 
