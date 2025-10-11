@@ -96,19 +96,19 @@ def _refresh(_plex_server, _share_root):
 
 if __name__ == "__main__":
     # TODO: Remove this when .env is in place
-    # from dotenv import load_dotenv
-    # load_dotenv(os.path.join(os.path.dirname(__file__), '../../../../.env'))
-    # _plex_url = "https://plex.janeandgraham.com"
-    # _plex_token = os.environ['PLEX_TOKEN']
-    # _share_root = "/Users/graham/Desktop"
-    # _refresh(PlexServer(_plex_url, _plex_token), _share_root)
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), '../../../../.env'))
+    _plex_url = "https://plex.janeandgraham.com"
+    _plex_token = os.environ['PLEX_TOKEN']
+    _share_root = "/Users/graham/Desktop"
+    _refresh(PlexServer(_plex_url, _plex_token), _share_root)
 
-    argument_parser = argparse.ArgumentParser()
-    argument_parser.add_argument("url")
-    argument_parser.add_argument("token")
-    argument_parser.add_argument("directory")
-    arguments = argument_parser.parse_args()
-    sys.exit(1 if _refresh(
-        PlexServer(arguments.url, arguments.token),
-        Path(arguments.directory).absolute().as_posix()
-    ) < 0 else 0)
+    # argument_parser = argparse.ArgumentParser()
+    # argument_parser.add_argument("url")
+    # argument_parser.add_argument("token")
+    # argument_parser.add_argument("directory")
+    # arguments = argument_parser.parse_args()
+    # sys.exit(1 if _refresh(
+    #     PlexServer(arguments.url, arguments.token),
+    #     Path(arguments.directory).absolute().as_posix()
+    # ) < 0 else 0)
