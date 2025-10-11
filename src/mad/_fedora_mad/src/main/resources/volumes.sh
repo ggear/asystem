@@ -136,7 +136,6 @@ for dev in "${!devices[@]}"; do
       unset devices[$dev]
       break
     fi
-
     if [[ $key == "mount" && $value == "/" ]]; then
       mount="/"
       if [ $(grep /dev /etc/fstab | grep /share | wc -l) -gt 0 ]; then
@@ -144,17 +143,29 @@ for dev in "${!devices[@]}"; do
       fi
       devices[$dev]=${devices[$dev]/mount=\//mount=$mount}
     fi
+  done
+done
 
-
+for dev in "${!devices[@]}"; do
+  IFS=';' read -r -a attrs <<<"${devices[$dev]}"
+  for attr in "${attrs[@]}"; do
+    key="${attr%%=*}"
+    value="${attr#*=}"
+    if [[ $key == "mount" ]]; then
+      if [ "$value" == "/" ]; then
+        label=""
+      else
+        label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
+      fi
+      devices[$dev]="label=${label}${devices[$dev]:+;${devices[$dev]}}"        
+    fi
   done
 done
 
 
 
 
-
-
-declare -a ATTR_ORDER=(mount model size interface tbw errors rating life)
+declare -a ATTR_ORDER=(label mount model size interface tbw errors rating life)
 echo "+------------------------------------------------------------------------------------------------+" 
 echo "Devices mounted:"
 echo "+------------------------------------------------------------------------------------------------+" 
