@@ -8,6 +8,7 @@ declare -A ratings=(
   ["CT4000MX500SSD1"]=1000
   ["CT4000P3PSSD8"]=800
   ["CT2000MX500SSD1"]=700
+  ["Lexar SSD NQ710 2TB"]=680
   ["CT2000P2SSD8"]=400
   ["CT1000MX500SSD1"]=360
   ["APPLE SSD AP0512Z"]=300
@@ -77,6 +78,11 @@ while read -r dev size; do
     errors=$(smartctl -a "$dev" 2>/dev/null | awk '$1==1 {$10}')
   fi
   life=""
+  if [[ "$tbw" == *GB ]]; then
+    tbw=${tbw%GB}
+    tbw=${tbw// /}
+    tbw=$(awk -v t="$tbw" 'BEGIN{printf "%.3f", t/1000}')
+  fi
   tbw=${tbw%TB}
   tbw=${tbw// /}
   if [[ -n $rating && $rating != "NA" && -n $tbw ]]; then
@@ -88,36 +94,20 @@ while read -r dev size; do
   fi
 done < <(lsblk -ndo NAME,TYPE,SIZE | awk '$2=="disk"{print "/dev/"$1, $3}')
 
-# Print all device information
 echo && echo && echo
-for dev in $(for d in "${!devices[@]}"; do
-  IFS=';' read -r -a attrs <<<"${devices[$d]}"
+for dev in "${!devices[@]}"; do
+  IFS=';' read -r -a attrs <<<"${devices[$dev]}"
   for attr in "${attrs[@]}"; do
     key="${attr%%=*}"
     value="${attr#*=}"
-    if [[ $key == "mount" ]]; then
-      echo "$value $d"
-      break
+    if [[ $key == "mount" && $value != "Not Mounted" ]]; then
+      echo "$dev:"
+      IFS=';' read -r -a attrs <<<"${devices[$dev]}"
+      for attr in "${attrs[@]}"; do
+        echo "  ${attr%%=*}: ${attr#*=}"
+      done
+      echo
     fi
   done
-done | sort | cut -d' ' -f2); do
-  IFS=';' read -r -a attrs <<<"${devices[$dev]}"
-  echo "$dev:"
-  for attr in "${attrs[@]}"; do
-    key="${attr%%=*}"
-    value="${attr#*=}"
-    case $key in
-    size) echo "  Size: $value" ;;
-    mount) echo "  Mount: $value" ;;
-    interface) echo "  Interface: $value" ;;
-    model) echo "  Model: $value" ;;
-    tbw) echo "  TBW: $value TB" ;;
-    errors) echo "  SMART Errors: $value" ;;
-    rating) [[ $value != "NA" ]] && echo "  Rated TBW: $value TB" ;;
-    life) [[ -n $value ]] && echo "  Life Used: $value%" ;;
-    smart) [[ $value == "unavailable" ]] && echo "  SMART: Unavailable" ;;
-    esac
-  done
-  echo
 done
 echo && echo

@@ -96,38 +96,38 @@ resize_lv() {
 }
 if [ $(vgs --headings none | wc -l) -gt 0 ]; then
   vg_name=$(vgs --noheadings -o vg_name | xargs)
+  echo && echo "  --- Volume group ---" && vgdisplay "${vg_name}" | grep "Free" && echo
   resize_lv "${vg_name}" "root" "25"
   resize_lv "${vg_name}" "var" "30"
   resize_lv "${vg_name}" "tmp" "1"
   resize_lv "${vg_name}" "home" "335"
+  echo && echo "  --- Volume group ---" && vgdisplay "${vg_name}" | grep "Free" && echo
 fi
 
 ################################################################################
-# Shares (Internal)
+# Shares (LVM)
 ################################################################################
-SHARE_GUID="share_05"
-SHARE_SIZE="3.1TB"
+SHARE_GUID="share_06"
+SHARE_SIZE="1.4TB"
 if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
-  vgdisplay
-  if ! lvdisplay /dev/$(hostname)-vg/${SHARE_GUID} >/dev/null 2>&1; then
-    lvcreate -L ${SHARE_SIZE} -n ${SHARE_GUID} $(hostname)-vg
-    mkfs.ext4 -m 0 -T largefile4 /dev/$(hostname)-vg/${SHARE_GUID}
+  vg_name=$(vgs --noheadings -o vg_name | xargs)
+  lv_dev="/dev/${vg_name}/${SHARE_GUID}"
+  echo && echo "  --- Volume group ---" && vgdisplay "${vg_name}" | grep "Free" && echo
+  if ! lvdisplay "${lv_dev}" >/dev/null 2>&1; then
+    lvcreate -L ${SHARE_SIZE} -n ${SHARE_GUID} "${vg_name}"
+    mkfs.ext4 -m 0 -O fast_commit,dir_index,extent,^has_journal -E nodiscard "${lv_dev}"
   fi
-  lvdisplay /dev/$(hostname)-vg/${SHARE_GUID}
-  lvextend -L ${SHARE_SIZE} /dev/$(hostname)-vg/${SHARE_GUID}
-  resize2fs /dev/$(hostname)-vg/${SHARE_GUID}
-  tune2fs -m 0 /dev/$(hostname)-vg/${SHARE_GUID}
-  tune2fs -l /dev/$(hostname)-vg/${SHARE_GUID} | grep 'Block size:'
-  tune2fs -l /dev/$(hostname)-vg/${SHARE_GUID} | grep 'Block count:'
-  tune2fs -l /dev/$(hostname)-vg/${SHARE_GUID} | grep 'Reserved block count:'
-  lvdisplay /dev/$(hostname)-vg/${SHARE_GUID}
+  lvdisplay "${lv_dev}"
+  fsck.ext4 -f "${lv_dev}" && echo
+  tune2fs -O ^has_journal "${lv_dev}"
+  tune2fs -O dir_index,extent,fast_commit "${lv_dev}"
+  tune2fs -m 0 "${lv_dev}"
+  echo && fsck.ext4 -f "${lv_dev}"
+  echo && echo "  --- Volume group ---" && vgdisplay "${vg_name}" | grep "Free" && echo
 fi
-vgdisplay | grep 'VG Size'
-vgdisplay | grep 'Free  PE / Size'
-lvdisplay | grep 'LV Size'
 
 ################################################################################
-# Shares (External)
+# Shares (EXT4)
 ################################################################################
 DRIVE_GUID="share_07"
 dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
@@ -169,10 +169,11 @@ if [ -n "${DRIVE_GUID}" ]; then
     else
       echo "Unknown drive GUID [${DRIVE_GUID}]"
     fi
+    fsck.ext4 -f "${dev_path}"1 && echo
     tune2fs -O ^has_journal "${dev_path}"1
-    fsck.ext4 -f "${dev_path}"1
     tune2fs -O dir_index,extent,fast_commit "${dev_path}"1
     tune2fs -m 0 "${dev_path}"1
+    echo && fsck.ext4 -f "${dev_path}"1
   fi
 fi
 
