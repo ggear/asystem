@@ -266,7 +266,9 @@ for dev in "${!devices[@]}"; do
 done
 
 declare -a ATTR_ORDER=(mount model size interface tbw errors rating life)
-echo && echo "Devices mounted:" && echo
+echo "+------------+--------+--------+--------+-------------------------------+------------------------+" 
+echo "Devices mounted:" && echo
+echo "+------------+--------+--------+--------+-------------------------------+------------------------+" 
 for dev in $(printf '%s
 ' "${!devices[@]}" | sort); do
   echo "$dev:"
@@ -276,10 +278,9 @@ for dev in $(printf '%s
       echo "  $attr: $value"
     fi
   done
-  echo
+echo "+------------+--------+--------+--------+-------------------------------+------------------------+" 
 done
-echo && echo
-
+echo
 
 
 # echo && echo "Devices mounted:" && echo
