@@ -278,7 +278,7 @@ for dev in "${!devices[@]}"; do
     value="${attr#*=}"
     if [[ $key == "mount" ]]; then
       if [ "$value" == "/" ]; then
-        label=""
+        label="<NONE>"
       else
         label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
       fi
