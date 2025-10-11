@@ -260,7 +260,7 @@ for dev in "${!devices[@]}"; do
     value="${attr#*=}"
     if [[ $key == "mount" && $value != "Not Mounted" ]]; then
 
-        devices[$dev]="label=$(basename $value)${devices[$dev]:+;${devices[$dev]}}"
+        devices[$dev]="label=test${devices[$dev]:+;${devices[$dev]}}"
 
         echo "$dev:"
       IFS=';' read -r -a attrs <<<"${devices[$dev]}"
