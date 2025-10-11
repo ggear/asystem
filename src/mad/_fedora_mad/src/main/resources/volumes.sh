@@ -127,7 +127,6 @@ while read -r dev size; do
     devices[$dev]+="${devices[$dev]:+;}model=$model;tbw=${tbw:-N/A};errors=${errors:-0};rating=$rating;life=$life"
   fi
 done < <(lsblk -ndo NAME,TYPE,SIZE | awk '$2=="disk"{print "/dev/"$1, $3}')
-
 for dev in "${!devices[@]}"; do
   IFS=';' read -r -a attrs <<<"${devices[$dev]}"
   for attr in "${attrs[@]}"; do
@@ -137,20 +136,31 @@ for dev in "${!devices[@]}"; do
       unset devices[$dev]
       break
     fi
+
+    if [[ $key == "mount" && $value == "/" ]]; then
+      devices[$dev]=${devices[$dev]/mount=\//mount=/some/share}
+    fi
+
+
   done
 done
 
+
+
+
+
+
 declare -a ATTR_ORDER=(mount model size interface tbw errors rating life)
 echo "+------------------------------------------------------------------------------------------------+" 
-echo "Devices mounted:" && echo
+echo "Devices mounted:"
 echo "+------------------------------------------------------------------------------------------------+" 
 for dev in $(printf '%s
 ' "${!devices[@]}" | sort); do
-  echo " device: $dev"
+  echo "device: $dev"
   for attr in "${ATTR_ORDER[@]}"; do
     if [[ "${devices[$dev]}" =~ "$attr="([^;]+) ]]; then
       value="${BASH_REMATCH[1]}"
-      echo " $attr: $value"
+      echo "$attr: $value"
     fi
   done
 echo "+------------------------------------------------------------------------------------------------+" 
