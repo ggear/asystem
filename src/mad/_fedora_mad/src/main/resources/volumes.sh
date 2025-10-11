@@ -127,7 +127,6 @@ while read -r dev size; do
     devices[$dev]+="${devices[$dev]:+;}model=$model;tbw=${tbw:-N/A};errors=${errors:-0};rating=$rating;life=$life"
   fi
 done < <(lsblk -ndo NAME,TYPE,SIZE | awk '$2=="disk"{print "/dev/"$1, $3}')
-
 echo && echo "Devices mounted:" && echo
 for dev in "${!devices[@]}"; do
   IFS=';' read -r -a attrs <<<"${devices[$dev]}"
@@ -135,7 +134,10 @@ for dev in "${!devices[@]}"; do
     key="${attr%%=*}"
     value="${attr#*=}"
     if [[ $key == "mount" && $value != "Not Mounted" ]]; then
-      echo "$dev:"
+
+        devices[$dev]="label=$(basename $value)${devices[$dev]:+;${devices[$dev]}}"
+
+        echo "$dev:"
       IFS=';' read -r -a attrs <<<"${devices[$dev]}"
       for attr in "${attrs[@]}"; do
         echo "  ${attr%%=*}: ${attr#*=}"
