@@ -281,14 +281,14 @@ for dev in "${!devices[@]}"; do
       else
         label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
       fi
-      devices[$dev]="label=${label}${devices[$dev]:+;${devices[$dev]}}"        
+      devices[$dev]="label=${label}${devices[$dev]:+;${devices[$dev]}}"      
     fi
   done
 done
 declare -a ATTR_ORDER=(label mount model size interface tbw errors rating life)
-echo "+------------------------------------------------------------------------------------------------+" 
+echo "+------------------------------------------------------------------------------------------------+"
 echo "Devices mounted:"
-echo "+------------------------------------------------------------------------------------------------+" 
+echo "+------------------------------------------------------------------------------------------------+"
 for dev in $(printf '%s
 ' "${!devices[@]}" | sort); do
   echo "device: $dev"
@@ -298,7 +298,7 @@ for dev in $(printf '%s
       echo "$attr: $value"
     fi
   done
-echo "+------------------------------------------------------------------------------------------------+" 
+echo "+------------------------------------------------------------------------------------------------+"
 done
 echo
         """.strip())
