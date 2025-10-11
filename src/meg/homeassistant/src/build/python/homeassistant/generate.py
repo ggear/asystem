@@ -270,7 +270,6 @@ for dev in "${!devices[@]}"; do
     fi
   done
 done
-
 for dev in "${!devices[@]}"; do
   IFS=';' read -r -a attrs <<<"${devices[$dev]}"
   for attr in "${attrs[@]}"; do
@@ -286,10 +285,6 @@ for dev in "${!devices[@]}"; do
     fi
   done
 done
-
-
-
-
 declare -a ATTR_ORDER=(label mount model size interface tbw errors rating life)
 echo "+------------------------------------------------------------------------------------------------+" 
 echo "Devices mounted:"
@@ -306,34 +301,6 @@ for dev in $(printf '%s
 echo "+------------------------------------------------------------------------------------------------+" 
 done
 echo
-
-
-# echo && echo "Devices mounted:" && echo
-# for dev in "${!devices[@]}"; do
-#   IFS=';' read -r -a attrs <<<"${devices[$dev]}"
-#   for attr in "${attrs[@]}"; do
-#     key="${attr%%=*}"
-#     value="${attr#*=}"
-#     if [[ $key == "mount" && $value != "Not Mounted" ]]; then
-#         
-#         if [ "$value" == "/" ]; then
-#             label="TODO"
-#         else
-#             label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
-#         fi
-#         devices[$dev]="label=${label}${devices[$dev]:+;${devices[$dev]}}"
-#         
-# 
-#         echo "$dev:"
-#       IFS=';' read -r -a attrs <<<"${devices[$dev]}"
-#       for attr in "${attrs[@]}"; do
-#         echo "  ${attr%%=*}: ${attr#*=}"
-#       done
-#       echo
-#     fi
-#   done
-# done
-# echo && echo
         """.strip())
     os.chmod(script_path, os.stat(script_path).st_mode | stat.S_IEXEC)
     print("Build generate script [{}] script persisted to [{}]"
