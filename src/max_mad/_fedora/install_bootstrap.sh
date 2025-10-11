@@ -118,6 +118,7 @@ if [ -n "${SHARE_GUID}" ] && [ -n "${SHARE_SIZE}" ]; then
     mkfs.ext4 -m 0 -O fast_commit,dir_index,extent,^has_journal -E nodiscard "${lv_dev}"
   fi
   lvdisplay "${lv_dev}"
+  blkid "${lv_dev}"
   fsck.ext4 -f "${lv_dev}" && echo
   tune2fs -O ^has_journal "${lv_dev}"
   tune2fs -O dir_index,extent,fast_commit "${lv_dev}"
@@ -129,7 +130,7 @@ fi
 ################################################################################
 # Shares (EXT4)
 ################################################################################
-DRIVE_GUID="share_07"
+DRIVE_GUID="share_05"
 dev_recent=$(ls -lt --time-style=full-iso /dev/disk/by-id/ | grep usb | sort -k6,7 -r | head -n 1 | awk '{print $NF}')
 if [ -n "${dev_recent}" ]; then
   dev_path="/dev/$(lsblk -no $(echo "${dev_recent}" | grep -q '[0-9]$' && echo 'pk')name "$(readlink -f /dev/disk/by-id/"${dev_recent}")" | head -n 1)"
@@ -161,7 +162,6 @@ if [ -n "${DRIVE_GUID}" ]; then
       mkpart primary 0% 100%
     parted "${dev_path}" name 1 ${DRIVE_GUID}
     echo "" && echo "" && fdisk -l "${dev_path}"
-    blkid "${dev_path}"1
     if [[ "${DRIVE_GUID}" == backup* ]]; then
       mkfs.ext4 -m 0 -O dir_index,extent,^has_journal -E nodiscard "${dev_path}1"
     elif [[ "${DRIVE_GUID}" == share* ]]; then
@@ -169,6 +169,7 @@ if [ -n "${DRIVE_GUID}" ]; then
     else
       echo "Unknown drive GUID [${DRIVE_GUID}]"
     fi
+    blkid "${dev_path}"1
     fsck.ext4 -f "${dev_path}"1 && echo
     tune2fs -O ^has_journal "${dev_path}"1
     tune2fs -O dir_index,extent,fast_commit "${dev_path}"1
