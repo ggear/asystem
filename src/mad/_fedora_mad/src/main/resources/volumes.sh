@@ -140,7 +140,7 @@ for dev in "${!devices[@]}"; do
         else
             label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
         fi
-        devices[$dev]="label=${label}:mount=WEE${devices[$dev]:+;${devices[$dev]}}"
+        devices[$dev]="label=${label};mount=WEE${devices[$dev]:+;${devices[$dev]}}"
 
         echo "$dev:"
       IFS=';' read -r -a attrs <<<"${devices[$dev]}"
