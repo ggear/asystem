@@ -259,8 +259,12 @@ for dev in "${!devices[@]}"; do
     key="${attr%%=*}"
     value="${attr#*=}"
     if [[ $key == "mount" && $value != "Not Mounted" ]]; then
-
-        label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
+        
+        if [ "$value" == "/" ]; then
+            label="TODO"
+        else
+            label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
+        fi
         devices[$dev]="label=${label}${devices[$dev]:+;${devices[$dev]}}"
 
         echo "$dev:"
