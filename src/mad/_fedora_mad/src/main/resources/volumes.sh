@@ -74,7 +74,7 @@ while read -r name type size tran mountpoint; do
   mountpoint=${mountpoint:-"Not Mounted"}
   devices[$dev]="size=$size;mount=$mountpoint;interface=$iface"
 done < <(lsblk -ndo NAME,TYPE,SIZE,TRAN,MOUNTPOINT)
-while read dev tran; do
+while read dev size tran; do
   for part in $(lsblk -ln -o NAME /dev/$dev | tail -n +2); do
     mp=$(findmnt -nr -S /dev/$part -o TARGET)
     [[ -z "$mp" ]] || [[ "$mp" == /boot* ]] && continue
@@ -90,7 +90,7 @@ while read dev tran; do
     dev="/dev/${part%%[0-9]*}"
     devices[$dev]="size=$size;mount=$mp;interface=$speed_h"
   done
-done < <(lsblk -o NAME,TRAN -nr | grep usb)
+done < <(lsblk -o NAME,SIZE,TRAN -nr | grep usb)
 while read -r dev size; do
   model=$(smartctl -i "$dev" 2>/dev/null | awk -F: '/Device Model|Model Number/ {gsub(/^[ \t]+|[ \t]+$/,"",$2); print $2}')
   if [[ -z "$model" ]]; then
@@ -120,6 +120,8 @@ while read -r dev size; do
     life=$(awk -v t="$tbw" -v r="$rating" 'BEGIN{printf "%.2f", t/r*100}')
   fi
   dev="${dev%%n[0-9]*}"
+  tbw="${tbw} TB"
+  life="${life}%"
   if [[ ! "${devices[$dev]}" =~ "model=" ]]; then
     devices[$dev]+="${devices[$dev]:+;}model=$model;tbw=${tbw:-N/A};errors=${errors:-0};rating=$rating;life=$life"
   fi
