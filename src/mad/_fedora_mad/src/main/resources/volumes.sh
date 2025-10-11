@@ -127,29 +127,58 @@ while read -r dev size; do
     devices[$dev]+="${devices[$dev]:+;}model=$model;tbw=${tbw:-N/A};errors=${errors:-0};rating=$rating;life=$life"
   fi
 done < <(lsblk -ndo NAME,TYPE,SIZE | awk '$2=="disk"{print "/dev/"$1, $3}')
-echo && echo "Devices mounted:" && echo
+
 for dev in "${!devices[@]}"; do
   IFS=';' read -r -a attrs <<<"${devices[$dev]}"
   for attr in "${attrs[@]}"; do
     key="${attr%%=*}"
     value="${attr#*=}"
-    if [[ $key == "mount" && $value != "Not Mounted" ]]; then
-        
-        if [ "$value" == "/" ]; then
-            label="TODO"
-        else
-            label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
-        fi
-        devices[$dev]="label=${label};mount=WEE${devices[$dev]:+;${devices[$dev]}}"
-
-
-        echo "$dev:"
-      IFS=';' read -r -a attrs <<<"${devices[$dev]}"
-      for attr in "${attrs[@]}"; do
-        echo "  ${attr%%=*}: ${attr#*=}"
-      done
-      echo
+    if [[ $key == "mount" && $value == "Not Mounted" ]]; then
+      unset devices[$dev]
+      break
     fi
   done
 done
+
+declare -a ATTR_ORDER=(mount model size interface tbw errors rating life)
+echo && echo "Devices mounted:" && echo
+for dev in $(printf '%s
+' "${!devices[@]}" | sort); do
+  info=""
+  for attr in "${ATTR_ORDER[@]}"; do
+    if [[ "${devices[$dev]}" =~ "$attr="([^;]+) ]]; then
+      value="${BASH_REMATCH[1]}"
+      info+="${info:+ | }$attr: $value"
+    fi
+  done
+  echo "$dev: $info"
+done
 echo && echo
+
+
+# echo && echo "Devices mounted:" && echo
+# for dev in "${!devices[@]}"; do
+#   IFS=';' read -r -a attrs <<<"${devices[$dev]}"
+#   for attr in "${attrs[@]}"; do
+#     key="${attr%%=*}"
+#     value="${attr#*=}"
+#     if [[ $key == "mount" && $value != "Not Mounted" ]]; then
+#         
+#         if [ "$value" == "/" ]; then
+#             label="TODO"
+#         else
+#             label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
+#         fi
+#         devices[$dev]="label=${label}${devices[$dev]:+;${devices[$dev]}}"
+#         
+# 
+#         echo "$dev:"
+#       IFS=';' read -r -a attrs <<<"${devices[$dev]}"
+#       for attr in "${attrs[@]}"; do
+#         echo "  ${attr%%=*}: ${attr#*=}"
+#       done
+#       echo
+#     fi
+#   done
+# done
+# echo && echo
