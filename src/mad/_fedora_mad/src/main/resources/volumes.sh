@@ -146,11 +146,11 @@ echo "Devices mounted:" && echo
 echo "+------------+--------+--------+--------+-------------------------------+------------------------+" 
 for dev in $(printf '%s
 ' "${!devices[@]}" | sort); do
-  echo "$dev:"
+  echo "device: $dev"
   for attr in "${ATTR_ORDER[@]}"; do
     if [[ "${devices[$dev]}" =~ "$attr="([^;]+) ]]; then
       value="${BASH_REMATCH[1]}"
-      echo "  $attr: $value"
+      echo "$attr: $value"
     fi
   done
 echo "+------------+--------+--------+--------+-------------------------------+------------------------+" 
