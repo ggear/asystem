@@ -133,16 +133,26 @@ dnf-3 install -y 'utrac-0.3.0'
 # Kernel
 ################################################################################
 [ ! -f /etc/default/grub.bak ] && cp /etc/default/grub /etc/default/grub.bak
-grep -q 'selinux=0' /etc/default/grub || sed -i '/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/"$/ selinux=0"/' /etc/default/grub
-echo "/etc/default/grub:" && diff -u /etc/default/grub.bak /etc/default/grub || true
-grub2-mkconfig -o /boot/efi/EFI/fedora/grub.cfg
+function add_grub_cmdline_param() {
+  local param="$1"
+  if ! grep -q "$param" /etc/default/grub; then
+    if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub; then
+      sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"[[:space:]]*$/ $param\"/" /etc/default/grub
+    else
+      echo "GRUB_CMDLINE_LINUX_DEFAULT=\"$param\"" >>/etc/default/grub
+    fi
+  fi
+}
+add_grub_cmdline_param 'selinux=0'
+echo "diff /etc/default/grub:" && diff -u /etc/default/grub.bak /etc/default/grub || true
+grub2-mkconfig -o /boot/grub2/grub.cfg
 echo "/etc/kernel/cmdline:" && cat /etc/kernel/cmdline
 echo "/proc/cmdline:" && cat /proc/cmdline
 if [ -f /etc/selinux/config ]; then
   [ ! -f /etc/selinux/config.bak ] && cp /etc/selinux/config /etc/selinux/config.bak
   sed 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config >/etc/selinux/config.tmp
   mv /etc/selinux/config.tmp /etc/selinux/config
-  diff -u /etc/selinux/config.bak /etc/selinux/config || true
+  echo "diff /etc/selinux/config:" && diff -u /etc/selinux/config.bak /etc/selinux/config || true
   setenforce 0 2>/dev/null || true
 fi
 tee /etc/sysctl.d/99-disable-ipv6.conf <<'EOF'
