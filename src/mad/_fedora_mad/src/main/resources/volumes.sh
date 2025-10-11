@@ -142,6 +142,7 @@ for dev in "${!devices[@]}"; do
         fi
         devices[$dev]="label=${label};mount=WEE${devices[$dev]:+;${devices[$dev]}}"
 
+
         echo "$dev:"
       IFS=';' read -r -a attrs <<<"${devices[$dev]}"
       for attr in "${attrs[@]}"; do
