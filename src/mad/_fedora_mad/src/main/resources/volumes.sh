@@ -144,16 +144,17 @@ declare -a ATTR_ORDER=(mount model size interface tbw errors rating life)
 echo && echo "Devices mounted:" && echo
 for dev in $(printf '%s
 ' "${!devices[@]}" | sort); do
-  info=""
+  echo "$dev:"
   for attr in "${ATTR_ORDER[@]}"; do
     if [[ "${devices[$dev]}" =~ "$attr="([^;]+) ]]; then
       value="${BASH_REMATCH[1]}"
-      info+="${info:+ | }$attr: $value"
+      echo "  $attr: $value"
     fi
   done
-  echo "$dev: $info"
+  echo
 done
 echo && echo
+
 
 
 # echo && echo "Devices mounted:" && echo
