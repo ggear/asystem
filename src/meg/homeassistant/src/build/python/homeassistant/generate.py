@@ -199,11 +199,11 @@ while read -r name type size tran mountpoint; do
   mountpoint=${mountpoint:-"Not Mounted"}
   devices[$dev]="size=$size;mount=$mountpoint;interface=$iface"
 done < <(lsblk -ndo NAME,TYPE,SIZE,TRAN,MOUNTPOINT)
-while read dev size tran; do
+while read dev tran; do
   for part in $(lsblk -ln -o NAME /dev/$dev | tail -n +2); do
     mp=$(findmnt -nr -S /dev/$part -o TARGET)
     [[ -z "$mp" ]] || [[ "$mp" == /boot* ]] && continue
-    dev_num=$(udevadm info --query=property --name=/dev/$part | grep DEVPATH | sed -n 's|.*/usb\([0-9]\+\)/.*|\1|p')
+    dev_num=$(udevadm info --query=property --name=/dev/$part | grep DEVPATH | sed -n 's|.*/usb\\([0-9]\\+\\)/.*|\\1|p')
     speed=$(lsusb -t | grep -E "Bus 0*$dev_num" -A1 | grep -Eo '10000M|5000M|480M|12M' | head -n1)
     case $speed in
     10000M) speed_h="USB 3.1 Gen 2 (10 Gbps)" ;;
@@ -215,9 +215,9 @@ while read dev size tran; do
     dev="/dev/${part%%[0-9]*}"
     devices[$dev]="size=$size;mount=$mp;interface=$speed_h"
   done
-done < <(lsblk -o NAME,SIZE,TRAN -nr | grep usb)
+done < <(lsblk -o NAME,TRAN -nr | grep usb)
 while read -r dev size; do
-  model=$(smartctl -i "$dev" 2>/dev/null | awk -F: '/Device Model|Model Number/ {gsub(/^[ \t]+|[ \t]+$/,"",$2); print $2}')
+  model=$(smartctl -i "$dev" 2>/dev/null | awk -F: '/Device Model|Model Number/ {gsub(/^[ \\t]+|[ \\t]+$/,"",$2); print $2}')
   if [[ -z "$model" ]]; then
     devices[$dev]+="${devices[$dev]:+;}smart=unavailable"
     continue
