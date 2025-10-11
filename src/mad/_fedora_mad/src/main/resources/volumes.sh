@@ -135,7 +135,7 @@ for dev in "${!devices[@]}"; do
     value="${attr#*=}"
     if [[ $key == "mount" && $value != "Not Mounted" ]]; then
 
-        label="POO"
+        label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
         devices[$dev]="label=${label}${devices[$dev]:+;${devices[$dev]}}"
 
         echo "$dev:"
