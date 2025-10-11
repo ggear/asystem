@@ -78,7 +78,7 @@ while read dev size tran; do
   for part in $(lsblk -ln -o NAME /dev/$dev | tail -n +2); do
     mp=$(findmnt -nr -S /dev/$part -o TARGET)
     [[ -z "$mp" ]] || [[ "$mp" == /boot* ]] && continue
-    dev_num=$(udevadm info --query=property --name=/dev/$part | grep DEVPATH | sed -n 's|.*/usb\([0-9]\+\)/.*||p')
+    dev_num=$(udevadm info --query=property --name=/dev/$part | grep DEVPATH | sed -n 's|.*/usb\([0-9]\+\)/.*|\1|p')
     speed=$(lsusb -t | grep -E "Bus 0*$dev_num" -A1 | grep -Eo '10000M|5000M|480M|12M' | head -n1)
     case $speed in
     10000M) speed_h="USB 3.1 Gen 2 (10 Gbps)" ;;
@@ -92,7 +92,7 @@ while read dev size tran; do
   done
 done < <(lsblk -o NAME,SIZE,TRAN -nr | grep usb)
 while read -r dev size; do
-  model=$(smartctl -i "$dev" 2>/dev/null | awk -F: '/Device Model|Model Number/ {gsub(/^[ 	]+|[ 	]+$/,"",$2); print $2}')
+  model=$(smartctl -i "$dev" 2>/dev/null | awk -F: '/Device Model|Model Number/ {gsub(/^[ \t]+|[ \t]+$/,"",$2); print $2}')
   if [[ -z "$model" ]]; then
     devices[$dev]+="${devices[$dev]:+;}smart=unavailable"
     continue
@@ -120,25 +120,81 @@ while read -r dev size; do
     life=$(awk -v t="$tbw" -v r="$rating" 'BEGIN{printf "%.2f", t/r*100}')
   fi
   dev="${dev%%n[0-9]*}"
+  tbw="${tbw}T"
+  rating="${rating}T"
+  life="${life}%"
   if [[ ! "${devices[$dev]}" =~ "model=" ]]; then
     devices[$dev]+="${devices[$dev]:+;}model=$model;tbw=${tbw:-N/A};errors=${errors:-0};rating=$rating;life=$life"
   fi
 done < <(lsblk -ndo NAME,TYPE,SIZE | awk '$2=="disk"{print "/dev/"$1, $3}')
-
-echo && echo "Devices mounted:" && echo
 for dev in "${!devices[@]}"; do
   IFS=';' read -r -a attrs <<<"${devices[$dev]}"
   for attr in "${attrs[@]}"; do
     key="${attr%%=*}"
     value="${attr#*=}"
-    if [[ $key == "mount" && $value != "Not Mounted" ]]; then
-      echo "$dev:"
-      IFS=';' read -r -a attrs <<<"${devices[$dev]}"
-      for attr in "${attrs[@]}"; do
-        echo "  ${attr%%=*}: ${attr#*=}"
-      done
-      echo
+    if [[ $key == "mount" && $value == "Not Mounted" ]]; then
+      unset devices[$dev]
+      break
     fi
+
+    if [[ $key == "mount" && $value == "/" ]]; then
+      mount="/"
+      if [ $(grep /dev /etc/fstab | grep /share | wc -l) -gt 0 ]; then
+        mount="$(grep /dev /etc/fstab | grep /share | awk '{print $2}')"
+      fi
+      devices[$dev]=${devices[$dev]/mount=\//mount=$mount}
+    fi
+
+
   done
 done
-echo && echo
+
+
+
+
+
+
+declare -a ATTR_ORDER=(mount model size interface tbw errors rating life)
+echo "+------------------------------------------------------------------------------------------------+" 
+echo "Devices mounted:"
+echo "+------------------------------------------------------------------------------------------------+" 
+for dev in $(printf '%s
+' "${!devices[@]}" | sort); do
+  echo "device: $dev"
+  for attr in "${ATTR_ORDER[@]}"; do
+    if [[ "${devices[$dev]}" =~ "$attr="([^;]+) ]]; then
+      value="${BASH_REMATCH[1]}"
+      echo "$attr: $value"
+    fi
+  done
+echo "+------------------------------------------------------------------------------------------------+" 
+done
+echo
+
+
+# echo && echo "Devices mounted:" && echo
+# for dev in "${!devices[@]}"; do
+#   IFS=';' read -r -a attrs <<<"${devices[$dev]}"
+#   for attr in "${attrs[@]}"; do
+#     key="${attr%%=*}"
+#     value="${attr#*=}"
+#     if [[ $key == "mount" && $value != "Not Mounted" ]]; then
+#         
+#         if [ "$value" == "/" ]; then
+#             label="TODO"
+#         else
+#             label=$(basename $(grep $value /etc/fstab | awk '{print $1}' | sed 's/PARTLABEL=//') | sed 's/.*-//')
+#         fi
+#         devices[$dev]="label=${label}${devices[$dev]:+;${devices[$dev]}}"
+#         
+# 
+#         echo "$dev:"
+#       IFS=';' read -r -a attrs <<<"${devices[$dev]}"
+#       for attr in "${attrs[@]}"; do
+#         echo "  ${attr%%=*}: ${attr#*=}"
+#       done
+#       echo
+#     fi
+#   done
+# done
+# echo && echo
