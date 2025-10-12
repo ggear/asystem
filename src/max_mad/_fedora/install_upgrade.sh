@@ -27,6 +27,7 @@ dnf-3 upgrade --refresh -y
 ASYSTEM_PACKAGES_DNF=(
   jq
   yq
+  xq
   nvme-cli
   acl
   parted

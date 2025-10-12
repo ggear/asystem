@@ -202,16 +202,19 @@ EOF
 tee /etc/modprobe.d/brcmfmac-ignore.conf <<'EOF'
 options brcmfmac fwload_disable=1
 EOF
-sudo udevadm control --reload
-sudo udevadm trigger
-dracut -f --quiet
+tee /etc/dracut.conf.d/no-i18n.conf <<'EOF'
+omit_dracutmodules+=" i18n "
+EOF
+dracut -f -v
+udevadm control --reload
+udevadm trigger
 
 ################################################################################
 # Swap
 ################################################################################
 # For <8GB RAM use RAM based zram swap, else file based swap
 swapon --show
-echo "vm.swappiness=10" | sudo tee /etc/sysctl.d/99-swap.conf
+echo "vm.swappiness=10" | tee /etc/sysctl.d/99-swap.conf
 if [ -f /var/swap/swapfile ]; then
   if [ "$(stat -c%s /var/swap/swapfile 2>/dev/null || echo 0)" -ne 1073741824 ]; then
     swapoff /var/swap/swapfile 2>/dev/null
@@ -230,7 +233,7 @@ fi
 mount | grep /tmp
 if mount | grep /tmp | grep -q 'tmpfs'; then
   mkdir -p /etc/systemd/system/tmp.mount.d
-  sudo tee /etc/systemd/system/tmp.mount.d/override.conf >/dev/null <<'EOF'
+  tee /etc/systemd/system/tmp.mount.d/override.conf >/dev/null <<'EOF'
 [Mount]
 Options=mode=1777,strictatime,size=2G
 EOF
@@ -285,6 +288,7 @@ for _service in "${services_to_disable[@]}"; do
   fi
 done
 systemctl list-units --type=service --state=running
+dracut -f -v
 
 ################################################################################
 # Network
@@ -473,8 +477,9 @@ BOOT_ERRORS=$(
     grep -v "ACPI Error: Needed type" |
     grep -v "ACPI Error: AE_AML_OPERAND_TYPE" |
     grep -v "ACPI Error: Aborting method" |
+    grep -v "Correctable Errors" |
     grep -v "20200925" |
-    grep -v "remount-ro" | grep -v "smartd" |
+    grep -v "remount-ro" | grep -v "smartd" | grep -v "automount" |
     grep -v "Clock Unsynchronized" |
     grep -v "dockerd" | grep -v "containerd" |
     grep -v "/usr/lib/gnupg/scdaemon" |
