@@ -81,77 +81,26 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
           echo "Error: Share index [${share_index_dest}] is not an integer"
         else
           share_dest="/share/${share_index_dest}/media/$(echo ${share_suffix} | cut -d '/' -f2-)/"
-
-#          ${share_ssh} bash -s -- "${share_src}" "${share_dest}" <<'EOF'
-#if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
-#  if [[ "${1}" == /share/* ]] && [[ $(echo "${1}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${1}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
-#     [[ "${2}" == /share/* ]] && [[ $(echo "${2}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${2}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
-#    share_rsync=(rsync -avhPr --info=progress2 "${1}" "${2}")
-#    set -vx
-#    mkdir -p "${2}"
-#    if "${share_rsync[@]}"; then
-#      rm -rvf "${1}"*
-#      find "${1}.." -type d -empty -delete 2>/dev/null
-#    else
-#      echo "Error: Failed to rsync files from source [${1}] to destination [${2}]"
-#    fi
-#  else
-#    echo "Error: Source [${1}] and or destination [${2}] paths are invalid"
-#  fi
-#else
-#    echo "Error: Source [${1}] and or destination [${2}] paths are null"
-#fi
-#EOF
-
           ${share_ssh} bash -s -- "${share_src}" "${share_dest}" <<'EOF'
-set -euo pipefail
-src="${1}"
-dest="${2}"
-if [ -z "${src}" ] || [ ! -d "${src}" ] || [ -z "${dest}" ]; then
-    echo "Error: Source [${src}] or destination [${dest}] invalid or missing"
-    exit 1
-fi
-count_slashes() { echo "${1}" | awk -F'/' '{print NF-1}'; }
-if [[ "${src}" != /share/* ]] || [[ $(count_slashes "${src}") -lt 5 ]] || \
-   [[ "${dest}" != /share/* ]] || [[ $(count_slashes "${dest}") -lt 5 ]]; then
-    echo "Error: Source [${src}] or destination [${dest}] paths do not meet criteria"
-    exit 1
-fi
-src_mount=$(echo "${src}" | cut -d'/' -f1-3)
-dest_mount=$(echo "${dest}" | cut -d'/' -f1-3)
-if ! mount | grep -q "${src_mount}"; then
-    echo "Error: Source mount [${src_mount}] not found"
-    exit 1
-fi
-if ! mount | grep -q "${dest_mount}"; then
-    echo "Error: Destination mount [${dest_mount}] not found"
-    exit 1
-fi
-mkdir -p "${dest}"
-rsync_opts=(-avhPr --info=progress2)
-echo "===== DRY RUN ====="
-rsync --dry-run "${rsync_opts[@]}" "${src}" "${dest}"
-echo "==================="
-read -p "Proceed with actual sync? [y/N]: " proceed
-if [[ "${proceed}" != "y" && "${proceed}" != "Y" ]]; then
-    echo "Aborted by user."
-    exit 0
-fi
-if rsync "${rsync_opts[@]}" "${src}" "${dest}"; then
-    find "${src}" -mindepth 1 -maxdepth 1 -exec rm -rvf {} +
-    find "${src}/.." -type d -empty -delete 2>/dev/null
+if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
+  if [[ "${1}" == /share/* ]] && [[ $(echo "${1}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${1}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
+     [[ "${2}" == /share/* ]] && [[ $(echo "${2}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${2}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
+    share_rsync=(rsync -avhPr --info=progress2 "${1}" "${2}")
+    set -vx
+    mkdir -p "${2}"
+    if "${share_rsync[@]}"; then
+      rm -rvf "${1}"*
+      find "${1}.." -type d -empty -delete 2>/dev/null
+    else
+      echo "Error: Failed to rsync files from source [${1}] to destination [${2}]"
+    fi
+  else
+    echo "Error: Source [${1}] and or destination [${2}] paths are invalid"
+  fi
 else
-    echo "Error: Rsync failed from [${src}] to [${dest}]"
-    exit 1
+    echo "Error: Source [${1}] and or destination [${2}] paths are null"
 fi
 EOF
-
-
-
-
-
-
-
         fi
       fi
     else
