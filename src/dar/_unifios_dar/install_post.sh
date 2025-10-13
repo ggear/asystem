@@ -30,16 +30,33 @@
 # Network baseline
 ################################################################################
 # Devices -> Rename as per entity_metadata.xlsx
-# Devices -> uap-deck -> Settings -> LED -> False
-# Devices -> uap-deck -> Settings -> 2.4GHz Channel -> 11 (Potentially use 3 8 13 to squeeze a third around Zigbee 11?)
-# Devices -> uap-deck -> Settings -> 2.4GHz Transmit Power -> High
-# Devices -> uap-deck -> Settings -> 5GHz Channel -> 48
-# Devices -> uap-deck -> Settings -> 5GHz Transmit Power -> High
-# Devices -> uap-hallway -> Settings -> LED -> False
-# Devices -> uap-hallway -> Settings -> 2.4GHz Channel -> 6 (Potentially use 3 8 13 to squeeze a third around Zigbee 11?)
-# Devices -> uap-hallway -> Settings -> 2.4GHz Transmit Power -> High
-# Devices -> uap-hallway -> Settings -> 5GHz Channel -> 36
-# Devices -> uap-hallway -> Settings -> 5GHz Transmit Power -> High
+
+# Devices -> uap-dar-hallway -> Settings -> 2.4GHz Width -> 20
+# Devices -> uap-dar-hallway -> Settings -> 2.4GHz Channel -> 6
+# Devices -> uap-dar-hallway -> Settings -> 2.4GHz Transmit Power -> High
+# Devices -> uap-dar-hallway -> Settings -> 5Ghz Width -> 160
+# Devices -> uap-dar-hallway -> Settings -> 5GHz Channel -> 36
+# Devices -> uap-dar-hallway -> Settings -> 5GHz Transmit Power -> High
+# Devices -> uap-dar-hallway -> Settings -> Band Steering -> Prefer 5 GHz
+# Devices -> uap-dar-hallway -> Settings -> LED -> False
+
+# Devices -> uap-dar-deck-north -> Settings -> 2.4GHz Width -> 20
+# Devices -> uap-dar-deck-north -> Settings -> 2.4GHz Channel -> 11
+# Devices -> uap-dar-deck-north -> Settings -> 2.4GHz Transmit Power -> High
+# Devices -> uap-dar-deck-north -> Settings -> 5Ghz Width -> 80
+# Devices -> uap-dar-deck-north -> Settings -> 5GHz Channel -> 100
+# Devices -> uap-dar-deck-north -> Settings -> 5GHz Transmit Power -> High
+# Devices -> uap-dar-deck-north -> Settings -> Band Steering -> Off
+# Devices -> uap-dar-deck-north -> Settings -> LED -> False
+
+# Devices -> uap-dar-deck-south -> Settings -> 2.4GHz Width -> 20
+# Devices -> uap-dar-deck-south -> Settings -> 2.4GHz Channel -> 11
+# Devices -> uap-dar-deck-south -> Settings -> 2.4GHz Transmit Power -> High
+# Devices -> uap-dar-deck-south -> Settings -> 5Ghz Width -> 80
+# Devices -> uap-dar-deck-south -> Settings -> 5GHz Channel -> 149
+# Devices -> uap-dar-deck-south -> Settings -> 5GHz Transmit Power -> High
+# Devices -> uap-dar-deck-south -> Settings -> Band Steering -> Off
+# Devices -> uap-dar-deck-south -> Settings -> LED -> False
 
 # Settings -> System -> Backups -> Auto Backup -> False
 # Settings -> System -> Updates -> Automate Device Updates -> False

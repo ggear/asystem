@@ -326,6 +326,15 @@ wifi.disabled=yes
 uri=
 interval=0
 
+[connection]
+ipv4.dhcp-timeout=0
+ipv4.dhcp-send-hostname=true
+ipv4.never-default=true
+
+[ipv4]
+method=auto
+dhcp-client-id=mac
+
 EOF
 diff -u /etc/NetworkManager/NetworkManager.conf.bak /etc/NetworkManager/NetworkManager.conf || true
 if [ -L /etc/resolv.conf ] || [ -f /etc/resolv.conf ]; then
