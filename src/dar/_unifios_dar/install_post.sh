@@ -1,5 +1,5 @@
 #!/bin/bash
-# https://ui.com/download/software/udm
+# https://ui.com/download/software/udm-pro
 
 ################################################################################
 # Device provision

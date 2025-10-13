@@ -106,7 +106,9 @@ dnf-3 install -y "${ASYSTEM_PACKAGES_DNF[@]}"
 echo "" && echo "#######################################################################################"
 echo "Base image install commands:"
 echo "#######################################################################################" && echo ""
+echo "dnf-3 install -y \\"
 for _package in "${ASYSTEM_PACKAGES_DNF[@]}"; do
-  echo "dnf-3 install -y '${_package}-$(dnf info "${_package}" 2>/dev/null | awk '/^Version/ {print $3}')'"
+  echo "  ${_package}-$(dnf info --installed "${_package}" 2>/dev/null | awk '/^Version/ {print $3}') \\"
 done
+echo "  #"
 echo "" && echo "#######################################################################################"

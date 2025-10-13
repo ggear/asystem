@@ -14,120 +14,122 @@ dnf-3 makecache --quiet
 ################################################################################
 # Packages
 ################################################################################
-#dnf-3 install -y 'jq-1.7.1'
-#dnf-3 install -y 'yq-4.43.1'
-#dnf-3 install -y 'nvme-cli-2.15'
-#dnf-3 install -y 'acl-2.3.2'
-#dnf-3 install -y 'parted-3.6'
-#dnf-3 install -y 'util-linux-2.40.4'
-#dnf-3 install -y 'usbutils-018'
-#dnf-3 install -y 'smartmontools-7.5'
-#dnf-3 install -y 'htop-3.4.1'
-#dnf-3 install -y 'iotop-c-1.30'
-#dnf-3 install -y 'ethtool-6.15'
-#dnf-3 install -y 'lm_sensors-3.6.0'
-#dnf-3 install -y 'efivar-39'
-#dnf-3 install -y 'cifs-utils-7.2'
-#dnf-3 install -y 'samba-4.22.4'
-#dnf-3 install -y 'samba-client-4.22.4'
-#dnf-3 install -y 'cups-2.4.12'
-#dnf-3 install -y 'avahi-0.9~rc2'
-#dnf-3 install -y 'inotify-tools-4.23.9.0'
-#dnf-3 install -y 'powertop-2.15'
-#dnf-3 install -y 'python3-3.13.7'
-#dnf-3 install -y 'python3-pip-24.3.1'
-#dnf-3 install -y 'vim-enhanced-9.1.1723'
-#dnf-3 install -y 'nano-8.3'
-#dnf-3 install -y 'screen-5.0.1'
-#dnf-3 install -y 'tmux-3.5a'
-#dnf-3 install -y 'curl-8.11.1'
-#dnf-3 install -y 'wget2-wget-2.2.0'
-#dnf-3 install -y 'unrar-7.1.7'
-#dnf-3 install -y 'rsync-3.4.1'
-#dnf-3 install -y 'mediainfo-25.04'
-#dnf-3 install -y 'tesseract-5.5.0'
-#dnf-3 install -y 'exfatprogs-1.2.9'
-#dnf-3 install -y 'ntfs-3g-2022.10.3'
-#dnf-3 install -y 'mkvtoolnix-93.0'
-#dnf-3 install -y 'ruby-3.4.5'
-#dnf-3 install -y 'xz-5.8.1'
-#dnf-3 install -y 'tk-devel-9.0.0'
-#dnf-3 install -y 'x265-4.1'
-#dnf-3 install -y 'x265-devel-4.1'
-#dnf-3 install -y 'llvm-20.1.8'
-#dnf-3 install -y 'docker-ce-28.3.3'
-#dnf-3 install -y 'docker-ce-cli-28.3.3'
-#dnf-3 install -y 'containerd.io-1.7.27'
-#dnf-3 install -y 'libcurl-devel-8.11.1'
-#dnf-3 install -y 'libxml2-devel-2.12.10'
-#dnf-3 install -y 'glib2-devel-2.84.4'
-#dnf-3 install -y 'gtk2-devel-2.24.33'
-#dnf-3 install -y 'libnotify-devel-0.8.6'
-#dnf-3 install -y 'libevent-devel-2.1.12'
-#dnf-3 install -y 'openssl-devel-3.2.4'
-#dnf-3 install -y 'zlib-ng-compat-devel-2.2.5'
-#dnf-3 install -y 'bzip2-devel-1.0.8'
-#dnf-3 install -y 'readline-devel-8.2'
-#dnf-3 install -y 'sqlite-devel-3.47.2'
-#dnf-3 install -y 'ncurses-devel-6.5'
-#dnf-3 install -y 'libffi-devel-3.4.6'
-#dnf-3 install -y 'xz-devel-5.8.1'
-#dnf-3 install -y 'autoconf-2.72'
-#dnf-3 install -y 'automake-1.17'
-#dnf-3 install -y 'libtool-2.5.4'
-#dnf-3 install -y 'pkgconf-pkg-config-2.3.0'
-#dnf-3 install -y 'yasm-1.3.0^20250625git121ab15'
-#dnf-3 install -y 'nasm-2.16.03'
-#dnf-3 install -y 'net-tools-2.0'
-#dnf-3 install -y 'bind-utils-9.18.38'
-#dnf-3 install -y 'b3sum-1.8.2'
-#dnf-3 install -y 'fd-find-10.2.0'
-#dnf-3 install -y 'fzf-0.65.1'
-#dnf-3 install -y 'digitemp-3.7.2'
-#dnf-3 install -y 'tuptime-5.2.4'
-#dnf-3 install -y 'duf-0.8.1'
-#dnf-3 install -y 'fswatch-1.17.1'
-#dnf-3 install -y 'buildbot-4.3.0'
-#dnf-3 install -y 'colordiff-1.0.21'
-#dnf-3 install -y 'cvs-1.11.23'
-#dnf-3 install -y 'cvs2cl-2.73'
-#dnf-3 install -y 'cvsps-2.2'
-#dnf-3 install -y 'darcs-2.18.2'
-#dnf-3 install -y 'dejagnu-1.6.3'
-#dnf-3 install -y 'diffstat-1.67'
-#dnf-3 install -y 'doxygen-1.13.2'
-#dnf-3 install -y 'expect-5.45.4'
-#dnf-3 install -y 'gambas3-ide-3.20.2'
-#dnf-3 install -y 'gettext-0.23.1'
-#dnf-3 install -y 'git-2.51.0'
-#dnf-3 install -y 'git-annex-10.20250320'
-#dnf-3 install -y 'git-cola-4.14.0'
-#dnf-3 install -y 'git2cl-3.0'
-#dnf-3 install -y 'gitg-45~20250512gitf7501bc'
-#dnf-3 install -y 'gtranslator-48.0'
-#dnf-3 install -y 'highlight-4.13'
-#dnf-3 install -y 'lcov-2.0'
-#dnf-3 install -y 'manedit-1.2.1'
-#dnf-3 install -y 'meld-3.23.0'
-#dnf-3 install -y 'monotone-1.1'
-#dnf-3 install -y 'myrepos-1.20180726'
-#dnf-3 install -y 'nemiver-0.9.6'
-#dnf-3 install -y 'patch-2.8'
-#dnf-3 install -y 'patchutils-0.4.2'
-#dnf-3 install -y 'qgit-2.10'
-#dnf-3 install -y 'quilt-0.69'
-#dnf-3 install -y 'rapidsvn-0.13.0'
-#dnf-3 install -y 'rcs-5.10.1'
-#dnf-3 install -y 'robodoc-4.99.44'
-#dnf-3 install -y 'scanmem-0.17'
-#dnf-3 install -y 'subunit-1.4.4'
-#dnf-3 install -y 'subversion-1.14.5'
-#dnf-3 install -y 'svn2cl-0.14'
-#dnf-3 install -y 'systemtap-5.3'
-#dnf-3 install -y 'tig-2.5.12'
-#dnf-3 install -y 'tortoisehg-7.0.1'
-#dnf-3 install -y 'translate-toolkit-3.14.5'
-#dnf-3 install -y 'utrac-0.3.0'
+dnf-3 install -y \
+  jq-1.7.1 \
+  yq-4.47.1 \
+  xq-1.3.0 \
+  nvme-cli-2.15 \
+  acl-2.3.2 \
+  parted-3.6 \
+  util-linux-2.40.4 \
+  usbutils-018 \
+  smartmontools-7.5 \
+  htop-3.4.1 \
+  iotop-c-1.30 \
+  ethtool-6.15 \
+  lm_sensors-3.6.0 \
+  efivar-39 \
+  cifs-utils-7.2 \
+  samba-4.22.4 \
+  samba-client-4.22.4 \
+  cups-2.4.14 \
+  avahi-0.9~rc2 \
+  inotify-tools-4.23.9.0 \
+  powertop-2.15 \
+  python3-3.13.7 \
+  python3-pip-24.3.1 \
+  vim-enhanced-9.1.1818 \
+  nano-8.3 \
+  screen-5.0.1 \
+  tmux-3.5a \
+  curl-8.11.1 \
+  wget2-wget-2.2.0 \
+  unrar-7.1.7 \
+  rsync-3.4.1 \
+  mediainfo-25.07 \
+  tesseract-5.5.0 \
+  exfatprogs-1.2.9 \
+  ntfs-3g-2022.10.3 \
+  mkvtoolnix-93.0 \
+  ruby-3.4.5 \
+  xz-5.8.1 \
+  tk-devel-9.0.0 \
+  x265-4.1 \
+  x265-devel-4.1 \
+  llvm-20.1.8 \
+  docker-ce-28.5.1 \
+  docker-ce-cli-28.5.1 \
+  containerd.io-1.7.28 \
+  libcurl-devel-8.11.1 \
+  libxml2-devel-2.12.10 \
+  glib2-devel-2.84.4 \
+  gtk2-devel-2.24.33 \
+  libnotify-devel-0.8.7 \
+  libevent-devel-2.1.12 \
+  openssl-devel-3.2.6 \
+  zlib-ng-compat-devel-2.2.5 \
+  bzip2-devel-1.0.8 \
+  readline-devel-8.2 \
+  sqlite-devel-3.47.2 \
+  ncurses-devel-6.5 \
+  libffi-devel-3.4.6 \
+  xz-devel-5.8.1 \
+  autoconf-2.72 \
+  automake-1.17 \
+  libtool-2.5.4 \
+  pkgconf-pkg-config-2.3.0 \
+  yasm-1.3.0^20250625git121ab15 \
+  nasm-2.16.03 \
+  net-tools-2.0 \
+  bind-utils-9.18.39 \
+  b3sum-1.8.2 \
+  fd-find-10.2.0 \
+  fzf-0.65.2 \
+  digitemp-3.7.2 \
+  tuptime-5.2.4 \
+  duf-0.9.0 \
+  fswatch-1.17.1 \
+  buildbot-4.3.0 \
+  colordiff-1.0.21 \
+  cvs-1.11.23 \
+  cvs2cl-2.73 \
+  cvsps-2.2 \
+  darcs-2.18.2 \
+  dejagnu-1.6.3 \
+  diffstat-1.67 \
+  doxygen-1.13.2 \
+  expect-5.45.4 \
+  gambas3-ide-3.20.4 \
+  gettext-0.23.1 \
+  git-2.51.0 \
+  git2cl-3.0 \
+  git-annex-10.20250320 \
+  git-cola-4.15.0 \
+  gitg-45~20250512gitf7501bc \
+  gtranslator-48.0 \
+  highlight-4.13 \
+  lcov-2.0 \
+  manedit-1.2.1 \
+  meld-3.23.0 \
+  monotone-1.1 \
+  myrepos-1.20180726 \
+  nemiver-0.9.6 \
+  patch-2.8 \
+  patchutils-0.4.2 \
+  qgit-2.10 \
+  quilt-0.69 \
+  rapidsvn-0.13.0 \
+  rcs-5.10.1 \
+  robodoc-4.99.44 \
+  scanmem-0.17 \
+  subunit-1.4.4 \
+  subversion-1.14.5 \
+  svn2cl-0.14 \
+  systemtap-5.3 \
+  tig-2.6.0 \
+  tortoisehg-7.0.1 \
+  translate-toolkit-3.14.5 \
+  utrac-0.3.0
 
 ################################################################################
 # Kernel
