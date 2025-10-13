@@ -81,7 +81,8 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
           echo "Error: Share index [${share_index_dest}] is not an integer"
         else
           share_dest="/share/${share_index_dest}/media/$(echo ${share_suffix} | cut -d '/' -f2-)/"
-          ${share_ssh} bash -s -- "${share_src}" "${share_dest}" <<'EOF'
+          [ ! -z "${share_ssh}" ] && echo "Executing remotely ..."
+          ${share_ssh} bash -s -- \"${share_src}\" \"${share_dest}\" <<'EOF'
 if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
   if [[ "${1}" == /share/* ]] && [[ $(echo "${1}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${1}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
      [[ "${2}" == /share/* ]] && [[ $(echo "${2}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${2}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
