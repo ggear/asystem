@@ -91,6 +91,7 @@ if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
     mkdir -p "${2}"
     if "${share_rsync[@]}"; then
       rm -rvf "${1}"*
+      [[ $(echo "${1}" | grep -o "/" | wc -l) -gt 8 ]] && rm -rvf "${1}".[!.]*
       find "${1}.." -type d -empty -delete 2>/dev/null
     else
       echo "Error: Failed to rsync files from source [${1}] to destination [${2}]"
