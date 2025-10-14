@@ -25,7 +25,9 @@ if [ "$(${share_ssh} ${mount_check})" == "true" ]; then
     dirs_found["${dir_found}"]="${dir_found}"
   done < <(${share_ssh} ${find_cmd} | sed "s|^/share|${SHARE_ROOT}|")
   printf '%s\n' "${dirs_found[@]}" | sort | while read -r dir_found; do
-    echo "cd '${dir_found}'"
+    if [ ! -z "${dir_found}" ]; then
+      echo "cd '${dir_found}'"
+    fi
   done
 else
   echo "Error: Not all shares are properly mounted."

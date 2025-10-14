@@ -86,15 +86,23 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
 if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
   if [[ "${1}" == /share/* ]] && [[ $(echo "${1}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${1}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
      [[ "${2}" == /share/* ]] && [[ $(echo "${2}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${2}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
-    share_rsync=(rsync -avhPr --info=progress2 "${1}" "${2}")
-    set -vx
     mkdir -p "${2}"
-    if "${share_rsync[@]}"; then
-      rm -rvf "${1}"*
-      [[ $(echo "${1}" | grep -o "/" | wc -l) -gt 8 ]] && rm -rvf "${1}".[!.]*
-      find "${1}.." -type d -empty -delete 2>/dev/null
+    source_size=$(( $(du -s "${1}" | cut -f1) / 1048576 ))
+    dest_free=$(( $(df "${2}" | tail -1 | awk '{print $4}') / 1048576 ))
+    if [ $(( source_size * 100 / dest_free )) -gt 95 ]; then
+      echo "Error: Source directory size [${source_size} GB] is greater than 95% of free space [${dest_free} GB] on destination, bailing out"
+      [[ -d "${2}" ] && [ -z "$(ls -A "${2}")" ]] && rm -rf "${2}"
     else
-      echo "Error: Failed to rsync files from source [${1}] to destination [${2}]"
+      echo "Copying [${source_size} GB] from [${1}] to [${2}] with free [${dest_free} GB]"
+      share_rsync=(rsync -avhPr --info=progress2 "${1}" "${2}")
+      set -vx
+      if "${share_rsync[@]}"; then
+        rm -rvf "${1}"*
+        [[ $(echo "${1}" | grep -o "/" | wc -l) -gt 6 ]] && rm -rvf "${1}".[!.]*
+        find "${1}.." -type d -empty -delete 2>/dev/null
+      else
+        echo "Error: Failed to rsync files from source [${1}] to destination [${2}]"
+      fi
     fi
   else
     echo "Error: Source [${1}] and or destination [${2}] paths are invalid"
