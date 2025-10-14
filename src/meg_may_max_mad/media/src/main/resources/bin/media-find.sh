@@ -14,6 +14,11 @@ share_ssh=""
 find_cmd="find /share ! -name '._*' ! -path '*/audio/*' -path '*/media/*' -type f -name '*${FILE_NAME_TOKEN}*'"
 [ "${SHARE_ROOT}" != "/share" ] && share_ssh="ssh root@macmini-mad" && echo "Executing remotely ..."
 
+
+mount_check="[ \$(find '${SHARE_ROOT}' -mindepth 1 -maxdepth 1 | wc -l) -eq \$(find '${SHARE_ROOT}' -mindepth 2 -maxdepth 2 -name media -type d | wc -l) ]"
+echo $mount_check
+
+
 declare -A dirs_found
 while read -r file_found; do
   if [[ "${file_found}" == *"/series/"* ]]; then
