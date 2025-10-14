@@ -84,7 +84,9 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
           [ ! -z "${share_ssh}" ] && echo "Executing remotely ..."
           ${share_ssh} bash -s -- \"${share_src}\" \"${share_dest}\" <<'EOF'
 if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
-  if [[ "${1}" == /share/* ]] && [[ $(echo "${1}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${1}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
+  if [[ "${1}" == "${2}" ]]; then
+    echo "Error: Source [${1}] and destination [${2}] paths are the same"
+  elif [[ "${1}" == /share/* ]] && [[ $(echo "${1}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${1}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
      [[ "${2}" == /share/* ]] && [[ $(echo "${2}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${2}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
     mkdir -p "${2}"
     source_size=$(( $(du -s "${1}" | cut -f1) / 1048576 ))
@@ -95,7 +97,7 @@ if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
         rm -rf "${2}"
       fi
     else
-      echo "Copying [${source_size} GB] from [${1}] to [${2}] with free [${dest_free} GB]"
+      echo "+ rsync '$(echo "${1}" | sed -E 's|^(/share/[0-9]+).*|\1|')'(${source_size} GB files) -> '$(echo "${2}" | sed -E 's|^(/share/[0-9]+).*|\1|')'(${dest_free} GB free)"
       share_rsync=(rsync -avhPr --info=progress2 "${1}" "${2}")
       set -vx
       if "${share_rsync[@]}"; then
