@@ -240,7 +240,7 @@ if mount | grep /tmp | grep -q 'tmpfs'; then
 Options=mode=1777,strictatime,size=2G
 EOF
   systemctl daemon-reexec
-  systemctl restart tmp.mount
+  systemctl start tmp.mount
   mount | grep /tmp
   df -h /tmp
 fi
@@ -490,7 +490,7 @@ BOOT_ERRORS=$(
     grep -v "ACPI Error: Aborting method" |
     grep -v "Correctable Errors" |
     grep -v "20200925" |
-    grep -v "remount-ro" | grep -v "smartd" | grep -v "automount" |
+    grep -v "remount-ro" | grep -v "smartd" | grep -v "automount" | grep -v "mount error" | grep -v "Error connecting to socket. Aborting operation." |
     grep -v "Clock Unsynchronized" |
     grep -v "dockerd" | grep -v "containerd" |
     grep -v "/usr/lib/gnupg/scdaemon" |
