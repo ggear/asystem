@@ -91,7 +91,9 @@ if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
     dest_free=$(( $(df "${2}" | tail -1 | awk '{print $4}') / 1048576 ))
     if [ $(( source_size * 100 / dest_free )) -gt 95 ]; then
       echo "Error: Source directory size [${source_size} GB] is greater than 95% of free space [${dest_free} GB] on destination, bailing out"
-      [[ -d "${2}" ] && [ -z "$(ls -A "${2}")" ]] && rm -rf "${2}"
+      if [ -d "${2}" ] && [ -z "$(ls -A "${2}")" ]; then
+        rm -rf "${2}"
+      fi
     else
       echo "Copying [${source_size} GB] from [${1}] to [${2}] with free [${dest_free} GB]"
       share_rsync=(rsync -avhPr --info=progress2 "${1}" "${2}")
