@@ -1236,11 +1236,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             (
                                     (pl.col("Media Type") == "movies") &
                                     (pl.col("Target Quality").cast(pl.Int16) <= 6) &
-                                    (pl.col("File Size (GB)").cast(pl.Float32) > 7)
+                                    (pl.col("File Size (GB)").cast(pl.Float32) > 8)
                             ) | (
                                     (pl.col("Media Type") == "series") &
                                     (pl.col("Target Quality").cast(pl.Int16) <= 6) &
-                                    (pl.col("File Size (GB)").cast(pl.Float32) > 1.5)
+                                    (pl.col("File Size (GB)").cast(pl.Float32) > 2)
                             )
                     )
                 ).then(pl.lit("Downscale High Size Non-HEVC"))
