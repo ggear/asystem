@@ -1201,7 +1201,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 #     )
                 # ).then(pl.lit("Downscale High Size Non-HEVC"))
                 .when(
-                    (pl.col("Video 1 Codec") != "HEVC") & (
+                    (
+                            (pl.col("Video 1 Codec") != "HEVC") &
+                            (pl.col("Transcode Video Bitrate").cast(pl.Int32) <
+                             pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
+                    ) & (
                             (
                                     (pl.col("Media Type") == "movies") &
                                     (pl.col("Target Quality").cast(pl.Int16) <= 6) &
@@ -1490,7 +1494,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).alias("Transcode Video Resolution"),
                 (
                     pl.when(
-                        (pl.col("Video 1 Codec") == "HEVC") &
                         (pl.col("Transcode Video Bitrate") == pl.col("Video 1 Bitrate Estimate (Kbps)"))
                     ).then(
                         pl.lit("--copy-video")
