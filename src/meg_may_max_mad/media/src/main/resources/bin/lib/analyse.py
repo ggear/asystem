@@ -395,9 +395,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     if ("format" in file_probe and "bit_rate" in file_probe["format"]) else -1
                 file_probe_duration = float(file_probe["format"]["duration"]) / 60 ** 2 \
                     if ("format" in file_probe and "duration" in file_probe["format"]) else -1
-                file_probe_size = (int(file_probe["format"]["size"])
-                                   if ("format" in file_probe and "size" in file_probe["format"])
-                                   else os.path.getsize(file_path)) / 10 ** 9
+                file_probe_size = os.path.getsize(file_path) / (1024 ** 3)
                 file_probe_streams_filtered = {
                     "video": [],
                     "audio": [],
