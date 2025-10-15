@@ -1181,12 +1181,27 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 .when(
                     (pl.col("File Size") == "Large")
                 ).then(pl.lit("Downscale High Size"))
+
+                # TODO: Tune downscaling
+                # .when(
+                #     (pl.col("Video 1 Codec") != "HEVC") & (
+                #             (
+                #                     (pl.col("Media Type") == "movies") &
+                #                     (pl.col("Target Quality").cast(pl.Int16) <= 6) &
+                #                     (pl.col("File Size (GB)").cast(pl.Float32) > 9)
+                #             ) | (
+                #                     (pl.col("Media Type") == "series") &
+                #                     (pl.col("Target Quality").cast(pl.Int16) <= 4) &
+                #                     (pl.col("File Size (GB)").cast(pl.Float32) > 2)
+                #             )
+                #     )
+                # ).then(pl.lit("Downscale High Size Non-HEVC"))
                 .when(
                     (pl.col("Video 1 Codec") != "HEVC") & (
                             (
                                     (pl.col("Media Type") == "movies") &
                                     (pl.col("Target Quality").cast(pl.Int16) <= 6) &
-                                    (pl.col("File Size (GB)").cast(pl.Float32) > 8)
+                                    (pl.col("File Size (GB)").cast(pl.Float32) > 7)
                             ) | (
                                     (pl.col("Media Type") == "series") &
                                     (pl.col("Target Quality").cast(pl.Int16) <= 6) &
@@ -1194,6 +1209,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             )
                     )
                 ).then(pl.lit("Downscale High Size Non-HEVC"))
+
                 #
                 # Reformat
                 #
@@ -1470,6 +1486,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 ).alias("Transcode Video Resolution"),
                 (
                     pl.when(
+                        (pl.col("Video 1 Codec") == "HEVC") &
                         (pl.col("Transcode Video Bitrate") == pl.col("Video 1 Bitrate Estimate (Kbps)"))
                     ).then(
                         pl.lit("--copy-video")
