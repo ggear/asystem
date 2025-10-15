@@ -1194,7 +1194,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             ) | (
                                     (pl.col("Media Type") == "series") &
                                     (pl.col("Target Quality").cast(pl.Int16) <= 4) &
-                                    (pl.col("File Size (GB)").cast(pl.Float32) > 2)
+                                    (pl.col("File Size (GB)").cast(pl.Float32) > 1.5)
                             )
                     )
                 ).then(pl.lit("Downscale High Size Non-HEVC"))
