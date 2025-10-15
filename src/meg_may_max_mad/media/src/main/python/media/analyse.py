@@ -1073,6 +1073,33 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 .otherwise(pl.lit("Clean"))
             ).alias("Metadata State"))
         metadata_merged_pl = metadata_merged_pl.with_columns(
+            [
+                (
+                    pl.when(
+                        (pl.col("Video 1 Codec") != "HEVC")
+                    ).then(
+                        (pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Int32) /
+                         pl.lit(BITRATE_HVEC_SCALE)).cast(pl.Int32)
+                    ).otherwise(
+                        pl.col("Video 1 Bitrate Target (Kbps)")
+                    )
+                ).alias("Transcode Video Bitrate")
+            ]
+        ).with_columns(
+            [
+                (
+                    pl.when(
+                        (pl.col("Transcode Video Bitrate").cast(pl.Int32) <=
+                         pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
+                    ).then(
+                        pl.col("Transcode Video Bitrate")
+                    ).otherwise(
+                        pl.col("Video 1 Bitrate Estimate (Kbps)")
+                    )
+                ).alias("Transcode Video Bitrate")
+            ]
+        )
+        metadata_merged_pl = metadata_merged_pl.with_columns(
             (
                 #
                 # Rename
@@ -1205,11 +1232,11 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             (
                                     (pl.col("Media Type") == "movies") &
                                     (pl.col("Target Quality").cast(pl.Int16) <= 6) &
-                                    (pl.col("File Size (GB)").cast(pl.Float32) > 7)
+                                    (pl.col("File Size (GB)").cast(pl.Float32) > 8)
                             ) | (
                                     (pl.col("Media Type") == "series") &
                                     (pl.col("Target Quality").cast(pl.Int16) <= 6) &
-                                    (pl.col("File Size (GB)").cast(pl.Float32) > 1.5)
+                                    (pl.col("File Size (GB)").cast(pl.Float32) > 2)
                             )
                     )
                 ).then(pl.lit("Downscale High Size Non-HEVC"))
@@ -1446,32 +1473,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.col("Upscale Script Directory"),
                     pl.lit("/upscale.sh"),
                 ]).alias("Upscale Script File"),
-            ]
-        ).with_columns(
-            [
-                (
-                    pl.when(
-                        (pl.col("Video 1 Codec") != "HEVC")
-                    ).then(
-                        (pl.col("Video 1 Bitrate Target (Kbps)").cast(pl.Int32) /
-                         pl.lit(BITRATE_HVEC_SCALE)).cast(pl.Int32)
-                    ).otherwise(
-                        pl.col("Video 1 Bitrate Target (Kbps)")
-                    )
-                ).alias("Transcode Video Bitrate")
-            ]
-        ).with_columns(
-            [
-                (
-                    pl.when(
-                        (pl.col("Transcode Video Bitrate").cast(pl.Int32) <=
-                         pl.col("Video 1 Bitrate Estimate (Kbps)").cast(pl.Int32))
-                    ).then(
-                        pl.col("Transcode Video Bitrate")
-                    ).otherwise(
-                        pl.col("Video 1 Bitrate Estimate (Kbps)")
-                    )
-                ).alias("Transcode Video Bitrate")
             ]
         ).with_columns(
             [
