@@ -82,37 +82,37 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
         else
           share_dest="/share/${share_index_dest}/media/$(echo ${share_suffix} | cut -d '/' -f2-)/"
           [ ! -z "${share_ssh}" ] && echo "Executing remotely ..."
+          trap '${share_ssh} killall -9 rsync; echo; exit' INT
           ${share_ssh} bash -s -- \"${share_src}\" \"${share_dest}\" <<'EOF'
-if [ -n "${1}" ] && [ -d "${1}" ] && [ -n "${2}" ]; then
-  if [[ "${1}" == "${2}" ]]; then
-    echo "Error: Source [${1}] and destination [${2}] paths are the same"
-  elif [[ "${1}" == /share/* ]] && [[ $(echo "${1}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${1}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
-     [[ "${2}" == /share/* ]] && [[ $(echo "${2}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${2}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
-    mkdir -p "${2}"
-    source_size=$(( $(du -s "${1}" | cut -f1) / 1048576 ))
-    dest_free=$(( $(df "${2}" | tail -1 | awk '{print $4}') / 1048576 ))
+share_src="${1}"
+share_dest="${2}"
+if [ -n "${share_src}" ] && [ -d "${share_src}" ] && [ -n "${share_dest}" ]; then
+  if [ "${share_src}" == "${share_dest}" ]; then
+    echo "Error: Source [${share_src}] and destination [${share_dest}] paths are the same"
+  elif [[ "${share_src}" == /share/* ]] && [[ $(echo "${share_src}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${share_src}" | cut -d'/' -f1-3)" | grep "//" | wc -l) -eq 0 ]] &&
+     [[ "${share_dest}" == /share/* ]] && [[ $(echo "${share_dest}" | grep -o "/" | wc -l) -ge 5 ]] && [[ $(mount | grep "$(echo "${share_dest}" | cut -d'/' -f1-3)" | wc -l) -gt 0 ]]; then
+    mkdir -p "${share_dest}"
+    source_size=$(( $(du -s "${share_src}" | cut -f1) / 1048576 ))
+    dest_free=$(( $(df "${share_dest}" | tail -1 | awk '{print $4}') / 1048576 ))
     if [ $(( source_size * 100 / dest_free )) -gt 95 ]; then
-      echo "Error: Source directory size [${source_size} GB] is greater than 95% of free space [${dest_free} GB] on destination, bailing out"
-      if [ -d "${2}" ] && [ -z "$(ls -A "${2}")" ]; then
-        rm -rf "${2}"
-      fi
+      echo "Error: Source size [${source_size} GB] is greater than 95% of free space [${dest_free} GB] on destination, bailing out"
+      [ -d "$share_dest" ] && [ -z "$(ls -A "$share_dest")" ] && rm -rf "$share_dest"
     else
-      echo "+ rsync '$(echo "${1}" | sed -E 's|^(/share/[0-9]+).*|\1|')'(${source_size} GB files) -> '$(echo "${2}" | sed -E 's|^(/share/[0-9]+).*|\1|')'(${dest_free} GB free)"
-      share_rsync=(rsync -avhPr --info=progress2 "${1}" "${2}")
+      echo "+ rsync '$(echo "${share_src}" | sed -E 's|^(/share/[0-9]+).*|\1|')'(${source_size} GB files) -> '$(echo "${share_dest}" | sed -E 's|^(/share/[0-9]+).*|\1|')'(${dest_free} GB free)"
       set -vx
-      if "${share_rsync[@]}"; then
-        rm -rvf "${1}"*
-        [[ $(echo "${1}" | grep -o "/" | wc -l) -gt 6 ]] && rm -rvf "${1}".[!.]*
-        find "${1}.." -type d -empty -delete 2>/dev/null
+      if rsync -avhPr --info=progress2 "${share_src}" "${share_dest}"; then
+        rm -rvf "${share_src}"*
+        [[ $(echo "${share_src}" | grep -o "/" | wc -l) -gt 6 ]] && rm -rvf "${share_src}".[!.]*
+        find "${share_src}.." -type d -empty -delete 2>/dev/null
       else
-        echo "Error: Failed to rsync files from source [${1}] to destination [${2}]"
+        echo "Error: Failed to rsync files from source [${share_src}] to destination [${share_dest}]"
       fi
     fi
   else
-    echo "Error: Source [${1}] and or destination [${2}] paths are invalid"
+    echo "Error: Source [${share_src}] and or destination [${share_dest}] paths are invalid"
   fi
 else
-    echo "Error: Source [${1}] and or destination [${2}] paths are null"
+  echo "Error: Source [${share_src}] and or destination [${share_dest}] paths are null"
 fi
 EOF
         fi

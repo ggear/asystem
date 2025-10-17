@@ -81,8 +81,8 @@ while read dev size tran; do
     dev_num=$(udevadm info --query=property --name=/dev/$part | grep DEVPATH | sed -n 's|.*/usb\([0-9]\+\)/.*|\1|p')
     speed=$(lsusb -t | grep -E "Bus 0*$dev_num" -A1 | grep -Eo '10000M|5000M|480M|12M' | head -n1)
     case $speed in
-    10000M) speed_h="USB 3.1 Gen 2 (10 Gbps)" ;;
-    5000M) speed_h="USB 3.0 Gen 1 (5 Gbps)" ;;
+    10000M) speed_h="USB 3.1 (10 Gbps)" ;;
+    5000M) speed_h="USB 3.0 (5 Gbps)" ;;
     480M) speed_h="USB 2.0 (0.5 Gbps)" ;;
     12M) speed_h="USB 1.1 (0.01 Gbps)" ;;
     *) speed_h="Unknown" ;;

@@ -18,6 +18,7 @@ if [ $(uname) == "Linux" ]; then
   find "${WORKING_DIR}" -type f -name "*.sh" -exec chmod 750 {} \;
   find "${WORKING_DIR}" -type f ! -name "*.sh" -exec chmod 640 {} \;
 fi
+find "${WORKING_DIR}" -type f -name "*.*.??????" -exec rm -f {} \;
 find "${WORKING_DIR}" -type f -name nohup -exec rm -f {} \;
 find "${WORKING_DIR}" -type f -name .DS_Store -exec rm -f {} \;
 echo "done"
