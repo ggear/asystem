@@ -30,7 +30,7 @@ BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 BITRATE_UNSCALED_KBPS = {
     "HD": 5000,  # <=720, <=QUALITY_MIN
     "FHD": 6000,  # ==1080, <=QUALITY_MID
-    "UHD": 12000,  # >=2160, >=QUALITY_MAX
+    "UHD": 14000,  # >=2160, >=QUALITY_MAX
 }
 
 
