@@ -5,8 +5,6 @@ session_name="host_stats_live"
 session_hosts=("macmini-mad" "macmini-max" "macmini-may" "macmini-meg")
 session_script="/root/install/monitor/latest/image/monitor.sh"
 
-chmod +x "${session_script}"
-
 tmux kill-session -t "${session_name}" 2>/dev/null
 tmux new-session -d -s "${session_name}"
 tmux split-window -h -t "${session_name}:0"
