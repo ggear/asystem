@@ -10,8 +10,7 @@ mapfile -t host_stats < <(
     swap_percent=$(awk "BEGIN {printf \"%.1f\", ($swap_total-$swap)/$swap_total*100}")
     max_temp=$(sensors | awk '/^Core/ {gsub(/\+/,""); gsub(/°C/,""); print $3}' | sort -nr | head -n1)
     temp_percent=$(awk -v t="$max_temp" -v m=90 'BEGIN {printf "%.1f", (t/m)*100}')
-    uptime_seconds=$(awk '{print $1}' /proc/uptime)
-    downtime_percent=$(awk -v up="$uptime_seconds" 'BEGIN {printf "%.1f", (1-(up/(30*24*60*60)))*100}')
+    downtime_percent=$(tuptime | awk '/System uptime:/ {for(i=1;i<=NF;i++){if($i ~ /%$/){gsub("%","",$i); up=$i}}} END {dp=100-up; if(dp<0) dp=0; if(dp>100) dp=100; printf "%.1f", dp}')
     echo "Down Tme=${downtime_percent}%"
     echo "Used Mem=${mem_percent}%"
     echo "Temp Max=${temp_percent}%"
