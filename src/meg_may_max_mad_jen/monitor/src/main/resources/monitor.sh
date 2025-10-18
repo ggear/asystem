@@ -28,49 +28,41 @@ print_stats() {
   local heading2=$3
   local column_width=$4
   local num_cols=$5
-  local RED=$(tput setaf 1)
-  local GREEN=$(tput setaf 2)
-  local NC=$(tput sgr0)
-  local term_width=$(tput cols)
   local total_width=55
-  local sep_line=$(printf '%0.s-' $(seq 1 $total_width))
-  echo "$sep_line"
+  local RED='\033[0;31m'
+  local GREEN='\033[0;32m'
+  local NC='\033[0m'
+
+  printf "%${total_width}s\n" | tr ' ' '-'
   for ((c = 0; c < num_cols; c++)); do
     printf "%-${column_width}s %-${column_width}s  " "$heading1" "$heading2"
   done
-  echo
-  echo "$sep_line"
+  printf "\n"
+  printf "%${total_width}s\n" | tr ' ' '-'
   local count=0
   for item in "${arr[@]}"; do
-    local key value
     if [[ "$item" == *$'\t'* ]]; then
-      key="${item%%$'\t'*}"
-      value="${item##*$'\t'}"
+      key=$(echo "$item" | awk -F'\t' '{print $1}')
+      value=$(echo "$item" | awk -F'\t' '{print $2}')
     elif [[ "$item" == *=* ]]; then
-      key="${item%%=*}"
-      value="${item#*=}"
+      key=$(echo "$item" | cut -d'=' -f1)
+      value=$(echo "$item" | cut -d'=' -f2-)
     else
       key="$item"
       value=""
     fi
-    local color=$GREEN
-    if [[ "$value" == *"unhealthy"* ]]; then
-      color=$RED
-    elif [[ "$value" == *"%"* ]]; then
-      local num=${value%\%}
-      if (($(echo "$num > 80" | bc -l))); then
-        color=$RED
-      fi
+    if [[ "$value" == *"unhealthy"* ]] || ([[ "$value" == *"%"* ]] && (($(echo "${value%\%} > 80" | bc -l)))); then
+      printf "%-${column_width}s ${RED}%-${column_width}s${NC}  " "$key" "$value"
+    else
+      printf "%-${column_width}s ${GREEN}%-${column_width}s${NC}  " "$key" "$value"
     fi
-    printf "%-${column_width}s " "$key"
-    printf "%s%-${column_width}s%s  " "$color" "$value" "$NC"
     count=$((count + 1))
     if ((count % num_cols == 0)); then
-      echo
+      printf "\n"
     fi
   done
   if ((count % num_cols != 0)); then
-    echo
+    printf "\n"
   fi
 }
 
