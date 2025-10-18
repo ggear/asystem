@@ -1,6 +1,6 @@
 #!/bin/bash
 
-chmod +x /root/install/monitor/latest/image/*.sh
+chmod +x /root/install/monitor/latest/*.sh
 
 docker exec monitor /asystem/etc/mqtt.sh
 
