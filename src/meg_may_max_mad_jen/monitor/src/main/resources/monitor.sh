@@ -35,10 +35,11 @@ print_stats() {
 
   printf "%${total_width}s\n" | tr ' ' '-'
   for ((c = 0; c < num_cols; c++)); do
-    printf "%-${column_width}s %-${column_width}s  " "$heading1" "$heading2"
+    printf "%-${column_width}.${column_width}s %-${column_width}.${column_width}s  " "$heading1" "$heading2"
   done
   printf "\n"
   printf "%${total_width}s\n" | tr ' ' '-'
+
   local count=0
   for item in "${arr[@]}"; do
     if [[ "$item" == *$'\t'* ]]; then
@@ -51,16 +52,19 @@ print_stats() {
       key="$item"
       value=""
     fi
+
     if [[ "$value" == *"unhealthy"* ]] || ([[ "$value" == *"%"* ]] && (($(echo "${value%\%} > 80" | bc -l)))); then
-      printf "%-${column_width}s ${RED}%-${column_width}s${NC}  " "$key" "$value"
+      printf "%-${column_width}.${column_width}s ${RED}%-${column_width}.${column_width}s${NC}  " "$key" "$value"
     else
-      printf "%-${column_width}s ${GREEN}%-${column_width}s${NC}  " "$key" "$value"
+      printf "%-${column_width}.${column_width}s ${GREEN}%-${column_width}.${column_width}s${NC}  " "$key" "$value"
     fi
+
     count=$((count + 1))
     if ((count % num_cols == 0)); then
       printf "\n"
     fi
   done
+
   if ((count % num_cols != 0)); then
     printf "\n"
   fi
