@@ -3,7 +3,7 @@
 update_interval=30
 session_name="host_stats_live"
 session_hosts=("macmini-mad" "macmini-max" "macmini-may" "macmini-meg")
-session_script="/root/install/monitor/latest/image/monitor.sh"
+session_script="/root/install/monitor/latest/monitor.sh"
 
 tmux kill-session -t "${session_name}" 2>/dev/null
 tmux new-session -d -s "${session_name}"
@@ -19,7 +19,11 @@ tmux set-option -g allow-rename off
 tmux set-option -t "${session_name}:0" pane-border-status top
 tmux set-option -t "${session_name}:0" pane-border-format "#{pane_index}: #{pane_title}"
 
-for i in {0..3}; do
+for host in "${session_hosts[@]}"; do
+  ssh -4 -T ${host} "echo \"Connection to \$(hostname) successful ... \""
+done
+
+for ((i = 0; i < ${#session_hosts[@]}; i++)); do
   host="${session_hosts[$i]}"
   tmux select-pane -t "${session_name}:0.$i"
   tmux select-pane -T "${host}"
