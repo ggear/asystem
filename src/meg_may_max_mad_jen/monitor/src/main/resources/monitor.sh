@@ -63,5 +63,5 @@ print_stats() {
 }
 
 print_stats host_stats "Host" "Metric" 15 2
-printf '%*s\n' "$(( $(tput cols + 0 ))" '' | tr ' ' '-'
+printf '%*s\n' "$(( $(tput cols - 0 ))" '' | tr ' ' '-'
 print_stats container_stats "Container" "Status" 15 1
