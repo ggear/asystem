@@ -28,45 +28,67 @@ print_stats() {
   local heading2=$3
   local column_width=$4
   local num_cols=$5
+
+  # Colors
+  local RED=$(tput setaf 1)
+  local GREEN=$(tput setaf 2)
+  local NC=$(tput sgr0)
+
+  # Terminal width (not strictly necessary, but can be used for dynamic lines)
+  local term_width=$(tput cols)
   local total_width=55
-  local RED='\033[0;31m'
-  local GREEN='\033[0;32m'
-  local NC='\033[0m'
 
-  printf "%${total_width}s\n" | tr ' ' '-'
-  for ((c = 0; c < num_cols; c++)); do
-    printf "%-${column_width}.${column_width}s %-${column_width}.${column_width}s  " "$heading1" "$heading2"
+  # Separator line
+  local sep_line=$(printf '%0.s-' $(seq 1 $total_width))
+
+  # Print header
+  echo "$sep_line"
+  for ((c=0; c<num_cols; c++)); do
+    printf "%-${column_width}s %-${column_width}s  " "$heading1" "$heading2"
   done
-  printf "\n"
-  printf "%${total_width}s\n" | tr ' ' '-'
+  echo
+  echo "$sep_line"
 
+  # Print rows
   local count=0
   for item in "${arr[@]}"; do
+    local key value
     if [[ "$item" == *$'\t'* ]]; then
-      key=$(echo "$item" | awk -F'\t' '{print $1}')
-      value=$(echo "$item" | awk -F'\t' '{print $2}')
+      key="${item%%$'\t'*}"
+      value="${item##*$'\t'}"
     elif [[ "$item" == *=* ]]; then
-      key=$(echo "$item" | cut -d'=' -f1)
-      value=$(echo "$item" | cut -d'=' -f2-)
+      key="${item%%=*}"
+      value="${item#*=}"
     else
       key="$item"
       value=""
     fi
 
-    if [[ "$value" == *"unhealthy"* ]] || ([[ "$value" == *"%"* ]] && (($(echo "${value%\%} > 80" | bc -l)))); then
-      printf "%-${column_width}.${column_width}s ${RED}%-${column_width}.${column_width}s${NC}  " "$key" "$value"
-    else
-      printf "%-${column_width}.${column_width}s ${GREEN}%-${column_width}.${column_width}s${NC}  " "$key" "$value"
+    # Determine color
+    local color=$GREEN
+    if [[ "$value" == *"unhealthy"* ]]; then
+      color=$RED
+    elif [[ "$value" == *"%"* ]]; then
+      local num=${value%\%}
+      # Compare floating point numbers with bc
+      if (( $(echo "$num > 80" | bc -l) )); then
+        color=$RED
+      fi
     fi
 
-    count=$((count + 1))
-    if ((count % num_cols == 0)); then
-      printf "\n"
+    # Print key and colored value safely
+    printf "%-${column_width}s " "$key"
+    printf "%s%-${column_width}s%s  " "$color" "$value" "$NC"
+
+    count=$((count+1))
+    if (( count % num_cols == 0 )); then
+      echo
     fi
   done
 
-  if ((count % num_cols != 0)); then
-    printf "\n"
+  # Final newline if last row is incomplete
+  if (( count % num_cols != 0 )); then
+    echo
   fi
 }
 
