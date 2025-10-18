@@ -1,8 +1,11 @@
 #!/bin/bash
 
+update_interval=30
 session_name="host_stats_live"
 session_hosts=("macmini-mad" "macmini-max" "macmini-may" "macmini-meg")
-update_interval=30
+session_script="/root/install/monitor/latest/image/monitor.sh"
+
+chmod +x "${session_script}"
 
 tmux kill-session -t "${session_name}" 2>/dev/null
 tmux new-session -d -s "${session_name}"
@@ -23,7 +26,7 @@ for i in {0..3}; do
   tmux select-pane -t "${session_name}:0.$i"
   tmux select-pane -T "${host}"
   tmux send-keys "printf '\033]2;${host}\033\\'" C-m
-  tmux send-keys "while true; do clear; ssh -4 -T ${host} /tmp/monitor.sh || echo 'Host unreachable: ${host}'; sleep ${update_interval}; done" C-m
+  tmux send-keys "while true; do clear; ssh -4 -T ${host} "${session_script}" || echo 'Host unreachable: ${host}'; sleep ${update_interval}; done" C-m
   #tmux send-keys "while true; do clear; ssh -4 -T ${host} docker ps --format \\\"table\\ {{.Names}}\\\t\\\t{{.Status}}\\\" || echo 'Host unreachable: ${host}'; sleep ${update_interval}; done" C-m
   #tmux send-keys "while true; do clear; ssh -4 -T ${host} docker stats --no-stream --format \\\"table\\ {{.Name}}\\\t{{.CPUPerc}}\\\t{{.MemUsage}}\\\" || echo 'Host unreachable: ${host}'; sleep ${update_interval}; done" C-m
 done
