@@ -10,10 +10,10 @@ mapfile -t host_stats < <(
     swap_percent=$(awk "BEGIN {printf \"%.1f\", ($swap_total-$swap)/$swap_total*100}")
     max_temp=$(sensors | awk '/^Core/ {gsub(/\+/,""); gsub(/°C/,""); print $3}' | sort -nr | head -n1)
     temp_percent=$(awk -v t="$max_temp" -v m=90 'BEGIN {printf "%.1f", (t/m)*100}')
-    echo "Used CPU=${cpu} %"
-    echo "Used Mem=${mem_percent} %"
-    echo "Used Swp=${swap_percent} %"
-    echo "Used Dsk=${disk_used} %"
+    echo "Used CPU=${cpu}%"
+    echo "Used Mem=${mem_percent}%"
+    echo "Used Swp=${swap_percent}%"
+    echo "Used Dsk=${disk_used}%"
     echo "Temp Max=${temp_percent}%"
   done
 )
