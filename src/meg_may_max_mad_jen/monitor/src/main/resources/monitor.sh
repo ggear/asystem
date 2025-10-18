@@ -22,49 +22,47 @@ mapfile -t host_stats < <(
 )
 mapfile -t container_stats < <(docker ps --format "{{.Names}}\t{{.Status}}")
 
+# Optimise for tput cols=64, tput lines=10
 print_stats() {
   local -n arr=$1
   local heading1=$2
   local heading2=$3
   local column_width=$4
   local num_cols=$5
-  local total_width=55
   local RED='\033[0;31m'
   local GREEN='\033[0;32m'
   local NC='\033[0m'
-
-  printf "%${total_width}s\n" | tr ' ' '-'
-  for ((c = 0; c < num_cols; c++)); do
-    printf "%-${column_width}s %-${column_width}s  " "$heading1" "$heading2"
-  done
-  printf "\n"
-  printf "%${total_width}s\n" | tr ' ' '-'
-  local count=0
+  local term_width
+  local count=0 key value color
   for item in "${arr[@]}"; do
-    if [[ "$item" == *$'\t'* ]]; then
-      key=$(echo "$item" | awk -F'\t' '{print $1}')
-      value=$(echo "$item" | awk -F'\t' '{print $2}')
-    elif [[ "$item" == *=* ]]; then
-      key=$(echo "$item" | cut -d'=' -f1)
-      value=$(echo "$item" | cut -d'=' -f2-)
-    else
-      key="$item"
+    case "$item" in
+    *$'\t'*)
+      key=${item%%$'\t'*}
+      value=${item#*$'\t'}
+      ;;
+    *=*)
+      key=${item%%=*}
+      value=${item#*=}
+      ;;
+    *)
+      key=$item
       value=""
-    fi
-    if [[ "$value" == *"unhealthy"* ]] || ([[ "$value" == *"%"* ]] && (($(echo "${value%\%} > 80" | bc -l)))); then
-      printf "%-${column_width}s ${RED}%-${column_width}s${NC}  " "$key" "$value"
+      ;;
+    esac
+    if [[ "$value" == *"unhealthy"* ]] || [[ "$value" =~ ^([8-9][0-9]|100)\.%?$ ]]; then
+      color=$RED
     else
-      printf "%-${column_width}s ${GREEN}%-${column_width}s${NC}  " "$key" "$value"
+      color=$GREEN
     fi
-    count=$((count + 1))
+    printf "%-${column_width}s${color}%-${column_width}s${NC}" "$key" "$value"
+    ((count++))
     if ((count % num_cols == 0)); then
-      printf "\n"
+      printf '\n'
     fi
   done
-  if ((count % num_cols != 0)); then
-    printf "\n"
-  fi
+  ((count % num_cols != 0)) && printf '\n'
 }
 
 print_stats host_stats "Host" "Metric" 15 2
+printf '%*s\n' "$(tput cols 2>/dev/null || echo 64)" '' | tr ' ' '-'
 print_stats container_stats "Container" "Status" 15 1
