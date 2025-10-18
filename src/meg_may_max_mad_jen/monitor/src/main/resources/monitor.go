@@ -45,11 +45,10 @@ func main() {
 	}
 
 	renderTable("Host Stats", []string{"Metric", "Value"}, hostMetrics)
-	fmt.Println(strings.Repeat("-", 60))
+	fmt.Println(strings.Repeat("-", terminalWidth()))
 	renderTable("Container Stats", []string{"Container", "Status"}, containerMetrics)
 }
 
-// gatherHostMetrics collects memory, swap, CPU, disk, temp, and downtime
 func gatherHostMetrics() ([]HostMetrics, error) {
 	memPercent, swapPercent, err := readMemSwap()
 	if err != nil {
@@ -77,13 +76,11 @@ func gatherHostMetrics() ([]HostMetrics, error) {
 	}, nil
 }
 
-// gatherContainerMetrics collects Docker container statuses
 func gatherContainerMetrics() ([]HostMetrics, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil, err
 	}
-
 	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
 		return nil, err
@@ -253,13 +250,31 @@ func readDowntimePercent() float64 {
 }
 
 func renderTable(title string, headers []string, rows []HostMetrics) {
+	width := terminalWidth()
 	fmt.Println(title)
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader(headers)
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	for _, r := range rows {
-		table.Append([]string{r.Name, r.Value})
+		name := truncate(r.Name, width/len(headers))
+		value := truncate(r.Value, width/len(headers))
+		table.Append([]string{name, value})
 	}
 	table.Render()
+}
+
+func terminalWidth() int {
+	w, _, err := syscall.IoctlGetWinsize(int(os.Stdout.Fd()), syscall.TIOCGWINSZ)
+	if err != nil || w.Col == 0 {
+		return 60
+	}
+	return int(w.Col)
+}
+
+func truncate(s string, max int) string {
+	if len(s) > max-1 {
+		return s[:max-1]
+	}
+	return s
 }
