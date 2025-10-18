@@ -19,7 +19,7 @@ mapfile -t host_stats < <(
 )
 mapfile -t container_stats < <(docker ps --format "{{.Names}}\t{{.Status}}")
 
-print_mapfile() {
+print_stats() {
   local -n arr=$1
   local heading1=$2
   local heading2=$3
@@ -27,12 +27,10 @@ print_mapfile() {
   local GREEN='\033[0;32m'
   local NC='\033[0m'
   local column_width=15
-  local dashes=$(printf "%0.s-" {1..30})
+  local dashes=$(printf "%0.s-" {1..40})
 
-  printf "%s" "${dashes}"
   printf "  \n%-${column_width}s %s\n" "$heading1" "$heading2"
-  printf "%s" "${dashes}"
-  echo
+  printf "%s" "${dashes}" && echo
 
   for item in "${arr[@]}"; do
     if [[ "$item" == *$'\t'* ]]; then
@@ -53,5 +51,5 @@ print_mapfile() {
   done
 }
 
-print_mapfile host_stats "Host" "Metric"
-print_mapfile container_stats "Container" "Status"
+print_stats host_stats "Host" "Metric"
+print_stats container_stats "Container" "Status"
