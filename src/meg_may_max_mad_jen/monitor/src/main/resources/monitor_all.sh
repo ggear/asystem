@@ -20,7 +20,7 @@ tmux set-option -t "${session_name}:0" pane-border-status top
 tmux set-option -t "${session_name}:0" pane-border-format "#{pane_index}: #{pane_title}"
 
 for host in "${session_hosts[@]}"; do
-  ssh -4 -T "${host}" "echo 'Connection to $(hostname) successful ... '"
+  ssh -4 -T "${host}" "echo 'Connection to \$(hostname) successful ... '"
 done
 
 for ((i = 0; i < ${#session_hosts[@]}; i++)); do
@@ -29,8 +29,9 @@ for ((i = 0; i < ${#session_hosts[@]}; i++)); do
   tmux select-pane -T "${host}"
   tmux send-keys -t "${session_name}:0.$i" \
     "while true; do
+      export TERM=xterm
       clear
-      ssh -4 -T ${host} '${session_script}'
+      ssh -4 -T ${host} 'export TERM=xterm; ${session_script}'
       sleep ${update_interval}
       tmux select-pane -T ${host}
     done" C-m
