@@ -12,29 +12,34 @@ mapfile -t host_stats < <(
     temp_percent=$(awk -v t="$max_temp" -v m=90 'BEGIN {printf "%.1f", (t/m)*100}')
     uptime_seconds=$(awk '{print $1}' /proc/uptime)
     downtime_percent=$(awk -v up="$uptime_seconds" 'BEGIN {printf "%.1f", (1-(up/(30*24*60*60)))*100}')
-    echo "Used CPU=${cpu}%"
-    echo "Used Mem=${mem_percent}%"
-    echo "Used Swp=${swap_percent}%"
-    echo "Used Dsk=${disk_used}%"
-    echo "Temp Max=${temp_percent}%"
     echo "Down Tme=${downtime_percent}%"
+    echo "Used Mem=${mem_percent}%"
+    echo "Temp Max=${temp_percent}%"
+    echo "Used Swp=${swap_percent}%"
+    echo "Used CPU=${cpu}%"
+    echo "Used Dsk=${disk_used}%"
   done
 )
 mapfile -t container_stats < <(docker ps --format "{{.Names}}\t{{.Status}}")
 
-dashes=$(printf "%0.s-" {1..40})
 print_stats() {
   local -n arr=$1
   local heading1=$2
   local heading2=$3
+  local column_width=$4
+  local num_cols=$5
+  local total_width=55
   local RED='\033[0;31m'
   local GREEN='\033[0;32m'
   local NC='\033[0m'
-  local column_width=15
 
-  printf "%-${column_width}s %s\n" "$heading1" "$heading2"
-  printf "%s" "${dashes}" && echo
-
+  printf "%${total_width}s\n" | tr ' ' '-'
+  for ((c = 0; c < num_cols; c++)); do
+    printf "%-${column_width}s %-${column_width}s  " "$heading1" "$heading2"
+  done
+  printf "\n"
+  printf "%${total_width}s\n" | tr ' ' '-'
+  local count=0
   for item in "${arr[@]}"; do
     if [[ "$item" == *$'\t'* ]]; then
       key=$(echo "$item" | awk -F'\t' '{print $1}')
@@ -46,14 +51,20 @@ print_stats() {
       key="$item"
       value=""
     fi
-    if [[ "$value" == *"unhealthy"* ]] || [[ "$value" =~ ([0-9]+(\.[0-9]+)?%) && $(echo "${value%\%} > 80" | bc -l) -eq 1 ]]; then
-      printf "%-${column_width}s ${RED}%s${NC}\n" "$key" "$value"
+    if [[ "$value" == *"unhealthy"* ]] || ([[ "$value" == *"%"* ]] && (($(echo "${value%\%} > 80" | bc -l)))); then
+      printf "%-${column_width}s ${RED}%-${column_width}s${NC}  " "$key" "$value"
     else
-      printf "%-${column_width}s ${GREEN}%s${NC}\n" "$key" "$value"
+      printf "%-${column_width}s ${GREEN}%-${column_width}s${NC}  " "$key" "$value"
+    fi
+    count=$((count + 1))
+    if ((count % num_cols == 0)); then
+      printf "\n"
     fi
   done
+  if ((count % num_cols != 0)); then
+    printf "\n"
+  fi
 }
 
-print_stats host_stats "Host" "Metric"
-printf "%s" "${dashes}" && echo
-print_stats container_stats "Container" "Status"
+print_stats host_stats "Host" "Metric" 15 2
+print_stats container_stats "Container" "Status" 15 1
