@@ -26,10 +26,12 @@ print_mapfile() {
   local RED='\033[0;31m'
   local GREEN='\033[0;32m'
   local NC='\033[0m'
+  local column_width=15
+  local dashes=$(printf "%0.s-" {1..30})
 
-  printf "%0.s-" {1..30}
-  printf "\n%-12s %s\n" "$heading1" "$heading2"
-  printf "%0.s-" {1..30}
+  printf "%s" "${dashes}"
+  printf "  \n%-${column_width}s %s\n" "$heading1" "$heading2"
+  printf "%s" "${dashes}"
   echo
 
   for item in "${arr[@]}"; do
@@ -44,9 +46,9 @@ print_mapfile() {
       value=""
     fi
     if [[ "$value" == *"unhealthy"* ]] || [[ "$value" =~ ([0-9]+(\.[0-9]+)?%) && $(echo "${value%\%} > 80" | bc -l) -eq 1 ]]; then
-      printf "%-12s ${RED}%s${NC}\n" "$key" "$value"
+      printf "%-${column_width}s ${RED}%s${NC}\n" "$key" "$value"
     else
-      printf "%-12s ${GREEN}%s${NC}\n" "$key" "$value"
+      printf "%-${column_width}s ${GREEN}%s${NC}\n" "$key" "$value"
     fi
   done
 }
