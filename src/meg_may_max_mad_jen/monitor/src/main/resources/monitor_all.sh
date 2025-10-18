@@ -19,21 +19,21 @@ tmux set-option -g allow-rename off
 tmux set-option -t "${session_name}:0" pane-border-status top
 tmux set-option -t "${session_name}:0" pane-border-format "#{pane_index}: #{pane_title}"
 
-for host in "${session_hosts[@]}"; do
-  ssh -4 -T "${host}" "echo 'Connection to \$(hostname) successful ... '"
+for session_host in "${session_hosts[@]}"; do
+  ssh -4 -t "${session_host}" 'echo "Connection to $(hostname) successful ... "' 2>/dev/null
 done
 
 for ((i = 0; i < ${#session_hosts[@]}; i++)); do
-  host="${session_hosts[$i]}"
+  session_host="${session_hosts[$i]}"
   tmux select-pane -t "${session_name}:0.$i"
-  tmux select-pane -T "${host}"
+  tmux select-pane -T "${session_host}"
   tmux send-keys -t "${session_name}:0.$i" \
     "while true; do
-      clear
-      ssh -4 -T ${host} '${session_script} $(tput cols 2>/dev/null)'
-      sleep ${update_interval}
-      tmux select-pane -T ${host}
-    done" C-m
+       clear
+       ssh -4 -t '${session_host}' '${session_script}' 2>/dev/null
+       sleep ${update_interval}
+       tmux select-pane -T '${session_host}'
+     done" C-m
 done
 
 tmux attach-session -t "${session_name}"
