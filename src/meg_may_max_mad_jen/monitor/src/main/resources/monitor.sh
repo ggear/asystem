@@ -28,28 +28,18 @@ print_stats() {
   local heading2=$3
   local column_width=$4
   local num_cols=$5
-
-  # Colors
   local RED=$(tput setaf 1)
   local GREEN=$(tput setaf 2)
   local NC=$(tput sgr0)
-
-  # Terminal width (not strictly necessary, but can be used for dynamic lines)
   local term_width=$(tput cols)
   local total_width=55
-
-  # Separator line
   local sep_line=$(printf '%0.s-' $(seq 1 $total_width))
-
-  # Print header
   echo "$sep_line"
-  for ((c=0; c<num_cols; c++)); do
+  for ((c = 0; c < num_cols; c++)); do
     printf "%-${column_width}s %-${column_width}s  " "$heading1" "$heading2"
   done
   echo
   echo "$sep_line"
-
-  # Print rows
   local count=0
   for item in "${arr[@]}"; do
     local key value
@@ -63,31 +53,23 @@ print_stats() {
       key="$item"
       value=""
     fi
-
-    # Determine color
     local color=$GREEN
     if [[ "$value" == *"unhealthy"* ]]; then
       color=$RED
     elif [[ "$value" == *"%"* ]]; then
       local num=${value%\%}
-      # Compare floating point numbers with bc
-      if (( $(echo "$num > 80" | bc -l) )); then
+      if (($(echo "$num > 80" | bc -l))); then
         color=$RED
       fi
     fi
-
-    # Print key and colored value safely
     printf "%-${column_width}s " "$key"
     printf "%s%-${column_width}s%s  " "$color" "$value" "$NC"
-
-    count=$((count+1))
-    if (( count % num_cols == 0 )); then
+    count=$((count + 1))
+    if ((count % num_cols == 0)); then
       echo
     fi
   done
-
-  # Final newline if last row is incomplete
-  if (( count % num_cols != 0 )); then
+  if ((count % num_cols != 0)); then
     echo
   fi
 }
