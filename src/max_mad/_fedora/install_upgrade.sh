@@ -99,6 +99,11 @@ ASYSTEM_PACKAGES_DNF=(
   tuptime
   duf
   fswatch
+  tmux
+  glances
+  sysstat
+  fbterm
+  terminus-fonts-console
 )
 group_packages=$(dnf-3 groupinfo "Development Tools" 2>/dev/null | grep "   " | sort -u)
 ASYSTEM_PACKAGES_DNF+=($group_packages)

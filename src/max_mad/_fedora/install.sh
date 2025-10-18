@@ -135,17 +135,34 @@ dnf-3 install -y \
 # Kernel
 ################################################################################
 [ ! -f /etc/default/grub.bak ] && cp /etc/default/grub /etc/default/grub.bak
-function add_grub_cmdline_param() {
-  local param="$1"
-  if ! grep -q "$param" /etc/default/grub; then
-    if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' /etc/default/grub; then
-      sed -i "/^GRUB_CMDLINE_LINUX_DEFAULT=/ s/\"[[:space:]]*$/ $param\"/" /etc/default/grub
-    else
-      echo "GRUB_CMDLINE_LINUX_DEFAULT=\"$param\"" >>/etc/default/grub
-    fi
-  fi
-}
-add_grub_cmdline_param 'selinux=0'
+#GRUB_CMDLINE_LINUX="video=HDMI-A-1:1024x600@60 console=tty0"
+#GRUB_CMDLINE_LINUX="video=HDMI-A-1:4096x2160@60 fbcon=map:1 fbcon=font:VGA8x8 console=tty0"
+#GRUB_CMDLINE_LINUX="video=HDMI-A-1:1024x600@60 video=HDMI-A-1:4096x2160@60 fbcon=map:1 fbcon=font:VGA8x8 console=tty0"
+GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
+if [ "${GRUB_DISTRIBUTOR}" == "Fedora Asahi Remix" ]; then
+  GRUB_CMDLINE_LINUX="rootflags=subvol=root video=HDMI-A-1:1024x600@60 console=tty0 selinux=0"
+  GRUB_ENABLE_BLSCFG=false
+else
+  GRUB_CMDLINE_LINUX="rd.lvm.lv=fedora_$(hostname)/root video=HDMI-A-1:1024x600@60 console=tty0 selinux=0"
+  GRUB_ENABLE_BLSCFG=true
+fi
+tee /etc/default/grub <<EOF
+GRUB_TIMEOUT=5
+GRUB_DEFAULT="saved"
+GRUB_SAVEDEFAULT=true
+GRUB_TIMEOUT_STYLE="menu"
+GRUB_DISABLE_SUBMENU=true
+GRUB_TERMINAL_OUTPUT="console"
+GRUB_TERMINAL_INPUT="console"
+GRUB_DISABLE_RECOVERY=true
+GRUB_DISABLE_OS_PROBER=true
+GRUB_GFXMODE="1024x600"
+GRUB_GFXPAYLOAD_LINUX="keep"
+GRUB_DISTRIBUTOR="${GRUB_DISTRIBUTOR}"
+GRUB_CMDLINE_LINUX_DEFAULT=""
+GRUB_CMDLINE_LINUX="${GRUB_CMDLINE_LINUX}"
+GRUB_ENABLE_BLSCFG="${GRUB_ENABLE_BLSCFG}"
+EOF
 echo "diff /etc/default/grub:" && diff -u /etc/default/grub.bak /etc/default/grub || true
 grub2-mkconfig -o /boot/grub2/grub.cfg
 echo "/etc/kernel/cmdline:" && cat /etc/kernel/cmdline
@@ -157,11 +174,19 @@ if [ -f /etc/selinux/config ]; then
   echo "diff /etc/selinux/config:" && diff -u /etc/selinux/config.bak /etc/selinux/config || true
   setenforce 0 2>/dev/null || true
 fi
+[ ! -f /etc/vconsole.conf.bak ] && cp /etc/vconsole.conf /etc/vconsole.conf.bak
+tee /etc/vconsole.conf <<'EOF'
+KEYMAP=us
+FONT=ter-v32n
+UNICODE=yes
+EOF
+dracut -f -v
 tee /etc/sysctl.d/99-disable-ipv6.conf <<'EOF'
 net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
 net.ipv6.conf.lo.disable_ipv6 = 1
 EOF
+
 
 ################################################################################
 # Modules
@@ -253,9 +278,11 @@ services_to_enable=(
   docker
   chronyd
   NetworkManager
+  systemd-vconsole-setup
 )
 for _service in "${services_to_enable[@]}"; do
   if systemctl list-unit-files | grep -q "^$_service"; then
+    systemctl unmask "$_service"
     systemctl enable "$_service"
     systemctl start "$_service"
     systemctl --no-pager status "$_service"
@@ -277,7 +304,6 @@ services_to_disable=(
   bluetooth
   wpa_supplicant
   speakersafetyd
-  systemd-vconsole-setup
   systemd-resolved
   ModemManager
 )
