@@ -30,7 +30,6 @@ print_stats() {
   local RED='\033[0;31m'
   local GREEN='\033[0;32m'
   local NC='\033[0m'
-  local term_width
   local count=0 key value color
   for item in "${arr[@]}"; do
     case "$item" in
@@ -61,6 +60,8 @@ print_stats() {
   ((count % num_cols != 0)) && printf '\n'
 }
 
+
+term_width="${1:-"$(tput cols 2>/dev/null || echo 60)"}"
 print_stats host_stats "Host" "Metric" 15 2
-printf '%*s\n' "$(tput cols 2>/dev/null || echo 60)" '' | tr ' ' '-'
+printf '%*s\n' "${term_width}" '' | tr ' ' '-'
 print_stats container_stats "Container" "Status" 15 1
