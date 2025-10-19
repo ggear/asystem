@@ -3,7 +3,6 @@
 update_interval=30
 session_name="host_stats_live"
 session_hosts=("macmini-mad" "macmini-max" "macmini-may" "macmini-meg")
-session_stats="/root/install/monitor/latest/monitor.sh"
 
 tmux kill-session -t "${session_name}" 2>/dev/null
 tmux new-session -d -s "${session_name}"
@@ -30,7 +29,7 @@ for ((i = 0; i < ${#session_hosts[@]}; i++)); do
   tmux send-keys -t "${session_name}:0.$i" \
     "while true; do
        clear
-       ssh -4 -t '${session_host}' '${session_stats}' 2>/dev/null
+       ssh -4 -t '${session_host}' 'asystem-top' 2>/dev/null
        sleep ${update_interval}
        tmux select-pane -T '${session_host}'
      done" C-m
