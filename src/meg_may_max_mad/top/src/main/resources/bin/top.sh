@@ -5,7 +5,7 @@ mapfile -t host_stats < <(
     mem_total=$(awk '/MemTotal/ {print $2}' /proc/meminfo)
     mem_percent=$(awk "BEGIN {printf \"%.1f\", ($mem_total-$mem)/$mem_total*100}")
     disk_used=$(df / | awk 'NR==2 {printf "%.1f", 100-$4/$2*100}')
-    cpu=$(mpstat 1 2 | awk '/Average/ {printf "%.1f", 100 - $12}')
+    cpu=$(mpstat 1 1 | awk '/Average/ {printf "%.1f", 100 - $12}')
     swap_total=$(awk '/SwapTotal/ {print $2}' /proc/meminfo)
     swap_percent=$(awk "BEGIN {printf \"%.1f\", ($swap_total-$swap)/$swap_total*100}")
     max_temp=$(sensors | awk '/^Core/ {gsub(/\+/,""); gsub(/°C/,""); print $3}' | sort -nr | head -n1)

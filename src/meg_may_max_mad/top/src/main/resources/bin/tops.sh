@@ -28,10 +28,7 @@ for ((i = 0; i < ${#session_hosts[@]}; i++)); do
   tmux select-pane -T "${session_host}"
   tmux send-keys -t "${session_name}:0.$i" \
     "while true; do
-       clear
-       ssh -4 -t '${session_host}' 'asystem-top' 2>/dev/null
-       sleep ${update_interval}
-       tmux select-pane -T '${session_host}'
+       ssh -4 -t '${session_host}' 'clear; asystem-top; sleep ${update_interval};' 2>/dev/null
      done" C-m
 done
 

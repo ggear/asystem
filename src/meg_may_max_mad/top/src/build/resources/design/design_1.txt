@@ -1,0 +1,11 @@
+Down Tme       3.0%           Used Mem       39.5%
+Temp Max       44.4%          Used Swp       0.1%
+Used CPU       4.3%           Used Dsk       42.8%
+--------------------------------------------------------------
+monitor        Up 10 minutes (healthy)
+homeassistant  Up 2 days (healthy)
+nginx          Up 3 days (unhealthy)
+postgres       Up 3 days
+internet       Up 3 days
+vernemq        Up 3 days (healthy)
+mariadb        Up 3 days
