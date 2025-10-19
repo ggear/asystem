@@ -61,7 +61,7 @@ chmod +x /usr/local/bin/other-transcode
 mkdir -p /root/.config
 cp -rvf /var/lib/asystem/install/media/latest/.gspread_pandas /root/.config/gspread_pandas
 
-chmod +x bin/*.sh bin/lib/*.sh
+chmod +x /var/lib/asystem/install/media/latest/bin/*.sh /var/lib/asystem/install/media/latest/bin/lib/*.sh
 for SCRIPT in /var/lib/asystem/install/media/latest/bin/*.sh; do
   rm -rf /usr/local/bin/asystem-$(basename "${SCRIPT}" .sh)
   ln -vs "${SCRIPT}" /usr/local/bin/asystem-$(basename "${SCRIPT}" .sh)
