@@ -21,7 +21,6 @@ mapfile -t host_stats < <(
 )
 mapfile -t container_stats < <(docker ps --format "{{.Names}}\t{{.Status}}")
 
-# Optimise for tput cols=64, tput lines=10
 print_stats() {
   local -n arr=$1
   local heading1=$2
