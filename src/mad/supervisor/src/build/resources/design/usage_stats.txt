@@ -1,0 +1,17 @@
+Usage:
+  supervisor stats [OPTIONS]
+
+Description:
+  Show real-time system statistics
+
+Options:
+  -m, --mode string         Method to retrieve stats:
+                              'poll'      – Poll system for stats (default)
+                              'cache'     – Query stats from cache, if unavailable, poll for system stats
+  -f, --format string       Display format based on console width:
+                              'auto'      - Uses console width to determine the largest format possible (default)
+                              'compact'   – For consoles <64 chars wide
+                              'relaxed'   – For consoles <129 chars wide
+  -p, --poll-period string  Polling interval takes unit suffixes [s, m, h] (ignored in cache mode, default: "1s")
+  -n, --no-stream           Disable continuous streaming, show only the first result and exit
+  -h, --help                Display this help message and exit
