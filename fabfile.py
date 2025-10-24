@@ -544,7 +544,7 @@ docker rm -vf "$CONTAINER_NAME"
                     get_docker_image_metadata(docker_compose_path, compose_image_regexs, docker_version_env)
             docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "0a", "0b", "b1"]
             if all(key in docker_image_metadata for key in
-                        ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
+                   ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
                     and not docker_image_metadata["skipped"]:
                 docker_image_tags_command = "regctl -v error tag ls {}/{}" \
                     .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
@@ -651,6 +651,11 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
 
         if isfile(join(ROOT_MODULE_DIR, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
+
+
+
+
+        # TODO: Provide implementation
         if isdir(join(ROOT_MODULE_DIR, module, "src/main/go/pkg")):
             _run_local(context, "[ ! -d ${GOPATH} ] && mkdir -vp ${GOPATH}/{bin,src,pkg} || true")
             _run_local(context, "go mod tidy", join(module, "src/main/go/pkg"))
@@ -666,6 +671,12 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
         if isdir(join(ROOT_MODULE_DIR, module, "src/test/go/system")):
             _run_local(context, "go mod tidy", join(module, "src/test/go/system"))
             _run_local(context, "go mod download", join(module, "src/test/go/system"))
+
+
+
+
+
+
         cargo_file = join(ROOT_MODULE_DIR, module, "Cargo.toml")
         if isfile(cargo_file):
             _run_local(context, "mkdir -p target/package && cp -rvfp Cargo.toml target/package",
