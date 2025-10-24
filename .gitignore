@@ -26,6 +26,7 @@
 .cache
 .local
 .conda
+.pyenv
 .ipython
 .bash_history
 .oracle_jre_usage

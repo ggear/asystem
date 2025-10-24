@@ -5,5 +5,5 @@ Description:
   Run the supervisor process to retrieve and publish stats from the system and perform supervisory duties
 
 Options:
-  -p, --poll-period string  Polling interval (default: "30s")
+  -p, --poll-period string  Polling interval, uses unit suffixes [s, m, h] (default: "1s")
   -h, --help                Display this help message and exit

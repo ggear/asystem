@@ -43,14 +43,17 @@ alias dns-cache-flush="sudo dscacheutil -flushcache; sudo killall -HUP mDNSRespo
 alias ssh-copy-id="sshcopyid_func"
 function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh; cat >>.ssh/authorized_keys'; }
 
-export PYTHON_HOME="${HOME}/.conda/envs/python3"
+export PATH="/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 
-export CARGO_HOME="${HOME}/.cargo"
+export PYENV_ROOT="${HOME}/.pyenv"
+export PYTHON_HOME="${PYENV_ROOT}/versions/$(pyenv version --bare)"
 
-export GOROOT="${HOME}/.conda/envs/go"
+export GOENV_ROOT="${HOME}/.goenv"
+export GOROOT="${GOENV_ROOT}/versions/$(goenv version-name)"
 export GOPATH="${HOME}/.go"
+export GOBIN="${HOME}/.go/bin"
 
-export PATH=${GOROOT}/bin:${CARGO_HOME}/bin:${PYTHON_HOME}/bin:/Library/Conda/anaconda3/bin:/opt/homebrew/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+export PATH="${PYTHON_HOME}/bin:${GOPATH}/bin:${GOROOT}/bin:${PATH}"
 
 EOF
 cat <<'EOF' >/var/root/.profile
@@ -91,3 +94,37 @@ cat <<EOF >"/Users/graham/Library/Application Support/Sublime Text/Packages/User
 	{ "keys": ["alt+a"], "command": "replace_all", "args": {"close_panel": true}, "context": [{"key": "panel", "operand": "replace"}, {"key": "panel_has_focus"}] },
 ]
 EOF
+
+################################################################################
+# Python
+################################################################################
+PYENV_ROOT="${HOME}/.pyenv"
+PYTHON_VERSION_LATEST=$(pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' ')
+for env in $(pyenv versions --bare); do pyenv uninstall -f "$env"; done
+for venv in $(pyenv virtualenvs --bare); do pyenv virtualenv-delete -f "$venv"; done
+pyenv install -sv "${PYTHON_VERSION_LATEST}"
+PYTHON_HOME="${PYENV_ROOT}/versions/${PYTHON_VERSION_LATEST}"
+"${PYTHON_HOME}/bin/pip" install --upgrade \
+  pip \
+  fabric \
+  docker \
+  varsubst \
+  requests \
+  pathlib2 \
+  packaging
+pyenv global "${PYTHON_VERSION_LATEST}"
+pyenv versions
+pyenv virtualenvs
+echo "$("${PYTHON_HOME}/bin/python" --version) installed"
+
+################################################################################
+# Go
+################################################################################
+GOENV_ROOT="${HOME}/.goenv"
+GO_VERSION_LATEST=$(goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' ')
+for env in $(goenv versions --bare); do goenv uninstall -f "$env"; done
+goenv install -sv "${GO_VERSION_LATEST}"
+GOROOT="${GOENV_ROOT}/versions/${GO_VERSION_LATEST}"
+goenv global "${GO_VERSION_LATEST}"
+goenv versions
+echo "$("${GOROOT}/bin/go" version) installed"

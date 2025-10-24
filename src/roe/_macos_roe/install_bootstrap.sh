@@ -53,7 +53,7 @@
 # Keybaord functions keys
 
 ################################################################################
-# Install Apps
+# Apps
 ################################################################################
 # Install Calca from App Store
 # Install Infuse from App Store
@@ -74,7 +74,7 @@
 # Remove all unnecessary apps using Clean My Mac
 
 ################################################################################
-# Sublime Settings
+# Sublime
 ################################################################################
 cat <<EOF >"/Users/graham/Library/Application Support/Sublime Text/Packages/User/Preferences.sublime-settings"
 // Settings in here override those in "Default/Preferences.sublime-settings",
@@ -93,13 +93,21 @@ cat <<EOF >"/Users/graham/Library/Application Support/Sublime Text/Packages/User
 EOF
 
 ################################################################################
-# Init Environment
+# Shell
+################################################################################
+chsh -s /bin/bash
+
+################################################################################
+# SSH
 ################################################################################
 sudo passwd root
 sudo sed -i '' 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 vi /Users/graham/.ssh/.password
 chmod 600 /Users/graham/.ssh/.password
-chsh -s /bin/bash
+
+################################################################################
+# Git
+################################################################################
 git config --global credential.helper osxkeychain
 git config --global user.name "Graham Gear"
 git config --global user.email graham.gear@nowhere.org

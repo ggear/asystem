@@ -2,7 +2,6 @@
 # Fabric management script, to be invoked by fab command
 ###############################################################################
 
-import collections
 import glob
 import math
 import os
@@ -12,11 +11,10 @@ import sys
 import time
 from os.path import *
 from typing import Any, Dict, Optional
-
+import packaging.version
 import varsubst
 import varsubst.resolvers
 from fabric import task
-from packaging import version
 from pathlib2 import Path
 from varsubst.resolvers import BaseResolver
 
@@ -130,17 +128,22 @@ def _setup(context):
         _get_versions()[1],
         _get_versions()[0])
     )
-    pull_conda = True
-    for environment in ["python", "go", "rust"]:
-        if len(_run_local(context, "conda env list | grep ${}_HOME || true".format(
-                environment.upper()), hide='out').stdout) == 0:
-            if pull_conda:
-                pull_conda = False
-                _print_header("asystem", "pull conda")
-                _run_local(context, "conda update -y --all")
-                _print_footer("asystem", "pull conda")
-            _run_local(context, "conda create -y -n asystem-{} -c conda-forge {}=${}_VERSION"
-                       .format(environment, environment, environment.upper()))
+    _run_local(context, 'pyenv install -sv "${PYTHON_VERSION}";'
+                        'pyenv virtualenv "${PYTHON_VERSION}" asystem;'
+                        '"${PYENV_ROOT}/versions/asystem/bin/pip" install --upgrade pip;'
+                        'echo "Installed python at [${PYENV_ROOT}/versions/asystem]"')
+    if _run_local(context,
+                  '[[ "$(python --version)" == "Python ${PYTHON_VERSION}" ]]'
+                  ' && echo true || echo false',
+                  hide='out').stdout.strip() != 'true':
+        raise Exception("Could not install python")
+    _run_local(context, 'goenv install -sv "${GO_VERSION}";'
+                        'echo "Installed go at [${GOROOT}]"')
+    if _run_local(context,
+                  '[[ "$(go version)" == *"go${GO_VERSION}"* ]]'
+                  ' && echo true || echo false',
+                  hide='out').stdout.strip() != 'true':
+        raise Exception("Could not install go")
     _print_footer("asystem", "setup")
 
 
@@ -153,14 +156,10 @@ def _purge(context):
                "[ $(docker images -a -q | wc -l) -gt 0 ] && "
                "docker rmi -f $(docker images -a -q)", warn=True)
     _run_local(context, "docker system prune --volumes -f")
-    for environment in ["python", "go", "rust"]:
-        if len(_run_local(context,
-                          "conda env list | grep ${}_HOME || true".format(
-                              environment.upper()), hide='out').stdout) > 0:
-            _run_local(context, "conda remove -y -n asystem-{} --all".format(environment))
-            _run_local(context,
-                       "chmod -R 777 ${}_HOME 2>/dev/null && rm -rvf ${}_HOME || true".format(
-                           environment.upper(), environment.upper()))
+    _run_local(context, 'pyenv virtualenv-delete -f asystem || true')
+    _run_local(context, 'for env in $(pyenv versions --bare); do '
+                        '[[ "$(pyenv version --bare)" != "$env" ]] && pyenv uninstall -f "$env" || true; done')
+    _run_local(context, 'for env in $(goenv versions --bare); do goenv uninstall -f "$env"; done')
     _print_footer("asystem", "purge")
 
 
@@ -171,6 +170,7 @@ def _backup(context):
                         "-not -path './.git*' "
                         "-not -path './.deps*' "
                         "-not -path './.idea*' "
+                        "-not -path './.pyenv*' "
                         "-type f -print0 | "
                         "git check-ignore --stdin -z | tr '\\0' '\\n' "
                         "> /Users/graham/Backup/asystem/.gitexternal", ROOT_DIR)
@@ -541,7 +541,7 @@ docker rm -vf "$CONTAINER_NAME"
             elif exists(docker_compose_path):
                 docker_image_metadata = \
                     get_docker_image_metadata(docker_compose_path, compose_image_regexs, docker_version_env)
-            docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "0a", "0b"]
+            docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "0a", "0b", "b1"]
             if docker_image_metadata is not None and \
                     all(key in docker_image_metadata for key in
                         ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
@@ -561,9 +561,10 @@ docker rm -vf "$CONTAINER_NAME"
                             docker_image_version_match = \
                                 re.match(docker_image_metadata["version_regex"], docker_image_version)
                             if docker_image_version_match is not None and \
-                                    version.parse(docker_image_version_match.groups()[0]) >= \
-                                    version.parse(re.match(docker_image_metadata["version_regex"], \
-                                                           docker_image_metadata["version_upstream"]).groups()[0]):
+                                    packaging.version.parse(docker_image_version_match.groups()[0]) >= \
+                                    packaging.version.parse(re.match(docker_image_metadata["version_regex"], \
+                                                                     docker_image_metadata[
+                                                                         "version_upstream"]).groups()[0]):
                                 docker_image_metadata["version_upstream"] = docker_image_version
                 if "version_upstream" in docker_image_metadata:
                     version_type = 0 \
@@ -587,18 +588,20 @@ docker rm -vf "$CONTAINER_NAME"
                     version_messages["error"].append(version_formats[2].format(
                         module + ":" + docker_image_metadata["repository"],
                         "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
-        for stack in ["python", "go", "rust"]:
-            stack_version_installed = GLOBAL_ENV["{}_VERSION".format(stack.upper())]
-            stack_version_upstream = _run_local(context, "conda search --json '{}>={}' | jq -r .{}[-1].version"
-                                                .format(stack, stack_version_installed, stack),
-                                                module, hide='out').stdout.strip()
-            if stack_version_upstream != stack_version_installed:
+        for lang, version in {
+            "python": r"pyenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' '",
+            "go": r"goenv install --list | grep -E '^[[:space:]]*[0-9]+\.[0-9]+\.[1-9][0-9]*$' | tail -1 | tr -d ' '",
+            # "rust": r"curl -s https://api.github.com/repos/rust-lang/rust/releases | jq -r '.[] | "\(.published_at) \(.tag_name)"' | grep -E '^202[0-9]' | sort -r | awk '{print $2}'",
+        }.items():
+            lang_version_installed = GLOBAL_ENV["{}_VERSION".format(lang.upper())]
+            lang_version_upstream = _run_local(context, version, module, hide='out').stdout.strip()
+            if lang_version_upstream != lang_version_installed:
                 version_messages["to update"].append(version_formats[1].format(
-                    "*/{}".format(stack), stack_version_installed,
-                    stack_version_upstream))
+                    "*/{}".format(lang), lang_version_installed,
+                    lang_version_upstream))
             else:
                 version_messages["up to date"].append(version_formats[0].format(
-                    "*/{}".format(stack), stack_version_installed))
+                    "*/{}".format(lang), lang_version_installed))
         version_types.insert(1, "pinned")
         version_messages["pinned"] = []
         for message in version_messages["to update"]:
