@@ -305,6 +305,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
     ]
 
     def get_docker_image_metadata(config_path, config_regexs, config_env):
+        docker_image_metadata_dict = {}
         with (open(config_path, 'r') as config_file):
             for config_line in config_file:
                 for config_regex in config_regexs:
@@ -333,6 +334,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                         docker_image_metadata_dict["version_regex"] = config_version_regex
                                         break
                         return docker_image_metadata_dict
+            return docker_image_metadata_dict
 
     version_messages = {type: [] for type in version_types}
     module_generate_stdout = {}
@@ -371,8 +373,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         elif exists(docker_compose_path):
             docker_image_metadata = get_docker_image_metadata(
                 docker_compose_path, compose_image_regexs, docker_version_env)
-        if docker_image_metadata is not None and "repository" in docker_image_metadata and \
-                "version_current" in docker_image_metadata:
+        if "repository" in docker_image_metadata and "version_current" in docker_image_metadata:
             docker_deps_script_path = join(ROOT_MODULE_DIR, module, "docker_deps.sh")
             docker_image = "{}{}:{}".format(
                 (docker_image_metadata["namespace"] + "/") \
@@ -542,8 +543,7 @@ docker rm -vf "$CONTAINER_NAME"
                 docker_image_metadata = \
                     get_docker_image_metadata(docker_compose_path, compose_image_regexs, docker_version_env)
             docker_image_version_ignores = ["windows", "alpha", "beta", "rc", "0a", "0b", "b1"]
-            if docker_image_metadata is not None and \
-                    all(key in docker_image_metadata for key in
+            if all(key in docker_image_metadata for key in
                         ["namespace", "repository", "version_current", "version_regex", "skipped"]) \
                     and not docker_image_metadata["skipped"]:
                 docker_image_tags_command = "regctl -v error tag ls {}/{}" \
@@ -757,10 +757,10 @@ def _execute(context):
         _up_module(context, module, up_this=False)
         _print_header(module, "execute")
 
-        def server_stop(signal, frame):
+        def _server_stop(_signal, _frame):
             _down_module(context, module)
 
-        signal.signal(signal.SIGINT, server_stop)
+        signal.signal(signal.SIGINT, _server_stop)
         run_dev_path = join(ROOT_MODULE_DIR, module, "run_dev.sh")
         if isfile(run_dev_path):
             _run_local(context, "run_dev.sh", module)
@@ -931,7 +931,7 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
                               glob.glob("{}/{}/{}*".format(ROOT_MODULE_DIR, module, filter_path))]
     else:
         for module_path in glob.glob("{}/{}".format(ROOT_MODULE_DIR, filter_module)):
-            if isdir(module_path) and (filter_path is None or \
+            if isdir(module_path) and (filter_path is None or
                                        glob.glob("{}/{}".format(module_path, filter_path))):
                 working_modules.append(module_path.replace(ROOT_MODULE_DIR + "/", ""))
     grouped_modules = {}
@@ -939,8 +939,8 @@ def _get_modules(context, filter_path=None, filter_module=None, filter_changes=T
         group_path = Path(join(ROOT_MODULE_DIR, module, ".group"))
         group = int(group_path.read_text().strip()) if group_path.exists() else -1
         if not filter_groups or (
-                (FAB_SKIP_GROUP_BELOW not in os.environ or int(os.environ[FAB_SKIP_GROUP_BELOW]) > group) and \
-                (FAB_SKIP_GROUP_ABOVE not in os.environ or int(os.environ[FAB_SKIP_GROUP_ABOVE]) < group) and \
+                (FAB_SKIP_GROUP_BELOW not in os.environ or int(os.environ[FAB_SKIP_GROUP_BELOW]) > group) and
+                (FAB_SKIP_GROUP_ABOVE not in os.environ or int(os.environ[FAB_SKIP_GROUP_ABOVE]) < group) and
                 (FAB_SKIP_HOST_ALLBUT not in os.environ or os.environ[FAB_SKIP_HOST_ALLBUT] in _get_host_labels(module))
         ):
             if group not in grouped_modules:
@@ -1043,7 +1043,7 @@ def _write_env(context, module, working_path=".", filter_host=None, is_release=F
             elif host_ip == "127.0.1.1":
                 host_ip = "10.0.0.1"
             else:
-                "10.0.2." + host_ip.split('.')[3]
+                host_ip = "10.0.2." + host_ip.split('.')[3]
             host_ips_prod.append(host_ip)
         host_ip_prod = ",".join(host_ips_prod)
         host_name_prod = ",".join(host_names_prod)
