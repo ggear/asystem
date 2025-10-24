@@ -494,10 +494,6 @@ sensor.dish_washer_power:
   friendly_name: 'Dish Washer'
   icon: 'mdi:home-lightning-bolt'
   unit_of_measurement: 'W'
-sensor.kitchen_fridge_power:
-  friendly_name: 'Kitchen Fridge'
-  icon: 'mdi:home-lightning-bolt'
-  unit_of_measurement: 'W'
 sensor.deck_freezer_power:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:home-lightning-bolt'
@@ -552,10 +548,6 @@ sensor.water_booster_energy_daily:
   unit_of_measurement: 'kWh'
 sensor.dish_washer_energy_daily:
   friendly_name: 'Dish Washer'
-  icon: 'mdi:battery-charging'
-  unit_of_measurement: 'kWh'
-sensor.kitchen_fridge_energy_daily:
-  friendly_name: 'Kitchen Fridge'
   icon: 'mdi:battery-charging'
   unit_of_measurement: 'kWh'
 sensor.deck_freezer_energy_daily:
@@ -676,14 +668,6 @@ sensor.rack_bottom_temperature:
   unit_of_measurement: '°C'
 sensor.compensation_sensor_rack_bottom_temperature:
   friendly_name: 'Rack Bottom'
-  icon: 'mdi:thermometer'
-  unit_of_measurement: '°C'
-sensor.host_mad_temperature:
-  friendly_name: 'Mac Mini Mad'
-  icon: 'mdi:thermometer'
-  unit_of_measurement: '°C'
-sensor.compensation_sensor_host_mad_temperature:
-  friendly_name: 'Mac Mini Mad'
   icon: 'mdi:thermometer'
   unit_of_measurement: '°C'
 sensor.host_max_temperature:

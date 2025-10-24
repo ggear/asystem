@@ -58,9 +58,6 @@
     - entity: sensor.dish_washer_power
       name: Dish Washer
       icon: mdi:home-lightning-bolt
-    - entity: sensor.kitchen_fridge_power
-      name: Kitchen Fridge
-      icon: mdi:home-lightning-bolt
     - entity: sensor.deck_freezer_power
       name: Deck Freezer
       icon: mdi:home-lightning-bolt
@@ -132,9 +129,6 @@
       icon: mdi:battery-charging
     - entity: sensor.dish_washer_energy_daily
       name: Dish Washer
-      icon: mdi:battery-charging
-    - entity: sensor.kitchen_fridge_energy_daily
-      name: Kitchen Fridge
       icon: mdi:battery-charging
     - entity: sensor.deck_freezer_energy_daily
       name: Deck Freezer
