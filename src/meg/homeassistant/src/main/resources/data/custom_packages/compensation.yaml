@@ -139,16 +139,16 @@ compensation:
       - [ 8.4, 8.7 ]
       - [ 17.6, 18 ]
   #####################################################################################
-  compensation_sensor_host_may_temperature:
-    unique_id: compensation_sensor_host_may_temperature
+  compensation_sensor_host_mad_temperature:
+    unique_id: compensation_sensor_host_mad_temperature
     source: sensor.host_mad_temperature
     precision: 1
     data_points:
       - [ 1, 1 ]
       - [ 2, 2 ]
   #####################################################################################
-  compensation_sensor_host_may_temperature:
-    unique_id: compensation_sensor_host_may_temperature
+  compensation_sensor_host_max_temperature:
+    unique_id: compensation_sensor_host_max_temperature
     source: sensor.host_max_temperature
     precision: 1
     data_points:
