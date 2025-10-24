@@ -131,14 +131,14 @@ def _setup(context):
     _run_local(context, 'pyenv install -sv "${PYTHON_VERSION}";'
                         'pyenv virtualenv "${PYTHON_VERSION}" asystem;'
                         '"${PYENV_ROOT}/versions/asystem/bin/pip" install --upgrade pip;'
-                        'echo "Installed python at [${PYENV_ROOT}/versions/asystem]"')
+                        'echo "Installed python-${PYTHON_VERSION} at [${PYENV_ROOT}/versions/asystem]"')
     if _run_local(context,
                   '[[ "$(python --version)" == "Python ${PYTHON_VERSION}" ]]'
                   ' && echo true || echo false',
                   hide='out').stdout.strip() != 'true':
         raise Exception("Could not install python")
     _run_local(context, 'goenv install -sv "${GO_VERSION}";'
-                        'echo "Installed go at [${GOROOT}]"')
+                        'echo "Installed go-${GO_VERSION} at [${GOROOT}]"')
     if _run_local(context,
                   '[[ "$(go version)" == *"go${GO_VERSION}"* ]]'
                   ' && echo true || echo false',
@@ -532,7 +532,7 @@ docker rm -vf "$CONTAINER_NAME"
                         version_messages[version_types[i]].append(version_formats[i] \
                                                                   .format(*match.groupdict().values()))
         for module in _get_modules(context, filter_module=filter_module, filter_changes=filter_changes):
-            docker_image_metadata = None
+            docker_image_metadata = {}
             docker_file_path = join(ROOT_MODULE_DIR, module, "Dockerfile")
             docker_compose_path = join(ROOT_MODULE_DIR, module, "docker-compose.yml")
             if exists(docker_file_path):
@@ -562,7 +562,7 @@ docker rm -vf "$CONTAINER_NAME"
                                 re.match(docker_image_metadata["version_regex"], docker_image_version)
                             if docker_image_version_match is not None and \
                                     packaging.version.parse(docker_image_version_match.groups()[0]) >= \
-                                    packaging.version.parse(re.match(docker_image_metadata["version_regex"], \
+                                    packaging.version.parse(re.match(docker_image_metadata["version_regex"],
                                                                      docker_image_metadata[
                                                                          "version_upstream"]).groups()[0]):
                                 docker_image_metadata["version_upstream"] = docker_image_version
