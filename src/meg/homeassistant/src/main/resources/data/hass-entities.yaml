@@ -257,6 +257,10 @@ sensor.compensation_sensor_rack_top_temperature:
   name: Rack Temperature
   aliases: ['Temperature']
   room: Rack
+sensor.compensation_sensor_rack_bottom_temperature:
+  name: Rack Temperature
+  aliases: ['Temperature']
+  room: Rack
 input_boolean.lighting_reset_adaptive_lighting_ada_lamp:
   name: Ada Lamp Reset
   aliases: ['Lamp Reset']
