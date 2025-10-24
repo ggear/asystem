@@ -115,8 +115,8 @@
     - entity: sensor.compensation_sensor_rack_top_temperature
       name: Rack Top
       icon: mdi:thermometer
-    - entity: sensor.compensation_sensor_rack_bottom_temperature
-      name: Rack Bottom
+    - entity: sensor.compensation_sensor_host_mad_temperature
+      name: Mac Mini Mad
       icon: mdi:thermometer
     - entity: sensor.compensation_sensor_host_max_temperature
       name: Mac Mini Max
