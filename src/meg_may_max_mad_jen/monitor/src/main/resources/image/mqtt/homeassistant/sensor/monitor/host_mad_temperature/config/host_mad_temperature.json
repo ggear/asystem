@@ -8,7 +8,7 @@
   "icon": "mdi:thermometer",
   "force_update": "false",
   "state_topic": "telegraf/macmini-mad/monitor/sensors",
-  "value_template": "{{ ((value_json[\"metrics\"] | selectattr('tags.feature', 'eq', 'composite') | map(attribute='fields.temp_input') | first | default(None) | float) + 10 + (0.2 * 20)) if (value_json['metrics'] is defined) else (states('sensor.host_mad_temperature') | float) }}",
+  "value_template": "{{ ((value_json[\"metrics\"] | selectattr('tags.feature', 'eq', 'composite') | map(attribute='fields.temp_input') | first | default(None) | float) + 7 ) if (value_json['metrics'] is defined) else (states('sensor.host_mad_temperature') | float) }}",
   "qos": "1",
   "device": {
     "via_device": "Monitor",
