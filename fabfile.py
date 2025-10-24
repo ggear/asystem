@@ -364,7 +364,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
         if env_global_key.endswith("_VERSION") or env_global_key.endswith("_LABEL"):
             docker_version_env["ASYSTEM_" + env_global_key] = env_global_value.removeprefix('"').removesuffix('"')
     for module in _get_modules(context, filter_changes=False):
-        docker_image_metadata = None
+        docker_image_metadata = {}
         docker_file_path = join(ROOT_MODULE_DIR, module, "Dockerfile")
         docker_compose_path = join(ROOT_MODULE_DIR, module, "docker-compose.yml")
         if exists(docker_file_path):
