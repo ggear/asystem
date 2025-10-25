@@ -8,7 +8,7 @@ from digitemp.device import TemperatureSensor
 from digitemp.master import UART_Adapter
 
 FILE_SERIAL_DEVICE = "/dev/ttyUSB0"
-FILE_SENSORS = "/asystem/runtime/sensors.json"
+FILE_SENSORS = "/asystem/etc/sensors.json"
 FORMAT_TEMPLATE = "digitemp,metric=temperature{},run_code={} {}run_ms={} {}"
 
 if __name__ == "__main__":
