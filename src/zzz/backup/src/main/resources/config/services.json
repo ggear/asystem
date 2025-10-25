@@ -11,13 +11,13 @@
     "postgres",
     "internet",
     "nginx",
-    "digitemp",
     "monitor"
   ],
   "macmini-max": [
     "mlflow",
     "mlserver",
     "rhasspy",
+    "influxdb3",
     "monitor"
   ],
   "macmini-mad": [
@@ -30,7 +30,7 @@
     "grafana",
     "influxdb",
     "wrangle",
-    "influxdb3",
+    "digitemp",
     "sonarr",
     "unpoller",
     "monitor"

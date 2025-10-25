@@ -2,7 +2,7 @@ ARG ASYSTEM_TELEGRAF_VERSION="latest"
 
 FROM telegraf:${ASYSTEM_TELEGRAF_VERSION} AS image_upstream
 
-# Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
+# DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 ARG ASYSTEM_PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1

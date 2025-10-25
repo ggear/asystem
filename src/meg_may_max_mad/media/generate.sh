@@ -22,7 +22,7 @@ for FILE in "ingress.py" "analyse.py"; do
   cat "${ROOT_DIR}/src/main/python/media/${FILE}" >>"${ROOT_DIR}/src/main/resources/bin/lib/${FILE}"
 done
 
-# Notes: https://github.com/lisamelton/other_video_transcoding/releases
+# NOTES: https://github.com/lisamelton/other_video_transcoding/releases
 VERSION=2025.01.21
 pull_repo "${ROOT_DIR}" "${1}" "media" "other_video_transcoding" "ggear/other_video_transcoding" "ggear-tested" "https://github.com/lisamelton/other_video_transcoding.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/bin/lib/other-transcode.rb"

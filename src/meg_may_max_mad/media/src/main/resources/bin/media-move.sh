@@ -4,7 +4,7 @@ ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 . "${ROOT_DIR}/.env_media"
 
-# Notes: Command line parameter acts as destination share index for "rsync workflow",
+# NOTES: Command line parameter acts as destination share index for "rsync workflow",
 # or destination share scope for "mv workflow", defaulting to below if not passed
 SHARE_INDEX_DESTINATION_DEFAULT="11"
 SHARE_SCOPE_DESTINATION_DEFAULT="parents"

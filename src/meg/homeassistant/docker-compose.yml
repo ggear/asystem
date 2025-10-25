@@ -1,5 +1,5 @@
 x-common: &common
-  # Defined: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
+  # DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
   image: homeassistant/home-assistant:${ASYSTEM_HOMEASSISTANT_VERSION}
   user: root
   environment:

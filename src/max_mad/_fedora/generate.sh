@@ -5,7 +5,7 @@
 
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
-# Notes: https://github.com/pyenv/pyenv/releases
+# NOTES: https://github.com/pyenv/pyenv/releases
 VERSION=v2.6.11
 pull_repo "${ROOT_DIR}" "${1}" "python" "pyenv" "pyenv/pyenv" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/pyenv"

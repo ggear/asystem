@@ -9,11 +9,16 @@ services:
       - VERNEMQ_SERVICE
       - VERNEMQ_API_PORT
     volumes:
-      - ${SERVICE_DATA_DIR}:/asystem/runtime:rw
-      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf:ro
-      - ${SERVICE_DATA_DIR}/checkready.sh:/bootstrap/checkready.sh:ro
+      - ${SERVICE_DATA_DIR}:/asystem/mnt:rw
     devices:
       - /dev/ttyUSBTempProbe:/dev/ttyUSB0:rw
+    healthcheck:
+      test: /asystem/etc/checkready.sh
+      interval: 2m
+      timeout: 10s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     logging:
       driver: "json-file"
       options:

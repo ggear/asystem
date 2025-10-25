@@ -1,6 +1,6 @@
 services:
   nginx:
-    # Notes: https://nginx.org/en/CHANGES
+    # NOTES: https://nginx.org/en/CHANGES
     image: nginx:1.29.2-alpine
     container_name: nginx
     init: true

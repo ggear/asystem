@@ -9,7 +9,7 @@ ENV LANGUAGE=en_AU.UTF-8
 ENV LC_ALL=en_AU.UTF-8
 
 FROM image_base AS image_build
-COPY target/package/main/resources/image /asystem/etc
+COPY target/package/main/resources/image/. /asystem/etc
 
 FROM image_build AS image_runtime
 
