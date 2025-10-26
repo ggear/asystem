@@ -34,7 +34,7 @@ set -eo pipefail
 shopt -s expand_aliases
 
 if
-  OUTPUT="$(telegraf --test 2>/dev/null)" && [ "$(grep -c 'metrics_succeeded=6,metrics_failed=0' <<<"${OUTPUT}")" -eq 1 ] && telegraf --once >/dev/null 2>&1
+  OUTPUT="$(telegraf --test 2>/dev/null)" && [ "$(grep -c 'metrics_failed=0,metrics_succeeded=6' <<<"${OUTPUT}")" -eq 1 ] && telegraf --once >/dev/null 2>&1
 then
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [internet] is ready :)" >&2
   exit 0
