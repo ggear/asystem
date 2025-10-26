@@ -22,8 +22,6 @@ RUN \
     apt-get -y --no-install-recommends --allow-downgrades install libssl-dev=3.0.17-1~deb12u3 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
-COPY src/main/python/. /asystem/bin/python
-COPY target/package/main/resources/image/. /asystem/etc
 
 FROM image_base AS image_build
 RUN \
@@ -38,12 +36,14 @@ RUN \
     cd /root && \
     python3 --version && \
     pip3 --version && \
-    cat /asystem/bin/python/.py_deps.txt | xargs -n 1 pip3 install --default-timeout=1000 && \
     rm -rf /tmp/*
-RUN \
-    cp /asystem/etc/telegraf.conf /etc/telegraf/telegraf.conf
 
 FROM image_build AS image_runtime
+COPY src/main/python/. /asystem/bin/python
+COPY target/package/main/resources/image/. /asystem/etc
+RUN \
+    cp /asystem/etc/telegraf.conf /etc/telegraf/telegraf.conf && \
+    cat /asystem/bin/python/.py_deps.txt | xargs -n 1 pip3 install --default-timeout=1000 && \
 WORKDIR /asystem/etc
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["telegraf"]
