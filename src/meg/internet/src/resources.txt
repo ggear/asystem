@@ -1,2 +1,2 @@
 ../install.sh
-main/resources/config/telegraf.conf
+main/resources/image/telegraf.conf

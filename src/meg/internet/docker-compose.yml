@@ -14,8 +14,14 @@ services:
       - INFLUXDB_BUCKET_HOST_PRIVATE
       - INFLUXDB_TOKEN
     volumes:
-      - ${SERVICE_DATA_DIR}/telegraf.conf:/etc/telegraf/telegraf.conf
-      - ${SERVICE_DATA_DIR}:/asystem/runtime
+      - ${SERVICE_DATA_DIR}:/asystem/mnt:rw
+    healthcheck:
+      test: /asystem/etc/checkready.sh
+      interval: 2m
+      timeout: 30s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     logging:
       driver: "json-file"
       options:

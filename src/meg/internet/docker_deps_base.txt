@@ -1,0 +1,12 @@
+#######################################################################################
+# Container base packages
+#######################################################################################
+bash
+less
+vim
+mosquitto-clients
+build-essential
+libbz2-dev
+libffi-dev
+zlib1g-dev
+libssl-dev

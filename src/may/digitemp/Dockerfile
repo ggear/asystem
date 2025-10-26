@@ -20,6 +20,8 @@ RUN \
 
 FROM image_upstream AS image_base
 ARG ASYSTEM_PYTHON_VERSION
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 RUN \
     cd /tmp && \
     rm -f Python* && \

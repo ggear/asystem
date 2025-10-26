@@ -11,10 +11,10 @@ from unittest.mock import patch, MagicMock
 class InternetTest(unittest.TestCase):
 
     def test_all(self):
-        print("")
         sys.stdout.flush()
         with patch("internet.main.query", MagicMock(return_value=[])):
             self.assertEqual(main.execute(), 0, "Script execution failed with non-zero return")
+        sys.stdout.flush()
 
 
 if __name__ == '__main__':

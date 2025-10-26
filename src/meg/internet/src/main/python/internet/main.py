@@ -5,8 +5,8 @@ import ssl
 import sys
 import time
 import traceback
-from datetime import datetime
-from socket import gethostbyname, gethostname
+from datetime import datetime, timezone
+from socket import gethostbyname
 
 import pytz
 from dateutil.parser import parse
@@ -164,7 +164,7 @@ def upload():
             for network_stat_reply in \
                     query(QUERY_LAST.format(network_stats[network_stat][0], network_stat,
                                             network_stats[network_stat][1])):
-                if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
+                if ((datetime.now(timezone.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
                     throughput_run = False
                     print(FORMAT_TEMPLATE.format(
                         network_stat,
@@ -238,7 +238,7 @@ def download():
             for network_stat_reply in \
                     query(QUERY_LAST.format(network_stats[network_stat][0], network_stat,
                                             network_stats[network_stat][1])):
-                if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
+                if ((datetime.now(timezone.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
                     throughput_run = False
                     print(FORMAT_TEMPLATE.format(
                         network_stat,
@@ -359,7 +359,7 @@ def lookup():
     run_code = RUN_CODE_SUCCESS if (
                 run_reply_count == len(RESOLVER_IPS) + 1 and len(run_replies) == 1) else RUN_CODE_FAIL_NETWORK
     uptime_delta = 0
-    uptime_now = datetime.now(pytz.utc)
+    uptime_now = datetime.now(timezone.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
         uptime_rows = query(QUERY_UPTIME.format("uptime_delta_s", "lookup"))
@@ -407,7 +407,7 @@ def certificate():
         run_code = RUN_CODE_SUCCESS
     uptime_new = 0
     uptime_delta = 0
-    uptime_now = datetime.now(pytz.utc)
+    uptime_now = datetime.now(timezone.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
         uptime_rows = query(QUERY_UPTIME.format("uptime_delta_s", "certificate"))
@@ -452,7 +452,7 @@ def execute():
     run_code_uptime = RUN_CODE_FAIL_CONFIG
     uptime_delta = 0
     uptime_new = None
-    uptime_now = datetime.now(pytz.utc)
+    uptime_now = datetime.now(timezone.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
     try:
         uptime_rows = query(QUERY_UPTIME.format("uptime_s", "network"))
