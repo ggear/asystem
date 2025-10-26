@@ -6,7 +6,7 @@ import sys
 import time
 import traceback
 from datetime import datetime
-from socket import gethostbyname
+from socket import gethostbyname, gethostname
 
 import pytz
 from dateutil.parser import parse
@@ -21,7 +21,7 @@ HOST_NGINX_NAME = "nginx.janeandgraham.com"
 HOST_SPEEDTEST_PING_IDS = []
 HOST_SPEEDTEST_THROUGHPUT_ID = "12494"
 
-RESOLVER_IPS = ["10.0.0.1", "162.159.44.190", "1.1.1.1", "8.8.8.8"]
+RESOLVER_IPS = ["162.159.44.190", "1.1.1.1", "8.8.8.8"]
 
 HOST_INTERNET = "udm-rack"
 HOST_INTERNET_LOCATION = "darlington"
@@ -84,7 +84,8 @@ def med(data):
 
 def query(flux):
     response = post(
-        url="http://{}:{}/api/v2/query?org={}".format(os.environ["INFLUXDB_SERVICE"], os.environ["INFLUXDB_HTTP_PORT"], os.environ["INFLUXDB_ORG"]),
+        url="http://{}:{}/api/v2/query?org={}".format(os.environ["INFLUXDB_SERVICE"], os.environ["INFLUXDB_HTTP_PORT"],
+                                                      os.environ["INFLUXDB_ORG"]),
         headers={
             'Accept': 'application/csv',
             'Content-type': 'application/vnd.flux',
@@ -161,14 +162,16 @@ def upload():
         time_start = time_ms()
         try:
             for network_stat_reply in \
-                    query(QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
+                    query(QUERY_LAST.format(network_stats[network_stat][0], network_stat,
+                                            network_stats[network_stat][1])):
                 if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
                     throughput_run = False
                     print(FORMAT_TEMPLATE.format(
                         network_stat,
                         network_stat_reply[2],
                         RUN_CODE_REPEAT,
-                        network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
+                        network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4],
+                                                              network_stat_reply[1]),
                         time_ms() - time_start,
                         time_ns()))
         except Exception as exception:
@@ -233,14 +236,16 @@ def download():
         time_start = time_ms()
         try:
             for network_stat_reply in \
-                    query(QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
+                    query(QUERY_LAST.format(network_stats[network_stat][0], network_stat,
+                                            network_stats[network_stat][1])):
                 if ((datetime.now(pytz.utc) - network_stat_reply[0]).total_seconds()) < THROUGHPUT_PERIOD_SECONDS:
                     throughput_run = False
                     print(FORMAT_TEMPLATE.format(
                         network_stat,
                         network_stat_reply[2],
                         RUN_CODE_REPEAT,
-                        network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4], network_stat_reply[1]),
+                        network_stats[network_stat][2].format(network_stat_reply[3], network_stat_reply[4],
+                                                              network_stat_reply[1]),
                         time_ms() - time_start,
                         time_ns()))
         except Exception as exception:
@@ -327,7 +332,7 @@ def lookup():
         try:
             home_host_resolver = Resolver()
             home_host_resolver.nameservers = [home_host_resolver_ip]
-            home_host_replies = home_host_resolver.query(HOST_HOME_NAME, lifetime=SERVICE_TIMEOUT_SECONDS)
+            home_host_replies = home_host_resolver.resolve(HOST_HOME_NAME, lifetime=SERVICE_TIMEOUT_SECONDS)
             if home_host_replies is not None and len(home_host_replies) == 1:
                 home_host_reply = home_host_replies[0]
         except Exception as exception:
@@ -347,10 +352,12 @@ def lookup():
                 home_host_resolver_ip,
                 " ip=\"{}\",".format(
                     home_host_reply.address
-                ) if (home_host_reply is not None and home_host_reply.address is not None and home_host_reply.address != "") else " "),
+                ) if (
+                            home_host_reply is not None and home_host_reply.address is not None and home_host_reply.address != "") else " "),
             time_ms() - time_start_iteration,
             time_ns()))
-    run_code = RUN_CODE_SUCCESS if (run_reply_count == len(RESOLVER_IPS) + 1 and len(run_replies) == 1) else RUN_CODE_FAIL_NETWORK
+    run_code = RUN_CODE_SUCCESS if (
+                run_reply_count == len(RESOLVER_IPS) + 1 and len(run_replies) == 1) else RUN_CODE_FAIL_NETWORK
     uptime_delta = 0
     uptime_now = datetime.now(pytz.utc)
     uptime_epoch = int((uptime_now - datetime(1970, 1, 1, tzinfo=pytz.utc)).total_seconds() * 1000000000)
@@ -385,11 +392,13 @@ def certificate():
     run_code = RUN_CODE_FAIL_CONFIG
     home_host_certificate_expiry = None
     try:
-        home_host_connection = ssl.create_default_context().wrap_socket(socket.socket(socket.AF_INET), server_hostname=HOST_NGINX_NAME)
+        home_host_connection = ssl.create_default_context().wrap_socket(socket.socket(socket.AF_INET),
+                                                                        server_hostname=HOST_NGINX_NAME)
         home_host_connection.settimeout(SERVICE_TIMEOUT_SECONDS)
         home_host_connection.connect((HOST_NGINX_NAME, 443))
         home_host_certificate_expiry = \
-            int((datetime.strptime(home_host_connection.getpeercert()['notAfter'], DATE_TLS) - datetime.now()).total_seconds())
+            int((datetime.strptime(home_host_connection.getpeercert()['notAfter'],
+                                   DATE_TLS) - datetime.now()).total_seconds())
     except Exception as exception:
         print("Error processing TLS certificate - ", end="", file=sys.stderr)
         traceback.print_exc(limit=STACKTRACE_REFERENCE_LIMIT)
@@ -479,7 +488,8 @@ def execute():
             time_start = time_ms()
             try:
                 for network_stat_reply in \
-                        query(QUERY_LAST.format(network_stats[network_stat][0], network_stat, network_stats[network_stat][1])):
+                        query(QUERY_LAST.format(network_stats[network_stat][0], network_stat,
+                                                network_stats[network_stat][1])):
                     print(FORMAT_TEMPLATE.format(
                         network_stat,
                         network_stat_reply[2],
