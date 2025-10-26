@@ -584,12 +584,6 @@ sensor.network_certificate_expiry:
   friendly_name: 'Certifcate Expiry'
   icon: 'mdi:cloud-lock'
   unit_of_measurement: 'd'
-sensor.deck_wifi_access_point_experience:
-  friendly_name: 'Deck Access Point'
-  unit_of_measurement: '%'
-sensor.hallway_wifi_access_point_experience:
-  friendly_name: 'Hallway Access Point'
-  unit_of_measurement: '%'
 sensor.template_driveway_repeater_linkquality_percentage:
   friendly_name: 'Driveway Repeater'
 sensor.template_landing_repeater_linkquality_percentage:

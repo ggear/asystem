@@ -18,14 +18,6 @@
       icon: mdi:cloud-lock
 ################################################################################
 - type: entities
-  title: WiFI Link Quality
-  entities:
-    - entity: sensor.deck_wifi_access_point_experience
-      name: Deck Access Point
-    - entity: sensor.hallway_wifi_access_point_experience
-      name: Hallway Access Point
-################################################################################
-- type: entities
   title: Zigbee Link Quality
   entities:
     - entity: sensor.template_driveway_repeater_linkquality_percentage
