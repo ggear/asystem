@@ -36,9 +36,11 @@ shopt -s expand_aliases
 if
   [ $(ps aux | grep weewxd | grep python | grep -v grep | wc -l) -eq 1 ]
 then
+  set +o
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [weewx] is alive :)" >&2
   exit 0
 else
+  set +o
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [weewx] is *NOT* alive :(" >&2
   exit 1
 fi

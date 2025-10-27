@@ -424,9 +424,11 @@ shopt -s expand_aliases
 if
   {}
 then
+  set +o
   [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "✅ The service [{}] is {} :)" >&2
   exit 0
 else
+  set +o
   [ "${{HEALTHCHECK_VERBOSE}}" == true ] && echo "❌ The service [{}] is *NOT* {} :(" >&2
   exit 1
 fi
