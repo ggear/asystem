@@ -1,1 +1,1 @@
-/asystem/etc/checkready.sh
+/asystem/etc/checkready.sh "${POSITIONAL_ARGS[@]}"

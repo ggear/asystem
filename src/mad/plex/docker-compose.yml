@@ -19,6 +19,7 @@ services:
       - ${PLEX_SHARE_DIR}:/share
     ports:
       - ${PLEX_HTTP_PORT}:${PLEX_HTTP_PORT}
+    network_mode: host
     healthcheck:
       test: /asystem/etc/checkhealthy.sh
       interval: 2m
