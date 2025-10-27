@@ -129,7 +129,7 @@ def _setup(context):
         _get_versions()[0])
     )
     _run_local(context, 'pyenv install -sv "${PYTHON_VERSION}";'
-                        'pyenv virtualenv "${PYTHON_VERSION}" asystem;'
+                        'pyenv virtualenv "${PYTHON_VERSION}" asystem 2>/dev/null;'
                         '"${PYENV_ROOT}/versions/asystem/bin/pip" install --upgrade pip;'
                         'echo "Installed python-${PYTHON_VERSION} at [${PYENV_ROOT}/versions/asystem]"')
     if _run_local(context,
