@@ -9,6 +9,7 @@ while [[ $# -gt 0 ]]; do
   case $1 in
   -v | --verbose)
     HEALTHCHECK_VERBOSE=true
+    POSITIONAL_ARGS+=("$1")
     shift
     ;;
   -h | --help | -*)
@@ -21,7 +22,6 @@ while [[ $# -gt 0 ]]; do
     ;;
   esac
 done
-set -- "${POSITIONAL_ARGS[@]}"
 
 if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
   alias curl="curl -f --connect-timeout 2 --max-time 2"
@@ -34,7 +34,7 @@ set -eo pipefail
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkready.sh
+  /asystem/etc/checkready.sh "${POSITIONAL_ARGS[@]}" && [ "$(jq -r '."current.outTemp"? | sub("°C";"")' "/data/html/loopdata/loop-data.txt" | awk '{print ($1>-25 && $1<60)?"true":"false"}')" = "true" ]
 then
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [weewx] is healthy :)" >&2
   exit 0

@@ -373,12 +373,15 @@ def write_healthcheck(module_name=None, working_dir=None):
     if working_dir is None:
         working_dir = join(root_dir, "src/main/resources/image")
     os.makedirs(working_dir, exist_ok=True)
-    for script in ["alive", "ready", "healthy"]:
+    for script, source in {
+        "alive": "true",
+        "ready": "/asystem/etc/checkalive.sh \"${POSITIONAL_ARGS[@]}\" && \n  true",
+        "healthy": "/asystem/etc/checkready.sh \"${POSITIONAL_ARGS[@]}\" && \n  true",
+    }.items():
         script_source_path = join(root_dir, "src/build/resources/check{}.sh".format(script))
         if not isfile(script_source_path):
             os.makedirs(os.path.dirname(script_source_path), exist_ok=True)
-            Path(script_source_path).write_text(
-                "/asystem/etc/checkready.sh\n" if script == "healthy" else "true\n# TODO: Provide implementation\n")
+            Path(script_source_path).write_text(source + "\n# TODO: Provide implementation\n")
         script_source = " ".join([line.strip() for line in Path(script_source_path).read_text().strip().split("\n")])
         script_path = abspath(join(working_dir, "check{}.sh".format(script)))
         with open(script_path, 'w') as script_file:
@@ -394,6 +397,7 @@ while [[ $# -gt 0 ]]; do
   case $1 in
   -v | --verbose)
     HEALTHCHECK_VERBOSE=true
+    POSITIONAL_ARGS+=("$1")
     shift
     ;;
   -h | --help | -*)
@@ -406,7 +410,6 @@ while [[ $# -gt 0 ]]; do
     ;;
   esac
 done
-set -- "${{POSITIONAL_ARGS[@]}}"
 
 if [ "${{HEALTHCHECK_VERBOSE}}" == true ]; then
   alias curl="curl -f --connect-timeout 2 --max-time 2"

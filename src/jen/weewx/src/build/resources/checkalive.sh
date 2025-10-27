@@ -1,1 +1,1 @@
-  [ -f "/data/html/loopdata/loop-data.txt" ]
+[ $(ps aux | grep weewxd | grep python | grep -v grep) -eq 1 ]
