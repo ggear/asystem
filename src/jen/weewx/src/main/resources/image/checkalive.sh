@@ -34,7 +34,7 @@ set -eo pipefail
 shopt -s expand_aliases
 
 if
-  [ $(ps aux | grep weewxd | grep python | grep -v grep) -eq 1 ]
+  [ $(ps aux | grep weewxd | grep python | grep -v grep | wc -l) -eq 1 ]
 then
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [weewx] is alive :)" >&2
   exit 0
