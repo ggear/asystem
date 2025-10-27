@@ -25,7 +25,7 @@ done
 
 if [ "${HEALTHCHECK_VERBOSE}" == true ]; then
   alias curl="curl -f --connect-timeout 2 --max-time 2"
-  set -o xtrace
+  set -x
 else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
@@ -36,11 +36,11 @@ shopt -s expand_aliases
 if
   [ $(ps aux | grep weewxd | grep python | grep -v grep | wc -l) -eq 1 ]
 then
-  set +o
+  set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [weewx] is alive :)" >&2
   exit 0
 else
-  set +o
+  set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [weewx] is *NOT* alive :(" >&2
   exit 1
 fi
