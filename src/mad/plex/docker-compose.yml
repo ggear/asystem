@@ -19,10 +19,10 @@ services:
       - ${PLEX_SHARE_DIR}:/share
     ports:
       - ${PLEX_HTTP_PORT}:${PLEX_HTTP_PORT}
-      - "32469:32469/tcp"     # Plex Companion
-      - "1900:1900/udp"       # DLNA
-      - "5353:5353/udp"       # Bonjour/mDNS
-      - "32410-32414:32410-32414/udp" # Additional discovery
+      - 32469:32469
+      - 1900:1900
+      - 5353:5353
+      - 32410-32414:32410-32414
     healthcheck:
       test: /asystem/etc/checkhealthy.sh
       interval: 2m
