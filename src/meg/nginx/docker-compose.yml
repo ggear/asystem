@@ -17,7 +17,7 @@ services:
       - ${SERVICE_DATA_DIR}/html:/usr/share/nginx/html
       - ${SERVICE_DATA_DIR}/checkready.sh:/asystem/etc/checkready.sh
     healthcheck:
-      test: /asystem/etc/checkready.sh
+      test: /asystem/etc/checkhealthy.sh
       interval: 2m
       timeout: 30s
       retries: 3

@@ -12,20 +12,20 @@ ENV PYTHONDONTWRITEBYTECODE=1
 #FROM image_upstream AS image_base
 #USER root
 #RUN apt-get update && \
-#    apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install build-essential=12.9 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install poppler-utils=22.12.0-2+b1 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install libc6-dev=2.36-9+deb12u9 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install zlib1g-dev=1:1.2.13.dfsg-1 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install libssl-dev=3.0.15-1~deb12u1 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install libbz2-dev=1.0.8-5+b1 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install libffi-dev=3.4.4-1 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install liblzma-dev=5.4.1-0.2 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install libsqlite3-dev=3.40.1-2+deb12u1 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install libreadline-dev=8.2-1.3 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install libncurses5-dev=6.4-4 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install libncursesw5-dev=6.4-4 && \
-#    apt-get -y --no-install-recommends --allow-downgrades install libpoppler-cpp-dev=22.12.0-2+b1 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install build-essential=12.9 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install poppler-utils=22.12.0-2+b1 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libc6-dev=2.36-9+deb12u9 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install zlib1g-dev=1:1.2.13.dfsg-1 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libssl-dev=3.0.15-1~deb12u1 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libbz2-dev=1.0.8-5+b1 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libffi-dev=3.4.4-1 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install liblzma-dev=5.4.1-0.2 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libsqlite3-dev=3.40.1-2+deb12u1 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libreadline-dev=8.2-1.3 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libncurses5-dev=6.4-4 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libncursesw5-dev=6.4-4 && \
+#    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install libpoppler-cpp-dev=22.12.0-2+b1 && \
 #    apt-get clean
 #
 #FROM image_base AS image_build

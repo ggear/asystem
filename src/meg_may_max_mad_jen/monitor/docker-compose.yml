@@ -25,7 +25,7 @@ services:
       - /run/utmp:/hostfs/var/run/utmp:ro
       - /var/run/docker.sock:/var/run/docker.sock
     healthcheck:
-      test: /asystem/etc/checkready.sh
+      test: /asystem/etc/checkhealthy.sh
       interval: 2m
       timeout: 30s
       retries: 3

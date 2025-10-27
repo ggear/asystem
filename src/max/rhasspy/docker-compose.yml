@@ -36,7 +36,7 @@ services:
       - "--hass-token"
       - "${HOMEASSISTANT_API_TOKEN}"
     healthcheck:
-      test: /asystem/etc/checkready.sh
+      test: /asystem/etc/checkhealthy.sh
       interval: 2m
       timeout: 30s
       retries: 3

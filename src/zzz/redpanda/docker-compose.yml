@@ -1,7 +1,7 @@
 services:
   redpanda:
     # https://github.com/redpanda-data/redpanda/releases
-    image: redpandadata/redpanda:v25.2.9
+    image: redpandadata/redpanda:v25.2.10
     container_name: redpanda
     init: true
     restart: ${SERVICE_RESTART}

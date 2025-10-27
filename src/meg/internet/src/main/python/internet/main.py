@@ -111,7 +111,7 @@ def ping():
                 speedtest = Speedtest()
                 try:
                     speedtest.get_servers([host_speedtest_id])
-                except Exception:
+                except Exception as exception:
                     pass
                 host_speedtest = speedtest.best
                 speedtest_results = speedtest.results.dict()

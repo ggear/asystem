@@ -27,7 +27,7 @@ services:
     ports:
       - ${ZIGBEE2MQTT_HTTP_PORT}:${ZIGBEE2MQTT_HTTP_PORT}
     healthcheck:
-      test: /asystem/etc/checkready.sh
+      test: /asystem/etc/checkhealthy.sh
       interval: 2m
       timeout: 30s
       retries: 3

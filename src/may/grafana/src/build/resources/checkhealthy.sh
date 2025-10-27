@@ -1,0 +1,1 @@
+/asystem/etc/checkready.sh

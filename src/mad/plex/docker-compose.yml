@@ -17,9 +17,10 @@ services:
       - ${SERVICE_DATA_DIR}/config:/config
       - ${SERVICE_DATA_DIR}/transcode:/transcode
       - ${PLEX_SHARE_DIR}:/share
-    network_mode: host
+    ports:
+      - ${PLEX_HTTP_PORT}:${PLEX_HTTP_PORT}
     healthcheck:
-      test: /asystem/etc/checkready.sh
+      test: /asystem/etc/checkhealthy.sh
       interval: 2m
       timeout: 30s
       retries: 3
