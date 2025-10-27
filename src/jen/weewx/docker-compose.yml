@@ -8,6 +8,8 @@ services:
       - TZ=Australia/Perth
       - WEEWX_UID=weewx
       - WEEWX_GID=dialout
+      - WEEWX_SERVICE
+      - WEEWX_HTTP_PORT
       - MARIADB_SERVICE
       - MARIADB_USER_WEEWX
       - MARIADB_DATABASE_WEEWX

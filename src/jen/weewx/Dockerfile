@@ -25,7 +25,6 @@ RUN set -eux; \
 FROM image_base AS image_build
 COPY src/main/python/. /asystem/bin/python
 COPY target/package/main/resources/image/. /asystem/etc
-ENV WEEWX_HOME="/home/weewx"
 RUN set -eux; \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt; \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir /asystem/etc/install/weewx*.whl; \
@@ -43,5 +42,6 @@ RUN set -eux; \
     ln -s /data/html /var/www/html
 
 FROM image_build AS image_runtime
+ENV WEEWX_HOME="/home/weewx"
 WORKDIR /asystem/etc
 ENTRYPOINT ["/asystem/etc/entrypoint.sh"]
