@@ -18,7 +18,6 @@ FROM image_upstream AS image_base
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 RUN set -eux; \
-    python3 -m ensurepip 2> /dev/null; \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade pip; \
     pip3 cache purge
 
@@ -26,7 +25,7 @@ FROM image_base AS image_build
 COPY src/main/python/. /asystem/bin/python
 COPY target/package/main/resources/image/. /asystem/etc
 RUN set -eux; \
-    pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade -r /asystem/bin/python/.py_deps.txt; \
+    if [ -f /asystem/bin/python/.py_deps.txt ]; then pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir -r /asystem/bin/python/.py_deps.txt; fi; \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir /asystem/etc/install/weewx*.whl; \
     pip3 cache purge; \
     mkdir -p /etc/weewx; \

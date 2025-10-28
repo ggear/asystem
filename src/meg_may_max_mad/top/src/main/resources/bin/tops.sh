@@ -1,5 +1,24 @@
 #!/bin/bash
 
+# Create a 2x3 pane session
+#tmux kill-session -t mysession
+#tmux new-session -d -s mysession \
+#  \; split-window -h -p 66 \
+#  \; split-window -h -p 50 \
+#  \; split-window -v -p 50 \
+#  \; select-pane -t 1 \
+#  \; split-window -v -p 50 \
+#  \; select-pane -t 2 \
+#  \; split-window -v -p 50 \
+#  \; select-layout tiled
+#tmux send-keys -t mysession:0.0 'tput lines; tput cols' C-m
+#tmux send-keys -t mysession:0.1 'tput lines; tput cols' C-m
+#tmux send-keys -t mysession:0.2 'tput lines; tput cols' C-m
+#tmux send-keys -t mysession:0.3 'tput lines; tput cols' C-m
+#tmux send-keys -t mysession:0.4 'tput lines; tput cols' C-m
+#tmux send-keys -t mysession:0.5 'tput lines; tput cols' C-m
+#tmux attach-session -t mysession
+
 update_interval=30
 session_name="host_stats_live"
 session_hosts=("macmini-mad" "macmini-max" "macmini-may" "macmini-meg")
