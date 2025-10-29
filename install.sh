@@ -54,10 +54,10 @@ if [ -f "docker-compose.yml" ]; then
     [ ${service_healthy} -eq 0 ] && echo "✅ Service is healthy" || echo "❌ Service is unhealthy"
   fi
   if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
-    echo && echo "Service failed to start" && echo "" && exit 1
+    echo && echo "❌ Service failed to start" && echo "" && exit 1
   else
     docker system prune --volumes -f -a 2>&1 >/dev/null
-    echo "Service started successfully" && echo "----------"
+    echo "✅ Service started successfully" && echo "----------"
   fi
 fi
 [ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh || true
