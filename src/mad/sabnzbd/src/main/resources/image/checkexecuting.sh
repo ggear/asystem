@@ -31,13 +31,13 @@ else
 fi
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ "$(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null)" == '{"state":"online"}' ] && [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} -t 'zigbee/bridge/groups' -W 1 2>/dev/null | jq length 2>/dev/null) -gt 0 ] && [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} -t 'zigbee/bridge/devices' -W 1 2>/dev/null | jq length 2>/dev/null) -gt 0 ]
+  READY="$(curl "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" && [ "$(jq -er '.status.paused' <<<"${READY}")" == "false" ] && [ "$(jq -er '[.status.servers[].servertotalconn] | add' <<<"${READY}")" -gt 0 ]
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [zigbee2mqtt] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sabnzbd] is executing :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [zigbee2mqtt] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [sabnzbd] is *NOT* executing :(" >&2
   exit 1
 fi

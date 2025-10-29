@@ -14,7 +14,9 @@ services:
     volumes:
       - ${SERVICE_DATA_DIR}/letsencrypt:/etc/letsencrypt
       - ${SERVICE_DATA_DIR}/dnsrobocert:/etc/dnsrobocert
-      - ${SERVICE_DATA_DIR}/checkready.sh:/asystem/etc/checkready.sh
+      - ${SERVICE_DATA_DIR}/checkalive.sh:/asystem/etc/checkalive.sh
+      - ${SERVICE_DATA_DIR}/checkexecuting.sh:/asystem/etc/checkexecuting.sh
+      - ${SERVICE_DATA_DIR}/checkhealthy.sh:/asystem/etc/checkhealthy.sh
     healthcheck:
       test: /asystem/etc/checkhealthy.sh
       interval: 2m

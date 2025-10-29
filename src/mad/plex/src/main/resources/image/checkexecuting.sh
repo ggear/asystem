@@ -30,17 +30,14 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
-  [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ] && [ $(grep ERROR /etc/letsencrypt/logs/letsencrypt.log | wc -l) -eq 0 ] && [ $((($(date +%s) - $(stat /etc/letsencrypt/logs/letsencrypt.log -c %Y)) / 3600)) -le 25 ]
+  [ $(curl -sf "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity" | xq -e '/MediaContainer/@claimed') == "1" ] && [ $(find /share -mindepth 1 -maxdepth 1 | wc -l) -eq $(find /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l) ]
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [letsencrypt] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [plex] is executing :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [letsencrypt] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [plex] is *NOT* executing :(" >&2
   exit 1
 fi

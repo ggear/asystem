@@ -30,17 +30,14 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
-  [ "$(jq -er .model_version /train/en_US-rhasspy/training_info.json 2>/dev/null)" == "1.0" ]
+  true # TODO: Provide implementation
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [rhasspy] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [nginx] is executing :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [rhasspy] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [nginx] is *NOT* executing :(" >&2
   exit 1
 fi

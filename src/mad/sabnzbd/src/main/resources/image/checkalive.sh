@@ -30,9 +30,6 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
   [ "$(curl "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0" | jq -er '.pid')" -gt 0 ]
 then

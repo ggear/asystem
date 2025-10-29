@@ -30,17 +30,14 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
-  [ "$(curl "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" == "OK" ] # TODO: Provide implementation that reflects on models being served
+  [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ] && [ $(grep ERROR /etc/letsencrypt/logs/letsencrypt.log | wc -l) -eq 0 ] && [ $((($(date +%s) - $(stat /etc/letsencrypt/logs/letsencrypt.log -c %Y)) / 3600)) -le 25 ]
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [mlflow] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [letsencrypt] is executing :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [mlflow] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [letsencrypt] is *NOT* executing :(" >&2
   exit 1
 fi

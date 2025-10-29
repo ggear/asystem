@@ -31,13 +31,13 @@ else
 fi
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ -f "/data/html/loopdata/loop-data.txt" ] && [ $(($(date +%s) - $(stat -c %Y "/data/html/loopdata/loop-data.txt"))) -le 5 ] && [ $(($(date +%s) - $(jq -r '."current.dateTime.raw"' "/data/html/loopdata/loop-data.txt"))) -le 5 ]
+  [ "$(curl -H "Authorization: Bearer ${HOMEASSISTANT_API_TOKEN}" -H "Content-Type: application/json" "http://${HOMEASSISTANT_SERVICE}:${HOMEASSISTANT_HTTP_PORT}/api/states/input_boolean.home_started" | jq -er .state)" == "on" ]
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [weewx] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [homeassistant] is executing :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [weewx] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [homeassistant] is *NOT* executing :(" >&2
   exit 1
 fi

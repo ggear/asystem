@@ -30,17 +30,14 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
-  true # TODO: Provide implementation
+  [ "$(curl -X GET http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/health  -H "X-Api-Key: ${SONARR_API_KEY}" | jq 'length == 0')" == "true" ]
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [nginx] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sonarr] is executing :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [nginx] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [sonarr] is *NOT* executing :(" >&2
   exit 1
 fi

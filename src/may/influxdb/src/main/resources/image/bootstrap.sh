@@ -106,9 +106,9 @@ echo "--------------------------------------------------------------------------
 
 set +eo pipefail
 
-MESSAGE="Waiting for service to become ready ..."
+MESSAGE="Waiting for service to start executing ..."
 echo "${MESSAGE}"
-while ! "${ASYSTEM_HOME}/checkready.sh"; do
+while ! "${ASYSTEM_HOME}/checkexecuting.sh"; do
   echo "${MESSAGE}" && sleep 1
 done
 echo "----------" && echo "✅ Service has started"

@@ -352,9 +352,9 @@ echo "--------------------------------------------------------------------------
 
 set +eo pipefail
 
-MESSAGE="Waiting for service to become ready ..."
+MESSAGE="Waiting for service to start executing ..."
 echo "${{MESSAGE}}"
-while ! "${{ASYSTEM_HOME}}/checkready.sh"; do
+while ! "${{ASYSTEM_HOME}}/checkexecuting.sh"; do
   echo "${{MESSAGE}}" && sleep 1
 done
 echo "----------" && echo "✅ Service has started"
@@ -375,8 +375,8 @@ def write_healthcheck(module_name=None, working_dir=None):
     os.makedirs(working_dir, exist_ok=True)
     for script, source in {
         "alive": "true",
-        "ready": "/asystem/etc/checkalive.sh \"${POSITIONAL_ARGS[@]}\" && \n  true",
-        "healthy": "/asystem/etc/checkready.sh \"${POSITIONAL_ARGS[@]}\" && \n  true",
+        "executing": "/asystem/etc/checkalive.sh \"${POSITIONAL_ARGS[@]}\" && \n  true",
+        "healthy": "/asystem/etc/checkexecuting.sh \"${POSITIONAL_ARGS[@]}\" && \n  true",
     }.items():
         script_source_path = join(root_dir, "src/build/resources/check{}.sh".format(script))
         if not isfile(script_source_path):

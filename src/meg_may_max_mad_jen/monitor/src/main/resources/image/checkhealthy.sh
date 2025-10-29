@@ -30,11 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
-  /asystem/etc/checkready.sh "${POSITIONAL_ARGS[@]}"
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && telegraf --once >/dev/null 2>&1
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [monitor] is healthy :)" >&2

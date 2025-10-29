@@ -30,17 +30,14 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
   [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_DATA_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOST_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PUBLIC}" --token "${INFLUXDB3_TOKEN_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_DATA_PUBLIC}" --token "${INFLUXDB3_TOKEN_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PRIVATE}" --token "${INFLUXDB3_TOKEN_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOST_PRIVATE}" --token "${INFLUXDB3_TOKEN_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ]
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [influxdb3] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [influxdb3] is executing :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [influxdb3] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [influxdb3] is *NOT* executing :(" >&2
   exit 1
 fi

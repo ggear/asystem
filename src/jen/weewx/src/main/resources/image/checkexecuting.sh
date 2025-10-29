@@ -30,17 +30,14 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
-  READY="$(curl "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0")" && [ "$(jq -er '.status.paused' <<<"${READY}")" == "false" ] && [ "$(jq -er '[.status.servers[].servertotalconn] | add' <<<"${READY}")" -gt 0 ]
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ -f "/data/html/loopdata/loop-data.txt" ] && [ $(($(date +%s) - $(stat -c %Y "/data/html/loopdata/loop-data.txt"))) -le 5 ] && [ $(($(date +%s) - $(jq -r '."current.dateTime.raw"' "/data/html/loopdata/loop-data.txt"))) -le 5 ]
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sabnzbd] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [weewx] is executing :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [sabnzbd] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [weewx] is *NOT* executing :(" >&2
   exit 1
 fi

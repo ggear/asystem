@@ -30,9 +30,6 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
   [ "$(pidof telegraf)" != "" ]
 then

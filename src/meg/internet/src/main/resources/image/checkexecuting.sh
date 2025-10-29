@@ -30,17 +30,14 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
-  OUTPUT="$(telegraf --test 2>/dev/null)" && [ "$(grep -c 'metrics_failed=0,metrics_succeeded=3' <<<"${OUTPUT}")" -eq 1 ] && telegraf --once >/dev/null 2>&1
+  OUTPUT="$(telegraf --test 2>/dev/null)" && [ "$(grep -c 'metrics_failed=0,metrics_succeeded=6' <<<"${OUTPUT}")" -eq 1 ] && telegraf --once >/dev/null 2>&1
 then
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [digitemp] is ready :)" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [internet] is executing :)" >&2
   exit 0
 else
   set +x
-  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [digitemp] is *NOT* ready :(" >&2
+  [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "❌ The service [internet] is *NOT* executing :(" >&2
   exit 1
 fi
