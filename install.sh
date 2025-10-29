@@ -29,7 +29,6 @@ if [ ! -d "$SERVICE_HOME" ]; then
   fi
   rm -rf $SERVICE_HOME_OLDEST
 fi
-
 [ "$(ls -A data | wc -l)" -gt 0 ] && cp -rfpv $(find data -mindepth 1 -maxdepth 1) "${SERVICE_HOME}"
 rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
 touch .env
@@ -50,8 +49,9 @@ if [ -f "docker-compose.yml" ]; then
       echo "Waiting for service to start executing ... " && sleep 1
     done
     echo && echo "Waiting to check service health ... " && echo
-    docker exec "${SERVICE_NAME}" /asystem/etc/checkhealthy.sh -v
+    docker exec -i "${SERVICE_NAME}" bash -c '/asystem/etc/checkhealthy.sh -v | stdbuf -oL'
     echo && echo
+    sleep 1
   else
     echo && echo "❌ Service does not have health scripts defined" && echo "" && exit 1
   fi
