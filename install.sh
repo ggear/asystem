@@ -42,16 +42,13 @@ if [ -f "docker-compose.yml" ]; then
     docker logs "${SERVICE_NAME}_bootstrap" -f
   fi
   echo "----------" && docker ps -f name="${SERVICE_NAME}" && echo "----------"
-  if find "${SERVICE_INSTALL}" -name checkexecuting.sh -quit | grep -q . && find "${SERVICE_INSTALL}" -name checkhealthy.sh -quit | grep -q .; then
+  if find "${SERVICE_INSTALL}" -name checkexecuting.sh | grep -q . && find "${SERVICE_INSTALL}" -name checkhealthy.sh | grep -q .; then
     echo
     while ! docker exec "${SERVICE_NAME}" /asystem/etc/checkexecuting.sh; do
       echo "Waiting for service to start executing ... " && sleep 1
     done
     echo && echo "Checking service health ... " && echo
     docker exec "${SERVICE_NAME}" /asystem/etc/checkhealthy.sh -v
-    service_healthy=$?
-    sleep 1 && echo
-    [ ${service_healthy} -eq 0 ] && echo "✅ Service is healthy" || echo "❌ Service is unhealthy"
   fi
   if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
     echo && echo "❌ Service failed to start" && echo "" && exit 1
