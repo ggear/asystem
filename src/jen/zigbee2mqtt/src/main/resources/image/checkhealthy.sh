@@ -30,11 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
-set -eo pipefail
-shopt -s expand_aliases
-
 if
-  /asystem/etc/checkready.sh "${POSITIONAL_ARGS[@]}"
+  /asystem/etc/checkready.sh "${POSITIONAL_ARGS[@]}" && last=$(mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/Deck Fans Outlet' -W 1 2>/dev/null | jq -r '.last_seen // empty' | sed 's/T/ /; s/+.*//') && [ -n "$last" ] && [ $(($(date +%s) - $(date -d "$last" +%s))) -lt 900 ] && last=$(mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/Edwin Wardrobe Outlet' -W 1 2>/dev/null | jq -r '.last_seen // empty' | sed 's/T/ /; s/+.*//') && [ -n "$last" ] && [ $(($(date +%s) - $(date -d "$last" +%s))) -lt 900 ] && last=$(mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/Kitchen Fan Outlet' -W 1 2>/dev/null | jq -r '.last_seen // empty' | sed 's/T/ /; s/+.*//') && [ -n "$last" ] && [ $(($(date +%s) - $(date -d "$last" +%s))) -lt 900 ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [zigbee2mqtt] is healthy :)" >&2
