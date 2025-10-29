@@ -31,7 +31,7 @@ else
 fi
 
 if
-  [ $(curl -sf "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity" | xq -e '/MediaContainer/@version') != "" ]
+  curl -sf "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity" | grep -q "machineIdentifier"
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [plex] is alive :)" >&2
