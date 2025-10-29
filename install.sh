@@ -47,8 +47,9 @@ if [ -f "docker-compose.yml" ]; then
     while ! docker exec "${SERVICE_NAME}" /asystem/etc/checkexecuting.sh; do
       echo "Waiting for service to start executing ... " && sleep 1
     done
-    echo && echo "Checking service health ... " && echo
+    echo && echo "Waiting to check service health ... " && echo
     docker exec "${SERVICE_NAME}" /asystem/etc/checkhealthy.sh -v
+    echo && echo
   fi
   if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
     echo && echo "❌ Service failed to start" && echo "" && exit 1
