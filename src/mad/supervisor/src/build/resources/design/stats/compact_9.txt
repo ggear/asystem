@@ -7,7 +7,7 @@ SERVICE     CPU  RAM BKP HLT  SERVICE     CPU  RAM BKP HLT
 monitor    100% 100%  ✔   ✔   alongishn~ 100% 100%  ✔   ✔
 homeassi~   10%  10%  ✔   ✖   ashortern~  10%  10%  ✖   ✖
 nginx      100% 100%  ✖   ✔   shortname  100% 100%  ✔   ✔
-veryreal~    0%  10%  ✔   ✔   ~~~~~~~~~~    ~    ~  ~   ~
+averyrea~    0%  10%  ✔   ✔   ~~~~~~~~~~    ~    ~  ~   ~
 
 
 
