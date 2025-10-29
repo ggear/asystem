@@ -148,7 +148,11 @@ find /backup -mindepth 1 -maxdepth 1 -type d -empty -delete
 for _dir in $(grep -v '^#' /etc/fstab | grep '/share\\|/backup' | awk '{print $2}'); do
   if ls "${_dir}" 2>&1 | grep -q "Stale file handle"; then
     while mount | grep -q "${_dir}"; do umount -f "${_dir}"; done
+    
+    echo 
     echo rm -rf "${_dir}"
+    echo 
+
   fi
   mkdir -p "${_dir}"
   chmod 750 "${_dir}"
