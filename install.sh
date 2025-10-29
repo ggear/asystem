@@ -41,7 +41,9 @@ if [ -f "docker-compose.yml" ]; then
     sleep 1
     docker logs "${SERVICE_NAME}_bootstrap" -f
   fi
-  echo "----------" && docker ps -f name="${SERVICE_NAME}" && echo "----------"
+  echo "--------------------------------------------------------------------------------"
+  docker ps -f name="${SERVICE_NAME}"
+  echo "--------------------------------------------------------------------------------"
   if find "${SERVICE_INSTALL}" -name checkexecuting.sh | grep -q . && find "${SERVICE_INSTALL}" -name checkhealthy.sh | grep -q .; then
     echo
     while ! docker exec "${SERVICE_NAME}" /asystem/etc/checkexecuting.sh; do
@@ -50,12 +52,20 @@ if [ -f "docker-compose.yml" ]; then
     echo && echo "Waiting to check service health ... " && echo
     docker exec "${SERVICE_NAME}" /asystem/etc/checkhealthy.sh -v
     echo && echo
+  else
+    echo && echo "❌ Service does not have health scripts defined" && echo "" && exit 1
   fi
+  echo "--------------------------------------------------------------------------------"
+  docker ps -f name="${SERVICE_NAME}"
+  echo "--------------------------------------------------------------------------------"
+  docker logs "${SERVICE_NAME}"
+  echo "--------------------------------------------------------------------------------"
   if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
     echo && echo "❌ Service failed to start" && echo "" && exit 1
   else
     docker system prune --volumes -f -a 2>&1 >/dev/null
-    echo "✅ Service started successfully" && echo "----------"
+    echo "✅ Service started successfully"
+    echo "--------------------------------------------------------------------------------"
   fi
 fi
 [ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh || true
