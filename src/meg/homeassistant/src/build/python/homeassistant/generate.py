@@ -149,6 +149,7 @@ for _dir in $(grep -v '^#' /etc/fstab | grep '/share\\|/backup' | awk '{print $2
   
   echo
   echo $_dir
+  ls -la /share
   ls "${_dir}" 2>&1 | grep -q "Stale file handle"
   echo
   
