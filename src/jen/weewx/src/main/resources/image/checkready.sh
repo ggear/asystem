@@ -31,7 +31,7 @@ else
 fi
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ -f "/data/html/loopdata/loop-data.txt" ] && [ $(($(date +%s) - $(stat "/data/html/loopdata/loop-data.txt" -c %Y))) -le 2 ] && [ $(($(date +%s) - $(jq -r '."current.dateTime.raw"' "/data/html/loopdata/loop-data.txt"))) -le 2 ]
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ -f "/data/html/loopdata/loop-data.txt" ] && [ $(($(date +%s) - $(stat -c %Y "/data/html/loopdata/loop-data.txt"))) -le 5 ] && [ $(($(date +%s) - $(jq -r '."current.dateTime.raw"' "/data/html/loopdata/loop-data.txt"))) -le 5 ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [weewx] is ready :)" >&2
