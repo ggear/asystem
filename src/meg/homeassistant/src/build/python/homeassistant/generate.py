@@ -146,6 +146,13 @@ for _dir in $(mount | grep '/share\\|/backup' | awk '{print $3}'); do umount -f 
 find /share -mindepth 1 -maxdepth 1 -type d -empty -delete
 find /backup -mindepth 1 -maxdepth 1 -type d -empty -delete
 for _dir in $(grep -v '^#' /etc/fstab | grep '/share\\|/backup' | awk '{print $2}'); do
+  
+  echo
+  echo $_dir
+  ls "${_dir}" 2>&1 | grep -q "Stale file handle"
+  echo
+  
+  
   if ls "${_dir}" 2>&1 | grep -q "Stale file handle"; then
     while mount | grep -q "${_dir}"; do umount -f "${_dir}"; done
     
