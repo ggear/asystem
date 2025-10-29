@@ -1,1 +1,1 @@
-[ $(ps aux | grep tini | grep /app/index.js | grep -v grep | wc -l) -gt 0 ]
+[ "$(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null)" == '{"state":"online"}' ]
