@@ -20,5 +20,5 @@ if [ $(uname) == "Linux" ]; then
 fi
 find "${WORKING_DIR}" -type f -name nohup -exec rm -f {} \;
 find "${WORKING_DIR}" -type f -name .DS_Store -exec rm -f {} \;
-find "${WORKING_DIR}" -type f -regex '.*/\..*\.[A-Za-z0-9]\{6\}$' -exec rm -f {} \;
+find "${WORKING_DIR}" -type f -regextype posix-extended -regex '.*/\.[^/]*\.[A-Za-z0-9]{6}$' -exec rm -f {} \;
 echo "done"

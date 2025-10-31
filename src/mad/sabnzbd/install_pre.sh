@@ -2,6 +2,8 @@
 
 . ./.env
 
+# TODO: Check share mounted, if not attempt mount. if not failed, write a place holder, check placeholder in health
+
 for DIR in "enqueued" "finished" "reencoding" "staging"; do
   mkdir -p "${SABNZBD_SHARE_DIR}/$DIR"
 done
