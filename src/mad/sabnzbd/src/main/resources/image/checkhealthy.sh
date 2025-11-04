@@ -31,7 +31,7 @@ else
 fi
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}"
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && true  # TODO: Check file added to   /downloads
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sabnzbd] is healthy :)" >&2

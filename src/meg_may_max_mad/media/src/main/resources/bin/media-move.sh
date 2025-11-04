@@ -50,7 +50,7 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
             target_file="${share_type_dest}/${file#${share_type_dir}/}"
             mv -v "${source_file}" "${target_file}"
           done
-          find "${share_current_dir}" -mindepth 1 -type d -empty -delete
+          find "${share_current_dir}/.." -type d -empty -delete
         fi
       done
     fi

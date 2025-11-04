@@ -73,14 +73,18 @@ STOCK = OrderedDict([
     ('GOLD', {"start": "2008-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('VAS', {"start": "2010-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('VHY', {"start": "2011-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('MVW', {"start": "2014-06", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('VGS', {"start": "2014-12", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('VGE', {"start": "2014-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('NDQ', {"start": "2015-06", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('VAE', {"start": "2016-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('VDHG', {"start": "2018-01", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('IAF', {"start": "2012-04", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('ACDC', {"start": "2018-09", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('CLNE', {"start": "2021-04", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('ERTH', {"start": "2021-04", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('QSML', {"start": "2021-05", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
+    ('GAME', {"start": "2022-05", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
     ('URNM', {"start": "2022-07", "end of day": "16:00", "prefix": "", "exchange": "AX", }),
 ])
 
