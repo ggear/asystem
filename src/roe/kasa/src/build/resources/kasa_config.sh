@@ -52,10 +52,10 @@ else
 	echo '' && echo 'Skipping config for device [garden_sewerage_blower_plug] at [http://10.0.4.87/?] given it is unresponsive'
 fi
 if netcat -zw 1 10.0.4.93 9999 2>/dev/null; then
-	echo '' && echo 'Processing config for device [rack_backup_plug] at [10.0.4.93] ... '
-	kasa --host 10.0.4.93 --type plug alias 'Rack Backup Plug'
+	echo '' && echo 'Processing config for device [rack_printer_plug] at [10.0.4.93] ... '
+	kasa --host 10.0.4.93 --type plug alias 'Rack Printer Plug'
 	kasa --host 10.0.4.93 --type plug led 'True'
 else
-	echo '' && echo 'Skipping config for device [rack_backup_plug] at [http://10.0.4.93/?] given it is unresponsive'
+	echo '' && echo 'Skipping config for device [rack_printer_plug] at [http://10.0.4.93/?] given it is unresponsive'
 fi
 echo ''

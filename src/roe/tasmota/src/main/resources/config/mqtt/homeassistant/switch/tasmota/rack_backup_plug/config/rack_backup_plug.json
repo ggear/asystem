@@ -1,0 +1,33 @@
+{
+  "object_id": "rack_backup_plug",
+  "unique_id": "rack_backup_plug",
+  "name": "Rack Backup Plug",
+  "icon": "mdi:tape-drive",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/rack_backup_plug/stat/POWER",
+  "value_template": "{{ value }}",
+  "command_topic": "tasmota/device/rack_backup_plug/cmnd/POWER",
+  "availability_topic": "tasmota/device/rack_backup_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.4.110/?",
+    "identifiers": "sonoff-rack-backup",
+    "name": "Rack Backup",
+    "model": "BASICR2",
+    "manufacturer": "SONOFF",
+    "sw_version": "13.0.0",
+    "suggested_area": "Rack",
+    "connections": [
+      [
+        "ip",
+        "10.0.4.110"
+      ]
+    ]
+  }
+}

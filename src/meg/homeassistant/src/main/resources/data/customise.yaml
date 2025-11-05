@@ -762,9 +762,9 @@ sensor.rack_outlet_plug_energy_power:
 sensor.rack_outlet_plug_energy_total:
   friendly_name: 'Server Rack'
   unit_of_measurement: 'kWh'
-switch.rack_backup_plug:
-  friendly_name: 'Server Backup'
-  icon: 'mdi:server'
+switch.rack_printer_plug:
+  friendly_name: 'Printer'
+  icon: 'mdi:printer'
 switch.ceiling_network_switch_plug:
   friendly_name: 'Ceiling Network Devices'
   icon: 'mdi:server-network'
@@ -774,7 +774,13 @@ sensor.ceiling_network_switch_plug_energy_power:
 sensor.ceiling_network_switch_plug_energy_total:
   friendly_name: 'Ceiling Network Devices'
   unit_of_measurement: 'kWh'
-fan.rack_fans_plug:
+switch.rack_backup_plug:
+  friendly_name: 'Rack Backup'
+  icon: 'mdi:tape-drive'
+switch.rack_screen_plug:
+  friendly_name: 'Rack Screen'
+  icon: 'mdi:monitor'
+switch.rack_fans_plug:
   friendly_name: 'Rack Fans'
   icon: 'mdi:server-remove'
 switch.garden_sewerage_blower_plug:
@@ -1035,6 +1041,38 @@ sensor.landing_festoons_plug_energy_monthly:
 sensor.landing_festoons_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
+sensor.rack_backup_plug_power:
+  friendly_name: 'Current Power'
+sensor.rack_backup_plug_energy:
+  friendly_name: 'Total Energy'
+sensor.rack_backup_plug_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.rack_backup_plug_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.rack_backup_plug_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.rack_backup_plug_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
+sensor.rack_screen_plug_power:
+  friendly_name: 'Current Power'
+sensor.rack_screen_plug_energy:
+  friendly_name: 'Total Energy'
+sensor.rack_screen_plug_energy_daily:
+  friendly_name: 'Total Energy Daily'
+  icon: 'mdi:counter'
+sensor.rack_screen_plug_energy_weekly:
+  friendly_name: 'Total Energy Hept-Daily'
+  icon: 'mdi:counter'
+sensor.rack_screen_plug_energy_monthly:
+  friendly_name: 'Total Energy Monthly'
+  icon: 'mdi:counter'
+sensor.rack_screen_plug_energy_yearly:
+  friendly_name: 'Total Energy Yearly'
+  icon: 'mdi:counter'
 sensor.rack_fans_plug_power:
   friendly_name: 'Current Power'
 sensor.rack_fans_plug_energy:
@@ -1201,29 +1239,29 @@ sensor.server_jen_plug_energy_monthly:
 sensor.server_jen_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.rack_backup_plug_current:
+sensor.rack_printer_plug_current:
   friendly_name: 'Current Amperage'
-sensor.rack_backup_plug_voltage:
+sensor.rack_printer_plug_voltage:
   friendly_name: 'Current Voltage'
-sensor.rack_backup_plug_current_consumption:
+sensor.rack_printer_plug_current_consumption:
   friendly_name: 'Current Power'
-sensor.rack_backup_plug_energy:
+sensor.rack_printer_plug_energy:
   friendly_name: 'Total Energy'
-sensor.rack_backup_plug_total_consumption:
+sensor.rack_printer_plug_total_consumption:
   friendly_name: 'Total Energy (Plug)'
-sensor.rack_backup_plug_today_s_consumption:
+sensor.rack_printer_plug_today_s_consumption:
   friendly_name: 'Total Energy Daily (Plug)'
   icon: 'mdi:counter'
-sensor.rack_backup_plug_energy_daily:
+sensor.rack_printer_plug_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.rack_backup_plug_energy_weekly:
+sensor.rack_printer_plug_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.rack_backup_plug_energy_monthly:
+sensor.rack_printer_plug_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.rack_backup_plug_energy_yearly:
+sensor.rack_printer_plug_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.garden_sewerage_blower_plug_current:
@@ -2286,20 +2324,20 @@ sensor.template_rack_outlet_plug_proxy_energy_monthly:
 sensor.template_rack_outlet_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
-sensor.template_rack_backup_plug_proxy_power:
+sensor.template_rack_printer_plug_proxy_power:
   friendly_name: 'Current Power'
-sensor.template_rack_backup_plug_proxy_energy:
+sensor.template_rack_printer_plug_proxy_energy:
   friendly_name: 'Total Energy'
-sensor.template_rack_backup_plug_proxy_energy_daily:
+sensor.template_rack_printer_plug_proxy_energy_daily:
   friendly_name: 'Total Energy Daily'
   icon: 'mdi:counter'
-sensor.template_rack_backup_plug_proxy_energy_weekly:
+sensor.template_rack_printer_plug_proxy_energy_weekly:
   friendly_name: 'Total Energy Hept-Daily'
   icon: 'mdi:counter'
-sensor.template_rack_backup_plug_proxy_energy_monthly:
+sensor.template_rack_printer_plug_proxy_energy_monthly:
   friendly_name: 'Total Energy Monthly'
   icon: 'mdi:counter'
-sensor.template_rack_backup_plug_proxy_energy_yearly:
+sensor.template_rack_printer_plug_proxy_energy_yearly:
   friendly_name: 'Total Energy Yearly'
   icon: 'mdi:counter'
 sensor.template_ceiling_network_switch_plug_proxy_power:
@@ -3042,18 +3080,18 @@ sensor.server_rack_energy_monthly:
   friendly_name: 'Server Rack Total Energy Monthly'
 sensor.server_rack_energy_yearly:
   friendly_name: 'Server Rack Total Energy Yearly'
-sensor.server_backup_power:
-  friendly_name: 'Server Backup Current Power'
-sensor.server_backup_energy:
-  friendly_name: 'Server Backup Total Energy'
-sensor.server_backup_energy_daily:
-  friendly_name: 'Server Backup Total Energy Daily'
-sensor.server_backup_energy_weekly:
-  friendly_name: 'Server Backup Total Energy Hept-Daily'
-sensor.server_backup_energy_monthly:
-  friendly_name: 'Server Backup Total Energy Monthly'
-sensor.server_backup_energy_yearly:
-  friendly_name: 'Server Backup Total Energy Yearly'
+sensor.printer_power:
+  friendly_name: 'Printer Current Power'
+sensor.printer_energy:
+  friendly_name: 'Printer Total Energy'
+sensor.printer_energy_daily:
+  friendly_name: 'Printer Total Energy Daily'
+sensor.printer_energy_weekly:
+  friendly_name: 'Printer Total Energy Hept-Daily'
+sensor.printer_energy_monthly:
+  friendly_name: 'Printer Total Energy Monthly'
+sensor.printer_energy_yearly:
+  friendly_name: 'Printer Total Energy Yearly'
 sensor.ceiling_network_devices_power:
   friendly_name: 'Ceiling Network Devices Current Power'
 sensor.ceiling_network_devices_energy:

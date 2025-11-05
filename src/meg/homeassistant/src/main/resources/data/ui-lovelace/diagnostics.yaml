@@ -187,13 +187,19 @@
     - entity: switch.rack_outlet_plug
       name: Server Rack
       icon: mdi:server
-    - entity: switch.rack_backup_plug
-      name: Server Backup
-      icon: mdi:server
+    - entity: switch.rack_printer_plug
+      name: Printer
+      icon: mdi:printer
     - entity: switch.ceiling_network_switch_plug
       name: Ceiling Network Devices
       icon: mdi:server-network
-    - entity: fan.rack_fans_plug
+    - entity: switch.rack_backup_plug
+      name: Rack Backup
+      icon: mdi:tape-drive
+    - entity: switch.rack_screen_plug
+      name: Rack Screen
+      icon: mdi:monitor
+    - entity: switch.rack_fans_plug
       name: Rack Fans
       icon: mdi:server-remove
     - entity: switch.garden_sewerage_blower_plug

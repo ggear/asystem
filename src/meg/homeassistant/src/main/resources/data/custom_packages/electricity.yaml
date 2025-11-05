@@ -21,7 +21,17 @@ powercalc:
       power_sensor_id: sensor.all_standby_power
       energy_sensor_id: sensor.all_standby_energy
     ###################################################################################
-    - entity_id: fan.rack_fans_plug
+    - entity_id: switch.rack_backup_plug
+      standby_power: 0.6
+      fixed:
+        power: 16.2
+    ###################################################################################
+    - entity_id: switch.rack_screen_plug
+      standby_power: 0.6
+      fixed:
+        power: 16.2
+    ###################################################################################
+    - entity_id: switch.rack_fans_plug
       standby_power: 0.6
       fixed:
         power: 16.2
@@ -456,16 +466,16 @@ powercalc:
                       power_sensor_id: sensor.rack_outlet_plug_energy_power
                       energy_sensor_id: sensor.rack_outlet_plug_energy_total
                 #######################################################################
-                - create_group: Server Backup
+                - create_group: Printer
                   entities:
-                    - entity_id: binary_sensor.template_rack_backup_plug_proxy
+                    - entity_id: binary_sensor.template_rack_printer_plug_proxy
                       standby_power: 1.54
                       unavailable_power: 0
                       fixed:
                         power: 2.19
-                    - entity_id: switch.rack_backup_plug
-                      power_sensor_id: sensor.rack_backup_plug_current_consumption
-                      force_energy_sensor_creation: true
+                    - entity_id: switch.rack_printer_plug
+                      power_sensor_id: sensor.rack_printer_plug_energy_power
+                      energy_sensor_id: sensor.rack_printer_plug_energy_total
                 #######################################################################
                 - create_group: Ceiling Network Devices
                   entities:
@@ -599,9 +609,9 @@ template:
         state: >-
           {{ states('switch.rack_outlet_plug') }}
       #################################################################################
-      - unique_id: rack_backup_plug_proxy
+      - unique_id: rack_printer_plug_proxy
         state: >-
-          {{ states('switch.rack_backup_plug') }}
+          {{ states('switch.rack_printer_plug') }}
       #################################################################################
       - unique_id: ceiling_network_switch_plug_proxy
         state: >-

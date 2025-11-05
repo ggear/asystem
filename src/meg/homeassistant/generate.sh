@@ -42,7 +42,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bureau_of_meteorology-component/custom_components/bureau_of_meteorology" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/thomasloven/lovelace-layout-card/releases
-VERSION=v2.4.6
+VERSION=v2.4.7
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "lovelace-layout-card" "thomasloven/lovelace-layout-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/layout-card"
@@ -63,7 +63,7 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card"
 wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/mini-graph-card/mini-graph-card-bundle.js" "https://github.com/kalkih/mini-graph-card/releases/download/${VERSION}/mini-graph-card-bundle.js"
 
 # NOTES: https://github.com/pnbruckner/ha-sun2/releases
-VERSION=3.4.1
+VERSION=3.4.3
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "sun2-component" "pnbruckner/ha-sun2" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/sun2"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"

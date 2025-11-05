@@ -1,0 +1,33 @@
+{
+  "object_id": "rack_screen_plug",
+  "unique_id": "rack_screen_plug",
+  "name": "Rack Screen Plug",
+  "icon": "mdi:monitor",
+  "force_update": "false",
+  "optimistic": "true",
+  "state_topic": "tasmota/device/rack_screen_plug/stat/POWER",
+  "value_template": "{{ value }}",
+  "command_topic": "tasmota/device/rack_screen_plug/cmnd/POWER",
+  "availability_topic": "tasmota/device/rack_screen_plug/tele/LWT",
+  "payload_on": "ON",
+  "payload_off": "OFF",
+  "payload_available": "Online",
+  "payload_not_available": "Offline",
+  "qos": "1",
+  "device": {
+    "via_device": "Tasmota",
+    "configuration_url": "http://10.0.4.109/?",
+    "identifiers": "sonoff-rack-screen",
+    "name": "Rack Screen",
+    "model": "BASICR2",
+    "manufacturer": "SONOFF",
+    "sw_version": "13.0.0",
+    "suggested_area": "Rack",
+    "connections": [
+      [
+        "ip",
+        "10.0.4.109"
+      ]
+    ]
+  }
+}
