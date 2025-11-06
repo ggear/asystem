@@ -25,6 +25,10 @@
     "suggested_area": "Rack",
     "connections": [
       [
+        "mac",
+        "80:64:6f:91:0d:0f"
+      ],
+      [
         "ip",
         "10.0.4.110"
       ]

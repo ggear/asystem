@@ -161,7 +161,7 @@ automation:
       - delay: '00:00:01'
       - action: mqtt.publish
         data:
-          topic: "zigbee/Edwin Wardrobe Outlet/11/set"
+          topic: "zigbee/Edwin Desk Outlet/11/set"
           payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
       - delay: '00:00:01'
       - delay: '00:00:01'
@@ -228,7 +228,7 @@ automation:
         then:
           - action: mqtt.publish
             data:
-              topic: "zigbee/Edwin Wardrobe Outlet"
+              topic: "zigbee/Edwin Desk Outlet"
               payload: '{ "last_seen": null, "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
       - action: input_boolean.turn_off
         entity_id: input_boolean.network_refresh_zigbee_router_lqi

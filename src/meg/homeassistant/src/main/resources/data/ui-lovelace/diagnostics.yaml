@@ -31,7 +31,7 @@
     - entity: sensor.template_deck_fans_outlet_linkquality_percentage
       name: Deck Fans Outlet
     - entity: sensor.template_edwin_wardrobe_outlet_linkquality_percentage
-      name: Edwin Wardrobe Outlet
+      name: Edwin Desk Outlet
 ################################################################################
 - type: entities
   title: Radio Link Quality
@@ -172,15 +172,42 @@
   title: Power Plugs
   show_header_toggle: false
   entities:
+    - entity: switch.rack_printer_plug
+      name: Rack Printer
+      icon: mdi:printer
+    - entity: switch.rack_screen_plug
+      name: Rack Screen
+      icon: mdi:monitor
+    - entity: switch.rack_backup_plug
+      name: Rack Backup
+      icon: mdi:tape-drive
+    - entity: switch.rack_fans_plug
+      name: Rack Fans
+      icon: mdi:server-remove
+    - entity: switch.garden_sewerage_blower_plug
+      name: Garden Sewerage Blower
+      icon: mdi:fan
     - entity: switch.lounge_tv_plug
       name: Lounge TV
       icon: mdi:television
     - entity: switch.kitchen_dish_washer_plug
       name: Dish Washer
       icon: mdi:dishwasher
+    - entity: switch.kitchen_fridge_plug
+      name: Kitchen Fridge
+      icon: mdi:fridge-outline
     - entity: switch.deck_freezer_plug
       name: Deck Freezer
       icon: mdi:fridge-top
+    - entity: switch.deck_fans_outlet
+      name: Deck Fans Outlet
+      icon: mdi:power-plug-outline
+    - entity: switch.kitchen_fan_outlet
+      name: Kitchen Fan Outlet
+      icon: mdi:power-plug-outline
+    - entity: switch.edwin_desk_outlet
+      name: Edwin Desk Outlet
+      icon: mdi:power-plug-outline
     - entity: switch.server_jen_plug
       name: Server Jen
       icon: mdi:server
@@ -190,30 +217,6 @@
     - entity: switch.ceiling_network_switch_plug
       name: Ceiling Network Devices
       icon: mdi:server-network
-    - entity: switch.rack_printer_plug
-      name: Printer
-      icon: mdi:printer
-    - entity: switch.rack_backup_plug
-      name: Rack Backup
-      icon: mdi:tape-drive
-    - entity: switch.rack_screen_plug
-      name: Rack Screen
-      icon: mdi:monitor
-    - entity: switch.rack_fans_plug
-      name: Rack Fans
-      icon: mdi:server-remove
-    - entity: switch.garden_sewerage_blower_plug
-      name: Garden Sewerage Blower
-      icon: mdi:fan
-    - entity: switch.deck_fans_outlet
-      name: Deck Fans Outlet
-      icon: mdi:power-plug-outline
-    - entity: switch.kitchen_fan_outlet
-      name: Kitchen Fan Outlet
-      icon: mdi:power-plug-outline
-    - entity: switch.edwin_wardrobe_outlet
-      name: Edwin Wardrobe Outlet
-      icon: mdi:power-plug-outline
 ################################################################################
 - type: entities
   title: Reset Adaptive Lighting

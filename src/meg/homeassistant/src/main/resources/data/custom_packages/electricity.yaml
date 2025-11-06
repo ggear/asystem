@@ -21,12 +21,17 @@ powercalc:
       power_sensor_id: sensor.all_standby_power
       energy_sensor_id: sensor.all_standby_energy
     ###################################################################################
-    - entity_id: switch.rack_backup_plug
+    - entity_id: switch.rack_printer_plug
       standby_power: 0.6
       fixed:
         power: 16.2
     ###################################################################################
     - entity_id: switch.rack_screen_plug
+      standby_power: 0.6
+      fixed:
+        power: 16.2
+    ###################################################################################
+    - entity_id: switch.rack_backup_plug
       standby_power: 0.6
       fixed:
         power: 16.2
@@ -375,6 +380,20 @@ powercalc:
                       fixed:
                         power: 31
             ###########################################################################
+            - create_group: Power Plugs
+              entities:
+                #######################################################################
+                - create_group: Garden Sewerage Blower
+                  entities:
+                    - entity_id: binary_sensor.template_garden_sewerage_blower_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.garden_sewerage_blower_plug
+                      power_sensor_id: sensor.garden_sewerage_blower_plug_current_consumption
+                      force_energy_sensor_creation: true
+            ###########################################################################
             - create_group: Audio Visual Devices
               entities:
                 #######################################################################
@@ -430,6 +449,17 @@ powercalc:
             - create_group: Whitegoods Continuous
               entities:
                 #######################################################################
+                - create_group: Kitchen Fridge
+                  entities:
+                    - entity_id: binary_sensor.template_kitchen_fridge_plug_proxy
+                      standby_power: 1.54
+                      unavailable_power: 0
+                      fixed:
+                        power: 2.19
+                    - entity_id: switch.kitchen_fridge_plug
+                      power_sensor_id: sensor.kitchen_fridge_plug_current_consumption
+                      force_energy_sensor_creation: true
+                #######################################################################
                 - create_group: Deck Freezer
                   entities:
                     - entity_id: binary_sensor.template_deck_freezer_plug_proxy
@@ -443,6 +473,33 @@ powercalc:
             ###########################################################################
             - create_group: Servers & Network
               entities:
+                #######################################################################
+                - create_group: Zigbee Repeaters
+                  entities:
+                    - entity_id: switch.deck_fans_outlet
+                      standby_power: 0.2
+                      fixed:
+                        power: 0.5
+                    - entity_id: switch.kitchen_fan_outlet
+                      standby_power: 0.2
+                      fixed:
+                        power: 0.5
+                    - entity_id: switch.edwin_desk_outlet
+                      standby_power: 0.2
+                      fixed:
+                        power: 0.5
+                    - entity_id: sensor.garden_repeater_linkquality
+                      standby_power: 0
+                      fixed:
+                        power: 0.4
+                    - entity_id: sensor.landing_repeater_linkquality
+                      standby_power: 0
+                      fixed:
+                        power: 0.4
+                    - entity_id: sensor.driveway_repeater_linkquality
+                      standby_power: 0
+                      fixed:
+                        power: 0.4
                 #######################################################################
                 - create_group: Server Jen
                   entities:
@@ -476,58 +533,6 @@ powercalc:
                     - entity_id: switch.ceiling_network_switch_plug
                       power_sensor_id: sensor.ceiling_network_switch_plug_energy_power
                       energy_sensor_id: sensor.ceiling_network_switch_plug_energy_total
-                #######################################################################
-                - create_group: Printer
-                  entities:
-                    - entity_id: binary_sensor.template_rack_printer_plug_proxy
-                      standby_power: 1.54
-                      unavailable_power: 0
-                      fixed:
-                        power: 2.19
-                    - entity_id: switch.rack_printer_plug
-                      power_sensor_id: sensor.rack_printer_plug_energy_power
-                      energy_sensor_id: sensor.rack_printer_plug_energy_total
-                #######################################################################
-                - create_group: Zigbee Repeaters
-                  entities:
-                    - entity_id: switch.deck_fans_outlet
-                      standby_power: 0.2
-                      fixed:
-                        power: 0.5
-                    - entity_id: switch.kitchen_fan_outlet
-                      standby_power: 0.2
-                      fixed:
-                        power: 0.5
-                    - entity_id: switch.edwin_wardrobe_outlet
-                      standby_power: 0.2
-                      fixed:
-                        power: 0.5
-                    - entity_id: sensor.garden_repeater_linkquality
-                      standby_power: 0
-                      fixed:
-                        power: 0.4
-                    - entity_id: sensor.landing_repeater_linkquality
-                      standby_power: 0
-                      fixed:
-                        power: 0.4
-                    - entity_id: sensor.driveway_repeater_linkquality
-                      standby_power: 0
-                      fixed:
-                        power: 0.4
-            ###########################################################################
-            - create_group: Power Plugs
-              entities:
-                #######################################################################
-                - create_group: Garden Sewerage Blower
-                  entities:
-                    - entity_id: binary_sensor.template_garden_sewerage_blower_plug_proxy
-                      standby_power: 1.54
-                      unavailable_power: 0
-                      fixed:
-                        power: 2.19
-                    - entity_id: switch.garden_sewerage_blower_plug
-                      power_sensor_id: sensor.garden_sewerage_blower_plug_current_consumption
-                      force_energy_sensor_creation: true
   #####################################################################################
 template:
   #####################################################################################
@@ -589,6 +594,10 @@ template:
         state: >-
           {{ states('switch.garden_pool_filter_plug') }}
       #################################################################################
+      - unique_id: garden_sewerage_blower_plug_proxy
+        state: >-
+          {{ states('switch.garden_sewerage_blower_plug') }}
+      #################################################################################
       - unique_id: lounge_tv_plug_proxy
         state: >-
           {{ states('switch.lounge_tv_plug') }}
@@ -596,6 +605,10 @@ template:
       - unique_id: kitchen_dish_washer_plug_proxy
         state: >-
           {{ states('switch.kitchen_dish_washer_plug') }}
+      #################################################################################
+      - unique_id: kitchen_fridge_plug_proxy
+        state: >-
+          {{ states('switch.kitchen_fridge_plug') }}
       #################################################################################
       - unique_id: deck_freezer_plug_proxy
         state: >-
@@ -612,12 +625,4 @@ template:
       - unique_id: ceiling_network_switch_plug_proxy
         state: >-
           {{ states('switch.ceiling_network_switch_plug') }}
-      #################################################################################
-      - unique_id: rack_printer_plug_proxy
-        state: >-
-          {{ states('switch.rack_printer_plug') }}
-      #################################################################################
-      - unique_id: garden_sewerage_blower_plug_proxy
-        state: >-
-          {{ states('switch.garden_sewerage_blower_plug') }}
       #################################################################################

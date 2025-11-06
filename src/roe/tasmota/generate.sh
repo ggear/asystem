@@ -13,6 +13,7 @@ if [ ! -f ${ROOT_DIR}/src/build/resources/firmware/tasmota-${VERSION}.bin.gz ] |
   mkdir -p ${ROOT_DIR}/src/build/resources/firmware &&
     rm -rf ${ROOT_DIR}/src/build/resources/firmware/*.gz &&
     wget -q -O ${ROOT_DIR}/src/build/resources/firmware/tasmota-${VERSION}.bin.gz http://ota.tasmota.com/tasmota/release-${VERSION}/tasmota.bin.gz &&
+    wget -q -O ${ROOT_DIR}/src/build/resources/firmware/tasmota-lite-${VERSION}.bin.gz http://ota.tasmota.com/tasmota/release-${VERSION}/tasmota-lite.bin &&
     wget -q -O ${ROOT_DIR}/src/build/resources/firmware/tasmota-minimal-${VERSION}.bin.gz http://ota.tasmota.com/tasmota/release-${VERSION}/tasmota-minimal.bin.gz &&
     wget -q -O ${ROOT_DIR}/src/build/resources/firmware/tasmota32-${VERSION}.bin http://ota.tasmota.com/tasmota32/release/tasmota32.bin
 fi
