@@ -197,7 +197,7 @@
       name: Deck Freezer
       icon: mdi:fridge-top
     - entity: switch.garden_sewerage_blower_plug
-      name: Garden Sewerage Blower
+      name: Sewerage Blower
       icon: mdi:fan
     - entity: switch.deck_fans_outlet
       name: Deck Fans Outlet

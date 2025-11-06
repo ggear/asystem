@@ -774,7 +774,7 @@ switch.deck_freezer_plug:
   friendly_name: 'Deck Freezer'
   icon: 'mdi:fridge-top'
 switch.garden_sewerage_blower_plug:
-  friendly_name: 'Garden Sewerage Blower'
+  friendly_name: 'Sewerage Blower'
   icon: 'mdi:fan'
 switch.deck_fans_outlet:
   friendly_name: 'Deck Fans Outlet'
@@ -3095,18 +3095,18 @@ sensor.power_plugs_energy_monthly:
   friendly_name: 'Power Plugs Total Energy Monthly'
 sensor.power_plugs_energy_yearly:
   friendly_name: 'Power Plugs Total Energy Yearly'
-sensor.garden_sewerage_blower_power:
-  friendly_name: 'Garden Sewerage Blower Current Power'
-sensor.garden_sewerage_blower_energy:
-  friendly_name: 'Garden Sewerage Blower Total Energy'
-sensor.garden_sewerage_blower_energy_daily:
-  friendly_name: 'Garden Sewerage Blower Total Energy Daily'
-sensor.garden_sewerage_blower_energy_weekly:
-  friendly_name: 'Garden Sewerage Blower Total Energy Hept-Daily'
-sensor.garden_sewerage_blower_energy_monthly:
-  friendly_name: 'Garden Sewerage Blower Total Energy Monthly'
-sensor.garden_sewerage_blower_energy_yearly:
-  friendly_name: 'Garden Sewerage Blower Total Energy Yearly'
+sensor.sewerage_blower_power:
+  friendly_name: 'Sewerage Blower Current Power'
+sensor.sewerage_blower_energy:
+  friendly_name: 'Sewerage Blower Total Energy'
+sensor.sewerage_blower_energy_daily:
+  friendly_name: 'Sewerage Blower Total Energy Daily'
+sensor.sewerage_blower_energy_weekly:
+  friendly_name: 'Sewerage Blower Total Energy Hept-Daily'
+sensor.sewerage_blower_energy_monthly:
+  friendly_name: 'Sewerage Blower Total Energy Monthly'
+sensor.sewerage_blower_energy_yearly:
+  friendly_name: 'Sewerage Blower Total Energy Yearly'
 sensor.servers_network_energy:
   friendly_name: 'Servers & Network Total Energy'
 sensor.servers_network_energy_weekly:
