@@ -31,7 +31,7 @@ else
 fi
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && last=$(mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/Deck Fans Outlet' -W 1 2>/dev/null | jq -r '.last_seen // empty' | sed 's/T/ /; s/+.*//') && [ -n "$last" ] && [ $(($(date +%s) - $(date -d "$last" +%s))) -lt 3660 ] && last=$(mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/Edwin Wardrobe Outlet' -W 1 2>/dev/null | jq -r '.last_seen // empty' | sed 's/T/ /; s/+.*//') && [ -n "$last" ] && [ $(($(date +%s) - $(date -d "$last" +%s))) -lt 3660 ] && last=$(mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/Kitchen Fan Outlet' -W 1 2>/dev/null | jq -r '.last_seen // empty' | sed 's/T/ /; s/+.*//') && [ -n "$last" ] && [ $(($(date +%s) - $(date -d "$last" +%s))) -lt 3660 ]
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && last=$(mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/Deck Fans Outlet' -W 1 2>/dev/null | jq -r '.last_seen // empty' | sed 's/T/ /; s/+.*//') && [ -n "$last" ] && [ $(($(date +%s) - $(date -d "$last" +%s))) -lt 3660 ] && last=$(mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/Edwin Desk Outlet' -W 1 2>/dev/null | jq -r '.last_seen // empty' | sed 's/T/ /; s/+.*//') && [ -n "$last" ] && [ $(($(date +%s) - $(date -d "$last" +%s))) -lt 3660 ] && last=$(mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/Kitchen Fan Outlet' -W 1 2>/dev/null | jq -r '.last_seen // empty' | sed 's/T/ /; s/+.*//') && [ -n "$last" ] && [ $(($(date +%s) - $(date -d "$last" +%s))) -lt 3660 ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [zigbee2mqtt] is healthy :)" >&2
