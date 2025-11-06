@@ -418,6 +418,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   {}
 then

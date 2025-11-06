@@ -184,9 +184,6 @@
     - entity: switch.rack_fans_plug
       name: Rack Fans
       icon: mdi:server-remove
-    - entity: switch.garden_sewerage_blower_plug
-      name: Garden Sewerage Blower
-      icon: mdi:fan
     - entity: switch.lounge_tv_plug
       name: Lounge TV
       icon: mdi:television
@@ -199,6 +196,9 @@
     - entity: switch.deck_freezer_plug
       name: Deck Freezer
       icon: mdi:fridge-top
+    - entity: switch.garden_sewerage_blower_plug
+      name: Garden Sewerage Blower
+      icon: mdi:fan
     - entity: switch.deck_fans_outlet
       name: Deck Fans Outlet
       icon: mdi:power-plug-outline
