@@ -30,6 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   [ "$(curl "$INFLUXDB3_HOST_URL/health" --header "Authorization: Bearer $INFLUXDB3_AUTH_TOKEN")" == "OK" ]
 then

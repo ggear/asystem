@@ -30,6 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   curl -s -o /dev/null -w "%{http_code}" "${ZIGBEE2MQTT_SERVICE}:${ZIGBEE2MQTT_HTTP_PORT}" | grep -q '^200$'
 then

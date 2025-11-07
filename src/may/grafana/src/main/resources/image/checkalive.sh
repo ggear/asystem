@@ -30,6 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   [ "$(curl "${GRAFANA_URL}/api/health" | jq -er .database | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')" == "ok" ]
 then

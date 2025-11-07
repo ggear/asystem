@@ -30,6 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && true  # TODO: Check file added to   /downloads
 then

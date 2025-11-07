@@ -135,9 +135,6 @@ dnf-3 install -y \
 # Kernel
 ################################################################################
 [ ! -f /etc/default/grub.bak ] && cp /etc/default/grub /etc/default/grub.bak
-#GRUB_CMDLINE_LINUX="video=HDMI-A-1:1024x600@60 console=tty0"
-#GRUB_CMDLINE_LINUX="video=HDMI-A-1:4096x2160@60 fbcon=map:1 fbcon=font:VGA8x8 console=tty0"
-#GRUB_CMDLINE_LINUX="video=HDMI-A-1:1024x600@60 video=HDMI-A-1:4096x2160@60 fbcon=map:1 fbcon=font:VGA8x8 console=tty0"
 GRUB_DISTRIBUTOR="$(sed 's, release .*$,,g' /etc/system-release)"
 if [ "${GRUB_DISTRIBUTOR}" == "Fedora Asahi Remix" ]; then
   GRUB_CMDLINE_LINUX="rootflags=subvol=root video=HDMI-A-1:1024x600@60 console=tty0 selinux=0"
@@ -180,12 +177,26 @@ KEYMAP=us
 FONT=ter-v32n
 UNICODE=yes
 EOF
-dracut -f -v
 tee /etc/sysctl.d/99-disable-ipv6.conf <<'EOF'
 net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
 net.ipv6.conf.lo.disable_ipv6 = 1
 EOF
+sudo tee /etc/systemd/system/mute-console.service <<'EOF'
+[Unit]
+Description=Disable kernel console logging (CIFS, bridge, etc.)
+After=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash -c 'echo 0 0 0 0 > /proc/sys/kernel/printk'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl enable mute-console.service
+dracut -f -v
 
 
 ################################################################################
@@ -278,6 +289,7 @@ services_to_enable=(
   docker
   chronyd
   NetworkManager
+  mute-console
   systemd-vconsole-setup
 )
 for _service in "${services_to_enable[@]}"; do

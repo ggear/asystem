@@ -30,6 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   netcat -zw 1 ${RHASSPY_SERVICE} ${RHASSPY_API_PORT}
 then

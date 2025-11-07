@@ -30,6 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ]
 then

@@ -30,6 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ -f "/data/html/loopdata/loop-data.txt" ] && [ $(($(date +%s) - $(stat -c %Y "/data/html/loopdata/loop-data.txt"))) -le 5 ] && [ $(($(date +%s) - $(jq -r '."current.dateTime.raw"' "/data/html/loopdata/loop-data.txt"))) -le 5 ]
 then

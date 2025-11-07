@@ -30,6 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   OUTPUT="$(telegraf --test 2>/dev/null)" && [ "$(grep -c 'metrics_failed=0,metrics_succeeded=3' <<<"${OUTPUT}")" -eq 1 ] && telegraf --once >/dev/null 2>&1
 then

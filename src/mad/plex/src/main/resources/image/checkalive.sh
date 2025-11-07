@@ -30,6 +30,8 @@ else
   alias curl="curl -sf --connect-timeout 2 --max-time 2"
 fi
 
+shopt -s expand_aliases
+
 if
   curl -sf "http://${PLEX_SERVICE}:${PLEX_HTTP_PORT}/identity" | grep -q "machineIdentifier"
 then
