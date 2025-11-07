@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  [ "$(curl -s "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0" | jq -r '.status.pid // 0')" -gt 0 ]
+  curl -s "http://${SABNZBD_SERVICE_PROD}:${SABNZBD_HTTP_PORT}/sabnzbd/api?output=json&apikey=${SABNZBD_API_KEY}&mode=status&skip_dashboard=0" | jq -e '.status.pid // 0 > 0'
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sabnzbd] is alive :)" >&2
