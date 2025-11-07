@@ -61,7 +61,7 @@ print_stats() {
 }
 
 
-term_width="${1:-"$(tput cols 2>/dev/null || echo 60)"}"
+term_width="${1:-"$(tput cols 2>/dev/null || echo 59)"}"
 print_stats host_stats "Host" "Metric" 15 2
 printf '%*s\n' "${term_width}" '' | tr ' ' '-'
 print_stats container_stats "Container" "Status" 15 1
