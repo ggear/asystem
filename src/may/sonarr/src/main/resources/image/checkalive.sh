@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  [ "$(curl http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api  -H "X-Api-Key: ${SONARR_API_KEY}" | jq 'length == 0')" == "false" ]
+  curl -s "http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api" -H "X-Api-Key: ${SONARR_API_KEY}" | jq -e 'length > 0' >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sonarr] is alive :)" >&2
