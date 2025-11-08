@@ -21,6 +21,7 @@ RUN apt-get update && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
 FROM image_base AS image_build
+COPY target/package/main/resources/image/. /asystem/etc
 RUN \
     tar -xvzf /asystem/etc/*.gz -C /opt && \
     chmod +x /opt/Sonarr/Sonarr && \
