@@ -12,12 +12,9 @@ services:
       - SABNZBD_HTTP_PORT
       - SABNZBD_API_KEY
       - SABNZBD_NZB_KEY
-      - SABNZBD_SHARE_DIR
     volumes:
       - ${SERVICE_DATA_DIR}:/config
-      - ${SABNZBD_SHARE_DIR}/enqueued:/downloads/enqueued
-      - ${SABNZBD_SHARE_DIR}/finished:/downloads/finished
-      - ${SABNZBD_SHARE_DIR}/staging:/downloads/staging
+      - ${SABNZBD_SHARE_DIR}:/downloads
     ports:
       - ${SABNZBD_HTTP_PORT}:8080
     healthcheck:
