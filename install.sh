@@ -49,7 +49,7 @@ if [ -f "docker-compose.yml" ]; then
       echo "Waiting for service to start executing ... " && sleep 1
     done
     echo && echo "Waiting to check service health ... " && echo
-    docker exec -i "${SERVICE_NAME}" bash -c '/asystem/etc/checkhealthy.sh -v | stdbuf -oL'
+    docker exec -i "${SERVICE_NAME}" bash -c "stdbuf -oL /asystem/etc/checkhealthy.sh -v"
     echo && echo
     sleep 1
   else
