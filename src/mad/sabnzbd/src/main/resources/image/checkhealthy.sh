@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && true  # TODO: Check file added to   /downloads
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && [ -f "${SABNZBD_SHARE_DIR}/.sabnzbd" ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sabnzbd] is healthy :)" >&2

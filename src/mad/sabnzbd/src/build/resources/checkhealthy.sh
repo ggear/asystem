@@ -1,4 +1,2 @@
 /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" &&
-  true
-
-# TODO: Check file added to   /downloads
+  [ -f "${SABNZBD_SHARE_DIR}/.sabnzbd" ]

@@ -10,4 +10,4 @@ if [ "$(find /share -mindepth 1 -maxdepth 1 -type d | wc -l)" -ne "$(find /share
   done
   systemctl start smb nmb
 fi
-[ "$(find /share -mindepth 1 -maxdepth 1 -type d | wc -l)" -ne "$(find /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l)" ] && echo "Could not mount all shares"
+[ "$(find /share -mindepth 1 -maxdepth 1 -type d | wc -l)" -ne "$(find /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l)" ] && echo "Error: Could not mount all shares"

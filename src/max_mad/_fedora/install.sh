@@ -182,7 +182,7 @@ net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
 net.ipv6.conf.lo.disable_ipv6 = 1
 EOF
-sudo tee /etc/systemd/system/mute-console.service <<'EOF'
+tee /etc/systemd/system/mute-console.service <<'EOF'
 [Unit]
 Description=Disable kernel console logging (CIFS, bridge, etc.)
 After=network-pre.target
@@ -304,6 +304,7 @@ for _service in "${services_to_enable[@]}"; do
   fi
 done
 services_to_disable=(
+  ntpd
   cups
   cups.path
   abrtd
