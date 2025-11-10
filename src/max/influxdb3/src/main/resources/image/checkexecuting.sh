@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_DATA_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOST_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PUBLIC}" --token "${INFLUXDB3_TOKEN_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_DATA_PUBLIC}" --token "${INFLUXDB3_TOKEN_PUBLIC}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOME_PRIVATE}" --token "${INFLUXDB3_TOKEN_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ] && [ "$(influxdb3 query --format json --database "${INFLUXDB3_DATABASE_HOST_PRIVATE}" --token "${INFLUXDB3_TOKEN_PRIVATE}" "SELECT 1" 2>/dev/null | jq -e '.[0]["Int64(1)"]')" == "1" ]
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && influxdb3 show license info --format json | jq -e '.[0].expires_at as $e | (now < (($e + "Z") | fromdateiso8601))' >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [influxdb3] is executing :)" >&2
