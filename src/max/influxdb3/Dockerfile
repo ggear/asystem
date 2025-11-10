@@ -14,6 +14,7 @@ FROM image_upstream AS image_base
 
 FROM image_base AS image_build
 COPY target/package/main/resources/image/. /asystem/etc
+COPY target/package/main/resources/image/. /asystem/bin
 
 FROM image_base AS image_runtime
 WORKDIR /asystem/etc
