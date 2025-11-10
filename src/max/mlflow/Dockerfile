@@ -2,6 +2,7 @@
 ARG ASYSTEM_PYTHON_VERSION="latest"
 ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL="slim"
 FROM python:${ASYSTEM_PYTHON_VERSION}-${ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL} AS image_upstream
+ARG ASYSTEM_MLFLOW_VERSION
 
 FROM image_upstream AS image_base
 USER root
@@ -17,7 +18,6 @@ RUN apt-get update && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
 FROM image_base AS image_build
-ARG ASYSTEM_MLFLOW_VERSION
 RUN (python3 -m ensurepip 2> /dev/null || true) && \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade pip && \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade virtualenv==20.27.1 && \

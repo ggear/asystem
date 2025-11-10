@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  true # TODO: Provide implementation
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && true # TODO: Provide implementation
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [mlserver] is executing :)" >&2

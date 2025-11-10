@@ -411,12 +411,8 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                                .format(*docker_build_mount))
             if any("src/main/python" in item for item in docker_build_copies):
                 docker_build_copies.append('RUN set -eux; \\\\\\\\')
-                docker_build_copies.append('    if [ -f /asystem/bin/python/.py_deps.txt ]; then '
-                                           'pip3 install '
-                                           '--root-user-action ignore '
-                                           '--break-system-packages '
-                                           '--default-timeout=1000 --no-cache-dir '
-                                           '-r /asystem/bin/python/.py_deps.txt; \\\\\\\\')
+                docker_build_copies.append(
+                    '    [ -f /asystem/bin/python/.py_deps.txt ] && pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir -r /asystem/bin/python/.py_deps.txt; \\\\\\\\')
                 docker_build_copies.append('    pip3 cache purge')
             docker_build_variables = []
             for env_global_key, env_global_value in GLOBAL_ENV.items():
