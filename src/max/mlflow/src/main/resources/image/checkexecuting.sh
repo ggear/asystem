@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  [ "$(curl "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" == "OK" ] # TODO: Provide implementation that reflects on models being served
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ "$(curl "http://${MLFLOW_SERVICE}:${MLFLOW_HTTP_PORT}/health")" == "OK" ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [mlflow] is executing :)" >&2

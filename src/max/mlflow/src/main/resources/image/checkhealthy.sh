@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}"
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && true  # TODO: Provide implementation that reflects on models being served
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [mlflow] is healthy :)" >&2

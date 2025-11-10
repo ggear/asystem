@@ -724,12 +724,11 @@ def _package(context, filter_module=None, filter_host=None, is_release=False):
         build_args = ""
         for env_global_key, env_global_value in GLOBAL_ENV.items():
             if env_global_key.endswith("_VERSION"):
-                build_args += "--build-arg ASYSTEM_{}={} ".format(env_global_key, env_global_value)
-
+                build_args += "\\\n    --build-arg ASYSTEM_{}={} ".format(env_global_key, env_global_value)
         docker_image_build_start_time = time.time()
         _run_local(context,
-                   "docker buildx build --progress=plain --platform linux/{} {} --output type=docker --tag {}:{} ."
-                   .format(host_arch, build_args, _name(module), _get_versions()[0]), module)
+                   "docker buildx build . --progress=plain --platform linux/{} --output type=docker --tag {}:{} {}"
+                   .format(host_arch, _name(module), _get_versions()[0], build_args), module)
         docker_image_build_time = int((time.time() - docker_image_build_start_time) / 60)
         docker_image_size = _run_local(context, "docker image ls --format json {}:{} | jq -r .VirtualSize".format(
             _name(module),
