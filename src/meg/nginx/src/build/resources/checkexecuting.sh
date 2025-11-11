@@ -1,2 +1,1 @@
-true
-# TODO: Provide implementation
+/asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}"
