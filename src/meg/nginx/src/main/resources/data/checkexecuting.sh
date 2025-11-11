@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}"
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && curl -fsS "https://${NGINX_SERVICE}:${NGINX_HTTP_PORT}/health" | grep -qx "OK"
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [nginx] is executing :)" >&2

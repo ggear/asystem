@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}"
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && curl -fsS -o /dev/null -w "%{http_code}" https://home.janeandgraham.com | grep -qx "200"
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [nginx] is healthy :)" >&2
