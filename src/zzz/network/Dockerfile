@@ -1,6 +1,5 @@
-# https://hub.docker.com/_/golang/tags?page=1&ordering=last_updated&name=-alpine
+# NOTES: https://hub.docker.com/_/golang/tags?page=1&ordering=last_updated&name=-alpine
 ARG ASYSTEM_GO_VERSION
-
 FROM golang:$ASYSTEM_GO_VERSION-alpine AS image_upstream
 
 FROM image_upstream AS image_base

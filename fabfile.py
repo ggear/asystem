@@ -452,6 +452,11 @@ function echo_package_install_commands {{
     {}
   )
   set -x
+
+  # TODO: Use debian repo snapshots for reproducible builds on debian, detect if debian first then execute and output for Dockerfile also, paramaterise (lookup?) timestamp
+  # find /etc/apt/ -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i -e 's|http://deb.debian.org/debian-security|https://snapshot.debian.org/archive/debian-security/20251109T121306Z|g' {{}} +
+  # find /etc/apt/ -type f \( -name '*.list' -o -name '*.sources' \) -exec sed -i -e 's|http://deb.debian.org/debian|https://snapshot.debian.org/archive/debian/20251110T023338Z/|g' {{}} +
+
   $PKG_UPDATE
   $PKG_BOOTSTRAP
   for ASYSTEM_PACKAGE in "${{ASYSTEM_PACKAGES_BASE[@]}}"; do $PKG_INSTALL "$ASYSTEM_PACKAGE" 2>/dev/null; done

@@ -1,9 +1,7 @@
+# DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
 ARG ASYSTEM_PYTHON_VERSION="latest"
 ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION="slim"
-
 FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
-
-FROM image_upstream AS image_base
 USER root
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b9 && \
@@ -20,12 +18,14 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
-FROM image_base AS image_build
+FROM image_upstream AS image_base
 COPY target/package/main/resources/image/. /asystem/etc
 RUN \
     tar -xvzf /asystem/etc/*.gz -C /opt && \
     chmod +x /opt/Sonarr/Sonarr && \
     rm /asystem/etc/*.gz
+
+FROM image_base AS image_build
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc

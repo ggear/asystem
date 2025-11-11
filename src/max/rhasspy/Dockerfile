@@ -1,5 +1,5 @@
 # NOTES: https://github.com/OHF-Voice/speech-to-phrase/releases
-FROM rhasspy/wyoming-speech-to-phrase:1.3.0 AS image_upstream
+FROM rhasspy/wyoming-speech-to-phrase:1.4.1 AS image_upstream
 
 FROM image_upstream AS image_base
 USER root

@@ -2,9 +2,6 @@
 ARG ASYSTEM_PYTHON_VERSION="latest"
 ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL="slim"
 FROM python:${ASYSTEM_PYTHON_VERSION}-${ASYSTEM_IMAGE_VARIANT_DEBIAN_CODENAME_SLIM_LABEL} AS image_upstream
-ARG ASYSTEM_MLFLOW_VERSION
-
-FROM image_upstream AS image_base
 USER root
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b9 && \
@@ -17,13 +14,17 @@ RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
-FROM image_base AS image_build
+FROM image_upstream AS image_base
+# DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
+ARG ASYSTEM_MLFLOW_VERSION
 RUN (python3 -m ensurepip 2> /dev/null || true) && \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade pip && \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade virtualenv==20.27.1 && \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade psycopg2-binary==2.9.10  && \
     pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir --upgrade mlflow[extras]==${ASYSTEM_MLFLOW_VERSION} && \
     pip3 cache purge
+
+FROM image_base AS image_build
 ENV PATH=/root/.pyenv/bin:$PATH
 RUN cd /tmp && \
     rm -rf pyenv && \

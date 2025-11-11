@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  true
+  true # TODO: Provide implementation
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [mlflow] is alive :)" >&2

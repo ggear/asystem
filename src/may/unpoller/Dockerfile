@@ -1,11 +1,6 @@
-ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION="slim"
-
-FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
-
 # DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
-ARG ASYSTEM_UNPOLLER_VERSION
-
-FROM image_upstream AS image_base
+ARG ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION="slim"
+FROM debian:${ASYSTEM_IMAGE_VARIANT_DEBIAN_SLIM_VERSION} AS image_upstream
 USER root
 RUN \
     apt-get update && \
@@ -17,9 +12,12 @@ RUN \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install ca-certificates=20230311 && \
     apt-get clean && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
-COPY target/package/main/resources/image/. /asystem/etc
 
-FROM image_base AS image_build
+
+FROM image_upstream AS image_base
+# DEFINED: [/asystem/.env_fab](https://github.com/ggear/asystem/blob/master/.env_fab)
+ARG ASYSTEM_UNPOLLER_VERSION
+COPY target/package/main/resources/image/. /asystem/etc
 RUN \
     cd /tmp && \
     curl -sfSL -o "unpoller.tar.gz" "https://github.com/unpoller/unpoller/releases/download/v${ASYSTEM_UNPOLLER_VERSION}/unpoller_${ASYSTEM_UNPOLLER_VERSION}_linux_amd64.tar.gz" && \
@@ -32,6 +30,8 @@ RUN \
     cd / &&  \
     rm -rf /tmp/* && \
     unpoller --version
+
+FROM image_base AS image_build
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc
