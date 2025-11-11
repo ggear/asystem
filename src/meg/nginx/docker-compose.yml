@@ -7,6 +7,8 @@ services:
     restart: ${SERVICE_RESTART}
     environment:
       - TZ=Australia/Perth
+      - NGINX_SERVICE
+      - NGINX_HTTP_PORT
     ports:
       - ${NGINX_PORT_EXTERNAL_HTTP}:${NGINX_PORT_INTERNAL_HTTP}
       - ${NGINX_PORT_EXTERNAL_HTTPS}:${NGINX_PORT_INTERNAL_HTTPS}

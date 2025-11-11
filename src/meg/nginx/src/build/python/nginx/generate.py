@@ -104,11 +104,19 @@ http {
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS};
     server_name nginx.janeandgraham.com;
+    location = /health {
+      root /usr/share/nginx/html;
+      try_files /health.txt =404;
+      access_log off;
+      add_header Content-Type text/plain;
+    }
     location / {
       root /usr/share/nginx/html;
       autoindex on;
     }
   }
+
+
       """.strip() + "\n\n")
         for name in modules:
             ip_key = "{}_IP".format(name.upper())
