@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  true # TODO: Provide implementation
+  nginx -t 2>/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [nginx] is alive :)" >&2

@@ -1,2 +1,1 @@
-true
-# TODO: Provide implementation
+nginx -t 2>/dev/null
