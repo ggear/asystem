@@ -103,7 +103,7 @@ http {
   # Local server for [nginx] and domain [nginx}.janeandgraham.com]
   server {
     listen ${NGINX_PORT_INTERNAL_HTTPS};
-    server_name nginx.janeandgraham.com;
+    server_name nginx.janeandgraham.com nginx.local.janeandgraham.com;
     location = /health {
       root /usr/share/nginx/html;
       try_files /health.txt =404;
