@@ -83,11 +83,6 @@ http {
   proxy_set_header Host $host;
   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
-  # TODO: Grafana (others?) are prickly about this, disable for the time being
-  # proxy_set_header X-Forwarded-Proto $scheme;
-  # proxy_set_header X-Forwarded-Host $host;
-  # proxy_buffering off;
-
   limit_req_zone $binary_remote_addr zone=perip:10m rate=10r/s;
   limit_req zone=perip burst=20 nodelay;
 
