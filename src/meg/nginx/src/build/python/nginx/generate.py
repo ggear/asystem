@@ -99,7 +99,11 @@ http {
     server_name *.janeandgraham.com;
     ssl_certificate /etc/nginx/certificate.pem;
     ssl_certificate_key /etc/nginx/.key.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_protocols TLSv1.2 TLSv1.3;    
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:...';
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;    
   }
 
   # Remote domain redirect
