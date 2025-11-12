@@ -71,16 +71,18 @@ http {
     text/plain
     text/xml;
 
-  # add_header X-Frame-Options "SAMEORIGIN" always;
-  # add_header X-Content-Type-Options "nosniff" always;
-  # add_header X-XSS-Protection "1; mode=block" always;
-  # add_header Referrer-Policy "no-referrer-when-downgrade" always;
-  # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-XSS-Protection "1; mode=block" always;
+  add_header Referrer-Policy "no-referrer-when-downgrade" always;
+  add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+
+
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_hide_header X-Powered-By;
 
   # proxy_set_header X-Forwarded-Proto $scheme;
   # proxy_set_header X-Forwarded-Host $host;
-  # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  # proxy_hide_header X-Powered-By;
   # proxy_buffering off;
 
   limit_req_zone $binary_remote_addr zone=perip:10m rate=10r/s;
