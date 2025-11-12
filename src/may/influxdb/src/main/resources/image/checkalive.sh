@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  [ "$(influx ping --host http://${INFLUXDB_SERVICE}:${INFLUXDB_HTTP_PORT} 2>&1)" == "OK" ]
+  pgrep -x influxd >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [influxdb] is alive :)" >&2
