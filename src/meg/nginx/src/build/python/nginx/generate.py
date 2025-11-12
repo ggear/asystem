@@ -77,8 +77,11 @@ http {
   add_header Referrer-Policy "no-referrer-when-downgrade" always;
   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
 
-  # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  # proxy_hide_header X-Powered-By;
+  proxy_http_version 1.1;
+  proxy_set_header Connection "";
+  proxy_hide_header X-Powered-By;
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
   # TODO: Grafana (others?) are prickly about this, disable for the time being
   # proxy_set_header X-Forwarded-Proto $scheme;
@@ -170,10 +173,7 @@ http {
     server_name {}.janeandgraham.com;
     proxy_buffering off;
     location / {{
-      proxy_http_version 1.1;
       proxy_pass ${}_url{};
-      proxy_set_header Host $host;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     }}
               """.format(
                         "Remote" if name != server_name else "Local",
@@ -191,10 +191,7 @@ http {
                     if ws_context_key in modules[name][1]:
                         conf_file.write("    " + """
     location {} {{
-      proxy_http_version 1.1;
       proxy_pass ${}_url{};
-      proxy_set_header Host $host;
-      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
       proxy_set_header Upgrade $http_upgrade;
       proxy_set_header Connection "upgrade";
     }}
