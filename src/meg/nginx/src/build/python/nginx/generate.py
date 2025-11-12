@@ -106,10 +106,10 @@ http {
     ssl_certificate /etc/nginx/certificate.pem;
     ssl_certificate_key /etc/nginx/.key.pem;
     ssl_protocols TLSv1.2 TLSv1.3;    
-    ssl_prefer_server_ciphers on;
-    ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:...';
-    ssl_session_cache shared:SSL:10m;
-    ssl_session_timeout 10m;    
+    # ssl_prefer_server_ciphers on;
+    # ssl_ciphers 'ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:...';
+    # ssl_session_cache shared:SSL:10m;
+    # ssl_session_timeout 10m;    
   }
 
   # Remote domain redirect
@@ -133,11 +133,11 @@ http {
       root /usr/share/nginx/html;
       autoindex on;
     }
-    location ~ /\.(git|env|ht) {
-      deny all;
-      access_log off;
-      log_not_found off;
-    }
+    # location ~ /\.(git|env|ht) {
+    #   deny all;
+    #   access_log off;
+    #   log_not_found off;
+    # }
   }
 
 
