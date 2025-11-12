@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}"
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && [ $((($(date +%s) - $(stat /etc/letsencrypt/logs/letsencrypt.log -c %Y)) / 3600)) -le 25 ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [letsencrypt] is healthy :)" >&2

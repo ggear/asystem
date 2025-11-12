@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ]
+  [ "$(ps uax | grep dnsrobocert | grep -v grep | wc -l)" -eq 1 ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [letsencrypt] is alive :)" >&2

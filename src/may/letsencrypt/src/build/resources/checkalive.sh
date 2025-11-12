@@ -1,1 +1,1 @@
-[ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ]
+[ "$(ps uax | grep dnsrobocert | grep -v grep | wc -l)" -eq 1 ]

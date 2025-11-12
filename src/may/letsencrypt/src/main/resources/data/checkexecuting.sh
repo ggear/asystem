@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  [ $(ps uax | grep dnsrobocert | grep -v grep | wc -l) -eq 1 ] && [ $(grep ERROR /etc/letsencrypt/logs/letsencrypt.log | wc -l) -eq 0 ] && [ $((($(date +%s) - $(stat /etc/letsencrypt/logs/letsencrypt.log -c %Y)) / 3600)) -le 25 ]
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && [ "$(grep -c ERROR /etc/letsencrypt/logs/letsencrypt.log)" -eq 0 ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [letsencrypt] is executing :)" >&2
