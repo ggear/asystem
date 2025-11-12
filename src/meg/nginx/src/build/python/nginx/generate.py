@@ -77,10 +77,10 @@ http {
   add_header Referrer-Policy "no-referrer-when-downgrade" always;
   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
 
+  # proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  # proxy_hide_header X-Powered-By;
 
-  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-  proxy_hide_header X-Powered-By;
-
+  # TODO: Grafana (others?) are prickly about this, disable for the time being
   # proxy_set_header X-Forwarded-Proto $scheme;
   # proxy_set_header X-Forwarded-Host $host;
   # proxy_buffering off;
@@ -153,7 +153,8 @@ http {
             scheme_key = "{}_HTTP_SCHEME".format(name.upper())
             scheme_value = modules[name][1][scheme_key] if scheme_key in modules[name][1] else "http://"
             console_context_key = "{}_HTTP_CONSOLE_CONTEXT".format(name.upper())
-            console_context_value = modules[name][1][console_context_key] if console_context_key in modules[name][1] else ""
+            console_context_value = modules[name][1][console_context_key] if console_context_key in modules[name][
+                1] else ""
             nginx_port_key = "NGINX_PORT_INTERNAL_HTTPS"
             nginx_port_value = modules["nginx"][1][nginx_port_key]
             if port_key in modules[name][1] and name != "nginx":
