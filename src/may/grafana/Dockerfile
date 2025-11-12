@@ -3,6 +3,7 @@ FROM grafana/grafana:12.2.1 AS image_upstream
 USER root
 RUN apk update && \
     apk add --upgrade --no-cache bash=5.2.37-r0 && \
+    apk add --upgrade --no-cache coreutils=9.7-r1 && \
     apk add --upgrade --no-cache less=679-r0 && \
     apk add --upgrade --no-cache curl=8.14.1-r2 && \
     apk add --upgrade --no-cache vim=9.1.1566-r0 && \

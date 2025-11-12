@@ -2,6 +2,7 @@
 # Container base packages
 #######################################################################################
 bash
+coreutils
 less
 vim
 mosquitto-clients
