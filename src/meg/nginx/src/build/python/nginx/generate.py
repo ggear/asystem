@@ -162,7 +162,6 @@ http {
                 for server_name in server_names:
                     conf_file.write("  " + """
   # {} server for [{}] and domain [{}.janeandgraham.com]
-  if ($host !~* \\.janeandgraham\\.com$) {{ return 444; }}
   map $host ${}_url {{ default {}${}:{}; }}
   server {{
     listen {};
