@@ -76,10 +76,6 @@ http {
   add_header X-XSS-Protection "1; mode=block" always;
   add_header Referrer-Policy "no-referrer-when-downgrade" always;
   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
-  add_header Permissions-Policy "geolocation=(), microphone=(), camera=()";
-  add_header Cross-Origin-Embedder-Policy "require-corp";
-  add_header Cross-Origin-Opener-Policy "same-origin";
-  add_header Cross-Origin-Resource-Policy "same-origin";
 
   proxy_http_version 1.1;
   proxy_set_header Connection "";
