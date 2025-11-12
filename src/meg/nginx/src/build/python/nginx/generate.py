@@ -77,6 +77,9 @@ http {
   add_header Referrer-Policy "no-referrer-when-downgrade" always;
   add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
 
+  limit_req_zone $binary_remote_addr zone=perip:10m rate=10r/s;
+  limit_req zone=perip burst=20 nodelay;
+
   # HTTP WS upgrade
   map $http_upgrade $connection_upgrade {
     default upgrade;
@@ -119,6 +122,11 @@ http {
     location / {
       root /usr/share/nginx/html;
       autoindex on;
+    }
+    location ~ /\.(git|env|ht) {
+      deny all;
+      access_log off;
+      log_not_found off;
     }
   }
 
