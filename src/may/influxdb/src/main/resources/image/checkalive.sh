@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  pgrep -x influxd >/dev/null
+  [ -d "$(influx server-config | jq -r '.["engine-path"]')" ] && [ -w "$(influx server-config | jq -r '.["engine-path"]')" ]
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [influxdb] is alive :)" >&2
