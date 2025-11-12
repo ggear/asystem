@@ -83,8 +83,8 @@ http {
   # proxy_hide_header X-Powered-By;
   # proxy_buffering off;
 
-  limit_req_zone $binary_remote_addr zone=perip:10m rate=10r/s;
-  limit_req zone=perip burst=20 nodelay;
+  # limit_req_zone $binary_remote_addr zone=perip:10m rate=10r/s;
+  # limit_req zone=perip burst=20 nodelay;
 
   # HTTP WS upgrade
   map $http_upgrade $connection_upgrade {
