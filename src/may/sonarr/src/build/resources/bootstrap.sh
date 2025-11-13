@@ -138,7 +138,7 @@ else
     updated_profile=$(echo "$full_profile" | jq '.formatItems[0].score = 100')
     status=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$SONARR_URL/api/v3/qualityProfile/$profile_id" \
       "${auth_header[@]}" -H "Content-Type: application/json" -d "$updated_profile")
-    if [ "$status" != 2* ]; then
+    if [[ "$status" != 2* ]]; then
       curl -s -X PUT "$SONARR_URL/api/v3/qualityProfile/$profile_id" \
         "${auth_header[@]}" -H "Content-Type: application/json" -d "$updated_profile"
       echo "❌ Failed to update $profile_name (HTTP $status)"
@@ -157,7 +157,7 @@ echo "${rootfolders}" | jq -c '.[]' | while read -r folder; do
   id=$(echo "${folder}" | jq -r '.id')
   status=$(curl -s -o /dev/null -w "%{http_code}" -X DELETE "${SONARR_URL}/api/v3/rootfolder/${id}" \
     -H "X-Api-Key: ${SONARR_API_KEY}")
-  if [ "${status}" == 2* ]; then
+  if [[ "${status}" == 2* ]]; then
     echo "✅ Deleted root folder ID ${id}"
   else
     echo "❌ Failed to delete root folder ID ${id}, HTTP ${status}" >&2
@@ -168,7 +168,7 @@ status=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${SONARR_URL}/api/v3/ro
   -H "X-Api-Key: ${SONARR_API_KEY}" \
   -H "Content-Type: application/json" \
   -d "${payload}")
-if [ "${status}" == 2* ]; then
+if [[ "${status}" == 2* ]]; then
   echo "✅ Successfully added root folder '${MEDIA_SERIES_DIR}'"
 else
   echo "❌ Failed to add root folder '${MEDIA_SERIES_DIR}', HTTP ${status}" >&2
