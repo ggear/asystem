@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  [ "$(curl "http://${UNPOLLER_SERVICE}:${UNPOLLER_HTTP_PORT}/health")" == "OK" ]
+  pgrep -x unpoller >/dev/null
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [unpoller] is alive :)" >&2

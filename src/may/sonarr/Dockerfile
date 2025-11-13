@@ -20,8 +20,7 @@ RUN apt-get update && \
 
 FROM image_upstream AS image_base
 COPY target/package/main/resources/image/. /asystem/etc
-RUN \
-    tar -xvzf /asystem/etc/*.gz -C /opt && \
+RUN tar -xvzf /asystem/etc/*.gz -C /opt && \
     chmod +x /opt/Sonarr/Sonarr && \
     rm /asystem/etc/*.gz
 

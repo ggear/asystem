@@ -2,6 +2,7 @@
 # Container base packages
 #######################################################################################
 bash
+procps
 coreutils
 less
 curl

@@ -1,1 +1,1 @@
-[ "$(curl "http://${UNPOLLER_SERVICE}:${UNPOLLER_HTTP_PORT}/health")" == "OK" ]
+pgrep -x unpoller >/dev/null
