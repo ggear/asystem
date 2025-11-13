@@ -241,7 +241,7 @@ done
 # Refresh library
 ###############################################################################
 auth_header=(-H "X-Api-Key: ${SONARR_API_KEY}")
-payload='{"name": "DownloadedEpisodesScan"}'
+payload='{"name": "DownloadedEpisodesScan", "path": "/downloads"}'
 status=$(curl -s -o /dev/null -w "%{http_code}" \
   -X POST "${SONARR_URL}/api/v3/command" \
   -H "X-Api-Key: ${SONARR_API_KEY}" \
