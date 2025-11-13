@@ -15,8 +15,6 @@ while ! "${ASYSTEM_HOME}/checkalive.sh"; do
  echo "${MESSAGE}" && sleep 1
 done
 
-set -eo pipefail
-
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
@@ -215,6 +213,28 @@ if [[ "$status" == 2* ]]; then
 else
   echo "❌ Failed to update usenet delay (HTTP $status)"
 fi
+###############################################################################
+
+###############################################################################
+# Configure series monitoring
+###############################################################################
+auth_header=(-H "X-Api-Key: ${SONARR_API_KEY}")
+series=$(curl -s "${SONARR_URL}/api/v3/series" "${auth_header[@]}")
+for row in $(echo "${series}" | jq -r '.[] | @base64'); do
+  _jq() { echo "${row}" | base64 --decode | jq -r "${1}"; }
+  series_id=$(_jq '.id')
+  series_title=$(_jq '.title')
+  updated_series=$(echo "${row}" | base64 --decode | jq '.monitored = true | .episodeFileCount = 0')
+  status=$(curl -s -o /dev/null -w "%{http_code}" \
+    -X PUT "${SONARR_URL}/api/v3/series/${series_id}" \
+    "${auth_header[@]}" -H "Content-Type: application/json" \
+    -d "${updated_series}")
+  if [[ "${status}" == 2* ]]; then
+    echo "✅ Updated monitoring for ${series_title}"
+  else
+    echo "❌ Failed to update monitoring for ${series_title} (HTTP ${status})"
+  fi
+done
 ###############################################################################
 
 ###############################################################################
