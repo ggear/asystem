@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && curl -s -X GET "http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/health" -H "X-Api-Key: ${SONARR_API_KEY}" | jq -e 'length == 0' >/dev/null
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && curl -s -w '%{http_code}' -o >(jq -e 'length == 0' >/dev/null) "http://${SONARR_SERVICE_PROD}:${SONARR_HTTP_PORT}/api/v3/health" -H "X-Api-Key: ${SONARR_API_KEY}" | grep -q '^200$'
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [sonarr] is executing :)" >&2
