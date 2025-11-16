@@ -8,4 +8,5 @@ FROM image_base AS image_build
 FROM image_build AS image_runtime
 
 ENTRYPOINT ["docker-entrypoint.sh"]
+WORKDIR /asystem/etc
 CMD ["mariadbd"]
