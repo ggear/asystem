@@ -26,6 +26,7 @@ x-common: &common
     - ${SERVICE_DATA_DIR}/checkalive.sh:/asystem/etc/checkalive.sh
     - ${SERVICE_DATA_DIR}/checkexecuting.sh:/asystem/etc/checkexecuting.sh
     - ${SERVICE_DATA_DIR}/checkhealthy.sh:/asystem/etc/checkhealthy.sh
+  working_dir: /asystem/etc
   logging:
     driver: "json-file"
     options:
