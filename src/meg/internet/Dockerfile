@@ -2,9 +2,9 @@
 ARG ASYSTEM_TELEGRAF_VERSION="latest"
 FROM telegraf:${ASYSTEM_TELEGRAF_VERSION} AS image_upstream
 USER root
-RUN \
-    apt-get update && \
+RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.15-2+b9 && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install coreutils=9.1-1 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install less=590-2.1~deb12u2 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install vim=2:9.0.1378-2+deb12u2 && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install mosquitto-clients=2.0.11-1.2+deb12u2 && \
@@ -21,8 +21,7 @@ FROM image_upstream AS image_base
 ARG ASYSTEM_PYTHON_VERSION
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
-RUN \
-    cd /tmp && \
+RUN cd /tmp && \
     rm -f Python* && \
     wget https://www.python.org/ftp/python/$ASYSTEM_PYTHON_VERSION/Python-$ASYSTEM_PYTHON_VERSION.tgz && \
     tar zxf Python-$ASYSTEM_PYTHON_VERSION.tgz && \
@@ -38,9 +37,10 @@ RUN \
 FROM image_base AS image_build
 COPY src/main/python/. /asystem/bin/python
 COPY target/package/main/resources/image/. /asystem/etc
-RUN \
-    cp /asystem/etc/telegraf.conf /etc/telegraf/telegraf.conf && \
-    [ -f /asystem/bin/python/.py_deps.txt ] && pip3 install --no-cache-dir --default-timeout=1000 -r /asystem/bin/python/.py_deps.txt
+RUN set -eux; \
+    cp /asystem/etc/telegraf.conf /etc/telegraf/telegraf.conf; \
+    [ -f /asystem/bin/python/.py_deps.txt ] && pip3 install --root-user-action ignore --break-system-packages --default-timeout=1000 --no-cache-dir -r /asystem/bin/python/.py_deps.txt; \
+    pip3 cache purge
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc

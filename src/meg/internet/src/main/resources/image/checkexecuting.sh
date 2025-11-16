@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  OUTPUT="$(telegraf --test 2>/dev/null)" && [ "$(grep -c 'metrics_failed=0,metrics_succeeded=6' <<<"${OUTPUT}")" -eq 1 ] && telegraf --once >/dev/null 2>&1
+  /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" && telegraf --test 2>/dev/null | grep -q 'metrics_failed=0,metrics_succeeded=6'
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [internet] is executing :)" >&2
