@@ -15,8 +15,6 @@ while ! "${ASYSTEM_HOME}/checkalive.sh"; do
  echo "${MESSAGE}" && sleep 1
 done
 
-set -eo pipefail
-
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap starting ..."
 echo "--------------------------------------------------------------------------------"
