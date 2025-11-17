@@ -25,6 +25,13 @@ services:
       - ${SERVICE_DATA_DIR}:/var/lib/mysql
     ports:
       - ${MARIADB_API_PORT}:${MARIADB_API_PORT}
+    healthcheck:
+      test: /asystem/etc/checkhealthy.sh
+      interval: 2m
+      timeout: 30s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     deploy:
       resources:
         limits:
