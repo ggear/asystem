@@ -7,5 +7,6 @@ less
 curl
 vim
 jq
+patch
 apache2
 mosquitto-clients
