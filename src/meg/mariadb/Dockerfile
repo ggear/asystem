@@ -1,5 +1,5 @@
 # NOTES: https://mariadb.org/mariadb/all-releases
-FROM mariadb:11.5.2 AS image_upstream
+FROM mariadb:12.0.2 AS image_upstream
 USER root
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.21-2ubuntu4 && \
