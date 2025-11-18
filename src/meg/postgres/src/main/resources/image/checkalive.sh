@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  pg_isready -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER}
+  pg_isready -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} >/dev/null 2>&1
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [postgres] is alive :)" >&2
