@@ -37,11 +37,4 @@ services:
       resources:
         limits:
           memory: 2G
-  vernemq_bootstrap:
-    container_name: vernemq_bootstrap
-    <<: *common
-    restart: 'no'
-    entrypoint: bash
-    command: /asystem/etc/bootstrap.sh
-    depends_on:
-      - vernemq
+
