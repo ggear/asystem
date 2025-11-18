@@ -1,5 +1,5 @@
 # NOTES: https://www.postgresql.org/docs/release
-FROM postgres:14.13-bullseye AS image_upstream
+FROM postgres:17.5-bullseye AS image_upstream
 USER root
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.1-2+deb11u1 && \

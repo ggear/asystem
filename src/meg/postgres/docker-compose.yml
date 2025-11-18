@@ -33,6 +33,13 @@ services:
     restart: ${SERVICE_RESTART}
     ports:
       - ${POSTGRES_API_PORT}:5432
+    healthcheck:
+      test: /asystem/etc/checkhealthy.sh
+      interval: 2m
+      timeout: 30s
+      retries: 3
+      start_period: 1m
+      start_interval: 10s
     deploy:
       resources:
         limits:
