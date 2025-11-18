@@ -18,8 +18,9 @@ func newStatsCmd() *cobra.Command {
 	opts := &statsOptions{}
 
 	cmd := &cobra.Command{
-		Use:   "stats [OPTIONS]",
-		Short: "Show real-time system statistics",
+		Use:     "stats [OPTIONS]",
+		Aliases: []string{"atop"},
+		Short:   "Show real-time system statistics",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runStats(opts)
 		},
