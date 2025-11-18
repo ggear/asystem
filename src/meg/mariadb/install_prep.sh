@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker exec --user root mariadb /var/lib/influxdb2/backup.sh
+docker exec --user root mariadb /asystem/etc/backup.sh

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIR_BACKUP="/var/lib/postgresql/data/backup"
+DIR_BACKUP="/var/lib/mysql/backup"
 TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 for SCHEMA in "all"; do
