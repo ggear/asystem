@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  vmq-admin node status | awk -F '|' '/version/ {gsub(/ /,"",$3); exit ($3=="")?1:0}'
+  vmq-admin node status | awk -F '|' '/version/ {gsub(/ /,"",$3); exit ($3=="")?1:0}' >/dev/null 2>&1
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [vernemq] is alive :)" >&2
