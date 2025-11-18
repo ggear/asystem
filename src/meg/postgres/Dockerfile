@@ -1,5 +1,10 @@
-# https://www.postgresql.org/docs/release
+# NOTES: https://www.postgresql.org/docs/release
 FROM postgres:14.13-bullseye AS image_upstream
+USER root
+RUN apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.1-2+deb11u1 && \
+    DEBIAN_FRONTEND=noninteractive apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
 FROM image_upstream AS image_base
 RUN localedef -i en_AU -c -f UTF-8 -A /usr/share/locale/locale.alias en_AU.UTF-8
