@@ -1,2 +1,2 @@
 /asystem/etc/checkalive.sh "${POSITIONAL_ARGS[@]}" &&
-  mariadb -uroot -p"${MARIADB_ROOT_PASSWORD}" -h "${MARIADB_SERVICE}" -P "${MARIADB_API_PORT}" -e "SELECT 1;" >/dev/null 2>&1
+  psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER}" -d "postgres" -c "SELECT 1;" >/dev/null 2>&1

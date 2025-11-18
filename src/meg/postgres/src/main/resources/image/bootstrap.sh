@@ -1,14 +1,19 @@
-#!/bin/bash
+#!/usr/bin/env bash
+################################################################################
+# WARNING: This file is written by the build process, any manual edits will be lost!
+################################################################################
 
 echo "--------------------------------------------------------------------------------"
-echo "Bootstrap initialising ..."
+echo "Service is starting ..."
 echo "--------------------------------------------------------------------------------"
 
-while ! pg_isready -q -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} -t 1 >/dev/null 2>&1; do
-  echo "Waiting for service to come alive ..." && sleep 1
+ASYSTEM_HOME=${ASYSTEM_HOME:-"/asystem/etc"}
+
+MESSAGE="Waiting for service to come alive ... "
+echo "${MESSAGE}"
+while ! "${ASYSTEM_HOME}/checkalive.sh"; do
+ echo "${MESSAGE}" && sleep 1
 done
-
-set -eo pipefail
 
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap starting ..."
@@ -30,3 +35,12 @@ init_user_database "${POSTGRES_USER_MLFLOW}" "${POSTGRES_KEY_MLFLOW}" "${POSTGRE
 echo "--------------------------------------------------------------------------------"
 echo "Bootstrap finished"
 echo "--------------------------------------------------------------------------------"
+
+set +eo pipefail
+
+MESSAGE="Waiting for service to start executing ... "
+echo "${MESSAGE}"
+while ! "${ASYSTEM_HOME}/checkexecuting.sh"; do
+  echo "${MESSAGE}" && sleep 1
+done
+echo "----------" && echo "✅ Service has started"

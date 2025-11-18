@@ -1,2 +1,3 @@
 /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" &&
-  mariadb -u"${MARIADB_USER}" -p"${MARIADB_PASSWORD}" -h "${MARIADB_SERVICE}" -P "${MARIADB_API_PORT}" -e "SELECT 1;" >/dev/null 2>&1
+  PGPASSWORD="${POSTGRES_KEY_HASS}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER_HASS}" -d "${POSTGRES_DATABASE_HASS}" -c "SELECT 1;" >/dev/null 2>&1 &&
+  PGPASSWORD="${POSTGRES_KEY_MLFLOW}" psql -h "${POSTGRES_SERVICE}" -p "${POSTGRES_API_PORT}" -U "${POSTGRES_USER_MLFLOW}" -d "${POSTGRES_DATABASE_MLFLOW}" -c "SELECT 1;" >/dev/null 2>&1

@@ -19,6 +19,7 @@ x-common: &common
     - PGPASSWORD=${POSTGRES_KEY}
     - PGDATA=/var/lib/postgresql/data/pgdata
   volumes:
+    - ${SERVICE_DATA_DIR}:/asystem/mnt
     - ${SERVICE_DATA_DIR}:/var/lib/postgresql/data
   logging:
     driver: "json-file"
