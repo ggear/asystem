@@ -6,9 +6,10 @@
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
 
 pull_repo "${ROOT_DIR}" "${1}" weewx weewx-core weewx/weewx v${WEEWX_VERSION}
-[ $(ls ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*.whl 2>/dev/null | wc -l) -eq 0 ] && cd ${ROOT_DIR}/../../../.deps/weewx/weewx-core && rm -rf dist && make clean pypi-package
+[ $(ls ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*${WEEWX_VERSION}*.whl 2>/dev/null | wc -l) -eq 0 ] && cd ${ROOT_DIR}/../../../.deps/weewx/weewx-core && rm -rf dist && make clean pypi-package
 mkdir -p ${ROOT_DIR}/src/main/resources/image/install
-cp -nv ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*.whl ${ROOT_DIR}/src/main/resources/image/install
+find ${ROOT_DIR}/src/main/resources/image/install -type f ! -name "weewx*${WEEWX_VERSION}*whl" -exec rm {} \;
+cp -nv ${ROOT_DIR}/../../../.deps/weewx/weewx-core/dist/weewx*${WEEWX_VERSION}*.whl ${ROOT_DIR}/src/main/resources/image/install
 
 VERSION=master
 pull_repo "${ROOT_DIR}" "${1}" weewx weewx-mqtt matthewwall/weewx-mqtt "${VERSION}"
