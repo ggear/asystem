@@ -5,8 +5,9 @@ TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
 
 for SCHEMA in "all"; do
   DIR="${DIR_BACKUP}/${TIMESTAMP}/${SCHEMA}"
-  mkdir -p ${DIR}
-  mysqldump -uroot -p"${MARIADB_ROOT_PASSWORD}" --all-databases --single-transaction --quick | gzip >all_${TIMESTAMP}.sql.gz
+  mkdir -p "${DIR}"
+  cd "${DIR}"
+  mariadb-dump -uroot -p"${MARIADB_ROOT_PASSWORD}" --all-databases --single-transaction --quick | gzip >"all_${TIMESTAMP}.sql.gz"
   echo "Completed backup for timestamp [$TIMESTAMP] to [${DIR}]"
 done
-find ${DIR_BACKUP} -depth -empty -delete -type d
+find "${DIR_BACKUP}" -depth -empty -delete -type d
