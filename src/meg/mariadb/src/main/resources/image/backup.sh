@@ -7,7 +7,7 @@ for SCHEMA in "all"; do
   DIR="${DIR_BACKUP}/${TIMESTAMP}/${SCHEMA}"
   mkdir -p "${DIR}"
   cd "${DIR}"
-  echo -n "Starting backup for timestamp [$TIMESTAMP] to [${DIR}] ... "
+  echo -n "Starting backup to [${DIR}] ... "
   mariadb-dump -uroot -p"${MARIADB_ROOT_PASSWORD}" --all-databases --single-transaction --quick | gzip >"all_${TIMESTAMP}.sql.gz"
   echo "done"
 done
