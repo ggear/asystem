@@ -1,1 +1,1 @@
-pg_isready -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER}
+pg_isready -h ${POSTGRES_SERVICE} -p ${POSTGRES_API_PORT} -U ${POSTGRES_USER} >/dev/null 2>&1
