@@ -3,7 +3,7 @@
 # WARNING: This file is written by the build process, any manual edits will be lost!
 #######################################################################################
 ROOT_DIR="$(dirname "$(readlink -f "$0")")"
-while [ $(mosquitto_sub -h ${VERNEMQ_SERVICE} -p ${VERNEMQ_API_PORT} -t 'zigbee/bridge/state' -W 1 2>/dev/null | grep online | wc -l) -ne 1 ]; do :; done
+while ! mosquitto_sub -h "$VERNEMQ_SERVICE" -p "$VERNEMQ_API_PORT" -t 'zigbee/bridge/health' -W 1 2>/dev/null | jq -r '.process.uptime_sec' | awk '{exit ($1>0?0:1)}'; do echo 'Waiting for zigbee2mqtt server to come up ... '; sleep 2; done
 mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Ada Lamp Bulb 1" }' && echo '[INFO] Device [Ada Lamp Bulb 1] removed from all groups' && sleep 1
 mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Edwin Night Light Bulb 1" }' && echo '[INFO] Device [Edwin Night Light Bulb 1] removed from all groups' && sleep 1
 mosquitto_pub -h $VERNEMQ_SERVICE -p $VERNEMQ_API_PORT -t 'zigbee/bridge/request/group/members/remove_all' -m '{ "device": "Hallway Main Bulb 1" }' && echo '[INFO] Device [Hallway Main Bulb 1] removed from all groups' && sleep 1
