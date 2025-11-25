@@ -1,0 +1,43 @@
+{
+  "asystem": {
+    "version": "$SERVICE_VERSION_ABSOLUTE",
+    "services": {
+      "macmini-mad": [
+        "monitor",
+        "plex",
+        "sabnzbd"
+      ],
+      "macmini-max": [
+        "influxdb3",
+        "mlflow",
+        "mlserver",
+        "monitor",
+        "rhasspy"
+      ],
+      "macmini-may": [
+        "digitemp",
+        "grafana",
+        "influxdb",
+        "letsencrypt",
+        "monitor",
+        "sonarr",
+        "unpoller",
+        "wrangle"
+      ],
+      "macmini-meg": [
+        "homeassistant",
+        "internet",
+        "mariadb",
+        "monitor",
+        "nginx",
+        "postgres",
+        "vernemq"
+      ],
+      "raspbpi-jen": [
+        "monitor",
+        "weewx",
+        "zigbee2mqtt"
+      ]
+    }
+  }
+}

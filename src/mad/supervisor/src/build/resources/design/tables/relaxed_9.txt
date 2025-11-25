@@ -23,5 +23,5 @@
 +----------------+----------------------+----------------------+--------+---------------+---------+---------+
 
 ########################################################################################################################
-# Optimise for >120 columns and >33 rows, scale from mininum above to console columns by adding to bar charts in 4 char quanta
+# Optimise for >120 columns and >33 rows, scale from minimum above to console columns by adding to bar charts in 4 char quanta
 ########################################################################################################################

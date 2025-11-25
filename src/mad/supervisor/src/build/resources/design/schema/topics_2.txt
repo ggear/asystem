@@ -1,0 +1,35 @@
+supervisor/macmini-meg/host # {"ok":true}
+supervisor/macmini-meg/host/compute # {"ok":true}
+supervisor/macmini-meg/host/compute/used_processor/used_cpu # {"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/compute/used_memory/used_ram # {"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/compute/allocated_memory/aloc_ram # {"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/health # {"ok":true}
+supervisor/macmini-meg/host/health/failed_services/fail_svc # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/health/failed_shares/fail_shr # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/health/failed_backups/fail_bkp # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime # {"ok":true}
+supervisor/macmini-meg/host/runtime/peak_temperature/peak_tem # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/peak_fan/peak_fan # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/life_drives/life_ssd # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage # {"ok":true}
+supervisor/macmini-meg/host/storage/used_system_drive/used_sys # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/used_share_drives/used_shr # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/used_backup_drives/used_bkp # {"ok":false, "unit":"%", "value":"100"}
+
+supervisor/macmini-meg/service # {"ok":true}
+supervisor/macmini-meg/service/monitor # {"ok":true}
+supervisor/macmini-meg/service/monitor/processor/used_cpu # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/monitor/memory/used_ram # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/monitor/backups/stat_bkp # {"ok":true}
+supervisor/macmini-meg/service/monitor/healthy/stat_hlt # {"ok":true}
+supervisor/macmini-meg/service/monitor/reboots/nmbr_rbt # {"ok":true, value":"1"}
+supervisor/macmini-meg/service/monitor/alive/time_alv # {"ok":false, "unit":"d", "value":"1"}
+supervisor/macmini-meg/service/monitor/version/stat_ver # {"ok":true, "value":"10.100.5096"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff # {"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/processor/used_cpu # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/memory/used_ram # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/backups/stat_bkp # {"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/healthy/stat_hlt # {"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/reboots/nmbr_rbt # {"ok":true, value":"1"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/alive/time_alv # {"ok":false, "unit":"d", "value":"1"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/version/stat_ver # {"ok":true, "value":"10.100.5096"}

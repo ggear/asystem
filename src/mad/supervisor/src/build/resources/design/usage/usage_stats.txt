@@ -4,6 +4,9 @@ Usage:
 Description:
   Show real-time system statistics
 
+Aliases:
+  atop
+
 Options:
   -m, --mode string         Method to retrieve stats:
                               'poll'      – Poll system for stats (default)

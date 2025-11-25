@@ -657,32 +657,28 @@ def _build(context, filter_module=None, filter_host=None, is_release=False):
         _print_footer(module, "build process", host=filter_host)
     for module in _get_modules(context, "src", filter_module=filter_module):
         _print_header(module, "build compile", host=filter_host)
-        if isdir(join(ROOT_MODULE_DIR, module, "src/main/python")):
-            _print_line("Linting sources ...")
 
-            # TODO: Re-enable once I have cleaned up python codebases
-            # _run_local(context, "pylint --disable=all src/main/python/*", module)
+        # TODO: Re-enable once I have cleaned up python codebases
+        # if isdir(join(ROOT_MODULE_DIR, module, "src/main/python")):
+        # _print_line("Linting sources ...")
+        # _run_local(context, "pylint --disable=all src/main/python/*", module)
 
         if isfile(join(ROOT_MODULE_DIR, module, "src/setup.py")):
             _run_local(context, "python setup.py sdist", join(module, "target/package"))
-
-        # TODO: Provide implementation
-        if isdir(join(ROOT_MODULE_DIR, module, "src/main/go/pkg")):
-            _run_local(context, "[ ! -d ${GOPATH} ] && mkdir -vp ${GOPATH}/{bin,src,pkg} || true")
-            _run_local(context, "go mod tidy", join(module, "src/main/go/pkg"))
-            _run_local(context, "go mod download", join(module, "src/main/go/pkg"))
-            _run_local(context, "GOCACHE={} go build".format(join(ROOT_MODULE_DIR, module, "target/gocache")),
-                       join(module, "src/main/go/pkg"))
-        if isdir(join(ROOT_MODULE_DIR, module, "src/main/go/cmd")):
-            _run_local(context, "go mod tidy", join(module, "src/main/go/cmd"))
-            _run_local(context, "go mod download", join(module, "src/main/go/cmd"))
-        if isdir(join(ROOT_MODULE_DIR, module, "src/test/go/unit")):
-            _run_local(context, "go mod tidy", join(module, "src/test/go/unit"))
-            _run_local(context, "go mod download", join(module, "src/test/go/unit"))
-        if isdir(join(ROOT_MODULE_DIR, module, "src/test/go/system")):
-            _run_local(context, "go mod tidy", join(module, "src/test/go/system"))
-            _run_local(context, "go mod download", join(module, "src/test/go/system"))
-
+        module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
+        if isdir(module_go_main_path):
+            _run_local(context, "go mod tidy", module_go_main_path)
+            _run_local(context, "go mod download", module_go_main_path)
+            _run_local(context, "GOCACHE={} GOBIN={} go build -o {}".format(
+                join(ROOT_MODULE_DIR, module, "target/go/cache"),
+                join(ROOT_MODULE_DIR, module, "target/go/bin"),
+                join(ROOT_MODULE_DIR, module, "target/go/bin/"),
+            ), module_go_main_path)
+            _run_local(context, "chmod -R 777 $GOPATH", module_go_main_path)
+        module_go_test_path = join(ROOT_MODULE_DIR, module, "src/test/go", _get_service(module) + "_test")
+        if isdir(module_go_test_path):
+            _run_local(context, "go mod tidy", module_go_test_path)
+            _run_local(context, "go mod download", module_go_test_path)
         cargo_file = join(ROOT_MODULE_DIR, module, "Cargo.toml")
         if isfile(cargo_file):
             _run_local(context, "mkdir -p target/package && cp -rvfp Cargo.toml target/package",
@@ -704,12 +700,10 @@ def _unittest(context, filter_module=None):
         _print_line("Running unit tests ...")
         _run_local(context, "python unit_test.py", join(module, "src/test/python/unit"))
         _print_footer(module, "unittest")
-    for module in _get_modules(context, "src/test/go/unit/unit_test.go", filter_module=filter_module):
+    for module in _get_modules(context, "src/main/go", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "go mod tidy", join(module, "src/test/go/unit"))
-        _run_local(context, "go mod download", join(module, "src/test/go/unit"))
-        _run_local(context, "go test --race", join(module, "src/test/go/unit"))
+        _run_local(context, "go test -v ./... 2>&1 | cat", join(module, "src/main/go/{}".format(_get_service(module))))
         _print_footer(module, "unittest")
     for module in _get_modules(context, "src/test/rust/unit/unit_test.rs", filter_module=filter_module):
         _print_header(module, "unittest")
@@ -752,13 +746,6 @@ def _systest(context, filter_module=None):
         if isfile(join(ROOT_MODULE_DIR, module, "src/test/python/system/system_test.py")):
             test_exit_code = _run_local(context, "python system_test.py",
                                         join(module, "src/test/python/system"), warn=True).exited
-        elif isdir(join(ROOT_MODULE_DIR, module, "src/test/go/system")):
-            _run_local(context, "go mod tidy",
-                       join(module, "src/test/go/system"))
-            _run_local(context, "go mod download",
-                       join(module, "src/test/go/system"))
-            test_exit_code = _run_local(context, "go test --race",
-                                        join(module, "src/test/go/system"), warn=True).exited
         else:
             print("Could not find test to run")
         _down_module(context, module)

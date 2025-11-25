@@ -8,7 +8,7 @@ export $(xargs <${ROOT_DIR}/.env)
 
 export VERNEMQ_SERVICE=${VERNEMQ_SERVICE_PROD}
 
-${ROOT_DIR}/src/main/resources/config/mqtt.sh
+${ROOT_DIR}/src/main/resources/image/mqtt.sh
 
 printf "Entity Metadata publish script [monitor] sleeping before publishing data topics ... " && sleep 2 && printf "done\n\nEntity Metadata publish script [monitor] publishing data topics:\n"
 

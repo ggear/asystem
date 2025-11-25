@@ -1,0 +1,21 @@
+Used CPU 100%  Fail SVC 100%  Peak TEM 100%  Used SYS 100%
+Used RAM  39%  Fail SHR 100%  Peak FAN 100%  Used SHR  10%
+Aloc RAM   1%  Fail BCK   4%  Life SSD   3%  Used BKP  10%
+==========================================================
+SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK
+==========================================================
+monitor    100% 100%  ✔   ✔   alongishn~ 100% 100%  ✔   ✔
+homeassi~   10%  10%  ✔   ✖   ashortern~  10%  10%  ✖   ✖
+nginx      100% 100%  ✖   ✔   shortname  100% 100%  ✔   ✔
+averyrea~    0%  10%  ✔   ✔   ~~~~~~~~~~    ~    ~  ~   ~
+
+
+
+
+
+
+
+
+###########################################################
+# Optimise for 59 columns and 10 rows
+###########################################################

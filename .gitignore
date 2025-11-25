@@ -3,6 +3,7 @@
 .git/
 *.pem
 ~$*.*
+.go
 .env
 .env_all_key
 .py_deps_dev.txt

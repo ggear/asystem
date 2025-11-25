@@ -15,7 +15,7 @@ packaging==24.2
 pytz==2025.2
 datetime==5.5
 python-dateutil==2.9.0.post0
-types-python-dateutil==2.9.0.20251108
+types-python-dateutil==2.9.0.20251115
 
 pandas==2.2.3
 polars==1.29.0

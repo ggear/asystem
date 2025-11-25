@@ -1,0 +1,37 @@
+supervisor/macmini-meg/ok/bool # true|false
+
+supervisor/macmini-meg/host/ok/bool # true|false
+supervisor/macmini-meg/host/compute/ok/bool # true|false
+supervisor/macmini-meg/host/compute/metric/used_processor/used_cpu/pct # 100
+supervisor/macmini-meg/host/compute/metric/used_memory/used_ram/pct # 100
+supervisor/macmini-meg/host/compute/metric/allocated_memory/aloc_ram/pct # 100
+supervisor/macmini-meg/host/health/ok/bool # true|false
+supervisor/macmini-meg/host/health/metric/failed_services/fail_svc/pct # 100
+supervisor/macmini-meg/host/health/metric/failed_shares/fail_shr/pct # 100
+supervisor/macmini-meg/host/health/metric/failed_backups/fail_bkp/pct # 100
+supervisor/macmini-meg/host/runtime/ok/bool # true|false
+supervisor/macmini-meg/host/runtime/metric/peak_temperature/peak_tem/pct # 100
+supervisor/macmini-meg/host/runtime/metric/peak_fan/peak_fan/pct # 100
+supervisor/macmini-meg/host/runtime/metric/life_drives/life_ssd/pct # 100
+supervisor/macmini-meg/host/storage/ok/bool # true|false
+supervisor/macmini-meg/host/storage/metric/used_system_drive/used_sys/pct # 100
+supervisor/macmini-meg/host/storage/metric/used_share_drives/used_shr/pct # 100
+supervisor/macmini-meg/host/storage/metric/used_backup_drives/used_bkp/pct # 100
+
+supervisor/macmini-meg/service/ok/bool # true|false
+supervisor/macmini-meg/service/monitor/ok/bool # true|false
+supervisor/macmini-meg/service/monitor/metric/processor/used_cpu/pct # 100
+supervisor/macmini-meg/service/monitor/metric/memory/used_ram/pct # 100
+supervisor/macmini-meg/service/monitor/metric/backups/stat_bkp/bool # true|false
+supervisor/macmini-meg/service/monitor/metric/healthy/stat_hlt/bool # true|false
+supervisor/macmini-meg/service/monitor/metric/reboots/cnts_rbt/int # 3
+supervisor/macmini-meg/service/monitor/metric/alive/stat_alv/bool # true|false
+supervisor/macmini-meg/service/monitor/metric/version/stat_ver/str # 'A String'
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/ok/bool # true|false
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/metric/processor/used_cpu/pct # 100
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/metric/memory/used_ram/pct # 100
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/metric/backups/stat_bkp/bool # true|false
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/metric/healthy/stat_hlt/bool # true|false
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/metric/reboots/cnts_rbt/int # 3
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/metric/alive/stat_alv/bool # true|false
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/metric/version/stat_ver/str # 'A String'
