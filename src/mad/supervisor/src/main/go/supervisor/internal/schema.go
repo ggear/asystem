@@ -42,7 +42,7 @@ func GetVersion(schemaPath string) (string, error) {
 		return "", errors.New("missing version")
 	}
 	if !regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}$`).MatchString(version) {
-		return "", fmt.Errorf("invalid version format: %s", version)
+		return "", fmt.Errorf("invalid version format [%s]", version)
 	}
 	return version, nil
 }

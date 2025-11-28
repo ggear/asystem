@@ -2,8 +2,9 @@ package internal
 
 import (
 	"fmt"
-	"github.com/gdamore/tcell/v2"
 	"time"
+
+	"github.com/gdamore/tcell/v2"
 )
 
 // Service represents a single service row

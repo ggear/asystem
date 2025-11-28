@@ -1,0 +1,28 @@
+supervisor/macmini-meg/host # {"ok":true}
+supervisor/macmini-meg/host/compute # {"ok":true}
+supervisor/macmini-meg/host/compute/used_processor # {"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/compute/used_memory # {"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/compute/allocated_memory # {"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/health # {"ok":true}
+supervisor/macmini-meg/host/health/failed_services # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/health/failed_shares # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/health/failed_backups # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime # {"ok":true}
+supervisor/macmini-meg/host/runtime/peak_temperature_max # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/peak_fan_speed_max # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/life_used_drives # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage # {"ok":true}
+supervisor/macmini-meg/host/storage/used_system_drive # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/used_share_drives # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/used_backup_drives # {"ok":false, "unit":"%", "value":"100"}
+
+supervisor/macmini-meg/service # {"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff # {"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/name # {"ok":true, "value":"averyrealylongnamethatiscutoff"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/version # {"ok":true, "value":"10.100.5096"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_processor # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_memory # {"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/backup_status # {"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/configured_status # {"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/restart_count # {"ok":true, value":"1"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/runtime # {"ok":false, "unit":"d", "value":"1"}

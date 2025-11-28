@@ -15,6 +15,7 @@ Options:
                               'auto'      - Uses console width to determine the most spacious format possible (default)
                               'compact'   – For consoles <60 chars wide
                               'relaxed'   – For consoles >120 chars wide
+  -m, --monochrome          Display in monochrome without ANSI escape colour coding sequences
   -p, --poll-period string  Polling interval, uses unit suffixes [s, m, h] (ignored in cache mode, default: "1s")
   -n, --no-stream           Disable continuous streaming, show only the first result and exit
   -h, --help                Display this help message and exit

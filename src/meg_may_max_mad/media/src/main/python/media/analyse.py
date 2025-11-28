@@ -488,7 +488,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             file_probe_stream_filtered["height"] = str(file_probe_stream_video_height) \
                                 if file_probe_stream_video_height > 0 else ""
                             file_probe_stream_filtered["width"] = str(file_probe_stream_video_width) \
-                                if file_probe_stream_video_width > 0 else ""
+                                if file_probe_stream_video_width > 0 else "-1"
                             file_probe_stream_filtered["resolution"] = file_probe_stream_video_resolution
                             file_probe_stream_filtered["resolution_target"] = ""
                             file_probe_stream_filtered["resolution_target_size"] = ""

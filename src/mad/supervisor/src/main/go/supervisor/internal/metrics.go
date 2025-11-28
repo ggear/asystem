@@ -2,241 +2,420 @@ package internal
 
 import (
 	"fmt"
-	"os"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 )
 
+type metricEnum int
+
 const (
-	TopicNamespaceIndex   = 0
-	TopicHostIndex        = 1
-	TopicTypeIndex        = 2
-	TopicCategoryIndex    = 3
-	TopicDescriptionIndex = 4
-	TopicLabelIndex       = 5
+	METRIC_MIN metricEnum = iota
+	metricHost
+	metricHostCompute
+	metricHostComputeUsedProcessor
+	metricHostComputeUsedMemory
+	metricHostComputeAllocatedMemory
+	metricHostHealth
+	metricHostHealthFailedServices
+	metricHostHealthFailedShares
+	metricHostHealthFailedBackups
+	metricHostRuntime
+	metricHostRuntimePeakTemperatureMax
+	metricHostRuntimePeakFanSpeedMax
+	metricHostRuntimeLifeUsedDrives
+	metricHostStorage
+	metricHostStorageUsedSystemDrive
+	metricHostStorageUsedShareDrives
+	metricHostStorageUsedBackupDrives
+	metricService
+	metricServiceName
+	metricServiceVersion
+	metricServiceUsedProcessor
+	metricServiceUsedMemory
+	metricServiceBackupStatus
+	metricServiceConfiguredStatus
+	metricServiceRestartCount
+	metricServiceRuntime
+	METRIC_MAX
 )
 
-type Metric struct {
-	Topic    string
-	Load     func(int) MetricValue
-	Payload  MetricValue
-	OnChange func(previous, current MetricValue)
+func (m metricEnum) isValid() bool {
+	return m > METRIC_MIN && m < METRIC_MAX
 }
 
-type MetricValue struct {
-	OK    bool   `json:"ok"`
-	Unit  string `json:"unit,omitempty"`
-	Value string `json:"value,omitempty"`
+var metricBuilders = [METRIC_MAX]metricBuilder{
+	metricHost: {
+		topicBuilder{
+			metricID: metricHost,
+			template: "supervisor/$HOSTNAME/host",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true}
+		},
+	},
+	metricHostCompute: {
+		topicBuilder{
+			metricID: metricHostCompute,
+			template: "supervisor/$HOSTNAME/host/compute",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true}
+		},
+	},
+	metricHostComputeUsedProcessor: {
+		topicBuilder{
+			metricID: metricHostComputeUsedProcessor,
+			template: "supervisor/$HOSTNAME/host/compute/used_processor",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "%", value: "10"}
+		},
+	},
+	metricHostComputeUsedMemory: {
+		topicBuilder{
+			metricID: metricHostComputeUsedMemory,
+			template: "supervisor/$HOSTNAME/host/compute/used_memory",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "%", value: "10"}
+		},
+	},
+	metricHostComputeAllocatedMemory: {
+		topicBuilder{
+			metricID: metricHostComputeAllocatedMemory,
+			template: "supervisor/$HOSTNAME/host/compute/allocated_memory",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "GB", value: "10"}
+		},
+	},
+	metricHostHealth: {
+		topicBuilder{
+			metricID: metricHostHealth,
+			template: "supervisor/$HOSTNAME/host/health",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true}
+		},
+	},
+	metricHostHealthFailedServices: {
+		topicBuilder{
+			metricID: metricHostHealthFailedServices,
+			template: "supervisor/$HOSTNAME/host/health/failed_services",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "", value: "10"}
+		},
+	},
+	metricHostHealthFailedShares: {
+		topicBuilder{
+			metricID: metricHostHealthFailedShares,
+			template: "supervisor/$HOSTNAME/host/health/failed_shares",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "", value: "10"}
+		},
+	},
+	metricHostHealthFailedBackups: {
+		topicBuilder{
+			metricID: metricHostHealthFailedBackups,
+			template: "supervisor/$HOSTNAME/host/health/failed_backups",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "", value: "10"}
+		},
+	},
+	metricHostRuntime: {
+		topicBuilder{
+			metricID: metricHostRuntime,
+			template: "supervisor/$HOSTNAME/host/runtime",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true}
+		},
+	},
+	metricHostRuntimePeakTemperatureMax: {
+		topicBuilder{
+			metricID: metricHostRuntimePeakTemperatureMax,
+			template: "supervisor/$HOSTNAME/host/runtime/peak_temperature_max",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "°C", value: "10"}
+		},
+	},
+	metricHostRuntimePeakFanSpeedMax: {
+		topicBuilder{
+			metricID: metricHostRuntimePeakFanSpeedMax,
+			template: "supervisor/$HOSTNAME/host/runtime/peak_fan_speed_max",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "RPM", value: "10"}
+		},
+	},
+	metricHostRuntimeLifeUsedDrives: {
+		topicBuilder{
+			metricID: metricHostRuntimeLifeUsedDrives,
+			template: "supervisor/$HOSTNAME/host/runtime/life_used_drives",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "%", value: "10"}
+		},
+	},
+	metricHostStorage: {
+		topicBuilder{
+			metricID: metricHostStorage,
+			template: "supervisor/$HOSTNAME/host/storage",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true}
+		},
+	},
+	metricHostStorageUsedSystemDrive: {
+		topicBuilder{
+			metricID: metricHostStorageUsedSystemDrive,
+			template: "supervisor/$HOSTNAME/host/storage/used_system_drive",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "%", value: "10"}
+		},
+	},
+	metricHostStorageUsedShareDrives: {
+		topicBuilder{
+			metricID: metricHostStorageUsedShareDrives,
+			template: "supervisor/$HOSTNAME/host/storage/used_share_drives",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "%", value: "10"}
+		},
+	},
+	metricHostStorageUsedBackupDrives: {
+		topicBuilder{
+			metricID: metricHostStorageUsedBackupDrives,
+			template: "supervisor/$HOSTNAME/host/storage/used_backup_drives",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "%", value: "10"}
+		},
+	},
+	metricService: {
+		topicBuilder{
+			metricID: metricService,
+			template: "supervisor/$HOSTNAME/service",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true}
+		},
+	},
+	metricServiceName: {
+		topicBuilder{
+			metricID: metricServiceName,
+			template: "supervisor/$HOSTNAME/service/$SERVICENAME/name",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, value: serviceName}
+		},
+	},
+	metricServiceVersion: {
+		topicBuilder{
+			metricID: metricServiceVersion,
+			template: "supervisor/$HOSTNAME/service/$SERVICENAME/version",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, value: "1.0.0"}
+		},
+	},
+	metricServiceUsedProcessor: {
+		topicBuilder{
+			metricID: metricServiceUsedProcessor,
+			template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_processor",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "%", value: "10"}
+		},
+	},
+	metricServiceUsedMemory: {
+		topicBuilder{
+			metricID: metricServiceUsedMemory,
+			template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_memory",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "MB", value: "256"}
+		},
+	},
+	metricServiceBackupStatus: {
+		topicBuilder{
+			metricID: metricServiceBackupStatus,
+			template: "supervisor/$HOSTNAME/service/$SERVICENAME/backup_status",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, value: "1"}
+		},
+	},
+	metricServiceConfiguredStatus: {
+		topicBuilder{
+			metricID: metricServiceConfiguredStatus,
+			template: "supervisor/$HOSTNAME/service/$SERVICENAME/configured_status",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, value: "true"}
+		},
+	},
+	metricServiceRestartCount: {
+		topicBuilder{
+			metricID: metricServiceRestartCount,
+			template: "supervisor/$HOSTNAME/service/$SERVICENAME/restart_count",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, value: "0"}
+		},
+	},
+	metricServiceRuntime: {
+		topicBuilder{
+			metricID: metricServiceRuntime,
+			template: "supervisor/$HOSTNAME/service/$SERVICENAME/runtime",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true, unit: "s", value: "3600"}
+		},
+	},
 }
 
-type MetricNode struct {
-	Metric   *Metric
-	Children map[string]*MetricNode
-	Order    []string
-}
+func CacheMetrics(hostname string, schemaPath string) (map[string]*metricRecord, error) {
 
-func (m *Metric) GetNamespace() (string, error) {
-	parts := strings.Split(m.Topic, "/")
-	if len(parts) <= TopicNamespaceIndex {
-		return "", fmt.Errorf("invalid topic [%s], namespace/# not found", m.Topic)
+	// TODO: How to present topic/index/row-col mapped metric to display
+	// TODO: -> Return Map keyed by metricRecordGUID, update sort, getServiceIndexRange
+	// TODO: How to reload for new or removed services
+	// TODO: -> onChange triggered by value and or serviceIndex change
+	//       -> input metricRecordMap, if null load for first time, otherwise use for onchnage
+	//       -> have display work out if a service has been deleted and not replaced, to nil out display
+
+	if hostname == "" {
+		return nil, fmt.Errorf("hostname not defined")
 	}
-	return parts[TopicNamespaceIndex], nil
-}
-
-func (m *Metric) GetHostname() (string, error) {
-	parts := strings.Split(m.Topic, "/")
-	if len(parts) <= TopicHostIndex {
-		return "", fmt.Errorf("invalid topic [%s], +/hostname/# not found", m.Topic)
-	}
-	return parts[TopicHostIndex], nil
-}
-
-func (m *Metric) GetType() (string, error) {
-	parts := strings.Split(m.Topic, "/")
-	if len(parts) <= TopicHostIndex {
-		return "", fmt.Errorf("invalid topic [%s], +/+/type/# not found", m.Topic)
-	}
-	return parts[TopicTypeIndex], nil
-}
-
-func (m *Metric) GetCategory() string {
-	parts := strings.Split(m.Topic, "/")
-	if len(parts) <= TopicCategoryIndex {
-		return ""
-	}
-	return parts[TopicCategoryIndex]
-}
-
-func (m *Metric) GetDescription() string {
-	parts := strings.Split(m.Topic, "/")
-	if len(parts) <= TopicDescriptionIndex {
-		return ""
-	}
-	return parts[TopicDescriptionIndex]
-}
-
-func (m *Metric) GetLabel() string {
-	parts := strings.Split(m.Topic, "/")
-	if len(parts) <= TopicLabelIndex {
-		return ""
-	}
-	return parts[TopicLabelIndex]
-}
-
-func (m *Metric) AsInt() (int, error) {
-	return strconv.Atoi(m.Payload.Value)
-}
-
-func (m *Metric) AsFloat() (float64, error) {
-	return strconv.ParseFloat(m.Payload.Value, 64)
-}
-
-func (m *Metric) AsBool() (bool, error) {
-	v := strings.ToLower(m.Payload.Value)
-	if v == "true" || v == "1" {
-		return true, nil
-	}
-	if v == "false" || v == "0" {
-		return false, nil
-	}
-	return false, fmt.Errorf("invalid boolean value: %s", m.Payload.Value)
-}
-
-func (m *Metric) Update(current MetricValue) {
-	if m.HasChanged(&Metric{Payload: current}) {
-		previous := m.Payload
-		m.Payload = current
-		m.OnChange(previous, current)
-	}
-}
-
-func (m *Metric) HasChanged(other *Metric) bool {
-	return m.Payload.OK != other.Payload.OK ||
-		m.Payload.Unit != other.Payload.Unit ||
-		m.Payload.Value != other.Payload.Value
-}
-
-func CacheMetrics() map[string]*MetricNode {
-	hostname, err := os.Hostname()
+	serviceNameSlice, err := GetServices(hostname, schemaPath)
 	if err != nil {
-		hostname = "unknown"
+		return nil, err
 	}
-	topicNamespace := "supervisor/" + hostname
-
-	metricsHost := []Metric{
-		// HOST COMPUTE
-		{Topic: topicNamespace + "/host/compute/used_processor/used_cpu"},
-		{Topic: topicNamespace + "/host/compute/used_memory/used_ram"},
-		{Topic: topicNamespace + "/host/compute/allocated_memory/aloc_ram"},
-		{Topic: topicNamespace + "/host/compute"},
-		// HOST HEALTH
-		{Topic: topicNamespace + "/host/health/failed_services/fail_svc"},
-		{Topic: topicNamespace + "/host/health/failed_shares/fail_shr"},
-		{Topic: topicNamespace + "/host/health/failed_backups/fail_bkp"},
-		{Topic: topicNamespace + "/host/health"},
-		// HOST RUNTIME
-		{Topic: topicNamespace + "/host/runtime/peak_temperature/peak_tem"},
-		{Topic: topicNamespace + "/host/runtime/peak_fan/peak_fan"},
-		{Topic: topicNamespace + "/host/runtime/life_drives/life_ssd"},
-		{Topic: topicNamespace + "/host/runtime"},
-		// HOST STORAGE
-		{Topic: topicNamespace + "/host/storage/used_system_drive/used_sys"},
-		{Topic: topicNamespace + "/host/storage/used_share_drives/used_shr"},
-		{Topic: topicNamespace + "/host/storage/used_backup_drives/used_bkp"},
-		{Topic: topicNamespace + "/host/storage"},
-		// HOST
-		{Topic: topicNamespace + "/host"},
-	}
-
-	// TODO
-	if serviceSlice, err := GetServices(hostname, SchemaDefaultPath); err != nil {
-		fmt.Println(err)
-	} else {
-		fmt.Println(serviceSlice)
-	}
-	metricsService := []Metric{
-		// SERVICE
-		{Topic: topicNamespace + "/service/monitor/version/ver"},
-		{Topic: topicNamespace + "/service/monitor/processor/cpu"},
-		{Topic: topicNamespace + "/service/monitor/memory/ram"},
-		{Topic: topicNamespace + "/service/monitor/backups/bkp"},
-		{Topic: topicNamespace + "/service/monitor/all_ok/aok"},
-		{Topic: topicNamespace + "/service/monitor/configured/cfg"},
-		{Topic: topicNamespace + "/service/monitor/restarts/rst"},
-		{Topic: topicNamespace + "/service/monitor/runtime/run"},
-		{Topic: topicNamespace + "/service/monitor"},
-	}
-	metricsService = append(metricsService, Metric{Topic: topicNamespace + "/service"})
-
-	allMetrics := append(metricsHost, metricsService...)
-	metricsTree := make(map[string]*MetricNode)
-	for _, metric := range allMetrics {
-		topicRelative := strings.TrimPrefix(metric.Topic, topicNamespace+"/")
-		topicParts := strings.Split(topicRelative, "/")
-		currentLevel := metricsTree
-		var parentNode *MetricNode
-		for partIndex, topicPart := range topicParts {
-			currentNode, exists := currentLevel[topicPart]
-			if !exists {
-				currentNode = &MetricNode{Children: make(map[string]*MetricNode)}
-				currentLevel[topicPart] = currentNode
-				if parentNode != nil {
-					parentNode.Order = append(parentNode.Order, topicPart)
+	metricRecordMap := make(map[string]*metricRecord)
+	for index := 1; index <= len(metricBuilders)-1; index++ {
+		if !metricBuilders[index].topicBuilder.metricID.isValid() {
+			return nil, fmt.Errorf("metric builder [%d] has invalid metric ID [%d]", index, metricBuilders[index].topicBuilder.metricID)
+		}
+		if metricBuilders[index].topicBuilder.template == "" {
+			return nil, fmt.Errorf("metric builder [%d] has empty template string", index)
+		}
+		if metricBuilders[index].load == nil {
+			return nil, fmt.Errorf("metric builder [%d] has empty load function", index)
+		}
+		if metricBuilders[index].topicBuilder.isHost() {
+			topic, err := metricBuilders[index].topicBuilder.buildHost(hostname)
+			if err != nil {
+				return nil, fmt.Errorf("host topic build error: %w", err)
+			}
+			metricRecordMap[fmt.Sprintf("%d", metricBuilders[index].topicBuilder.metricID)] =
+				&metricRecord{topic: topic, load: metricBuilders[index].load}
+		} else {
+			for serviceIndex, serviceName := range serviceNameSlice {
+				topic, err := metricBuilders[index].topicBuilder.buildService(hostname, serviceName)
+				if err != nil {
+					return nil, fmt.Errorf("service topic build error: %w", err)
 				}
+				metricRecordMap[fmt.Sprintf("%d_%d", metricBuilders[index].topicBuilder.metricID, serviceIndex)] =
+					&metricRecord{topic: topic, load: metricBuilders[index].load}
 			}
-			parentNode = currentNode
-			if partIndex == len(topicParts)-1 {
-				currentNode.Metric = &metric
-			}
-			currentLevel = currentNode.Children
 		}
 	}
-	return metricsTree
+	return metricRecordMap, nil
 }
 
-func GetMetrics(metrics map[string]*MetricNode, topic string, ignoreRoot bool) []*Metric {
-	topic = strings.TrimSpace(topic)
-	if topic == "" {
-		return []*Metric{}
+func SortMetricIDs(metricRecords map[string]*metricRecord) []string {
+	keys := make([]string, 0, len(metricRecords))
+	for key := range metricRecords {
+		keys = append(keys, key)
 	}
-	topicParts := strings.Split(topic, "/")
-	currentLevel := metrics
-	var targetNode *MetricNode
-	for _, topicPart := range topicParts {
-		var exists bool
-		targetNode, exists = currentLevel[topicPart]
-		if !exists {
-			return []*Metric{}
+	sort.Slice(keys, func(i, j int) bool {
+		keyA, keyB := keys[i], keys[j]
+		partsA, partsB := strings.Split(keyA, "_"), strings.Split(keyB, "_")
+		if len(partsA) == 1 && len(partsB) > 1 {
+			return true
 		}
-		currentLevel = targetNode.Children
-	}
-	var results []*Metric
-	var traverse func(node *MetricNode)
-	traverse = func(node *MetricNode) {
-		if node == nil {
-			return
+		if len(partsA) > 1 && len(partsB) == 1 {
+			return false
 		}
-		if node.Metric != nil {
-			results = append(results, node.Metric)
+		numberA, _ := strconv.Atoi(partsA[0])
+		numberB, _ := strconv.Atoi(partsB[0])
+		if len(partsA) == 1 && len(partsB) == 1 {
+			return numberA < numberB
 		}
-		for _, childKey := range node.Order {
-			traverse(node.Children[childKey])
+		subNumberA, _ := strconv.Atoi(partsA[1])
+		subNumberB, _ := strconv.Atoi(partsB[1])
+		if subNumberA != subNumberB {
+			return subNumberA < subNumberB
 		}
-	}
-	if ignoreRoot {
-		for _, childKey := range targetNode.Order {
-			traverse(targetNode.Children[childKey])
-		}
-	} else {
-		traverse(targetNode)
-	}
-	return results
+		return numberA < numberB
+	})
+	return keys
 }
 
-func GetMetric(metrics map[string]*MetricNode, topic string) *Metric {
-	metricSlice := GetMetrics(metrics, topic, false)
-	if len(metricSlice) > 0 {
-		return metricSlice[0]
+type metricBuilder struct {
+	topicBuilder topicBuilder
+	load         func(int, string) metricValue
+}
+
+type metricRecordGUID struct {
+	metricID     metricEnum
+	serviceIndex int
+	isService    bool
+}
+
+type metricRecord struct {
+	topic    string
+	value    metricValue
+	load     func(int, string) metricValue
+	onChange func(previous, current metricValue)
+}
+
+type metricValue struct {
+	ok    bool   `json:"ok"`
+	unit  string `json:"unit,omitempty"`
+	value string `json:"value,omitempty"`
+}
+
+type topicBuilder struct {
+	metricID metricEnum
+	template string
+}
+
+func (tb *topicBuilder) build(replacements map[string]string) (string, error) {
+	if !regexp.MustCompile(`^supervisor(/[a-zA-Z0-9$_-]+){2,4}$`).MatchString(tb.template) {
+		return "", fmt.Errorf("invalid topic template [%s]", tb.template)
 	}
-	return nil
+	pairs := make([]string, 0, len(replacements)*2)
+	for key, value := range replacements {
+		pairs = append(pairs, "$"+key, value)
+	}
+	replacer := strings.NewReplacer(pairs...)
+	result := replacer.Replace(tb.template)
+	if strings.Contains(result, "$") {
+		return "", fmt.Errorf("invalid $TOKEN in template [%s]", result)
+	}
+	return result, nil
+}
+
+func (tb *topicBuilder) isHost() bool {
+	return strings.Contains(tb.template, "$HOSTNAME") && !strings.Contains(tb.template, "$SERVICENAME")
+}
+
+func (tb *topicBuilder) isService() bool {
+	return strings.Contains(tb.template, "$HOSTNAME") && strings.Contains(tb.template, "$SERVICENAME")
+}
+
+func (tb *topicBuilder) buildHost(hostname string) (string, error) {
+	return tb.build(map[string]string{"HOSTNAME": hostname})
+}
+
+func (tb *topicBuilder) buildService(hostname string, servicename string) (string, error) {
+	return tb.build(map[string]string{"HOSTNAME": hostname, "SERVICENAME": servicename})
 }

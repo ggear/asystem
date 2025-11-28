@@ -26,6 +26,7 @@ func newStatsCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&opts.mode, "mode", "m", "poll", "Method to retrieve stats: 'poll' or 'cache'")
 	cmd.Flags().StringVarP(&opts.format, "format", "f", "auto", "Display format: 'auto', 'compact', or 'relaxed'")
+	cmd.Flags().BoolVarP(&opts.noStream, "monochrome", "m", false, "Display in monochrome without ANSI escape colour coding sequences")
 	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "p", "1s", "Polling interval (default: '1s')")
 	cmd.Flags().BoolVarP(&opts.noStream, "no-stream", "n", false, "Disable continuous streaming")
 	return cmd
