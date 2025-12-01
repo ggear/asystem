@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/emirpasic/gods/maps/treemap"
 )
 
 type metricEnum int
@@ -285,7 +287,9 @@ var metricBuilders = [METRIC_MAX]metricBuilder{
 func CacheMetrics(hostname string, schemaPath string) (map[string]*metricRecord, error) {
 
 	// TODO: How to present topic/index/row-col mapped metric to display
-	// TODO: -> Return Map keyed by metricRecordGUID, update sort, getServiceIndexRange
+	// TODO: -> Return Map keyed by metricRecordGUID, update sort (ordered map), getServiceIndexRange
+	m := treemap.NewWith(metricRecordGUIDComparator)
+	m.Put(metricRecordGUID{metricHost, 0, false}, "CPU host")
 	// TODO: How to reload for new or removed services
 	// TODO: -> onChange triggered by value and or serviceIndex change
 	//       -> input metricRecordMap, if null load for first time, otherwise use for onchnage
@@ -386,6 +390,39 @@ type metricValue struct {
 type topicBuilder struct {
 	metricID metricEnum
 	template string
+}
+
+func metricRecordGUIDComparator(this, that interface{}) int {
+	thisGUID := this.(metricRecordGUID)
+	thatGUID := that.(metricRecordGUID)
+	if thisGUID.isService != thatGUID.isService {
+		if !thisGUID.isService {
+			return -1
+		}
+		return 1
+	}
+	if !thisGUID.isService {
+		switch {
+		case thisGUID.metricID < thatGUID.metricID:
+			return -1
+		case thisGUID.metricID > thatGUID.metricID:
+			return 1
+		default:
+			return 0
+		}
+	}
+	switch {
+	case thisGUID.serviceIndex < thatGUID.serviceIndex:
+		return -1
+	case thisGUID.serviceIndex > thatGUID.serviceIndex:
+		return 1
+	case thisGUID.metricID < thatGUID.metricID:
+		return -1
+	case thisGUID.metricID > thatGUID.metricID:
+		return 1
+	default:
+		return 0
+	}
 }
 
 func (tb *topicBuilder) build(replacements map[string]string) (string, error) {
