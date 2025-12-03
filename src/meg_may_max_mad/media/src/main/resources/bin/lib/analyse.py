@@ -169,7 +169,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 if len(file_relative_dir_tokens) > 1 else ""
             file_media_type = file_relative_dir_tokens[2] \
                 if len(file_relative_dir_tokens) > 2 else ""
-            if file_media_type in {"audio"} or file_extension in MEDIA_FILE_EXTENSIONS_IGNORE:
+            if file_media_type in {"audio"} or \
+                    file_extension in MEDIA_FILE_EXTENSIONS_IGNORE or \
+                    file_name.replace(".", "") in MEDIA_FILE_EXTENSIONS_IGNORE:
                 continue
             _print_message(_prefix="{} ... ".format(os.path.join(file_relative_dir, file_name)),
                            _no_header_footer=not verbose)
