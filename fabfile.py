@@ -168,6 +168,7 @@ def _backup(context):
     _run_local(context, "mkdir -p /Users/graham/Backup/asystem && "
                         "find . "
                         "-not -path './.git*' "
+                        "-not -path './.go*' "
                         "-not -path './.deps*' "
                         "-not -path './.idea*' "
                         "-not -path './.pyenv*' "

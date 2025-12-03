@@ -68,7 +68,7 @@ MEDIA_EPISODE_NUMBER_REGEXP = r"([sS])([0-9]?[0-9]+)([-_\. ]*)([eE])([0-9]?[-]*[
 MEDIA_EPISODE_NAME_REGEXP = r".*" + MEDIA_EPISODE_NUMBER_REGEXP + r"\..*"
 MEDIA_PROFILE_REGEXP = r"(" + TOKEN_SMALL + r"|" + TOKEN_LARGE + r")$"
 MEDIA_FILE_EXTENSIONS = {"avi", "m2ts", "mkv", "mov", "mp4", "wmv", "ts"}
-MEDIA_FILE_EXTENSIONS_IGNORE = {"yaml", "sh", "srt", "png", "jpg", "jpeg", "log"}
+MEDIA_FILE_EXTENSIONS_IGNORE = {"yaml", "sh", "srt", "png", "jpg", "jpeg", "log", "sonarr"}
 MEDIA_FILE_SCRIPTS = [_file_action.script for _file_action in FileAction if _file_action.has_script]
 
 BASH_EXIT_HANDLER = "shopt -s expand_aliases\n" \
