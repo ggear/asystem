@@ -1173,7 +1173,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     (pl.struct(
                         pl.col("Version Directory"),
                         pl.col("File Name")
-                        .str.replace_all(MEDIA_YEAR_NUMBER_REGEXP, "")
                         .str.to_lowercase()
                         .str.split(".").list.first()
                         .str.strip_chars()
