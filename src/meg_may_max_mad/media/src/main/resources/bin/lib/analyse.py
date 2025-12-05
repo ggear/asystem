@@ -25,6 +25,7 @@ from polars.exceptions import ColumnNotFoundError
 QUALITY_MIN = 3  # <=720
 QUALITY_MID = 8  # ==1080
 QUALITY_MAX = 9  # >=2160
+QUALITY_LARGE = 25  # >=2160, scale up for LARGE profile
 BITRATE_HVEC_SCALE = 1.5  # H265 efficiency factor over H264
 BITRATE_SIZE_LOWER_SCALE = 0.20  # Margin when assessing small size
 BITRATE_SIZE_UPPER_SCALE = 1.35  # Margin when assessing large size
@@ -34,7 +35,7 @@ BITRATE_QUALITY_SCALE = 0.15  # Quality quantum
 BITRATE_UNSCALED_KBPS = {
     "HD": 5000,  # <=720, <=QUALITY_MIN
     "FHD": 6000,  # ==1080, <=QUALITY_MID
-    "UHD": 14000,  # >=2160, >=QUALITY_MAX
+    "UHD": 12000,  # >=2160, >=QUALITY_MAX
 }
 
 
@@ -369,7 +370,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                 if re.search(TOKEN_SMALL, file_name) is not None:
                     file_defaults_dict["target_quality"] = "3"
                 if re.search(TOKEN_LARGE, file_name) is not None:
-                    file_defaults_dict["target_quality"] = "9"
+                    file_defaults_dict["target_quality"] = str(QUALITY_LARGE)
                 file_defaults_analysed_path = os.path.join(
                     file_dir_path, "._defaults_analysed_{}_{}.yaml".format(
                         file_name_sans_extension, file_extension))
@@ -1535,7 +1536,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             [
                 (
                     pl.when(
-                        (pl.col("Audio 1 Surround") == "Atmos")
+                        (pl.col("Audio 1 Surround") == "Atmos") & (pl.col("Audio 1 Codec") == "EAC3")
                     ).then(
                         pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --surround-bitrate 640 --eac3")])
                     ).otherwise(
@@ -1566,11 +1567,14 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("NEW_DIR=\""), pl.col("Media Directory"), pl.lit("/\"\\\n"),
                     pl.lit("\""), pl.col("Media Scope"), pl.lit("/"), pl.col("Media Type"), pl.lit("\"\n"),
                     pl.lit("NEW_DIR=\"${ROOT_DIR%%${NEW_DIR}*}${NEW_DIR}\"\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/"
+                           "._defaults_analysed_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
-                    pl.lit("RENAME_DIR=\""), pl.col("Rename Directory").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
-                    pl.lit("RENAME_FILE=\""), pl.col("Rename File").str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("RENAME_DIR=\""), pl.col("Rename Directory") \
+                        .str.replace_all("\"", "\\\""), pl.lit("\"\n"),
+                    pl.lit("RENAME_FILE=\""), pl.col("Rename File") \
+                        .str.replace_all("\"", "\\\""), pl.lit("\"\n"),
                     pl.lit("if [ \"${RENAME_DIR}\" != \"\" ]; then\n"),
                     pl.lit("  echo 'Renaming of directory must be validated and executed manually:' && echo ''\n"),
                     pl.lit("  if [ \"${RENAME_DIR}\" != \"" + TOKEN_UNKNOWABLE + "\" ]; then\n"),
@@ -1621,9 +1625,10 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("  ORIG_DIR=\"$(realpath \"${ROOT_DIR}/..\")\"\n"),
                     pl.lit("fi\n"),
                     pl.lit("ORIG_FILE_META=\"$(find \"${ORIG_DIR}\" " +
-                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
+                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_???.yaml\" "
+                           "! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
                     pl.lit("TRAN_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
-                           "-name \"._metadata_${ROOT_FILE_NAME%.*}*.yaml\")\"\n"),
+                           "-name \"._metadata_${ROOT_FILE_NAME%.*}_mkv.yaml\")\"\n"),
                     pl.lit("CHECK_REQUIRED=\"\"\n"),
                     pl.lit("if [ \"" + str(force) + "\" != \"True\" ]; then\n"),
                     pl.lit("  if [ \"${ORIG_FILE_META}\" == \"\" ] || [ ! -f \"${ORIG_FILE_META}\" ]; then \n"),
@@ -1632,16 +1637,20 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("    CHECK_REQUIRED=\"transcoded-metadata-file-not-found\"\n"),
                     pl.lit("  fi\n"),
                     pl.lit("fi\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}_\"???.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/"
+                           "._defaults_analysed_${ROOT_FILE_STEM}_\"???.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/"
+                           "._defaults_analysed_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
-                    pl.lit("if [ $(find \"${ORIG_DIR}\" ! -name *." +
-                           " ! -name *.".join(MEDIA_FILE_EXTENSIONS_IGNORE) +
-                           " -type f -name \"${ROOT_FILE_STEM}*\" | wc -l) -le 2 ] && " +
+                    pl.lit("if [ $(find \"${ORIG_DIR}\" ! -name *. " +
+                           " ".join(f"! -name '*.{extension}'" for extension in MEDIA_FILE_EXTENSIONS_IGNORE) +
+                           " -type f -name \"${ROOT_FILE_STEM}__TRANSCODE*mkv\" | wc -l) -eq 1 ] && " +
                            "[ $(find \"${ORIG_DIR}\" -name \"${ROOT_FILE_NAME}\" | wc -l) -eq 1 ]; then\n"),
-                    pl.lit("  ORIG_FILE=\"$(find \"${ORIG_DIR}\" ! -name *." +
-                           " ! -name *.".join(
-                               MEDIA_FILE_EXTENSIONS_IGNORE) + " -type f -name \"${ROOT_FILE_STEM}\\.*\")\"\n"),
+                    pl.lit("  ORIG_FILE=\"$(find \"${ORIG_DIR}\" ! -name *. " +
+                           " ".join(f"! -name '*.{extension}'" for extension in MEDIA_FILE_EXTENSIONS_IGNORE) +
+                           " -type f -name \"${ROOT_FILE_STEM}\\.*\")\"\n"),
                     pl.lit("  TRAN_FILE=\"${ROOT_DIR}/../${ROOT_FILE_NAME}\"\n"),
                     pl.lit("  MERG_FILE=\"${ORIG_DIR}/${ROOT_FILE_STEM}.mkv\"\n"),
                     pl.lit("  if [ -f \"${ORIG_FILE}\" ] && [ -f \"${TRAN_FILE}\" ]; then\n"),
@@ -1699,7 +1708,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("echo \"${SCRIPT_VERB}: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
-                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_*.yaml\" ! -name '*" +
+                           "-name \"._metadata_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\" ! -name '*" +
                            TOKEN_TRANSCODE + "_*')\"\n"),
                     pl.lit("if [ \"${ORIG_FILE_META}\" == \"\" ]; then \n"),
                     pl.lit("  echo '' && echo \"Warning: Metadata file not found\" && exit 4\n"),
@@ -1786,8 +1795,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("fi\n"),
                     pl.lit("echo '' && echo \"Metadata file:\"\n"),
                     pl.lit("cat \"${FILE_META}\"\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/"
+                           "._defaults_analysed_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
                     pl.lit("echo '' && echo \"File probe reported:"
                            " "), pl.col("File Validity"), pl.lit("\" && echo '' && exit 0\n"),
@@ -1815,8 +1825,9 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("fi\n"),
                     pl.lit("echo '' && echo \"Metadata file:\"\n"),
                     pl.lit("cat \"${FILE_META}\"\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}\"*.yaml\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._defaults_analysed_${ROOT_FILE_STEM}\"*.yaml\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
+                    pl.lit("rm -f \"${ROOT_DIR_BASE}/"
+                           "._defaults_analysed_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
                     pl.lit("echo '' && echo \"File probe reported:"
                            " "), pl.col("File Validity"), pl.lit("\" && echo '' && exit 0\n"),

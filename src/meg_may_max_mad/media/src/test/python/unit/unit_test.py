@@ -218,26 +218,39 @@ class InternetTest(unittest.TestCase):
 
     def test_analyse_profiles(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
-        self._test_analyse_assert(join(dir_test, "55/media"),
+        self._test_analyse_assert(join(dir_test, "56/media"),
                                   files_action_expected=actions(
-                                      transcode=1,
-                                      nothing=1
-                                  ), scripts={"transcode"})
-        self._test_analyse_assert(join(dir_test, "55/media"),
+                                      merge=5,
+                                      upscale=1,
+                                      transcode=9,
+                                      reformat=1,
+                                      downscale=2,
+                                      nothing=3
+                                  ), scripts={"transcode", "reformat", "downscale"})
+        self._test_analyse_assert(join(dir_test, "56/media"),
                                   files_action_expected=actions(
-                                      merge=1,
-                                      transcode=1,
-                                      nothing=1
+                                      merge=16,
+                                      upscale=1,
+                                      transcode=9,
+                                      reformat=1,
+                                      downscale=2,
+                                      nothing=3
                                   ), scripts={})
-        self._test_analyse_assert(join(dir_test, "55/media"), files_expected_scripts=3,
+        self._test_analyse_assert(join(dir_test, "56/media"), files_expected_scripts=35,
                                   files_action_expected=actions(
-                                      merge=1,
-                                      transcode=1,
-                                      nothing=1
+                                      merge=16,
+                                      upscale=1,
+                                      transcode=9,
+                                      reformat=1,
+                                      downscale=2,
+                                      nothing=3
                                   ), scripts={"merge"})
-        self._test_analyse_assert(join(dir_test, "55/media"),
+        self._test_analyse_assert(join(dir_test, "56/media"),
                                   files_action_expected=actions(
-                                      nothing=2
+                                      merge=8,
+                                      upscale=1,
+                                      transcode=4,
+                                      nothing=11
                                   ), scripts={})
 
     def test_analyse_empty(self):
