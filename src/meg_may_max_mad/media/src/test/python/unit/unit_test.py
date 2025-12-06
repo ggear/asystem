@@ -158,7 +158,7 @@ class InternetTest(unittest.TestCase):
                                   files_action_expected=actions(
                                       check=8,
                                       upscale=4,
-                                      reformat=3,
+                                      reformat=4,
                                       downscale=1,
                                       nothing=1
                                   ), scripts={"merge"})

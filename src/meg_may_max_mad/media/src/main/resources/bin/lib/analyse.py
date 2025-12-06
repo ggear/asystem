@@ -1503,22 +1503,25 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
             [
                 (
                     pl.when(
-                        (pl.col("Target Lang") == "eng") &
-                        (pl.col("Native Lang") == "eng")
-                    ).then(
-                        pl.concat_str([pl.lit("--main-audio "), pl.col("Transcode Audio Index")])
-                    ).when(
-                        (pl.col("Target Lang") == "eng") &
-                        (pl.col("Native Lang") != "eng")
+                        (pl.col("Target Lang") == "eng") & (pl.col("Native Lang") == "eng")
                     ).then(
                         pl.concat_str([
                             pl.lit("--main-audio "), pl.col("Transcode Audio Index"),
-                            pl.lit(" "), pl.lit("--add-audio "), pl.col("Target Lang")
+                            pl.lit(" --surround-bitrate 640")
+                        ])
+                    ).when(
+                        (pl.col("Target Lang") == "eng") & (pl.col("Native Lang") != "eng")
+                    ).then(
+                        pl.concat_str([
+                            pl.lit("--main-audio "), pl.col("Transcode Audio Index"),
+                            pl.lit(" --add-audio "), pl.col("Target Lang"),
+                            pl.lit(" --surround-bitrate 640")
                         ])
                     ).otherwise(
                         pl.concat_str([
                             pl.lit("--main-audio "), pl.col("Transcode Audio Index"),
-                            pl.lit(" "), pl.lit("--add-audio eng")
+                            pl.lit("--add-audio eng"),
+                            pl.lit(" --surround-bitrate 640")
                         ])
                     )
                 ).alias("Transcode Audio"),
@@ -1531,18 +1534,6 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                         pl.lit("--add-subtitle eng")
                     )
                 ).alias("Transcode Subtitle")
-            ]
-        ).with_columns(
-            [
-                (
-                    pl.when(
-                        (pl.col("Audio 1 Surround") == "Atmos") & (pl.col("Audio 1 Codec") == "EAC3")
-                    ).then(
-                        pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --surround-bitrate 640 --eac3")])
-                    ).otherwise(
-                        pl.concat_str([pl.col("Transcode Audio"), pl.lit(" --surround-bitrate 640")])
-                    )
-                ).alias("Transcode Audio")
             ]
         ).with_columns(
             [
@@ -1624,8 +1615,12 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("else\n"),
                     pl.lit("  ORIG_DIR=\"$(realpath \"${ROOT_DIR}/..\")\"\n"),
                     pl.lit("fi\n"),
-                    pl.lit("ORIG_FILE_META=\"$(find \"${ORIG_DIR}\" " +
-                           "-name \"._metadata_${ROOT_FILE_STEM%.*}_???.yaml\" "
+                    pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
+                           "\\( " +
+                           "-name \"._metadata_${ROOT_FILE_STEM}_\"??.yaml -o " +
+                           "-name \"._metadata_${ROOT_FILE_STEM}_\"???.yaml -o " +
+                           "-name \"._metadata_${ROOT_FILE_STEM}_\"????.yaml " +
+                           "\\) " +
                            "! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
                     pl.lit("TRAN_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
                            "-name \"._metadata_${ROOT_FILE_NAME%.*}_mkv.yaml\")\"\n"),
@@ -1637,10 +1632,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("    CHECK_REQUIRED=\"transcoded-metadata-file-not-found\"\n"),
                     pl.lit("  fi\n"),
                     pl.lit("fi\n"),
-                    pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}_\"???.yaml\n"),
+                    pl.lit("rm -f " +
+                           "\"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}_\"??.yaml " +
+                           "\"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}_\"???.yaml " +
+                           "\"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_STEM}_\"????.yaml " +
+                           "\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._metadata_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/"
-                           "._defaults_analysed_${ROOT_FILE_STEM}_\"???.yaml\n"),
+                           "._defaults_analysed_${ROOT_FILE_STEM}_\"??.yaml " +
+                           "._defaults_analysed_${ROOT_FILE_STEM}_\"???.yaml " +
+                           "._defaults_analysed_${ROOT_FILE_STEM}_\"????.yaml " +
+                           "\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/"
                            "._defaults_analysed_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\"\n"),
                     pl.lit("rm -f \"${ROOT_DIR_BASE}/._\"*\"_${ROOT_FILE_STEM}\"/*.sh\n"),
@@ -1708,9 +1710,13 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     pl.lit("echo \"${SCRIPT_VERB}: '${ROOT_FILE_NAME}' @ '${ROOT_DIR_LOCAL}'\"\n"),
                     pl.lit(BASH_ECHO_HEADER),
                     pl.lit("ORIG_FILE_META=\"$(find \"${ROOT_DIR_BASE}\" " +
-                           "-name \"._metadata_${ROOT_FILE_NAME%.*}_${ROOT_FILE_NAME##*.}.yaml\" ! -name '*" +
-                           TOKEN_TRANSCODE + "_*')\"\n"),
-                    pl.lit("if [ \"${ORIG_FILE_META}\" == \"\" ]; then \n"),
+                           "\\( " +
+                           "-name \"._metadata_${ROOT_FILE_STEM}_\"??.yaml -o " +
+                           "-name \"._metadata_${ROOT_FILE_STEM}_\"???.yaml -o " +
+                           "-name \"._metadata_${ROOT_FILE_STEM}_\"????.yaml " +
+                           "\\) " +
+                           "! -name '*" + TOKEN_TRANSCODE + "_*')\"\n"),
+                    pl.lit("if [ \"${ORIG_FILE_META}\" == \"\" ] || [ ! -f \"${ORIG_FILE_META}\" ]; then \n"),
                     pl.lit("  echo '' && echo \"Warning: Metadata file not found\" && exit 4\n"),
                     pl.lit("fi\n"),
                     pl.lit("echo -n ${SCRIPT_VERB}' at ' && date\n"),
