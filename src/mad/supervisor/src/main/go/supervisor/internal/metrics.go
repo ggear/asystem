@@ -3,9 +3,8 @@ package internal
 import (
 	"fmt"
 	"regexp"
-	"sort"
-	"strconv"
 	"strings"
+	"time"
 
 	"github.com/emirpasic/gods/maps/treemap"
 )
@@ -43,8 +42,38 @@ const (
 	METRIC_MAX
 )
 
-func (m metricEnum) isValid() bool {
-	return m > METRIC_MIN && m < METRIC_MAX
+type metricBuilder struct {
+	topicBuilder topicBuilder
+	load         func(int, string) metricValue
+}
+
+type metricRecordGUID struct {
+	metricID     metricEnum
+	serviceIndex int
+	isService    bool
+}
+
+type metricRecord struct {
+	topic    string
+	value    metricValue
+	time     time.Time
+	load     func(int, string) metricValue
+	onChange func(previous, current metricValue)
+}
+
+type metricValue struct {
+	ok    bool   `json:"ok"`
+	unit  string `json:"unit,omitempty"`
+	value string `json:"value,omitempty"`
+}
+
+type topicBuilder struct {
+	metricID metricEnum
+	template string
+}
+
+type metricRecordCache struct {
+	treeMap *treemap.Map
 }
 
 var metricBuilders = [METRIC_MAX]metricBuilder{
@@ -144,7 +173,7 @@ var metricBuilders = [METRIC_MAX]metricBuilder{
 			template: "supervisor/$HOSTNAME/host/runtime/peak_temperature_max",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "°C", value: "10"}
+			return metricValue{ok: true, unit: "%", value: "10"}
 		},
 	},
 	metricHostRuntimePeakFanSpeedMax: {
@@ -153,7 +182,7 @@ var metricBuilders = [METRIC_MAX]metricBuilder{
 			template: "supervisor/$HOSTNAME/host/runtime/peak_fan_speed_max",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "RPM", value: "10"}
+			return metricValue{ok: true, unit: "%", value: "10"}
 		},
 	},
 	metricHostRuntimeLifeUsedDrives: {
@@ -284,15 +313,17 @@ var metricBuilders = [METRIC_MAX]metricBuilder{
 	},
 }
 
-func CacheMetrics(hostname string, schemaPath string) (map[string]*metricRecord, error) {
+func newMetricRecordCache() *metricRecordCache {
+	return &metricRecordCache{
+		treeMap: treemap.NewWith(metricRecordGUIDComparator),
+	}
+}
 
-	// TODO: How to present topic/index/row-col mapped metric to display
-	// TODO: -> Return Map keyed by metricRecordGUID, update sort (ordered map), getServiceIndexRange
-	m := treemap.NewWith(metricRecordGUIDComparator)
-	m.Put(metricRecordGUID{metricHost, 0, false}, "CPU host")
+func CacheMetrics(hostname string, schemaPath string) (*metricRecordCache, error) {
+
 	// TODO: How to reload for new or removed services
 	// TODO: -> onChange triggered by value and or serviceIndex change
-	//       -> input metricRecordMap, if null load for first time, otherwise use for onchnage
+	//       -> input metricCache, if null load for first time, otherwise use for onchnage
 	//       -> have display work out if a service has been deleted and not replaced, to nil out display
 
 	if hostname == "" {
@@ -302,7 +333,7 @@ func CacheMetrics(hostname string, schemaPath string) (map[string]*metricRecord,
 	if err != nil {
 		return nil, err
 	}
-	metricRecordMap := make(map[string]*metricRecord)
+	metricCache := newMetricRecordCache()
 	for index := 1; index <= len(metricBuilders)-1; index++ {
 		if !metricBuilders[index].topicBuilder.metricID.isValid() {
 			return nil, fmt.Errorf("metric builder [%d] has invalid metric ID [%d]", index, metricBuilders[index].topicBuilder.metricID)
@@ -313,83 +344,105 @@ func CacheMetrics(hostname string, schemaPath string) (map[string]*metricRecord,
 		if metricBuilders[index].load == nil {
 			return nil, fmt.Errorf("metric builder [%d] has empty load function", index)
 		}
-		if metricBuilders[index].topicBuilder.isHost() {
-			topic, err := metricBuilders[index].topicBuilder.buildHost(hostname)
-			if err != nil {
-				return nil, fmt.Errorf("host topic build error: %w", err)
-			}
-			metricRecordMap[fmt.Sprintf("%d", metricBuilders[index].topicBuilder.metricID)] =
-				&metricRecord{topic: topic, load: metricBuilders[index].load}
-		} else {
+		if metricBuilders[index].topicBuilder.isService() {
 			for serviceIndex, serviceName := range serviceNameSlice {
 				topic, err := metricBuilders[index].topicBuilder.buildService(hostname, serviceName)
 				if err != nil {
 					return nil, fmt.Errorf("service topic build error: %w", err)
 				}
-				metricRecordMap[fmt.Sprintf("%d_%d", metricBuilders[index].topicBuilder.metricID, serviceIndex)] =
-					&metricRecord{topic: topic, load: metricBuilders[index].load}
+				metricCache.Put(
+					metricRecordGUID{metricBuilders[index].topicBuilder.metricID, serviceIndex, true},
+					&metricRecord{topic: topic, load: metricBuilders[index].load},
+				)
 			}
+		} else {
+			topic, err := metricBuilders[index].topicBuilder.buildHost(hostname)
+			if err != nil {
+				return nil, fmt.Errorf("host topic build error: %w", err)
+			}
+			metricCache.Put(
+				metricRecordGUID{metricBuilders[index].topicBuilder.metricID, 0, false},
+				&metricRecord{topic: topic, load: metricBuilders[index].load},
+			)
 		}
 	}
-	return metricRecordMap, nil
+	return metricCache, nil
 }
 
-func SortMetricIDs(metricRecords map[string]*metricRecord) []string {
-	keys := make([]string, 0, len(metricRecords))
-	for key := range metricRecords {
-		keys = append(keys, key)
+func (metricCache *metricRecordCache) Put(key metricRecordGUID, record *metricRecord) {
+	if metricCache == nil || metricCache.treeMap == nil || record == nil {
+		return
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		keyA, keyB := keys[i], keys[j]
-		partsA, partsB := strings.Split(keyA, "_"), strings.Split(keyB, "_")
-		if len(partsA) == 1 && len(partsB) > 1 {
-			return true
+	metricCache.treeMap.Put(key, record)
+}
+
+func (metricCache *metricRecordCache) Get(key metricRecordGUID) (*metricRecord, bool) {
+	if metricCache == nil || metricCache.treeMap == nil {
+		return nil, false
+	}
+	rawValue, found := metricCache.treeMap.Get(key)
+	if !found || rawValue == nil {
+		return nil, false
+	}
+	record, ok := rawValue.(*metricRecord)
+	if !ok {
+		return nil, false
+	}
+	return record, true
+}
+
+func (metricCache *metricRecordCache) Keys() []metricRecordGUID {
+	if metricCache == nil || metricCache.treeMap == nil {
+		return nil
+	}
+	rawKeys := metricCache.treeMap.Keys()
+	recordGUIDs := make([]metricRecordGUID, len(rawKeys))
+	for index, rawKey := range rawKeys {
+		recordGUIDs[index] = rawKey.(metricRecordGUID)
+	}
+	return recordGUIDs
+}
+
+func (metricCache *metricRecordCache) Size() int {
+	if metricCache == nil || metricCache.treeMap == nil {
+		return 0
+	}
+	return metricCache.treeMap.Size()
+}
+
+func (metricCache *metricRecordCache) String() string {
+	if metricCache == nil {
+		return "<nil>"
+	}
+	var stringBuilder strings.Builder
+	recordGUIDs := metricCache.Keys()
+	for recordIndex, recordGUID := range recordGUIDs {
+		record, ok := metricCache.Get(recordGUID)
+		if !ok || record == nil {
+			fmt.Fprintf(&stringBuilder,
+				"Index[%03d] Service[%03d] Metric[%03d] <nil>\n",
+				recordIndex,
+				recordGUID.serviceIndex,
+				recordGUID.metricID,
+			)
+			continue
 		}
-		if len(partsA) > 1 && len(partsB) == 1 {
-			return false
+		recordValue := fmt.Sprintf("%v", record.value.value)
+		recordTopic := record.topic
+		if recordTopic == "" {
+			recordTopic = "<no topic>"
 		}
-		numberA, _ := strconv.Atoi(partsA[0])
-		numberB, _ := strconv.Atoi(partsB[0])
-		if len(partsA) == 1 && len(partsB) == 1 {
-			return numberA < numberB
-		}
-		subNumberA, _ := strconv.Atoi(partsA[1])
-		subNumberB, _ := strconv.Atoi(partsB[1])
-		if subNumberA != subNumberB {
-			return subNumberA < subNumberB
-		}
-		return numberA < numberB
-	})
-	return keys
-}
-
-type metricBuilder struct {
-	topicBuilder topicBuilder
-	load         func(int, string) metricValue
-}
-
-type metricRecordGUID struct {
-	metricID     metricEnum
-	serviceIndex int
-	isService    bool
-}
-
-type metricRecord struct {
-	topic    string
-	value    metricValue
-	load     func(int, string) metricValue
-	onChange func(previous, current metricValue)
-}
-
-type metricValue struct {
-	ok    bool   `json:"ok"`
-	unit  string `json:"unit,omitempty"`
-	value string `json:"value,omitempty"`
-}
-
-type topicBuilder struct {
-	metricID metricEnum
-	template string
+		fmt.Fprintf(
+			&stringBuilder,
+			"Index[%03d] Service[%03d] Metric[%03d] Value[%-6s] Topic[%s]\n",
+			recordIndex,
+			recordGUID.serviceIndex,
+			recordGUID.metricID,
+			recordValue,
+			recordTopic,
+		)
+	}
+	return stringBuilder.String()
 }
 
 func metricRecordGUIDComparator(this, that interface{}) int {
@@ -423,6 +476,10 @@ func metricRecordGUIDComparator(this, that interface{}) int {
 	default:
 		return 0
 	}
+}
+
+func (m metricEnum) isValid() bool {
+	return m > METRIC_MIN && m < METRIC_MAX
 }
 
 func (tb *topicBuilder) build(replacements map[string]string) (string, error) {

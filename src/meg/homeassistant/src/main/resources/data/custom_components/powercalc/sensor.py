@@ -17,7 +17,9 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     CONF_ENTITIES,
     CONF_ENTITY_ID,
+    CONF_ID,
     CONF_NAME,
+    CONF_PATH,
     CONF_UNIQUE_ID,
 )
 from homeassistant.core import Event, HomeAssistant, SupportsResponse, callback
@@ -55,6 +57,8 @@ from .const import (
     CONF_DAILY_FIXED_ENERGY,
     CONF_DELAY,
     CONF_DISABLE_STANDBY_POWER,
+    CONF_ENERGY_FILTER_OUTLIER_ENABLED,
+    CONF_ENERGY_FILTER_OUTLIER_MAX,
     CONF_ENERGY_INTEGRATION_METHOD,
     CONF_ENERGY_SENSOR_CATEGORY,
     CONF_ENERGY_SENSOR_ID,
@@ -80,6 +84,7 @@ from .const import (
     CONF_ON_TIME,
     CONF_OR,
     CONF_PLAYBOOK,
+    CONF_PLAYBOOKS,
     CONF_POWER,
     CONF_POWER_SENSOR_CATEGORY,
     CONF_POWER_SENSOR_ID,
@@ -192,6 +197,8 @@ SENSOR_CONFIG = {
     vol.Optional(CONF_ENERGY_SENSOR_NAMING): validate_name_pattern,
     vol.Optional(CONF_ENERGY_SENSOR_CATEGORY): vol.In(ENTITY_CATEGORIES),
     vol.Optional(CONF_ENERGY_INTEGRATION_METHOD): vol.In(ENERGY_INTEGRATION_METHODS),
+    vol.Optional(CONF_ENERGY_FILTER_OUTLIER_ENABLED): cv.boolean,
+    vol.Optional(CONF_ENERGY_FILTER_OUTLIER_MAX): cv.positive_int,
     vol.Optional(CONF_ENERGY_SENSOR_UNIT_PREFIX): vol.In([cls.value for cls in UnitPrefix]),
     vol.Optional(CONF_CREATE_GROUP): cv.string,
     vol.Optional(CONF_GROUP_ENERGY_START_AT_ZERO): cv.boolean,
@@ -273,7 +280,7 @@ async def async_setup_platform(
             breaks_in_ha_version=None,
             is_fixable=False,
             severity=IssueSeverity.WARNING,
-            learn_more_url="https://docs.powercalc.nl/configuration/new-yaml-structure/",
+            learn_more_url="https://docs.powercalc.nl/configuration/migration/new-yaml-structure/",
             translation_key="deprecated_platform_yaml",
             translation_placeholders={"platform": SENSOR_DOMAIN},
         )
@@ -586,11 +593,19 @@ def convert_config_entry_to_sensor_config(config_entry: ConfigEntry, hass: HomeA
         if CONF_UTILITY_METER_OFFSET in sensor_config:
             sensor_config[CONF_UTILITY_METER_OFFSET] = timedelta(days=sensor_config[CONF_UTILITY_METER_OFFSET])
 
+    def process_playbook_config() -> None:
+        if CONF_PLAYBOOK not in sensor_config:
+            return
+        playbook_config = copy.copy(sensor_config[CONF_PLAYBOOK])
+        playbook_config[CONF_PLAYBOOKS] = {item[CONF_ID]: item[CONF_PATH] for item in playbook_config[CONF_PLAYBOOKS]}
+        sensor_config[CONF_PLAYBOOK] = playbook_config
+
     handle_sensor_type()
 
     process_daily_fixed_energy()
     process_fixed_config()
     process_linear_config()
+    process_playbook_config()
     process_calculation_enabled_condition()
     process_utility_meter_offset()
 
@@ -722,9 +737,9 @@ async def add_discovered_entities(
         include_config: dict = cast(dict, config[CONF_INCLUDE])
         include_non_powercalc: bool = include_config.get(CONF_INCLUDE_NON_POWERCALC_SENSORS, True)
         entity_filter = create_composite_filter(include_config, hass, FilterOperator.AND)
-        found_entities, discoverable_entities = await find_entities(hass, entity_filter, include_non_powercalc)
-        entities_to_add.existing.extend(found_entities)
-        for entity_id in discoverable_entities:
+        found_entities = await find_entities(hass, entity_filter, include_non_powercalc)
+        entities_to_add.existing.extend(found_entities.resolved)
+        for entity_id in found_entities.discoverable:
             sensor_configs[entity_id] = {CONF_ENTITY_ID: entity_id}
 
 
@@ -917,7 +932,7 @@ async def check_entity_not_already_configured(
         raise SensorAlreadyConfiguredError(entity_id, existing_entities)
 
     # YAML flow without unique_id cannot add when any entity already exists
-    if context.is_yaml and not unique_id and entities:
+    if context.is_yaml and not sensor_config.get(CONF_UNIQUE_ID) and existing_entities:
         raise SensorAlreadyConfiguredError(entity_id, existing_entities)
 
 

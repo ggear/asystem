@@ -1180,17 +1180,17 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                             (pl.col("File Name").str.contains("__LARGE", literal=True)) |
                             (pl.col("File Name").str.contains("__SMALL", literal=True))
                     ) &
-                    ~(pl.col("File Stem") \
-                      .str.replace_all("__LARGE", "") \
-                      .str.replace_all("__SMALL", "")
-                      .is_duplicated())
+                    (~pl.col("File Stem") \
+                     .str.replace_all("__LARGE", "") \
+                     .str.replace_all("__SMALL", "")
+                     .is_duplicated())
                 ).then(pl.lit("Check Missing Non-Profile File"))
                 .when(
                     (
                             (pl.col("File Name").str.contains("__LARGE", literal=True)) |
                             (pl.col("File Name").str.contains("__SMALL", literal=True))
                     ) &
-                    ~(pl.col("File Directory").is_duplicated())
+                    (~pl.col("File Directory").is_duplicated())
                 ).then(pl.lit("Check Non-Colocated Profile File"))
                 #
                 # Reformat

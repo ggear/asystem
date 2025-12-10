@@ -216,7 +216,7 @@ class InternetTest(unittest.TestCase):
                                       reformat=3
                                   ), scripts={"reformat"})
 
-    def test_analyse_missing(self):
+    def test_analyse_missing_profile(self):
         dir_test = self._test_prepare_dir("share_media_example", 1)
         self._test_analyse_assert(join(dir_test, "57/media"),
                                   files_action_expected=actions(

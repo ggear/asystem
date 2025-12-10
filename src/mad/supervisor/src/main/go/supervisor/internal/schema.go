@@ -16,46 +16,6 @@ import (
 const SchemaDefaultPath = "/root/install/supervisor/latest/image/schema.json"
 const dockerContainerNameIgnoredPattern = `^reaper_`
 
-func getSchema(schemaPath string) (map[string]any, error) {
-	schemaString, readErr := os.ReadFile(schemaPath)
-	if readErr != nil {
-		return nil, readErr
-	}
-	var schemaMap map[string]any
-	if unmarshalErr := json.Unmarshal([]byte(schemaString), &schemaMap); unmarshalErr != nil {
-		return nil, unmarshalErr
-	}
-	return schemaMap, nil
-}
-
-func GetVersion(schemaPath string) (string, error) {
-	schemaMap, err := getSchema(schemaPath)
-	if err != nil {
-		return "", err
-	}
-	rootMap, ok := schemaMap["asystem"].(map[string]any)
-	if !ok {
-		return "", errors.New("missing asystem")
-	}
-	version, ok := rootMap["version"].(string)
-	if !ok {
-		return "", errors.New("missing version")
-	}
-	if !regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}$`).MatchString(version) {
-		return "", fmt.Errorf("invalid version format [%s]", version)
-	}
-	return version, nil
-}
-
-func contains(slice []string, str string) bool {
-	for _, v := range slice {
-		if v == str {
-			return true
-		}
-	}
-	return false
-}
-
 func GetServices(hostname string, schemaPath string) ([]string, error) {
 	schemaMap, err := getSchema(schemaPath)
 	if err != nil {
@@ -117,4 +77,44 @@ func GetServices(hostname string, schemaPath string) ([]string, error) {
 	}
 	sort.Strings(serviceSlice)
 	return serviceSlice, nil
+}
+
+func GetVersion(schemaPath string) (string, error) {
+	schemaMap, err := getSchema(schemaPath)
+	if err != nil {
+		return "", err
+	}
+	rootMap, ok := schemaMap["asystem"].(map[string]any)
+	if !ok {
+		return "", errors.New("missing asystem")
+	}
+	version, ok := rootMap["version"].(string)
+	if !ok {
+		return "", errors.New("missing version")
+	}
+	if !regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}$`).MatchString(version) {
+		return "", fmt.Errorf("invalid version format [%s]", version)
+	}
+	return version, nil
+}
+
+func getSchema(schemaPath string) (map[string]any, error) {
+	schemaString, readErr := os.ReadFile(schemaPath)
+	if readErr != nil {
+		return nil, readErr
+	}
+	var schemaMap map[string]any
+	if unmarshalErr := json.Unmarshal([]byte(schemaString), &schemaMap); unmarshalErr != nil {
+		return nil, unmarshalErr
+	}
+	return schemaMap, nil
+}
+
+func contains(slice []string, str string) bool {
+	for _, v := range slice {
+		if v == str {
+			return true
+		}
+	}
+	return false
 }

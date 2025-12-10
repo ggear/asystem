@@ -53,13 +53,10 @@ func TestCacheMetrics(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			metricRecordMap, err := CacheMetrics(testCase.hostname, testCase.schemaPath)
-			t.Logf("CacheMetrics():")
-			for _, metricRecordID := range SortMetricIDs(metricRecordMap) {
-				t.Logf("  %s: %s", metricRecordID, metricRecordMap[metricRecordID].topic)
-			}
-			if (err != nil) != testCase.expectError || len(metricRecordMap) != testCase.expected {
-				t.Fatalf("CacheMetrics() = len(%v), %v; want len(%v), error? %v", len(metricRecordMap), err, testCase.expected, testCase.expectError)
+			metricCache, err := CacheMetrics(testCase.hostname, testCase.schemaPath)
+			t.Logf("Metric Record Cache:\n%s", metricCache)
+			if (err != nil) != testCase.expectError || metricCache.Size() != testCase.expected {
+				t.Fatalf("CacheMetrics() = len(%v), %v; want len(%v), error? %v", metricCache.Size(), err, testCase.expected, testCase.expectError)
 			}
 		})
 	}
