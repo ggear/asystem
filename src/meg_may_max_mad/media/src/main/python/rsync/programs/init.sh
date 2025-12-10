@@ -21,7 +21,7 @@ for host in mad max may meg; do
   scp "/Users/graham/Code/asystem/src/meg_may_max_mad/media/src/main/python/rsync/programs/media_"* root@macmini-${host}:/tmp
 done
 
-INDEX="4"
+INDEX="all"
 rm -rf /tmp/media.log
 chmod +x /tmp/media_${INDEX}.sh
 nohup /tmp/media_${INDEX}.sh >/tmp/media.log 2>&1 &

@@ -63,6 +63,9 @@ function pull_repo() {
       [[ $(git branch | grep "ggear" | wc -l) -gt 0 ]] && TAG_CHECKED_OUT=$(git describe --tags --abbrev=0)
       [[ "${TAG_CHECKED_OUT}" == "" ]] && TAG_CHECKED_OUT="$(git branch --show-current)" && TAG_MOST_RECENT="$(git branch --show-current)"
       [[ "${TAG_MOST_RECENT}" == "" ]] && TAG_MOST_RECENT="${TAG_CHECKED_OUT}"
+      if [ "$(printf "%s\n%s" "${TAG_MOST_RECENT#v}" "${TAG_CHECKED_OUT#v}" | sort -V | head -n1)" != "${TAG_CHECKED_OUT#v}" ]; then
+        TAG_MOST_RECENT="$(git tag --sort=version:refname | grep -iv dev | grep -iv beta | grep -v stable | grep -iv rc | grep -iv a0 | grep -iv 0a | grep -iv b0 | grep -iv b1 | grep -iv b2 | grep -iv 0b | tail -n 1)"
+      fi
       echo "current tag [${TAG_CHECKED_OUT}] and upstream [${TAG_MOST_RECENT}]"
       [[ "${TAG_CHECKED_OUT}" == "${TAG_MOST_RECENT}" ]] && echo "Module [${REPO_LABEL}] [INFO] is up to date with version [${TAG_CHECKED_OUT}]"
       [[ "${TAG_CHECKED_OUT}" != "${TAG_MOST_RECENT}" ]] && echo "Module [${REPO_LABEL}] [WARN] requires update from version [${TAG_CHECKED_OUT}] to [${TAG_MOST_RECENT}]"
