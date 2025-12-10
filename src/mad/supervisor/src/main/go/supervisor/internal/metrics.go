@@ -319,17 +319,17 @@ func newMetricRecordCache() *metricRecordCache {
 	}
 }
 
-func CacheMetrics(hostname string, schemaPath string) (*metricRecordCache, error) {
+func CacheMetrics(hostName string, schemaPath string) (*metricRecordCache, error) {
 
 	// TODO: How to reload for new or removed services
 	// TODO: -> onChange triggered by value and or serviceIndex change
 	//       -> input metricCache, if null load for first time, otherwise use for onchnage
 	//       -> have display work out if a service has been deleted and not replaced, to nil out display
 
-	if hostname == "" {
-		return nil, fmt.Errorf("hostname not defined")
+	if hostName == "" {
+		return nil, fmt.Errorf("host name not defined")
 	}
-	serviceNameSlice, err := GetServices(hostname, schemaPath)
+	serviceNameSlice, err := GetServices(hostName, schemaPath)
 	if err != nil {
 		return nil, err
 	}
@@ -346,7 +346,7 @@ func CacheMetrics(hostname string, schemaPath string) (*metricRecordCache, error
 		}
 		if metricBuilders[index].topicBuilder.isService() {
 			for serviceIndex, serviceName := range serviceNameSlice {
-				topic, err := metricBuilders[index].topicBuilder.buildService(hostname, serviceName)
+				topic, err := metricBuilders[index].topicBuilder.buildService(hostName, serviceName)
 				if err != nil {
 					return nil, fmt.Errorf("service topic build error: %w", err)
 				}
@@ -356,7 +356,7 @@ func CacheMetrics(hostname string, schemaPath string) (*metricRecordCache, error
 				)
 			}
 		} else {
-			topic, err := metricBuilders[index].topicBuilder.buildHost(hostname)
+			topic, err := metricBuilders[index].topicBuilder.buildHost(hostName)
 			if err != nil {
 				return nil, fmt.Errorf("host topic build error: %w", err)
 			}
@@ -369,18 +369,18 @@ func CacheMetrics(hostname string, schemaPath string) (*metricRecordCache, error
 	return metricCache, nil
 }
 
-func (metricCache *metricRecordCache) Put(key metricRecordGUID, record *metricRecord) {
-	if metricCache == nil || metricCache.treeMap == nil || record == nil {
+func (mc *metricRecordCache) Put(key metricRecordGUID, record *metricRecord) {
+	if mc == nil || mc.treeMap == nil || record == nil {
 		return
 	}
-	metricCache.treeMap.Put(key, record)
+	mc.treeMap.Put(key, record)
 }
 
-func (metricCache *metricRecordCache) Get(key metricRecordGUID) (*metricRecord, bool) {
-	if metricCache == nil || metricCache.treeMap == nil {
+func (mc *metricRecordCache) Get(key metricRecordGUID) (*metricRecord, bool) {
+	if mc == nil || mc.treeMap == nil {
 		return nil, false
 	}
-	rawValue, found := metricCache.treeMap.Get(key)
+	rawValue, found := mc.treeMap.Get(key)
 	if !found || rawValue == nil {
 		return nil, false
 	}
@@ -391,11 +391,11 @@ func (metricCache *metricRecordCache) Get(key metricRecordGUID) (*metricRecord, 
 	return record, true
 }
 
-func (metricCache *metricRecordCache) Keys() []metricRecordGUID {
-	if metricCache == nil || metricCache.treeMap == nil {
+func (mc *metricRecordCache) Keys() []metricRecordGUID {
+	if mc == nil || mc.treeMap == nil {
 		return nil
 	}
-	rawKeys := metricCache.treeMap.Keys()
+	rawKeys := mc.treeMap.Keys()
 	recordGUIDs := make([]metricRecordGUID, len(rawKeys))
 	for index, rawKey := range rawKeys {
 		recordGUIDs[index] = rawKey.(metricRecordGUID)
@@ -403,21 +403,21 @@ func (metricCache *metricRecordCache) Keys() []metricRecordGUID {
 	return recordGUIDs
 }
 
-func (metricCache *metricRecordCache) Size() int {
-	if metricCache == nil || metricCache.treeMap == nil {
+func (mc *metricRecordCache) Size() int {
+	if mc == nil || mc.treeMap == nil {
 		return 0
 	}
-	return metricCache.treeMap.Size()
+	return mc.treeMap.Size()
 }
 
-func (metricCache *metricRecordCache) String() string {
-	if metricCache == nil {
+func (mc *metricRecordCache) String() string {
+	if mc == nil {
 		return "<nil>"
 	}
 	var stringBuilder strings.Builder
-	recordGUIDs := metricCache.Keys()
+	recordGUIDs := mc.Keys()
 	for recordIndex, recordGUID := range recordGUIDs {
-		record, ok := metricCache.Get(recordGUID)
+		record, ok := mc.Get(recordGUID)
 		if !ok || record == nil {
 			fmt.Fprintf(&stringBuilder,
 				"Index[%03d] Service[%03d] Metric[%03d] <nil>\n",
@@ -478,8 +478,8 @@ func metricRecordGUIDComparator(this, that interface{}) int {
 	}
 }
 
-func (m metricEnum) isValid() bool {
-	return m > METRIC_MIN && m < METRIC_MAX
+func (me metricEnum) isValid() bool {
+	return me > METRIC_MIN && me < METRIC_MAX
 }
 
 func (tb *topicBuilder) build(replacements map[string]string) (string, error) {
@@ -506,10 +506,10 @@ func (tb *topicBuilder) isService() bool {
 	return strings.Contains(tb.template, "$HOSTNAME") && strings.Contains(tb.template, "$SERVICENAME")
 }
 
-func (tb *topicBuilder) buildHost(hostname string) (string, error) {
-	return tb.build(map[string]string{"HOSTNAME": hostname})
+func (tb *topicBuilder) buildHost(hostName string) (string, error) {
+	return tb.build(map[string]string{"HOSTNAME": hostName})
 }
 
-func (tb *topicBuilder) buildService(hostname string, servicename string) (string, error) {
-	return tb.build(map[string]string{"HOSTNAME": hostname, "SERVICENAME": servicename})
+func (tb *topicBuilder) buildService(hostName string, servicename string) (string, error) {
+	return tb.build(map[string]string{"HOSTNAME": hostName, "SERVICENAME": servicename})
 }
