@@ -330,6 +330,7 @@ def _generate(context, filter_module=None, filter_changes=True, filter_host=None
                                     r"^v([0-9]*\.[0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
                                     r"^([0-9]*\.[0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
                                     r"^([0-9]*\.[0-9]*)" + docker_image_metadata_version_suffix,
+                                    r"^([0-9]*)" + docker_image_metadata_version_suffix,
                                 ]:
                                     if re.match(config_version_regex, docker_image_metadata_dict["version_current"]):
                                         docker_image_metadata_dict["version_regex"] = config_version_regex
@@ -565,7 +566,7 @@ docker rm -vf "$CONTAINER_NAME"
                     .format(docker_image_metadata["namespace"], docker_image_metadata["repository"])
                 docker_image_tags = _run_local(context, docker_image_tags_command, hide='out').stdout.splitlines()
                 if docker_image_tags is None or len(docker_image_tags) == 0:
-                    version_messages["error"].append(version_formats[2].format(
+                    version_messages["errors"].append(version_formats[2].format(
                         module, "Could not determine versions from Github repository command [{}]" \
                             .format(docker_image_tags_command)))
                 docker_image_metadata["version_upstream"] = docker_image_metadata["version_current"]
@@ -590,7 +591,7 @@ docker rm -vf "$CONTAINER_NAME"
                         docker_image_metadata["version_upstream"]
                     ))
                 else:
-                    version_messages["error"].append(version_formats[2].format(
+                    version_messages["errors"].append(version_formats[2].format(
                         module + ":" + docker_image_metadata["repository"],
                         "Could not get upstream version with current [{}], regex [{}] and upstream versions:\n{}"
                         .format(
@@ -600,7 +601,7 @@ docker rm -vf "$CONTAINER_NAME"
             elif exists(docker_file_path) or exists(docker_compose_path):
                 if docker_image_metadata is None or \
                         "skipped" not in docker_image_metadata or not docker_image_metadata["skipped"]:
-                    version_messages["error"].append(version_formats[2].format(
+                    version_messages["errors"].append(version_formats[2].format(
                         module + ":" + docker_image_metadata["repository"],
                         "Could not determine versions from parsed metadata {}".format(docker_image_metadata)))
         for lang, version in {
