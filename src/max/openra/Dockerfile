@@ -2,6 +2,7 @@
 FROM ghcr.io/dkruyt/openra:20250330 AS image_upstream
 
 FROM image_upstream AS image_base
+USER root
 
 FROM image_base AS image_build
 COPY target/package/main/resources/image/. /asystem/etc

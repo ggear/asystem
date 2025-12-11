@@ -25,6 +25,8 @@ services:
       - SupportDir=
     volumes:
       - ${SERVICE_DATA_DIR}:/asystem/mnt:rw
+    ports:
+      - ${OPENRA_API_PORT}:${OPENRA_API_PORT}
     healthcheck:
       test: /asystem/etc/checkhealthy.sh
       interval: 2m
