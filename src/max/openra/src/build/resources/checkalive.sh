@@ -1,2 +1,1 @@
-true
-# TODO
+true # TODO: Provide implementation

@@ -33,7 +33,7 @@ fi
 shopt -s expand_aliases
 
 if
-  true # TODO
+  /asystem/etc/checkexecuting.sh "${POSITIONAL_ARGS[@]}" && true # TODO: Provide implementation
 then
   set +x
   [ "${HEALTHCHECK_VERBOSE}" == true ] && echo "✅ The service [openra] is healthy :)" >&2

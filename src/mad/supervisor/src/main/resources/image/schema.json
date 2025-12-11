@@ -12,6 +12,7 @@
         "mlflow",
         "mlserver",
         "monitor",
+        "openra",
         "rhasspy"
       ],
       "macmini-may": [
