@@ -122,7 +122,7 @@ lovelace:
       type: 'module'
     - url: '/local/custom_ui/bom-radar-card/bom-radar-card.js?v=v4.1.0'
       type: 'module'
-    - url: '/local/custom_ui/bom-weather-card/bom-weather-card-hacked.js?v=0.90a'
+    - url: '/local/custom_ui/bom-weather-card-hacked/bom-weather-card.js?v=0.90a-HACKED-V3'
       type: 'module'
   dashboards:
     lovelace-generated:
