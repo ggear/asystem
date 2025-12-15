@@ -188,23 +188,24 @@
       name: Yearly
       icon: mdi:weather-pouring
 ################################################################################
-- type: 'custom:bom-radar-card'
-  data_source: 'RainViewer-Original'
-  map_style: 'light'
-  frame_count: 30
-  frame_delay: 200
-  restart_delay: 4000
-  center_latitude: -31.918381
-  center_longitude: 116.079391
-  marker_latitude: -31.918381
-  marker_longitude: 116.079391
-  show_marker: true
-  show_range: true
-  show_scale: true
-  show_zoom: true
-  show_recenter: true
-  show_playback: true
-  show_radar_coverage: false
-  show_radar_location: true
-  zoom_level: 6
+# NOTE: Broken as of 01/12/2025 thanks to a BOM website update, boo :(
+#- type: 'custom:bom-radar-card'
+#  data_source: 'RainViewer-Original'
+#  map_style: 'light'
+#  frame_count: 30
+#  frame_delay: 200
+#  restart_delay: 4000
+#  center_latitude: -31.918381
+#  center_longitude: 116.079391
+#  marker_latitude: -31.918381
+#  marker_longitude: 116.079391
+#  show_marker: true
+#  show_range: true
+#  show_scale: true
+#  show_zoom: true
+#  show_recenter: true
+#  show_playback: true
+#  show_radar_coverage: false
+#  show_radar_location: true
+#  zoom_level: 6
 ################################################################################
