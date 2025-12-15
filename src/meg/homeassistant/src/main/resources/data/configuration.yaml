@@ -114,11 +114,11 @@ panel_custom: !include ui-panel-custom.yaml
 lovelace:
   mode: 'yaml'
   resources:
-    - url: '/local/custom_ui/layout-card/layout-card.js?v=2.4.4'
+    - url: '/local/custom_ui/layout-card/layout-card.js?v=v2.4.7'
       type: 'module'
-    - url: '/local/custom_ui/apexcharts-card/apexcharts-card.js?v=v2.1.2'
+    - url: '/local/custom_ui/apexcharts-card/apexcharts-card.js?v=v2.2.3'
       type: 'module'
-    - url: '/local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.11.0'
+    - url: '/local/custom_ui/mini-graph-card/mini-graph-card-bundle.js?v=v0.13.0'
       type: 'module'
     - url: '/local/custom_ui/bom-radar-card/bom-radar-card.js?v=v4.1.0'
       type: 'module'
