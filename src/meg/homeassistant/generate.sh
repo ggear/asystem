@@ -26,7 +26,7 @@ for FILE in illuminance.yaml lovelace.yaml weather.yaml; do
 done
 
 # NOTES: https://github.com/Makin-Things/bom-radar-card/releases
-VERSION=v2.1.1
+VERSION=v4.1.0
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bom-radar-card" "Makin-Things/bom-radar-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
