@@ -2087,6 +2087,7 @@ script:
   tap_action: none
   show_state: true
   show_indicator: true
+  loading_indicator: false
   show:
     extrema: true
     fill: false
