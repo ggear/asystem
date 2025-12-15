@@ -8,19 +8,19 @@ services:
       - TZ=Australia/Perth
       - Name=JaneAndGraham
       - ListenPort=${OPENRA_API_PORT}
+      - Password=${OPENRA_TOKEN}
       - Mod=d2k
       - Map=
       - AdvertiseOnline=False
-      - Password=${OPENRA_TOKEN}
       - RecordReplays=False
       - RequireAuthentication=False
       - ProfileIDBlacklist=
       - ProfileIDWhitelist=
       - EnableSingleplayer=False
       - EnableSyncReports=False
-      - EnableGeoIP=True
+      - EnableGeoIP=False
       - EnableLintChecks=True
-      - ShareAnonymizedIPs=True
+      - ShareAnonymizedIPs=False
       - FloodLimitJoinCooldown=5000
       - SupportDir=
     volumes:

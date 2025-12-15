@@ -6,6 +6,8 @@
 CURRENT_RELEASE=$(sed -n 's/.*release[[:space:]]\+\([0-9]\+\).*/\1/p' /etc/fedora-release)
 LATEST_RELEASE=$(curl -s -L https://fedoraproject.org/releases.json | jq -r '[.[].version|select(test("^[0-9]+$"))]|max')
 echo "" && echo "#######################################################################################"
+echo "Current Fedora release [${CURRENT_RELEASE}], latest release [${LATEST_RELEASE}]"
+echo "#######################################################################################"
 if [ "$CURRENT_RELEASE" -eq "$LATEST_RELEASE" ]; then
   echo "Current Fedora release [${CURRENT_RELEASE}] is already the latest, no upgrade required"
 elif [ "$CURRENT_RELEASE" -lt "$LATEST_RELEASE" ]; then
@@ -19,6 +21,7 @@ dnf-3 install -y dnf-plugins-core
 dnf-3 config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
 dnf-3 install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
 dnf-3 install -y https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+dnf --refresh upgrade
 dnf-3 upgrade --refresh -y
 
 ################################################################################

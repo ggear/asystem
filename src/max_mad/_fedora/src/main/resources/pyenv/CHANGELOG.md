@@ -1,5 +1,24 @@
 # Version History
 
+## Release v2.6.16
+* rehash: Fix hanging for 60 seconds when shims directory is not writable due to Linux Landlock by @native-api in https://github.com/pyenv/pyenv/pull/3367
+* Add Miniconda3-25.9.1-3 by @binbjz in https://github.com/pyenv/pyenv/pull/3368
+* sh-rehash: Fix erroneously executing rather than printing a command by @native-api in https://github.com/pyenv/pyenv/pull/3369
+* Add CPython 3.13.11, 3.14.2 by @cesarcoatl in https://github.com/pyenv/pyenv/pull/3370
+
+## Release v2.6.15
+* Add CPython 3.13.10 by @jsirois in https://github.com/pyenv/pyenv/pull/3364
+
+## Release v2.6.14
+* CI: Bump actions/checkout from 5 to 6 in the github-actions group by @dependabot[bot] in https://github.com/pyenv/pyenv/pull/3360
+* Fix "ld: symbol(s) not found" for C system calls in some MacOS versions if XCode is for a newer major MacOS version by @native-api in https://github.com/pyenv/pyenv/pull/3362
+* Add CPython 3.14.1 by @nedbat in https://github.com/pyenv/pyenv/pull/3363
+
+## Release v2.6.13
+* CI: Replace macos-13 with macos-15-intel by @edgarrmondragon in https://github.com/pyenv/pyenv/pull/3356
+* Add Miniconda3-25.9.1-1 by @binbjz in https://github.com/pyenv/pyenv/pull/3357
+* Add CPython 3.15.0a2 by @nedbat in https://github.com/pyenv/pyenv/pull/3359
+
 ## Release v2.6.12
 * Add graalpy-25.0.1 by @msimacek in https://github.com/pyenv/pyenv/pull/3350
 * Add CPython 3.9.25 by @nedbat in https://github.com/pyenv/pyenv/pull/3355

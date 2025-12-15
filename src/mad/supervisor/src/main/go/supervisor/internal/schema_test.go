@@ -168,9 +168,9 @@ func TestGetServices(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			serviceSlice, err := GetServices(testCase.hostname, testCase.schemaPath)
-			if (err != nil) != testCase.expectError || !reflect.DeepEqual(serviceSlice, testCase.expected) {
-				t.Fatalf("GetServices() = %v, %v; want %v, error? %v", serviceSlice, err, testCase.expected, testCase.expectError)
+			services, err := GetServices(testCase.hostname, testCase.schemaPath)
+			if (err != nil) != testCase.expectError || !reflect.DeepEqual(services, testCase.expected) {
+				t.Fatalf("GetServices() = %v, %v; want %v, error? %v", services, err, testCase.expected, testCase.expectError)
 			}
 		})
 	}

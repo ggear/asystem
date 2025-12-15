@@ -166,6 +166,10 @@ http {
   server {{
     listen {};
     server_name {}.janeandgraham.com;
+    add_header Access-Control-Allow-Origin https://{}.janeandgraham.com always;
+    add_header Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS" always;
+    add_header Access-Control-Allow-Headers "Authorization, Content-Type" always;
+    add_header Access-Control-Allow-Credentials "true" always;
     proxy_buffering off;
     location / {{
       proxy_pass ${}_url{};
@@ -179,6 +183,7 @@ http {
                         ip_key,
                         port_value,
                         nginx_port_value,
+                        server_name,
                         server_name,
                         name,
                         console_context_value,

@@ -1,6 +1,7 @@
 package internal
 
 type metricDisplay struct {
+	id          metricID
 	row         int
 	col         int
 	labelWidth  int
@@ -12,7 +13,6 @@ type metricDisplay struct {
 	spacer      string
 	suffix      string
 	label       string
-	topic       string
 }
 
 func CacheCompactDisplay(serviceCount int) ([][]metricDisplay, [][]metricDisplay, error) {
@@ -20,25 +20,9 @@ func CacheCompactDisplay(serviceCount int) ([][]metricDisplay, [][]metricDisplay
 	for i := range hostMetrics {
 		hostMetrics[i] = make([]metricDisplay, 3)
 	}
-	hostEnums := []metricEnum{
-		metricHostComputeUsedProcessor,
-		metricHostComputeUsedMemory,
-		metricHostStorageUsedSystemDrive,
-		metricHostHealthFailedServices,
-		metricHostHealthFailedShares,
-		metricHostHealthFailedBackups,
-		metricHostRuntimePeakTemperatureMax,
-		metricHostRuntimePeakFanSpeedMax,
-		metricHostRuntimeLifeUsedDrives,
-		metricHostStorageUsedShareDrives,
-		metricHostStorageUsedBackupDrives,
-		metricHostComputeAllocatedMemory,
-	}
 	for i := 0; i < 4; i++ {
 		for j := 0; j < 3; j++ {
-			idx := i*3 + j
-			topic := metricBuilders[hostEnums[idx]].topicBuilder.template
-			hostMetrics[i][j] = metricDisplay{topic: topic}
+			hostMetrics[i][j] = metricDisplay{}
 		}
 	}
 
@@ -46,8 +30,8 @@ func CacheCompactDisplay(serviceCount int) ([][]metricDisplay, [][]metricDisplay
 	//	serviceMetrics[i] = make([]metricDisplay, 3)
 	//}
 	//serviceMetrics := make([][]metricDisplay, 4)
-	//serviceEnums := []metricEnum{
-	//	metricServiceUsedProcessor,
+	//serviceEnums := []metricID{
+	//	metricServiceUsedProcessor,topic
 	//	metricServiceUsedMemory,
 	//	metricServiceBackupStatus,
 	//	metricServiceAllOk,
