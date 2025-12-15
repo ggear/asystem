@@ -26,13 +26,15 @@ for FILE in illuminance.yaml lovelace.yaml weather.yaml; do
 done
 
 # NOTES: https://github.com/Makin-Things/bom-radar-card/releases
-VERSION=v3.0.2
+VERSION=v4.1.0
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "bom-radar-card" "Makin-Things/bom-radar-card" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
-cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/"* "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
+npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" install
+npm --prefix "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card" run build
+cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/assets/"* "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
+cp -vf "${ROOT_DIR}/../../../.deps/homeassistant/bom-radar-card/dist/bom-radar-card.js" "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card"
 sed -i '' 's/\/local\/community/\/local\/custom_ui/g' "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/bom-radar-card.js"
-wget -q -O "${ROOT_DIR}/src/main/resources/data/www/custom_ui/bom-radar-card/leaflet.js.map" "https://unpkg.com/leaflet@1.9.2/dist/leaflet.js.map"
 
 # NOTES: https://github.com/bremor/bureau_of_meteorology/releases
 VERSION=1.3.6
@@ -77,14 +79,14 @@ mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/average-component/custom_components/average" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/basnijholt/adaptive-lighting/releases
-VERSION=v1.28.0
+VERSION=v1.29.0
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "adaptive-lighting-component" "basnijholt/adaptive-lighting" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/adaptive_lighting"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
 cp -rvf "${ROOT_DIR}/../../../.deps/homeassistant/adaptive-lighting-component/custom_components/adaptive_lighting" "${ROOT_DIR}/src/main/resources/data/custom_components"
 
 # NOTES: https://github.com/bramstroker/homeassistant-powercalc/releases
-VERSION=v1.19.2
+VERSION=v1.19.4
 pull_repo "${ROOT_DIR}" "${1}" "homeassistant" "powercalc-component" "ggear/homeassistant-powercalc" "ggear-powercalc" "https://github.com/bramstroker/homeassistant-powercalc.git" "${VERSION}"
 rm -rf "${ROOT_DIR}/src/main/resources/data/custom_components/powercalc"
 mkdir -p "${ROOT_DIR}/src/main/resources/data/custom_components"
