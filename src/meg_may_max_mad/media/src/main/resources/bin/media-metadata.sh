@@ -22,8 +22,8 @@ if [ -n "${DEFAULTS_FILE}" ]; then
 #- native_lang: eng
 EOF
   fi
-  if [ $(find . -name "._metadata_*.yaml" -type f | wc -l) -le 11 ]; then
-    find . -name "._metadata_*.yaml" -type f -exec echo "" \; -exec echo "Metadata file:" \; -exec cat {} \;
+  if [ $(${FIND_CMD} . -name "._metadata_*.yaml" -type f | wc -l) -le 11 ]; then
+    ${FIND_CMD} . -name "._metadata_*.yaml" -type f -exec echo "" \; -exec echo "Metadata file:" \; -exec cat {} \;
   fi
   echo "" && echo "Defaults file:" && cat "${DEFAULTS_FILE}"
   echo "" && echo "Defaults edit:" && echo "vi ${DEFAULTS_FILE}"

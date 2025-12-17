@@ -39,6 +39,7 @@ bind '"\e[B":history-search-forward'
 alias edit="/Applications/Sublime\ Text.app/Contents/SharedSupport/bin/subl"
 alias grep="grep --line-buffered"
 alias fab="fab -e"
+alias find="gfind"
 alias dns-cache-flush="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"
 alias ssh-copy-id="sshcopyid_func"
 function sshcopyid_func() { cat ~/.ssh/id_rsa.pub | ssh $1 'mkdir .ssh; cat >>.ssh/authorized_keys'; }

@@ -30,6 +30,7 @@ brew install \
   mosquitto \
   coreutils \
   bluesnooze \
+  findutils \
   mpv \
   ffmpeg \
   mediainfo \

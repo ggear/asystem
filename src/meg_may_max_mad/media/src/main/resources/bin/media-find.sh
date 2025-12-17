@@ -12,7 +12,7 @@ fi
 
 share_ssh=""
 [ "${SHARE_ROOT}" != "/share" ] && share_ssh="ssh root@macmini-mad" && echo "Executing remotely ..."
-if [ "$(${share_ssh} '[[ $(find /share -mindepth 1 -maxdepth 1 | wc -l) -eq $(find /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l) ]] && echo true || echo false')" == "true" ]; then
+if [ "$(${share_ssh} '[[ $(${FIND_CMD}  /share -mindepth 1 -maxdepth 1 | wc -l) -eq $(${FIND_CMD}  /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l) ]] && echo true || echo false')" == "true" ]; then
   declare -A dirs_found
   while read -r file_found; do
     if [[ "${file_found}" == *"/series/"* ]]; then
@@ -21,7 +21,7 @@ if [ "$(${share_ssh} '[[ $(find /share -mindepth 1 -maxdepth 1 | wc -l) -eq $(fi
       dir_found="${file_found%/*}"
     fi
     dirs_found["${dir_found}"]="${dir_found}"
-  done < <(${share_ssh} "find /share ! -name '._*' ! -path '*/audio/*' -path '*/media/*' -type f -iname '*${FILE_NAME_TOKEN}*'" | sed "s|^/share|${SHARE_ROOT}|")
+  done < <(${share_ssh} "${FIND_CMD}  /share ! -name '._*' ! -path '*/audio/*' -path '*/media/*' -type f -iname '*${FILE_NAME_TOKEN}*'" | sed "s|^/share|${SHARE_ROOT}|")
   printf '%s\n' "${dirs_found[@]}" | sort | while read -r dir_found; do
     if [ ! -z "${dir_found}" ]; then
       echo "cd '${dir_found}'"

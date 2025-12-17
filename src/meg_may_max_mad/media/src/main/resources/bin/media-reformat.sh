@@ -8,7 +8,7 @@ SCRIPT_NAME="reformat.sh"
 SCRIPT_PATH="${ROOT_DIR}/lib/${SCRIPT_NAME}"
 SCRIPT_FILE="tmp/scripts/media/${SCRIPT_NAME}"
 if [ -n "${SHARE_DIR_MEDIA}" ]; then
-  find . -name ${SCRIPT_NAME} -exec "{}" \; | grep -v "No such file or directory"
+  ${FIND_CMD} . -name ${SCRIPT_NAME} -exec "{}" \; | grep -v "No such file or directory"
 elif [ -n "${SHARE_DIR}" ]; then
   [[ ! -f "${SHARE_DIR}/${SCRIPT_FILE}" ]] && asystem-media-analyse
   "${SHARE_DIR}/${SCRIPT_FILE}"

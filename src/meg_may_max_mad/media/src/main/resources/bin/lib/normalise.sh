@@ -13,12 +13,12 @@ fi
 echo -n "Normalising '${WORKING_DIR}' ... "
 if [ $(uname) == "Linux" ]; then
   command -v setfacl &>/dev/null && setfacl -bR "${WORKING_DIR}"
-  id "graham" &>/dev/null && getent group "users" &>/dev/null && find "${WORKING_DIR}" -exec chown "graham:users" {} \;
-  find "${WORKING_DIR}" -type d -exec chmod 750 {} \;
-  find "${WORKING_DIR}" -type f -name "*.sh" -exec chmod 750 {} \;
-  find "${WORKING_DIR}" -type f ! -name "*.sh" -exec chmod 640 {} \;
+  id "graham" &>/dev/null && getent group "users" &>/dev/null && ${FIND_CMD} "${WORKING_DIR}" -exec chown "graham:users" {} \;
+  ${FIND_CMD} "${WORKING_DIR}" -type d -exec chmod 750 {} \;
+  ${FIND_CMD} "${WORKING_DIR}" -type f -name "*.sh" -exec chmod 750 {} \;
+  ${FIND_CMD} "${WORKING_DIR}" -type f ! -name "*.sh" -exec chmod 640 {} \;
 fi
-find "${WORKING_DIR}" -type f -name nohup -exec rm -f {} \;
-find "${WORKING_DIR}" -type f -name .DS_Store -exec rm -f {} \;
-find "${WORKING_DIR}" -type f -regextype posix-extended -regex '.*/\.[^/]*\.[A-Za-z0-9]{6}$' -exec rm -f {} \;
+${FIND_CMD} "${WORKING_DIR}" -type f -name nohup -exec rm -f {} \;
+${FIND_CMD} "${WORKING_DIR}" -type f -name .DS_Store -exec rm -f {} \;
+${FIND_CMD} "${WORKING_DIR}" -type f -regextype posix-extended -regex '.*/\.[^/]*\.[A-Za-z0-9]{6}$' -exec rm -f {} \;
 echo "done"

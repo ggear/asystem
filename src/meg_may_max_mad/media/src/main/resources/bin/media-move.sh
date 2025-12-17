@@ -29,7 +29,7 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
           share_current_dir="${current_dir}"
           share_type_dir="${current_dir%%/${share_type}/*}/${share_type}"
         else
-          share_suffix_find="$(find "${current_dir}" -name "${share_type}" -type d)"
+          share_suffix_find="$(${FIND_CMD} "${current_dir}" -name "${share_type}" -type d)"
           if [ ! -z "${share_suffix_find}" ]; then
             share_current_dir="${share_suffix_find}"
             share_type_dir="${share_suffix_find}"
@@ -38,19 +38,19 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
         if [ ! -z "${share_type_dir}" ]; then
           share_type_suffix="${share_current_dir#${share_type_dir}}"
           share_type_dest="${share_dest}/${share_type}"
-          find "${share_type_dir}" -mindepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
+          ${FIND_CMD} "${share_type_dir}" -mindepth 1 -type d -print0 | while IFS= read -r -d '' dir; do
             rel_dir="${dir#${share_type_dir}/}"
             target_dir="${share_type_dest}/${rel_dir}"
             if [[ -z "${share_type_suffix}" ]] || [[ "${target_dir}" == *"${share_type_suffix}"* ]]; then
               mkdir -p "${target_dir}"
             fi
           done
-          find "${share_current_dir}" -mindepth 1 -type f -print0 | while IFS= read -r -d '' file; do
+          ${FIND_CMD} "${share_current_dir}" -mindepth 1 -type f -print0 | while IFS= read -r -d '' file; do
             source_file="${file}"
             target_file="${share_type_dest}/${file#${share_type_dir}/}"
             mv -v "${source_file}" "${target_file}"
           done
-          find "${share_current_dir}/.." -type d -empty -delete
+          [ -d "${share_current_dir}/.." ] && ${FIND_CMD} "${share_current_dir}/.." -type d -empty -delete
         fi
       done
     fi
@@ -103,7 +103,7 @@ if [ -n "${share_src}" ] && [ -d "${share_src}" ] && [ -n "${share_dest}" ]; the
       if rsync -avhPr --info=progress2 "${share_src}" "${share_dest}"; then
         rm -rvf "${share_src}"*
         [[ $(echo "${share_src}" | grep -o "/" | wc -l) -gt 6 ]] && rm -rvf "${share_src}".[!.]*
-        find "${share_src}.." -type d -empty -delete 2>/dev/null
+        [ -d "${share_src}.." ] && find "${share_src}.." -type d -empty -delete 2>/dev/null
       else
         echo "Error: Failed to rsync files from source [${share_src}] to destination [${share_dest}]"
       fi
