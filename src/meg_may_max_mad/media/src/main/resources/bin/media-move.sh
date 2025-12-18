@@ -50,7 +50,7 @@ if [[ "${current_dir}" == *"/share/"* ]]; then
             target_file="${share_type_dest}/${file#${share_type_dir}/}"
             mv -v "${source_file}" "${target_file}"
           done
-          [ -d "${share_current_dir}/.." ] && ${FIND_CMD} "${share_current_dir}/.." -type d -empty -delete
+          [ -d "${share_current_dir}/.." ] && ${FIND_CMD} "${share_current_dir}/.." -type d -empty -delete >/dev/null 2>&1
         fi
       done
     fi
@@ -103,7 +103,7 @@ if [ -n "${share_src}" ] && [ -d "${share_src}" ] && [ -n "${share_dest}" ]; the
       if rsync -avhPr --info=progress2 "${share_src}" "${share_dest}"; then
         rm -rvf "${share_src}"*
         [[ $(echo "${share_src}" | grep -o "/" | wc -l) -gt 6 ]] && rm -rvf "${share_src}".[!.]*
-        [ -d "${share_src}.." ] && find "${share_src}.." -type d -empty -delete 2>/dev/null
+        [ -d "${share_src}.." ] && find "${share_src}.." -type d -empty -delete >/dev/null 2>&1
       else
         echo "Error: Failed to rsync files from source [${share_src}] to destination [${share_dest}]"
       fi
