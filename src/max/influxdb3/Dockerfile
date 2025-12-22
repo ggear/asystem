@@ -1,5 +1,5 @@
 # NOTES: https://docs.influxdata.com/influxdb3/enterprise/release-notes
-FROM influxdb:3.7.0-enterprise AS image_upstream
+FROM influxdb:3.8.0-enterprise AS image_upstream
 USER root
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get -y --no-install-recommends --allow-downgrades install bash=5.2.21-2ubuntu4 && \
