@@ -1533,7 +1533,7 @@ def _analyse(file_path_root, sheet_guid, clean=False, force=False, defaults=Fals
                     ).otherwise(
                         pl.concat_str([
                             pl.lit("--main-audio "), pl.col("Transcode Audio Index"),
-                            pl.lit("--add-audio eng"),
+                            pl.lit(" --add-audio eng"),
                             pl.lit(" --surround-bitrate 640")
                         ])
                     )
