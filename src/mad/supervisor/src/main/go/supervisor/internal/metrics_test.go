@@ -58,6 +58,15 @@ func TestCacheMetrics(t *testing.T) {
 			if (err != nil) != testCase.expectError || cache.Size() != testCase.expected {
 				t.Fatalf("CacheMetrics() = len(%v), %v; want len(%v), error? %v", cache.Size(), err, testCase.expected, testCase.expectError)
 			}
+			cacheMarshalled, err := cache.MarshalSnapshot()
+			if err != nil || len(cacheMarshalled) == 0 {
+				t.Fatalf("MarshalSnapshot() = len(0); want len(>0)")
+			}
+			cacheUnmarshalled, err := UnmarshalSnapshot(cacheMarshalled)
+			t.Logf("Metric Record Cache:\n%s", cacheUnmarshalled)
+			if err != nil || cacheUnmarshalled.Size() != testCase.expected {
+				t.Fatalf("UnmarshalSnapshot() = len(%v), %v; want len(%v), error? %v", cacheUnmarshalled.Size(), err, testCase.expected, testCase.expectError)
+			}
 		})
 	}
 }

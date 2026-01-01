@@ -2,25 +2,43 @@ Usage:
   supervisor stats [OPTIONS]
 
 Description:
-  Show real-time system statistics
+  Show real-time system stats.
 
 Aliases:
   atop
+  atops (--mode remote)
 
 Options:
-  -m, --mode string         Method to retrieve stats:
-                              'poll'      – Poll system for stats (default)
-                              'cache'     – Query stats from cache (if cache is unavailable, fallback to poll mode)
-  -f, --format string       Display format based on console width:
-                              'auto'      - Uses console width to determine the most spacious format possible (default)
-                              'compact'   – For consoles <60 chars wide
-                              'relaxed'   – For consoles >120 chars wide
+  -m, --mode string
+      Stats host selection and retrieval method:
+        local
+            Show stats from the local host only, directly polled, presented
+            as a single cell grid (default).
+        remote
+            Show stats from all hosts, read from the supervisor message bus
+            and presented as a grid.
+        remote[:HOST[,HOST...]]
+            Show stats from the specified hosts, read from the supervisor
+            message bus and presented as a grid.
 
-  -s, --hosts string         Consoles to display
-                              'local'
-                              'remote'
+  -f, --format string
+      Output format based on grid cell width:
+        auto
+            Select the most spacious format the grid cell allows (default).
+        compact
+            Optimised for grid cells narrower than 59 columns.
+        relaxed
+            Optimised for grid cells wider than 100 columns.
 
-  -p, --poll-period string  Polling interval, uses unit suffixes [s, m, h] (ignored in cache mode, default: "1s")
-  -n, --no-stream           Disable continuous streaming, show only the first result and exit
-  -m, --monochrome          Display in monochrome without ANSI escape colour coding sequences
-  -h, --help                Display this help message and exit
+  -p, --poll-period duration
+      Polling interval, with unit suffixes [s, m, h], ignored in
+      remote mode (default: 1s).
+
+  -n, --no-stream
+      Disable continuous streaming; display a single result and exit.
+
+  -b, --monochrome
+      Disable ANSI colour output.
+
+  -h, --help
+      Display this help message and exit.

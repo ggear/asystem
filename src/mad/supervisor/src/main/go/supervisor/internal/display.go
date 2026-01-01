@@ -1,5 +1,24 @@
 package internal
 
+type cellDisplay struct {
+	cell         int
+	topBorder    borderDisplay
+	leftBorder   borderDisplay
+	rightBorder  borderDisplay
+	bottomBorder borderDisplay
+	metrics      [][]metricDisplay
+}
+
+type borderDisplay struct {
+	labelWidth  int
+	scaledWidth int
+	labelAlign  string
+	prefix      string
+	spacer      string
+	suffix      string
+	label       string
+}
+
 type metricDisplay struct {
 	id          metricID
 	row         int

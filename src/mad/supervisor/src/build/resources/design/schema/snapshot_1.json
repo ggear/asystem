@@ -1,0 +1,8 @@
+{
+  "timestamp": "2025-12-31T14:00:00Z",
+  "data": [
+    ["supervisor/macmini-meg/host/health/failed_services", true, 0],
+    ["supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/name", true, "averyrealylongnamethatiscutoff"],
+    ["supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_processor", true, 50, "%"]
+  ]
+}

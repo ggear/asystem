@@ -1,16 +1,25 @@
 Usage:
-  supervisor [OPTIONS] [COMMAND]
+  supervisor [OPTIONS] COMMAND
 
 Description:
-  Run the supervisor processes
+  Run supervisor processes.
 
 Commands:
-  run         Run the supervisor process to retrieve and publish stats from the system and perform supervisory duties
-  stats       Show real-time system statistics
-  help        Display this help message and exit
+  run
+      Run the supervisor process to collect and publish system statistics
+      and perform supervisory duties.
+
+  stats
+      Show real-time system statistics.
+
+  help
+      Display this help message and exit.
 
 Global Options:
-  -v, --version             Display version information and exit
-  -h, --help                Display this help message and exit
+  -v, --version
+      Display version information and exit.
 
-Run 'supervisor COMMAND --help' for more information on a command
+  -h, --help
+      Display this help message and exit.
+
+Run 'supervisor COMMAND --help' for more information on a command.

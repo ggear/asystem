@@ -2,8 +2,15 @@ Usage:
   supervisor run [OPTIONS]
 
 Description:
-  Run the supervisor process to retrieve and publish stats from the system and perform supervisory duties
+  Run the supervisor process to collect and publish system statistics and
+  perform supervisory duties.
 
 Options:
-  -p, --poll-period string  Polling interval, uses unit suffixes [s, m, h] (default: "1s")
-  -h, --help                Display this help message and exit
+  -p, --poll-period duration
+      Polling interval, with unit suffixes [s, m, h] (default: 5s).
+
+  -s, --snaphot-period duration
+      Snapshot interval, with unit suffixes [s, m, h] (default: 5m).
+
+  -h, --help
+      Display this help message and exit.

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/emirpasic/gods/maps/treemap"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type metricID int
@@ -70,6 +71,18 @@ type metricBuilder struct {
 type topicBuilder struct {
 	id       metricID
 	template string
+}
+
+type metricSnapshotCache struct {
+	timestamp time.Time             `msgpack:"timestamp" json:"timestamp"`
+	data      []metricSnapshotDatum `msgpack:"data" json:"data"`
+}
+
+type metricSnapshotDatum struct {
+	topic string
+	ok    bool
+	value interface{}
+	unit  string
 }
 
 type metricRecordCache struct {
@@ -436,7 +449,7 @@ func (cache *metricRecordCache) String() string {
 		}
 		fmt.Fprintf(
 			&stringBuilder,
-			"Index[%03d] Service[%03d] Metric[%03d] Value[%-6s] Topic[%s]\n",
+			"Index[%03d] Service[%03d] Metric[%03d] value[%-6s] topic[%s]\n",
 			index,
 			guid.serviceIndex,
 			guid.id,
@@ -482,6 +495,132 @@ func metricRecordGUIDComparator(this, that interface{}) int {
 
 func (id metricID) isValid() bool {
 	return id > METRIC_MIN && id < METRIC_MAX
+}
+
+func (cache *metricRecordCache) MarshalSnapshot() ([]byte, error) {
+	if cache == nil || cache.treeMap == nil {
+		return nil, fmt.Errorf("cache is nil")
+	}
+	snapshot := &metricSnapshotCache{
+		timestamp: time.Now(),
+		data:      make([]metricSnapshotDatum, 0, cache.Size()),
+	}
+	guids := cache.Keys()
+	for _, guid := range guids {
+		record, ok := cache.Get(guid)
+		if !ok || record == nil {
+			continue
+		}
+		datum := metricSnapshotDatum{
+			topic: record.topic,
+			ok:    record.value.ok,
+			value: record.value.value,
+			unit:  record.value.unit,
+		}
+		snapshot.data = append(snapshot.data, datum)
+	}
+	return msgpack.Marshal(snapshot)
+}
+
+func UnmarshalSnapshot(data []byte) (*metricRecordCache, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty snapshot")
+	}
+	var snapshot metricSnapshotCache
+	if err := msgpack.Unmarshal(data, &snapshot); err != nil {
+		return nil, err
+	}
+	cache := &metricRecordCache{
+		treeMap: treemap.NewWithStringComparator(),
+	}
+	for _, datum := range snapshot.data {
+		cache.treeMap.Put(datum.topic, &metricRecord{
+			topic: datum.topic,
+			value: metricValue{
+				ok:    datum.ok,
+				unit:  datum.unit,
+				value: fmt.Sprintf("%v", datum.value),
+			},
+		})
+	}
+	return cache, nil
+}
+
+func (snapshot *metricSnapshotCache) EncodeMsgpack(enc *msgpack.Encoder) error {
+	if err := enc.EncodeMapLen(2); err != nil {
+		return err
+	}
+	if err := enc.EncodeString("ts"); err != nil {
+		return err
+	}
+	if err := enc.Encode(snapshot.timestamp); err != nil {
+		return err
+	}
+	if err := enc.EncodeString("d"); err != nil {
+		return err
+	}
+	return enc.Encode(snapshot.data)
+}
+
+func (snapshot *metricSnapshotCache) DecodeMsgpack(dec *msgpack.Decoder) error {
+	n, err := dec.DecodeMapLen()
+	if err != nil {
+		return err
+	}
+
+	for i := 0; i < n; i++ {
+		key, err := dec.DecodeString()
+		if err != nil {
+			return err
+		}
+		switch key {
+		case "ts":
+			if err := dec.Decode(&snapshot.timestamp); err != nil {
+				return err
+			}
+		case "d":
+			if err := dec.Decode(&snapshot.data); err != nil {
+				return err
+			}
+		default:
+			if err := dec.Skip(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (snapshotDatum *metricSnapshotDatum) EncodeMsgpack(enc *msgpack.Encoder) error {
+	var array []interface{}
+	if snapshotDatum.unit != "" {
+		array = []interface{}{snapshotDatum.topic, snapshotDatum.ok, snapshotDatum.value, snapshotDatum.unit}
+	} else {
+		array = []interface{}{snapshotDatum.topic, snapshotDatum.ok, snapshotDatum.value}
+	}
+	return enc.Encode(array)
+}
+
+func (snapshotDatum *metricSnapshotDatum) DecodeMsgpack(dec *msgpack.Decoder) error {
+	var array []interface{}
+	if err := dec.Decode(&array); err != nil {
+		return err
+	}
+	if len(array) < 3 {
+		return fmt.Errorf("invalid metric data array length")
+	}
+	snapshotDatum.topic, _ = array[0].(string)
+	snapshotDatum.ok, _ = array[1].(bool)
+
+	if value, ok := array[2].(string); ok {
+		snapshotDatum.value = value
+	} else {
+		snapshotDatum.value = fmt.Sprintf("%v", array[2])
+	}
+	if len(array) > 3 {
+		snapshotDatum.unit, _ = array[3].(string)
+	}
+	return nil
 }
 
 func (builder *topicBuilder) build(replacements map[string]string) (string, error) {
