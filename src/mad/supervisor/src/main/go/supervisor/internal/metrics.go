@@ -64,6 +64,15 @@ type metricValue struct {
 	unit  string `msgpack:"unit,omitempty" json:"unit,omitempty"`
 }
 
+type metricRecordCache struct {
+	treeMap *treemap.Map
+}
+
+type metricRecordSnapshot struct {
+	Timestamp time.Time              `msgpack:"timestamp" json:"timestamp"`
+	Metrics   map[string]metricValue `msgpack:"data" json:"data"`
+}
+
 type metricBuilder struct {
 	topicBuilder topicBuilder
 	load         func(int, string) metricValue
@@ -72,15 +81,6 @@ type metricBuilder struct {
 type topicBuilder struct {
 	id       metricID
 	template string
-}
-
-type metricRecordCache struct {
-	treeMap *treemap.Map
-}
-
-type metricSnapshotCache struct {
-	Timestamp time.Time              `msgpack:"timestamp" json:"timestamp"`
-	Metrics   map[string]metricValue `msgpack:"data" json:"data"`
 }
 
 var metricBuilders = [METRIC_MAX]metricBuilder{

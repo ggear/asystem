@@ -1,4 +1,4 @@
-supervisor/macmini-meg/all # msgpack{"timestamp":}
+supervisor/macmini-meg # msgpack{"timestamp":, "metrics":{}}
 
 supervisor/macmini-meg/host # json{"ok":true}
 supervisor/macmini-meg/host/compute # json{"ok":true}
