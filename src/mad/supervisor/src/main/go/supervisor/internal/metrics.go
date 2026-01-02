@@ -14,6 +14,7 @@ type metricID int
 
 const (
 	METRIC_MIN metricID = iota
+	metricAll
 	metricHost
 	metricHostCompute
 	metricHostComputeUsedProcessor
@@ -58,9 +59,9 @@ type metricRecord struct {
 }
 
 type metricValue struct {
-	ok    bool   `json:"ok"`
-	unit  string `json:"unit,omitempty"`
-	value string `json:"value,omitempty"`
+	ok    bool   `msgpack:"ok" json:"ok"`
+	value string `msgpack:"value" json:"value"`
+	unit  string `msgpack:"unit,omitempty" json:"unit,omitempty"`
 }
 
 type metricBuilder struct {
@@ -73,23 +74,25 @@ type topicBuilder struct {
 	template string
 }
 
-type metricSnapshotCache struct {
-	timestamp time.Time             `msgpack:"timestamp" json:"timestamp"`
-	data      []metricSnapshotDatum `msgpack:"data" json:"data"`
-}
-
-type metricSnapshotDatum struct {
-	topic string
-	ok    bool
-	value interface{}
-	unit  string
-}
-
 type metricRecordCache struct {
 	treeMap *treemap.Map
 }
 
+type metricSnapshotCache struct {
+	Timestamp time.Time              `msgpack:"timestamp" json:"timestamp"`
+	Metrics   map[string]metricValue `msgpack:"data" json:"data"`
+}
+
 var metricBuilders = [METRIC_MAX]metricBuilder{
+	metricAll: {
+		topicBuilder{
+			id:       metricAll,
+			template: "supervisor/$HOSTNAME/all",
+		},
+		func(period int, serviceName string) metricValue {
+			return metricValue{ok: true}
+		},
+	},
 	metricHost: {
 		topicBuilder{
 			id:       metricHost,
@@ -497,132 +500,6 @@ func (id metricID) isValid() bool {
 	return id > METRIC_MIN && id < METRIC_MAX
 }
 
-func (cache *metricRecordCache) MarshalSnapshot() ([]byte, error) {
-	if cache == nil || cache.treeMap == nil {
-		return nil, fmt.Errorf("cache is nil")
-	}
-	snapshot := &metricSnapshotCache{
-		timestamp: time.Now(),
-		data:      make([]metricSnapshotDatum, 0, cache.Size()),
-	}
-	guids := cache.Keys()
-	for _, guid := range guids {
-		record, ok := cache.Get(guid)
-		if !ok || record == nil {
-			continue
-		}
-		datum := metricSnapshotDatum{
-			topic: record.topic,
-			ok:    record.value.ok,
-			value: record.value.value,
-			unit:  record.value.unit,
-		}
-		snapshot.data = append(snapshot.data, datum)
-	}
-	return msgpack.Marshal(snapshot)
-}
-
-func UnmarshalSnapshot(data []byte) (*metricRecordCache, error) {
-	if len(data) == 0 {
-		return nil, fmt.Errorf("empty snapshot")
-	}
-	var snapshot metricSnapshotCache
-	if err := msgpack.Unmarshal(data, &snapshot); err != nil {
-		return nil, err
-	}
-	cache := &metricRecordCache{
-		treeMap: treemap.NewWithStringComparator(),
-	}
-	for _, datum := range snapshot.data {
-		cache.treeMap.Put(datum.topic, &metricRecord{
-			topic: datum.topic,
-			value: metricValue{
-				ok:    datum.ok,
-				unit:  datum.unit,
-				value: fmt.Sprintf("%v", datum.value),
-			},
-		})
-	}
-	return cache, nil
-}
-
-func (snapshot *metricSnapshotCache) EncodeMsgpack(enc *msgpack.Encoder) error {
-	if err := enc.EncodeMapLen(2); err != nil {
-		return err
-	}
-	if err := enc.EncodeString("ts"); err != nil {
-		return err
-	}
-	if err := enc.Encode(snapshot.timestamp); err != nil {
-		return err
-	}
-	if err := enc.EncodeString("d"); err != nil {
-		return err
-	}
-	return enc.Encode(snapshot.data)
-}
-
-func (snapshot *metricSnapshotCache) DecodeMsgpack(dec *msgpack.Decoder) error {
-	n, err := dec.DecodeMapLen()
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < n; i++ {
-		key, err := dec.DecodeString()
-		if err != nil {
-			return err
-		}
-		switch key {
-		case "ts":
-			if err := dec.Decode(&snapshot.timestamp); err != nil {
-				return err
-			}
-		case "d":
-			if err := dec.Decode(&snapshot.data); err != nil {
-				return err
-			}
-		default:
-			if err := dec.Skip(); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (snapshotDatum *metricSnapshotDatum) EncodeMsgpack(enc *msgpack.Encoder) error {
-	var array []interface{}
-	if snapshotDatum.unit != "" {
-		array = []interface{}{snapshotDatum.topic, snapshotDatum.ok, snapshotDatum.value, snapshotDatum.unit}
-	} else {
-		array = []interface{}{snapshotDatum.topic, snapshotDatum.ok, snapshotDatum.value}
-	}
-	return enc.Encode(array)
-}
-
-func (snapshotDatum *metricSnapshotDatum) DecodeMsgpack(dec *msgpack.Decoder) error {
-	var array []interface{}
-	if err := dec.Decode(&array); err != nil {
-		return err
-	}
-	if len(array) < 3 {
-		return fmt.Errorf("invalid metric data array length")
-	}
-	snapshotDatum.topic, _ = array[0].(string)
-	snapshotDatum.ok, _ = array[1].(bool)
-
-	if value, ok := array[2].(string); ok {
-		snapshotDatum.value = value
-	} else {
-		snapshotDatum.value = fmt.Sprintf("%v", array[2])
-	}
-	if len(array) > 3 {
-		snapshotDatum.unit, _ = array[3].(string)
-	}
-	return nil
-}
-
 func (builder *topicBuilder) build(replacements map[string]string) (string, error) {
 	if !regexp.MustCompile(`^supervisor(/[a-zA-Z0-9$_-]+){2,4}$`).MatchString(builder.template) {
 		return "", fmt.Errorf("invalid topic template [%s]", builder.template)
@@ -653,4 +530,82 @@ func (builder *topicBuilder) buildHost(hostName string) (string, error) {
 
 func (builder *topicBuilder) buildService(hostName string, servicename string) (string, error) {
 	return builder.build(map[string]string{"HOSTNAME": hostName, "SERVICENAME": servicename})
+}
+
+// TODO: Fix, move all structs to exported (title case)
+func (cache *metricRecordCache) MarshalSnapshot() ([]byte, error) {
+	if cache == nil || cache.treeMap == nil {
+		return nil, fmt.Errorf("cache is nil")
+	}
+	snapshot := &metricSnapshotCache{
+		Timestamp: time.Now(),
+		Data:      make([]metricSnapshotDatum, 0, cache.Size()),
+	}
+	guids := cache.Keys()
+	for _, guid := range guids {
+		record, ok := cache.Get(guid)
+		if !ok || record == nil {
+			continue
+		}
+		var unitDefault string
+		if len(record.value.unit) > 0 {
+			unitDefault = record.value.unit
+		}
+		snapshot.Data = append(snapshot.Data, metricSnapshotDatum{
+			Topic: record.topic,
+			Value: record.value.value,
+			OK:    record.value.ok,
+			Unit:  unitDefault,
+		})
+	}
+	return msgpack.Marshal(snapshot)
+}
+
+func (cache *metricRecordCache) UnmarshalSnapshot(data []byte) (*metricSnapshotCache, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty snapshot")
+	}
+	var snapshot metricSnapshotCache
+	if err := msgpack.Unmarshal(data, &snapshot); err != nil {
+		return nil, err
+	}
+
+	// TODO: Load values into cache by topic
+
+	return &snapshot, nil
+}
+
+func (snapshot *metricSnapshotCache) String() string {
+	if snapshot == nil {
+		return "<nil>"
+	}
+	var stringBuilder strings.Builder
+	//guids := snapshot.Keys()
+	//for index, guid := range guids {
+	//	record, ok := snapshot.Get(guid)
+	//	if !ok || record == nil {
+	//		fmt.Fprintf(&stringBuilder,
+	//			"Index[%03d] Service[%03d] Metric[%03d] <nil>\n",
+	//			index,
+	//			guid.serviceIndex,
+	//			guid.id,
+	//		)
+	//		continue
+	//	}
+	//	value := fmt.Sprintf("%v", record.value.value)
+	//	topic := record.topic
+	//	if topic == "" {
+	//		topic = "<no topic>"
+	//	}
+	//	fmt.Fprintf(
+	//		&stringBuilder,
+	//		"Index[%03d] Service[%03d] Metric[%03d] value[%-6s] topic[%s]\n",
+	//		index,
+	//		guid.serviceIndex,
+	//		guid.id,
+	//		value,
+	//		topic,
+	//	)
+	//}
+	return stringBuilder.String()
 }
