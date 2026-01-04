@@ -50,7 +50,7 @@ func CacheCompactDisplay(serviceCount int) ([][]metricDisplay, [][]metricDisplay
 	//}
 	//serviceMetrics := make([][]metricDisplay, 4)
 	//serviceEnums := []metricID{
-	//	metricServiceUsedProcessor,topic
+	//	metricServiceUsedProcessor,Topic
 	//	metricServiceUsedMemory,
 	//	metricServiceBackupStatus,
 	//	metricServiceAllOk,

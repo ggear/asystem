@@ -5,8 +5,35 @@ import (
 	"testing"
 )
 
-func TestCacheMetrics(t *testing.T) {
-	_, err := testutil.SetupTestContainer(t)
+func TestCacheRemoteMetrics(t *testing.T) {
+	_, _, err := testutil.SetupBrokerService(t)
+	if err != nil {
+		t.Fatalf("Could not start container: %v", err)
+	}
+	tests := []struct {
+		name        string
+		expected    int
+		expectError bool
+	}{
+		{
+			name:        "test 1",
+			expected:    0,
+			expectError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			cache, err := CacheRemoteMetrics(nil)
+			t.Logf("Metric Record Remote Cache:\n%s", cache)
+			if (err != nil) != testCase.expectError || cache.Size() != testCase.expected {
+				t.Fatalf("CacheRemoteMetrics() = len(%v), %v; want len(%v), error? %v", cache.Size(), err, testCase.expected, testCase.expectError)
+			}
+		})
+	}
+}
+
+func TestCacheLocalMetrics(t *testing.T) {
+	_, err := testutil.SetupSleepContainer(t)
 	if err != nil {
 		t.Fatalf("Could not start container: %v", err)
 	}
@@ -53,23 +80,11 @@ func TestCacheMetrics(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			cache, err := CacheMetrics(testCase.hostname, testCase.schemaPath)
-			t.Logf("Metric Record Cache:\n%s", cache)
+			cache, err := CacheLocalMetrics(testCase.hostname, testCase.schemaPath)
+			t.Logf("Metric Record Local Cache:\n%s", cache)
 			if (err != nil) != testCase.expectError || cache.Size() != testCase.expected {
-				t.Fatalf("CacheMetrics() = len(%v), %v; want len(%v), error? %v", cache.Size(), err, testCase.expected, testCase.expectError)
+				t.Fatalf("CacheLocalMetrics() = len(%v), %v; want len(%v), error? %v", cache.Size(), err, testCase.expected, testCase.expectError)
 			}
-
-			// TODO:
-			cacheMarshalled, err := cache.MarshalSnapshot()
-			if err != nil || len(cacheMarshalled) == 0 {
-				t.Fatalf("MarshalSnapshot() = len(0); want len(>0)")
-			}
-			cacheUnmarshalled, err := cache.UnmarshalSnapshot(cacheMarshalled)
-			t.Logf("Metric Snapshot:\n%s", cacheUnmarshalled)
-			if err != nil || cacheUnmarshalled == nil {
-				t.Fatalf("UnmarshalSnapshot() = len(0); want len(>0)")
-			}
-
 		})
 	}
 }

@@ -11,7 +11,40 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func SetupTestContainer(t *testing.T) (testcontainers.Container, error) {
+func SetupBrokerService(t *testing.T) (testcontainers.Container, string, error) {
+	t.Helper()
+	ctx := context.Background()
+	req := testcontainers.ContainerRequest{
+		Image:        "eclipse-mosquitto:2",
+		ExposedPorts: []string{"1883/tcp"},
+		WaitingFor:   wait.ForListeningPort("1883/tcp"),
+	}
+	container, err := testcontainers.GenericContainer(
+		ctx,
+		testcontainers.GenericContainerRequest{
+			ContainerRequest: req,
+			Started:          true,
+		},
+	)
+	if err != nil {
+		return nil, "", err
+	}
+	t.Cleanup(func() {
+		_ = container.Terminate(context.Background())
+	})
+	host, err := container.Host(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	port, err := container.MappedPort(ctx, "1883")
+	if err != nil {
+		return nil, "", err
+	}
+	brokerURL := fmt.Sprintf("tcp://%s:%s", host, port.Port())
+	return container, brokerURL, nil
+}
+
+func SetupSleepContainer(t *testing.T) (testcontainers.Container, error) {
 	t.Helper()
 	fmt.Println("Creating containers ... ")
 	ctx := context.Background()

@@ -57,6 +57,7 @@ func GetServices(hostName string, schemaPath string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer dockerClient.Close()
 	dockerContainerSlice, err := dockerClient.ContainerList(context.Background(), container.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -67,9 +68,9 @@ func GetServices(hostName string, schemaPath string) ([]string, error) {
 			servicesMap[service] = true
 		}
 	}
-	for _, container := range dockerContainerSlice {
-		if len(container.Names) > 0 {
-			containerName := container.Names[0][1:]
+	for _, dockerContainer := range dockerContainerSlice {
+		if len(dockerContainer.Names) > 0 {
+			containerName := dockerContainer.Names[0][1:]
 			if containerName != "" && !regexp.MustCompile(dockerContainerNameIgnoredPattern).MatchString(containerName) && !servicesMap[containerName] {
 				serviceSlice = append(serviceSlice, containerName)
 			}
@@ -104,17 +105,8 @@ func getSchema(schemaPath string) (map[string]any, error) {
 		return nil, readErr
 	}
 	var schemaMap map[string]any
-	if unmarshalErr := json.Unmarshal([]byte(schemaString), &schemaMap); unmarshalErr != nil {
+	if unmarshalErr := json.Unmarshal(schemaString, &schemaMap); unmarshalErr != nil {
 		return nil, unmarshalErr
 	}
 	return schemaMap, nil
-}
-
-func contains(slice []string, str string) bool {
-	for _, v := range slice {
-		if v == str {
-			return true
-		}
-	}
-	return false
 }

@@ -45,27 +45,27 @@ const (
 )
 
 type metricRecordGUID struct {
-	id           metricID
-	serviceIndex int
-	isService    bool
+	ID           metricID
+	ServiceIndex int
+	IsService    bool
 }
 
 type metricRecord struct {
-	topic    string
-	value    metricValue
-	time     time.Time
-	load     func(int, string) metricValue
-	onChange func(previous, current metricValue)
+	Topic     string
+	Value     metricValue
+	Time      time.Time
+	LoadValue func(int, string) metricValue
+	OnChange  func(previous, current metricValue)
 }
 
 type metricValue struct {
-	ok    bool   `msgpack:"ok" json:"ok"`
-	value string `msgpack:"value" json:"value"`
-	unit  string `msgpack:"unit,omitempty" json:"unit,omitempty"`
+	OK    bool   `msgpack:"ok" json:"ok"`
+	Value string `msgpack:"value" json:"value"`
+	Unit  string `msgpack:"unit,omitempty" json:"unit,omitempty"`
 }
 
 type metricRecordCache struct {
-	treeMap *treemap.Map
+	Metrics *treemap.Map
 }
 
 type metricRecordSnapshot struct {
@@ -74,272 +74,316 @@ type metricRecordSnapshot struct {
 }
 
 type metricBuilder struct {
-	topicBuilder topicBuilder
-	load         func(int, string) metricValue
+	TopicBuilder topicBuilder
+	LoadValue    func(int, string) metricValue
 }
 
 type topicBuilder struct {
-	id       metricID
-	template string
+	ID       metricID
+	Template string
 }
 
 var metricBuilders = [METRIC_MAX]metricBuilder{
 	metricAll: {
 		topicBuilder{
-			id:       metricAll,
-			template: "supervisor/$HOSTNAME/all",
+			ID:       metricAll,
+			Template: "supervisor/$HOSTNAME/all",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true}
+			return metricValue{OK: true}
 		},
 	},
 	metricHost: {
 		topicBuilder{
-			id:       metricHost,
-			template: "supervisor/$HOSTNAME/host",
+			ID:       metricHost,
+			Template: "supervisor/$HOSTNAME/host",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true}
+			return metricValue{OK: true}
 		},
 	},
 	metricHostCompute: {
 		topicBuilder{
-			id:       metricHostCompute,
-			template: "supervisor/$HOSTNAME/host/compute",
+			ID:       metricHostCompute,
+			Template: "supervisor/$HOSTNAME/host/compute",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true}
+			return metricValue{OK: true}
 		},
 	},
 	metricHostComputeUsedProcessor: {
 		topicBuilder{
-			id:       metricHostComputeUsedProcessor,
-			template: "supervisor/$HOSTNAME/host/compute/used_processor",
+			ID:       metricHostComputeUsedProcessor,
+			Template: "supervisor/$HOSTNAME/host/compute/used_processor",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "%", value: "10"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricHostComputeUsedMemory: {
 		topicBuilder{
-			id:       metricHostComputeUsedMemory,
-			template: "supervisor/$HOSTNAME/host/compute/used_memory",
+			ID:       metricHostComputeUsedMemory,
+			Template: "supervisor/$HOSTNAME/host/compute/used_memory",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "%", value: "10"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricHostComputeAllocatedMemory: {
 		topicBuilder{
-			id:       metricHostComputeAllocatedMemory,
-			template: "supervisor/$HOSTNAME/host/compute/allocated_memory",
+			ID:       metricHostComputeAllocatedMemory,
+			Template: "supervisor/$HOSTNAME/host/compute/allocated_memory",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "GB", value: "10"}
+			return metricValue{OK: true, Unit: "GB", Value: "10"}
 		},
 	},
 	metricHostHealth: {
 		topicBuilder{
-			id:       metricHostHealth,
-			template: "supervisor/$HOSTNAME/host/health",
+			ID:       metricHostHealth,
+			Template: "supervisor/$HOSTNAME/host/health",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true}
+			return metricValue{OK: true}
 		},
 	},
 	metricHostHealthFailedServices: {
 		topicBuilder{
-			id:       metricHostHealthFailedServices,
-			template: "supervisor/$HOSTNAME/host/health/failed_services",
+			ID:       metricHostHealthFailedServices,
+			Template: "supervisor/$HOSTNAME/host/health/failed_services",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "", value: "10"}
+			return metricValue{OK: true, Unit: "", Value: "10"}
 		},
 	},
 	metricHostHealthFailedShares: {
 		topicBuilder{
-			id:       metricHostHealthFailedShares,
-			template: "supervisor/$HOSTNAME/host/health/failed_shares",
+			ID:       metricHostHealthFailedShares,
+			Template: "supervisor/$HOSTNAME/host/health/failed_shares",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "", value: "10"}
+			return metricValue{OK: true, Unit: "", Value: "10"}
 		},
 	},
 	metricHostHealthFailedBackups: {
 		topicBuilder{
-			id:       metricHostHealthFailedBackups,
-			template: "supervisor/$HOSTNAME/host/health/failed_backups",
+			ID:       metricHostHealthFailedBackups,
+			Template: "supervisor/$HOSTNAME/host/health/failed_backups",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "", value: "10"}
+			return metricValue{OK: true, Unit: "", Value: "10"}
 		},
 	},
 	metricHostRuntime: {
 		topicBuilder{
-			id:       metricHostRuntime,
-			template: "supervisor/$HOSTNAME/host/runtime",
+			ID:       metricHostRuntime,
+			Template: "supervisor/$HOSTNAME/host/runtime",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true}
+			return metricValue{OK: true}
 		},
 	},
 	metricHostRuntimePeakTemperatureMax: {
 		topicBuilder{
-			id:       metricHostRuntimePeakTemperatureMax,
-			template: "supervisor/$HOSTNAME/host/runtime/peak_temperature_max",
+			ID:       metricHostRuntimePeakTemperatureMax,
+			Template: "supervisor/$HOSTNAME/host/runtime/peak_temperature_max",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "%", value: "10"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricHostRuntimePeakFanSpeedMax: {
 		topicBuilder{
-			id:       metricHostRuntimePeakFanSpeedMax,
-			template: "supervisor/$HOSTNAME/host/runtime/peak_fan_speed_max",
+			ID:       metricHostRuntimePeakFanSpeedMax,
+			Template: "supervisor/$HOSTNAME/host/runtime/peak_fan_speed_max",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "%", value: "10"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricHostRuntimeLifeUsedDrives: {
 		topicBuilder{
-			id:       metricHostRuntimeLifeUsedDrives,
-			template: "supervisor/$HOSTNAME/host/runtime/life_used_drives",
+			ID:       metricHostRuntimeLifeUsedDrives,
+			Template: "supervisor/$HOSTNAME/host/runtime/life_used_drives",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "%", value: "10"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricHostStorage: {
 		topicBuilder{
-			id:       metricHostStorage,
-			template: "supervisor/$HOSTNAME/host/storage",
+			ID:       metricHostStorage,
+			Template: "supervisor/$HOSTNAME/host/storage",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true}
+			return metricValue{OK: true}
 		},
 	},
 	metricHostStorageUsedSystemDrive: {
 		topicBuilder{
-			id:       metricHostStorageUsedSystemDrive,
-			template: "supervisor/$HOSTNAME/host/storage/used_system_drive",
+			ID:       metricHostStorageUsedSystemDrive,
+			Template: "supervisor/$HOSTNAME/host/storage/used_system_drive",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "%", value: "10"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricHostStorageUsedShareDrives: {
 		topicBuilder{
-			id:       metricHostStorageUsedShareDrives,
-			template: "supervisor/$HOSTNAME/host/storage/used_share_drives",
+			ID:       metricHostStorageUsedShareDrives,
+			Template: "supervisor/$HOSTNAME/host/storage/used_share_drives",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "%", value: "10"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricHostStorageUsedBackupDrives: {
 		topicBuilder{
-			id:       metricHostStorageUsedBackupDrives,
-			template: "supervisor/$HOSTNAME/host/storage/used_backup_drives",
+			ID:       metricHostStorageUsedBackupDrives,
+			Template: "supervisor/$HOSTNAME/host/storage/used_backup_drives",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "%", value: "10"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricService: {
 		topicBuilder{
-			id:       metricService,
-			template: "supervisor/$HOSTNAME/service",
+			ID:       metricService,
+			Template: "supervisor/$HOSTNAME/service",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true}
+			return metricValue{OK: true}
 		},
 	},
 	metricServiceName: {
 		topicBuilder{
-			id:       metricServiceName,
-			template: "supervisor/$HOSTNAME/service/$SERVICENAME/name",
+			ID:       metricServiceName,
+			Template: "supervisor/$HOSTNAME/service/$SERVICENAME/name",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, value: serviceName}
+			return metricValue{OK: true, Value: serviceName}
 		},
 	},
 	metricServiceVersion: {
 		topicBuilder{
-			id:       metricServiceVersion,
-			template: "supervisor/$HOSTNAME/service/$SERVICENAME/version",
+			ID:       metricServiceVersion,
+			Template: "supervisor/$HOSTNAME/service/$SERVICENAME/version",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, value: "1.0.0"}
+			return metricValue{OK: true, Value: "1.0.0"}
 		},
 	},
 	metricServiceUsedProcessor: {
 		topicBuilder{
-			id:       metricServiceUsedProcessor,
-			template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_processor",
+			ID:       metricServiceUsedProcessor,
+			Template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_processor",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "%", value: "10"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricServiceUsedMemory: {
 		topicBuilder{
-			id:       metricServiceUsedMemory,
-			template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_memory",
+			ID:       metricServiceUsedMemory,
+			Template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_memory",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "MB", value: "256"}
+			return metricValue{OK: true, Unit: "MB", Value: "256"}
 		},
 	},
 	metricServiceBackupStatus: {
 		topicBuilder{
-			id:       metricServiceBackupStatus,
-			template: "supervisor/$HOSTNAME/service/$SERVICENAME/backup_status",
+			ID:       metricServiceBackupStatus,
+			Template: "supervisor/$HOSTNAME/service/$SERVICENAME/backup_status",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, value: "1"}
+			return metricValue{OK: true, Value: "1"}
 		},
 	},
 	metricServiceConfiguredStatus: {
 		topicBuilder{
-			id:       metricServiceConfiguredStatus,
-			template: "supervisor/$HOSTNAME/service/$SERVICENAME/configured_status",
+			ID:       metricServiceConfiguredStatus,
+			Template: "supervisor/$HOSTNAME/service/$SERVICENAME/configured_status",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, value: "true"}
+			return metricValue{OK: true, Value: "true"}
 		},
 	},
 	metricServiceRestartCount: {
 		topicBuilder{
-			id:       metricServiceRestartCount,
-			template: "supervisor/$HOSTNAME/service/$SERVICENAME/restart_count",
+			ID:       metricServiceRestartCount,
+			Template: "supervisor/$HOSTNAME/service/$SERVICENAME/restart_count",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, value: "0"}
+			return metricValue{OK: true, Value: "0"}
 		},
 	},
 	metricServiceRuntime: {
 		topicBuilder{
-			id:       metricServiceRuntime,
-			template: "supervisor/$HOSTNAME/service/$SERVICENAME/runtime",
+			ID:       metricServiceRuntime,
+			Template: "supervisor/$HOSTNAME/service/$SERVICENAME/runtime",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{ok: true, unit: "s", value: "3600"}
+			return metricValue{OK: true, Unit: "s", Value: "3600"}
 		},
 	},
 }
 
+func MarshalSnapshot(cache *metricRecordCache) ([]byte, error) {
+	if cache == nil || cache.Metrics == nil {
+		return nil, fmt.Errorf("cache is nil")
+	}
+	snapshot := &metricRecordSnapshot{
+		Timestamp: time.Now(),
+		Metrics:   make(map[string]metricValue),
+	}
+	guids := cache.Keys()
+	for _, guid := range guids {
+		record, ok := cache.Get(guid)
+		if !ok || record == nil {
+			continue
+		}
+		var unitDefault string
+		if len(record.Value.Unit) > 0 {
+			unitDefault = record.Value.Unit
+		}
+		snapshot.Metrics[record.Topic] = metricValue{
+			Value: record.Value.Value,
+			OK:    record.Value.OK,
+			Unit:  unitDefault,
+		}
+	}
+	return msgpack.Marshal(snapshot)
+}
+
+func UnmarshalSnapshot(snapshotMsgPack []byte) (*metricRecordSnapshot, error) {
+	if len(snapshotMsgPack) == 0 {
+		return nil, fmt.Errorf("empty snapshot")
+	}
+	var snapshot metricRecordSnapshot
+	if err := msgpack.Unmarshal(snapshotMsgPack, &snapshot); err != nil {
+		return nil, err
+	}
+	return &snapshot, nil
+}
+
 func newMetricRecordCache() *metricRecordCache {
 	return &metricRecordCache{
-		treeMap: treemap.NewWith(metricRecordGUIDComparator),
+		Metrics: treemap.NewWith(metricRecordGUIDComparator),
 	}
 }
 
-func CacheMetrics(hostName string, schemaPath string) (*metricRecordCache, error) {
+func CacheRemoteMetrics(metrics map[string]metricValue) (*metricRecordCache, error) {
+	metricCache := newMetricRecordCache()
+	// TODO: Provide impl
+	return metricCache, nil
+}
+
+func CacheLocalMetrics(hostName string, schemaPath string) (*metricRecordCache, error) {
 
 	// TODO: How to reload for new or removed services
-	// TODO: -> onChange triggered by value and or serviceIndex change
-	//       -> input metricCache, if null load for first time, otherwise use for onchnage
+	// TODO: -> OnChange triggered by Value and or ServiceIndex change
+	//       -> input metricCache, if null LoadValue for first Time, otherwise use for onchnage
 	//       -> have display work out if a service has been deleted and not replaced, to nil out display
 
 	if hostName == "" {
@@ -351,34 +395,34 @@ func CacheMetrics(hostName string, schemaPath string) (*metricRecordCache, error
 	}
 	metricCache := newMetricRecordCache()
 	for index := 1; index <= len(metricBuilders)-1; index++ {
-		if !metricBuilders[index].topicBuilder.id.isValid() {
-			return nil, fmt.Errorf("metric builder [%d] has invalid metric id [%d]", index, metricBuilders[index].topicBuilder.id)
+		if !metricBuilders[index].TopicBuilder.ID.isValid() {
+			return nil, fmt.Errorf("metric builder [%d] has invalid metric ID [%d]", index, metricBuilders[index].TopicBuilder.ID)
 		}
-		if metricBuilders[index].topicBuilder.template == "" {
-			return nil, fmt.Errorf("metric builder [%d] has empty template string", index)
+		if metricBuilders[index].TopicBuilder.Template == "" {
+			return nil, fmt.Errorf("metric builder [%d] has empty Template string", index)
 		}
-		if metricBuilders[index].load == nil {
-			return nil, fmt.Errorf("metric builder [%d] has empty load function", index)
+		if metricBuilders[index].LoadValue == nil {
+			return nil, fmt.Errorf("metric builder [%d] has empty LoadValue function", index)
 		}
-		if metricBuilders[index].topicBuilder.isService() {
+		if metricBuilders[index].TopicBuilder.isService() {
 			for serviceIndex, serviceName := range serviceNameSlice {
-				topic, err := metricBuilders[index].topicBuilder.buildService(hostName, serviceName)
+				topic, err := metricBuilders[index].TopicBuilder.buildService(hostName, serviceName)
 				if err != nil {
-					return nil, fmt.Errorf("service topic build error: %w", err)
+					return nil, fmt.Errorf("service Topic build error: %w", err)
 				}
 				metricCache.Put(
-					metricRecordGUID{metricBuilders[index].topicBuilder.id, serviceIndex, true},
-					&metricRecord{topic: topic, load: metricBuilders[index].load},
+					metricRecordGUID{metricBuilders[index].TopicBuilder.ID, serviceIndex, true},
+					&metricRecord{Topic: topic, LoadValue: metricBuilders[index].LoadValue},
 				)
 			}
 		} else {
-			topic, err := metricBuilders[index].topicBuilder.buildHost(hostName)
+			topic, err := metricBuilders[index].TopicBuilder.buildHost(hostName)
 			if err != nil {
-				return nil, fmt.Errorf("host topic build error: %w", err)
+				return nil, fmt.Errorf("host Topic build error: %w", err)
 			}
 			metricCache.Put(
-				metricRecordGUID{metricBuilders[index].topicBuilder.id, 0, false},
-				&metricRecord{topic: topic, load: metricBuilders[index].load},
+				metricRecordGUID{metricBuilders[index].TopicBuilder.ID, 0, false},
+				&metricRecord{Topic: topic, LoadValue: metricBuilders[index].LoadValue},
 			)
 		}
 	}
@@ -386,17 +430,17 @@ func CacheMetrics(hostName string, schemaPath string) (*metricRecordCache, error
 }
 
 func (cache *metricRecordCache) Put(key metricRecordGUID, record *metricRecord) {
-	if cache == nil || cache.treeMap == nil || record == nil {
+	if cache == nil || cache.Metrics == nil || record == nil {
 		return
 	}
-	cache.treeMap.Put(key, record)
+	cache.Metrics.Put(key, record)
 }
 
 func (cache *metricRecordCache) Get(key metricRecordGUID) (*metricRecord, bool) {
-	if cache == nil || cache.treeMap == nil {
+	if cache == nil || cache.Metrics == nil {
 		return nil, false
 	}
-	rawValue, found := cache.treeMap.Get(key)
+	rawValue, found := cache.Metrics.Get(key)
 	if !found || rawValue == nil {
 		return nil, false
 	}
@@ -408,10 +452,10 @@ func (cache *metricRecordCache) Get(key metricRecordGUID) (*metricRecord, bool) 
 }
 
 func (cache *metricRecordCache) Keys() []metricRecordGUID {
-	if cache == nil || cache.treeMap == nil {
+	if cache == nil || cache.Metrics == nil {
 		return nil
 	}
-	rawKeys := cache.treeMap.Keys()
+	rawKeys := cache.Metrics.Keys()
 	recordGUIDs := make([]metricRecordGUID, 0, len(rawKeys))
 	for _, rawKey := range rawKeys {
 		if recordGUID, ok := rawKey.(metricRecordGUID); ok {
@@ -422,10 +466,10 @@ func (cache *metricRecordCache) Keys() []metricRecordGUID {
 }
 
 func (cache *metricRecordCache) Size() int {
-	if cache == nil || cache.treeMap == nil {
+	if cache == nil || cache.Metrics == nil {
 		return 0
 	}
-	return cache.treeMap.Size()
+	return cache.Metrics.Size()
 }
 
 func (cache *metricRecordCache) String() string {
@@ -440,22 +484,22 @@ func (cache *metricRecordCache) String() string {
 			fmt.Fprintf(&stringBuilder,
 				"Index[%03d] Service[%03d] Metric[%03d] <nil>\n",
 				index,
-				guid.serviceIndex,
-				guid.id,
+				guid.ServiceIndex,
+				guid.ID,
 			)
 			continue
 		}
-		value := fmt.Sprintf("%v", record.value.value)
-		topic := record.topic
+		value := fmt.Sprintf("%v", record.Value.Value)
+		topic := record.Topic
 		if topic == "" {
-			topic = "<no topic>"
+			topic = "<no Topic>"
 		}
 		fmt.Fprintf(
 			&stringBuilder,
-			"Index[%03d] Service[%03d] Metric[%03d] value[%-6s] topic[%s]\n",
+			"Index[%03d] Service[%03d] Metric[%03d] Value[%-6s] Topic[%s]\n",
 			index,
-			guid.serviceIndex,
-			guid.id,
+			guid.ServiceIndex,
+			guid.ID,
 			value,
 			topic,
 		)
@@ -466,30 +510,30 @@ func (cache *metricRecordCache) String() string {
 func metricRecordGUIDComparator(this, that interface{}) int {
 	thisGUID := this.(metricRecordGUID)
 	thatGUID := that.(metricRecordGUID)
-	if thisGUID.isService != thatGUID.isService {
-		if !thisGUID.isService {
+	if thisGUID.IsService != thatGUID.IsService {
+		if !thisGUID.IsService {
 			return -1
 		}
 		return 1
 	}
-	if !thisGUID.isService {
+	if !thisGUID.IsService {
 		switch {
-		case thisGUID.id < thatGUID.id:
+		case thisGUID.ID < thatGUID.ID:
 			return -1
-		case thisGUID.id > thatGUID.id:
+		case thisGUID.ID > thatGUID.ID:
 			return 1
 		default:
 			return 0
 		}
 	}
 	switch {
-	case thisGUID.serviceIndex < thatGUID.serviceIndex:
+	case thisGUID.ServiceIndex < thatGUID.ServiceIndex:
 		return -1
-	case thisGUID.serviceIndex > thatGUID.serviceIndex:
+	case thisGUID.ServiceIndex > thatGUID.ServiceIndex:
 		return 1
-	case thisGUID.id < thatGUID.id:
+	case thisGUID.ID < thatGUID.ID:
 		return -1
-	case thisGUID.id > thatGUID.id:
+	case thisGUID.ID > thatGUID.ID:
 		return 1
 	default:
 		return 0
@@ -501,27 +545,27 @@ func (id metricID) isValid() bool {
 }
 
 func (builder *topicBuilder) build(replacements map[string]string) (string, error) {
-	if !regexp.MustCompile(`^supervisor(/[a-zA-Z0-9$_-]+){2,4}$`).MatchString(builder.template) {
-		return "", fmt.Errorf("invalid topic template [%s]", builder.template)
+	if !regexp.MustCompile(`^supervisor(/[a-zA-Z0-9$_-]+){2,4}$`).MatchString(builder.Template) {
+		return "", fmt.Errorf("invalid Topic Template [%s]", builder.Template)
 	}
 	pairs := make([]string, 0, len(replacements)*2)
 	for key, value := range replacements {
 		pairs = append(pairs, "$"+key, value)
 	}
 	replacer := strings.NewReplacer(pairs...)
-	result := replacer.Replace(builder.template)
+	result := replacer.Replace(builder.Template)
 	if strings.Contains(result, "$") {
-		return "", fmt.Errorf("invalid $TOKEN in template [%s]", result)
+		return "", fmt.Errorf("invalid $TOKEN in Template [%s]", result)
 	}
 	return result, nil
 }
 
 func (builder *topicBuilder) isHost() bool {
-	return strings.Contains(builder.template, "$HOSTNAME") && !strings.Contains(builder.template, "$SERVICENAME")
+	return strings.Contains(builder.Template, "$HOSTNAME") && !strings.Contains(builder.Template, "$SERVICENAME")
 }
 
 func (builder *topicBuilder) isService() bool {
-	return strings.Contains(builder.template, "$HOSTNAME") && strings.Contains(builder.template, "$SERVICENAME")
+	return strings.Contains(builder.Template, "$HOSTNAME") && strings.Contains(builder.Template, "$SERVICENAME")
 }
 
 func (builder *topicBuilder) buildHost(hostName string) (string, error) {
@@ -530,82 +574,4 @@ func (builder *topicBuilder) buildHost(hostName string) (string, error) {
 
 func (builder *topicBuilder) buildService(hostName string, servicename string) (string, error) {
 	return builder.build(map[string]string{"HOSTNAME": hostName, "SERVICENAME": servicename})
-}
-
-// TODO: Fix, move all structs to exported (title case)
-func (cache *metricRecordCache) MarshalSnapshot() ([]byte, error) {
-	if cache == nil || cache.treeMap == nil {
-		return nil, fmt.Errorf("cache is nil")
-	}
-	snapshot := &metricSnapshotCache{
-		Timestamp: time.Now(),
-		Data:      make([]metricSnapshotDatum, 0, cache.Size()),
-	}
-	guids := cache.Keys()
-	for _, guid := range guids {
-		record, ok := cache.Get(guid)
-		if !ok || record == nil {
-			continue
-		}
-		var unitDefault string
-		if len(record.value.unit) > 0 {
-			unitDefault = record.value.unit
-		}
-		snapshot.Data = append(snapshot.Data, metricSnapshotDatum{
-			Topic: record.topic,
-			Value: record.value.value,
-			OK:    record.value.ok,
-			Unit:  unitDefault,
-		})
-	}
-	return msgpack.Marshal(snapshot)
-}
-
-func (cache *metricRecordCache) UnmarshalSnapshot(data []byte) (*metricSnapshotCache, error) {
-	if len(data) == 0 {
-		return nil, fmt.Errorf("empty snapshot")
-	}
-	var snapshot metricSnapshotCache
-	if err := msgpack.Unmarshal(data, &snapshot); err != nil {
-		return nil, err
-	}
-
-	// TODO: Load values into cache by topic
-
-	return &snapshot, nil
-}
-
-func (snapshot *metricSnapshotCache) String() string {
-	if snapshot == nil {
-		return "<nil>"
-	}
-	var stringBuilder strings.Builder
-	//guids := snapshot.Keys()
-	//for index, guid := range guids {
-	//	record, ok := snapshot.Get(guid)
-	//	if !ok || record == nil {
-	//		fmt.Fprintf(&stringBuilder,
-	//			"Index[%03d] Service[%03d] Metric[%03d] <nil>\n",
-	//			index,
-	//			guid.serviceIndex,
-	//			guid.id,
-	//		)
-	//		continue
-	//	}
-	//	value := fmt.Sprintf("%v", record.value.value)
-	//	topic := record.topic
-	//	if topic == "" {
-	//		topic = "<no topic>"
-	//	}
-	//	fmt.Fprintf(
-	//		&stringBuilder,
-	//		"Index[%03d] Service[%03d] Metric[%03d] value[%-6s] topic[%s]\n",
-	//		index,
-	//		guid.serviceIndex,
-	//		guid.id,
-	//		value,
-	//		topic,
-	//	)
-	//}
-	return stringBuilder.String()
 }

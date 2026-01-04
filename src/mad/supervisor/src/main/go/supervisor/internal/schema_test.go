@@ -38,26 +38,26 @@ func TestGetVersion(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "invalid value format 1",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-value-format-1.json"),
+			name:        "invalid Value format 1",
+			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-1.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
-			name:        "invalid value format 2",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-value-format-2.json"),
+			name:        "invalid Value format 2",
+			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-2.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
-			name:        "invalid value format 3",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-value-format-3.json"),
+			name:        "invalid Value format 3",
+			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-3.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
-			name:        "invalid value format 4",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-value-format-4.json"),
+			name:        "invalid Value format 4",
+			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-4.json"),
 			expected:    "",
 			expectError: true,
 		},
@@ -79,7 +79,7 @@ func TestGetVersion(t *testing.T) {
 }
 
 func TestGetServices(t *testing.T) {
-	_, err := testutil.SetupTestContainer(t)
+	_, err := testutil.SetupSleepContainer(t)
 	if err != nil {
 		t.Fatalf("Could not start container: %v", err)
 	}
@@ -115,26 +115,26 @@ func TestGetServices(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "invalid value format 1",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-value-format-1.json"),
+			name:        "invalid Value format 1",
+			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-1.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
-			name:        "invalid value format 2",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-value-format-2.json"),
+			name:        "invalid Value format 2",
+			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-2.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
-			name:        "invalid value format 3",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-value-format-3.json"),
+			name:        "invalid Value format 3",
+			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-3.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
-			name:        "invalid value format 4",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-value-format-4.json"),
+			name:        "invalid Value format 4",
+			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-4.json"),
 			expected:    nil,
 			expectError: true,
 		},
