@@ -10,23 +10,30 @@ if [ -z "${FILE_NAME_TOKEN}" ]; then
   exit 1
 fi
 
-share_ssh=""
-[ "${SHARE_ROOT}" != "/share" ] && share_ssh="ssh root@macmini-mad" && echo "Executing remotely ..."
-if [ "$(${share_ssh} '[[ $(${FIND_CMD}  /share -mindepth 1 -maxdepth 1 | wc -l) -eq $(${FIND_CMD}  /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l) ]] && echo true || echo false')" == "true" ]; then
+share_ssh=()
+if [ "${SHARE_ROOT}" != "/share" ]; then
+  share_ssh=(ssh root@macmini-mad)
+  echo "Executing remotely ..."
+fi
+if "${share_ssh[@]}" bash -c '
+  c1=$(find /share -mindepth 1 -maxdepth 1 | wc -l)
+  c2=$(find /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l)
+  [[ "$c1" -eq "$c2" ]]
+'; then
   declare -A dirs_found
   while read -r file_found; do
-    if [[ "${file_found}" == *"/series/"* ]]; then
+    if [[ "$file_found" == *"/series/"* ]]; then
       dir_found="${file_found%/Season */*}"
     else
       dir_found="${file_found%/*}"
     fi
-    dirs_found["${dir_found}"]="${dir_found}"
-  done < <(${share_ssh} "${FIND_CMD}  /share ! -name '._*' ! -path '*/audio/*' -path '*/media/*' -type f -iname '*${FILE_NAME_TOKEN}*'" | sed "s|^/share|${SHARE_ROOT}|")
-  printf '%s\n' "${dirs_found[@]}" | sort | while read -r dir_found; do
-    if [ ! -z "${dir_found}" ]; then
-      echo "cd '${dir_found}'"
-    fi
-  done
+    dirs_found["$dir_found"]="$dir_found"
+  done < <("${share_ssh[@]}" "$FIND_CMD" /share ! -name '._*' ! -path '*/audio/*' -path '*/media/*' -type f -iname "*${FILE_NAME_TOKEN}*" | sed "s|^/share|${SHARE_ROOT}|")
+  printf '%s\n' "${dirs_found[@]}" |
+    sort |
+    while read -r dir_found; do
+      [ -n "$dir_found" ] && echo "cd '$dir_found'"
+    done
 else
   echo "Error: Not all shares are properly mounted."
 fi
