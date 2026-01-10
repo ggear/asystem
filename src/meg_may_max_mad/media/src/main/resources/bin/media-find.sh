@@ -29,7 +29,7 @@ if "${share_ssh[@]}" bash -c '
       dir_found="${file_found%/*}"
     fi
     dirs_found["$dir_found"]="$dir_found"
-  done < <("${share_ssh[@]}" "$FIND_CMD" /share ! -name '._*' ! -path '*/audio/*' -path '*/media/*' -type f -iname "*${FILE_NAME_TOKEN}*" | sed "s|^/share|${SHARE_ROOT}|")
+  done < <("${share_ssh[@]}" ". $(asystem-media-home)/.env_media && $FIND_CMD" /share ! -name '._*' ! -path '*/audio/*' -path '*/media/*' -type f -iname "*${FILE_NAME_TOKEN}*" | sed "s|^/share|${SHARE_ROOT}|")
   printf '%s\n' "${dirs_found[@]}" |
     sort |
     while read -r dir_found; do
