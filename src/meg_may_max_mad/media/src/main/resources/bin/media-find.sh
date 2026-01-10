@@ -16,8 +16,9 @@ if [ "${SHARE_ROOT}" != "/share" ]; then
   echo "Executing remotely ..."
 fi
 if "${share_ssh[@]}" bash -c '
-  c1=$('"$FIND_CMD"' /share -mindepth 1 -maxdepth 1 | wc -l)
-  c2=$('"$FIND_CMD"' /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l)
+  . $(asystem-media-home)/.env_media
+  c1=$("$FIND_CMD" /share -mindepth 1 -maxdepth 1 | wc -l)
+  c2=$("$FIND_CMD" /share -mindepth 2 -maxdepth 2 -name media -type d | wc -l)
   [[ "$c1" -eq "$c2" ]]
 '; then
   declare -A dirs_found
