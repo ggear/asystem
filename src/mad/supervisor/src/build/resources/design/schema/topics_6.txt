@@ -1,4 +1,4 @@
-supervisor/macmini-meg # msgpack{"timestamp": "2025-12-31T14:00:00Z", "metrics": [["supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_processor", true, "50", "%"]]}
+supervisor/macmini-meg # msgpack{"version": "", ""timestamp": "2025-12-31T14:00:00Z", "metrics": [["supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_processor", true, "50", "%"]]}
 
 supervisor/macmini-meg/host # json{"ok":true}
 supervisor/macmini-meg/host/compute # json{"ok":true}

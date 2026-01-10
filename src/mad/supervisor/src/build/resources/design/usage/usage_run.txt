@@ -7,10 +7,16 @@ Description:
 
 Options:
   -p, --poll-period duration
-      Polling interval, with unit suffixes [s, m, h] (default: 5s).
+      Polling period for caching individual metric raw values,
+      with unit suffixes [s, m, h] (default: 1s).
+
+  -b, --bin-period duration
+      Bin period for analysing and publishing individual, calculated metric values,
+      with unit suffixes [s, m, h] (default: 5s).
 
   -s, --snaphot-period duration
-      Snapshot interval, with unit suffixes [s, m, h] (default: 5m).
+      Snapshot period for publishing a complete set of calculated metric values,
+      with unit suffixes [s, m, h] (default: 5m).
 
   -h, --help
       Display this help message and exit.

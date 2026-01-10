@@ -21,49 +21,49 @@ func TestGetVersion(t *testing.T) {
 		},
 		{
 			name:        "invalid corrupt 1",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-corrupt-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-corrupt-1.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
 			name:        "invalid missing keys 1",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-missing-keys-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-missing-keys-1.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
 			name:        "invalid missing keys 2",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-missing-keys-2.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-missing-keys-2.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
 			name:        "invalid Value format 1",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-1.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
 			name:        "invalid Value format 2",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-2.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-2.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
 			name:        "invalid Value format 3",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-3.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-3.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
 			name:        "invalid Value format 4",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-4.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-4.json"),
 			expected:    "",
 			expectError: true,
 		},
 		{
 			name:        "valid 1",
-			schemaPath:  testutil.GetSchemaPath("schema-valid-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-valid-1.json"),
 			expected:    "10.100.6792",
 			expectError: false,
 		},
@@ -73,6 +73,78 @@ func TestGetVersion(t *testing.T) {
 			version, err := GetVersion(testCase.schemaPath)
 			if (err != nil) != testCase.expectError || version != testCase.expected {
 				t.Fatalf("GetVersion() = %v, %v; want %v, error? %v", version, err, testCase.expected, testCase.expectError)
+			}
+		})
+	}
+}
+
+func TestGetHosts(t *testing.T) {
+	tests := []struct {
+		name        string
+		schemaPath  string
+		expected    []string
+		expectError bool
+	}{
+		{
+			name:        "non-existent file 1",
+			schemaPath:  "non-existent-file.json",
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name:        "invalid corrupt 1",
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-corrupt-1.json"),
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name:        "invalid missing keys 1",
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-missing-keys-1.json"),
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name:        "invalid missing keys 2",
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-missing-keys-2.json"),
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name:        "invalid Value format 1",
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-1.json"),
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name:        "invalid Value format 2",
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-2.json"),
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name:        "invalid Value format 3",
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-3.json"),
+			expected:    []string{},
+			expectError: false,
+		},
+		{
+			name:        "invalid Value format 4",
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-4.json"),
+			expected:    []string{"ahost"},
+			expectError: false,
+		},
+		{
+			name:        "valid 1",
+			schemaPath:  testutil.GetSchemaPath(t, "schema-valid-1.json"),
+			expected:    []string{"macmini-mad", "macmini-max", "macmini-may", "macmini-meg", "raspbpi-jen"},
+			expectError: false,
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			hosts, err := GetHosts(testCase.schemaPath)
+			if (err != nil) != testCase.expectError || !reflect.DeepEqual(hosts, testCase.expected) {
+				t.Fatalf("GetHosts() = %v, %v; want %v, error? %v", hosts, err, testCase.expected, testCase.expectError)
 			}
 		})
 	}
@@ -98,70 +170,70 @@ func TestGetServices(t *testing.T) {
 		},
 		{
 			name:        "invalid corrupt 1",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-corrupt-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-corrupt-1.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
 			name:        "invalid missing keys 1",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-missing-keys-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-missing-keys-1.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
 			name:        "invalid missing keys 2",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-missing-keys-2.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-missing-keys-2.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
 			name:        "invalid Value format 1",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-1.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
 			name:        "invalid Value format 2",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-2.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-2.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
 			name:        "invalid Value format 3",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-3.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-3.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
 			name:        "invalid Value format 4",
-			schemaPath:  testutil.GetSchemaPath("schema-invalid-Value-format-4.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-invalid-Value-format-4.json"),
 			expected:    nil,
 			expectError: true,
 		},
 		{
 			name:        "valid nil-host 1",
-			schemaPath:  testutil.GetSchemaPath("schema-valid-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-valid-1.json"),
 			expected:    []string{},
 			expectError: false,
 		},
 		{
 			name:        "valid non-existent-host 1",
 			hostname:    "non-existent-host",
-			schemaPath:  testutil.GetSchemaPath("schema-valid-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-valid-1.json"),
 			expected:    []string{},
 			expectError: false,
 		},
 		{
 			name:        "valid macmini-mad 1",
 			hostname:    "macmini-mad",
-			schemaPath:  testutil.GetSchemaPath("schema-valid-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-valid-1.json"),
 			expected:    []string{"monitor", "plex", "sabnzbd", "sleep"},
 			expectError: false,
 		},
 		{
 			name:        "valid raspbpi-jen 1",
 			hostname:    "raspbpi-jen",
-			schemaPath:  testutil.GetSchemaPath("schema-valid-1.json"),
+			schemaPath:  testutil.GetSchemaPath(t, "schema-valid-1.json"),
 			expected:    []string{"monitor", "sleep", "weewx", "zigbee2mqtt"},
 			expectError: false,
 		},

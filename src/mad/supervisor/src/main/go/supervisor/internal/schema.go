@@ -16,6 +16,29 @@ import (
 const SchemaDefaultPath = "/root/install/supervisor/latest/image/schema.json"
 const dockerContainerNameIgnoredPattern = `^reaper_`
 
+func GetHosts(schemaPath string) ([]string, error) {
+	schemaMap, err := getSchema(schemaPath)
+	if err != nil {
+		return nil, err
+	}
+	rootMap, ok := schemaMap["asystem"].(map[string]any)
+	if !ok {
+		return nil, errors.New("missing asystem")
+	}
+	hostNameMap, ok := rootMap["services"].(map[string]any)
+	if !ok {
+		return nil, errors.New("missing services")
+	}
+	hostSlice := make([]string, 0, len(hostNameMap))
+	for hostName := range hostNameMap {
+		if hostName != "" {
+			hostSlice = append(hostSlice, hostName)
+		}
+	}
+	sort.Strings(hostSlice)
+	return hostSlice, nil
+}
+
 func GetServices(hostName string, schemaPath string) ([]string, error) {
 	schemaMap, err := getSchema(schemaPath)
 	if err != nil {

@@ -2,7 +2,9 @@ package internal
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -69,6 +71,7 @@ type metricRecordCache struct {
 }
 
 type metricRecordSnapshot struct {
+	Version   string                 `msgpack:"version" json:"version"`
 	Timestamp time.Time              `msgpack:"timestamp" json:"timestamp"`
 	Metrics   map[string]metricValue `msgpack:"data" json:"data"`
 }
@@ -81,13 +84,14 @@ type metricBuilder struct {
 type topicBuilder struct {
 	ID       metricID
 	Template string
+	Topic    string
 }
 
 var metricBuilders = [METRIC_MAX]metricBuilder{
 	metricAll: {
 		topicBuilder{
 			ID:       metricAll,
-			Template: "supervisor/$HOSTNAME/all",
+			Template: "supervisor/$HOSTNAME",
 		},
 		func(period int, serviceName string) metricValue {
 			return metricValue{OK: true}
@@ -288,7 +292,7 @@ var metricBuilders = [METRIC_MAX]metricBuilder{
 			Template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_memory",
 		},
 		func(period int, serviceName string) metricValue {
-			return metricValue{OK: true, Unit: "MB", Value: "256"}
+			return metricValue{OK: true, Unit: "%", Value: "10"}
 		},
 	},
 	metricServiceBackupStatus: {
@@ -329,20 +333,31 @@ var metricBuilders = [METRIC_MAX]metricBuilder{
 	},
 }
 
-func MarshalSnapshot(cache *metricRecordCache) ([]byte, error) {
-	if cache == nil || cache.Metrics == nil {
+var metricBuildersCache = func() map[string]metricBuilder {
+	builders := make(map[string]metricBuilder)
+	for i := METRIC_MIN + 1; i < METRIC_MAX; i++ {
+		if err := metricBuilders[i].isValid(); err != nil {
+			panic(fmt.Sprintf("invalid metric builder at index %d: %v", i, err))
+		}
+		builders[metricBuilders[i].TopicBuilder.Template] = metricBuilders[i]
+	}
+	return builders
+}()
+
+func MarshalSnapshot(schemaPath string, records []metricRecord) ([]byte, error) {
+	if records == nil {
 		return nil, fmt.Errorf("cache is nil")
 	}
+	version, err := GetVersion(schemaPath)
+	if err != nil {
+		return nil, err
+	}
 	snapshot := &metricRecordSnapshot{
+		Version:   version,
 		Timestamp: time.Now(),
 		Metrics:   make(map[string]metricValue),
 	}
-	guids := cache.Keys()
-	for _, guid := range guids {
-		record, ok := cache.Get(guid)
-		if !ok || record == nil {
-			continue
-		}
+	for _, record := range records {
 		var unitDefault string
 		if len(record.Value.Unit) > 0 {
 			unitDefault = record.Value.Unit
@@ -374,16 +389,34 @@ func newMetricRecordCache() *metricRecordCache {
 }
 
 func CacheRemoteMetrics(metrics map[string]metricValue) (*metricRecordCache, error) {
-	metricCache := newMetricRecordCache()
-	// TODO: Provide impl
-	return metricCache, nil
+	topics := slices.Collect(maps.Keys(metrics))
+	slices.Sort(topics)
+	services := make(map[string]int)
+	services[""] = 0
+	cache := newMetricRecordCache()
+	for _, topic := range topics {
+		value := metrics[topic]
+		builder := topicBuilder{Topic: topic}
+		id, _, service, err := builder.parse()
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse topic %s: %w", topic, err)
+		}
+		if _, exists := services[service]; !exists {
+			services[service] = len(services) - 1
+		}
+		cache.Put(
+			metricRecordGUID{id, services[service], builder.isService()},
+			&metricRecord{Topic: topic, Value: value, LoadValue: metricBuilders[id].LoadValue},
+		)
+	}
+	return cache, nil
 }
 
 func CacheLocalMetrics(hostName string, schemaPath string) (*metricRecordCache, error) {
 
 	// TODO: How to reload for new or removed services
 	// TODO: -> OnChange triggered by Value and or ServiceIndex change
-	//       -> input metricCache, if null LoadValue for first Time, otherwise use for onchnage
+	//       -> input cache, if null LoadValue for first Time, otherwise use for onchnage
 	//       -> have display work out if a service has been deleted and not replaced, to nil out display
 
 	if hostName == "" {
@@ -393,24 +426,15 @@ func CacheLocalMetrics(hostName string, schemaPath string) (*metricRecordCache, 
 	if err != nil {
 		return nil, err
 	}
-	metricCache := newMetricRecordCache()
+	cache := newMetricRecordCache()
 	for index := 1; index <= len(metricBuilders)-1; index++ {
-		if !metricBuilders[index].TopicBuilder.ID.isValid() {
-			return nil, fmt.Errorf("metric builder [%d] has invalid metric ID [%d]", index, metricBuilders[index].TopicBuilder.ID)
-		}
-		if metricBuilders[index].TopicBuilder.Template == "" {
-			return nil, fmt.Errorf("metric builder [%d] has empty Template string", index)
-		}
-		if metricBuilders[index].LoadValue == nil {
-			return nil, fmt.Errorf("metric builder [%d] has empty LoadValue function", index)
-		}
 		if metricBuilders[index].TopicBuilder.isService() {
 			for serviceIndex, serviceName := range serviceNameSlice {
 				topic, err := metricBuilders[index].TopicBuilder.buildService(hostName, serviceName)
 				if err != nil {
 					return nil, fmt.Errorf("service Topic build error: %w", err)
 				}
-				metricCache.Put(
+				cache.Put(
 					metricRecordGUID{metricBuilders[index].TopicBuilder.ID, serviceIndex, true},
 					&metricRecord{Topic: topic, LoadValue: metricBuilders[index].LoadValue},
 				)
@@ -420,13 +444,13 @@ func CacheLocalMetrics(hostName string, schemaPath string) (*metricRecordCache, 
 			if err != nil {
 				return nil, fmt.Errorf("host Topic build error: %w", err)
 			}
-			metricCache.Put(
+			cache.Put(
 				metricRecordGUID{metricBuilders[index].TopicBuilder.ID, 0, false},
 				&metricRecord{Topic: topic, LoadValue: metricBuilders[index].LoadValue},
 			)
 		}
 	}
-	return metricCache, nil
+	return cache, nil
 }
 
 func (cache *metricRecordCache) Put(key metricRecordGUID, record *metricRecord) {
@@ -494,13 +518,17 @@ func (cache *metricRecordCache) String() string {
 		if topic == "" {
 			topic = "<no Topic>"
 		}
+		metricOK := map[bool]string{true: "✔", false: "✖"}[record.Value.OK]
+		metricServiceIndex := map[bool]string{true: fmt.Sprintf("%03d", guid.ServiceIndex), false: "   "}[guid.IsService]
 		fmt.Fprintf(
 			&stringBuilder,
-			"Index[%03d] Service[%03d] Metric[%03d] Value[%-6s] Topic[%s]\n",
+			"Index[%03d] Service[%v] Metric[%03d] OK[%v] Value[%3s] Unit[%1v] Topic[%s]\n",
 			index,
-			guid.ServiceIndex,
+			metricServiceIndex,
 			guid.ID,
+			metricOK,
 			value,
+			record.Value.Unit,
 			topic,
 		)
 	}
@@ -540,12 +568,35 @@ func metricRecordGUIDComparator(this, that interface{}) int {
 	}
 }
 
-func (id metricID) isValid() bool {
-	return id > METRIC_MIN && id < METRIC_MAX
+func (id metricID) isValid() error {
+	if id < METRIC_MIN || id > METRIC_MAX {
+		return fmt.Errorf("metric ID %d outside [%d, %d]", id, METRIC_MIN, METRIC_MAX)
+	}
+	return nil
+}
+
+func (builder metricBuilder) isValid() error {
+	id := builder.TopicBuilder.ID
+	if err := id.isValid(); err != nil {
+		return fmt.Errorf("metric builder %d: %w", id, err)
+	}
+	if builder.TopicBuilder.Template == "" {
+		return fmt.Errorf("metric builder %d: empty template", id)
+	}
+	if builder.LoadValue == nil {
+		return fmt.Errorf("metric builder %d: LoadValue is nil", id)
+	}
+	return nil
 }
 
 func (builder *topicBuilder) build(replacements map[string]string) (string, error) {
-	if !regexp.MustCompile(`^supervisor(/[a-zA-Z0-9$_-]+){2,4}$`).MatchString(builder.Template) {
+	if builder.Topic != "" {
+		return builder.Topic, nil
+	}
+	if builder.Template == "" {
+		return "", fmt.Errorf("cannot build with empty template")
+	}
+	if !regexp.MustCompile(`^supervisor(/[a-zA-Z0-9$_-]+){1,4}$`).MatchString(builder.Template) {
 		return "", fmt.Errorf("invalid Topic Template [%s]", builder.Template)
 	}
 	pairs := make([]string, 0, len(replacements)*2)
@@ -553,11 +604,37 @@ func (builder *topicBuilder) build(replacements map[string]string) (string, erro
 		pairs = append(pairs, "$"+key, value)
 	}
 	replacer := strings.NewReplacer(pairs...)
-	result := replacer.Replace(builder.Template)
-	if strings.Contains(result, "$") {
-		return "", fmt.Errorf("invalid $TOKEN in Template [%s]", result)
+	builder.Topic = replacer.Replace(builder.Template)
+	if strings.Contains(builder.Topic, "$") {
+		return "", fmt.Errorf("invalid $TOKEN in Template [%s]", builder.Topic)
 	}
-	return result, nil
+	return builder.Topic, nil
+}
+
+func (builder *topicBuilder) parse() (metricID, string, string, error) {
+	host := ""
+	service := ""
+	if builder.Template == "" {
+		if builder.Topic == "" {
+			return METRIC_MIN, "", "", fmt.Errorf("cannot parse with empty topic")
+		}
+		if serviceMatch := regexp.MustCompile(`^supervisor/([a-zA-Z0-9_-]+)/service/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*)$`).FindStringSubmatch(builder.Topic); serviceMatch != nil {
+			host = serviceMatch[1]
+			service = serviceMatch[2]
+			builder.Template = "supervisor/$HOSTNAME/service/$SERVICENAME/" + serviceMatch[3]
+		} else if hostMatch := regexp.MustCompile(`^supervisor/([a-zA-Z0-9_-]+)/host/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*)$`).FindStringSubmatch(builder.Topic); hostMatch != nil {
+			host = hostMatch[1]
+			builder.Template = "supervisor/$HOSTNAME/host/" + hostMatch[2]
+		} else {
+			return METRIC_MIN, "", "", fmt.Errorf("topic [%s] does not match expected format", builder.Topic)
+		}
+	}
+	if cached, found := metricBuildersCache[builder.Template]; found {
+		builder.ID = cached.TopicBuilder.ID
+	} else {
+		return METRIC_MIN, "", "", fmt.Errorf("template [%s] not found in metric builders cache", builder.Template)
+	}
+	return builder.ID, host, service, nil
 }
 
 func (builder *topicBuilder) isHost() bool {

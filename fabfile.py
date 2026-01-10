@@ -700,17 +700,17 @@ def _unittest(context, filter_module=None):
     for module in _get_modules(context, "src/test/python/unit/unit_test.py", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "python unit_test.py", join(module, "src/test/python/unit"))
+        _run_local(context, "set -o pipefail && python unit_test.py", join(module, "src/test/python/unit"))
         _print_footer(module, "unittest")
     for module in _get_modules(context, "src/main/go", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "go test -v ./... 2>&1 | cat", join(module, "src/main/go/{}".format(_get_service(module))))
+        _run_local(context, "set -o pipefail && go test -v ./... 2>&1 | cat", join(module, "src/main/go/{}".format(_get_service(module))))
         _print_footer(module, "unittest")
     for module in _get_modules(context, "src/test/rust/unit/unit_test.rs", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "cargo test", join(module, "target/package"))
+        _run_local(context, "set -o pipefail && cargo test", join(module, "target/package"))
         _print_footer(module, "unittest")
 
 

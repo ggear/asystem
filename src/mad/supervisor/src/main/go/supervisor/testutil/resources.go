@@ -6,18 +6,28 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func SetupBrokerService(t *testing.T) (testcontainers.Container, string, error) {
+func SetupBrokerService(t *testing.T) (testcontainers.Container, mqtt.Client, error) {
+	start := time.Now()
 	t.Helper()
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
-		Image:        "eclipse-mosquitto:2",
+		Image:        "eclipse-mosquitto:2.0.22",
 		ExposedPorts: []string{"1883/tcp"},
-		WaitingFor:   wait.ForListeningPort("1883/tcp"),
+		Files: []testcontainers.ContainerFile{{
+			HostFilePath:      GetPath(t, []string{}, "mosquitto.conf"),
+			ContainerFilePath: "/mosquitto/config/mosquitto.conf",
+			FileMode:          0644,
+		}},
+		WaitingFor: wait.ForAll(
+			wait.ForListeningPort("1883/tcp"),
+		).WithDeadline(15 * time.Second),
 	}
 	container, err := testcontainers.GenericContainer(
 		ctx,
@@ -27,34 +37,53 @@ func SetupBrokerService(t *testing.T) (testcontainers.Container, string, error) 
 		},
 	)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
-	t.Cleanup(func() {
-		_ = container.Terminate(context.Background())
-	})
-	host, err := container.Host(ctx)
-	if err != nil {
-		return nil, "", err
-	}
+	host := "127.0.0.1"
 	port, err := container.MappedPort(ctx, "1883")
 	if err != nil {
-		return nil, "", err
+		return nil, nil, fmt.Errorf("failed to get mapped port: %w", err)
 	}
+	os.Setenv("VERNEMQ_HOST", host)
+	os.Setenv("VERNEMQ_API_PORT", port.Port())
 	brokerURL := fmt.Sprintf("tcp://%s:%s", host, port.Port())
-	return container, brokerURL, nil
+	opts := mqtt.NewClientOptions().
+		AddBroker(brokerURL).
+		SetClientID(fmt.Sprintf("go-test-%d", time.Now().UnixNano())).
+		SetCleanSession(true).
+		SetConnectTimeout(2 * time.Second)
+	client := mqtt.NewClient(opts)
+	var connectError error
+	for i := 0; i < 50; i++ {
+		token := client.Connect()
+		token.Wait()
+		if token.Error() == nil && client.IsConnected() {
+			break
+		}
+		connectError = token.Error()
+		time.Sleep(200 * time.Millisecond)
+	}
+	if !client.IsConnected() {
+		_ = container.Terminate(ctx)
+		return nil, nil, fmt.Errorf("failed to connect to broker [%v]: %w", brokerURL, connectError)
+	}
+	t.Cleanup(func() {
+		client.Disconnect(250)
+		_ = container.Terminate(context.Background())
+		t.Logf("Broker container stopped in [%v ms]", time.Since(start).Milliseconds())
+	})
+	t.Logf("Broker container started in [%v ms] at %s", time.Since(start).Milliseconds(), brokerURL)
+	return container, client, nil
 }
 
 func SetupSleepContainer(t *testing.T) (testcontainers.Container, error) {
+	start := time.Now()
 	t.Helper()
-	fmt.Println("Creating containers ... ")
 	ctx := context.Background()
 	req := testcontainers.ContainerRequest{
 		Name:  "sleep",
 		Image: "alpine",
 		Cmd:   []string{"sleep", "99999"},
-		WaitingFor: wait.ForAll(
-			wait.ForLog(""),
-		),
 	}
 	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
@@ -63,24 +92,28 @@ func SetupSleepContainer(t *testing.T) (testcontainers.Container, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Finished creating containers")
 	t.Cleanup(func() {
-		fmt.Println("Terminating containers ... ")
-		ctx := context.Background()
-		container.Terminate(ctx)
-		fmt.Println("Finished terminating containers")
+		stop := time.Now()
+		_ = container.Terminate(context.Background())
+		t.Logf("Sleep container stopped in [%v ms]", time.Since(stop).Milliseconds())
 	})
+	t.Logf("Sleep container started in [%v ms]", time.Since(start).Milliseconds())
 	return container, nil
 }
 
-func GetSchemaPath(schemaFilename string) string {
+func GetPath(t *testing.T, dirs []string, filename string) string {
+	t.Helper()
 	dir, err := os.Getwd()
 	if err != nil {
-		panic(fmt.Sprintf("Error getting working directory: %v", err))
+		t.Fatalf("getwd failed: %v", err)
 	}
-	path := filepath.Join(dir, "..", "..", "..", "..", "test", "resources", schemaFilename)
+	path := filepath.Join(append(append([]string{dir, "../../../../test/resources"}, dirs...), filename)...)
 	if _, err := os.Stat(path); err != nil {
-		panic(fmt.Sprintf("Schema file does not exist: %v", err))
+		t.Fatalf("file not found: %s (%v)", path, err)
 	}
 	return path
+}
+
+func GetSchemaPath(t *testing.T, schemaFilename string) string {
+	return GetPath(t, []string{"schema"}, schemaFilename)
 }
