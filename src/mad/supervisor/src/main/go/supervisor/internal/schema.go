@@ -14,7 +14,9 @@ import (
 )
 
 const SchemaDefaultPath = "/root/install/supervisor/latest/image/schema.json"
-const dockerContainerNameIgnoredPattern = `^reaper_`
+
+var versionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}$`)
+var containerIgnoredPattern = regexp.MustCompile(`^reaper_`)
 
 func GetHosts(schemaPath string) ([]string, error) {
 	schemaMap, err := getSchema(schemaPath)
@@ -80,7 +82,9 @@ func GetServices(hostName string, schemaPath string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer dockerClient.Close()
+	defer func(dockerClient *client.Client) {
+		_ = dockerClient.Close()
+	}(dockerClient)
 	dockerContainerSlice, err := dockerClient.ContainerList(context.Background(), container.ListOptions{})
 	if err != nil {
 		return nil, err
@@ -94,7 +98,7 @@ func GetServices(hostName string, schemaPath string) ([]string, error) {
 	for _, dockerContainer := range dockerContainerSlice {
 		if len(dockerContainer.Names) > 0 {
 			containerName := dockerContainer.Names[0][1:]
-			if containerName != "" && !regexp.MustCompile(dockerContainerNameIgnoredPattern).MatchString(containerName) && !servicesMap[containerName] {
+			if containerName != "" && !containerIgnoredPattern.MatchString(containerName) && !servicesMap[containerName] {
 				serviceSlice = append(serviceSlice, containerName)
 			}
 		}
@@ -116,7 +120,7 @@ func GetVersion(schemaPath string) (string, error) {
 	if !ok {
 		return "", errors.New("missing version")
 	}
-	if !regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}$`).MatchString(version) {
+	if !versionPattern.MatchString(version) {
 		return "", fmt.Errorf("invalid version format [%s]", version)
 	}
 	return version, nil

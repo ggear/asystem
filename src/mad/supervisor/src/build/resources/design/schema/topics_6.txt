@@ -10,8 +10,8 @@ supervisor/macmini-meg/host/health/failed_services # json{"ok":false, "unit":"%"
 supervisor/macmini-meg/host/health/failed_shares # json{"ok":false, "unit":"%", "value":"100"}
 supervisor/macmini-meg/host/health/failed_backups # json{"ok":false, "unit":"%", "value":"100"}
 supervisor/macmini-meg/host/runtime # json{"ok":true}
-supervisor/macmini-meg/host/runtime/peak_temperature_max # json{"ok":false, "unit":"%", "value":"100"}
-supervisor/macmini-meg/host/runtime/peak_fan_speed_max # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/span_temperature_of_max # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/spin_fan_speed_of_max # json{"ok":false, "unit":"%", "value":"100"}
 supervisor/macmini-meg/host/runtime/life_used_drives # json{"ok":false, "unit":"%", "value":"100"}
 supervisor/macmini-meg/host/storage # json{"ok":true}
 supervisor/macmini-meg/host/storage/used_system_drive # json{"ok":false, "unit":"%", "value":"100"}

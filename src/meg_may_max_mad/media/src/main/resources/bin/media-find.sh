@@ -30,7 +30,7 @@ EOF
 )
 printf '%s\n' "${dirs_found[@]}" | sort | while read -r dir_found; do
   dir_found="${dir_found/#\/share/$SHARE_ROOT}"
-  if [ ! -z "${dir_found}" ]; then
+  if [ -n "${dir_found}" ]; then
     echo "cd '${dir_found}'"
   fi
 done

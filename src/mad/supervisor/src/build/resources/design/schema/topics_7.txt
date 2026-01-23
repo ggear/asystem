@@ -1,0 +1,59 @@
+supervisor/macmini-meg # msgpack{"version": "", ""timestamp": "2025-12-31T14:00:00Z", "metrics": [["supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_processor/5s", true, "50", "%"]]}
+
+supervisor/macmini-meg/host/5s # json{"ok":true}
+supervisor/macmini-meg/host/1d # json{"ok":true}
+supervisor/macmini-meg/host/compute/5s # json{"ok":true}
+supervisor/macmini-meg/host/compute/1d # json{"ok":true}
+supervisor/macmini-meg/host/compute/used_processor/5s # json{"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/compute/used_processor/1d # json{"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/compute/used_memory/5s # json{"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/compute/used_memory/1d # json{"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/compute/allocated_memory/5s # json{"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/compute/allocated_memory/1d # json{"ok":true, "unit":"%", "value":"10"}
+supervisor/macmini-meg/host/health/5s # json{"ok":true}
+supervisor/macmini-meg/host/health/1d # json{"ok":true}
+supervisor/macmini-meg/host/health/failed_services/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/health/failed_services/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/health/failed_shares/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/health/failed_shares/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/health/failed_backups/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/health/failed_backups/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/5s # json{"ok":true}
+supervisor/macmini-meg/host/runtime/1d # json{"ok":true}
+supervisor/macmini-meg/host/runtime/warn_temperature_of_max/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/warn_temperature_of_max/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/spin_fan_speed_of_max/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/spin_fan_speed_of_max/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/life_used_drives/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/runtime/life_used_drives/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/5s # json{"ok":true}
+supervisor/macmini-meg/host/storage/1d # json{"ok":true}
+supervisor/macmini-meg/host/storage/used_system_drive/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/used_system_drive/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/used_share_drives/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/used_share_drives/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/used_backup_drives/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/host/storage/used_backup_drives/1d # json{"ok":false, "unit":"%", "value":"100"}
+
+supervisor/macmini-meg/service/5s # json{"ok":true}
+supervisor/macmini-meg/service/1d # json{"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/5s # json{"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/1d # json{"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/name/5s # json{"ok":true, "value":"averyrealylongnamethatiscutoff"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/name/1d # json{"ok":true, "value":"averyrealylongnamethatiscutoff"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_processor/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_processor/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_memory/5s # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/used_memory/1d # json{"ok":false, "unit":"%", "value":"100"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/backup_status/5s # json{"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/backup_status/1d # json{"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/health_status/5s # json{"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/health_status/1d # json{"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/configured_status/5s # json{"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/configured_status/1d # json{"ok":true}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/restart_count/5s # json{"ok":true, value":"1"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/restart_count/1d # json{"ok":true, value":"1"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/runtime/5s # json{"ok":false, "unit":"d", "value":"1"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/runtime/1d # json{"ok":false, "unit":"d", "value":"1"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/version/5s # json{"ok":true, "value":"10.100.5096"}
+supervisor/macmini-meg/service/averyrealylongnamethatiscutoff/version/1d # json{"ok":true, "value":"10.100.5096"}

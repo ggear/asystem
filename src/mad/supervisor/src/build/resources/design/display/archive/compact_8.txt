@@ -1,0 +1,10 @@
+Fail SHR 100%  Used CPU 100%  Used SYS 100%  Used BKP 100%
+Fail BKP 100%  Used RAM  39%  Used VAR  10%  Used SWP 100%
+Peak TMP   4%  Aloc RAM   1%  Used HME  10%  Down TME   3%
+==========================================================
+SERVICE     CPU  RAM BKP HLT  SERVICE     CPU  RAM BKP HLT
+==========================================================
+monitor    100% 100%  ✔   ✔   alongishn~ 100% 100%  ✔   ✔
+homeassi~   10%  10%  ✔   ✖   ashortern~  10%  10%  ✖   ✖
+nginx      100% 100%  ✖   ✔   shortname  100% 100%  ✔   ✔
+veryreal~    0%  10%  ✔   ✔

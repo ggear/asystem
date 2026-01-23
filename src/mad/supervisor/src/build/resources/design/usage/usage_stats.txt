@@ -13,7 +13,7 @@ Options:
       Stats host selection and retrieval method:
         local
             Show stats from the local host only, directly polled, presented
-            as a single cell grid (default).
+            as a single cell (default).
         remote
             Show stats from all hosts, read from the supervisor message bus
             and presented as a grid.
@@ -43,10 +43,10 @@ Options:
       suffixes [s, m, h], ignored in no stream mode (default: 10m).
 
   -n, --no-stream
-      Disable continuous streaming; display a single result and exit.
+      Disable continuous streaming, display a single console and exits.
 
   -b, --monochrome
-      Disable ANSI colour output.
+      Disable console colour output.
 
   -h, --help
       Display this help message and exit.

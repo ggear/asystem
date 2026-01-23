@@ -13,22 +13,23 @@ func TestCacheRemoteMetrics(t *testing.T) {
 	tests := []struct {
 		name        string
 		schemaPath  string
-		metrics     map[string][]metricRecord
+		metrics     map[string][]MetricRecord
 		expected    int
 		expectError bool
 	}{
-		// TODO: Add tests, test against a serialisation - string/json?
+		// TODO: Add tests, test against a serialisation - string/json? build from local host first?
 		{
 			name:       "test 1",
 			schemaPath: testutil.GetSchemaPath(t, "schema-valid-1.json"),
-			metrics: map[string][]metricRecord{"host-1": []metricRecord{
-				{Topic: "supervisor/host-1/host/compute/used_processor", Value: metricValue{OK: true, Value: "10", Unit: "%"}},
-				{Topic: "supervisor/host-1/host/storage/used_system_drive", Value: metricValue{OK: false, Value: "100", Unit: "%"}},
-				{Topic: "supervisor/host-1/service/shortname/used_processor", Value: metricValue{OK: true, Value: "50", Unit: "%"}},
-				{Topic: "supervisor/host-1/service/shortname/used_memory", Value: metricValue{OK: false, Value: "100", Unit: "%"}},
-				{Topic: "supervisor/host-1/service/averyrealylongnamethatiscutoff/used_processor", Value: metricValue{OK: true, Value: "50", Unit: "%"}},
-				{Topic: "supervisor/host-1/service/averyrealylongnamethatiscutoff/used_memory", Value: metricValue{OK: false, Value: "100", Unit: "%"}},
-			}},
+			metrics: map[string][]MetricRecord{
+				"host-1": {
+					newMetricRecord("supervisor/host-1/host/compute/used_processor", "true", "10", "%"),
+					newMetricRecord("supervisor/host-1/host/storage/used_system_drive", "false", "100", "%"),
+					newMetricRecord("supervisor/host-1/service/shortname/used_processor", "true", "50", "%"),
+					newMetricRecord("supervisor/host-1/service/shortname/used_memory", "false", "100", "%"),
+					newMetricRecord("supervisor/host-1/service/averyrealylongnamethatiscutoff/used_processor", "true,", "50", "%"),
+					newMetricRecord("supervisor/host-1/service/averyrealylongnamethatiscutoff/used_memory", "false", "100", "%"),
+				}},
 			expected:    6,
 			expectError: false,
 		},
@@ -56,11 +57,11 @@ func TestCacheRemoteMetrics(t *testing.T) {
 			//if err != nil {
 			//	t.Fatalf("UnmarshalSnapshot() failed: %v", err)
 			//}
-			//cache, err := CacheRemoteMetrics(snapshot.Metrics)
+			//valueCache, err := CacheRemoteMetrics(snapshot.records)
 			//
-			//t.Logf("Metric Record Remote Cache:\n%s", cache)
-			//if (err != nil) != testCase.expectError || cache.Size() != testCase.expected {
-			//	t.Fatalf("CacheRemoteMetrics() = len(%v), %v; want len(%v), error? %v", cache.Size(), err, testCase.expected, testCase.expectError)
+			//t.Logf("Metric Record Remote Cache:\n%s", valueCache)
+			//if (err != nil) != testCase.expectError || valueCache.Size() != testCase.expected {
+			//	t.Fatalf("CacheRemoteMetrics() = len(%v), %v; want len(%v), error? %v", valueCache.Size(), err, testCase.expected, testCase.expectError)
 			//}
 		})
 	}

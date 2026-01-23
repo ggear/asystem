@@ -117,3 +117,4 @@ func GetPath(t *testing.T, dirs []string, filename string) string {
 func GetSchemaPath(t *testing.T, schemaFilename string) string {
 	return GetPath(t, []string{"schema"}, schemaFilename)
 }
+
