@@ -1,8 +1,7 @@
-package internal
+package _SCRATCH
 
 import (
 	"fmt"
-	"github.com/gdamore/tcell/v3"
 	"time"
 )
 
@@ -19,6 +18,7 @@ type Service struct {
 }
 
 // Draw a progress bar of given width
+
 func progressBar(val int, width int) string {
 	if val > 100 {
 		val = 100
@@ -38,6 +38,7 @@ func progressBar(val int, width int) string {
 }
 
 // Draw a single row at (x, y) with given column widths
+
 func drawRow(s tcell.Screen, x, y int, row []string, colWidths []int, style tcell.Style) {
 	sX := x
 	for i, cell := range row {
@@ -57,6 +58,7 @@ func drawRow(s tcell.Screen, x, y int, row []string, colWidths []int, style tcel
 }
 
 // Draw table borders (top + bottom + separator)
+
 func drawBorder(s tcell.Screen, x, y int, colWidths []int, style tcell.Style) {
 	sX := x
 	for _, w := range colWidths {
@@ -70,11 +72,13 @@ func drawBorder(s tcell.Screen, x, y int, colWidths []int, style tcell.Style) {
 }
 
 // Draw headers
+
 func drawHeader(s tcell.Screen, x, y int, headers []string, colWidths []int, style tcell.Style) {
 	drawRow(s, x, y, headers, colWidths, style)
 }
 
 // Copy slice of services
+
 func copyServices(src []Service) []Service {
 	dst := make([]Service, len(src))
 	copy(dst, src)
@@ -90,10 +94,8 @@ func main() {
 		panic(err)
 	}
 	defer s.Fini()
-
 	style := tcell.StyleDefault.Foreground(tcell.ColorWhite)
 	s.Clear()
-
 	// ----- compute Table -----
 	computeHeaders := []string{"COMPUTE", "HEALTH", "RUNTIME", "STORAGE"}
 	computeRows := [][]string{
@@ -117,7 +119,6 @@ func main() {
 		},
 	}
 	computeColWidths := []int{26, 26, 26, 26}
-
 	// Draw compute table (full refresh)
 	drawBorder(s, 0, 0, computeColWidths, style)
 	drawHeader(s, 1, 1, computeHeaders, computeColWidths, style)
@@ -126,11 +127,9 @@ func main() {
 		drawRow(s, 1, 3+i, row, computeColWidths, style)
 	}
 	drawBorder(s, 0, 3+len(computeRows), computeColWidths, style)
-
 	// ----- Service Table -----
 	serviceHeaders := []string{"SERVICE", "PROCESSOR", "MEMORY", "BACK-UP", "HEALTHY", "REBOOTS", "ALIVE", "VERSION"}
 	serviceColWidths := []int{17, 17, 17, 9, 9, 9, 7, 15}
-
 	services := []Service{
 		{"monitor", 100, 100, "✔", "✔", 5, "1y", "10.100.5191"},
 		{"homeassistant", 75, 75, "✖", "✖", 0, "120d", "10.100.5190"},
@@ -140,15 +139,12 @@ func main() {
 		{"ashortername", 1, 75, "✖", "✖", 0, "100d", "10.100.5095"},
 		{"shortname", 1, 75, "✖", "✖", 0, "100d", "10.100.5096"},
 	}
-
 	// Draw header
 	startY := 3 + len(computeRows) + 2
 	drawBorder(s, 0, startY, serviceColWidths, style)
 	drawHeader(s, 1, startY+1, serviceHeaders, serviceColWidths, style)
 	drawBorder(s, 0, startY+2, serviceColWidths, style)
-
 	prevServices := copyServices(services)
-
 	for i, svc := range services {
 		row := []string{
 			svc.Name,
@@ -163,21 +159,16 @@ func main() {
 		drawRow(s, 1, startY+3+i, row, serviceColWidths, style)
 	}
 	drawBorder(s, 0, startY+3+len(services), serviceColWidths, style)
-
 	s.Show()
-
 	// ----- Update loop (partial refresh) -----
 	tick := time.NewTicker(2 * time.Second)
 	defer tick.Stop()
-
 	for i := 0; i < 50; i++ {
 		<-tick.C
-
 		// Simulate updates
 		services[1].CPU = (services[1].CPU + 7) % 100
 		services[1].RAM = (services[1].RAM + 5) % 100
 		services[4].CPU = (services[4].CPU + 3) % 100
-
 		// Compare previous state and update only changed rows
 		for rowIdx, svc := range services {
 			prev := prevServices[rowIdx]
@@ -195,7 +186,6 @@ func main() {
 				drawRow(s, 1, startY+3+rowIdx, row, serviceColWidths, style)
 			}
 		}
-
 		prevServices = copyServices(services)
 		s.Show()
 	}

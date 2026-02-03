@@ -1,0 +1,14 @@
+{
+  "asystem": {
+    "version": "10.100.6792",
+    "services": [
+      {
+        "host": "macmini-mad",
+        "services": [
+          "monitor",
+          "monitor"
+        ]
+      }
+    ]
+  }
+}

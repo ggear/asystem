@@ -29,7 +29,7 @@ if __name__ == "__main__":
         metadata_supervisor_file.write(json.dumps({
             "asystem": {
                 "version": "$SERVICE_VERSION_ABSOLUTE",
-                "services": {k: sorted(v) for k, v in sorted(_get_modules_by_hosts("docker-compose.yml").items(), key=itemgetter(0))}
+                "services": [{"host": k, "services": sorted(v)} for k, v in sorted(_get_modules_by_hosts("docker-compose.yml").items(), key=itemgetter(0))]
             },
         }, indent=2))
     print("Build generate script [supervisor] service metadata persisted to [{}]".format(metadata_supervisor_path))

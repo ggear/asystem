@@ -11,6 +11,7 @@ import sys
 import time
 from os.path import *
 from typing import Any, Dict, Optional
+
 import packaging.version
 import varsubst
 import varsubst.resolvers
@@ -138,6 +139,7 @@ def _setup(context):
                   hide='out').stdout.strip() != 'true':
         raise Exception("Could not install python")
     _run_local(context, 'goenv install -sv "${GO_VERSION}";'
+                        'go install gotest.tools/gotestsum@latest;'
                         'echo "Installed go-${GO_VERSION} at [${GOROOT}]"')
     if _run_local(context,
                   '[[ "$(go version)" == *"go${GO_VERSION}"* ]]'
@@ -705,7 +707,8 @@ def _unittest(context, filter_module=None):
     for module in _get_modules(context, "src/main/go", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "set -o pipefail && go test -v ./... 2>&1 | cat", join(module, "src/main/go/{}".format(_get_service(module))))
+        _run_local(context, "set -o pipefail && gotestsum --format-hide-empty-pkg --format short-verbose --no-color=false ./... | grep -v 'EMPTY' 2>&1 | cat",
+                   join(module, "src/main/go/{}".format(_get_service(module))))
         _print_footer(module, "unittest")
     for module in _get_modules(context, "src/test/rust/unit/unit_test.rs", filter_module=filter_module):
         _print_header(module, "unittest")

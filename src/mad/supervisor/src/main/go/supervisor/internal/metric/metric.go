@@ -1,12 +1,14 @@
-package internal
+package metric
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
+	"supervisor/internal/schema"
 	"sync"
 	"time"
 
@@ -14,10 +16,10 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-type MetricID int
+type ID int
 
 const (
-	metricAll MetricID = iota
+	metricAll ID = iota
 	metricHost
 	metricHostCompute
 	metricHostComputeUsedProcessor
@@ -48,7 +50,7 @@ const (
 	metricMax
 )
 
-var metricBuilders = []metricBuilder{
+var metricBuilders = []builder{
 	metricAll: {
 		id:       metricAll,
 		template: "supervisor/$HOSTNAME",
@@ -163,73 +165,72 @@ var metricBuilders = []metricBuilder{
 	},
 }
 
-var metricBuildersCache = func() map[string]metricBuilder {
+var metricBuildersCache = func() map[string]builder {
 	if len(metricBuilders) != int(metricMax) {
-		panic(fmt.Sprintf("metricBuilders is incorrect length [%d], should use all (and only all) MetricID's (sans metricMax) giving length [%d]",
+		panic(fmt.Sprintf("metricBuilders is incorrect length [%d], should use all (and only all) ID's (sans metricMax) giving length [%d]",
 			len(metricBuilders), metricMax))
 	}
-	ids := make(map[MetricID]bool)
+	ids := make(map[ID]bool)
 	templates := make(map[string]bool)
-	builders := make(map[string]metricBuilder)
-	for i := MetricID(0); i < metricMax; i++ {
+	builders := make(map[string]builder)
+	for i := ID(0); i < metricMax; i++ {
 		builders[metricBuilders[i].template] = metricBuilders[i]
 	}
-	for i := MetricID(0); i < metricMax; i++ {
+	for i := ID(0); i < metricMax; i++ {
 		if err := metricBuilders[i].compile(ids, templates, builders); err != nil {
-			panic(fmt.Sprintf("invalid metricBuilder at metricBuilders index [%d]: %v", i, err))
+			panic(fmt.Sprintf("invalid builder at metricBuilders index [%d]: %v", i, err))
 		}
 	}
 	return builders
 }()
 
-func getMetricBuilder(template string) (MetricID, error) {
+func metricFromTemplate(template string) (ID, error) {
 	builder, ok := metricBuildersCache[template]
 	if !ok {
-		return -1, fmt.Errorf("unknown template %q", template)
+		return -1, fmt.Errorf("unknown template [%s]", template)
 	}
 	return builder.id, nil
 }
 
-type MetricValue struct {
+type Value struct {
 	OK    *bool  `msgpack:"ok,omitempty" json:"ok,omitempty"`
 	Value string `msgpack:"value,omitempty" json:"value,omitempty"`
 	Unit  string `msgpack:"unit,omitempty" json:"unit,omitempty"`
 }
 
-type MetricRecordSnapshot struct {
-	Version   string                 `msgpack:"version" json:"version"`
-	Timestamp time.Time              `msgpack:"timestamp" json:"timestamp"`
-	Metrics   map[string]MetricValue `msgpack:"metrics" json:"metrics"`
+type RecordSnapshot struct {
+	Version   string           `msgpack:"version" json:"version"`
+	Timestamp time.Time        `msgpack:"timestamp" json:"timestamp"`
+	Metrics   map[string]Value `msgpack:"metrics" json:"metrics"`
 }
 
-type MetricRecordGUID struct {
-	ID           MetricID
+type RecordGUID struct {
+	ID           ID
 	Host         string
 	ServiceIndex int
 }
 
-type MetricRecord struct {
+type Record struct {
 	Topic     string
-	Value     MetricValue
+	Value     Value
 	Timestamp time.Time
 }
 
-type MetricRecordCache struct {
+type RecordCache struct {
 	lock    sync.Mutex
-	dirty   []MetricRecordGUID
+	dirty   []RecordGUID
 	records *treemap.Map
 }
 
-type metricBuilder struct {
-	id       MetricID
+type builder struct {
+	id       ID
 	template string
 	topic    string
 }
 
 var (
-	templateFormatHost     = "supervisor/$HOSTNAME/host/"
-	templateFormatService  = "supervisor/$HOSTNAME/service/$SERVICENAME/"
-	templateFormatSnapshot = "supervisor/$HOSTNAME"
+	templateFormatHost    = "supervisor/$HOSTNAME/host/"
+	templateFormatService = "supervisor/$HOSTNAME/service/$SERVICENAME/"
 )
 
 var (
@@ -238,18 +239,18 @@ var (
 	topicPatternService = regexp.MustCompile(`^supervisor/([a-zA-Z0-9_-]+)/service/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*)$`)
 )
 
-func MarshalSnapshot(schemaPath string, records []MetricRecord) ([]byte, error) {
+func MarshalSnapshot(schemaPath string, records []Record) ([]byte, error) {
 	if records == nil {
-		return nil, fmt.Errorf("valueCache is nil")
+		return nil, errors.New("value cache is nil")
 	}
-	version, err := GetVersion(schemaPath)
+	schemaData, err := schema.Load(schemaPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load schema [%s]: %w", schemaPath, err)
 	}
-	snapshot := &MetricRecordSnapshot{
-		Version:   version,
+	snapshot := &RecordSnapshot{
+		Version:   schemaData.Version(),
 		Timestamp: time.Now(),
-		Metrics:   make(map[string]MetricValue),
+		Metrics:   make(map[string]Value),
 	}
 	for _, record := range records {
 		recordValueOK := ""
@@ -262,28 +263,32 @@ func MarshalSnapshot(schemaPath string, records []MetricRecord) ([]byte, error) 
 			record.Value.Unit,
 		)
 	}
-	return msgpack.Marshal(snapshot)
+	encoded, err := msgpack.Marshal(snapshot)
+	if err != nil {
+		return nil, fmt.Errorf("marshal snapshot: %w", err)
+	}
+	return encoded, nil
 }
 
-func UnmarshalSnapshot(snapshotMsgPack []byte) (*MetricRecordSnapshot, error) {
+func UnmarshalSnapshot(snapshotMsgPack []byte) (*RecordSnapshot, error) {
 	if len(snapshotMsgPack) == 0 {
-		return nil, fmt.Errorf("empty snapshot")
+		return nil, errors.New("empty snapshot")
 	}
-	var snapshot MetricRecordSnapshot
+	var snapshot RecordSnapshot
 	if err := msgpack.Unmarshal(snapshotMsgPack, &snapshot); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal snapshot: %w", err)
 	}
 	return &snapshot, nil
 }
 
-func newMetricRecordCache() *MetricRecordCache {
-	return &MetricRecordCache{
-		dirty:   make([]MetricRecordGUID, 0),
+func newMetricRecordCache() *RecordCache {
+	return &RecordCache{
+		dirty:   make([]RecordGUID, 0),
 		records: treemap.NewWith(metricRecordGUIDComparator),
 	}
 }
 
-func CacheRemoteMetrics(metrics map[string]MetricValue) (*MetricRecordCache, error) {
+func CacheRemoteMetrics(metrics map[string]Value) (*RecordCache, error) {
 	topics := slices.Collect(maps.Keys(metrics))
 	slices.Sort(topics)
 	services := make(map[string]int)
@@ -291,28 +296,27 @@ func CacheRemoteMetrics(metrics map[string]MetricValue) (*MetricRecordCache, err
 	cache := newMetricRecordCache()
 	for _, topic := range topics {
 		value := metrics[topic]
-		builder := metricBuilder{topic: topic}
+		builder := builder{topic: topic}
 		template, host, service, err := builder.parse()
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse topic %s: %w", topic, err)
+			return nil, fmt.Errorf("parse topic [%s]: %w", topic, err)
 		}
-		id, err := getMetricBuilder(template)
+		id, err := metricFromTemplate(template)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find samples builder for topic %s and template %s", topic, template)
+			return nil, fmt.Errorf("find samples builder for topic [%s] and template [%s]: %w", topic, template, err)
 		}
 		if _, exists := services[service]; !exists {
 			services[service] = len(services) - 1
 		}
 		cache.Put(
-			MetricRecordGUID{id, host, services[service]},
-			&MetricRecord{Topic: topic, Value: value},
+			RecordGUID{id, host, services[service]},
+			&Record{Topic: topic, Value: value},
 		)
 	}
 	return cache, nil
 }
 
-func CacheLocalMetrics(hostName string, schemaPath string) (*MetricRecordCache, error) {
-
+func CacheLocalMetrics(hostName string, schemaPath string) (*RecordCache, error) {
 	//TODO: Design for concurrency
 	// 	 -> keys are immutable, dont mutate them
 	//   -> RWMutex around the TreeMap
@@ -321,29 +325,28 @@ func CacheLocalMetrics(hostName string, schemaPath string) (*MetricRecordCache, 
 	//   -> have dirty reader execute after each batch update to update derived metrics and publish to mqtt for run mode
 	//   -> have dirty reader execute every sec to update derived metrics and write to screen for stats mode
 	//   -> have a samples timeout reappear service to blank out non updated metrics, maybe on snapshot+10 interval when snapshots are expected
-
 	// TODO: How to reload for new or removed services
 	//   -> OnChange triggered by Value and or ServiceIndex change
 	//   -> input valueCache, if null LoadValue for first Time, otherwise use for onchnage
 	//   -> have display work out if a service has been deleted and not replaced, to nil out display
-
 	if hostName == "" {
-		return nil, fmt.Errorf("host name not defined")
+		return nil, errors.New("host name not defined")
 	}
-	serviceNameSlice, err := GetServices(hostName, schemaPath)
+	schemaData, err := schema.Load(schemaPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("load schema [%s]: %w", schemaPath, err)
 	}
+	serviceNameSlice := schemaData.Services(hostName)
 	cache := newMetricRecordCache()
-	for index := MetricID(0); index < metricMax; index++ {
+	for index := ID(0); index < metricMax; index++ {
 		if metricBuilders[index].isHost() {
 			topic, err := metricBuilders[index].buildHost(hostName)
 			if err != nil {
 				return nil, fmt.Errorf("host topic build error: %w", err)
 			}
 			cache.Put(
-				MetricRecordGUID{metricBuilders[index].id, hostName, -1},
-				&MetricRecord{Topic: topic},
+				RecordGUID{metricBuilders[index].id, hostName, -1},
+				&Record{Topic: topic},
 			)
 		} else {
 			for serviceIndex, serviceName := range serviceNameSlice {
@@ -352,8 +355,8 @@ func CacheLocalMetrics(hostName string, schemaPath string) (*MetricRecordCache, 
 					return nil, fmt.Errorf("service topic build error: %w", err)
 				}
 				cache.Put(
-					MetricRecordGUID{metricBuilders[index].id, hostName, serviceIndex},
-					&MetricRecord{Topic: topic},
+					RecordGUID{metricBuilders[index].id, hostName, serviceIndex},
+					&Record{Topic: topic},
 				)
 			}
 		}
@@ -361,57 +364,57 @@ func CacheLocalMetrics(hostName string, schemaPath string) (*MetricRecordCache, 
 	return cache, nil
 }
 
-func (cache *MetricRecordCache) Put(key MetricRecordGUID, record *MetricRecord) {
-	if cache == nil || cache.records == nil || record == nil {
+func (c *RecordCache) Put(key RecordGUID, record *Record) {
+	if c == nil || c.records == nil || record == nil {
 		return
 	}
-	cache.records.Put(key, record)
+	c.records.Put(key, record)
 }
 
-func (cache *MetricRecordCache) Get(key MetricRecordGUID) (*MetricRecord, bool) {
-	if cache == nil || cache.records == nil {
+func (c *RecordCache) Get(key RecordGUID) (*Record, bool) {
+	if c == nil || c.records == nil {
 		return nil, false
 	}
-	rawValue, found := cache.records.Get(key)
+	rawValue, found := c.records.Get(key)
 	if !found || rawValue == nil {
 		return nil, false
 	}
-	record, ok := rawValue.(*MetricRecord)
+	record, ok := rawValue.(*Record)
 	if !ok {
 		return nil, false
 	}
 	return record, true
 }
 
-func (cache *MetricRecordCache) Keys() []MetricRecordGUID {
-	if cache == nil || cache.records == nil {
+func (c *RecordCache) Keys() []RecordGUID {
+	if c == nil || c.records == nil {
 		return nil
 	}
-	rawKeys := cache.records.Keys()
-	recordGUIDs := make([]MetricRecordGUID, 0, len(rawKeys))
+	rawKeys := c.records.Keys()
+	recordGUIDs := make([]RecordGUID, 0, len(rawKeys))
 	for _, rawKey := range rawKeys {
-		if recordGUID, ok := rawKey.(MetricRecordGUID); ok {
+		if recordGUID, ok := rawKey.(RecordGUID); ok {
 			recordGUIDs = append(recordGUIDs, recordGUID)
 		}
 	}
 	return recordGUIDs
 }
 
-func (cache *MetricRecordCache) Size() int {
-	if cache == nil || cache.records == nil {
+func (c *RecordCache) Size() int {
+	if c == nil || c.records == nil {
 		return 0
 	}
-	return cache.records.Size()
+	return c.records.Size()
 }
 
-func (cache *MetricRecordCache) String() string {
-	if cache == nil {
+func (c *RecordCache) String() string {
+	if c == nil {
 		return "<nil>"
 	}
 	var stringBuilder strings.Builder
-	guids := cache.Keys()
+	guids := c.Keys()
 	for index, guid := range guids {
-		record, _ := cache.Get(guid)
+		record, _ := c.Get(guid)
 		recordValueOK := ""
 		if record.Value.OK != nil {
 			recordValueOK = map[bool]string{true: "T", false: "F"}[*record.Value.OK]
@@ -436,8 +439,8 @@ func (cache *MetricRecordCache) String() string {
 }
 
 func metricRecordGUIDComparator(this, that interface{}) int {
-	thisGUID, thisOK := this.(MetricRecordGUID)
-	thatGUID, thatOK := that.(MetricRecordGUID)
+	thisGUID, thisOK := this.(RecordGUID)
+	thatGUID, thatOK := that.(RecordGUID)
 	if !thisOK || !thatOK {
 		panic("invalid key type")
 	}
@@ -459,117 +462,124 @@ func metricRecordGUIDComparator(this, that interface{}) int {
 	}
 }
 
-func newMetricValue(ok string, value string, unit string) MetricValue {
+func newMetricValue(ok string, value string, unit string) Value {
 	var okPointer *bool
 	if ok != "" {
 		okPointer = func() *bool { okVal := strings.ToLower(ok) == "true"; return &okVal }()
 	}
-	return MetricValue{
+	return Value{
 		OK:    okPointer,
 		Value: value,
 		Unit:  unit,
 	}
 }
 
-func newMetricRecord(topic string, ok string, value string, unit string) MetricRecord {
-	return MetricRecord{
+func newMetricRecord(topic string, ok string, value string, unit string) Record {
+	return Record{
 		Topic:     topic,
 		Value:     newMetricValue(ok, value, unit),
 		Timestamp: time.Now(),
 	}
 }
 
-func (builder metricBuilder) compile(ids map[MetricID]bool, templates map[string]bool, builders map[string]metricBuilder) error {
-	if builder.id < MetricID(0) || builder.id > metricMax {
-		return fmt.Errorf("invalid metricBuilder.id [%d]", builder.id)
+func (b builder) compile(ids map[ID]bool, templates map[string]bool, builders map[string]builder) error {
+	if b.id < ID(0) || b.id > metricMax {
+		return fmt.Errorf("invalid builder.id [%d]", b.id)
 	}
-	if ids[builder.id] {
-		return fmt.Errorf("duplicate metricBuilder.id [%d]", builder.id)
+	if ids[b.id] {
+		return fmt.Errorf("duplicate builder.id [%d]", b.id)
 	}
-	ids[builder.id] = true
-	if builder.template == "" {
-		return fmt.Errorf("invalid metricBuilder.template for metricBuilder.id [%d]", builder.id)
+	ids[b.id] = true
+	if b.template == "" {
+		return fmt.Errorf("invalid builder.template for builder.id [%d]", b.id)
 	}
-	if templates[builder.template] {
-		return fmt.Errorf("duplicate metricBuilder.template for metricBuilder.id [%d]", builder.id)
+	if templates[b.template] {
+		return fmt.Errorf("duplicate builder.template for builder.id [%d]", b.id)
 	}
-	templates[builder.template] = true
-	if builder.topic != "" {
-		return fmt.Errorf("invalid metricBuilder.topic for metricBuilder.id [%d]", builder.id)
+	templates[b.template] = true
+	if b.topic != "" {
+		return fmt.Errorf("invalid builder.topic for builder.id [%d]", b.id)
 	}
+
+
+
+
+
 
 	//hostName := "hostname-test"
 	//serviceName := "serviceName-test"
-	//topic, err := builder.build(map[string]string{"HOSTNAME": hostName, "SERVICENAME": serviceName})
+	//topic, err := b.build(map[string]string{"HOSTNAME": hostName, "SERVICENAME": serviceName})
 	//if err != nil || topic == "" {
-	//	return fmt.Errorf("invalid metricBuilder.template for metricBuilder.id [%d]: %v", builder.id, err)
+	//	return fmt.Errorf("invalid builder.template for builder.id [%d]: %v", b.id, err)
 	//}
-
-	//_, _, _, err = (&metricBuilder{topic: topic}).parse()
+	//_, _, _, err = (&builder{topic: topic}).parse()
 	//if err != nil {
-	//	return fmt.Errorf("invalid metricBuilder.topic for metricBuilder.id [%d]: %v", builder.id, err)
+	//	return fmt.Errorf("invalid builder.topic for builder.id [%d]: %v", b.id, err)
 	//}
-
-	//if builder.isHost() && !topicPattern.MatchString(topic) {
+	//if b.isHost() && !topicPattern.MatchString(topic) {
 	//	return fmt.Errorf("service topic [%s] does not match expected pattern", topic)
 	//}
-	//if builder.isService() && !topicPatternService.MatchString(topic) {
+	//if b.isService() && !topicPatternService.MatchString(topic) {
 	//	return fmt.Errorf("service topic [%s] does not match expected pattern", topic)
 	//}
-
 	// TODO: Fix topicPattern's/templateFormat's isHost, isService add isSnapshot? work off template and or topic return them in build/parse, collapse isFuncs to one enum driven switch impl, that works on topic and template, remove buildHost/Service, just use build
-	// TODO: Work through init v runtime errors, how to handle - look at all exported func's, make errors consistent []/:
+	// TODO: Work through init v runtime errors, how to handle - look at all exported func's
+
+
+
+
+
 
 	return nil
 }
 
-func (builder metricBuilder) build(replacements map[string]string) (topic string, err error) {
-	if builder.template == "" {
-		return "", fmt.Errorf("cannot build with empty template")
+func (b builder) build(replacements map[string]string) (topic string, err error) {
+	if b.template == "" {
+		return "", errors.New("cannot build with empty template")
 	}
-	if !topicPattern.MatchString(builder.template) {
-		return "", fmt.Errorf("invalid topic template [%s]", builder.template)
+	if !topicPattern.MatchString(b.template) {
+		return "", fmt.Errorf("invalid topic template [%s]", b.template)
 	}
 	pairs := make([]string, 0, len(replacements)*2)
 	for key, value := range replacements {
 		pairs = append(pairs, "$"+key, value)
 	}
-	topic = strings.NewReplacer(pairs...).Replace(builder.template)
+	topic = strings.NewReplacer(pairs...).Replace(b.template)
 	if strings.Contains(topic, "$") {
-		return "", fmt.Errorf("invalid $TOKEN in template [%s]", builder.topic)
+		return "", fmt.Errorf("invalid $TOKEN in template [%s]", b.topic)
 	}
 	return topic, nil
 }
 
-func (builder metricBuilder) parse() (template string, host string, service string, err error) {
-	if builder.topic == "" {
-		return "", "", "", fmt.Errorf("cannot parse with empty topic")
+func (b builder) parse() (template string, host string, service string, err error) {
+	if b.topic == "" {
+		return "", "", "", errors.New("cannot parse with empty topic")
 	}
-	if serviceMatch := topicPatternService.FindStringSubmatch(builder.topic); serviceMatch != nil {
+	if serviceMatch := topicPatternService.FindStringSubmatch(b.topic); serviceMatch != nil {
 		host = serviceMatch[1]
 		service = serviceMatch[2]
 		template = templateFormatService + serviceMatch[3]
-	} else if hostMatch := topicPatternHost.FindStringSubmatch(builder.topic); hostMatch != nil {
+	} else if hostMatch := topicPatternHost.FindStringSubmatch(b.topic); hostMatch != nil {
 		host = hostMatch[1]
 		template = templateFormatHost + hostMatch[2]
 	} else {
-		return "", "", "", fmt.Errorf("topic [%s] does not match expected format", builder.topic)
+		return "", "", "", fmt.Errorf("topic [%s] does not match expected format", b.topic)
 	}
 	return template, host, service, nil
 }
 
-func (builder metricBuilder) isHost() bool {
-	return strings.Contains(builder.template, "$HOSTNAME") && !strings.Contains(builder.template, "$SERVICENAME")
+func (b builder) isHost() bool {
+	return strings.Contains(b.template, "$HOSTNAME") && !strings.Contains(b.template, "$SERVICENAME")
 }
 
-func (builder metricBuilder) isService() bool {
-	return strings.Contains(builder.template, "$HOSTNAME") && strings.Contains(builder.template, "$SERVICENAME")
+func (b builder) isService() bool {
+	return strings.Contains(b.template, "$HOSTNAME") && strings.Contains(b.template, "$SERVICENAME")
 }
 
-func (builder metricBuilder) buildHost(hostName string) (string, error) {
-	return builder.build(map[string]string{"HOSTNAME": hostName})
+func (b builder) buildHost(hostName string) (string, error) {
+	return b.build(map[string]string{"HOSTNAME": hostName})
 }
 
-func (builder metricBuilder) buildService(hostName string, serviceName string) (string, error) {
-	return builder.build(map[string]string{"HOSTNAME": hostName, "SERVICENAME": serviceName})
+func (b builder) buildService(hostName string, serviceName string) (string, error) {
+	return b.build(map[string]string{"HOSTNAME": hostName, "SERVICENAME": serviceName})
 }

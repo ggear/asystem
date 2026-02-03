@@ -3,7 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"supervisor/internal"
+	"supervisor/internal/schema"
 
 	"github.com/spf13/cobra"
 )
@@ -17,10 +17,10 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		showVersion, _ := cmd.Flags().GetBool("version")
 		if showVersion {
-			if version, err := internal.GetVersion(internal.SchemaDefaultPath); err != nil {
+			if schema, err := schema.Load(schema.DefaultPath); err != nil {
 				return err
 			} else {
-				fmt.Println(version)
+				fmt.Println(schema.Version())
 			}
 			os.Exit(0)
 		}

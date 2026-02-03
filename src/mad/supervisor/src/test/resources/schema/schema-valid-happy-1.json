@@ -1,6 +1,6 @@
 {
   "asystem": {
-    "version": "$SERVICE_VERSION_ABSOLUTE",
+    "version": "10.100.6792",
     "services": [
       {
         "host": "macmini-mad",

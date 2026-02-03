@@ -1,0 +1,13 @@
+{
+  "asystem": {
+    "version": "",
+    "services": [
+      {
+        "host": "ahost",
+        "services": [
+          ""
+        ]
+      }
+    ]
+  }
+}
