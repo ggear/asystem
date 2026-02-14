@@ -1,4 +1,4 @@
-package schema
+package config
 
 import (
 	"encoding/json"
@@ -9,37 +9,25 @@ import (
 	"sort"
 )
 
-const DefaultPath = "/root/install/supervisor/latest/image/schema.json"
+const DefaultConfigPath = "/root/install/supervisor/latest/image/config.json"
 
-var versionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}$`)
+type Config struct{ Asystem configData }
 
-type Schema struct{ Asystem schemaData }
-
-type schemaData struct {
-	Version  string
-	Services []schemaHostServices
-}
-
-type schemaHostServices struct {
-	Host     string
-	Services []string
-}
-
-func Load(path string) (*Schema, error) {
+func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read schema file [%s]: %w", path, err)
+		return nil, fmt.Errorf("read config file [%s]: %w", path, err)
 	}
-	var schema Schema
-	if err := json.Unmarshal(data, &schema); err != nil {
-		return nil, fmt.Errorf("unmarshal schema: %w", err)
+	var config Config
+	if err := json.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
-	if !versionPattern.MatchString(schema.Asystem.Version) {
-		return nil, fmt.Errorf("invalid version [%s]", schema.Asystem.Version)
+	if !versionPattern.MatchString(config.Asystem.Version) {
+		return nil, fmt.Errorf("invalid version [%s]", config.Asystem.Version)
 	}
 	seenHosts := map[string]bool{}
-	for i := range schema.Asystem.Services {
-		hostServices := &schema.Asystem.Services[i]
+	for i := range config.Asystem.Services {
+		hostServices := &config.Asystem.Services[i]
 		if hostServices.Host == "" {
 			return nil, errors.New("empty host name")
 		}
@@ -58,12 +46,12 @@ func Load(path string) (*Schema, error) {
 			seenServices[service] = true
 		}
 	}
-	return &schema, nil
+	return &config, nil
 }
 
-func (s *Schema) Version() string { return s.Asystem.Version }
+func (s *Config) Version() string { return s.Asystem.Version }
 
-func (s *Schema) Hosts() []string {
+func (s *Config) Hosts() []string {
 	hosts := make([]string, len(s.Asystem.Services))
 	for i := range s.Asystem.Services {
 		hosts[i] = s.Asystem.Services[i].Host
@@ -72,7 +60,7 @@ func (s *Schema) Hosts() []string {
 	return hosts
 }
 
-func (s *Schema) Services(host string) []string {
+func (s *Config) Services(host string) []string {
 	for i := range s.Asystem.Services {
 		services := &s.Asystem.Services[i]
 		if services.Host == host {
@@ -82,4 +70,16 @@ func (s *Schema) Services(host string) []string {
 		}
 	}
 	return []string{}
+}
+
+var versionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}$`)
+
+type configData struct {
+	Version  string
+	Services []configServices
+}
+
+type configServices struct {
+	Host     string
+	Services []string
 }

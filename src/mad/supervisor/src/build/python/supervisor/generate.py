@@ -24,7 +24,7 @@ if __name__ == "__main__":
     write_entity_metadata("supervisor", join(DIR_ROOT, "src/main/resources/image/mqtt"), metadata_supervisor_df,
                           "homeassistant/+/supervisor/#", "asystem/supervisor/#")
 
-    metadata_supervisor_path = abspath(join(DIR_ROOT, "src/main/resources/image/schema.json"))
+    metadata_supervisor_path = abspath(join(DIR_ROOT, "src/main/resources/image/config.json"))
     with open(metadata_supervisor_path, 'w') as metadata_supervisor_file:
         metadata_supervisor_file.write(json.dumps({
             "asystem": {

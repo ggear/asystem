@@ -9,7 +9,6 @@ RUN echo "Australia/Perth" >  /etc/timezone
 ENV TZ=Australia/Perth
 ENV LANG=en_AU.UTF-8
 ENV LANGUAGE=en_AU.UTF-8
-ENV LC_ALL=en_AU.UTF-8
 
 FROM image_base AS image_build
 

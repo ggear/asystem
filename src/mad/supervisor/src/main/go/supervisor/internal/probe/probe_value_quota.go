@@ -1,4 +1,4 @@
-package window
+package probe
 
 import (
 	"errors"
@@ -9,15 +9,17 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+// TODO: Reorder and remove comments, unexport all, ensure naming good, remove tick?
+
 // Performance-optimised rolling window implementation for monitoring int values 0-100.
 //
-// MEMORY USAGE (per QuotaWindow with default config):
+// MEMORY USAGE (per quotaValue with default config):
 //   - Trend window:  ~920 KB (3-tier: 1h@1s + 6h@1min + 18h@1hour = 25 hours total)
 //   - Pulse window: ~1.1 KB (5 samples @ 1s)
-//   - Total per QuotaWindow: ~921 KB
+//   - Total per quotaValue: ~921 KB
 //   - 50 QuotaWindows: ~46 MB
 //
-// CPU USAGE (per QuotaWindow):
+// CPU USAGE (per quotaValue):
 //   - Push(): O(1) ~10-20ns per call (array increment + bounds check)
 //   - Tick(): O(1) ~100ns (moves deque pointer, periodic aggregation)
 //   - Query (Mean/Max/Min): O(window_count) ~0.1ms for trend window
@@ -48,9 +50,9 @@ const (
 	// Value range constants
 	minValidValue = 0   // Minimum valid input value (inclusive)
 	maxValidValue = 100 // Maximum valid input value (inclusive)
-	// Sentinel values for uninitialized min/max
-	uninitializedMin = 101 // Value > maxValidValue indicates no data yet
-	uninitializedMax = -1  // Value < minValidValue indicates no data yet
+	// Sentinel values for uninitialised min/max
+	uninitialisedMin = 101 // Value > maxValidValue indicates no data yet
+	uninitialisedMax = -1  // Value < minValidValue indicates no data yet
 	// Overflow limits - using saturation to prevent wraparound
 	maxInt16BucketCount = 32767      // Maximum value for int16 bucket (handles 32K samples/sec)
 	maxInt32BucketCount = 2147483647 // Maximum value for int32 bucket
@@ -67,6 +69,75 @@ const (
 	defaultGeriatricCapacity = 18   // 18 hours at 1-hour resolution
 )
 
+// Exported types
+// quotaValue manages both trend and pulse windows
+type quotaValue struct {
+	trend *trendWindow
+	pulse *pulseWindow
+}
+
+// Exported constructors
+// newQuotaValue creates dual windows with configurable durations
+// trendDays: trend window duration in days
+// pulseSecs: pulse window duration in seconds
+// tickFreqSecs: seconds between ticks (typically 1)
+func newQuotaValue(trendDays int, pulseSecs int, tickFreqSecs int) (*quotaValue, error) {
+	trendWindow, err := newTrendWindow(trendDays, tickFreqSecs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create trend window: %w", err)
+	}
+	pulseWindow, err := newPulseWindow(pulseSecs, tickFreqSecs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create pulse window: %w", err)
+	}
+	return &quotaValue{
+		trend: trendWindow,
+		pulse: pulseWindow,
+	}, nil
+}
+
+func convertToQuota[T constraints.Integer | constraints.Float](value T) (int8, error) {
+	valueWide := float64(value)
+	if math.IsNaN(valueWide) || math.IsInf(valueWide, 0) {
+		return -1, errors.New("value must be finite")
+	}
+	if valueWide < 0 {
+		valueWide = 0
+	}
+	if valueWide > 100 {
+		valueWide = 100
+	}
+	return int8(valueWide + 0.5), nil
+}
+
+// Exported methods
+func (v *quotaValue) Tick() {
+	v.trend.tick()
+	v.pulse.tick()
+}
+
+func (v *quotaValue) Push(value int8) {
+	v.trend.push(value)
+	v.pulse.push(value)
+}
+
+func (v *quotaValue) PushAndTick(value int8) {
+	v.Push(value)
+	v.Tick()
+}
+
+func (v *quotaValue) PulseLast() int8   { return v.pulse.last() }
+func (v *quotaValue) PulseMean() int8   { return v.pulse.mean() }
+func (v *quotaValue) PulseMedian() int8 { return v.pulse.median() }
+func (v *quotaValue) PulseMax() int8    { return v.pulse.max() }
+func (v *quotaValue) PulseMin() int8    { return v.pulse.min() }
+func (v *quotaValue) TrendMean() int8   { return v.trend.mean() }
+func (v *quotaValue) TrendMedian() int8 { return v.trend.median() }
+func (v *quotaValue) TrendMax() int8    { return v.trend.max() }
+func (v *quotaValue) TrendMin() int8    { return v.trend.min() }
+func (v *quotaValue) TrendP95() int8    { return v.trend.p95() }
+
+// Unexported types
 // compactHistogram represents a histogram for values 0-100 with int16 buckets
 // Can handle up to 32,767 identical samples per second without overflow
 type compactHistogram struct {
@@ -132,151 +203,10 @@ type pulseWindow struct {
 	lastValue    int8
 }
 
-// QuotaWindow manages both trend and pulse windows
-type QuotaWindow struct {
-	trend *trendWindow
-	pulse *pulseWindow
-}
-
-// NewQuotaWindow creates dual windows with configurable durations
-// trendDays: trend window duration in days
-// pulseSecs: pulse window duration in seconds
-// tickFreqSecs: seconds between ticks (typically 1)
-
-func NewQuotaWindow(trendDays int, pulseSecs int, tickFreqSecs int) (*QuotaWindow, error) {
-	trendWindow, trendError := newTrendWindow(trendDays, tickFreqSecs)
-	if trendError != nil {
-		return nil, fmt.Errorf("failed to create trend window: %w", trendError)
-	}
-	pulseWindow, pulseError := newPulseWindow(pulseSecs, tickFreqSecs)
-	if pulseError != nil {
-		return nil, fmt.Errorf("failed to create pulse window: %w", pulseError)
-	}
-	return &QuotaWindow{
-		trend: trendWindow,
-		pulse: pulseWindow,
-	}, nil
-}
-
-func (w *QuotaWindow) Tick() {
-	w.trend.tick()
-	w.pulse.tick()
-}
-
-func (w *QuotaWindow) Push(value int8) {
-	w.trend.push(value)
-	w.pulse.push(value)
-}
-
-func (w *QuotaWindow) PushAndTick(value int8) {
-	w.Push(value)
-	w.Tick()
-}
-
-func (w *QuotaWindow) PulseLast() int8   { return w.pulse.last() }
-func (w *QuotaWindow) PulseMean() int8   { return w.pulse.mean() }
-func (w *QuotaWindow) PulseMedian() int8 { return w.pulse.median() }
-func (w *QuotaWindow) PulseMax() int8    { return w.pulse.max() }
-func (w *QuotaWindow) PulseMin() int8    { return w.pulse.min() }
-func (w *QuotaWindow) TrendMean() int8   { return w.trend.mean() }
-func (w *QuotaWindow) TrendMedian() int8 { return w.trend.median() }
-func (w *QuotaWindow) TrendMax() int8    { return w.trend.max() }
-func (w *QuotaWindow) TrendMin() int8    { return w.trend.min() }
-func (w *QuotaWindow) TrendP95() int8    { return w.trend.p95() }
-
-// Helper functions for safe arithmetic with saturation
-// safeAddInt32 adds two int32 values with saturation at maxInt32BucketCount
-func safeAddInt32(leftValue, rightValue int32) int32 {
-	if rightValue > 0 && leftValue > maxInt32BucketCount-rightValue {
-		return maxInt32BucketCount
-	}
-	return leftValue + rightValue
-}
-
-// safeAddInt64 adds two int64 values with saturation at maxInt64Sum
-
-func safeAddInt64(leftValue, rightValue int64) int64 {
-	if leftValue > maxInt64Sum-rightValue { // Overflow check
-		return maxInt64Sum
-	}
-	return leftValue + rightValue
-}
-
-// updateMinMax updates min/max values for aggregated histogram
-
-func updateMinMax(aggregate *aggregatedHistogram, histogramMin, histogramMax int8) {
-	if aggregate.slots == 0 || histogramMax > aggregate.max {
-		aggregate.max = histogramMax
-	}
-	if aggregate.slots == 0 || (histogramMin < aggregate.min && histogramMin != uninitializedMin) {
-		aggregate.min = histogramMin
-	}
-}
-
-func addCompactBuckets(merged *[maxValidValue + 1]int64, histogram *compactHistogram) int64 {
-	var total int64
-	for bucketIndex := 0; bucketIndex <= maxValidValue; bucketIndex++ {
-		count := int64(histogram.buckets[bucketIndex])
-		merged[bucketIndex] += count
-		total += count
-	}
-	return total
-}
-
-func addAggregatedBuckets(merged *[maxValidValue + 1]int64, histogram *aggregatedHistogram) int64 {
-	var total int64
-	for bucketIndex := 0; bucketIndex <= maxValidValue; bucketIndex++ {
-		count := int64(histogram.buckets[bucketIndex])
-		merged[bucketIndex] += count
-		total += count
-	}
-	return total
-}
-
-func percentileFromBuckets(merged *[maxValidValue + 1]int64, totalCount int64, percentile float64) int8 {
-	if totalCount == 0 {
-		return 0
-	}
-	target := int64(math.Ceil(float64(totalCount) * percentile))
-	cumulative := int64(0)
-	for valueIndex := 0; valueIndex <= maxValidValue; valueIndex++ {
-		cumulative += merged[valueIndex]
-		if cumulative >= target {
-			return int8(valueIndex)
-		}
-	}
-	return maxValidValue
-}
-
-func updateCompactHistogram(histogram *compactHistogram, value int8) {
-	if histogram.buckets[value] < maxInt16BucketCount {
-		histogram.buckets[value]++
-	}
-	if histogram.count < maxInt32Count {
-		histogram.count++
-	}
-	if histogram.sum <= maxInt64Sum-int64(value) {
-		histogram.sum += int64(value)
-	} else {
-		histogram.sum = maxInt64Sum
-	}
-	if histogram.count == 1 {
-		histogram.max = value
-		histogram.min = value
-	} else {
-		if value > histogram.max {
-			histogram.max = value
-		}
-		if value < histogram.min {
-			histogram.min = value
-		}
-	}
-}
-
+// Unexported functions
 // creates a tiered trend window with configurable duration
 // durationDays: total window duration in days (extends geriatric tier capacity)
 // tickFreqSecs: seconds between ticks (typically 1)
-
 func newTrendWindow(durationDays int, tickFreqSecs int) (*trendWindow, error) {
 	if durationDays < 1 {
 		return nil, fmt.Errorf("durationDays must be >= 1, got [%d]", durationDays)
@@ -318,7 +248,7 @@ func newTrendWindow(durationDays int, tickFreqSecs int) (*trendWindow, error) {
 		middleCapacity:     middleCapacity,
 		geriatric:          make([]aggregatedHistogram, geriatricCapacity),
 		geriatricCapacity:  geriatricCapacity,
-		current:            compactHistogram{min: uninitializedMin, max: uninitializedMax},
+		current:            compactHistogram{min: uninitialisedMin, max: uninitialisedMax},
 		tickFreqSecs:       tickFreqSecs,
 		youngAggBatchSize:  youngAggBatchSize,
 		middleAggBatchSize: middleAggBatchSize,
@@ -328,7 +258,6 @@ func newTrendWindow(durationDays int, tickFreqSecs int) (*trendWindow, error) {
 // newPulseWindow creates a pulse window with Tick-frequency based sizing
 // durationSecs: total window duration in seconds
 // tickFreqSecs: seconds between ticks (typically 1)
-
 func newPulseWindow(durationSecs int, tickFreqSecs int) (*pulseWindow, error) {
 	if durationSecs < 1 {
 		return nil, fmt.Errorf("durationSecs must be >= 1, got [%d]", durationSecs)
@@ -342,19 +271,18 @@ func newPulseWindow(durationSecs int, tickFreqSecs int) (*pulseWindow, error) {
 	}
 	samples := make([]compactHistogram, size)
 	for sampleIndex := range samples {
-		samples[sampleIndex].min = uninitializedMin
-		samples[sampleIndex].max = uninitializedMax
+		samples[sampleIndex].min = uninitialisedMin
+		samples[sampleIndex].max = uninitialisedMax
 	}
 	return &pulseWindow{
 		samples:      samples,
 		size:         size,
 		tickFreqSecs: tickFreqSecs,
-		lastValue:    uninitializedMax,
+		lastValue:    uninitialisedMax,
 	}, nil
 }
 
 // Push adds a value to the current accumulator with saturation on overflow
-
 func (w *trendWindow) push(value int8) {
 	if value < minValidValue || value > maxValidValue {
 		return // Silently ignore out-of-range values
@@ -367,13 +295,12 @@ func (w *trendWindow) push(value int8) {
 }
 
 // Tick advances the window and handles tier aggregation
-
 func (w *trendWindow) tick() {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 	// Move current to the young tier; empty ticks do not advance tiers.
 	addedNonEmpty := w.enqueueYoung(w.current)
-	w.current = compactHistogram{min: uninitializedMin, max: uninitializedMax}
+	w.current = compactHistogram{min: uninitialisedMin, max: uninitialisedMax}
 	// Aggregate when enough non-empty samples have been added.
 	if addedNonEmpty && w.youngCount >= w.youngAggBatchSize {
 		w.aggregateYoungToMiddle()
@@ -395,14 +322,13 @@ func (w *trendWindow) enqueueYoung(histogram compactHistogram) bool {
 }
 
 // drainTier consumes up to batchSize samples from the head.
-
 func (w *trendWindow) drainTier(
 	sourceSlice interface{},
 	sourceHead, sourceCount *int,
 	sourceCapacity int,
 	batchSize int,
 ) aggregatedHistogram {
-	aggregate := aggregatedHistogram{min: uninitializedMin, max: uninitializedMax}
+	aggregate := aggregatedHistogram{min: uninitialisedMin, max: uninitialisedMax}
 	for *sourceCount > 0 && batchSize > 0 {
 		index := *sourceHead
 		consumed := false
@@ -502,7 +428,6 @@ func (w *trendWindow) enqueueAggregated(
 }
 
 // Mean calculates the mean across all tiers (rounded to nearest int).
-
 func (w *trendWindow) mean() int8 {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
@@ -563,14 +488,13 @@ func (w *trendWindow) forEachHistogramStats(visit func(count int64, minValue, ma
 }
 
 // Max returns maximum across all tiers
-
 func (w *trendWindow) max() int8 {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
-	maximumValue := int8(uninitializedMax)
+	maximumValue := int8(uninitialisedMax)
 	found := false
 	w.forEachHistogramStats(func(count int64, minValue, maxValue int8) {
-		if maxValue != uninitializedMax {
+		if maxValue != uninitialisedMax {
 			if !found || maxValue > maximumValue {
 				maximumValue = maxValue
 				found = true
@@ -584,14 +508,13 @@ func (w *trendWindow) max() int8 {
 }
 
 // Min returns minimum across all tiers
-
 func (w *trendWindow) min() int8 {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
-	minimumValue := int8(uninitializedMin)
+	minimumValue := int8(uninitialisedMin)
 	found := false
 	w.forEachHistogramStats(func(count int64, minValue, maxValue int8) {
-		if minValue != uninitializedMin {
+		if minValue != uninitialisedMin {
 			if !found || minValue < minimumValue {
 				minimumValue = minValue
 				found = true
@@ -640,7 +563,6 @@ func (w *trendWindow) percentile(percentile float64) int8 {
 }
 
 // Pulse window methods (same overflow protection)
-
 func (w *pulseWindow) push(value int8) {
 	if value < minValidValue || value > maxValidValue {
 		return
@@ -656,7 +578,7 @@ func (w *pulseWindow) tick() {
 	w.mutex.Lock()
 	defer w.mutex.Unlock()
 	w.current = (w.current + 1) % w.size
-	w.samples[w.current] = compactHistogram{min: uninitializedMin, max: uninitializedMax}
+	w.samples[w.current] = compactHistogram{min: uninitialisedMin, max: uninitialisedMax}
 	if w.filled < w.size {
 		w.filled++
 	}
@@ -690,10 +612,10 @@ func (w *pulseWindow) mean() int8 {
 func (w *pulseWindow) max() int8 {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
-	maximumValue := int8(uninitializedMax)
+	maximumValue := int8(uninitialisedMax)
 	found := false
 	w.forEachSample(func(histogram *compactHistogram) {
-		if histogram.count > 0 && histogram.max != uninitializedMax {
+		if histogram.count > 0 && histogram.max != uninitialisedMax {
 			if !found || histogram.max > maximumValue {
 				maximumValue = histogram.max
 				found = true
@@ -709,10 +631,10 @@ func (w *pulseWindow) max() int8 {
 func (w *pulseWindow) min() int8 {
 	w.mutex.RLock()
 	defer w.mutex.RUnlock()
-	minimumValue := int8(uninitializedMin)
+	minimumValue := int8(uninitialisedMin)
 	found := false
 	w.forEachSample(func(histogram *compactHistogram) {
-		if histogram.count > 0 && histogram.min != uninitializedMin {
+		if histogram.count > 0 && histogram.min != uninitialisedMin {
 			if !found || histogram.min < minimumValue {
 				minimumValue = histogram.min
 				found = true
@@ -746,16 +668,90 @@ func (w *pulseWindow) median() int8 {
 	return w.percentile(0.5)
 }
 
-func ConvertToQuota[T constraints.Integer | constraints.Float](value T) (int8, error) {
-	valueWide := float64(value)
-	if math.IsNaN(valueWide) || math.IsInf(valueWide, 0) {
-		return -1, errors.New("value must be finite")
+// Unexported functions
+// Helper functions for safe arithmetic with saturation
+// safeAddInt32 adds two int32 values with saturation at maxInt32BucketCount
+func safeAddInt32(leftValue, rightValue int32) int32 {
+	if rightValue > 0 && leftValue > maxInt32BucketCount-rightValue {
+		return maxInt32BucketCount
 	}
-	if valueWide < 0 {
-		valueWide = 0
+	return leftValue + rightValue
+}
+
+// safeAddInt64 adds two int64 values with saturation at maxInt64Sum
+func safeAddInt64(leftValue, rightValue int64) int64 {
+	if leftValue > maxInt64Sum-rightValue { // Overflow check
+		return maxInt64Sum
 	}
-	if valueWide > 100 {
-		valueWide = 100
+	return leftValue + rightValue
+}
+
+// updateMinMax updates min/max values for aggregated histogram
+func updateMinMax(aggregate *aggregatedHistogram, histogramMin, histogramMax int8) {
+	if aggregate.slots == 0 || histogramMax > aggregate.max {
+		aggregate.max = histogramMax
 	}
-	return int8(valueWide + 0.5), nil
+	if aggregate.slots == 0 || (histogramMin < aggregate.min && histogramMin != uninitialisedMin) {
+		aggregate.min = histogramMin
+	}
+}
+
+func addCompactBuckets(merged *[maxValidValue + 1]int64, histogram *compactHistogram) int64 {
+	var total int64
+	for bucketIndex := 0; bucketIndex <= maxValidValue; bucketIndex++ {
+		count := int64(histogram.buckets[bucketIndex])
+		merged[bucketIndex] += count
+		total += count
+	}
+	return total
+}
+
+func addAggregatedBuckets(merged *[maxValidValue + 1]int64, histogram *aggregatedHistogram) int64 {
+	var total int64
+	for bucketIndex := 0; bucketIndex <= maxValidValue; bucketIndex++ {
+		count := int64(histogram.buckets[bucketIndex])
+		merged[bucketIndex] += count
+		total += count
+	}
+	return total
+}
+
+func percentileFromBuckets(merged *[maxValidValue + 1]int64, totalCount int64, percentile float64) int8 {
+	if totalCount == 0 {
+		return 0
+	}
+	target := int64(math.Ceil(float64(totalCount) * percentile))
+	cumulative := int64(0)
+	for valueIndex := 0; valueIndex <= maxValidValue; valueIndex++ {
+		cumulative += merged[valueIndex]
+		if cumulative >= target {
+			return int8(valueIndex)
+		}
+	}
+	return maxValidValue
+}
+
+func updateCompactHistogram(histogram *compactHistogram, value int8) {
+	if histogram.buckets[value] < maxInt16BucketCount {
+		histogram.buckets[value]++
+	}
+	if histogram.count < maxInt32Count {
+		histogram.count++
+	}
+	if histogram.sum <= maxInt64Sum-int64(value) {
+		histogram.sum += int64(value)
+	} else {
+		histogram.sum = maxInt64Sum
+	}
+	if histogram.count == 1 {
+		histogram.max = value
+		histogram.min = value
+	} else {
+		if value > histogram.max {
+			histogram.max = value
+		}
+		if value < histogram.min {
+			histogram.min = value
+		}
+	}
 }

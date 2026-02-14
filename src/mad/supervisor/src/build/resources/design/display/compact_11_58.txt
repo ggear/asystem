@@ -6,3 +6,5 @@ SERVICE     CPU  RAM BKP AOK  SERVICE     CPU  RAM BKP AOK
 monitor    100% 100%  ✔   ✔   alongishn~ 100% 100%  ✔   ✔
 homeassi~   10%  10%  ✔   ✖   averyrea~    0%  10%  ✔   ✔
 nginx      100% 100%  ✖   ✔
+
+

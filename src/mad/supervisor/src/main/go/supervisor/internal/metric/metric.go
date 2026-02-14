@@ -3,199 +3,65 @@ package metric
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 	"regexp"
 	"slices"
 	"strconv"
 	"strings"
-	"supervisor/internal/schema"
+	"supervisor/internal/config"
 	"sync"
 	"time"
 
-	"github.com/emirpasic/gods/maps/treemap"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
+// TODO: Reorder and remove comments
+
+// Exported types
 type ID int
 
+// noinspection GoNameStartsWithPackageName
 const (
-	metricAll ID = iota
-	metricHost
-	metricHostCompute
-	metricHostComputeUsedProcessor
-	metricHostComputeUsedMemory
-	metricHostComputeAllocatedMemory
-	metricHostHealth
-	metricHostHealthFailedServices
-	metricHostHealthFailedShares
-	metricHostHealthFailedBackups
-	metricHostRuntime
-	metricHostRuntimeWarningTemperatureOfMax
-	metricHostRuntimeRevsFanSpeedOfMax
-	metricHostRuntimeLifeUsedDrives
-	metricHostStorage
-	metricHostStorageUsedSystemDrive
-	metricHostStorageUsedShareDrives
-	metricHostStorageUsedBackupDrives
-	metricService
-	metricServiceName
-	metricServiceUsedProcessor
-	metricServiceUsedMemory
-	metricServiceBackupStatus
-	metricServiceHealthStatus
-	metricServiceConfiguredStatus
-	metricServiceRestartCount
-	metricServiceRuntime
-	metricServiceVersion
-	metricMax
+	MetricAll ID = iota
+	MetricHost
+	MetricHostCompute
+	MetricHostComputeUsedProcessor
+	MetricHostComputeUsedMemory
+	MetricHostComputeAllocatedMemory
+	MetricHostHealth
+	MetricHostHealthFailedServices
+	MetricHostHealthFailedShares
+	MetricHostHealthFailedBackups
+	MetricHostRuntime
+	MetricHostRuntimeWarningTemperatureOfMax
+	MetricHostRuntimeRevsFanSpeedOfMax
+	MetricHostRuntimeLifeUsedDrives
+	MetricHostStorage
+	MetricHostStorageUsedSystemDrive
+	MetricHostStorageUsedShareDrives
+	MetricHostStorageUsedBackupDrives
+	MetricService
+	MetricServiceName
+	MetricServiceUsedProcessor
+	MetricServiceUsedMemory
+	MetricServiceBackupStatus
+	MetricServiceHealthStatus
+	MetricServiceConfiguredStatus
+	MetricServiceRestartCount
+	MetricServiceRuntime
+	MetricServiceVersion
+	MetricMax
 )
-
-var metricBuilders = []builder{
-	metricAll: {
-		id:       metricAll,
-		template: "supervisor/$HOSTNAME",
-	},
-	metricHost: {
-		id:       metricHost,
-		template: "supervisor/$HOSTNAME/host",
-	},
-	metricHostCompute: {
-		id:       metricHostCompute,
-		template: "supervisor/$HOSTNAME/host/compute",
-	},
-	metricHostComputeUsedProcessor: {
-		id:       metricHostComputeUsedProcessor,
-		template: "supervisor/$HOSTNAME/host/compute/used_processor",
-	},
-	metricHostComputeUsedMemory: {
-		id:       metricHostComputeUsedMemory,
-		template: "supervisor/$HOSTNAME/host/compute/used_memory",
-	},
-	metricHostComputeAllocatedMemory: {
-		id:       metricHostComputeAllocatedMemory,
-		template: "supervisor/$HOSTNAME/host/compute/allocated_memory",
-	},
-	metricHostHealth: {
-		id:       metricHostHealth,
-		template: "supervisor/$HOSTNAME/host/health",
-	},
-	metricHostHealthFailedServices: {
-		id:       metricHostHealthFailedServices,
-		template: "supervisor/$HOSTNAME/host/health/failed_services",
-	},
-	metricHostHealthFailedShares: {
-		id:       metricHostHealthFailedShares,
-		template: "supervisor/$HOSTNAME/host/health/failed_shares",
-	},
-	metricHostHealthFailedBackups: {
-		id:       metricHostHealthFailedBackups,
-		template: "supervisor/$HOSTNAME/host/health/failed_backups",
-	},
-	metricHostRuntime: {
-		id:       metricHostRuntime,
-		template: "supervisor/$HOSTNAME/host/runtime",
-	},
-	metricHostRuntimeWarningTemperatureOfMax: {
-		id:       metricHostRuntimeWarningTemperatureOfMax,
-		template: "supervisor/$HOSTNAME/host/runtime/warn_temperature_of_max",
-	},
-	metricHostRuntimeRevsFanSpeedOfMax: {
-		id:       metricHostRuntimeRevsFanSpeedOfMax,
-		template: "supervisor/$HOSTNAME/host/runtime/revs_fan_speed_of_max",
-	},
-	metricHostRuntimeLifeUsedDrives: {
-		id:       metricHostRuntimeLifeUsedDrives,
-		template: "supervisor/$HOSTNAME/host/runtime/lifetime_used_of_drives",
-	},
-	metricHostStorage: {
-		id:       metricHostStorage,
-		template: "supervisor/$HOSTNAME/host/storage",
-	},
-	metricHostStorageUsedSystemDrive: {
-		id:       metricHostStorageUsedSystemDrive,
-		template: "supervisor/$HOSTNAME/host/storage/used_system_drive",
-	},
-	metricHostStorageUsedShareDrives: {
-		id:       metricHostStorageUsedShareDrives,
-		template: "supervisor/$HOSTNAME/host/storage/used_share_drives",
-	},
-	metricHostStorageUsedBackupDrives: {
-		id:       metricHostStorageUsedBackupDrives,
-		template: "supervisor/$HOSTNAME/host/storage/used_backup_drives",
-	},
-	metricService: {
-		id:       metricService,
-		template: "supervisor/$HOSTNAME/service",
-	},
-	metricServiceName: {
-		id:       metricServiceName,
-		template: "supervisor/$HOSTNAME/service/$SERVICENAME/name",
-	},
-	metricServiceUsedProcessor: {
-		id:       metricServiceUsedProcessor,
-		template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_processor",
-	},
-	metricServiceUsedMemory: {
-		id:       metricServiceUsedMemory,
-		template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_memory",
-	},
-	metricServiceBackupStatus: {
-		id:       metricServiceBackupStatus,
-		template: "supervisor/$HOSTNAME/service/$SERVICENAME/backup_status",
-	},
-	metricServiceHealthStatus: {
-		id:       metricServiceHealthStatus,
-		template: "supervisor/$HOSTNAME/service/$SERVICENAME/health_status",
-	},
-	metricServiceConfiguredStatus: {
-		id:       metricServiceConfiguredStatus,
-		template: "supervisor/$HOSTNAME/service/$SERVICENAME/configured_status",
-	},
-	metricServiceRestartCount: {
-		id:       metricServiceRestartCount,
-		template: "supervisor/$HOSTNAME/service/$SERVICENAME/restart_count",
-	},
-	metricServiceRuntime: {
-		id:       metricServiceRuntime,
-		template: "supervisor/$HOSTNAME/service/$SERVICENAME/runtime",
-	},
-	metricServiceVersion: {
-		id:       metricServiceVersion,
-		template: "supervisor/$HOSTNAME/service/$SERVICENAME/version",
-	},
-}
-
-var metricBuildersCache = func() map[string]builder {
-	if len(metricBuilders) != int(metricMax) {
-		panic(fmt.Sprintf("metricBuilders is incorrect length [%d], should use all (and only all) ID's (sans metricMax) giving length [%d]",
-			len(metricBuilders), metricMax))
-	}
-	ids := make(map[ID]bool)
-	templates := make(map[string]bool)
-	builders := make(map[string]builder)
-	for i := ID(0); i < metricMax; i++ {
-		builders[metricBuilders[i].template] = metricBuilders[i]
-	}
-	for i := ID(0); i < metricMax; i++ {
-		if err := metricBuilders[i].compile(ids, templates, builders); err != nil {
-			panic(fmt.Sprintf("invalid builder at metricBuilders index [%d]: %v", i, err))
-		}
-	}
-	return builders
-}()
-
-func metricFromTemplate(template string) (ID, error) {
-	builder, ok := metricBuildersCache[template]
-	if !ok {
-		return -1, fmt.Errorf("unknown template [%s]", template)
-	}
-	return builder.id, nil
-}
 
 type Value struct {
 	OK    *bool  `msgpack:"ok,omitempty" json:"ok,omitempty"`
 	Value string `msgpack:"value,omitempty" json:"value,omitempty"`
 	Unit  string `msgpack:"unit,omitempty" json:"unit,omitempty"`
+}
+
+type UpdatesListener interface {
+	MarkDirty()
 }
 
 type RecordSnapshot struct {
@@ -211,44 +77,33 @@ type RecordGUID struct {
 }
 
 type Record struct {
-	Topic     string
-	Value     Value
-	Timestamp time.Time
+	Topic       string
+	Value       Value
+	Timestamp   time.Time
+	depsForward []RecordGUID
+	depsReverse map[RecordGUID]struct{}
+	depsCompute func(values []Value) Value
 }
 
 type RecordCache struct {
-	lock    sync.Mutex
-	dirty   []RecordGUID
-	records *treemap.Map
+	lock        sync.RWMutex
+	records     map[RecordGUID]*Record
+	notify      chan struct{}
+	listeners   map[RecordGUID][]UpdatesListener
+	depsPending map[RecordGUID]map[RecordGUID]struct{}
 }
 
-type builder struct {
-	id       ID
-	template string
-	topic    string
-}
-
-var (
-	templateFormatHost    = "supervisor/$HOSTNAME/host/"
-	templateFormatService = "supervisor/$HOSTNAME/service/$SERVICENAME/"
-)
-
-var (
-	topicPattern        = regexp.MustCompile(`^supervisor(/[a-zA-Z0-9$_-]+){1,4}$`)
-	topicPatternHost    = regexp.MustCompile(`^supervisor/([a-zA-Z0-9_-]+)/host/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*)$`)
-	topicPatternService = regexp.MustCompile(`^supervisor/([a-zA-Z0-9_-]+)/service/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*)$`)
-)
-
-func MarshalSnapshot(schemaPath string, records []Record) ([]byte, error) {
+// Exported constructors
+func MarshalSnapshot(configPath string, records []Record) ([]byte, error) {
 	if records == nil {
 		return nil, errors.New("value cache is nil")
 	}
-	schemaData, err := schema.Load(schemaPath)
+	configData, err := config.Load(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("load schema [%s]: %w", schemaPath, err)
+		return nil, fmt.Errorf("load config [%s]: %w", configPath, err)
 	}
 	snapshot := &RecordSnapshot{
-		Version:   schemaData.Version(),
+		Version:   configData.Version(),
 		Timestamp: time.Now(),
 		Metrics:   make(map[string]Value),
 	}
@@ -281,13 +136,6 @@ func UnmarshalSnapshot(snapshotMsgPack []byte) (*RecordSnapshot, error) {
 	return &snapshot, nil
 }
 
-func newMetricRecordCache() *RecordCache {
-	return &RecordCache{
-		dirty:   make([]RecordGUID, 0),
-		records: treemap.NewWith(metricRecordGUIDComparator),
-	}
-}
-
 func CacheRemoteMetrics(metrics map[string]Value) (*RecordCache, error) {
 	topics := slices.Collect(maps.Keys(metrics))
 	slices.Sort(topics)
@@ -316,29 +164,24 @@ func CacheRemoteMetrics(metrics map[string]Value) (*RecordCache, error) {
 	return cache, nil
 }
 
-func CacheLocalMetrics(hostName string, schemaPath string) (*RecordCache, error) {
+func CacheLocalMetrics(hostName string, configPath string) (*RecordCache, error) {
 	//TODO: Design for concurrency
 	// 	 -> keys are immutable, dont mutate them
-	//   -> RWMutex around the TreeMap
-	//   -> add batch update for bursty traffic
-	//   -> add dirty flag per samples and get dirty metrics func
-	//   -> have dirty reader execute after each batch update to update derived metrics and publish to mqtt for run mode
-	//   -> have dirty reader execute every sec to update derived metrics and write to screen for stats mode
+	//   -> RWMutex around the Map
 	//   -> have a samples timeout reappear service to blank out non updated metrics, maybe on snapshot+10 interval when snapshots are expected
 	// TODO: How to reload for new or removed services
 	//   -> OnChange triggered by Value and or ServiceIndex change
-	//   -> input valueCache, if null LoadValue for first Time, otherwise use for onchnage
 	//   -> have display work out if a service has been deleted and not replaced, to nil out display
 	if hostName == "" {
 		return nil, errors.New("host name not defined")
 	}
-	schemaData, err := schema.Load(schemaPath)
+	configData, err := config.Load(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("load schema [%s]: %w", schemaPath, err)
+		return nil, fmt.Errorf("load config [%s]: %w", configPath, err)
 	}
-	serviceNameSlice := schemaData.Services(hostName)
+	serviceNameSlice := configData.Services(hostName)
 	cache := newMetricRecordCache()
-	for index := ID(0); index < metricMax; index++ {
+	for index := ID(0); index < MetricMax; index++ {
 		if metricBuilders[index].isHost() {
 			topic, err := metricBuilders[index].buildHost(hostName)
 			if err != nil {
@@ -364,72 +207,178 @@ func CacheLocalMetrics(hostName string, schemaPath string) (*RecordCache, error)
 	return cache, nil
 }
 
+// Exported methods
 func (c *RecordCache) Put(key RecordGUID, record *Record) {
 	if c == nil || c.records == nil || record == nil {
 		return
 	}
-	c.records.Put(key, record)
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.records[key] = record
+	if pendingDependents, found := c.depsPending[key]; found {
+		if record.depsReverse == nil {
+			record.depsReverse = make(map[RecordGUID]struct{})
+		}
+		for dependentID := range pendingDependents {
+			record.depsReverse[dependentID] = struct{}{}
+		}
+		delete(c.depsPending, key)
+	}
+	for _, depID := range record.depsForward {
+		if depRec, found := c.records[depID]; found && depRec != nil {
+			if depRec.depsReverse == nil {
+				depRec.depsReverse = make(map[RecordGUID]struct{})
+			}
+			depRec.depsReverse[key] = struct{}{}
+			continue
+		}
+		if c.depsPending[depID] == nil {
+			c.depsPending[depID] = make(map[RecordGUID]struct{})
+		}
+		c.depsPending[depID][key] = struct{}{}
+	}
 }
 
 func (c *RecordCache) Get(key RecordGUID) (*Record, bool) {
 	if c == nil || c.records == nil {
 		return nil, false
 	}
-	rawValue, found := c.records.Get(key)
-	if !found || rawValue == nil {
-		return nil, false
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	record, found := c.records[key]
+	return record, found
+}
+
+func (c *RecordCache) Set(key RecordGUID, value *Value) {
+	if c == nil || value == nil {
+		return
 	}
-	record, ok := rawValue.(*Record)
-	if !ok {
-		return nil, false
+	var listeners []UpdatesListener
+	c.lock.Lock()
+	record, found := c.records[key]
+	if !found || record == nil {
+		c.lock.Unlock()
+		return
 	}
-	return record, true
+	old := record.Value
+	record.Value = *value
+	record.Timestamp = time.Now()
+	listeners = append(listeners, append([]UpdatesListener(nil), c.listeners[key]...)...)
+	if old != record.Value {
+		visited := make(map[RecordGUID]bool)
+		listeners = c.propagateUpdateLocked(key, visited, listeners)
+	}
+	c.lock.Unlock()
+	for _, listener := range listeners {
+		listener.MarkDirty()
+	}
+}
+
+func (c *RecordCache) SubscribeUpdates(key RecordGUID, listener UpdatesListener) {
+	if c == nil {
+		return
+	}
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.listeners[key] = append(c.listeners[key], listener)
+}
+
+func (c *RecordCache) Updates() <-chan struct{} {
+	return c.notify
+}
+
+func (c *RecordCache) NotifyUpdates() {
+	select {
+	case c.notify <- struct{}{}:
+	default:
+	}
 }
 
 func (c *RecordCache) Keys() []RecordGUID {
 	if c == nil || c.records == nil {
 		return nil
 	}
-	rawKeys := c.records.Keys()
-	recordGUIDs := make([]RecordGUID, 0, len(rawKeys))
-	for _, rawKey := range rawKeys {
-		if recordGUID, ok := rawKey.(RecordGUID); ok {
-			recordGUIDs = append(recordGUIDs, recordGUID)
-		}
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	recordGUIDs := make([]RecordGUID, 0, len(c.records))
+	for key := range c.records {
+		recordGUIDs = append(recordGUIDs, key)
 	}
 	return recordGUIDs
+}
+
+func (c *RecordCache) Hosts() []string {
+	if c == nil || c.records == nil {
+		return nil
+	}
+	c.lock.RLock()
+	hostMap := make(map[string]bool)
+	for key := range c.records {
+		hostMap[key.Host] = true
+	}
+	c.lock.RUnlock()
+	if len(hostMap) == 0 {
+		return nil
+	}
+	hosts := make([]string, 0, len(hostMap))
+	for host := range hostMap {
+		hosts = append(hosts, host)
+	}
+	slices.Sort(hosts)
+	return hosts
 }
 
 func (c *RecordCache) Size() int {
 	if c == nil || c.records == nil {
 		return 0
 	}
-	return c.records.Size()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return len(c.records)
 }
 
 func (c *RecordCache) String() string {
 	if c == nil {
 		return "<nil>"
 	}
+	type recordStringEntry struct {
+		guid  RecordGUID
+		topic string
+		value Value
+	}
+	c.lock.RLock()
+	entries := make([]recordStringEntry, 0, len(c.records))
+	for guid, record := range c.records {
+		if record == nil {
+			continue
+		}
+		entries = append(entries, recordStringEntry{
+			guid:  guid,
+			topic: record.Topic,
+			value: record.Value,
+		})
+	}
+	c.lock.RUnlock()
+	slices.SortFunc(entries, func(a, b recordStringEntry) int {
+		return compareRecordGUID(a.guid, b.guid)
+	})
 	var stringBuilder strings.Builder
-	guids := c.Keys()
-	for index, guid := range guids {
-		record, _ := c.Get(guid)
+	for index, entry := range entries {
 		recordValueOK := ""
-		if record.Value.OK != nil {
-			recordValueOK = map[bool]string{true: "T", false: "F"}[*record.Value.OK]
+		if entry.value.OK != nil {
+			recordValueOK = map[bool]string{true: "T", false: "F"}[*entry.value.OK]
 		}
 		_, err := fmt.Fprintf(
 			&stringBuilder,
 			"Index[%03d] Metric[%03d] ServiceIndex[%02v] Host[%v] OK[%1s] Value[%3s] Unit[%1v] topic[%s]\n",
 			index,
-			guid.ID,
-			guid.ServiceIndex,
-			guid.Host,
+			entry.guid.ID,
+			entry.guid.ServiceIndex,
+			entry.guid.Host,
 			recordValueOK,
-			record.Value.Value,
-			record.Value.Unit,
-			record.Topic,
+			entry.value.Value,
+			entry.value.Unit,
+			entry.topic,
 		)
 		if err != nil {
 			return ""
@@ -438,24 +387,44 @@ func (c *RecordCache) String() string {
 	return stringBuilder.String()
 }
 
-func metricRecordGUIDComparator(this, that interface{}) int {
-	thisGUID, thisOK := this.(RecordGUID)
-	thatGUID, thatOK := that.(RecordGUID)
-	if !thisOK || !thatOK {
-		panic("invalid key type")
+// Unexported types
+type builder struct {
+	id       ID
+	template string
+	topic    string
+}
+
+// Unexported functions
+func metricFromTemplate(template string) (ID, error) {
+	builder, ok := metricBuildersCache[template]
+	if !ok {
+		return -1, fmt.Errorf("unknown template [%s]", template)
 	}
+	return builder.id, nil
+}
+
+func newMetricRecordCache() *RecordCache {
+	return &RecordCache{
+		records:     make(map[RecordGUID]*Record),
+		notify:      make(chan struct{}, 1),
+		listeners:   make(map[RecordGUID][]UpdatesListener),
+		depsPending: make(map[RecordGUID]map[RecordGUID]struct{}),
+	}
+}
+
+func compareRecordGUID(this, that RecordGUID) int {
 	switch {
-	case thisGUID.Host < thatGUID.Host:
+	case this.Host < that.Host:
 		return -1
-	case thisGUID.Host > thatGUID.Host:
+	case this.Host > that.Host:
 		return 1
-	case thisGUID.ServiceIndex < thatGUID.ServiceIndex:
+	case this.ServiceIndex < that.ServiceIndex:
 		return -1
-	case thisGUID.ServiceIndex > thatGUID.ServiceIndex:
+	case this.ServiceIndex > that.ServiceIndex:
 		return 1
-	case thisGUID.ID < thatGUID.ID:
+	case this.ID < that.ID:
 		return -1
-	case thisGUID.ID > thatGUID.ID:
+	case this.ID > that.ID:
 		return 1
 	default:
 		return 0
@@ -482,29 +451,60 @@ func newMetricRecord(topic string, ok string, value string, unit string) Record 
 	}
 }
 
+func (c *RecordCache) propagateUpdateLocked(updatedID RecordGUID, visited map[RecordGUID]bool, listeners []UpdatesListener) []UpdatesListener {
+	if visited[updatedID] {
+		slog.Error("Circular dependency detected in metric calculation graph", "record", updatedID)
+		return listeners
+	}
+	visited[updatedID] = true
+	updatedRecord, found := c.records[updatedID]
+	if !found || updatedRecord == nil {
+		return listeners
+	}
+	for dependentID := range updatedRecord.depsReverse {
+		record, found := c.records[dependentID]
+		if !found || record == nil {
+			continue
+		}
+		if record.depsCompute == nil {
+			continue
+		}
+		var depValues []Value
+		for _, depRecordGUID := range record.depsForward {
+			if depRecord, found := c.records[depRecordGUID]; found {
+				depValues = append(depValues, depRecord.Value)
+			}
+		}
+		oldValue := record.Value
+		newValue := record.depsCompute(depValues)
+		if newValue != oldValue {
+			record.Value = newValue
+			record.Timestamp = time.Now()
+			listeners = append(listeners, append([]UpdatesListener(nil), c.listeners[dependentID]...)...)
+			listeners = c.propagateUpdateLocked(dependentID, visited, listeners)
+		}
+	}
+	return listeners
+}
+
 func (b builder) compile(ids map[ID]bool, templates map[string]bool, builders map[string]builder) error {
-	if b.id < ID(0) || b.id > metricMax {
-		return fmt.Errorf("invalid builder.id [%d]", b.id)
+	if b.id < ID(0) || b.id >= MetricMax {
+		return fmt.Errorf("invalid ID [%d]", b.id)
 	}
 	if ids[b.id] {
-		return fmt.Errorf("duplicate builder.id [%d]", b.id)
+		return fmt.Errorf("duplicate ID [%d]", b.id)
 	}
 	ids[b.id] = true
 	if b.template == "" {
-		return fmt.Errorf("invalid builder.template for builder.id [%d]", b.id)
+		return fmt.Errorf("empty template for ID [%d]", b.id)
 	}
 	if templates[b.template] {
-		return fmt.Errorf("duplicate builder.template for builder.id [%d]", b.id)
+		return fmt.Errorf("duplicate template [%s] for ID [%d]", b.template, b.id)
 	}
 	templates[b.template] = true
 	if b.topic != "" {
-		return fmt.Errorf("invalid builder.topic for builder.id [%d]", b.id)
+		return fmt.Errorf("topic already exists for ID [%d]", b.id)
 	}
-
-
-
-
-
 
 	//hostName := "hostname-test"
 	//serviceName := "serviceName-test"
@@ -516,19 +516,14 @@ func (b builder) compile(ids map[ID]bool, templates map[string]bool, builders ma
 	//if err != nil {
 	//	return fmt.Errorf("invalid builder.topic for builder.id [%d]: %v", b.id, err)
 	//}
-	//if b.isHost() && !topicPattern.MatchString(topic) {
+	//if b.isHost() && !templatePattern.MatchString(topic) {
 	//	return fmt.Errorf("service topic [%s] does not match expected pattern", topic)
 	//}
 	//if b.isService() && !topicPatternService.MatchString(topic) {
 	//	return fmt.Errorf("service topic [%s] does not match expected pattern", topic)
 	//}
-	// TODO: Fix topicPattern's/templateFormat's isHost, isService add isSnapshot? work off template and or topic return them in build/parse, collapse isFuncs to one enum driven switch impl, that works on topic and template, remove buildHost/Service, just use build
+	// TODO: Fix templatePattern's/templateFormat's isHost, isService add isSnapshot? work off template and or topic return them in build/parse, collapse isFuncs to one enum driven switch impl, that works on topic and template, remove buildHost/Service, just use build
 	// TODO: Work through init v runtime errors, how to handle - look at all exported func's
-
-
-
-
-
 
 	return nil
 }
@@ -537,7 +532,7 @@ func (b builder) build(replacements map[string]string) (topic string, err error)
 	if b.template == "" {
 		return "", errors.New("cannot build with empty template")
 	}
-	if !topicPattern.MatchString(b.template) {
+	if !templatePattern.MatchString(b.template) {
 		return "", fmt.Errorf("invalid topic template [%s]", b.template)
 	}
 	pairs := make([]string, 0, len(replacements)*2)
@@ -546,7 +541,7 @@ func (b builder) build(replacements map[string]string) (topic string, err error)
 	}
 	topic = strings.NewReplacer(pairs...).Replace(b.template)
 	if strings.Contains(topic, "$") {
-		return "", fmt.Errorf("invalid $TOKEN in template [%s]", b.topic)
+		return "", fmt.Errorf("invalid $TOKEN in template [%s]", b.template)
 	}
 	return topic, nil
 }
@@ -583,3 +578,149 @@ func (b builder) buildHost(hostName string) (string, error) {
 func (b builder) buildService(hostName string, serviceName string) (string, error) {
 	return b.build(map[string]string{"HOSTNAME": hostName, "SERVICENAME": serviceName})
 }
+
+// Unexported variables
+var metricBuilders = []builder{
+	MetricAll: {
+		id:       MetricAll,
+		template: "supervisor/$HOSTNAME",
+	},
+	MetricHost: {
+		id:       MetricHost,
+		template: "supervisor/$HOSTNAME/host",
+	},
+	MetricHostCompute: {
+		id:       MetricHostCompute,
+		template: "supervisor/$HOSTNAME/host/depsCompute",
+	},
+	MetricHostComputeUsedProcessor: {
+		id:       MetricHostComputeUsedProcessor,
+		template: "supervisor/$HOSTNAME/host/depsCompute/used_processor",
+	},
+	MetricHostComputeUsedMemory: {
+		id:       MetricHostComputeUsedMemory,
+		template: "supervisor/$HOSTNAME/host/depsCompute/used_memory",
+	},
+	MetricHostComputeAllocatedMemory: {
+		id:       MetricHostComputeAllocatedMemory,
+		template: "supervisor/$HOSTNAME/host/depsCompute/allocated_memory",
+	},
+	MetricHostHealth: {
+		id:       MetricHostHealth,
+		template: "supervisor/$HOSTNAME/host/health",
+	},
+	MetricHostHealthFailedServices: {
+		id:       MetricHostHealthFailedServices,
+		template: "supervisor/$HOSTNAME/host/health/failed_services",
+	},
+	MetricHostHealthFailedShares: {
+		id:       MetricHostHealthFailedShares,
+		template: "supervisor/$HOSTNAME/host/health/failed_shares",
+	},
+	MetricHostHealthFailedBackups: {
+		id:       MetricHostHealthFailedBackups,
+		template: "supervisor/$HOSTNAME/host/health/failed_backups",
+	},
+	MetricHostRuntime: {
+		id:       MetricHostRuntime,
+		template: "supervisor/$HOSTNAME/host/runtime",
+	},
+	MetricHostRuntimeWarningTemperatureOfMax: {
+		id:       MetricHostRuntimeWarningTemperatureOfMax,
+		template: "supervisor/$HOSTNAME/host/runtime/warn_temperature_of_max",
+	},
+	MetricHostRuntimeRevsFanSpeedOfMax: {
+		id:       MetricHostRuntimeRevsFanSpeedOfMax,
+		template: "supervisor/$HOSTNAME/host/runtime/revs_fan_speed_of_max",
+	},
+	MetricHostRuntimeLifeUsedDrives: {
+		id:       MetricHostRuntimeLifeUsedDrives,
+		template: "supervisor/$HOSTNAME/host/runtime/lifetime_used_of_drives",
+	},
+	MetricHostStorage: {
+		id:       MetricHostStorage,
+		template: "supervisor/$HOSTNAME/host/storage",
+	},
+	MetricHostStorageUsedSystemDrive: {
+		id:       MetricHostStorageUsedSystemDrive,
+		template: "supervisor/$HOSTNAME/host/storage/used_system_drive",
+	},
+	MetricHostStorageUsedShareDrives: {
+		id:       MetricHostStorageUsedShareDrives,
+		template: "supervisor/$HOSTNAME/host/storage/used_share_drives",
+	},
+	MetricHostStorageUsedBackupDrives: {
+		id:       MetricHostStorageUsedBackupDrives,
+		template: "supervisor/$HOSTNAME/host/storage/used_backup_drives",
+	},
+	MetricService: {
+		id:       MetricService,
+		template: "supervisor/$HOSTNAME/service",
+	},
+	MetricServiceName: {
+		id:       MetricServiceName,
+		template: "supervisor/$HOSTNAME/service/$SERVICENAME/name",
+	},
+	MetricServiceUsedProcessor: {
+		id:       MetricServiceUsedProcessor,
+		template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_processor",
+	},
+	MetricServiceUsedMemory: {
+		id:       MetricServiceUsedMemory,
+		template: "supervisor/$HOSTNAME/service/$SERVICENAME/used_memory",
+	},
+	MetricServiceBackupStatus: {
+		id:       MetricServiceBackupStatus,
+		template: "supervisor/$HOSTNAME/service/$SERVICENAME/backup_status",
+	},
+	MetricServiceHealthStatus: {
+		id:       MetricServiceHealthStatus,
+		template: "supervisor/$HOSTNAME/service/$SERVICENAME/health_status",
+	},
+	MetricServiceConfiguredStatus: {
+		id:       MetricServiceConfiguredStatus,
+		template: "supervisor/$HOSTNAME/service/$SERVICENAME/configured_status",
+	},
+	MetricServiceRestartCount: {
+		id:       MetricServiceRestartCount,
+		template: "supervisor/$HOSTNAME/service/$SERVICENAME/restart_count",
+	},
+	MetricServiceRuntime: {
+		id:       MetricServiceRuntime,
+		template: "supervisor/$HOSTNAME/service/$SERVICENAME/runtime",
+	},
+	MetricServiceVersion: {
+		id:       MetricServiceVersion,
+		template: "supervisor/$HOSTNAME/service/$SERVICENAME/version",
+	},
+}
+
+var metricBuildersCache = func() map[string]builder {
+	if len(metricBuilders) != int(MetricMax) {
+		panic(fmt.Sprintf("metricBuilders is incorrect length [%d], should use all (and only all) ID's (sans MetricMax) giving length [%d]",
+			len(metricBuilders), MetricMax))
+	}
+	ids := make(map[ID]bool)
+	templates := make(map[string]bool)
+	builders := make(map[string]builder)
+	for i := ID(0); i < MetricMax; i++ {
+		builders[metricBuilders[i].template] = metricBuilders[i]
+	}
+	for i := ID(0); i < MetricMax; i++ {
+		if err := metricBuilders[i].compile(ids, templates, builders); err != nil {
+			panic(fmt.Sprintf("invalid builder at metricBuilders index [%d]: %v", i, err))
+		}
+	}
+	return builders
+}()
+
+var (
+	templateFormatHost    = "supervisor/$HOSTNAME/host/"
+	templateFormatService = "supervisor/$HOSTNAME/service/$SERVICENAME/"
+)
+
+var (
+	templatePattern     = regexp.MustCompile(`^supervisor(/[a-zA-Z0-9$_-]+){1,4}$`)
+	topicPatternHost    = regexp.MustCompile(`^supervisor/([a-zA-Z0-9_-]+)/host/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*)$`)
+	topicPatternService = regexp.MustCompile(`^supervisor/([a-zA-Z0-9_-]+)/service/([a-zA-Z0-9_-]+)/([a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*)$`)
+)

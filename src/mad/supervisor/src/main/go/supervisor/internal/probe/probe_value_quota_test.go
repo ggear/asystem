@@ -1,4 +1,4 @@
-package window
+package probe
 
 import (
 	"math"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestQuotaWindow_NewTrendWindow(t *testing.T) {
+func TestProbeQuota_NewTrendWindow(t *testing.T) {
 	tests := []struct {
 		name          string
 		durationDays  int
@@ -16,54 +16,54 @@ func TestQuotaWindow_NewTrendWindow(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "invalid_zero_duration",
-			durationDays:  0,
-			tickFreqSec:   1,
-			expectedError: true,
-		},
-		{
-			name:          "invalid_negative_duration",
-			durationDays:  -1,
-			tickFreqSec:   1,
-			expectedError: true,
-		},
-		{
-			name:          "invalid_zero_tick_frequency",
-			durationDays:  1,
-			tickFreqSec:   0,
-			expectedError: true,
-		},
-		{
-			name:          "invalid_negative_tick_frequency",
-			durationDays:  1,
-			tickFreqSec:   -1,
-			expectedError: true,
-		},
-		{
-			name:          "valid_minimum_config",
+			name:          "happy_minimum_config",
 			durationDays:  1,
 			tickFreqSec:   1,
 			expectedError: false,
 			expectedSize:  17,
 		},
 		{
-			name:          "valid_default_config",
+			name:          "happy_default_config",
 			durationDays:  1,
 			tickFreqSec:   1,
 			expectedError: false,
 		},
 		{
-			name:          "valid_large_duration",
+			name:          "happy_large_duration",
 			durationDays:  7,
 			tickFreqSec:   1,
 			expectedError: false,
 			expectedSize:  161,
 		},
 		{
-			name:          "valid_slow_tick_frequency",
+			name:          "happy_slow_tick_frequency",
 			durationDays:  1,
 			tickFreqSec:   60,
 			expectedError: false,
+		},
+		{
+			name:          "sad_zero_duration",
+			durationDays:  0,
+			tickFreqSec:   1,
+			expectedError: true,
+		},
+		{
+			name:          "sad_negative_duration",
+			durationDays:  -1,
+			tickFreqSec:   1,
+			expectedError: true,
+		},
+		{
+			name:          "sad_zero_tick_frequency",
+			durationDays:  1,
+			tickFreqSec:   0,
+			expectedError: true,
+		},
+		{
+			name:          "sad_negative_tick_frequency",
+			durationDays:  1,
+			tickFreqSec:   -1,
+			expectedError: true,
 		},
 	}
 	for _, testCase := range tests {
@@ -84,7 +84,7 @@ func TestQuotaWindow_NewTrendWindow(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_NewPulseWindow(t *testing.T) {
+func TestProbeQuota_NewPulseWindow(t *testing.T) {
 	tests := []struct {
 		name          string
 		durationSec   int
@@ -93,43 +93,43 @@ func TestQuotaWindow_NewPulseWindow(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "invalid_zero_duration",
-			durationSec:   0,
-			tickFreqSec:   1,
-			expectedError: true,
-		},
-		{
-			name:          "invalid_negative_duration",
-			durationSec:   -1,
-			tickFreqSec:   1,
-			expectedError: true,
-		},
-		{
-			name:          "invalid_zero_tick_frequency",
-			durationSec:   5,
-			tickFreqSec:   0,
-			expectedError: true,
-		},
-		{
-			name:          "valid_minimum_config",
+			name:          "happy_minimum_config",
 			durationSec:   1,
 			tickFreqSec:   1,
 			expectedError: false,
 			expectedSize:  1,
 		},
 		{
-			name:          "valid_default_5_seconds",
+			name:          "happy_default_5_seconds",
 			durationSec:   5,
 			tickFreqSec:   1,
 			expectedError: false,
 			expectedSize:  5,
 		},
 		{
-			name:          "valid_large_duration",
+			name:          "happy_large_duration",
 			durationSec:   60,
 			tickFreqSec:   1,
 			expectedError: false,
 			expectedSize:  60,
+		},
+		{
+			name:          "sad_zero_duration",
+			durationSec:   0,
+			tickFreqSec:   1,
+			expectedError: true,
+		},
+		{
+			name:          "sad_negative_duration",
+			durationSec:   -1,
+			tickFreqSec:   1,
+			expectedError: true,
+		},
+		{
+			name:          "sad_zero_tick_frequency",
+			durationSec:   5,
+			tickFreqSec:   0,
+			expectedError: true,
 		},
 	}
 	for _, testCase := range tests {
@@ -150,7 +150,7 @@ func TestQuotaWindow_NewPulseWindow(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_NewQuotaWindow(t *testing.T) {
+func TestProbeQuota_NewQuotaWindow(t *testing.T) {
 	tests := []struct {
 		name          string
 		trendDays     int
@@ -159,37 +159,37 @@ func TestQuotaWindow_NewQuotaWindow(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "invalid_trend_duration",
+			name:          "happy_default_config",
+			trendDays:     1,
+			pulseSec:      5,
+			tickFreqSec:   1,
+			expectedError: false,
+		},
+		{
+			name:          "sad_trend_duration",
 			trendDays:     0,
 			pulseSec:      5,
 			tickFreqSec:   1,
 			expectedError: true,
 		},
 		{
-			name:          "invalid_pulse_duration",
+			name:          "sad_pulse_duration",
 			trendDays:     1,
 			pulseSec:      0,
 			tickFreqSec:   1,
 			expectedError: true,
 		},
 		{
-			name:          "invalid_tick_frequency",
+			name:          "sad_tick_frequency",
 			trendDays:     1,
 			pulseSec:      5,
 			tickFreqSec:   0,
 			expectedError: true,
 		},
-		{
-			name:          "valid_default_config",
-			trendDays:     1,
-			pulseSec:      5,
-			tickFreqSec:   1,
-			expectedError: false,
-		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			window, errorValue := NewQuotaWindow(testCase.trendDays, testCase.pulseSec, testCase.tickFreqSec)
+			window, errorValue := newQuotaValue(testCase.trendDays, testCase.pulseSec, testCase.tickFreqSec)
 			if (errorValue != nil) != testCase.expectedError {
 				t.Fatalf("Got err = %v, expected error? %t", errorValue, testCase.expectedError)
 			}
@@ -200,17 +200,35 @@ func TestQuotaWindow_NewQuotaWindow(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_PushOutOfRange(t *testing.T) {
+func TestProbeQuota_TrendWindow_PushOutOfRange(t *testing.T) {
 	tests := []struct {
 		name  string
 		value int8
 	}{
-		{name: "below_minimum_value", value: -1},
-		{name: "below_minimum_value_extreme", value: -128},
-		{name: "above_maximum_value", value: 101},
-		{name: "above_maximum_value_extreme", value: 127},
-		{name: "below_zero", value: -50},
-		{name: "way_above_maximum_value", value: 120},
+		{
+			name:  "sad_below_minimum_value",
+			value: -1,
+		},
+		{
+			name:  "sad_below_minimum_value_extreme",
+			value: -128,
+		},
+		{
+			name:  "sad_above_maximum_value",
+			value: 101,
+		},
+		{
+			name:  "sad_above_maximum_value_extreme",
+			value: 127,
+		},
+		{
+			name:  "sad_below_zero",
+			value: -50,
+		},
+		{
+			name:  "sad_way_above_maximum_value",
+			value: 120,
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -226,16 +244,31 @@ func TestQuotaWindow_TrendWindow_PushOutOfRange(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_SingleValue(t *testing.T) {
+func TestProbeQuota_TrendWindow_SingleValue(t *testing.T) {
 	tests := []struct {
 		name  string
 		value int8
 	}{
-		{name: "single_value_0", value: 0},
-		{name: "single_value_50", value: 50},
-		{name: "single_value_100", value: 100},
-		{name: "single_value_boundary_1", value: 1},
-		{name: "single_value_boundary_99", value: 99},
+		{
+			name:  "happy_single_value_0",
+			value: 0,
+		},
+		{
+			name:  "happy_single_value_50",
+			value: 50,
+		},
+		{
+			name:  "happy_single_value_100",
+			value: 100,
+		},
+		{
+			name:  "happy_single_value_boundary_1",
+			value: 1,
+		},
+		{
+			name:  "happy_single_value_boundary_99",
+			value: 99,
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -257,7 +290,7 @@ func TestQuotaWindow_TrendWindow_SingleValue(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_PushAndStats(t *testing.T) {
+func TestProbeQuota_TrendWindow_PushAndStats(t *testing.T) {
 	tests := []struct {
 		name         string
 		values       []int8
@@ -267,7 +300,7 @@ func TestQuotaWindow_TrendWindow_PushAndStats(t *testing.T) {
 		expectedLast int8
 	}{
 		{
-			name:         "single_value",
+			name:         "happy_single_value",
 			values:       []int8{50},
 			expectedMean: 50,
 			expectedMax:  50,
@@ -275,7 +308,7 @@ func TestQuotaWindow_TrendWindow_PushAndStats(t *testing.T) {
 			expectedLast: 50,
 		},
 		{
-			name:         "multiple_same_values",
+			name:         "happy_multiple_same_values",
 			values:       []int8{75, 75, 75, 75},
 			expectedMean: 75,
 			expectedMax:  75,
@@ -283,7 +316,7 @@ func TestQuotaWindow_TrendWindow_PushAndStats(t *testing.T) {
 			expectedLast: 75,
 		},
 		{
-			name:         "ascending_values",
+			name:         "happy_ascending_values",
 			values:       []int8{10, 20, 30, 40, 50},
 			expectedMean: 30,
 			expectedMax:  50,
@@ -291,7 +324,7 @@ func TestQuotaWindow_TrendWindow_PushAndStats(t *testing.T) {
 			expectedLast: 50,
 		},
 		{
-			name:         "descending_values",
+			name:         "happy_descending_values",
 			values:       []int8{90, 70, 50, 30, 10},
 			expectedMean: 50,
 			expectedMax:  90,
@@ -299,7 +332,7 @@ func TestQuotaWindow_TrendWindow_PushAndStats(t *testing.T) {
 			expectedLast: 10,
 		},
 		{
-			name:         "boundary_values",
+			name:         "happy_boundary_values",
 			values:       []int8{0, 100, 0, 100},
 			expectedMean: 50,
 			expectedMax:  100,
@@ -307,7 +340,7 @@ func TestQuotaWindow_TrendWindow_PushAndStats(t *testing.T) {
 			expectedLast: 100,
 		},
 		{
-			name:         "all_zeros",
+			name:         "happy_all_zeros",
 			values:       []int8{0, 0, 0, 0, 0},
 			expectedMean: 0,
 			expectedMax:  0,
@@ -315,7 +348,7 @@ func TestQuotaWindow_TrendWindow_PushAndStats(t *testing.T) {
 			expectedLast: 0,
 		},
 		{
-			name:         "all_maximum_value",
+			name:         "happy_all_maximum_value",
 			values:       []int8{100, 100, 100, 100},
 			expectedMean: 100,
 			expectedMax:  100,
@@ -345,7 +378,7 @@ func TestQuotaWindow_TrendWindow_PushAndStats(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_ExtremeFrequency(t *testing.T) {
+func TestProbeQuota_TrendWindow_ExtremeFrequency(t *testing.T) {
 	tests := []struct {
 		name            string
 		value           int8
@@ -354,28 +387,28 @@ func TestQuotaWindow_TrendWindow_ExtremeFrequency(t *testing.T) {
 		expectedMean    int8
 	}{
 		{
-			name:            "1000_pushes_per_second_same_value",
+			name:            "happy_1000_pushes_per_second_same_value",
 			value:           85,
 			pushesPerSecond: 1000,
 			seconds:         1,
 			expectedMean:    85,
 		},
 		{
-			name:            "10000_pushes_per_second",
+			name:            "happy_10000_pushes_per_second",
 			value:           50,
 			pushesPerSecond: 10000,
 			seconds:         1,
 			expectedMean:    50,
 		},
 		{
-			name:            "32000_pushes_near_bucket_limit",
+			name:            "happy_32000_pushes_near_bucket_limit",
 			value:           75,
 			pushesPerSecond: 32000,
 			seconds:         1,
 			expectedMean:    75,
 		},
 		{
-			name:            "50000_pushes_exceeds_bucket_limit",
+			name:            "happy_50000_pushes_exceeds_bucket_limit",
 			value:           90,
 			pushesPerSecond: 50000,
 			seconds:         1,
@@ -409,34 +442,34 @@ func TestQuotaWindow_TrendWindow_ExtremeFrequency(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_Percentiles(t *testing.T) {
+func TestProbeQuota_TrendWindow_Percentiles(t *testing.T) {
 	tests := []struct {
 		name        string
 		values      []int8
 		expectedP95 int8
 	}{
 		{
-			name:        "uniform_distribution",
+			name:        "happy_uniform_distribution",
 			values:      []int8{10, 20, 30, 40, 50, 60, 70, 80, 90, 100},
 			expectedP95: 100,
 		},
 		{
-			name:        "all_same_value",
+			name:        "happy_all_same_value",
 			values:      makeRepeated(50, 100),
 			expectedP95: 50,
 		},
 		{
-			name:        "spike_at_end",
+			name:        "happy_spike_at_end",
 			values:      append(makeRepeated(10, 95), 100, 100, 100, 100, 100, 100),
 			expectedP95: 100,
 		},
 		{
-			name:        "linear_0_100",
+			name:        "happy_linear_0_100",
 			values:      makeSequence(0, 100),
 			expectedP95: 95,
 		},
 		{
-			name:        "single_value_percentile",
+			name:        "happy_single_value_percentile",
 			values:      []int8{42},
 			expectedP95: 42,
 		},
@@ -455,24 +488,24 @@ func TestQuotaWindow_TrendWindow_Percentiles(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_Median(t *testing.T) {
+func TestProbeQuota_TrendWindow_Median(t *testing.T) {
 	tests := []struct {
 		name           string
 		values         []int8
 		expectedMedian int8
 	}{
 		{
-			name:           "odd_count_uniform",
+			name:           "happy_odd_count_uniform",
 			values:         makeSequence(0, 100),
 			expectedMedian: 50,
 		},
 		{
-			name:           "even_count_middle_low",
+			name:           "happy_even_count_middle_low",
 			values:         []int8{10, 20, 30, 40},
 			expectedMedian: 20,
 		},
 		{
-			name:           "single_value",
+			name:           "happy_single_value",
 			values:         []int8{42},
 			expectedMedian: 42,
 		},
@@ -491,13 +524,13 @@ func TestQuotaWindow_TrendWindow_Median(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_OverlappingValues(t *testing.T) {
+func TestProbeQuota_TrendWindow_OverlappingValues(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(*trendWindow) []int8
 	}{
 		{
-			name: "overlapping_values_across_tiers",
+			name: "happy_overlapping_values_across_tiers",
 			run: func(window *trendWindow) []int8 {
 				values := make([]int8, 0, 200)
 				for index := 0; index < ticksPerMinute; index++ {
@@ -539,13 +572,13 @@ func TestQuotaWindow_TrendWindow_OverlappingValues(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
+func TestProbeQuota_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(*trendWindow) []int8
 	}{
 		{
-			name: "partial_aggregation_across_tiers",
+			name: "happy_partial_aggregation_across_tiers",
 			run: func(window *trendWindow) []int8 {
 				values := make([]int8, 0, ticksPerMinute*2+10)
 				for index := 0; index < ticksPerMinute*2+10; index++ {
@@ -582,7 +615,7 @@ func TestQuotaWindow_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_SparseTraffic(t *testing.T) {
+func TestProbeQuota_TrendWindow_SparseTraffic(t *testing.T) {
 	tests := []struct {
 		name         string
 		idleTicks    int
@@ -592,7 +625,7 @@ func TestQuotaWindow_TrendWindow_SparseTraffic(t *testing.T) {
 		expectedP95  int8
 	}{
 		{
-			name:         "idle_ticks_preserve_last_value",
+			name:         "happy_idle_ticks_preserve_last_value",
 			idleTicks:    5000,
 			expectedMean: 42,
 			expectedMin:  42,
@@ -624,13 +657,13 @@ func TestQuotaWindow_TrendWindow_SparseTraffic(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_EvictionOrder(t *testing.T) {
+func TestProbeQuota_TrendWindow_EvictionOrder(t *testing.T) {
 	tests := []struct {
 		name       string
 		extraTicks int
 	}{
 		{
-			name:       "full_eviction_with_rollover",
+			name:       "happy_full_eviction_with_rollover",
 			extraTicks: 5000,
 		},
 	}
@@ -678,7 +711,7 @@ func TestQuotaWindow_TrendWindow_EvictionOrder(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_RandomPushTickSequences(t *testing.T) {
+func TestProbeQuota_TrendWindow_RandomPushTickSequences(t *testing.T) {
 	tests := []struct {
 		name      string
 		seed      int64
@@ -686,7 +719,7 @@ func TestQuotaWindow_TrendWindow_RandomPushTickSequences(t *testing.T) {
 		maxPushes int
 	}{
 		{
-			name:      "random_pushes_with_invariants",
+			name:      "happy_random_pushes_with_invariants",
 			seed:      1,
 			ticks:     200,
 			maxPushes: 5,
@@ -726,7 +759,7 @@ func TestQuotaWindow_TrendWindow_RandomPushTickSequences(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_OverflowProtection(t *testing.T) {
+func TestProbeQuota_TrendWindow_OverflowProtection(t *testing.T) {
 	tests := []struct {
 		name        string
 		description string
@@ -734,19 +767,19 @@ func TestQuotaWindow_TrendWindow_OverflowProtection(t *testing.T) {
 		pushCount   int
 	}{
 		{
-			name:        "bucket_saturation_at_32767",
+			name:        "happy_bucket_saturation_at_32767",
 			value:       85,
 			pushCount:   35000,
 			description: "should saturate bucket at 32767",
 		},
 		{
-			name:        "high_frequency_identical_values",
+			name:        "happy_high_frequency_identical_values",
 			value:       50,
 			pushCount:   50000,
 			description: "should handle 50K identical samples",
 		},
 		{
-			name:        "extreme_frequency_100k_pushes",
+			name:        "happy_extreme_frequency_100k_pushes",
 			value:       95,
 			pushCount:   100000,
 			description: "should handle 100K samples with saturation",
@@ -779,7 +812,7 @@ func TestQuotaWindow_TrendWindow_OverflowProtection(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_TickFrequencyVariations(t *testing.T) {
+func TestProbeQuota_TrendWindow_TickFrequencyVariations(t *testing.T) {
 	tests := []struct {
 		name          string
 		description   string
@@ -789,7 +822,7 @@ func TestQuotaWindow_TrendWindow_TickFrequencyVariations(t *testing.T) {
 		expectedMean  int8
 	}{
 		{
-			name:          "1_second_ticks",
+			name:          "happy_1_second_ticks",
 			tickFreqSec:   1,
 			pushesPerTick: 10,
 			ticks:         60,
@@ -797,7 +830,7 @@ func TestQuotaWindow_TrendWindow_TickFrequencyVariations(t *testing.T) {
 			description:   "standard 1-second interval",
 		},
 		{
-			name:          "5_second_ticks",
+			name:          "happy_5_second_ticks",
 			tickFreqSec:   5,
 			pushesPerTick: 50,
 			ticks:         12,
@@ -805,7 +838,7 @@ func TestQuotaWindow_TrendWindow_TickFrequencyVariations(t *testing.T) {
 			description:   "slower Tick rate",
 		},
 		{
-			name:          "60_second_ticks",
+			name:          "happy_60_second_ticks",
 			tickFreqSec:   60,
 			pushesPerTick: 600,
 			ticks:         1,
@@ -830,7 +863,7 @@ func TestQuotaWindow_TrendWindow_TickFrequencyVariations(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_StartupPhase(t *testing.T) {
+func TestProbeQuota_TrendWindow_StartupPhase(t *testing.T) {
 	tests := []struct {
 		name         string
 		description  string
@@ -839,28 +872,28 @@ func TestQuotaWindow_TrendWindow_StartupPhase(t *testing.T) {
 		expectedMean int8
 	}{
 		{
-			name:         "startup_10_ticks",
+			name:         "happy_startup_10_ticks",
 			ticks:        10,
 			value:        75,
 			expectedMean: 75,
 			description:  "partial young tier",
 		},
 		{
-			name:         "startup_30_ticks",
+			name:         "happy_startup_30_ticks",
 			ticks:        30,
 			value:        50,
 			expectedMean: 50,
 			description:  "half-filled young tier",
 		},
 		{
-			name:         "startup_65_ticks",
+			name:         "happy_startup_65_ticks",
 			ticks:        65,
 			value:        80,
 			expectedMean: 80,
 			description:  "first aggregation to middle tier",
 		},
 		{
-			name:         "startup_1_tick",
+			name:         "happy_startup_1_tick",
 			ticks:        1,
 			value:        90,
 			expectedMean: 90,
@@ -889,7 +922,7 @@ func TestQuotaWindow_TrendWindow_StartupPhase(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_TrendWindow_TickAndAggregation(t *testing.T) {
+func TestProbeQuota_TrendWindow_TickAndAggregation(t *testing.T) {
 	tests := []struct {
 		name         string
 		description  string
@@ -897,7 +930,7 @@ func TestQuotaWindow_TrendWindow_TickAndAggregation(t *testing.T) {
 		expectedMean int8
 	}{
 		{
-			name:        "single_tick_with_values",
+			name:        "happy_single_tick_with_values",
 			description: "values should move to young tier",
 			setupFunc: func(window *trendWindow) {
 				window.push(50)
@@ -908,7 +941,7 @@ func TestQuotaWindow_TrendWindow_TickAndAggregation(t *testing.T) {
 			expectedMean: 60,
 		},
 		{
-			name:        "multiple_ticks",
+			name:        "happy_multiple_ticks",
 			description: "should maintain accuracy across ticks",
 			setupFunc: func(window *trendWindow) {
 				for index := 0; index < 10; index++ {
@@ -919,7 +952,7 @@ func TestQuotaWindow_TrendWindow_TickAndAggregation(t *testing.T) {
 			expectedMean: 55,
 		},
 		{
-			name:        "aggregation_after_60_ticks",
+			name:        "happy_aggregation_after_60_ticks",
 			description: "should aggregate to middle tier",
 			setupFunc: func(window *trendWindow) {
 				for index := 0; index < 70; index++ {
@@ -930,7 +963,7 @@ func TestQuotaWindow_TrendWindow_TickAndAggregation(t *testing.T) {
 			expectedMean: 50,
 		},
 		{
-			name:        "aggregation_after_3600_ticks",
+			name:        "happy_aggregation_after_3600_ticks",
 			description: "should aggregate to geriatric tier",
 			setupFunc: func(window *trendWindow) {
 				for index := 0; index < 3650; index++ {
@@ -941,7 +974,7 @@ func TestQuotaWindow_TrendWindow_TickAndAggregation(t *testing.T) {
 			expectedMean: 85,
 		},
 		{
-			name:        "empty_ticks",
+			name:        "happy_empty_ticks",
 			description: "empty ticks should not affect mean",
 			setupFunc: func(window *trendWindow) {
 				for index := 0; index < 10; index++ {
@@ -951,7 +984,7 @@ func TestQuotaWindow_TrendWindow_TickAndAggregation(t *testing.T) {
 			expectedMean: 0,
 		},
 		{
-			name:        "mixed_empty_and_filled_ticks",
+			name:        "happy_mixed_empty_and_filled_ticks",
 			description: "should handle sparse data",
 			setupFunc: func(window *trendWindow) {
 				for index := 0; index < 20; index++ {
@@ -976,7 +1009,7 @@ func TestQuotaWindow_TrendWindow_TickAndAggregation(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_PulseWindow_Basic(t *testing.T) {
+func TestProbeQuota_PulseWindow_Basic(t *testing.T) {
 	tests := []struct {
 		name         string
 		pushAndTick  func(*pulseWindow)
@@ -985,7 +1018,7 @@ func TestQuotaWindow_PulseWindow_Basic(t *testing.T) {
 		expectedMin  int8
 	}{
 		{
-			name: "fill_window_exactly",
+			name: "happy_fill_window_exactly",
 			pushAndTick: func(window *pulseWindow) {
 				window.push(10)
 				window.tick()
@@ -1002,7 +1035,7 @@ func TestQuotaWindow_PulseWindow_Basic(t *testing.T) {
 			expectedMin:  10,
 		},
 		{
-			name: "overflow_window",
+			name: "happy_overflow_window",
 			pushAndTick: func(window *pulseWindow) {
 				window.push(10)
 				window.tick()
@@ -1023,7 +1056,7 @@ func TestQuotaWindow_PulseWindow_Basic(t *testing.T) {
 			expectedMin:  30,
 		},
 		{
-			name: "single_value_repeated",
+			name: "happy_single_value_repeated",
 			pushAndTick: func(window *pulseWindow) {
 				for index := 0; index < 5; index++ {
 					window.push(85)
@@ -1056,7 +1089,7 @@ func TestQuotaWindow_PulseWindow_Basic(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_PulseWindow_Median(t *testing.T) {
+func TestProbeQuota_PulseWindow_Median(t *testing.T) {
 	tests := []struct {
 		name           string
 		windowSize     int
@@ -1064,7 +1097,7 @@ func TestQuotaWindow_PulseWindow_Median(t *testing.T) {
 		expectedMedian int8
 	}{
 		{
-			name:       "odd_count",
+			name:       "happy_odd_count",
 			windowSize: 5,
 			pushAndTick: func(window *pulseWindow) {
 				window.push(10)
@@ -1080,7 +1113,7 @@ func TestQuotaWindow_PulseWindow_Median(t *testing.T) {
 			expectedMedian: 30,
 		},
 		{
-			name:       "even_count_low_middle",
+			name:       "happy_even_count_low_middle",
 			windowSize: 4,
 			pushAndTick: func(window *pulseWindow) {
 				window.push(10)
@@ -1106,15 +1139,17 @@ func TestQuotaWindow_PulseWindow_Median(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_Coordination(t *testing.T) {
+func TestProbeQuota_Coordination(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
-		{name: "shared_values"},
+		{
+			name: "happy_shared_values",
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			window, _ := NewQuotaWindow(1, 5, 1)
+			window, _ := newQuotaValue(1, 5, 1)
 			values := []int8{10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
 			for _, value := range values {
 				window.Push(value)
@@ -1129,7 +1164,7 @@ func TestQuotaWindow_Coordination(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_EmptyWindow(t *testing.T) {
+func TestProbeQuota_EmptyWindow(t *testing.T) {
 	tests := []struct {
 		name         string
 		description  string
@@ -1140,7 +1175,7 @@ func TestQuotaWindow_EmptyWindow(t *testing.T) {
 		expectedP95  int8
 	}{
 		{
-			name:        "never_pushed",
+			name:        "happy_never_pushed",
 			description: "completely empty window",
 			setupFunc: func(window *trendWindow) {
 			},
@@ -1150,7 +1185,7 @@ func TestQuotaWindow_EmptyWindow(t *testing.T) {
 			expectedP95:  0,
 		},
 		{
-			name:        "pushed_then_idle",
+			name:        "happy_pushed_then_idle",
 			description: "data retained without new samples",
 			setupFunc: func(window *trendWindow) {
 				window.push(50)
@@ -1184,20 +1219,22 @@ func TestQuotaWindow_EmptyWindow(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_MultipleWindows_Concurrency(t *testing.T) {
+func TestProbeQuota_MultipleWindows_Concurrency(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
-		{name: "multi_window_concurrency"},
+		{
+			name: "happy_multi_window_concurrency",
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			const numberOfWindows = 10
 			const numberOfGoroutinesPerWindow = 5
 			const operationsPerGoroutine = 100
-			windows := make([]*QuotaWindow, numberOfWindows)
+			windows := make([]*quotaValue, numberOfWindows)
 			for index := 0; index < numberOfWindows; index++ {
-				window, err := NewQuotaWindow(1, 5, 1)
+				window, err := newQuotaValue(1, 5, 1)
 				if err != nil {
 					t.Fatalf("Got err = %v, expected nil", err)
 				}
@@ -1207,7 +1244,7 @@ func TestQuotaWindow_MultipleWindows_Concurrency(t *testing.T) {
 			for windowIndex := 0; windowIndex < numberOfWindows; windowIndex++ {
 				for goroutineIndex := 0; goroutineIndex < numberOfGoroutinesPerWindow; goroutineIndex++ {
 					waitGroup.Add(1)
-					go func(window *QuotaWindow, windowIndex, goroutineIndex int) {
+					go func(window *quotaValue, windowIndex, goroutineIndex int) {
 						defer waitGroup.Done()
 						value := int8((windowIndex*numberOfGoroutinesPerWindow + goroutineIndex) % 101)
 						for index := 0; index < operationsPerGoroutine; index++ {
@@ -1236,11 +1273,13 @@ func TestQuotaWindow_MultipleWindows_Concurrency(t *testing.T) {
 	}
 }
 
-func TestQuotaWindow_Concurrency(t *testing.T) {
+func TestProbeQuota_Concurrency(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
-		{name: "single_window_concurrency"},
+		{
+			name: "happy_single_window_concurrency",
+		},
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -1303,14 +1342,14 @@ func expectedStatsFromCounts(counts [maxValidValue + 1]int, count int, sum int64
 	if count == 0 {
 		return 0, 0, 0, 0
 	}
-	minimumValue := int8(uninitializedMin)
-	maximumValue := int8(uninitializedMax)
+	minimumValue := int8(uninitialisedMin)
+	maximumValue := int8(uninitialisedMax)
 	for index := 0; index <= maxValidValue; index++ {
 		if counts[index] > 0 {
-			if minimumValue == uninitializedMin || int8(index) < minimumValue {
+			if minimumValue == uninitialisedMin || int8(index) < minimumValue {
 				minimumValue = int8(index)
 			}
-			if maximumValue == uninitializedMax || int8(index) > maximumValue {
+			if maximumValue == uninitialisedMax || int8(index) > maximumValue {
 				maximumValue = int8(index)
 			}
 		}

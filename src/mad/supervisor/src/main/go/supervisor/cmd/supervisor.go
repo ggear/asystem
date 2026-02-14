@@ -3,10 +3,21 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"supervisor/internal/schema"
+	"supervisor/internal/config"
 
 	"github.com/spf13/cobra"
 )
+
+func Execute() {
+	if err := rootCmd.Execute(); err != nil {
+		_, _ = fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func init() {
+	rootCmd.PersistentFlags().BoolP("version", "v", false, "Display version information and exit")
+}
 
 var rootCmd = &cobra.Command{
 	Use:           "supervisor [command]",
@@ -17,10 +28,10 @@ var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		showVersion, _ := cmd.Flags().GetBool("version")
 		if showVersion {
-			if schema, err := schema.Load(schema.DefaultPath); err != nil {
+			if config, err := config.Load(config.DefaultConfigPath); err != nil {
 				return err
 			} else {
-				fmt.Println(schema.Version())
+				fmt.Println(config.Version())
 			}
 			os.Exit(0)
 		}
@@ -29,15 +40,4 @@ var rootCmd = &cobra.Command{
 		}
 		return nil
 	},
-}
-
-func init() {
-	rootCmd.PersistentFlags().BoolP("version", "v", false, "Display version information and exit")
-}
-
-func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
 }

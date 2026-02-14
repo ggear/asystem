@@ -30,6 +30,12 @@ Options:
         relaxed
             Optimised for grid cells wider than 100 columns.
 
+  -w, --console-width int
+      Override the console width with the specified value
+
+  -h, --console-height int
+      Override the console height with the specified value
+
   -p, --poll-period duration
       Polling period for caching individual metric raw values,
       with unit suffixes [s, m, h], ignored in remote mode (default: 1s).
@@ -38,11 +44,15 @@ Options:
       Bin period for analysing and publishing individual, calculated metric values,
       with unit suffixes [s, m, h], ignored in remote mode (default: 5s).
 
-  -n, --no-stream
-      Disable continuous streaming, display a single console and exits.
+  -a, --ascii
+      Output ASCII charset only, instead of the Unicode default.
 
   -b, --monochrome
       Disable console colour output.
+
+  -j, --json
+      Output JSON format instead of the default text format. Assumes local mode,
+      repects poll and bin period options and ignores all formating options.
 
   -h, --help
       Display this help message and exit.

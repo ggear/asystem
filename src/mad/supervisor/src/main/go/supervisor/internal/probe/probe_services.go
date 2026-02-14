@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log/slog"
 	"sort"
 	"strings"
-	"supervisor/internal/window"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -16,8 +14,8 @@ import (
 )
 
 const (
-	dockerTimeoutSeconds    = 2
-	containerIgnoredPattern = "reaper_"
+	servicesDockerTimeoutSecs            = 2
+	servicesDockerContainerIgnorePattern = "reaper_"
 )
 
 type Services struct {
@@ -29,24 +27,24 @@ type Services struct {
 }
 
 type Service struct {
-	name               string
-	nameOK             bool
-	usedProcessor      int8
-	usedProcessorOK    bool
-	usedMemory         int8
-	usedMemoryOK       bool
-	backupStatus       bool
-	backupStatusOK     bool
-	healthStatus       bool
-	healthStatusOK     bool
-	configuredStatus   bool
-	configuredStatusOK bool
-	restartCount       int
-	restartCountOK     bool
-	runtime            time.Duration
-	runtimeOK          bool
-	version            string
-	versionOK          bool
+	name                string
+	nameErr             error
+	usedProcessor       int8
+	usedProcessorErr    error
+	usedMemory          int8
+	usedMemoryErr       error
+	backupStatus        bool
+	backupStatusErr     error
+	healthStatus        bool
+	healthStatusErr     error
+	configuredStatus    bool
+	configuredStatusErr error
+	restartCount        int
+	restartCountErr     error
+	runtime             time.Duration
+	runtimeErr          error
+	version             string
+	versionErr          error
 }
 
 func NewServices() *Services {
@@ -68,121 +66,112 @@ func NewServices() *Services {
 
 func (s *Services) Services() ([]Service, error) {
 	if s == nil {
-		return nil, errors.New("services not initialized")
+		return nil, errors.New("services not initialised")
 	}
 	if s.newDockerClient == nil || s.listContainers == nil || s.statsOneShot == nil || s.inspectContainer == nil {
-		// TODO: Log error
-		slog.Error("docker client not configured")
-		return nil, errors.New("docker client not configured")
+		return nil, errors.New("docker client not initialised")
 	}
 	dockerClient, err := s.ensureDockerClient()
 	if err != nil {
-		// TODO: Log error
 		return nil, fmt.Errorf("ensure docker client: %w", err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), dockerTimeoutSeconds*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), servicesDockerTimeoutSecs*time.Second)
 	defer cancel()
 	containers, err := s.listContainers(ctx, dockerClient)
 	if err != nil {
-		retryClient, retryErr := s.reconnectDockerClient()
-		if retryErr != nil {
-			// TODO: Log error
-			return nil, fmt.Errorf("reconnect docker client: %w", retryErr)
-		}
-		containers, err = s.listContainers(ctx, retryClient)
+		dockerClient, err = s.reconnectDockerClient()
 		if err != nil {
-			// TODO: Log error
+			return nil, fmt.Errorf("reconnect docker client: %w", err)
+		}
+		containers, err = s.listContainers(ctx, dockerClient)
+		if err != nil {
 			return nil, fmt.Errorf("list containers after reconnect: %w", err)
 		}
 	}
 	services := make([]Service, 0, len(containers))
-	for _, dockerContainer := range containers {
+	for _, serviceContainer := range containers {
 		name := ""
-		for _, rawName := range dockerContainer.Names {
+		for _, rawName := range serviceContainer.Names {
 			rawName = strings.TrimPrefix(rawName, "/")
-			if rawName == "" {
-				continue
+			if rawName != "" {
+				name = rawName
+				break
 			}
-			name = rawName
-			break
 		}
-		if strings.HasPrefix(name, containerIgnoredPattern) {
+		if strings.HasPrefix(name, servicesDockerContainerIgnorePattern) {
 			continue
 		}
-		service := Service{
-			name:   name,
-			nameOK: name != "",
+		service := Service{name: name}
+		if name == "" {
+			service.nameErr = errors.New("service name not available")
 		}
-		stats, err := fetchStats(ctx, dockerClient, s.statsOneShot, dockerContainer.ID)
+		stats, err := fetchStats(ctx, dockerClient, s.statsOneShot, serviceContainer.ID)
 		if err != nil {
-			// TODO: Log error
+			service.usedProcessorErr = err
+			service.usedMemoryErr = err
 		} else {
 			usedProcessor, processorErr := processorUsed(stats)
 			if processorErr != nil {
-				// TODO: Log error
+				service.usedProcessorErr = processorErr
 			} else {
 				service.usedProcessor = usedProcessor
-				service.usedProcessorOK = true
 			}
 			usedMemory, memoryErr := memoryUsed(stats)
 			if memoryErr != nil {
-				// TODO: Log error
+				service.usedMemoryErr = memoryErr
 			} else {
 				service.usedMemory = usedMemory
-				service.usedMemoryOK = true
 			}
 		}
-		inspectInfo, inspectErr := fetchInspect(ctx, dockerClient, s.inspectContainer, dockerContainer.ID)
-		if inspectErr != nil {
-			// TODO: Log error
+		inspectInfo, err := fetchInspect(ctx, dockerClient, s.inspectContainer, serviceContainer.ID)
+		if err != nil {
+			service.healthStatusErr = err
+			service.runtimeErr = err
+			service.configuredStatusErr = err
+			service.restartCountErr = err
+			service.versionErr = err
 		} else {
-			healthStatus, healthErr := healthStatus(inspectInfo)
+			healthStatusValue, healthErr := healthStatus(inspectInfo)
 			if healthErr != nil {
-				// TODO: Log error
+				service.healthStatusErr = healthErr
 			} else {
-				service.healthStatus = healthStatus
-				service.healthStatusOK = true
+				service.healthStatus = healthStatusValue
 			}
-			runtime, runtimeErr := runtime(inspectInfo)
+			runtimeValue, runtimeErr := runtime(inspectInfo)
 			if runtimeErr != nil {
-				// TODO: Log error
+				service.runtimeErr = runtimeErr
 			} else {
-				service.runtime = runtime
-				service.runtimeOK = true
+				service.runtime = runtimeValue
 			}
-			backupStatus, backupErr := backupStatus()
-			if backupErr != nil {
-				// TODO: Log error
-			} else {
-				service.backupStatus = backupStatus
-				service.backupStatusOK = true
-			}
-			configuredStatus, configuredErr := configuredStatus(inspectInfo)
-			if configuredErr != nil {
-				// TODO: Log error
-			} else {
-				service.configuredStatus = configuredStatus
-				service.configuredStatusOK = true
-			}
-			restartCount, restartErr := restartCount(inspectInfo)
+			restartCountValue, restartErr := restartCount(inspectInfo)
 			if restartErr != nil {
-				// TODO: Log error
+				service.restartCountErr = restartErr
 			} else {
-				service.restartCount = restartCount
-				service.restartCountOK = true
+				service.restartCount = restartCountValue
 			}
-			version, versionErr := version(inspectInfo)
+			versionValue, versionErr := version(inspectInfo)
 			if versionErr != nil {
-				// TODO: Log error
+				service.versionErr = versionErr
 			} else {
-				service.version = version
-				service.versionOK = true
+				service.version = versionValue
 			}
+		}
+		configuredStatusValue, configuredErr := configuredStatus()
+		if configuredErr != nil {
+			service.configuredStatusErr = configuredErr
+		} else {
+			service.configuredStatus = configuredStatusValue
+		}
+		backupStatusValue, backupErr := backupStatus()
+		if backupErr != nil {
+			service.backupStatusErr = backupErr
+		} else {
+			service.backupStatus = backupStatusValue
 		}
 		services = append(services, service)
 	}
-	sort.Slice(services, func(i, j int) bool {
-		return services[i].name < services[j].name
+	sort.Slice(services, func(leftIndex, rightIndex int) bool {
+		return services[leftIndex].name < services[rightIndex].name
 	})
 	return services, nil
 }
@@ -198,66 +187,107 @@ func (s *Services) Reset() {
 }
 
 func (s *Service) Name() (string, error) {
-	if s == nil || !s.nameOK {
+	if s == nil {
 		return "", errors.New("service name not available")
+	}
+	if s.nameErr != nil {
+		err := s.nameErr
+		s.nameErr = nil
+		return "", err
 	}
 	return s.name, nil
 }
 
 func (s *Service) UsedProcessor() (int8, error) {
-	if !s.usedProcessorOK {
-		return 0, errors.New("cpu usage not available")
+	if s.usedProcessorErr != nil {
+		err := s.usedProcessorErr
+		s.usedProcessorErr = nil
+		return 0, err
 	}
 	return s.usedProcessor, nil
 }
 
 func (s *Service) UsedMemory() (int8, error) {
-	if !s.usedMemoryOK {
-		return 0, errors.New("memory usage not available")
+	if s.usedMemoryErr != nil {
+		err := s.usedMemoryErr
+		s.usedMemoryErr = nil
+		return 0, err
 	}
 	return s.usedMemory, nil
 }
 
 func (s *Service) BackupStatus() (bool, error) {
-	if !s.backupStatusOK {
-		return false, errors.New("backup status not available")
+	if s.backupStatusErr != nil {
+		err := s.backupStatusErr
+		s.backupStatusErr = nil
+		return false, err
 	}
 	return s.backupStatus, nil
 }
 
 func (s *Service) HealthStatus() (bool, error) {
-	if !s.healthStatusOK {
-		return false, errors.New("health status not available")
+	if s.healthStatusErr != nil {
+		err := s.healthStatusErr
+		s.healthStatusErr = nil
+		return false, err
 	}
 	return s.healthStatus, nil
 }
 
 func (s *Service) ConfiguredStatus() (bool, error) {
-	if !s.configuredStatusOK {
-		return false, errors.New("configured status not available")
+	if s.configuredStatusErr != nil {
+		err := s.configuredStatusErr
+		s.configuredStatusErr = nil
+		return false, err
 	}
 	return s.configuredStatus, nil
 }
 
 func (s *Service) RestartCount() (int, error) {
-	if !s.restartCountOK {
-		return 0, errors.New("restart count not available")
+	if s.restartCountErr != nil {
+		err := s.restartCountErr
+		s.restartCountErr = nil
+		return 0, err
 	}
 	return s.restartCount, nil
 }
 
 func (s *Service) Runtime() (time.Duration, error) {
-	if !s.runtimeOK {
-		return 0, errors.New("runtime not available")
+	if s.runtimeErr != nil {
+		err := s.runtimeErr
+		s.runtimeErr = nil
+		return 0, err
 	}
 	return s.runtime, nil
 }
 
 func (s *Service) Version() (string, error) {
-	if !s.versionOK {
-		return "", errors.New("version not available")
+	if s.versionErr != nil {
+		err := s.versionErr
+		s.versionErr = nil
+		return "", err
 	}
 	return s.version, nil
+}
+
+func (s *Services) ensureDockerClient() (*client.Client, error) {
+	if s.dockerClient != nil {
+		return s.dockerClient, nil
+	}
+	dockerClient, err := s.newDockerClient()
+	if err != nil {
+		return nil, fmt.Errorf("create docker client: %w", err)
+	}
+	s.dockerClient = dockerClient
+	return dockerClient, nil
+}
+
+func (s *Services) reconnectDockerClient() (*client.Client, error) {
+	if s.dockerClient != nil {
+		_ = s.dockerClient.Close()
+		s.dockerClient = nil
+	}
+	return s.ensureDockerClient()
 }
 
 func fetchStats(ctx context.Context, dockerClient *client.Client, statsOneShot func(context.Context, *client.Client, string) (container.StatsResponseReader, error), id string) (container.StatsResponse, error) {
@@ -285,7 +315,7 @@ func fetchInspect(ctx context.Context, dockerClient *client.Client, inspectConta
 
 func processorUsed(stats container.StatsResponse) (int8, error) {
 	if stats.PreCPUStats.CPUUsage.TotalUsage == 0 && stats.PreCPUStats.SystemUsage == 0 {
-		return 0, errors.New("cpu usage unavailable, first tick")
+		return 0, ErrProcessorProbeWarmingUp
 	}
 	cpuDelta := float64(stats.CPUStats.CPUUsage.TotalUsage - stats.PreCPUStats.CPUUsage.TotalUsage)
 	systemDelta := float64(stats.CPUStats.SystemUsage - stats.PreCPUStats.SystemUsage)
@@ -297,7 +327,7 @@ func processorUsed(stats container.StatsResponse) (int8, error) {
 		onlineCPUs = float64(len(stats.CPUStats.CPUUsage.PercpuUsage))
 	}
 	usedPercent := (cpuDelta / systemDelta) * onlineCPUs * 100.0
-	return window.ConvertToQuota(usedPercent)
+	return convertToQuota(usedPercent)
 }
 
 func memoryUsed(stats container.StatsResponse) (int8, error) {
@@ -305,7 +335,7 @@ func memoryUsed(stats container.StatsResponse) (int8, error) {
 		return 0, errors.New("memory limit must be > 0")
 	}
 	usedPercent := (float64(stats.MemoryStats.Usage) / float64(stats.MemoryStats.Limit)) * 100.0
-	return window.ConvertToQuota(usedPercent)
+	return convertToQuota(usedPercent)
 }
 
 func healthStatus(containerInfo container.InspectResponse) (bool, error) {
@@ -321,20 +351,20 @@ func healthStatus(containerInfo container.InspectResponse) (bool, error) {
 }
 
 func backupStatus() (bool, error) {
-	return false, errors.New("backup status not available")
+	// TODO: Provide implementation
+	return false, nil
 }
 
-func configuredStatus(containerInfo container.InspectResponse) (bool, error) {
-	if containerInfo.Config == nil {
-		return false, errors.New("configured status not available")
-	}
-	return true, nil
+func configuredStatus() (bool, error) {
+	// TODO: Provide implementation
+	return false, nil
 }
 
 func restartCount(containerInfo container.InspectResponse) (int, error) {
 	if containerInfo.ContainerJSONBase == nil {
 		return 0, errors.New("restart count not available")
 	}
+	// TODO: Provide implementation
 	return containerInfo.RestartCount, nil
 }
 
@@ -345,6 +375,7 @@ func version(containerInfo container.InspectResponse) (string, error) {
 	if containerInfo.Image != "" {
 		return containerInfo.Image, nil
 	}
+	// TODO: Provide implementation
 	return "", errors.New("version not available")
 }
 
@@ -361,24 +392,4 @@ func runtime(containerInfo container.InspectResponse) (time.Duration, error) {
 		return 0, errors.New("runtime not available")
 	}
 	return runtime, nil
-}
-
-func (s *Services) ensureDockerClient() (*client.Client, error) {
-	if s.dockerClient != nil {
-		return s.dockerClient, nil
-	}
-	dockerClient, err := s.newDockerClient()
-	if err != nil {
-		return nil, fmt.Errorf("create docker client: %w", err)
-	}
-	s.dockerClient = dockerClient
-	return dockerClient, nil
-}
-
-func (s *Services) reconnectDockerClient() (*client.Client, error) {
-	if s.dockerClient != nil {
-		_ = s.dockerClient.Close()
-		s.dockerClient = nil
-	}
-	return s.ensureDockerClient()
 }

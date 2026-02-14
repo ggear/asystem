@@ -3,7 +3,6 @@ package probe
 import (
 	"errors"
 	"fmt"
-	"supervisor/internal/window"
 
 	"github.com/shirou/gopsutil/v4/cpu"
 	"github.com/shirou/gopsutil/v4/mem"
@@ -23,11 +22,6 @@ func NewCompute() *Compute {
 	}
 }
 
-type cpuUsageSampler struct {
-	hasSample  bool
-	lastSample cpu.TimesStat
-}
-
 func (c *Compute) UsedProcessor() (int8, error) {
 	return c.cpuSampler.sample(c.cpuTimes)
 }
@@ -41,19 +35,12 @@ func (c *Compute) UsedMemory() (int8, error) {
 		return 0, errors.New("total memory must be > 0")
 	}
 	usedPercent := (float64(memoryStat.Total-memoryStat.Available) / float64(memoryStat.Total)) * 100.0
-	return window.ConvertToQuota(usedPercent)
+	return convertToQuota(usedPercent)
 }
 
 func (c *Compute) AllocatedMemory() (int8, error) {
-	memoryStat, err := c.virtualMemory()
-	if err != nil {
-		return 0, fmt.Errorf("virtual memory stats: %w", err)
-	}
-	if memoryStat.Total == 0 {
-		return 0, errors.New("total memory must be > 0")
-	}
-	allocatedPercent := (float64(memoryStat.Used) / float64(memoryStat.Total)) * 100.0
-	return window.ConvertToQuota(allocatedPercent)
+	// TODO: Provide implementation
+	return 0, nil
 }
 
 func (c *Compute) Reset() {
@@ -64,6 +51,11 @@ func (c *Compute) Reset() {
 	}
 	c.cpuTimes = cpu.Times
 	c.virtualMemory = mem.VirtualMemory
+}
+
+type cpuUsageSampler struct {
+	hasSample  bool
+	lastSample cpu.TimesStat
 }
 
 func (s *cpuUsageSampler) reset() {
@@ -83,7 +75,7 @@ func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (
 	if !s.hasSample {
 		s.lastSample = currentTimes[0]
 		s.hasSample = true
-		return 0, errors.New("cpu usage unavailable, first tick")
+		return 0, ErrProcessorProbeWarmingUp
 	}
 	previousIdleTime := s.lastSample.Idle
 	previousTotalTime := s.lastSample.Total()
@@ -96,5 +88,5 @@ func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (
 		return 0, errors.New("cpu usage unavailable, non-monotonic counters")
 	}
 	usedPercent := (1.0 - idleDelta/totalDelta) * 100.0
-	return window.ConvertToQuota(usedPercent)
+	return convertToQuota(usedPercent)
 }

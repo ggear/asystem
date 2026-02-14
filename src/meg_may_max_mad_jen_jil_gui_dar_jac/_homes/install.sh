@@ -27,7 +27,6 @@ EOF
 # .bashrc
 
 export LANG=en_AU.UTF-8
-export LC_ALL=en_AU.UTF-8
 export LC_COLLATE=C
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad

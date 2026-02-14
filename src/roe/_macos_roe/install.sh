@@ -17,7 +17,6 @@ defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool TRUE
 
 export PS1='\u@\h:\w\$ '
 
-export LC_ALL=C ls
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS="--color=auto"
@@ -66,7 +65,6 @@ tput rmam
 
 export PS1='\u@\h:\w\$ '
 
-export LC_ALL=C ls
 export CLICOLOR=1
 export LSCOLORS=ExFxCxDxBxegedabagacad
 export LS_OPTIONS="--color=auto"
