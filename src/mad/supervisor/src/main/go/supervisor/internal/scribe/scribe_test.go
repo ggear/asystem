@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"supervisor/internal/testutil"
 	"testing"
 )
 
@@ -60,36 +59,39 @@ func TestScribe_Stdout(t *testing.T) {
 func TestScribe_File(t *testing.T) {
 	tests := []struct {
 		name     string
-		setup    func(string)
+		setup    func(string) error
 		logFunc  func(string)
 		expected bool
 	}{
 		{
 			name:     "Enabled",
-			setup:    func(logPath string) { EnableFile(slog.LevelDebug, logPath, 10, 7, 30) },
+			setup:    func(cmd string) error { return EnableFile(slog.LevelDebug, cmd, 10, 7, 30) },
 			logFunc:  func(message string) { slog.Debug(message) },
 			expected: true,
 		},
 		{
 			name:     "Disabled",
-			setup:    func(logPath string) { EnableFile(9, logPath, 10, 7, 30) },
+			setup:    func(cmd string) error { return EnableFile(9, cmd, 10, 7, 30) },
 			logFunc:  func(message string) { slog.Error(message) },
 			expected: false,
 		},
 		{
 			name:     "Enabled",
-			setup:    func(logPath string) { EnableFile(slog.LevelDebug, logPath, 10, 7, 30) },
+			setup:    func(cmd string) error { return EnableFile(slog.LevelDebug, cmd, 10, 7, 30) },
 			logFunc:  func(message string) { slog.Debug(message) },
 			expected: true,
 		},
 		{
 			name:     "Disabled",
-			setup:    func(logPath string) { Disable() },
+			setup:    func(cmd string) error { Disable(); return nil },
 			logFunc:  func(message string) { slog.Error(message) },
 			expected: false,
 		},
 	}
-	baseDir := testutil.FindDir(t, "target")
+	logDir := logDirUser
+	if os.Geteuid() == 0 {
+		logDir = logDirRoot
+	}
 	for index, testCase := range tests {
 		testCase := testCase
 		name := fmt.Sprintf("%s_%d", testCase.name, index)
@@ -97,10 +99,13 @@ func TestScribe_File(t *testing.T) {
 		if !testCase.expected {
 			message = fmt.Sprintf("UNEXPECTED LOG MESSAGE %d!!!!", index)
 		}
-		logPath := filepath.Join(baseDir, fmt.Sprintf("supervisor-test-%d.log", index))
+		cmdName := fmt.Sprintf("supervisor-test-%d", index)
+		logPath := filepath.Join(logDir, fmt.Sprintf("%s-pid-%d.log", cmdName, os.Getpid()))
 		t.Run(name, func(t *testing.T) {
 			_ = os.Remove(logPath)
-			testCase.setup(logPath)
+			if err := testCase.setup(cmdName); err != nil {
+				t.Fatalf("setup failed: %v", err)
+			}
 			t.Logf("Log in mode [%s] and level [%v]", Mode(), Level())
 			testCase.logFunc(message)
 			content, err := os.ReadFile(logPath)

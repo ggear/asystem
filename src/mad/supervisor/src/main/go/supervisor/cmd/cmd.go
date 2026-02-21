@@ -16,22 +16,24 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.PersistentFlags().BoolP("version", "v", false, "Display version information and exit")
+	rootCmd.PersistentFlags().BoolP("version", "v", false, "display version information and exit")
+	rootCmd.Flags().SortFlags = false
+	rootCmd.PersistentFlags().SortFlags = false
+	rootCmd.InheritedFlags().SortFlags = false
 }
 
 var rootCmd = &cobra.Command{
-	Use:           "supervisor [command]",
-	Short:         "Run the supervisor processes",
-	Long:          "Run the supervisor processes",
+	Short:         rootDescription,
+	Long:          rootDescription,
 	SilenceUsage:  true,
-	SilenceErrors: false,
+	SilenceErrors: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		showVersion, _ := cmd.Flags().GetBool("version")
 		if showVersion {
-			if config, err := config.Load(config.DefaultConfigPath); err != nil {
+			if c, err := config.Load(config.DefaultConfigPath); err != nil {
 				return err
 			} else {
-				fmt.Println(config.Version())
+				fmt.Println(c.Version())
 			}
 			os.Exit(0)
 		}
@@ -41,3 +43,5 @@ var rootCmd = &cobra.Command{
 		return nil
 	},
 }
+
+const rootDescription = "Run supervisor processes"

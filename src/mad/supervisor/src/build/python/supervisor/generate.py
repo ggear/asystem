@@ -1,6 +1,6 @@
 import json
-from os.path import *
 from operator import itemgetter
+from os.path import *
 
 from fabfile import _get_modules_by_hosts
 from homeassistant.generate import load_entity_metadata
@@ -29,7 +29,18 @@ if __name__ == "__main__":
         metadata_supervisor_file.write(json.dumps({
             "asystem": {
                 "version": "$SERVICE_VERSION_ABSOLUTE",
-                "services": [{"host": k, "services": sorted(v)} for k, v in sorted(_get_modules_by_hosts("docker-compose.yml").items(), key=itemgetter(0))]
+                "broker": {
+                    "host": "$VERNEMQ_SERVICE",
+                    "port": "$VERNEMQ_API_PORT"
+                },
+                "database": {
+                    "host": "$INFLUXDB_SERVICE",
+                    "port": "$INFLUXDB_HTTP_PORT"
+                },
+                "services": [{
+                    "host": host,
+                    "services": sorted(services)
+                } for host, services in sorted(_get_modules_by_hosts("docker-compose.yml").items(), key=itemgetter(0))]
             },
         }, indent=2))
     print("Build generate script [supervisor] service metadata persisted to [{}]".format(metadata_supervisor_path))

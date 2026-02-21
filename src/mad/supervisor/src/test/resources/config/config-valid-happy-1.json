@@ -1,6 +1,14 @@
 {
   "asystem": {
     "version": "10.100.6792",
+    "broker": {
+      "host": "vernemq.local.janeandgraham.com",
+      "port": "1000"
+    },
+    "database": {
+      "host": "influxdb.local.janeandgraham.com",
+      "port": "2000"
+    },
     "services": [
       {
         "host": "macmini-mad",

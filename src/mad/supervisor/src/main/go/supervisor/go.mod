@@ -4,6 +4,7 @@ go 1.25
 
 require (
 	github.com/containerd/errdefs v1.0.0
+	github.com/divan/num2words v1.0.3
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/eclipse/paho.mqtt.golang v1.5.1
 	github.com/gdamore/tcell/v3 v3.1.2
@@ -12,6 +13,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.40.0
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	golang.org/x/exp v0.0.0-20260112195511-716be5621a96
+	golang.org/x/term v0.39.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 )
 
@@ -72,7 +74,6 @@ require (
 	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/term v0.39.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

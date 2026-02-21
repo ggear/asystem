@@ -707,7 +707,12 @@ def _unittest(context, filter_module=None):
     for module in _get_modules(context, "src/main/go", filter_module=filter_module):
         _print_header(module, "unittest")
         _print_line("Running unit tests ...")
-        _run_local(context, "echo ""; set -o pipefail && gotestsum --format-hide-empty-pkg --format short-verbose --no-color=false ./... | grep -v 'EMPTY' 2>&1 | cat",
+        _run_local(context,
+                   "GOCACHE={} GOBIN={} echo ""; "
+                   "set -o pipefail && gotestsum --format-hide-empty-pkg --format short-verbose --no-color=false ./... | "
+                   "grep -v 'EMPTY' 2>&1 | cat".format(
+                       join(ROOT_MODULE_DIR, module, "target/go/cache"),
+                       join(ROOT_MODULE_DIR, module, "target/go/bin")),
                    join(module, "src/main/go/{}".format(_get_service(module))))
         _print_footer(module, "unittest")
     for module in _get_modules(context, "src/test/rust/unit/unit_test.rs", filter_module=filter_module):

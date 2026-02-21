@@ -28,8 +28,8 @@ func (w *terminalWrapper) clear() {
 	w.screen.Clear()
 }
 
-func (w *terminalWrapper) draw(x int, y int, str string, colour Colour) {
-	if colour == ColourDefault {
+func (w *terminalWrapper) draw(x int, y int, str string, colour colour) {
+	if colour == colourDefault {
 		w.screen.PutStr(x, y, str)
 	} else {
 		w.screen.PutStrStyled(x, y, str, tcell.StyleDefault.Foreground(colourToTcell(colour)))
@@ -48,15 +48,15 @@ func (w *terminalWrapper) events() chan tcell.Event {
 	return w.screen.EventQ()
 }
 
-func colourToTcell(colour Colour) tcell.Color {
+func colourToTcell(colour colour) tcell.Color {
 	switch colour {
-	case ColourGray:
+	case colourGray:
 		return color.Gray
-	case ColourGreen:
+	case colourGreen:
 		return color.Green
-	case ColourYellow:
+	case colourYellow:
 		return color.Yellow
-	case ColourRed:
+	case colourRed:
 		return color.Red
 	default:
 		return color.Default

@@ -4,6 +4,9 @@ supervisor/macmini-meg/host/cmd # json{}
 supervisor/macmini-meg/host/meta # json{"version":"10.100.6842","timestamp":"2025-12-31T14:00:00Z","pulse":{"window":"5s"},"trend":{"window":"1d"}}
 supervisor/macmini-meg/host/data # json{"pulse":{"ok":true},"trend":{"ok":true}}
 
+supervisor/macmini-meg/host/supervisor/meta # json{"version":"10.100.6842","timestamp":"2025-12-31T14:00:00Z","pulse":{"window":"5s"},"trend":{"window":"1d"}}
+supervisor/macmini-meg/host/supervisor/data # json{"pulse":{"ok":true},"trend":{"ok":true}}
+
 supervisor/macmini-meg/host/compute/meta # json{"version":"10.100.6842","timestamp":"2025-12-31T14:00:00Z","pulse":{"window":"5s"},"trend":{"window":"1d"}}
 supervisor/macmini-meg/host/compute/data # json{"pulse":{"ok":true},"trend":{"ok":true}}
 supervisor/macmini-meg/host/compute/used_processor/meta # json{"version":"10.100.6842","timestamp":"2025-12-31T14:00:00Z","pulse":{"window":"5s","unit":"%","type":"percent","measure":"mean"},"trend":{"window":"1d","unit":"%","type":"percent","measure":"p95"}}

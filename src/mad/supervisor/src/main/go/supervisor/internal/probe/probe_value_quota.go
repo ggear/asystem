@@ -47,12 +47,12 @@ import (
 //
 //goland:noinspection GoUnusedConst
 const (
-	// Value range constants
+	// Datum range constants
 	minValidValue = 0   // Minimum valid input value (inclusive)
 	maxValidValue = 100 // Maximum valid input value (inclusive)
 	// Sentinel values for uninitialised min/max
-	uninitialisedMin = 101 // Value > maxValidValue indicates no data yet
-	uninitialisedMax = -1  // Value < minValidValue indicates no data yet
+	uninitialisedMin = 101 // Datum > maxValidValue indicates no data yet
+	uninitialisedMax = -1  // Datum < minValidValue indicates no data yet
 	// Overflow limits - using saturation to prevent wraparound
 	maxInt16BucketCount = 32767      // Maximum value for int16 bucket (handles 32K samples/sec)
 	maxInt32BucketCount = 2147483647 // Maximum value for int32 bucket

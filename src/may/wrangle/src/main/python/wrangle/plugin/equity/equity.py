@@ -264,6 +264,14 @@ class Equity(library.Library):
                                             for indexes in [
                                                 (2, "Situations", CURRENCIES, 5, 10, 2, 6),
                                                 (2, "Situations", CURRENCIES, 8, 13, 2, 6),
+
+                                                # PATCH: START
+                                                #  Format changed from "Compass Offshore Special Situations PCC Ltd GBP"
+                                                #  to "Compass Offshore Special Situations ICAV GBP" in 58861-A-122025-1.pdf,
+                                                #  added this to deal with it
+                                                (2, "Situations", CURRENCIES, 7, 12, 1, 6),
+                                                # PATCH: END
+
                                                 (3, "Situations", CURRENCIES, 5, 9, 2, 6),
                                                 (2, "Shares", ["USD"], 2, 7),
                                                 (3, "Shares", ["USD"], 2, 6),

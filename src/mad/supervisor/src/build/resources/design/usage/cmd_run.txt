@@ -14,7 +14,7 @@ Options:
       Bin period for analysing and publishing individual, calculated metric values,
       with unit suffixes [s, m, h] (default: 5s).
 
-  -s, --snaphot-period duration
+  -s, --snapshot-period duration
       Snapshot period for publishing a complete set of calculated metric values,
       with unit suffixes [s, m, h] (default: 5m).
 

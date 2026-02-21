@@ -56,7 +56,7 @@ const (
 
 type Value struct {
 	OK    *bool  `msgpack:"ok,omitempty" json:"ok,omitempty"`
-	Value string `msgpack:"value,omitempty" json:"value,omitempty"`
+	Datum string `msgpack:"datum,omitempty" json:"datum,omitempty"`
 	Unit  string `msgpack:"unit,omitempty" json:"unit,omitempty"`
 }
 
@@ -78,7 +78,8 @@ type RecordGUID struct {
 
 type Record struct {
 	Topic       string
-	Value       Value
+	Pulse       Value
+	Trend       Value
 	Timestamp   time.Time
 	depsForward []RecordGUID
 	depsReverse map[RecordGUID]struct{}
@@ -109,13 +110,13 @@ func MarshalSnapshot(configPath string, records []Record) ([]byte, error) {
 	}
 	for _, record := range records {
 		recordValueOK := ""
-		if ok := record.Value.OK; ok != nil {
+		if ok := record.Pulse.OK; ok != nil {
 			recordValueOK = strconv.FormatBool(*ok)
 		}
 		snapshot.Metrics[record.Topic] = newMetricValue(
 			recordValueOK,
-			record.Value.Value,
-			record.Value.Unit,
+			record.Pulse.Datum,
+			record.Pulse.Unit,
 		)
 	}
 	encoded, err := msgpack.Marshal(snapshot)
@@ -136,12 +137,36 @@ func UnmarshalSnapshot(snapshotMsgPack []byte) (*RecordSnapshot, error) {
 	return &snapshot, nil
 }
 
+func NewRecordCache() *RecordCache {
+	return &RecordCache{
+		records:     make(map[RecordGUID]*Record),
+		notify:      make(chan struct{}, 1),
+		listeners:   make(map[RecordGUID][]UpdatesListener),
+		depsPending: make(map[RecordGUID]map[RecordGUID]struct{}),
+	}
+}
+
+func (c *RecordCache) LoadLocalListeners() error {
+	// TODO: Implement
+	return nil
+}
+
+func (c *RecordCache) LoadRemoteListeners() error {
+	// TODO: Implement
+	return nil
+}
+
+func (c *RecordCache) LoadLocalPublishers() error {
+	// TODO: Implement
+	return nil
+}
+
 func CacheRemoteMetrics(metrics map[string]Value) (*RecordCache, error) {
 	topics := slices.Collect(maps.Keys(metrics))
 	slices.Sort(topics)
 	services := make(map[string]int)
 	services[""] = -1
-	cache := newMetricRecordCache()
+	cache := NewRecordCache()
 	for _, topic := range topics {
 		value := metrics[topic]
 		builder := builder{topic: topic}
@@ -158,7 +183,7 @@ func CacheRemoteMetrics(metrics map[string]Value) (*RecordCache, error) {
 		}
 		cache.Put(
 			RecordGUID{id, host, services[service]},
-			&Record{Topic: topic, Value: value},
+			&Record{Topic: topic, Pulse: value, Trend: value},
 		)
 	}
 	return cache, nil
@@ -170,7 +195,7 @@ func CacheLocalMetrics(hostName string, configPath string) (*RecordCache, error)
 	//   -> RWMutex around the Map
 	//   -> have a samples timeout reappear service to blank out non updated metrics, maybe on snapshot+10 interval when snapshots are expected
 	// TODO: How to reload for new or removed services
-	//   -> OnChange triggered by Value and or ServiceIndex change
+	//   -> OnChange triggered by Datum and or ServiceIndex change
 	//   -> have display work out if a service has been deleted and not replaced, to nil out display
 	if hostName == "" {
 		return nil, errors.New("host name not defined")
@@ -180,7 +205,7 @@ func CacheLocalMetrics(hostName string, configPath string) (*RecordCache, error)
 		return nil, fmt.Errorf("load config [%s]: %w", configPath, err)
 	}
 	serviceNameSlice := configData.Services(hostName)
-	cache := newMetricRecordCache()
+	cache := NewRecordCache()
 	for index := ID(0); index < MetricMax; index++ {
 		if metricBuilders[index].isHost() {
 			topic, err := metricBuilders[index].buildHost(hostName)
@@ -260,11 +285,12 @@ func (c *RecordCache) Set(key RecordGUID, value *Value) {
 		c.lock.Unlock()
 		return
 	}
-	old := record.Value
-	record.Value = *value
+	old := record.Pulse
+	record.Pulse = *value
+	record.Trend = *value
 	record.Timestamp = time.Now()
 	listeners = append(listeners, append([]UpdatesListener(nil), c.listeners[key]...)...)
-	if old != record.Value {
+	if old != record.Pulse {
 		visited := make(map[RecordGUID]bool)
 		listeners = c.propagateUpdateLocked(key, visited, listeners)
 	}
@@ -355,7 +381,7 @@ func (c *RecordCache) String() string {
 		entries = append(entries, recordStringEntry{
 			guid:  guid,
 			topic: record.Topic,
-			value: record.Value,
+			value: record.Pulse,
 		})
 	}
 	c.lock.RUnlock()
@@ -370,13 +396,13 @@ func (c *RecordCache) String() string {
 		}
 		_, err := fmt.Fprintf(
 			&stringBuilder,
-			"Index[%03d] Metric[%03d] ServiceIndex[%02v] Host[%v] OK[%1s] Value[%3s] Unit[%1v] topic[%s]\n",
+			"Index[%03d] Metric[%03d] ServiceIndex[%02v] Host[%v] OK[%1s] Datum[%3s] Unit[%1v] topic[%s]\n",
 			index,
 			entry.guid.ID,
 			entry.guid.ServiceIndex,
 			entry.guid.Host,
 			recordValueOK,
-			entry.value.Value,
+			entry.value.Datum,
 			entry.value.Unit,
 			entry.topic,
 		)
@@ -401,15 +427,6 @@ func metricFromTemplate(template string) (ID, error) {
 		return -1, fmt.Errorf("unknown template [%s]", template)
 	}
 	return builder.id, nil
-}
-
-func newMetricRecordCache() *RecordCache {
-	return &RecordCache{
-		records:     make(map[RecordGUID]*Record),
-		notify:      make(chan struct{}, 1),
-		listeners:   make(map[RecordGUID][]UpdatesListener),
-		depsPending: make(map[RecordGUID]map[RecordGUID]struct{}),
-	}
 }
 
 func compareRecordGUID(this, that RecordGUID) int {
@@ -438,7 +455,7 @@ func newMetricValue(ok string, value string, unit string) Value {
 	}
 	return Value{
 		OK:    okPointer,
-		Value: value,
+		Datum: value,
 		Unit:  unit,
 	}
 }
@@ -446,7 +463,8 @@ func newMetricValue(ok string, value string, unit string) Value {
 func newMetricRecord(topic string, ok string, value string, unit string) Record {
 	return Record{
 		Topic:     topic,
-		Value:     newMetricValue(ok, value, unit),
+		Pulse:     newMetricValue(ok, value, unit),
+		Trend:     newMetricValue(ok, value, unit),
 		Timestamp: time.Now(),
 	}
 }
@@ -472,13 +490,14 @@ func (c *RecordCache) propagateUpdateLocked(updatedID RecordGUID, visited map[Re
 		var depValues []Value
 		for _, depRecordGUID := range record.depsForward {
 			if depRecord, found := c.records[depRecordGUID]; found {
-				depValues = append(depValues, depRecord.Value)
+				depValues = append(depValues, depRecord.Pulse)
 			}
 		}
-		oldValue := record.Value
+		oldValue := record.Pulse
 		newValue := record.depsCompute(depValues)
 		if newValue != oldValue {
-			record.Value = newValue
+			record.Pulse = newValue
+			record.Trend = newValue
 			record.Timestamp = time.Now()
 			listeners = append(listeners, append([]UpdatesListener(nil), c.listeners[dependentID]...)...)
 			listeners = c.propagateUpdateLocked(dependentID, visited, listeners)

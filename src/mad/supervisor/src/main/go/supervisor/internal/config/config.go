@@ -51,6 +51,30 @@ func Load(path string) (*Config, error) {
 
 func (s *Config) Version() string { return s.Asystem.Version }
 
+func (s *Config) Broker() string {
+	host := s.Asystem.Broker.Host
+	port := s.Asystem.Broker.Port
+	if host == "" {
+		return ""
+	}
+	if port == "" {
+		return host
+	}
+	return fmt.Sprintf("%s:%s", host, port)
+}
+
+func (s *Config) Database() string {
+	host := s.Asystem.Database.Host
+	port := s.Asystem.Database.Port
+	if host == "" {
+		return ""
+	}
+	if port == "" {
+		return host
+	}
+	return fmt.Sprintf("%s:%s", host, port)
+}
+
 func (s *Config) Hosts() []string {
 	hosts := make([]string, len(s.Asystem.Services))
 	for i := range s.Asystem.Services {
@@ -76,10 +100,17 @@ var versionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}$`)
 
 type configData struct {
 	Version  string
+	Broker   configEndpoint
+	Database configEndpoint
 	Services []configServices
 }
 
 type configServices struct {
 	Host     string
 	Services []string
+}
+
+type configEndpoint struct {
+	Host string
+	Port string
 }

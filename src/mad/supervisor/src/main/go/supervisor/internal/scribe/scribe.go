@@ -1,15 +1,18 @@
 package scribe
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sync"
 
 	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-const DefaultLogFile = "/var/log/supervisor/supervisor.log"
+const logDirUser = "/tmp/supervisor"
+const logDirRoot = "/var/log/supervisor"
 
 func EnableStdout(level slog.Level) {
 	scribeLoggerMutex.Lock()
@@ -20,17 +23,24 @@ func EnableStdout(level slog.Level) {
 	slog.SetDefault(scribeLoggerInstance)
 }
 
-func EnableFile(level slog.Level, path string, maxSizeMB, maxBackups, maxAgeDays int) {
+func EnableFile(level slog.Level, cmd string, maxSizeMB, maxBackups, maxAgeDays int) error {
+	file := fmt.Sprintf("%s-pid-%d.log", cmd, os.Getpid())
+	dir := logDirUser
+	if os.Geteuid() == 0 {
+		dir = logDirRoot
+	}
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	path := filepath.Join(dir, file)
 	scribeLoggerMutex.Lock()
 	defer scribeLoggerMutex.Unlock()
-	if path == "" {
-		path = DefaultLogFile
-	}
 	scribeLoggerLevel = level
 	scribeLoggerMode = "file"
 	writer := &lumberjack.Logger{Filename: path, MaxSize: maxSizeMB, MaxBackups: maxBackups, MaxAge: maxAgeDays, Compress: true}
 	scribeLoggerInstance = slog.New(slog.NewTextHandler(io.MultiWriter(writer), &slog.HandlerOptions{Level: level}))
 	slog.SetDefault(scribeLoggerInstance)
+	return nil
 }
 
 func Disable() {

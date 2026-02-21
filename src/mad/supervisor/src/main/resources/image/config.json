@@ -1,6 +1,14 @@
 {
   "asystem": {
     "version": "$SERVICE_VERSION_ABSOLUTE",
+    "broker": {
+      "host": "$VERNEMQ_SERVICE",
+      "port": "$VERNEMQ_API_PORT"
+    },
+    "database": {
+      "host": "$INFLUXDB_SERVICE",
+      "port": "$INFLUXDB_HTTP_PORT"
+    },
     "services": [
       {
         "host": "macmini-mad",

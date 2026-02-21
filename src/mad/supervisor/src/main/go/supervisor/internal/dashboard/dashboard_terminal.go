@@ -7,20 +7,20 @@ import (
 // TODO:
 //   - hide tcell namespace completely - tcell.Event
 
-type Colour int
+type colour int
 
 const (
-	ColourDefault Colour = iota
-	ColourGray
-	ColourGreen
-	ColourYellow
-	ColourRed
+	colourDefault colour = iota
+	colourGray
+	colourGreen
+	colourYellow
+	colourRed
 )
 
 type Terminal interface {
 	close()
 	clear()
-	draw(x int, y int, str string, colour Colour)
+	draw(row int, col int, str string, colour colour)
 	show()
 	sync()
 	events() chan tcell.Event
