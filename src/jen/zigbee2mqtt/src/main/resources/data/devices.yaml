@@ -193,6 +193,14 @@
       enabled_by_default: true
     last_seen:
       enabled_by_default: true
+'0x001788010f03f035':
+  friendly_name: 'Ada Desk Outlet'
+  homeassistant:
+    expire_after: 3600
+    linkquality:
+      enabled_by_default: true
+    last_seen:
+      enabled_by_default: true
 '0x0017880108fd8633':
   friendly_name: 'Edwin Desk Outlet'
   homeassistant:
