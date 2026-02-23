@@ -17,7 +17,7 @@ import (
 	"github.com/vmihailenco/msgpack/v5"
 )
 
-// TODO: Reorder and remove comments
+// TODO: Reorder and remove comments, create a metric.go, metric_cache.go
 
 // Exported types
 type ID int

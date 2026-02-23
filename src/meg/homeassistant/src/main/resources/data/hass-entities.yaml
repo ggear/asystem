@@ -166,12 +166,12 @@ light.lounge_fan:
   aliases: ['Fan Light']
   room: Zombie
 light.lounge_lamp:
-  name: Lounge Lamp
-  aliases: ['Lamp']
+  name: Lounge Lounge Lamp
+  aliases: ['Lounge Lamp']
   room: Zombie
 light.lounge_reading:
-  name: Lounge Lamp
-  aliases: ['Lamp']
+  name: Lounge Lounge Reading
+  aliases: ['Lounge Reading']
   room: Zombie
 light.parents_main:
   name: Parents Main Lights
