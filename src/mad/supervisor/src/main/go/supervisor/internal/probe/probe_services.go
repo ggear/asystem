@@ -327,7 +327,7 @@ func processorUsed(stats container.StatsResponse) (int8, error) {
 		onlineCPUs = float64(len(stats.CPUStats.CPUUsage.PercpuUsage))
 	}
 	usedPercent := (cpuDelta / systemDelta) * onlineCPUs * 100.0
-	return convertToQuota(usedPercent)
+	return convertToGauge(usedPercent)
 }
 
 func memoryUsed(stats container.StatsResponse) (int8, error) {
@@ -335,7 +335,7 @@ func memoryUsed(stats container.StatsResponse) (int8, error) {
 		return 0, errors.New("memory limit must be > 0")
 	}
 	usedPercent := (float64(stats.MemoryStats.Usage) / float64(stats.MemoryStats.Limit)) * 100.0
-	return convertToQuota(usedPercent)
+	return convertToGauge(usedPercent)
 }
 
 func healthStatus(containerInfo container.InspectResponse) (bool, error) {

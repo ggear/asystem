@@ -65,7 +65,9 @@ func executeStats(opts *statsOptions) error {
 	}
 
 	// TODO: START
-	//  - Update periods to be pulse/trend specific, convert isRemote to zeroed out values
+	//  - Use poll/pulse/cache/trend periods, for stats local/json 1s/1x/0d/0d, stats remote 0s/0x/0d/0d, run local 1s/5x/3d/1d - make a struct?
+	//  - All metrics use pulse, and opt-in to poll in code or cache and trend if > 0
+	//  - Convert isRemote to zeroed out values?
 
 	if _, err := time.ParseDuration(opts.pollPeriod); err != nil {
 		return fmt.Errorf("invalid poll period: %width", err)

@@ -330,7 +330,7 @@ func (d *Dashboard) Update() error {
 	if d.terminal == nil {
 		return fmt.Errorf("dashboard terminal not initialized")
 	}
-	ticker := time.NewTicker(33 * time.Millisecond)
+	ticker := time.NewTicker(250 * time.Millisecond)
 	defer ticker.Stop()
 	var wake bool
 	var forceDrawAll bool

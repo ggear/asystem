@@ -66,7 +66,7 @@ type UpdatesListener interface {
 
 type RecordSnapshot struct {
 	Version   string           `msgpack:"version" json:"version"`
-	Timestamp time.Time        `msgpack:"timestamp" json:"timestamp"`
+	Timestamp int64            `msgpack:"timestamp" json:"timestamp"`
 	Metrics   map[string]Value `msgpack:"metrics" json:"metrics"`
 }
 
@@ -80,14 +80,14 @@ type Record struct {
 	Topic       string
 	Pulse       Value
 	Trend       Value
-	Timestamp   time.Time
+	Timestamp   int64
 	depsForward []RecordGUID
 	depsReverse map[RecordGUID]struct{}
 	depsCompute func(values []Value) Value
 }
 
 type RecordCache struct {
-	lock        sync.RWMutex
+	mutex       sync.RWMutex
 	records     map[RecordGUID]*Record
 	notify      chan struct{}
 	listeners   map[RecordGUID][]UpdatesListener
@@ -105,7 +105,7 @@ func MarshalSnapshot(configPath string, records []Record) ([]byte, error) {
 	}
 	snapshot := &RecordSnapshot{
 		Version:   configData.Version(),
-		Timestamp: time.Now(),
+		Timestamp: time.Now().Unix(),
 		Metrics:   make(map[string]Value),
 	}
 	for _, record := range records {
@@ -146,18 +146,41 @@ func NewRecordCache() *RecordCache {
 	}
 }
 
+func (c *RecordCache) LoadLocal() error {
+	// TODO:
+	//  - Loop over all metrics and load into cache
+	//  - Start probes for one cycle, writing to cache per metric
+	return nil
+}
+
 func (c *RecordCache) LoadLocalListeners() error {
-	// TODO: Implement
+	// TODO:
+	//  - Loop over listeners, load each and its deps into cache
+	//  - Start probes, writing to cache per metric
 	return nil
 }
 
 func (c *RecordCache) LoadRemoteListeners() error {
-	// TODO: Implement
+	// TODO:
+	//  - Loop over listeners, load each and its deps into cache
+	//  - Start topic subscriptions, writing to cache per metric
+	//  - Start reaper routine, if timestamp > poll period + 1, set to nil
 	return nil
 }
 
 func (c *RecordCache) LoadLocalPublishers() error {
-	// TODO: Implement
+	// TODO:
+	//  - Loop over all metrics and load into cache
+	//  - Start probes, writing to cache per metric (necessary for deps, not for JSON/LineProto),
+	//                  writing async cache.publishStream by value (JSON) per metric,
+	//                  writing line protocol to reused buffer per metric,
+	//                  writing async cache.publishHistory by value (String LineProto) at the end fo cycle
+	return nil
+}
+
+func (c *RecordCache) Close() error {
+	// TODO:
+	//  - Stop all routines
 	return nil
 }
 
@@ -237,8 +260,8 @@ func (c *RecordCache) Put(key RecordGUID, record *Record) {
 	if c == nil || c.records == nil || record == nil {
 		return
 	}
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	c.records[key] = record
 	if pendingDependents, found := c.depsPending[key]; found {
 		if record.depsReverse == nil {
@@ -268,8 +291,8 @@ func (c *RecordCache) Get(key RecordGUID) (*Record, bool) {
 	if c == nil || c.records == nil {
 		return nil, false
 	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	record, found := c.records[key]
 	return record, found
 }
@@ -279,22 +302,22 @@ func (c *RecordCache) Set(key RecordGUID, value *Value) {
 		return
 	}
 	var listeners []UpdatesListener
-	c.lock.Lock()
+	c.mutex.Lock()
 	record, found := c.records[key]
 	if !found || record == nil {
-		c.lock.Unlock()
+		c.mutex.Unlock()
 		return
 	}
 	old := record.Pulse
 	record.Pulse = *value
 	record.Trend = *value
-	record.Timestamp = time.Now()
+	record.Timestamp = time.Now().Unix()
 	listeners = append(listeners, append([]UpdatesListener(nil), c.listeners[key]...)...)
 	if old != record.Pulse {
 		visited := make(map[RecordGUID]bool)
 		listeners = c.propagateUpdateLocked(key, visited, listeners)
 	}
-	c.lock.Unlock()
+	c.mutex.Unlock()
 	for _, listener := range listeners {
 		listener.MarkDirty()
 	}
@@ -304,8 +327,8 @@ func (c *RecordCache) SubscribeUpdates(key RecordGUID, listener UpdatesListener)
 	if c == nil {
 		return
 	}
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	c.listeners[key] = append(c.listeners[key], listener)
 }
 
@@ -324,8 +347,8 @@ func (c *RecordCache) Keys() []RecordGUID {
 	if c == nil || c.records == nil {
 		return nil
 	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	recordGUIDs := make([]RecordGUID, 0, len(c.records))
 	for key := range c.records {
 		recordGUIDs = append(recordGUIDs, key)
@@ -337,12 +360,12 @@ func (c *RecordCache) Hosts() []string {
 	if c == nil || c.records == nil {
 		return nil
 	}
-	c.lock.RLock()
+	c.mutex.RLock()
 	hostMap := make(map[string]bool)
 	for key := range c.records {
 		hostMap[key.Host] = true
 	}
-	c.lock.RUnlock()
+	c.mutex.RUnlock()
 	if len(hostMap) == 0 {
 		return nil
 	}
@@ -358,8 +381,8 @@ func (c *RecordCache) Size() int {
 	if c == nil || c.records == nil {
 		return 0
 	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	return len(c.records)
 }
 
@@ -372,7 +395,7 @@ func (c *RecordCache) String() string {
 		topic string
 		value Value
 	}
-	c.lock.RLock()
+	c.mutex.RLock()
 	entries := make([]recordStringEntry, 0, len(c.records))
 	for guid, record := range c.records {
 		if record == nil {
@@ -384,7 +407,7 @@ func (c *RecordCache) String() string {
 			value: record.Pulse,
 		})
 	}
-	c.lock.RUnlock()
+	c.mutex.RUnlock()
 	slices.SortFunc(entries, func(a, b recordStringEntry) int {
 		return compareRecordGUID(a.guid, b.guid)
 	})
@@ -465,7 +488,7 @@ func newMetricRecord(topic string, ok string, value string, unit string) Record 
 		Topic:     topic,
 		Pulse:     newMetricValue(ok, value, unit),
 		Trend:     newMetricValue(ok, value, unit),
-		Timestamp: time.Now(),
+		Timestamp: time.Now().Unix(),
 	}
 }
 
@@ -498,7 +521,7 @@ func (c *RecordCache) propagateUpdateLocked(updatedID RecordGUID, visited map[Re
 		if newValue != oldValue {
 			record.Pulse = newValue
 			record.Trend = newValue
-			record.Timestamp = time.Now()
+			record.Timestamp = time.Now().Unix()
 			listeners = append(listeners, append([]UpdatesListener(nil), c.listeners[dependentID]...)...)
 			listeners = c.propagateUpdateLocked(dependentID, visited, listeners)
 		}
@@ -541,6 +564,9 @@ func (b builder) compile(ids map[ID]bool, templates map[string]bool, builders ma
 	//if b.isService() && !topicPatternService.MatchString(topic) {
 	//	return fmt.Errorf("service topic [%s] does not match expected pattern", topic)
 	//}
+
+	// TODO: Remove deps fields, add a compile time deps list against metricID, add to cache in listener load funcs
+	// TODO: Add influxdb tag/metric labels to metricID
 	// TODO: Fix templatePattern's/templateFormat's isHost, isService add isSnapshot? work off template and or topic return them in build/parse, collapse isFuncs to one enum driven switch impl, that works on topic and template, remove buildHost/Service, just use build
 	// TODO: Work through init v runtime errors, how to handle - look at all exported func's
 

@@ -13,13 +13,13 @@ import (
 
 // Performance-optimised rolling window implementation for monitoring int values 0-100.
 //
-// MEMORY USAGE (per quotaValue with default config):
+// MEMORY USAGE (per gaugeValue with default config):
 //   - Trend window:  ~920 KB (3-tier: 1h@1s + 6h@1min + 18h@1hour = 25 hours total)
 //   - Pulse window: ~1.1 KB (5 samples @ 1s)
-//   - Total per quotaValue: ~921 KB
-//   - 50 QuotaWindows: ~46 MB
+//   - Total per gaugeValue: ~921 KB
+//   - 50 GaugeWindows: ~46 MB
 //
-// CPU USAGE (per quotaValue):
+// CPU USAGE (per gaugeValue):
 //   - Push(): O(1) ~10-20ns per call (array increment + bounds check)
 //   - Tick(): O(1) ~100ns (moves deque pointer, periodic aggregation)
 //   - Query (Mean/Max/Min): O(window_count) ~0.1ms for trend window
@@ -70,18 +70,18 @@ const (
 )
 
 // Exported types
-// quotaValue manages both trend and pulse windows
-type quotaValue struct {
+// gaugeValue manages both trend and pulse windows
+type gaugeValue struct {
 	trend *trendWindow
 	pulse *pulseWindow
 }
 
 // Exported constructors
-// newQuotaValue creates dual windows with configurable durations
+// newGaugeValue creates dual windows with configurable durations
 // trendDays: trend window duration in days
 // pulseSecs: pulse window duration in seconds
 // tickFreqSecs: seconds between ticks (typically 1)
-func newQuotaValue(trendDays int, pulseSecs int, tickFreqSecs int) (*quotaValue, error) {
+func newGaugeValue(trendDays int, pulseSecs int, tickFreqSecs int) (*gaugeValue, error) {
 	trendWindow, err := newTrendWindow(trendDays, tickFreqSecs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create trend window: %w", err)
@@ -90,13 +90,13 @@ func newQuotaValue(trendDays int, pulseSecs int, tickFreqSecs int) (*quotaValue,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pulse window: %w", err)
 	}
-	return &quotaValue{
+	return &gaugeValue{
 		trend: trendWindow,
 		pulse: pulseWindow,
 	}, nil
 }
 
-func convertToQuota[T constraints.Integer | constraints.Float](value T) (int8, error) {
+func convertToGauge[T constraints.Integer | constraints.Float](value T) (int8, error) {
 	valueWide := float64(value)
 	if math.IsNaN(valueWide) || math.IsInf(valueWide, 0) {
 		return -1, errors.New("value must be finite")
@@ -111,31 +111,31 @@ func convertToQuota[T constraints.Integer | constraints.Float](value T) (int8, e
 }
 
 // Exported methods
-func (v *quotaValue) Tick() {
+func (v *gaugeValue) Tick() {
 	v.trend.tick()
 	v.pulse.tick()
 }
 
-func (v *quotaValue) Push(value int8) {
+func (v *gaugeValue) Push(value int8) {
 	v.trend.push(value)
 	v.pulse.push(value)
 }
 
-func (v *quotaValue) PushAndTick(value int8) {
+func (v *gaugeValue) PushAndTick(value int8) {
 	v.Push(value)
 	v.Tick()
 }
 
-func (v *quotaValue) PulseLast() int8   { return v.pulse.last() }
-func (v *quotaValue) PulseMean() int8   { return v.pulse.mean() }
-func (v *quotaValue) PulseMedian() int8 { return v.pulse.median() }
-func (v *quotaValue) PulseMax() int8    { return v.pulse.max() }
-func (v *quotaValue) PulseMin() int8    { return v.pulse.min() }
-func (v *quotaValue) TrendMean() int8   { return v.trend.mean() }
-func (v *quotaValue) TrendMedian() int8 { return v.trend.median() }
-func (v *quotaValue) TrendMax() int8    { return v.trend.max() }
-func (v *quotaValue) TrendMin() int8    { return v.trend.min() }
-func (v *quotaValue) TrendP95() int8    { return v.trend.p95() }
+func (v *gaugeValue) PulseLast() int8   { return v.pulse.last() }
+func (v *gaugeValue) PulseMean() int8   { return v.pulse.mean() }
+func (v *gaugeValue) PulseMedian() int8 { return v.pulse.median() }
+func (v *gaugeValue) PulseMax() int8    { return v.pulse.max() }
+func (v *gaugeValue) PulseMin() int8    { return v.pulse.min() }
+func (v *gaugeValue) TrendMean() int8   { return v.trend.mean() }
+func (v *gaugeValue) TrendMedian() int8 { return v.trend.median() }
+func (v *gaugeValue) TrendMax() int8    { return v.trend.max() }
+func (v *gaugeValue) TrendMin() int8    { return v.trend.min() }
+func (v *gaugeValue) TrendP95() int8    { return v.trend.p95() }
 
 // Unexported types
 // compactHistogram represents a histogram for values 0-100 with int16 buckets
