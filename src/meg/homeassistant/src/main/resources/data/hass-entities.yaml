@@ -169,6 +169,10 @@ light.lounge_lamp:
   name: Lounge Lamp
   aliases: ['Lamp']
   room: Zombie
+light.lounge_reading:
+  name: Lounge Lamp
+  aliases: ['Lamp']
+  room: Zombie
 light.parents_main:
   name: Parents Main Lights
   aliases: ['Parents Main Light', 'Main Lights', 'Main Light']
@@ -290,6 +294,10 @@ input_boolean.lighting_reset_adaptive_lighting_lounge_main:
   aliases: ['Main Reset']
   room: Lounge
 input_boolean.lighting_reset_adaptive_lighting_lounge_lamp:
+  name: Home Lamp Reset
+  aliases: ['Lamp Reset']
+  room: Zombie
+input_boolean.lighting_reset_adaptive_lighting_lounge_reading:
   name: Home Lamp Reset
   aliases: ['Lamp Reset']
   room: Zombie

@@ -16,6 +16,7 @@ adaptive_lighting:
     lights:
       - light.ada_lamp
       - light.lounge_lamp
+      - light.lounge_reading
       - light.study_lamp
   #####################################################################################
   - name: night
@@ -125,6 +126,10 @@ input_boolean:
   #####################################################################################
   lighting_reset_adaptive_lighting_lounge_lamp:
     name: Lounge Lamp
+    initial: false
+  #####################################################################################
+  lighting_reset_adaptive_lighting_lounge_reading:
+    name: Lounge Reading
     initial: false
   #####################################################################################
   lighting_reset_adaptive_lighting_parents_main:
@@ -374,6 +379,23 @@ automation:
       - delay: '00:00:10'
       - action: input_boolean.turn_off
         entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
+  #####################################################################################
+  - id: lighting_reset_adaptive_lighting_lounge_reading
+    alias: "Lighting: Reset Adaptive Lighting on request of Lounge Reading"
+    triggers:
+      - trigger: state
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_reading
+        from: 'off'
+        to: 'on'
+    actions:
+      - action: adaptive_lighting.set_manual_control
+        data:
+          entity_id: switch.adaptive_lighting_task
+          lights: light.lounge_reading
+          manual_control: false
+      - delay: '00:00:10'
+      - action: input_boolean.turn_off
+        entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_reading
   #####################################################################################
   - id: lighting_reset_adaptive_lighting_parents_main
     alias: "Lighting: Reset Adaptive Lighting on request of Parents Main"

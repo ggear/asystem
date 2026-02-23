@@ -289,6 +289,8 @@ powercalc:
                         max_power: 16.3
                     - entity_id: light.lounge_lamp_bulb_1
                       manufacturer: Signify
+                    - entity_id: light.lounge_reading_bulb_1
+                      manufacturer: Signify
                 #######################################################################
                 - create_group: Parents Lights
                   entities:
@@ -481,6 +483,10 @@ powercalc:
                       fixed:
                         power: 0.5
                     - entity_id: switch.kitchen_fan_outlet
+                      standby_power: 0.2
+                      fixed:
+                        power: 0.5
+                    - entity_id: switch.ada_desk_outlet
                       standby_power: 0.2
                       fixed:
                         power: 0.5

@@ -30,7 +30,9 @@
       name: Kitchen Fan Outlet
     - entity: sensor.template_deck_fans_outlet_linkquality_percentage
       name: Deck Fans Outlet
-    - entity: sensor.template_edwin_wardrobe_outlet_linkquality_percentage
+    - entity: sensor.template_ada_desk_outlet_linkquality_percentage
+      name: Ada Desk Outlet
+    - entity: sensor.template_edwin_desk_outlet_linkquality_percentage
       name: Edwin Desk Outlet
 ################################################################################
 - type: entities
@@ -205,6 +207,9 @@
     - entity: switch.kitchen_fan_outlet
       name: Kitchen Fan Outlet
       icon: mdi:power-plug-outline
+    - entity: switch.ada_desk_outlet
+      name: Ada Desk Outlet
+      icon: mdi:power-plug-outline
     - entity: switch.edwin_desk_outlet
       name: Edwin Desk Outlet
       icon: mdi:power-plug-outline
@@ -247,6 +252,9 @@
       name: Lounge Main
       icon: mdi:lightbulb-group
     - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
+      name: Lounge Lamp
+      icon: mdi:lightbulb-group
+    - entity: input_boolean.lighting_reset_adaptive_lighting_lounge_reading
       name: Lounge Lamp
       icon: mdi:lightbulb-group
     - entity: input_boolean.lighting_reset_adaptive_lighting_parents_main

@@ -102,12 +102,19 @@ template:
         state: >-
           {{ min(states('sensor.deck_fans_outlet_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
       #################################################################################
-      - unique_id: edwin_wardrobe_outlet_linkquality_percentage
+      - unique_id: ada_desk_outlet_linkquality_percentage
         device_class: signal_strength
         state_class: measurement
         unit_of_measurement: "%"
         state: >-
-          {{ min(states('sensor.edwin_wardrobe_outlet_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
+          {{ min(states('sensor.ada_desk_outlet_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
+      #################################################################################
+      - unique_id: edwin_desk_outlet_linkquality_percentage
+        device_class: signal_strength
+        state_class: measurement
+        unit_of_measurement: "%"
+        state: >-
+          {{ min(states('sensor.edwin_desk_outlet_linkquality') | float(0) / 100 * 100, 100) | int(0) }}
 #######################################################################################
 input_boolean:
   #####################################################################################
@@ -161,6 +168,11 @@ automation:
       - delay: '00:00:01'
       - action: mqtt.publish
         data:
+          topic: "zigbee/Ada Desk Outlet/11/set"
+          payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
+      - delay: '00:00:01'
+      - action: mqtt.publish
+        data:
           topic: "zigbee/Edwin Desk Outlet/11/set"
           payload: '{"read":{"attributes":["dateCode","modelId"],"cluster":"genBasic","options":{}}}'
       - delay: '00:00:01'
@@ -169,7 +181,7 @@ automation:
           - condition: template
             value_template: >-
               {{ ((states('sensor.driveway_repeater_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
-                    ((as_timestamp(now()) - as_timestamp(states('sensor.driveway_repeater_last_seen'))) > 11) }}
+                    ((as_timestamp(now()) - as_timestamp(states('sensor.driveway_repeater_last_seen'))) > 12) }}
         then:
           - action: mqtt.publish
             data:
@@ -180,7 +192,7 @@ automation:
           - condition: template
             value_template: >-
               {{ ((states('sensor.landing_repeater_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
-                    ((as_timestamp(now()) - as_timestamp(states('sensor.landing_repeater_last_seen'))) > 11) }}
+                    ((as_timestamp(now()) - as_timestamp(states('sensor.landing_repeater_last_seen'))) > 12) }}
         then:
           - action: mqtt.publish
             data:
@@ -191,7 +203,7 @@ automation:
           - condition: template
             value_template: >-
               {{ ((states('sensor.garden_repeater_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
-                    ((as_timestamp(now()) - as_timestamp(states('sensor.garden_repeater_last_seen'))) > 11) }}
+                    ((as_timestamp(now()) - as_timestamp(states('sensor.garden_repeater_last_seen'))) > 12) }}
         then:
           - action: mqtt.publish
             data:
@@ -202,7 +214,7 @@ automation:
           - condition: template
             value_template: >-
               {{ ((states('sensor.kitchen_fan_outlet_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
-                    ((as_timestamp(now()) - as_timestamp(states('sensor.kitchen_fan_outlet_last_seen'))) > 11) }}
+                    ((as_timestamp(now()) - as_timestamp(states('sensor.kitchen_fan_outlet_last_seen'))) > 12) }}
         then:
           - action: mqtt.publish
             data:
@@ -213,7 +225,7 @@ automation:
           - condition: template
             value_template: >-
               {{ ((states('sensor.deck_fans_outlet_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
-                    ((as_timestamp(now()) - as_timestamp(states('sensor.deck_fans_outlet_last_seen'))) > 11) }}
+                    ((as_timestamp(now()) - as_timestamp(states('sensor.deck_fans_outlet_last_seen'))) > 12) }}
         then:
           - action: mqtt.publish
             data:
@@ -223,8 +235,19 @@ automation:
       - if:
           - condition: template
             value_template: >-
-              {{ ((states('sensor.edwin_wardrobe_outlet_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
-                    ((as_timestamp(now()) - as_timestamp(states('sensor.edwin_wardrobe_outlet_last_seen'))) > 11) }}
+              {{ ((states('sensor.ada_desk_outlet_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
+                    ((as_timestamp(now()) - as_timestamp(states('sensor.ada_desk_outlet_last_seen'))) > 12) }}
+        then:
+          - action: mqtt.publish
+            data:
+              topic: "zigbee/Ada Desk Outlet"
+              payload: '{ "last_seen": null, "linkquality": 0, "state": null, "update": { "installed_version": null, "latest_version": null, "state": null }, "update_available": false }'
+      - delay: '00:00:01'
+      - if:
+          - condition: template
+            value_template: >-
+              {{ ((states('sensor.edwin_desk_outlet_last_seen') | lower) in ['unavailable', 'unknown', 'none', 'n/a']) or
+                    ((as_timestamp(now()) - as_timestamp(states('sensor.edwin_desk_outlet_last_seen'))) > 12) }}
         then:
           - action: mqtt.publish
             data:
