@@ -127,7 +127,6 @@
   optimistic: true
   off_state: 'all_members_off'
   devices:
-    - '0x001788010ec76d57'
     - '0x0017880106bc4f2d'
 '117':
   friendly_name: 'Study Lamp'
@@ -181,3 +180,11 @@
   off_state: 'all_members_off'
   devices:
     - '0x2c1165fffea8c4d8'
+'123':
+  friendly_name: 'Lounge Lamp'
+  retain: true
+  transition: 1
+  optimistic: true
+  off_state: 'all_members_off'
+  devices:
+    - '0x001788010ec76d57'
