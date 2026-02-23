@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"log/slog"
 	"supervisor/internal/scribe"
-	"time"
 
 	"github.com/spf13/cobra"
 )
 
 type runOptions struct {
 	pollPeriod     string
-	binPeriod      string
+	pulseFactor    string
+	trendPeriod    string
+	cachePeriod    string
 	snapshotPeriod string
 }
 
@@ -29,9 +30,11 @@ func newRunCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "p", "1s", "polling period for caching individual metric raw values, with unit suffixes [s, m, h] (default: 1s)")
-	cmd.Flags().StringVarP(&opts.binPeriod, "bin-period", "b", "5s", "bin period for analysing and publishing individual, calculated metric values, with unit suffixes [s, m, h] (default: 5s)")
-	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "s", "5m", "snapshot period for publishing a complete set of calculated metric values, with unit suffixes [s, m, h] (default: 5m)")
+	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "P", "1s", "period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]. (default: 1s)")
+	cmd.Flags().StringVarP(&opts.pulseFactor, "pulse-factor", "F", "5", "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics (default: 5)")
+	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", "24h", "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h] (default: 24h)")
+	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", "24h", "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h] (default: 24h)")
+	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h] (default: 5m)")
 	cmd.Flags().SortFlags = false
 	return cmd
 }
@@ -41,17 +44,11 @@ func executeRun(opts *runOptions) error {
 	if err != nil {
 		return err
 	}
-	pollDur, err := time.ParseDuration(opts.pollPeriod)
-	if err != nil {
-		return fmt.Errorf("invalid poll period: %w", err)
-	}
-	if _, err := time.ParseDuration(opts.binPeriod); err != nil {
-		return fmt.Errorf("invalid bin period: %w", err)
-	}
-	if _, err := time.ParseDuration(opts.snapshotPeriod); err != nil {
-		return fmt.Errorf("invalid snapshot period: %w", err)
-	}
-	fmt.Printf("Starting supervisor (poll interval: %s)\n", pollDur)
+
+	// TODO: START
+	_, err = makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod)
+	// TODO: END
+
 	return nil
 }
 

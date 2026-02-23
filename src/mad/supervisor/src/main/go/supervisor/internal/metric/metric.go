@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"supervisor/internal/config"
+	"supervisor/internal/probe"
 	"sync"
 	"time"
 
@@ -146,35 +147,35 @@ func NewRecordCache() *RecordCache {
 	}
 }
 
-func (c *RecordCache) LoadLocal() error {
+func (c *RecordCache) LoadProbes(periods probe.Periods) error {
 	// TODO:
 	//  - Loop over all metrics and load into cache
 	//  - Start probes for one cycle, writing to cache per metric
 	return nil
 }
 
-func (c *RecordCache) LoadLocalListeners() error {
+func (c *RecordCache) LoadProbesListeners(periods probe.Periods) error {
 	// TODO:
 	//  - Loop over listeners, load each and its deps into cache
 	//  - Start probes, writing to cache per metric
 	return nil
 }
 
-func (c *RecordCache) LoadRemoteListeners() error {
-	// TODO:
-	//  - Loop over listeners, load each and its deps into cache
-	//  - Start topic subscriptions, writing to cache per metric
-	//  - Start reaper routine, if timestamp > poll period + 1, set to nil
-	return nil
-}
-
-func (c *RecordCache) LoadLocalPublishers() error {
+func (c *RecordCache) LoadProbesPublishers(periods probe.Periods) error {
 	// TODO:
 	//  - Loop over all metrics and load into cache
 	//  - Start probes, writing to cache per metric (necessary for deps, not for JSON/LineProto),
 	//                  writing async cache.publishStream by value (JSON) per metric,
 	//                  writing line protocol to reused buffer per metric,
 	//                  writing async cache.publishHistory by value (String LineProto) at the end fo cycle
+	return nil
+}
+
+func (c *RecordCache) LoadBrokerListeners(periods probe.Periods) error {
+	// TODO:
+	//  - Loop over listeners, load each and its deps into cache
+	//  - Start topic subscriptions, writing to cache per metric
+	//  - Start reaper routine, if timestamp > poll period + 1, set to nil
 	return nil
 }
 

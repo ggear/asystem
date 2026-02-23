@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"sort"
 	"supervisor/internal/metric"
+	"supervisor/internal/probe"
 	"sync"
 	"time"
 	"unicode/utf8"
@@ -44,8 +45,9 @@ func (d dimensions) String() string {
 
 type Dashboard struct {
 	hosts      []string
-	format     Format
+	periods    probe.Periods
 	isRemote   bool
+	format     Format
 	dimensions dimensions
 	boxes      []box
 	dirty      dirtyBoxes
@@ -59,12 +61,13 @@ type dirtyBoxes struct {
 	indexes map[int]struct{}
 }
 
-func NewDashboard(cache *metric.RecordCache, factory terminalFactory, hosts []string, width, height int, format Format, isRemote bool) (*Dashboard, error) {
+func NewDashboard(cache *metric.RecordCache, factory terminalFactory, hosts []string, width, height int, format Format, periods probe.Periods, isRemote bool) (*Dashboard, error) {
 	return &Dashboard{
 		hosts:      hosts,
 		dimensions: dimensions{rows: height, cols: width},
-		format:     format,
+		periods:    periods,
 		isRemote:   isRemote,
+		format:     format,
 		factory:    factory,
 		cache:      cache,
 	}, nil
@@ -304,9 +307,9 @@ func (d *Dashboard) Load() error {
 		if !d.isRemote {
 			slog.Debug("Local metric polling requested for multiple hosts, falling back to remote metric collection")
 		}
-		return d.cache.LoadRemoteListeners()
+		return d.cache.LoadBrokerListeners(d.periods)
 	}
-	return d.cache.LoadLocalListeners()
+	return d.cache.LoadProbesListeners(d.periods)
 }
 
 func (d *Dashboard) Display() error {

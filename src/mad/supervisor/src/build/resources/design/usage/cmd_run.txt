@@ -2,21 +2,24 @@ Usage:
   supervisor run [OPTIONS]
 
 Description:
-  Run the supervisor process to collect and publish system statistics and
-  perform supervisory duties.
+  Run the supervisor process to collect and publish system statistics and perform supervisory duties
 
 Options:
-  -p, --poll-period duration
-      Polling period for caching individual metric raw values,
-      with unit suffixes [s, m, h] (default: 1s).
 
-  -b, --bin-period duration
-      Bin period for analysing and publishing individual, calculated metric values,
-      with unit suffixes [s, m, h] (default: 5s).
+  -P, --poll-period duration
+      period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]. (default: 1s)
 
-  -s, --snapshot-period duration
-      Snapshot period for publishing a complete set of calculated metric values,
-      with unit suffixes [s, m, h] (default: 5m).
+  -F, --pulse-factor int
+      factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics (default: 5)
+
+  -T, --trend-period duration
+      period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h] (default: 24h)
+
+  -C, --cache-period duration
+      period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h] (default: 24h)
+
+  -S, --snapshot-period duration
+      period for publishing a metric snapshot, uses unit suffixes [s, m, h] (default: 5m)
 
   -h, --help
-      Display this help message and exit.
+      display this help message and exit

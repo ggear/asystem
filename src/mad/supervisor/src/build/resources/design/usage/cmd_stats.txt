@@ -10,7 +10,7 @@ Aliases:
 
 Options:
   -m, --mode string
-      Stats host selection and retrieval method:
+      stats host selection and retrieval method:
         local
             Show stats from the local host only, directly polled, presented
             as a single cell (default).
@@ -22,7 +22,7 @@ Options:
             message bus and presented as a grid.
 
   -f, --format string
-      Output format based on grid cell width:
+      output format based on grid cell width:
         auto
             Select the most spacious format the grid cell allows (default).
         compact
@@ -30,23 +30,29 @@ Options:
         relaxed
             Optimised for grid cells wider than 100 columns.
 
-  -p, --poll-period duration
-      Polling period for caching individual metric raw values,
-      with unit suffixes [s, m, h], ignored in remote mode (default: 1s).
+  -P, --poll-period duration
+      period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]. (default: 1s)
 
-  -b, --bin-period duration
-      Bin period for analysing and publishing individual, calculated metric values,
-      with unit suffixes [s, m, h], ignored in remote mode (default: 5s).
+  -F, --pulse-factor int
+      factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics (default: 5)
+
+  -T, --trend-period duration
+      period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h] (default: 24h)
+
+  -C, --cache-period duration
+      period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h] (default: 24h)
+
+  -S, --snapshot-period duration
+      period for publishing a metric snapshot, uses unit suffixes [s, m, h] (default: 5m)
 
   -W --console-width int
-      Override the console width with the specified value
+      override the console width with the specified value
 
   -H --console-height int
-      Override the console height with the specified value
+      override the console height with the specified value
 
   -J --json
-      Output JSON instead of the default text format. Assumes local mode,
-      repects poll and bin period options and ignores all formating options.
+      output JSON instead of the default text format. Assumes local mode, repects poll and bin period options and ignores all formating options
 
   -h, --help
-      Display this help message and exit.
+      display this help message and exit

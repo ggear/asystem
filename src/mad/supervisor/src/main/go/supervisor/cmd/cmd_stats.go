@@ -9,20 +9,22 @@ import (
 	"supervisor/internal/dashboard"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
-	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
 )
 
 type statsOptions struct {
-	mode          string
-	format        string
-	consoleWidth  int
-	consoleHeight int
-	pollPeriod    string
-	binPeriod     string
-	json          bool
+	mode           string
+	format         string
+	pollPeriod     string
+	pulseFactor    string
+	trendPeriod    string
+	cachePeriod    string
+	snapshotPeriod string
+	consoleWidth   int
+	consoleHeight  int
+	json           bool
 }
 
 func newStatsCmd() *cobra.Command {
@@ -49,10 +51,13 @@ func newStatsCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVarP(&opts.mode, "mode", "m", "local", "stats host selection and retrieval method: local, remote, or remote[:HOST[,HOST...]]")
 	cmd.Flags().StringVarP(&opts.format, "format", "f", "auto", "output format based on grid cell width: auto, compact, or relaxed")
+	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "P", "1s", "period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]. (default: 1s)")
+	cmd.Flags().StringVarP(&opts.pulseFactor, "pulse-factor", "F", "5", "factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics (default: 5)")
+	cmd.Flags().StringVarP(&opts.trendPeriod, "trend-period", "T", "24h", "period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h] (default: 24h)")
+	cmd.Flags().StringVarP(&opts.cachePeriod, "cache-period", "C", "24h", "period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h] (default: 24h)")
+	cmd.Flags().StringVarP(&opts.snapshotPeriod, "snapshot-period", "S", "5m", "period for publishing a metric snapshot, uses unit suffixes [s, m, h] (default: 5m)")
 	cmd.Flags().IntVarP(&opts.consoleWidth, "console-width", "W", -1, "override the console width with the specified value")
 	cmd.Flags().IntVarP(&opts.consoleHeight, "console-height", "H", -1, "override the console height with the specified value")
-	cmd.Flags().StringVarP(&opts.pollPeriod, "poll-period", "p", "1s", "polling period for caching individual metric raw values, with unit suffixes [s, m, h], ignored in remote mode (default: 1s)")
-	cmd.Flags().StringVarP(&opts.binPeriod, "bin-period", "b", "5s", "bin period for analysing and publishing individual, calculated metric values, with unit suffixes [s, m, h], ignored in remote mode (default: 5s)")
 	cmd.Flags().BoolVarP(&opts.json, "json", "J", false, "output JSON instead of the default text format. Assumes local mode, respects poll and bin period options and ignores all formating options")
 	cmd.Flags().SortFlags = false
 	return cmd
@@ -65,18 +70,7 @@ func executeStats(opts *statsOptions) error {
 	}
 
 	// TODO: START
-	//  - Use poll/pulse/cache/trend periods, for stats local/json 1s/1x/0d/0d, stats remote 0s/0x/0d/0d, run local 1s/5x/3d/1d - make a struct periods?
-	//  - All metrics use pulse, and opt-in to poll in code or cache and trend if > 0
-	//  - Convert isRemote to struct periods nil?
-
-	if _, err := time.ParseDuration(opts.pollPeriod); err != nil {
-		return fmt.Errorf("invalid poll period: %width", err)
-	}
-	if _, err := time.ParseDuration(opts.binPeriod); err != nil {
-		return fmt.Errorf("invalid bin period: %width", err)
-	}
-
-	// TODO: END
+	//  - Implement JSON
 
 	mode := opts.mode
 	var isRemote bool
@@ -131,6 +125,10 @@ func executeStats(opts *statsOptions) error {
 	default:
 		return fmt.Errorf("invalid stats format [%s]", opts.format)
 	}
+	periods, err := makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod)
+	if err != nil {
+		return err
+	}
 	d, err := dashboard.NewDashboard(
 		metric.NewRecordCache(),
 		dashboard.TerminalFactory,
@@ -138,6 +136,7 @@ func executeStats(opts *statsOptions) error {
 		width,
 		height,
 		format,
+		periods,
 		isRemote,
 	)
 	if err != nil {

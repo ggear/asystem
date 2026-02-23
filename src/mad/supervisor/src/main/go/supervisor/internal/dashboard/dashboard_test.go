@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"strings"
 	"supervisor/internal/metric"
+	"supervisor/internal/probe"
 	"supervisor/internal/scribe"
 	"testing"
 	"time"
@@ -304,6 +305,7 @@ func TestDashboard(t *testing.T) {
 					testCase.terminalDims.cols,
 					testCase.terminalDims.rows,
 					attemptedFormat,
+					probe.Periods{},
 					true,
 				)
 				if newErr != nil {
