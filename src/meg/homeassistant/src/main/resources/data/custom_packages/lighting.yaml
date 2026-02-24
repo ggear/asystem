@@ -125,11 +125,11 @@ input_boolean:
     initial: false
   #####################################################################################
   lighting_reset_adaptive_lighting_lounge_lamp:
-    name: Lamp
+    name: Lounge Lamp
     initial: false
   #####################################################################################
   lighting_reset_adaptive_lighting_lounge_reading:
-    name: Reading
+    name: Reading Lamp
     initial: false
   #####################################################################################
   lighting_reset_adaptive_lighting_parents_main:
@@ -364,7 +364,7 @@ automation:
         entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_main
   #####################################################################################
   - id: lighting_reset_adaptive_lighting_lounge_lamp
-    alias: "Lighting: Reset Adaptive Lighting on request of Lamp"
+    alias: "Lighting: Reset Adaptive Lighting on request of Lounge Lamp"
     triggers:
       - trigger: state
         entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
@@ -381,7 +381,7 @@ automation:
         entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_lamp
   #####################################################################################
   - id: lighting_reset_adaptive_lighting_lounge_reading
-    alias: "Lighting: Reset Adaptive Lighting on request of Reading"
+    alias: "Lighting: Reset Adaptive Lighting on request of Reading Lamp"
     triggers:
       - trigger: state
         entity_id: input_boolean.lighting_reset_adaptive_lighting_lounge_reading

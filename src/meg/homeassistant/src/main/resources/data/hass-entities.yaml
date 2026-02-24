@@ -133,10 +133,6 @@ light.ada_fan:
   name: Ada Main Light
   aliases: ['Adas Main Light', 'Main Light', 's Main Light']
   room: Ada
-light.ada_lamp:
-  name: Ada Lamp
-  aliases: ['Lamp']
-  room: Zombie
 light.edwin_fan:
   name: Edwin Main Light
   aliases: ['Edwins Main Light', 'Main Light', 's Main Light']
@@ -166,12 +162,12 @@ light.lounge_fan:
   aliases: ['Fan Light']
   room: Zombie
 light.lounge_lamp:
-  name: Lounge Lounge Lamp
-  aliases: ['Lounge Lamp']
+  name: Lounge Lamp
+  aliases: ['Lamp']
   room: Zombie
 light.lounge_reading:
-  name: Lounge Lounge Reading
-  aliases: ['Lounge Reading']
+  name: Lounge Reading
+  aliases: ['Reading']
   room: Zombie
 light.parents_main:
   name: Parents Main Lights
@@ -184,10 +180,6 @@ light.parents_jane_bedside:
 light.parents_graham_bedside:
   name: Parents Sconces
   aliases: ['Parents Bedside', 'Parents Graham', 'Parents Graham Bedside', 'Sconces', 'Bedside', 'Graham', 'Graham Bedside']
-  room: Zombie
-light.study_lamp:
-  name: Study Lamp
-  aliases: ['Lamp']
   room: Zombie
 light.kitchen_main:
   name: Kitchen Main Lights

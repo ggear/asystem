@@ -97,10 +97,10 @@
       name: Lounge Fan
       icon: mdi:lightbulb-group
     - entity: light.lounge_lamp
-      name: Lamp
+      name: Lounge Lamp
       icon: mdi:lightbulb-group
     - entity: light.lounge_reading
-      name: Reading
+      name: Reading Lamp
       icon: mdi:lightbulb-group
     - entity: light.parents_main
       name: Parents Main
