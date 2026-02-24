@@ -1,0 +1,15 @@
+{
+  "version": "10.100.6842",
+  "pulse": {
+    "window": "5s",
+    "unit": "%",
+    "type": "percentage",
+    "measure": "mean"
+  },
+  "trend": {
+    "window": "24h",
+    "unit": "%",
+    "type": "percentage",
+    "measure": "p95"
+  }
+}

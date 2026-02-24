@@ -99,7 +99,7 @@ func TestMetric_CacheLocalMetrics(t *testing.T) {
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
 			cache, err := CacheLocalMetrics(testCase.hostname, testCase.configPath)
-			t.Logf("Metric Record Local Cache:\n%s", cache)
+			t.Logf("ValueData Record Local Cache:\n%s", cache)
 			if (err != nil) != testCase.expectedError {
 				t.Fatalf("Got err = %v, expected error? %t", err, testCase.expectedError)
 			}

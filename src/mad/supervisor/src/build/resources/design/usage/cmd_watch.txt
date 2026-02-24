@@ -1,5 +1,5 @@
 Usage:
-  supervisor stats [OPTIONS]
+  supervisor watch [OPTIONS]
 
 Description:
   Show real-time system stats.

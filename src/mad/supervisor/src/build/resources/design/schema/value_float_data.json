@@ -1,0 +1,11 @@
+{
+  "timestamp": 1771744503,
+  "pulse": {
+    "ok": true,
+    "value": 20
+  },
+  "trend": {
+    "ok": true,
+    "value": 19
+  }
+}

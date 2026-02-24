@@ -1,5 +1,5 @@
 Usage:
-  supervisor run [OPTIONS]
+  supervisor server [OPTIONS]
 
 Description:
   Run the supervisor process to collect and publish system statistics and perform supervisory duties

@@ -13,13 +13,13 @@ import (
 
 // Performance-optimised rolling window implementation for monitoring int values 0-100.
 //
-// MEMORY USAGE (per gaugeValue with default config):
+// MEMORY USAGE (per percentageValue with default config):
 //   - Trend window:  ~920 KB (3-tier: 1h@1s + 6h@1min + 18h@1hour = 25 hours total)
 //   - Pulse window: ~1.1 KB (5 samples @ 1s)
-//   - Total per gaugeValue: ~921 KB
-//   - 50 GaugeWindows: ~46 MB
+//   - Total per percentageValue: ~921 KB
+//   - 50 PercentageWindows: ~46 MB
 //
-// CPU USAGE (per gaugeValue):
+// CPU USAGE (per percentageValue):
 //   - Push(): O(1) ~10-20ns per call (array increment + bounds check)
 //   - Tick(): O(1) ~100ns (moves deque pointer, periodic aggregation)
 //   - Query (Mean/Max/Min): O(window_count) ~0.1ms for trend window
@@ -70,18 +70,18 @@ const (
 )
 
 // Exported types
-// gaugeValue manages both trend and pulse windows
-type gaugeValue struct {
+// percentageValue manages both trend and pulse windows
+type percentageValue struct {
 	trend *trendWindow
 	pulse *pulseWindow
 }
 
 // Exported constructors
-// newGaugeValue creates dual windows with configurable durations
+// newPercentageValue creates dual windows with configurable durations
 // trendDays: trend window duration in days
 // pulseSecs: pulse window duration in seconds
 // tickFreqSecs: seconds between ticks (typically 1)
-func newGaugeValue(trendDays int, pulseSecs int, tickFreqSecs int) (*gaugeValue, error) {
+func newPercentageValue(trendDays int, pulseSecs int, tickFreqSecs int) (*percentageValue, error) {
 	trendWindow, err := newTrendWindow(trendDays, tickFreqSecs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create trend window: %w", err)
@@ -90,13 +90,13 @@ func newGaugeValue(trendDays int, pulseSecs int, tickFreqSecs int) (*gaugeValue,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create pulse window: %w", err)
 	}
-	return &gaugeValue{
+	return &percentageValue{
 		trend: trendWindow,
 		pulse: pulseWindow,
 	}, nil
 }
 
-func convertToGauge[T constraints.Integer | constraints.Float](value T) (int8, error) {
+func convertToPercentage[T constraints.Integer | constraints.Float](value T) (int8, error) {
 	valueWide := float64(value)
 	if math.IsNaN(valueWide) || math.IsInf(valueWide, 0) {
 		return -1, errors.New("value must be finite")
@@ -111,31 +111,31 @@ func convertToGauge[T constraints.Integer | constraints.Float](value T) (int8, e
 }
 
 // Exported methods
-func (v *gaugeValue) Tick() {
+func (v *percentageValue) Tick() {
 	v.trend.tick()
 	v.pulse.tick()
 }
 
-func (v *gaugeValue) Push(value int8) {
+func (v *percentageValue) Push(value int8) {
 	v.trend.push(value)
 	v.pulse.push(value)
 }
 
-func (v *gaugeValue) PushAndTick(value int8) {
+func (v *percentageValue) PushAndTick(value int8) {
 	v.Push(value)
 	v.Tick()
 }
 
-func (v *gaugeValue) PulseLast() int8   { return v.pulse.last() }
-func (v *gaugeValue) PulseMean() int8   { return v.pulse.mean() }
-func (v *gaugeValue) PulseMedian() int8 { return v.pulse.median() }
-func (v *gaugeValue) PulseMax() int8    { return v.pulse.max() }
-func (v *gaugeValue) PulseMin() int8    { return v.pulse.min() }
-func (v *gaugeValue) TrendMean() int8   { return v.trend.mean() }
-func (v *gaugeValue) TrendMedian() int8 { return v.trend.median() }
-func (v *gaugeValue) TrendMax() int8    { return v.trend.max() }
-func (v *gaugeValue) TrendMin() int8    { return v.trend.min() }
-func (v *gaugeValue) TrendP95() int8    { return v.trend.p95() }
+func (v *percentageValue) PulseLast() int8   { return v.pulse.last() }
+func (v *percentageValue) PulseMean() int8   { return v.pulse.mean() }
+func (v *percentageValue) PulseMedian() int8 { return v.pulse.median() }
+func (v *percentageValue) PulseMax() int8    { return v.pulse.max() }
+func (v *percentageValue) PulseMin() int8    { return v.pulse.min() }
+func (v *percentageValue) TrendMean() int8   { return v.trend.mean() }
+func (v *percentageValue) TrendMedian() int8 { return v.trend.median() }
+func (v *percentageValue) TrendMax() int8    { return v.trend.max() }
+func (v *percentageValue) TrendMin() int8    { return v.trend.min() }
+func (v *percentageValue) TrendP95() int8    { return v.trend.p95() }
 
 // Unexported types
 // compactHistogram represents a histogram for values 0-100 with int16 buckets

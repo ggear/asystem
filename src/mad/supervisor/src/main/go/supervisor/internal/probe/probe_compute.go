@@ -35,7 +35,7 @@ func (c *Compute) UsedMemory() (int8, error) {
 		return 0, errors.New("total memory must be > 0")
 	}
 	usedPercent := (float64(memoryStat.Total-memoryStat.Available) / float64(memoryStat.Total)) * 100.0
-	return convertToGauge(usedPercent)
+	return convertToPercentage(usedPercent)
 }
 
 func (c *Compute) AllocatedMemory() (int8, error) {
@@ -88,5 +88,5 @@ func (s *cpuUsageSampler) sample(cpuTimes func(bool) ([]cpu.TimesStat, error)) (
 		return 0, errors.New("cpu usage unavailable, non-monotonic counters")
 	}
 	usedPercent := (1.0 - idleDelta/totalDelta) * 100.0
-	return convertToGauge(usedPercent)
+	return convertToPercentage(usedPercent)
 }

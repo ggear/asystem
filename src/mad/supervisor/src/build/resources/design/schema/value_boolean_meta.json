@@ -1,0 +1,13 @@
+{
+  "version": "10.100.6842",
+  "pulse": {
+    "window": "5s",
+    "type": "boolean",
+    "measure": "last"
+  },
+  "trend": {
+    "window": "24h",
+    "type": "boolean",
+    "measure": "max"
+  }
+}

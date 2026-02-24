@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type runOptions struct {
+type serveOptions struct {
 	pollPeriod     string
 	pulseFactor    string
 	trendPeriod    string
@@ -16,14 +16,15 @@ type runOptions struct {
 	snapshotPeriod string
 }
 
-func newRunCmd() *cobra.Command {
-	opts := &runOptions{}
+// noinspection DuplicatedCode
+func newServeCmd() *cobra.Command {
+	opts := &serveOptions{}
 	cmd := &cobra.Command{
-		Use:   "run",
-		Short: runDescription,
-		Long:  runDescription,
+		Use:   "serve",
+		Short: serveDescription,
+		Long:  serveDescription,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			err := executeRun(opts)
+			err := executeServe(opts)
 			if err != nil {
 				return fmt.Errorf("error: %w", err)
 			}
@@ -39,8 +40,8 @@ func newRunCmd() *cobra.Command {
 	return cmd
 }
 
-func executeRun(opts *runOptions) error {
-	err := scribe.EnableFile(slog.LevelDebug, "run", 10, 3, 7)
+func executeServe(opts *serveOptions) error {
+	err := scribe.EnableFile(slog.LevelDebug, "serve", 10, 3, 7)
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func executeRun(opts *runOptions) error {
 }
 
 func init() {
-	rootCmd.AddCommand(newRunCmd())
+	rootCmd.AddCommand(newServeCmd())
 }
 
-const runDescription = "Run the supervisor process to collect and publish system statistics and perform supervisory duties"
+const serveDescription = "Run the supervisor process to collect and publish system stats and perform supervisory duties"

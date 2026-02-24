@@ -1,0 +1,15 @@
+{
+  "version": "10.100.6842",
+  "pulse": {
+    "window": "5s",
+    "unit": "metrics/s",
+    "type": "float",
+    "measure": "max"
+  },
+  "trend": {
+    "window": "24h",
+    "unit": "metrics/s",
+    "type": "float",
+    "measure": "max"
+  }
+}

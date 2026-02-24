@@ -1,0 +1,99 @@
+# Supervisor JSON
+supervisor/macmini-meg/supervisor/cmd
+supervisor/macmini-meg/supervisor/snapshot
+
+# Supervisor Booleans
+supervisor/macmini-meg/supervisor/meta
+supervisor/macmini-meg/supervisor/data
+
+# Supervisor Strings
+supervisor/macmini-meg/supervisor/version/meta
+supervisor/macmini-meg/supervisor/version/data
+
+# Supervisor Percentages
+supervisor/macmini-meg/supervisor/used_processor/meta
+supervisor/macmini-meg/supervisor/used_processor/data
+supervisor/macmini-meg/supervisor/used_memory/meta
+supervisor/macmini-meg/supervisor/used_memory/data
+
+# Supervisor Floats
+supervisor/macmini-meg/supervisor/metric_rate/meta
+supervisor/macmini-meg/supervisor/metric_rate/data
+
+# Host Booleans
+supervisor/macmini-meg/host/meta
+supervisor/macmini-meg/host/data
+
+# Host Percentages
+supervisor/macmini-meg/host/used_processor/meta
+supervisor/macmini-meg/host/used_processor/data
+supervisor/macmini-meg/host/used_memory/meta
+supervisor/macmini-meg/host/used_memory/data
+supervisor/macmini-meg/host/allocated_memory/meta
+supervisor/macmini-meg/host/allocated_memory/data
+supervisor/macmini-meg/host/failed_services/meta
+supervisor/macmini-meg/host/failed_services/data
+supervisor/macmini-meg/host/failed_shares/meta
+supervisor/macmini-meg/host/failed_shares/data
+supervisor/macmini-meg/host/failed_backups/meta
+supervisor/macmini-meg/host/failed_backups/data
+supervisor/macmini-meg/host/warn_temperature_of_max/meta
+supervisor/macmini-meg/host/warn_temperature_of_max/data
+supervisor/macmini-meg/host/spin_fan_speed_of_max/meta
+supervisor/macmini-meg/host/spin_fan_speed_of_max/data
+supervisor/macmini-meg/host/life_used_drives/meta
+supervisor/macmini-meg/host/life_used_drives/data
+supervisor/macmini-meg/host/used_system_space/meta
+supervisor/macmini-meg/host/used_system_space/data
+supervisor/macmini-meg/host/used_share_space/meta
+supervisor/macmini-meg/host/used_share_space/data
+supervisor/macmini-meg/host/used_backup_space/meta
+supervisor/macmini-meg/host/used_backup_space/data
+supervisor/macmini-meg/host/used_swap_space/meta
+supervisor/macmini-meg/host/used_swap_space/data
+supervisor/macmini-meg/host/used_disk_ops/meta
+supervisor/macmini-meg/host/used_disk_ops/data
+supervisor/macmini-meg/host/used_network/meta
+supervisor/macmini-meg/host/used_network/data
+
+# Host Floats
+supervisor/macmini-meg/host/runtime/meta
+supervisor/macmini-meg/host/runtime/data
+supervisor/macmini-meg/host/temperature/meta
+supervisor/macmini-meg/host/temperature/data
+
+# Services Booleans
+supervisor/macmini-meg/service/meta
+supervisor/macmini-meg/service/data
+
+# Service Booleans
+supervisor/macmini-meg/service/0/meta
+supervisor/macmini-meg/service/0/data
+supervisor/macmini-meg/service/0/backup_status/meta
+supervisor/macmini-meg/service/0/backup_status/data
+supervisor/macmini-meg/service/0/health_status/meta
+supervisor/macmini-meg/service/0/health_status/data
+supervisor/macmini-meg/service/0/configured_status/meta
+supervisor/macmini-meg/service/0/configured_status/data
+
+# Service Strings
+supervisor/macmini-meg/service/0/name/meta
+supervisor/macmini-meg/service/0/name/data
+supervisor/macmini-meg/service/0/version/meta
+supervisor/macmini-meg/service/0/version/data
+
+# Service Percentages
+supervisor/macmini-meg/service/0/used_processor/meta
+supervisor/macmini-meg/service/0/used_processor/data
+supervisor/macmini-meg/service/0/used_memory/meta
+supervisor/macmini-meg/service/0/used_memory/data
+supervisor/macmini-meg/service/0/used_disk_ops/meta
+supervisor/macmini-meg/service/0/used_disk_ops/data
+supervisor/macmini-meg/service/0/used_network/meta
+supervisor/macmini-meg/service/0/used_network/data
+
+# Service Floats
+supervisor/macmini-meg/service/0/runtime/meta
+supervisor/macmini-meg/service/0/runtime/data
+supervisor/macmini-meg/service/0/restart_count/meta
+supervisor/macmini-meg/service/0/restart_count/data

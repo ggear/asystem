@@ -227,10 +227,7 @@ func rows(layout [][]box, hostCount int) int {
 		return 0
 	}
 	count := len(layout)
-	if hostCount == 0 {
-		return 0
-	}
-	if hostCount == 1 && count > 0 {
+	if hostCount == 1 {
 		count--
 	}
 	return count * ((hostCount + 1) / 2)

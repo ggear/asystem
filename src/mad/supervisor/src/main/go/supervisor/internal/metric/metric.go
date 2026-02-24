@@ -420,7 +420,7 @@ func (c *RecordCache) String() string {
 		}
 		_, err := fmt.Fprintf(
 			&stringBuilder,
-			"Index[%03d] Metric[%03d] ServiceIndex[%02v] Host[%v] OK[%1s] Datum[%3s] Unit[%1v] topic[%s]\n",
+			"Index[%03d] ValueData[%03d] ServiceIndex[%02v] Host[%v] OK[%1s] Datum[%3s] Unit[%1v] topic[%s]\n",
 			index,
 			entry.guid.ID,
 			entry.guid.ServiceIndex,

@@ -1,0 +1,8 @@
+{
+  "version": "10.100.6842",
+  "pulse": {
+    "window": "5s",
+    "type": "string",
+    "measure": "last"
+  }
+}

@@ -369,10 +369,10 @@ light.lounge_fan:
   friendly_name: 'Lounge Fan'
   icon: 'mdi:lightbulb-group'
 light.lounge_lamp:
-  friendly_name: 'Lounge Lamp'
+  friendly_name: 'Lamp'
   icon: 'mdi:lightbulb-group'
 light.lounge_reading:
-  friendly_name: 'Lounge Reading'
+  friendly_name: 'Reading'
   icon: 'mdi:lightbulb-group'
 light.parents_main:
   friendly_name: 'Parents Main'

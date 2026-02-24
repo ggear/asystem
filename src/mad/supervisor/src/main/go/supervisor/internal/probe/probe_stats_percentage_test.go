@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestProbeGauge_NewTrendWindow(t *testing.T) {
+func TestProbePercentage_NewTrendWindow(t *testing.T) {
 	tests := []struct {
 		name          string
 		durationDays  int
@@ -84,7 +84,7 @@ func TestProbeGauge_NewTrendWindow(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_NewPulseWindow(t *testing.T) {
+func TestProbePercentage_NewPulseWindow(t *testing.T) {
 	tests := []struct {
 		name          string
 		durationSec   int
@@ -150,7 +150,7 @@ func TestProbeGauge_NewPulseWindow(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_NewGaugeWindow(t *testing.T) {
+func TestProbePercentage_NewPercentageWindow(t *testing.T) {
 	tests := []struct {
 		name          string
 		trendDays     int
@@ -189,7 +189,7 @@ func TestProbeGauge_NewGaugeWindow(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			window, errorValue := newGaugeValue(testCase.trendDays, testCase.pulseSec, testCase.tickFreqSec)
+			window, errorValue := newPercentageValue(testCase.trendDays, testCase.pulseSec, testCase.tickFreqSec)
 			if (errorValue != nil) != testCase.expectedError {
 				t.Fatalf("Got err = %v, expected error? %t", errorValue, testCase.expectedError)
 			}
@@ -200,7 +200,7 @@ func TestProbeGauge_NewGaugeWindow(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_PushOutOfRange(t *testing.T) {
+func TestProbePercentage_TrendWindow_PushOutOfRange(t *testing.T) {
 	tests := []struct {
 		name  string
 		value int8
@@ -244,7 +244,7 @@ func TestProbeGauge_TrendWindow_PushOutOfRange(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_SingleValue(t *testing.T) {
+func TestProbePercentage_TrendWindow_SingleValue(t *testing.T) {
 	tests := []struct {
 		name  string
 		value int8
@@ -290,7 +290,7 @@ func TestProbeGauge_TrendWindow_SingleValue(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_PushAndStats(t *testing.T) {
+func TestProbePercentage_TrendWindow_PushAndStats(t *testing.T) {
 	tests := []struct {
 		name         string
 		values       []int8
@@ -378,7 +378,7 @@ func TestProbeGauge_TrendWindow_PushAndStats(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_ExtremeFrequency(t *testing.T) {
+func TestProbePercentage_TrendWindow_ExtremeFrequency(t *testing.T) {
 	tests := []struct {
 		name            string
 		value           int8
@@ -442,7 +442,7 @@ func TestProbeGauge_TrendWindow_ExtremeFrequency(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_Percentiles(t *testing.T) {
+func TestProbePercentage_TrendWindow_Percentiles(t *testing.T) {
 	tests := []struct {
 		name        string
 		values      []int8
@@ -488,7 +488,7 @@ func TestProbeGauge_TrendWindow_Percentiles(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_Median(t *testing.T) {
+func TestProbePercentage_TrendWindow_Median(t *testing.T) {
 	tests := []struct {
 		name           string
 		values         []int8
@@ -524,7 +524,7 @@ func TestProbeGauge_TrendWindow_Median(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_OverlappingValues(t *testing.T) {
+func TestProbePercentage_TrendWindow_OverlappingValues(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(*trendWindow) []int8
@@ -572,7 +572,7 @@ func TestProbeGauge_TrendWindow_OverlappingValues(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
+func TestProbePercentage_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
 	tests := []struct {
 		name string
 		run  func(*trendWindow) []int8
@@ -615,7 +615,7 @@ func TestProbeGauge_TrendWindow_PartialAggregationAcrossTiers(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_SparseTraffic(t *testing.T) {
+func TestProbePercentage_TrendWindow_SparseTraffic(t *testing.T) {
 	tests := []struct {
 		name         string
 		idleTicks    int
@@ -657,7 +657,7 @@ func TestProbeGauge_TrendWindow_SparseTraffic(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_EvictionOrder(t *testing.T) {
+func TestProbePercentage_TrendWindow_EvictionOrder(t *testing.T) {
 	tests := []struct {
 		name       string
 		extraTicks int
@@ -711,7 +711,7 @@ func TestProbeGauge_TrendWindow_EvictionOrder(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_RandomPushTickSequences(t *testing.T) {
+func TestProbePercentage_TrendWindow_RandomPushTickSequences(t *testing.T) {
 	tests := []struct {
 		name      string
 		seed      int64
@@ -759,7 +759,7 @@ func TestProbeGauge_TrendWindow_RandomPushTickSequences(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_OverflowProtection(t *testing.T) {
+func TestProbePercentage_TrendWindow_OverflowProtection(t *testing.T) {
 	tests := []struct {
 		name        string
 		description string
@@ -812,7 +812,7 @@ func TestProbeGauge_TrendWindow_OverflowProtection(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_TickFrequencyVariations(t *testing.T) {
+func TestProbePercentage_TrendWindow_TickFrequencyVariations(t *testing.T) {
 	tests := []struct {
 		name          string
 		description   string
@@ -863,7 +863,7 @@ func TestProbeGauge_TrendWindow_TickFrequencyVariations(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_StartupPhase(t *testing.T) {
+func TestProbePercentage_TrendWindow_StartupPhase(t *testing.T) {
 	tests := []struct {
 		name         string
 		description  string
@@ -922,7 +922,7 @@ func TestProbeGauge_TrendWindow_StartupPhase(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_TrendWindow_TickAndAggregation(t *testing.T) {
+func TestProbePercentage_TrendWindow_TickAndAggregation(t *testing.T) {
 	tests := []struct {
 		name         string
 		description  string
@@ -1009,7 +1009,7 @@ func TestProbeGauge_TrendWindow_TickAndAggregation(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_PulseWindow_Basic(t *testing.T) {
+func TestProbePercentage_PulseWindow_Basic(t *testing.T) {
 	tests := []struct {
 		name         string
 		pushAndTick  func(*pulseWindow)
@@ -1089,7 +1089,7 @@ func TestProbeGauge_PulseWindow_Basic(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_PulseWindow_Median(t *testing.T) {
+func TestProbePercentage_PulseWindow_Median(t *testing.T) {
 	tests := []struct {
 		name           string
 		windowSize     int
@@ -1139,7 +1139,7 @@ func TestProbeGauge_PulseWindow_Median(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_Coordination(t *testing.T) {
+func TestProbePercentage_Coordination(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
@@ -1149,7 +1149,7 @@ func TestProbeGauge_Coordination(t *testing.T) {
 	}
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			window, _ := newGaugeValue(1, 5, 1)
+			window, _ := newPercentageValue(1, 5, 1)
 			values := []int8{10, 20, 30, 40, 50, 60, 70, 80, 90, 100}
 			for _, value := range values {
 				window.Push(value)
@@ -1164,7 +1164,7 @@ func TestProbeGauge_Coordination(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_EmptyWindow(t *testing.T) {
+func TestProbePercentage_EmptyWindow(t *testing.T) {
 	tests := []struct {
 		name         string
 		description  string
@@ -1219,7 +1219,7 @@ func TestProbeGauge_EmptyWindow(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_MultipleWindows_Concurrency(t *testing.T) {
+func TestProbePercentage_MultipleWindows_Concurrency(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
@@ -1232,9 +1232,9 @@ func TestProbeGauge_MultipleWindows_Concurrency(t *testing.T) {
 			const numberOfWindows = 10
 			const numberOfGoroutinesPerWindow = 5
 			const operationsPerGoroutine = 100
-			windows := make([]*gaugeValue, numberOfWindows)
+			windows := make([]*percentageValue, numberOfWindows)
 			for index := 0; index < numberOfWindows; index++ {
-				window, err := newGaugeValue(1, 5, 1)
+				window, err := newPercentageValue(1, 5, 1)
 				if err != nil {
 					t.Fatalf("Got err = %v, expected nil", err)
 				}
@@ -1244,7 +1244,7 @@ func TestProbeGauge_MultipleWindows_Concurrency(t *testing.T) {
 			for windowIndex := 0; windowIndex < numberOfWindows; windowIndex++ {
 				for goroutineIndex := 0; goroutineIndex < numberOfGoroutinesPerWindow; goroutineIndex++ {
 					waitGroup.Add(1)
-					go func(window *gaugeValue, windowIndex, goroutineIndex int) {
+					go func(window *percentageValue, windowIndex, goroutineIndex int) {
 						defer waitGroup.Done()
 						value := int8((windowIndex*numberOfGoroutinesPerWindow + goroutineIndex) % 101)
 						for index := 0; index < operationsPerGoroutine; index++ {
@@ -1273,7 +1273,7 @@ func TestProbeGauge_MultipleWindows_Concurrency(t *testing.T) {
 	}
 }
 
-func TestProbeGauge_Concurrency(t *testing.T) {
+func TestProbePercentage_Concurrency(t *testing.T) {
 	tests := []struct {
 		name string
 	}{
