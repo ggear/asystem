@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 	"supervisor/internal/config"
-	"supervisor/internal/dashboard"
+	"supervisor/internal/display"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 	"unicode"
@@ -78,6 +78,7 @@ func executeWatch(opts *watchOptions) error {
 	switch {
 	case mode == "local":
 	case mode == "remote":
+		isRemote = true
 		if c, err := config.Load(config.DefaultConfigPath); err != nil {
 			return err
 		} else {
@@ -114,14 +115,14 @@ func executeWatch(opts *watchOptions) error {
 	if opts.consoleHeight > 0 && opts.consoleHeight < height {
 		height = opts.consoleHeight
 	}
-	format := dashboard.FormatAuto
+	format := display.FormatAuto
 	switch strings.ToLower(opts.format) {
 	case "auto":
-		format = dashboard.FormatAuto
+		format = display.FormatAuto
 	case "compact":
-		format = dashboard.FormatCompact
+		format = display.FormatCompact
 	case "relaxed":
-		format = dashboard.FormatRelaxed
+		format = display.FormatRelaxed
 	default:
 		return fmt.Errorf("invalid watch format [%s]", opts.format)
 	}
@@ -129,9 +130,9 @@ func executeWatch(opts *watchOptions) error {
 	if err != nil {
 		return err
 	}
-	d, err := dashboard.NewDashboard(
+	d, err := display.NewDisplay(
 		metric.NewRecordCache(),
-		dashboard.TerminalFactory,
+		display.TerminalFactory,
 		hosts,
 		width,
 		height,
@@ -142,7 +143,7 @@ func executeWatch(opts *watchOptions) error {
 	if err != nil {
 		return err
 	}
-	defer func(d *dashboard.Dashboard) {
+	defer func(d *display.Display) {
 		_ = d.Close()
 	}(d)
 	_, err = d.Compile()
@@ -153,11 +154,11 @@ func executeWatch(opts *watchOptions) error {
 	if err != nil {
 		return err
 	}
-	err = d.Display()
+	err = d.Draw()
 	if err != nil {
 		return err
 	}
-	err = d.Update()
+	err = d.Loop()
 	if err != nil {
 		return err
 	}

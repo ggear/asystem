@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 func SetupBrokerContainer(t *testing.T) (testcontainers.Container, mqtt.Client, error) {
 	start := time.Now()
 	t.Helper()
+	RequiresDocker(t)
 	containerSilenceLogs()
 	contextValue := context.Background()
 	containerRequest := testcontainers.ContainerRequest{
@@ -94,6 +96,7 @@ func SetupSleepContainerWithoutHealth(t *testing.T, names ...string) ([]testcont
 
 func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExit bool, names ...string) ([]testcontainers.Container, error) {
 	t.Helper()
+	RequiresDocker(t)
 	containerSilenceLogs()
 	ctx := context.Background()
 	if len(names) == 0 {
@@ -109,9 +112,9 @@ func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExi
 		count := nameCount[base]
 		nameCount[base] = count + 1
 		if count == 0 {
-			uniqueNames = append(uniqueNames, base)
+			uniqueNames = append(uniqueNames, "sleep-"+base)
 		} else {
-			uniqueNames = append(uniqueNames, fmt.Sprintf("%s-%d", base, count+1))
+			uniqueNames = append(uniqueNames, fmt.Sprintf("sleep-%s-%d", base, count+1))
 		}
 	}
 	if healthScriptPath != "" {
@@ -170,6 +173,10 @@ func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExi
 		}
 	}
 	t.Cleanup(func() {
+		zeroTimeout := time.Duration(0)
+		for _, c := range containers {
+			_ = c.Stop(ctx, &zeroTimeout)
+		}
 		clientInstance, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
 			return
@@ -178,10 +185,6 @@ func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExi
 			_ = clientInstance.Close()
 		}(clientInstance)
 		for _, name := range uniqueNames {
-			killErr := clientInstance.ContainerKill(ctx, name, "KILL")
-			if killErr != nil && !cerrdefs.IsNotFound(killErr) {
-				t.Logf("failed to kill container [%s]: %v", name, killErr)
-			}
 			removeErr := clientInstance.ContainerRemove(ctx, name, container.RemoveOptions{Force: true})
 			if removeErr != nil && !cerrdefs.IsNotFound(removeErr) {
 				t.Logf("failed to remove container [%s]: %v", name, removeErr)
@@ -189,6 +192,65 @@ func SetupSleepContainer(t *testing.T, healthScriptPath string, healthyScriptExi
 		}
 	})
 	return containers, nil
+}
+
+var dockerTestActive sync.Map
+
+func RequiresDocker(t *testing.T) {
+	t.Helper()
+	if _, loaded := dockerTestActive.LoadOrStore(t.Name(), true); loaded {
+		return
+	}
+	fileLock, err := os.OpenFile("/tmp/supervisor-docker-test.lock", os.O_CREATE|os.O_RDWR, 0600)
+	if err != nil {
+		t.Fatalf("failed to open docker test lock: %v", err)
+	}
+	if err := syscall.Flock(int(fileLock.Fd()), syscall.LOCK_EX); err != nil {
+		_ = fileLock.Close()
+		t.Fatalf("failed to acquire docker test lock: %v", err)
+	}
+	KillSleepContainers(t)
+	t.Cleanup(func() {
+		dockerTestActive.Delete(t.Name())
+		_ = syscall.Flock(int(fileLock.Fd()), syscall.LOCK_UN)
+		_ = fileLock.Close()
+	})
+}
+
+func KillSleepContainers(t *testing.T) {
+	t.Helper()
+	containerSilenceLogs()
+	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	if err != nil {
+		t.Logf("KillSleepContainers: failed to create docker client: %v", err)
+		return
+	}
+	defer func() { _ = dockerClient.Close() }()
+	ctx := context.Background()
+	containerList, err := dockerClient.ContainerList(ctx, container.ListOptions{All: true})
+	if err != nil {
+		t.Logf("KillSleepContainers: failed to list containers: %v", err)
+		return
+	}
+	var wg sync.WaitGroup
+	for _, c := range containerList {
+		match := false
+		for _, name := range c.Names {
+			if strings.HasPrefix(strings.TrimPrefix(name, "/"), "sleep-") {
+				match = true
+				break
+			}
+		}
+		if !match {
+			continue
+		}
+		wg.Add(1)
+		go func(id string) {
+			defer wg.Done()
+			_ = dockerClient.ContainerRemove(ctx, id, container.RemoveOptions{Force: true})
+		}(c.ID)
+	}
+	wg.Wait()
 }
 
 var containerSilenceLogsOnce sync.Once
@@ -199,7 +261,9 @@ func containerSilenceLogs() {
 	})
 }
 
+var _ = RequiresDocker
 var _ = SetupBrokerContainer
 var _ = SetupSleepContainer
 var _ = SetupSleepContainerWithHealth
 var _ = SetupSleepContainerWithoutHealth
+var _ = KillSleepContainers

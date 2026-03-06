@@ -1,13 +1,13 @@
 {
   "asystem": {
-    "version": "$SERVICE_VERSION_ABSOLUTE",
+    "version": "10.100.6792",
     "broker": {
-      "host": "$VERNEMQ_SERVICE",
-      "port": "$VERNEMQ_API_PORT"
+      "host": "vernemq.local.janeandgraham.com",
+      "port": "1000"
     },
     "database": {
-      "host": "$INFLUXDB_SERVICE",
-      "port": "$INFLUXDB_HTTP_PORT"
+      "host": "influxdb.local.janeandgraham.com",
+      "port": "2000"
     },
     "schema": [
       {

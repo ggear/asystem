@@ -16,6 +16,7 @@
 .settings
 .classpath
 .idea
+CLAUDE.md
 .deps
 *.iml
 .id_rsa

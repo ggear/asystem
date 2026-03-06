@@ -5,7 +5,6 @@ import (
 	"os"
 	"strconv"
 	"supervisor/internal/config"
-	"supervisor/internal/probe"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -47,7 +46,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeriod string) (probe.Periods, error) {
+func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeriod string) (config.Periods, error) {
 	toDuration := func(raw string, unit time.Duration, name string) (int, error) {
 		d, err := time.ParseDuration(raw)
 		if err != nil {
@@ -61,31 +60,44 @@ func makePeriods(pollPeriod, pulseFactor, trendPeriod, cachePeriod, snapshotPeri
 		}
 		return int(d / unit), nil
 	}
-	pollSecs, err := toDuration(pollPeriod, time.Second, "poll")
+	pollDuration, err := time.ParseDuration(pollPeriod)
 	if err != nil {
-		return probe.Periods{}, err
+		return config.Periods{}, fmt.Errorf("invalid poll period: %w", err)
 	}
+	if pollDuration <= 0 {
+		return config.Periods{}, fmt.Errorf("invalid poll period: must be > 0")
+	}
+	pollSecs := pollDuration.Seconds()
 	pulseFactorInt, err := strconv.Atoi(pulseFactor)
 	if err != nil {
-		return probe.Periods{}, fmt.Errorf("invalid pulse factor: %w", err)
+		return config.Periods{}, fmt.Errorf("invalid pulse factor: %w", err)
 	}
-	if pulseFactorInt < 0 {
-		return probe.Periods{}, fmt.Errorf("invalid pulse factor: must be >= 0")
+	if pulseFactorInt < 1 {
+		return config.Periods{}, fmt.Errorf("invalid pulse factor: must be >= 0")
 	}
-	pulseSecs := pulseFactorInt * pollSecs
+	pulseSecs := float64(pulseFactorInt) * pollSecs
 	trendHours, err := toDuration(trendPeriod, time.Hour, "trend")
 	if err != nil {
-		return probe.Periods{}, err
+		return config.Periods{}, err
+	}
+	if trendHours < 1 {
+		return config.Periods{}, fmt.Errorf("invalid trend period: must be >= 0")
 	}
 	cacheHours, err := toDuration(cachePeriod, time.Hour, "cache")
 	if err != nil {
-		return probe.Periods{}, err
+		return config.Periods{}, err
+	}
+	if cacheHours < 1 {
+		return config.Periods{}, fmt.Errorf("invalid cache period: must be >= 0")
 	}
 	snapshotMins, err := toDuration(snapshotPeriod, time.Minute, "snapshot")
 	if err != nil {
-		return probe.Periods{}, err
+		return config.Periods{}, err
 	}
-	return probe.Periods{
+	if snapshotMins < 1 {
+		return config.Periods{}, fmt.Errorf("invalid snapshot period: must be >= 0")
+	}
+	return config.Periods{
 		PollSecs:     pollSecs,
 		PulseSecs:    pulseSecs,
 		TrendHours:   trendHours,

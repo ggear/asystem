@@ -1,0 +1,13 @@
+{
+  "asystem": {
+    "version": "10.100.6792",
+    "schema": [
+      {
+        "host": "",
+        "services": [
+          "monitor"
+        ]
+      }
+    ]
+  }
+}

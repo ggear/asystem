@@ -1,0 +1,69 @@
+# Supervisor JSON
+supervisor/$HOST/command
+supervisor/$HOST/snapshot
+
+# Host Booleans
+supervisor/$HOST/$SCOPE/host
+
+# Host Ints
+supervisor/$HOST/$SCOPE/host/used_processor
+supervisor/$HOST/$SCOPE/host/used_memory
+supervisor/$HOST/$SCOPE/host/allocated_memory
+supervisor/$HOST/$SCOPE/host/failed_services
+supervisor/$HOST/$SCOPE/host/failed_shares
+supervisor/$HOST/$SCOPE/host/failed_backups
+supervisor/$HOST/$SCOPE/host/warn_temperature_of_max
+supervisor/$HOST/$SCOPE/host/spin_fan_speed_of_max
+supervisor/$HOST/$SCOPE/host/life_used_drives
+supervisor/$HOST/$SCOPE/host/used_system_space
+supervisor/$HOST/$SCOPE/host/used_share_space
+supervisor/$HOST/$SCOPE/host/used_backup_space
+supervisor/$HOST/$SCOPE/host/used_swap_space
+supervisor/$HOST/$SCOPE/host/used_disk_ops
+supervisor/$HOST/$SCOPE/host/used_network
+
+# Host Floats
+supervisor/$HOST/$SCOPE/host/running_time
+supervisor/$HOST/$SCOPE/host/temperature
+
+# Services Booleans
+supervisor/$HOST/$SCOPE/services
+
+# Services Floats
+supervisor/$HOST/$SCOPE/services/max_memory
+
+# Service Booleans
+supervisor/$HOST/$SCOPE/service/$SERVICE
+supervisor/$HOST/$SCOPE/service/$SERVICE/backup_status
+supervisor/$HOST/$SCOPE/service/$SERVICE/health_status
+supervisor/$HOST/$SCOPE/service/$SERVICE/configured_status
+
+# Service Strings
+supervisor/$HOST/$SCOPE/service/$SERVICE/name
+supervisor/$HOST/$SCOPE/service/$SERVICE/version
+
+# Service Ints
+supervisor/$HOST/$SCOPE/service/$SERVICE/used_processor
+supervisor/$HOST/$SCOPE/service/$SERVICE/used_memory
+supervisor/$HOST/$SCOPE/service/$SERVICE/used_disk_ops
+supervisor/$HOST/$SCOPE/service/$SERVICE/used_network
+
+# Service Floats
+supervisor/$HOST/$SCOPE/service/$SERVICE/running_time
+supervisor/$HOST/$SCOPE/service/$SERVICE/max_memory
+supervisor/$HOST/$SCOPE/service/$SERVICE/restart_count
+
+# Supervisor Booleans
+supervisor/$HOST/$SCOPE/service/supervisor
+
+# Supervisor Strings
+supervisor/$HOST/$SCOPE/service/supervisor/version
+
+# Supervisor Ints
+supervisor/$HOST/$SCOPE/service/supervisor/used_processor
+supervisor/$HOST/$SCOPE/service/supervisor/used_memory
+
+# Supervisor Floats
+supervisor/$HOST/$SCOPE/service/supervisor/running_time
+supervisor/$HOST/$SCOPE/service/supervisor/max_memory
+supervisor/$HOST/$SCOPE/service/supervisor/metric_rate

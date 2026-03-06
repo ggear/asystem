@@ -4,30 +4,41 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"sort"
+	"sync"
 )
 
 const DefaultConfigPath = "/root/install/supervisor/latest/image/config.json"
 
-type Config struct{ Asystem configData }
+type Periods struct {
+	PollSecs     float64
+	PulseSecs    float64
+	TrendHours   int
+	CacheHours   int
+	SnapshotMins int
+}
+
+type Config struct{ asystem configData }
 
 func Load(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read config file [%s]: %w", path, err)
 	}
-	var config Config
-	if err := json.Unmarshal(data, &config); err != nil {
+	var raw struct{ Asystem configData }
+	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
-	if !versionPattern.MatchString(config.Asystem.Version) {
-		return nil, fmt.Errorf("invalid version [%s]", config.Asystem.Version)
+	config := Config{asystem: raw.Asystem}
+	if !versionPattern.MatchString(config.asystem.Version) {
+		return nil, fmt.Errorf("invalid version [%s]", config.asystem.Version)
 	}
 	seenHosts := map[string]bool{}
-	for i := range config.Asystem.Services {
-		hostServices := &config.Asystem.Services[i]
+	for i := range config.asystem.Schema {
+		hostServices := &config.asystem.Schema[i]
 		if hostServices.Host == "" {
 			return nil, errors.New("empty host name")
 		}
@@ -46,14 +57,26 @@ func Load(path string) (*Config, error) {
 			seenServices[service] = true
 		}
 	}
+	if config.asystem.Broker.Host == "" {
+		return nil, errors.New("broker host is required")
+	}
+	if config.asystem.Broker.Port == "" {
+		return nil, errors.New("broker port is required")
+	}
+	if config.asystem.Database.Host == "" {
+		return nil, errors.New("database host is required")
+	}
+	if config.asystem.Database.Port == "" {
+		return nil, errors.New("database port is required")
+	}
 	return &config, nil
 }
 
-func (s *Config) Version() string { return s.Asystem.Version }
+func (s *Config) Version() string { return s.asystem.Version }
 
 func (s *Config) Broker() string {
-	host := s.Asystem.Broker.Host
-	port := s.Asystem.Broker.Port
+	host := s.asystem.Broker.Host
+	port := s.asystem.Broker.Port
 	if host == "" {
 		return ""
 	}
@@ -64,8 +87,8 @@ func (s *Config) Broker() string {
 }
 
 func (s *Config) Database() string {
-	host := s.Asystem.Database.Host
-	port := s.Asystem.Database.Port
+	host := s.asystem.Database.Host
+	port := s.asystem.Database.Port
 	if host == "" {
 		return ""
 	}
@@ -76,17 +99,17 @@ func (s *Config) Database() string {
 }
 
 func (s *Config) Hosts() []string {
-	hosts := make([]string, len(s.Asystem.Services))
-	for i := range s.Asystem.Services {
-		hosts[i] = s.Asystem.Services[i].Host
+	hosts := make([]string, len(s.asystem.Schema))
+	for i := range s.asystem.Schema {
+		hosts[i] = s.asystem.Schema[i].Host
 	}
 	sort.Strings(hosts)
 	return hosts
 }
 
 func (s *Config) Services(host string) []string {
-	for i := range s.Asystem.Services {
-		services := &s.Asystem.Services[i]
+	for i := range s.asystem.Schema {
+		services := &s.asystem.Schema[i]
 		if services.Host == host {
 			servicesCopy := append([]string(nil), services.Services...)
 			sort.Strings(servicesCopy)
@@ -96,13 +119,25 @@ func (s *Config) Services(host string) []string {
 	return []string{}
 }
 
+var LocalHostName = func() string {
+	cachedHostOnce.Do(func() {
+		hostName, err := os.Hostname()
+		if err != nil {
+			slog.Error("failed to get hostname", "error", err)
+			return
+		}
+		cachedHostName = hostName
+	})
+	return cachedHostName
+}
+
 var versionPattern = regexp.MustCompile(`^\d{2}\.\d{3}\.\d{4}$`)
 
 type configData struct {
 	Version  string
 	Broker   configEndpoint
 	Database configEndpoint
-	Services []configServices
+	Schema   []configServices
 }
 
 type configServices struct {
@@ -114,3 +149,6 @@ type configEndpoint struct {
 	Host string
 	Port string
 }
+
+var cachedHostName string
+var cachedHostOnce sync.Once

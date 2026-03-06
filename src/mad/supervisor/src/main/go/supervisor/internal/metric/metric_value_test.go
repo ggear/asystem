@@ -8,93 +8,113 @@ import (
 
 func TestValueData_UnmarshalJSON(t *testing.T) {
 	tests := []struct {
-		name              string
-		json              string
-		expectedTimestamp int64
-		pulseKind         ValueKind
-		trendKind         ValueKind
-		pulseOK           bool
-		trendOK           bool
-		expectedError     bool
+		name          string
+		json          string
+		pulseKind     ValueKind
+		trendKind     ValueKind
+		pulseOK       bool
+		trendOK       bool
+		expectedTime  int64
+		expectedPulse bool
+		expectedTrend bool
+		expectedError bool
 	}{
 		{
-			name:              "happy_percentage",
-			json:              `{"timestamp":1771744503,"pulse":{"ok":true,"value":20},"trend":{"ok":false,"value":91}}`,
-			expectedTimestamp: 1771744503,
-			pulseKind:         ValueNumber,
-			trendKind:         ValueNumber,
-			pulseOK:           true,
-			trendOK:           false,
-			expectedError:     false,
+			name:          "happy_percentage",
+			json:          `{"timestamp":1771744503,"pulse":{"ok":true,"value":20},"trend":{"ok":false,"value":91}}`,
+			pulseKind:     ValueInt,
+			trendKind:     ValueInt,
+			pulseOK:       true,
+			trendOK:       false,
+			expectedTime:  1771744503,
+			expectedPulse: true,
+			expectedTrend: true,
+			expectedError: false,
 		},
 		{
-			name:              "happy_string_values",
-			json:              `{"timestamp":42,"pulse":{"ok":true,"value":"hot"},"trend":{"ok":true,"value":"cold"}}`,
-			expectedTimestamp: 42,
-			pulseKind:         ValueString,
-			trendKind:         ValueString,
-			pulseOK:           true,
-			trendOK:           true,
-			expectedError:     false,
+			name:          "happy_string_values",
+			json:          `{"timestamp":42,"pulse":{"ok":true,"value":"hot"},"trend":{"ok":true,"value":"cold"}}`,
+			pulseKind:     ValueString,
+			trendKind:     ValueString,
+			pulseOK:       true,
+			trendOK:       true,
+			expectedTime:  42,
+			expectedPulse: true,
+			expectedTrend: true,
+			expectedError: false,
 		},
 		{
-			name:              "happy_missing_pulse",
-			json:              `{"timestamp":7,"trend":{"ok":true,"value":1}}`,
-			expectedTimestamp: 7,
-			pulseKind:         ValueNone,
-			trendKind:         ValueNumber,
-			pulseOK:           false,
-			trendOK:           true,
-			expectedError:     false,
+			name:          "happy_missing_pulse",
+			json:          `{"timestamp":7,"trend":{"ok":true,"value":1}}`,
+			pulseKind:     ValueNone,
+			trendKind:     ValueInt,
+			pulseOK:       false,
+			trendOK:       true,
+			expectedTime:  7,
+			expectedPulse: false,
+			expectedTrend: true,
+			expectedError: false,
 		},
 		{
-			name:              "happy_bool_values",
-			json:              `{"timestamp":9,"pulse":{"ok":true},"trend":{"ok":false}}`,
-			expectedTimestamp: 9,
-			pulseKind:         ValueBoolean,
-			trendKind:         ValueBoolean,
-			pulseOK:           true,
-			trendOK:           false,
-			expectedError:     false,
+			name:          "happy_bool_values",
+			json:          `{"timestamp":9,"pulse":{"ok":true},"trend":{"ok":false}}`,
+			pulseKind:     ValueBool,
+			trendKind:     ValueBool,
+			pulseOK:       true,
+			trendOK:       false,
+			expectedTime:  9,
+			expectedPulse: true,
+			expectedTrend: true,
+			expectedError: false,
 		},
 		{
-			name:              "happy_null_pulse_trend",
-			json:              `{"timestamp":11,"pulse":null,"trend":null}`,
-			expectedTimestamp: 11,
-			pulseKind:         ValueNone,
-			trendKind:         ValueNone,
-			expectedError:     false,
+			name:          "happy_null_pulse_trend",
+			json:          `{"timestamp":11,"pulse":null,"trend":null}`,
+			pulseKind:     ValueNone,
+			trendKind:     ValueNone,
+			expectedTime:  11,
+			expectedPulse: false,
+			expectedTrend: false,
+			expectedError: false,
 		},
 		{
-			name:          "happy_empty_object",
+			name:          "happy_empty_object_input",
 			json:          `{}`,
 			pulseKind:     ValueNone,
 			trendKind:     ValueNone,
+			expectedPulse: false,
+			expectedTrend: false,
 			expectedError: false,
 		},
 		{
-			name:          "happy_empty_string",
-			json:          `""`,
-			pulseKind:     ValueNone,
-			trendKind:     ValueNone,
-			expectedError: false,
-		},
-		{
-			name:          "happy_null",
+			name:          "happy_null_input",
 			json:          `null`,
 			pulseKind:     ValueNone,
 			trendKind:     ValueNone,
+			expectedPulse: false,
+			expectedTrend: false,
 			expectedError: false,
 		},
 		{
-			name:          "happy_empty",
+			name:          "happy_empty_input",
 			json:          "",
 			pulseKind:     ValueNone,
 			trendKind:     ValueNone,
+			expectedPulse: false,
+			expectedTrend: false,
 			expectedError: false,
 		},
 		{
-			name:          "sad_invalid_json",
+			name:          "sad_empty_string_input",
+			json:          `""`,
+			pulseKind:     ValueNone,
+			trendKind:     ValueNone,
+			expectedPulse: false,
+			expectedTrend: false,
+			expectedError: true,
+		},
+		{
+			name:          "sad_invalid_json_input",
 			json:          `{`,
 			expectedError: true,
 		},
@@ -114,20 +134,30 @@ func TestValueData_UnmarshalJSON(t *testing.T) {
 			if err != nil {
 				return
 			}
-			if s.Timestamp != tt.expectedTimestamp {
-				t.Fatalf("Got timestamp = %d, expected %d", s.Timestamp, tt.expectedTimestamp)
+			if s.Timestamp != tt.expectedTime {
+				t.Fatalf("Got timestamp = %d, expected %d", s.Timestamp, tt.expectedTime)
 			}
-			if s.Pulse.OK != tt.pulseOK {
-				t.Fatalf("Got pulse ok = %t, expected %t", s.Pulse.OK, tt.pulseOK)
+			if (s.Pulse == nil) && tt.expectedPulse {
+				t.Fatalf("Got pulse nil = %t, expected %t", s.Pulse == nil, tt.expectedPulse)
 			}
-			if s.Trend.OK != tt.trendOK {
-				t.Fatalf("Got trend ok = %t, expected %t", s.Trend.OK, tt.trendOK)
+			if (s.Trend == nil) && tt.expectedTrend {
+				t.Fatalf("Got trend nil = %t, expected %t", s.Trend == nil, tt.expectedTrend)
 			}
-			if s.Pulse.Kind != tt.pulseKind {
-				t.Fatal("pulse kind mismatch")
+			if s.Pulse != nil {
+				if s.Pulse.OK != tt.pulseOK {
+					t.Fatalf("Got pulse ok = %t, expected %t", s.Pulse.OK, tt.pulseOK)
+				}
+				if s.Pulse.Kind != tt.pulseKind {
+					t.Fatal("pulse kind mismatch")
+				}
 			}
-			if s.Trend.Kind != tt.trendKind {
-				t.Fatal("trend kind mismatch")
+			if s.Trend != nil {
+				if s.Trend.OK != tt.trendOK {
+					t.Fatalf("Got trend ok = %t, expected %t", s.Trend.OK, tt.trendOK)
+				}
+				if s.Trend.Kind != tt.trendKind {
+					t.Fatal("trend kind mismatch")
+				}
 			}
 		})
 	}
@@ -136,56 +166,100 @@ func TestValueData_UnmarshalJSON(t *testing.T) {
 func TestValueData_MarshalJSON(t *testing.T) {
 	tests := []struct {
 		name          string
-		value         ValueData
+		value         *ValueData
 		expected      string
 		expectedError bool
 	}{
 		{
-			name:          "happy_empty",
-			value:         ValueData{},
+			name:          "happy_empty_value",
+			value:         &ValueData{},
 			expected:      `{"timestamp":0}`,
 			expectedError: false,
 		},
 		{
-			name: "happy_with_pulse_only",
-			value: ValueData{
-				Timestamp: 1,
-				Pulse: ValueDataDetail{
-					OK:   true,
-					Kind: ValueBoolean,
-				},
-			},
+			name: "happy_pulse_only_bool",
+			value: func() *ValueData {
+				value := NewBoolPulseValue(true)
+				value.Timestamp = 1
+				return value
+			}(),
 			expected:      `{"timestamp":1,"pulse":{"ok":true,"value":true}}`,
 			expectedError: false,
 		},
 		{
-			name: "happy_with_trend_only",
-			value: ValueData{
-				Timestamp: 2,
-				Trend: ValueDataDetail{
-					OK:   false,
-					Kind: ValueBoolean,
-				},
-			},
+			name: "happy_trend_only_bool",
+			value: func() *ValueData {
+				value := NewBoolValue(false, false)
+				value.Timestamp = 2
+				value.Pulse = nil
+				return value
+			}(),
 			expected:      `{"timestamp":2,"trend":{"ok":false,"value":false}}`,
 			expectedError: false,
 		},
 		{
-			name: "happy_with_pulse_trend",
-			value: ValueData{
-				Timestamp: 3,
-				Pulse: ValueDataDetail{
-					OK:     true,
-					Kind:   ValueNumber,
-					Number: 1.25,
-				},
-				Trend: ValueDataDetail{
-					OK:     false,
-					Kind:   ValueString,
-					String: "down",
-				},
-			},
+			name: "happy_pulse_trend_mixed",
+			value: func() *ValueData {
+				value := NewFloatValue(true, 1.25, false, 0)
+				value.Timestamp = 3
+				value.Trend = &ValueDataDetail{
+					OK:          false,
+					Kind:        ValueString,
+					ValueString: "down",
+				}
+				return value
+			}(),
 			expected:      `{"timestamp":3,"pulse":{"ok":true,"value":1.25},"trend":{"ok":false,"value":"down"}}`,
+			expectedError: false,
+		},
+		{
+			name: "happy_pulse_only_string",
+			value: func() *ValueData {
+				value := NewStringPulseValue(true, "up")
+				value.Timestamp = 4
+				return value
+			}(),
+			expected:      `{"timestamp":4,"pulse":{"ok":true,"value":"up"}}`,
+			expectedError: false,
+		},
+		{
+			name: "happy_pulse_trend_string",
+			value: func() *ValueData {
+				value := NewStringValue(false, "down", true, "steady")
+				value.Timestamp = 5
+				return value
+			}(),
+			expected:      `{"timestamp":5,"pulse":{"ok":false,"value":"down"},"trend":{"ok":true,"value":"steady"}}`,
+			expectedError: false,
+		},
+		{
+			name: "happy_pulse_only_float",
+			value: func() *ValueData {
+				value := NewFloatPulseValue(true, 42.5)
+				value.Timestamp = 6
+				return value
+			}(),
+			expected:      `{"timestamp":6,"pulse":{"ok":true,"value":42.5}}`,
+			expectedError: false,
+		},
+		{
+			name: "happy_pulse_only_perc",
+			value: func() *ValueData {
+				value := NewIntPulseValue(true, 99)
+				value.Timestamp = 7
+				return value
+			}(),
+			expected:      `{"timestamp":7,"pulse":{"ok":true,"value":99}}`,
+			expectedError: false,
+		},
+		{
+			name: "happy_pulse_trend_perc",
+			value: func() *ValueData {
+				value := NewIntValue(true, 80, false, 55)
+				value.Timestamp = 8
+				return value
+			}(),
+			expected:      `{"timestamp":8,"pulse":{"ok":true,"value":80},"trend":{"ok":false,"value":55}}`,
 			expectedError: false,
 		},
 	}
@@ -213,82 +287,122 @@ func TestValueDataDetail_UnmarshalJSON(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "happy_empty_object",
+			name:          "happy_empty_object_input",
 			json:          `{}`,
 			expected:      ValueDataDetail{},
 			expectedError: false,
 		},
 		{
-			name:          "happy_null",
+			name:          "happy_null_input",
 			json:          `null`,
 			expected:      ValueDataDetail{},
 			expectedError: false,
 		},
 		{
-			name:          "happy_empty_string",
+			name:          "happy_empty_string_input",
 			json:          `""`,
 			expected:      ValueDataDetail{},
 			expectedError: false,
 		},
 		{
-			name: "happy_number_value",
+			name: "happy_number_value_float",
 			json: `{"ok":true,"value":12.5}`,
 			expected: ValueDataDetail{
-				OK:     true,
-				Kind:   ValueNumber,
-				Number: 12.5,
+				OK:         true,
+				Kind:       ValueFloat,
+				ValueFloat: 12.5,
 			},
 			expectedError: false,
 		},
 		{
-			name: "happy_number_string_value",
+			name: "happy_number_value_perc",
+			json: `{"ok":true,"value":42}`,
+			expected: ValueDataDetail{
+				OK:       true,
+				Kind:     ValueInt,
+				ValueInt: 42,
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_number_value_perc_min_int8",
+			json: `{"ok":true,"value":-128}`,
+			expected: ValueDataDetail{
+				OK:       true,
+				Kind:     ValueInt,
+				ValueInt: -128,
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_number_value_float_overflow_int8",
+			json: `{"ok":true,"value":128}`,
+			expected: ValueDataDetail{
+				OK:         true,
+				Kind:       ValueFloat,
+				ValueFloat: 128,
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_number_value_float_underflow_int8",
+			json: `{"ok":true,"value":-129}`,
+			expected: ValueDataDetail{
+				OK:         true,
+				Kind:       ValueFloat,
+				ValueFloat: -129,
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_number_value_string",
 			json: `{"ok":true,"value":"12.5"}`,
 			expected: ValueDataDetail{
-				OK:     true,
-				Kind:   ValueString,
-				String: "12.5",
+				OK:          true,
+				Kind:        ValueString,
+				ValueString: "12.5",
 			},
 			expectedError: false,
 		},
 		{
-			name: "happy_string_value",
+			name: "happy_string_value_text",
 			json: `{"ok":false,"value":"healthy"}`,
 			expected: ValueDataDetail{
-				OK:     false,
-				Kind:   ValueString,
-				String: "healthy",
+				OK:          false,
+				Kind:        ValueString,
+				ValueString: "healthy",
 			},
 			expectedError: false,
 		},
 		{
-			name: "happy_non_parseable_value",
+			name: "happy_bool_value_true",
 			json: `{"ok":true,"value":true}`,
 			expected: ValueDataDetail{
 				OK:   true,
-				Kind: ValueNone,
+				Kind: ValueBool,
 			},
 			expectedError: false,
 		},
 		{
-			name: "happy_missing_value",
+			name: "happy_value_missing_true",
 			json: `{"ok":true}`,
 			expected: ValueDataDetail{
 				OK:   true,
-				Kind: ValueBoolean,
+				Kind: ValueBool,
 			},
 			expectedError: false,
 		},
 		{
-			name: "happy_missing_value_false",
+			name: "happy_value_missing_false",
 			json: `{"ok":false}`,
 			expected: ValueDataDetail{
 				OK:   false,
-				Kind: ValueBoolean,
+				Kind: ValueBool,
 			},
 			expectedError: false,
 		},
 		{
-			name: "happy_value_null",
+			name: "happy_value_null_input",
 			json: `{"ok":true,"value":null}`,
 			expected: ValueDataDetail{
 				OK:   true,
@@ -297,7 +411,7 @@ func TestValueDataDetail_UnmarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "happy_value_object",
+			name: "happy_value_object_input",
 			json: `{"ok":true,"value":{}}`,
 			expected: ValueDataDetail{
 				OK:   true,
@@ -306,7 +420,7 @@ func TestValueDataDetail_UnmarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "sad_invalid_json",
+			name:          "sad_invalid_json_input",
 			json:          `{`,
 			expectedError: true,
 		},
@@ -327,11 +441,11 @@ func TestValueDataDetail_UnmarshalJSON(t *testing.T) {
 			if detail.Kind != tt.expected.Kind {
 				t.Fatalf("Got kind = %v, expected %v", detail.Kind, tt.expected.Kind)
 			}
-			if detail.Number != tt.expected.Number {
-				t.Fatalf("Got number = %v, expected %v", detail.Number, tt.expected.Number)
+			if detail.ValueFloat != tt.expected.ValueFloat {
+				t.Fatalf("Got number = %v, expected %v", detail.ValueFloat, tt.expected.ValueFloat)
 			}
-			if detail.String != tt.expected.String {
-				t.Fatalf("Got string = %q, expected %q", detail.String, tt.expected.String)
+			if detail.ValueString != tt.expected.ValueString {
+				t.Fatalf("Got string = %q, expected %q", detail.ValueString, tt.expected.ValueString)
 			}
 		})
 	}
@@ -345,45 +459,55 @@ func TestValueDataDetail_MarshalJSON(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "happy_none",
+			name:          "happy_none_value",
 			value:         ValueDataDetail{},
 			expected:      "null",
 			expectedError: false,
 		},
 		{
-			name: "happy_number",
+			name: "happy_number_value_float",
 			value: ValueDataDetail{
-				OK:     true,
-				Kind:   ValueNumber,
-				Number: 1.5,
+				OK:         true,
+				Kind:       ValueFloat,
+				ValueFloat: 1.5,
 			},
 			expected:      `{"ok":true,"value":1.5}`,
 			expectedError: false,
 		},
 		{
-			name: "happy_string",
+			name: "happy_string_value_text",
 			value: ValueDataDetail{
-				OK:     false,
-				Kind:   ValueString,
-				String: "hi",
+				OK:          false,
+				Kind:        ValueString,
+				ValueString: "hi",
 			},
 			expected:      `{"ok":false,"value":"hi"}`,
 			expectedError: false,
 		},
 		{
-			name: "happy_bool_true",
+			name: "happy_perc_value",
+			value: ValueDataDetail{
+				OK:       true,
+				Kind:     ValueInt,
+				ValueInt: 85,
+			},
+			expected:      `{"ok":true,"value":85}`,
+			expectedError: false,
+		},
+		{
+			name: "happy_bool_value_true",
 			value: ValueDataDetail{
 				OK:   true,
-				Kind: ValueBoolean,
+				Kind: ValueBool,
 			},
 			expected:      `{"ok":true,"value":true}`,
 			expectedError: false,
 		},
 		{
-			name: "happy_bool_false",
+			name: "happy_bool_value_false",
 			value: ValueDataDetail{
 				OK:   false,
-				Kind: ValueBoolean,
+				Kind: ValueBool,
 			},
 			expected:      `{"ok":false,"value":false}`,
 			expectedError: false,
@@ -413,7 +537,7 @@ func TestValueMeta_UnmarshalJSON(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name: "happy_with_pulse_trend",
+			name: "happy_with_pulse_and_trend",
 			json: `{"version":"10.100.6842","pulse":{"window":"5s","unit":"%","type":"percentage","measure":"mean"},"trend":{"window":"24h","unit":"%","type":"percentage","measure":"p95"}}`,
 			expected: ValueMeta{
 				Version: "10.100.6842",
@@ -433,7 +557,7 @@ func TestValueMeta_UnmarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "happy_omit_trend",
+			name: "happy_pulse_only",
 			json: `{"version":"10.100.6842","pulse":{"window":"5s","unit":"%","type":"percentage","measure":"mean"}}`,
 			expected: ValueMeta{
 				Version: "10.100.6842",
@@ -448,7 +572,7 @@ func TestValueMeta_UnmarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "happy_omit_pulse",
+			name: "happy_trend_only",
 			json: `{"version":"10.100.6842","trend":{"window":"24h","unit":"%","type":"percentage","measure":"p95"}}`,
 			expected: ValueMeta{
 				Version: "10.100.6842",
@@ -471,7 +595,7 @@ func TestValueMeta_UnmarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "happy_missing_unit",
+			name: "happy_pulse_missing_unit",
 			json: `{"version":"10.100.6842","pulse":{"window":"5s","type":"percentage","measure":"mean"}}`,
 			expected: ValueMeta{
 				Version: "10.100.6842",
@@ -485,7 +609,7 @@ func TestValueMeta_UnmarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:          "sad_invalid_json",
+			name:          "sad_invalid_json_input",
 			json:          `{`,
 			expectedError: true,
 		},
@@ -523,7 +647,7 @@ func TestValueMeta_MarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "happy_with_pulse_trend",
+			name: "happy_with_pulse_and_trend",
 			value: ValueMeta{
 				Version: "10.100.6842",
 				Pulse: &ValueMetaDetail{
@@ -543,7 +667,7 @@ func TestValueMeta_MarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "happy_with_pulse_only",
+			name: "happy_pulse_only",
 			value: ValueMeta{
 				Version: "10.100.6842",
 				Pulse: &ValueMetaDetail{
@@ -557,7 +681,7 @@ func TestValueMeta_MarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "happy_with_trend_only",
+			name: "happy_trend_only",
 			value: ValueMeta{
 				Version: "10.100.6842",
 				Trend: &ValueMetaDetail{
@@ -571,7 +695,7 @@ func TestValueMeta_MarshalJSON(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "happy_without_unit",
+			name: "happy_pulse_missing_unit",
 			value: ValueMeta{
 				Version: "10.100.6842",
 				Pulse: &ValueMetaDetail{

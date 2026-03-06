@@ -37,7 +37,7 @@ if __name__ == "__main__":
                     "host": "$INFLUXDB_SERVICE",
                     "port": "$INFLUXDB_HTTP_PORT"
                 },
-                "services": [{
+                "schema": [{
                     "host": host,
                     "services": sorted(services)
                 } for host, services in sorted(_get_modules_by_hosts("docker-compose.yml").items(), key=itemgetter(0))]
