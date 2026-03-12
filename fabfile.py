@@ -841,6 +841,9 @@ def _release(context):
                         target_arch = HOSTS[_get_host_label(host)][1]
                         if target_arch == "x86_64":
                             target_arch = "amd64"
+
+                        "darwin"
+
                         module_go_bin = join(ROOT_MODULE_DIR, module, "target/go/bin")
                         _run_local(context, "GOOS=linux GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
                             target_arch,
