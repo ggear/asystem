@@ -835,6 +835,27 @@ def _release(context):
                             _get_versions()[0],
                             file_image
                         ), join(module, "target/release"))
+
+                    module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
+                    if isdir(module_go_main_path):
+                        target_arch = HOSTS[_get_host(module)][1]
+                        if target_arch == "x86_64":
+                            target_arch = "amd64"
+
+
+
+                        _run_local(context, "GOCACHE={} GOBIN={} GOOS=linux GOARCH={} go build -o {}".format(
+                            join(ROOT_MODULE_DIR, module, "target/go/cache"),
+                            join(ROOT_MODULE_DIR, module, "target/go/bin"),
+                            target_arch,
+                            join(ROOT_MODULE_DIR, module, "target/go/bin/"),
+                        ), module_go_main_path)
+                        _run_local(context, "cp -rvf {} target/release".format(
+                            module_go_main_path
+                        ), module)
+
+
+
                     if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/main/resources/*")):
                         _run_local(context, "cp -rvfp target/package/main/resources/. target/release", module)
                     _run_local(context, "mkdir -p target/release/data", module)
