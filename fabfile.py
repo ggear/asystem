@@ -851,7 +851,7 @@ def _release(context):
                             join(ROOT_MODULE_DIR, module, "target/go/bin/"),
                         ), module_go_main_path)
                         _run_local(context, "cp -rvf {} target/release".format(
-                            module_go_main_path
+                            join(ROOT_MODULE_DIR, module, "target/go/bin")
                         ), module)
 
 
