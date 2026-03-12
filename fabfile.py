@@ -836,16 +836,19 @@ def _release(context):
                             file_image
                         ), join(module, "target/release"))
 
+
+
+
+
                     module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
                     if isdir(module_go_main_path):
                         target_arch = HOSTS[_get_host_label(host)][1]
                         if target_arch == "x86_64":
                             target_arch = "amd64"
-
-                        "darwin"
-
+                        target_os = HOSTS[_get_host_label(host)][3]
                         module_go_bin = join(ROOT_MODULE_DIR, module, "target/go/bin")
-                        _run_local(context, "GOOS=linux GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
+                        _run_local(context, "GOOS={} GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
+                            target_os,
                             target_arch,
                             join(ROOT_MODULE_DIR, module, "target/go/cache"),
                             module_go_bin,
@@ -854,6 +857,7 @@ def _release(context):
                         _run_local(context, "cp -rvf {}/* target/release".format(
                             module_go_bin
                         ), module)
+
 
 
 
