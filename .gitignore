@@ -43,6 +43,7 @@ CLAUDE.md
 *egg-info
 *.pipeout
 .pytest_cache
+.claude
 license
 nohup.out
 Cargo.lock
@@ -61,3 +62,4 @@ dist
 58861*
 07849*
 *.mbox
+

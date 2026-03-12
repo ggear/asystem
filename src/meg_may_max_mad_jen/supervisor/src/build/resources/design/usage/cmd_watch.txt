@@ -1,0 +1,67 @@
+Usage:
+  supervisor watch [OPTIONS]
+
+Description:
+  Show real-time system stats.
+
+Aliases:
+  atop
+  atops (--mode remote)
+
+Options:
+  -m, --mode string
+      stats host selection and retrieval method:
+        local
+            Show stats from the local host only, directly polled, presented
+            as a single cell (default).
+        remote
+            Show stats from all hosts, read from the supervisor message bus
+            and presented as a grid.
+        remote[:HOST[,HOST...]]
+            Show stats from the specified hosts, read from the supervisor
+            message bus and presented as a grid.
+
+  -f, --format string
+      output format based on grid cell width:
+        auto
+            Select the most spacious format the grid cell allows (default).
+        compact
+            Optimised for grid cells narrower than 59 columns.
+        relaxed
+            Optimised for grid cells wider than 100 columns.
+
+  -s, --symbols string
+      define output character set:
+        auto
+            Interogate the terminal to determine the character set (default).
+        ascii
+            Use ASCII characters only.
+        unicode
+            Use Unicode characters for expressive symbols.
+
+  -P, --poll-period duration
+      period for adding fast moving metric samples into a pulse window, ignored by slow moving metrics, uses unit suffixes [s, m, h]. (default: 1s)
+
+  -F, --pulse-factor int
+      factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics (default: 5)
+
+  -T, --trend-period duration
+      period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h] (default: 24h)
+
+  -C, --cache-period duration
+      period to cache metric sample for, ignored by fast moving metrics, uses unit suffixes [s, m, h] (default: 24h)
+
+  -S, --snapshot-period duration
+      period for publishing a metric snapshot, uses unit suffixes [s, m, h] (default: 5m)
+
+  -W --console-width int
+      override the console width with the specified value
+
+  -H --console-height int
+      override the console height with the specified value
+
+  -J --json
+      output JSON instead of the default text format. Assumes local mode, repects poll and bin period options and ignores all formating options
+
+  -h, --help
+      display this help message and exit
