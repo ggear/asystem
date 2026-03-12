@@ -835,11 +835,6 @@ def _release(context):
                             _get_versions()[0],
                             file_image
                         ), join(module, "target/release"))
-
-
-
-
-
                     module_go_main_path = join(ROOT_MODULE_DIR, module, "src/main/go", _get_service(module))
                     if isdir(module_go_main_path):
                         target_arch = HOSTS[_get_host_label(host)][1]
@@ -857,10 +852,6 @@ def _release(context):
                         _run_local(context, "cp -rvf {}/* target/release".format(
                             module_go_bin
                         ), module)
-
-
-
-
                     if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/main/resources/*")):
                         _run_local(context, "cp -rvfp target/package/main/resources/. target/release", module)
                     _run_local(context, "mkdir -p target/release/data", module)
