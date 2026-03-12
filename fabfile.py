@@ -843,9 +843,9 @@ def _release(context):
                             target_arch = "amd64"
                         module_go_bin = join(ROOT_MODULE_DIR, module, "target/go/bin")
                         _run_local(context, "GOOS=linux GOARCH={} GOCACHE={} GOBIN={} go build -o {}".format(
+                            target_arch,
                             join(ROOT_MODULE_DIR, module, "target/go/cache"),
                             module_go_bin,
-                            target_arch,
                             module_go_bin,
                         ), module_go_main_path)
                         _run_local(context, "cp -rvf {}/* target/release".format(
