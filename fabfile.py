@@ -849,7 +849,7 @@ def _release(context):
                             target_arch,
                             module_go_bin,
                         ), module_go_main_path)
-                        _run_local(context, "cp -rvf {} target/release".format(
+                        _run_local(context, "cp -rvf {}/* target/release".format(
                             module_go_bin
                         ), module)
 
