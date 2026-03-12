@@ -697,19 +697,25 @@ func version(containerInfo container.InspectResponse) (string, error) {
 			}
 		}
 		if version == "" {
-			tokens = strings.Split(tokens[0], "/")
-			if data, err := os.ReadFile("/root/install/" + tokens[0] + "/latest/.env"); err == nil {
-				for _, line := range strings.Split(string(data), "\n") {
-					if v, ok := strings.CutPrefix(line, "SERVICE_VERSION_ABSOLUTE="); ok {
-						version = v
-						break
+			name := containerInfo.Name
+			if name == "" {
+				tokens = strings.Split(tokens[0], "/")
+				name = tokens[0]
+			}
+			if name != "" {
+				if data, err := os.ReadFile("/root/install/" + name + "/latest/.env"); err == nil {
+					for _, line := range strings.Split(string(data), "\n") {
+						if v, ok := strings.CutPrefix(line, "SERVICE_VERSION_ABSOLUTE="); ok {
+							version = v
+							break
+						}
 					}
 				}
 			}
 		}
 	}
 	if version == "" {
-		slog.Error("version not available", "image", containerInfo.Config.Image)
+		slog.Error("version not available", "name", containerInfo.Name, "image", containerInfo.Config.Image)
 		return "-", nil
 	}
 	return version, nil
