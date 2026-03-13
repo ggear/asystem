@@ -394,10 +394,6 @@ func (p *servicesProbe) services(ctx context.Context) (map[string]service, error
 			slog.Error("empty container name reported by docker, excluding from service list")
 			continue
 		}
-		if name == "supervisor" {
-			slog.Error("invalid container name reported by docker, excluding from service list", "name", name)
-			continue
-		}
 		if _, exists := seenNames[name]; exists {
 			slog.Error("non-unique container name reported by docker, excluding from service list", "name", name)
 			continue

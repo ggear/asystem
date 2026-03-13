@@ -33,9 +33,9 @@ var metricBuildersByID = []builder{
 		template: "supervisor/$HOST/$SCOPE/host/allocated_memory",
 		deps:     []ID{MetricServicesMaxMemory},
 	},
-	MetricHostFailedServices: {
-		id:       MetricHostFailedServices,
-		template: "supervisor/$HOST/$SCOPE/host/failed_services",
+	MetricHostFailedLogs: {
+		id:       MetricHostFailedLogs,
+		template: "supervisor/$HOST/$SCOPE/host/failed_log_messages",
 	},
 	MetricHostFailedShares: {
 		id:       MetricHostFailedShares,
@@ -156,37 +156,6 @@ var metricBuildersByID = []builder{
 		id:       MetricServiceRestartCount,
 		template: "supervisor/$HOST/$SCOPE/service/$SERVICE/restart_count",
 	},
-	MetricSupervisor: {
-		id:       MetricSupervisor,
-		template: "supervisor/$HOST/$SCOPE/service/supervisor",
-	},
-	MetricSupervisorVersion: {
-		id:       MetricSupervisorVersion,
-		template: "supervisor/$HOST/$SCOPE/service/supervisor/version",
-		skipHist: true,
-	},
-	MetricSupervisorUsedProcessor: {
-		id:       MetricSupervisorUsedProcessor,
-		template: "supervisor/$HOST/$SCOPE/service/supervisor/used_processor",
-	},
-	MetricSupervisorUsedMemory: {
-		id:       MetricSupervisorUsedMemory,
-		template: "supervisor/$HOST/$SCOPE/service/supervisor/used_memory",
-	},
-	MetricSupervisorRunningTime: {
-		id:       MetricSupervisorRunningTime,
-		template: "supervisor/$HOST/$SCOPE/service/supervisor/running_time",
-		skipHist: true,
-	},
-	MetricSupervisorMaxMemory: {
-		id:       MetricSupervisorMaxMemory,
-		template: "supervisor/$HOST/$SCOPE/service/supervisor/max_memory",
-		skipHist: true,
-	},
-	MetricSupervisorMetricRate: {
-		id:       MetricSupervisorMetricRate,
-		template: "supervisor/$HOST/$SCOPE/service/supervisor/metric_rate",
-	},
 }
 
 func buildFromID(id ID, hostName string, serviceName string, scope string) (string, map[string]string, error) {
@@ -205,9 +174,6 @@ func buildFromID(id ID, hostName string, serviceName string, scope string) (stri
 	metricBuilder := metricBuildersByID[id]
 	replacer := strings.NewReplacer("$HOST", hostName, "$SCOPE", scope)
 	if serviceName != ServiceNameUnset {
-		if serviceName == "supervisor" {
-			return "", nil, fmt.Errorf("cannot build metric ID [%d] with illegal service=supervisor", id)
-		}
 		if !patternToken.MatchString(serviceName) {
 			return "", nil, fmt.Errorf("cannot build metric ID [%d] with invalid service [%s]", id, serviceName)
 		}
@@ -219,9 +185,6 @@ func buildFromID(id ID, hostName string, serviceName string, scope string) (stri
 	if serviceName != ServiceNameUnset {
 		tags["service"] = serviceName
 	}
-	if strings.Contains(metricBuilder.template, "/service/supervisor") {
-		tags["service"] = "supervisor"
-	}
 	if !patternTopic.MatchString(topic) {
 		return "", nil, fmt.Errorf("metric ID [%d] produced invalid topic [%s]", id, topic)
 	}
@@ -231,7 +194,7 @@ func buildFromID(id ID, hostName string, serviceName string, scope string) (stri
 		templateTokens := strings.Split(metricBuilder.template, "/")
 		metric := templateTokens[len(templateTokens)-1]
 		switch metric {
-		case "host", "service", "supervisor", "$SERVICE":
+		case "host", "service", "$SERVICE":
 			tags["metric"] = "status"
 		default:
 			tags["metric"] = metric
@@ -256,13 +219,8 @@ func buildFromTopic(topic string) (ID, map[string]string, error) {
 	entity := topicTokens[3]
 	template := "supervisor/$HOST/$SCOPE/" + entity
 	if entity == "service" && len(topicTokens) > 4 {
-		if topicTokens[4] == "supervisor" {
-			service = "supervisor"
-			template += "/supervisor"
-		} else {
-			service = topicTokens[4]
-			template += "/$SERVICE"
-		}
+		service = topicTokens[4]
+		template += "/$SERVICE"
 		metricIndex = 5
 	}
 	if len(topicTokens) > metricIndex {
@@ -287,7 +245,7 @@ func buildFromTopic(topic string) (ID, map[string]string, error) {
 		templateTokens := strings.Split(template, "/")
 		metric := templateTokens[len(templateTokens)-1]
 		switch metric {
-		case "host", "service", "supervisor", "$SERVICE":
+		case "host", "service", "$SERVICE":
 			tags["metric"] = "status"
 		default:
 			if !patternToken.MatchString(metric) {

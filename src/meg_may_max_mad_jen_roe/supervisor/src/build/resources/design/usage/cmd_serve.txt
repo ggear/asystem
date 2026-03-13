@@ -12,6 +12,9 @@ Options:
   -F, --pulse-factor int
       factor applied to polling period to size pulse window, defining metric sample aggregation publish period for all metrics (default: 5)
 
+  -B, --heartbeat-factor int
+      factor applied to pulse to time heart beat, period by which metrics are published even if they have not changed (default: 60)
+
   -T, --trend-period duration
       period to size trend window, published with pulse factor * poll period, ignored by non-trend tracked metrics, uses unit suffixes [s, m, h] (default: 24h)
 

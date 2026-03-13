@@ -69,16 +69,6 @@ func TestMetricBuild_TopicToAndFromID(t *testing.T) {
 		expectedFromTopicError bool
 	}{
 		{
-			name:                   "happy_supervisor",
-			topic:                  "supervisor/labnode-one/data/service/supervisor/used_processor",
-			hostName:               "labnode-one",
-			scope:                  "data",
-			serviceName:            ServiceNameUnset,
-			expected:               MetricSupervisorUsedProcessor,
-			expectedFromIDError:    false,
-			expectedFromTopicError: false,
-		},
-		{
 			name:                   "happy_host",
 			topic:                  "supervisor/host/data/host/used_processor",
 			hostName:               "host",
@@ -119,16 +109,6 @@ func TestMetricBuild_TopicToAndFromID(t *testing.T) {
 			expectedFromTopicError: false,
 		},
 		{
-			name:                   "sad_no_host",
-			topic:                  "supervisor/labnode-one/data/service/supervisor/used_processor",
-			hostName:               "",
-			scope:                  "data",
-			serviceName:            ServiceNameUnset,
-			expected:               MetricSupervisorUsedProcessor,
-			expectedFromIDError:    true,
-			expectedFromTopicError: false,
-		},
-		{
 			name:                   "sad_invalid_scope",
 			topic:                  "supervisor/labnode-one/data/host/used_processor",
 			hostName:               "labnode-one",
@@ -155,16 +135,6 @@ func TestMetricBuild_TopicToAndFromID(t *testing.T) {
 			scope:                  "data",
 			serviceName:            ServiceNameUnset,
 			expected:               MetricServiceUsedProcessor,
-			expectedFromIDError:    true,
-			expectedFromTopicError: false,
-		},
-		{
-			name:                   "sad_supervisor_named_service",
-			topic:                  "supervisor/labnode-one/data/service/supervisor/used_processor",
-			hostName:               "labnode-one",
-			scope:                  "data",
-			serviceName:            "supervisor",
-			expected:               MetricSupervisorUsedProcessor,
 			expectedFromIDError:    true,
 			expectedFromTopicError: false,
 		},

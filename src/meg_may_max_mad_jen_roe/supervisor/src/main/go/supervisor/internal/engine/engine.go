@@ -9,6 +9,7 @@ import (
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/probe"
+	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -55,7 +56,7 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	timeout := time.Duration(3*periods.PulseMillis) * time.Millisecond
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	err := probe.Run(ctx)
+	err := probe.Run(ctx, nil)
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		slog.Error("run all probes once: run failed", "error", err)
 	}
@@ -76,12 +77,15 @@ func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metri
 		slog.Error("run listening probes loop: create failed", "error", err)
 		return
 	}
-	if err := probe.Run(ctx); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+	if err := probe.Run(ctx, nil); err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		slog.Error("run listening probes loop: run failed", "error", err)
 	}
 }
 
 func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
+	streamHostStatusMu.Lock()
+	streamHostStatus = make(map[string]bool)
+	streamHostStatusMu.Unlock()
 	for host, ids := range cache.ListenerIDs() {
 		for _, id := range ids {
 			record := metric.NewRecord(metric.NewNilValue())
@@ -92,6 +96,9 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		subscribe := func(b metric.TopicBinding) {
 			guid := b.GUID
 			client.Subscribe(b.Topic, 0, func(_ mqtt.Client, msg mqtt.Message) {
+				if !hostIsOnline(guid.Host) {
+					return
+				}
 				var value metric.ValueData
 				if err := json.Unmarshal(msg.Payload(), &value); err != nil {
 					slog.Debug("stream: unmarshal failed", "topic", msg.Topic(), "error", err)
@@ -107,25 +114,51 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		for _, b := range cache.Topics() {
 			subscribe(b)
 		}
-		client.Subscribe("supervisor/+/data/service/+/name", 0, func(_ mqtt.Client, msg mqtt.Message) {
+		client.Subscribe("supervisor/+/data/service/+/name", 1, func(_ mqtt.Client, msg mqtt.Message) {
 			var value metric.ValueData
 			if err := json.Unmarshal(msg.Payload(), &value); err != nil || value.Pulse == nil {
 				return
 			}
 			serviceName := value.Pulse.ValueString
-			if serviceName == "" || serviceName == "supervisor" {
+			if serviceName == "" {
 				return
 			}
 			tokens := strings.Split(msg.Topic(), "/")
 			if len(tokens) < 6 || tokens[1] == "" {
 				return
 			}
-			host := tokens[1]
-			for _, b := range cache.RegisterService(host, serviceName) {
+			hostName := tokens[1]
+			if !hostIsOnline(hostName) {
+				return
+			}
+			for _, b := range cache.RegisterService(hostName, serviceName) {
 				subscribe(b)
 			}
 			record := metric.NewRecord(value)
-			cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, host, serviceName), &record)
+			cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, hostName, serviceName), &record)
+		})
+		client.Subscribe("supervisor/+/status", 1, func(_ mqtt.Client, msg mqtt.Message) {
+			tokens := strings.Split(msg.Topic(), "/")
+			if len(tokens) < 3 || tokens[1] == "" {
+				return
+			}
+			hostName := tokens[1]
+			payload := strings.TrimSpace(string(msg.Payload()))
+			switch payload {
+			case hostStatusOnline:
+				setHostStatus(hostName, true)
+			case hostStatusOffline:
+				setHostStatus(hostName, false)
+				for svc := range cache.Services() {
+					cache.Evict(hostName, svc)
+				}
+				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
+					record := metric.NewRecord(metric.NewNilValue())
+					cache.Store(metric.NewRecordGUID(id, hostName), &record)
+				}
+			default:
+				slog.Debug("stream: unknown status payload", "host", hostName, "payload", payload)
+			}
 		})
 	}
 	client, err := brokerConnect(configPath, onConnect)
@@ -135,7 +168,6 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 	defer client.Disconnect(250)
 	cache.SubscribeDeletes(&brokerDeletesListener{client: client})
-	staleSecs := max(periods.PulseMillis/1000+1, 2)
 	purgeTicker := time.NewTicker(time.Duration(max(periods.PulseMillis+1000, 2000)) * time.Millisecond)
 	defer purgeTicker.Stop()
 	for {
@@ -143,7 +175,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		case <-ctx.Done():
 			return
 		case <-purgeTicker.C:
-			cache.Purge(staleSecs)
+			cache.Purge(periods.HeartbeatSecs + 10)
 		}
 	}
 }
@@ -156,4 +188,27 @@ func RunAllProbesPublishLoop(ctx context.Context, cache *metric.RecordCache, per
 	//                  writing async cache.publishStream by value (JSON) per metric,
 	//                  writing line protocol to reused buffer per metric,
 	//                  writing async cache.publishHistory by value (ValueString LineProto) at the end fo cycle
+}
+
+const (
+	hostStatusOnline  = "online"
+	hostStatusOffline = "offline"
+)
+
+var (
+	streamHostStatusMu sync.RWMutex
+	streamHostStatus   = make(map[string]bool)
+)
+
+func hostIsOnline(hostName string) bool {
+	streamHostStatusMu.RLock()
+	online, known := streamHostStatus[hostName]
+	streamHostStatusMu.RUnlock()
+	return !known || online
+}
+
+func setHostStatus(hostName string, online bool) {
+	streamHostStatusMu.Lock()
+	streamHostStatus[hostName] = online
+	streamHostStatusMu.Unlock()
 }

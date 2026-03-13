@@ -14,11 +14,12 @@ import (
 var DefaultConfigPath = "/var/lib/asystem/install/supervisor/latest/image/config.json"
 
 type Periods struct {
-	PollMillis   int
-	PulseMillis  int
-	TrendHours   int
-	CacheHours   int
-	SnapshotMins int
+	PollMillis    int
+	PulseMillis   int
+	TrendHours    int
+	CacheHours    int
+	SnapshotMins  int
+	HeartbeatSecs int
 }
 
 func Load(path string) (*Config, error) {

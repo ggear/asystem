@@ -61,7 +61,7 @@ func (p *hostProbe) metrics() []metric.ID {
 		metric.MetricHostUsedProcessor,
 		metric.MetricHostUsedMemory,
 		metric.MetricHostAllocatedMemory,
-		metric.MetricHostFailedServices,
+		metric.MetricHostFailedLogs,
 		metric.MetricHostFailedShares,
 		metric.MetricHostFailedBackups,
 		metric.MetricHostWarnTemperatureOfMax,
@@ -153,7 +153,7 @@ func (p *hostProbe) run(_ context.Context, isPulse bool) error {
 		),
 		newCacheMetricTask(
 			metric.ValueInt,
-			metric.MetricHostFailedServices,
+			metric.MetricHostFailedLogs,
 			metric.ServiceNameUnset,
 			p.failedServices,
 			p.failedServicesInt,

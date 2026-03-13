@@ -105,7 +105,7 @@ func compactDisplayLayout() [][]box {
 	t_0_0 := box{lblLhs: "── ", lblMid: "           ", lblRhs: " ───────────────────────────────────────────", resizeCnt: 3, kind: boxTitle, resizeInc: resizeLblRhs1}
 
 	d_1_0 := box{lblMid: "Used CPU ", valLen: 3, valSfx: "%", metricID: metric.MetricHostUsedProcessor}
-	d_1_1 := box{lblMid: "Fail SVC ", valLen: 3, valSfx: "%", lblLhs: "  ", metricID: metric.MetricHostFailedServices, resizeInc: resizeLblLhs1}
+	d_1_1 := box{lblMid: "Fail LOG ", valLen: 3, valSfx: "%", lblLhs: "  ", metricID: metric.MetricHostFailedLogs, resizeInc: resizeLblLhs1}
 	d_1_2 := box{lblMid: "Warn TEM ", valLen: 3, valSfx: "%", lblLhs: "  ", metricID: metric.MetricHostWarnTemperatureOfMax, resizeInc: resizeLblLhs1}
 	d_1_3 := box{lblMid: "Used SYS ", valLen: 3, valSfx: "%", lblLhs: "  ", metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeLblLhs1}
 
@@ -183,7 +183,7 @@ func relaxedDisplayLayout() [][]box {
 	t_0_0 := box{lblLhs: "── ", lblMid: "           ", lblRhs: " ─────────────────────────────────────────────────────────────────────", resizeCnt: 4, kind: boxTitle, resizeInc: resizeLblRhs1}
 
 	d_1_0 := box{lblMid: "Used CPU ", valLen: 8, valSfx: "%", valKind: valHist, metricID: metric.MetricHostUsedProcessor, resizeInc: resizeHistVal}
-	d_1_1 := box{lblMid: "Fail SVC ", valLen: 8, valSfx: "%", valKind: valHist, lblLhs: "    ", metricID: metric.MetricHostFailedServices, resizeInc: resizeHistVal}
+	d_1_1 := box{lblMid: "Fail LOG ", valLen: 8, valSfx: "%", valKind: valHist, lblLhs: "    ", metricID: metric.MetricHostFailedLogs, resizeInc: resizeHistVal}
 	d_1_2 := box{lblMid: "Warn TEM ", valLen: 8, valSfx: "%", valKind: valHist, lblLhs: "    ", metricID: metric.MetricHostWarnTemperatureOfMax, resizeInc: resizeHistVal}
 	d_1_3 := box{lblMid: "Used SYS ", valLen: 8, valSfx: "%", valKind: valHist, lblLhs: "    ", metricID: metric.MetricHostUsedSystemSpace, resizeInc: resizeHistVal}
 

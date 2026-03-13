@@ -1141,18 +1141,18 @@ func TestRecordCache_Purge(t *testing.T) {
 		checkFunc func(*testing.T, *RecordCache)
 	}{
 		{
-			name: "happy_evicts_stale_records",
+			name: "happy_stale_records_preserved",
 			setupFunc: func(cache *RecordCache) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(100)
+				cache.Purge(9999)
 				record, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"))
 				if !ok || record == nil {
-					t.Fatalf("Got record not found, expected guid preserved after evict")
+					t.Fatalf("Got record not found, expected stale record preserved by purge")
 				}
-				if record.Value.Pulse != nil || record.Value.Trend != nil {
-					t.Fatalf("Got non-nil value after purge, expected nil after stale evict")
+				if record.Value.Pulse == nil {
+					t.Fatalf("Got nil pulse, expected stale record value unchanged by purge")
 				}
 			},
 		},
@@ -1162,7 +1162,7 @@ func TestRecordCache_Purge(t *testing.T) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: freshValue("v")})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(100)
+				cache.Purge(9999)
 				record, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"))
 				if !ok || record == nil {
 					t.Fatalf("Got record not found, expected fresh record preserved")
@@ -1179,7 +1179,7 @@ func TestRecordCache_Purge(t *testing.T) {
 				cache.Evict("alpha", "svc-a")
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(100)
+				cache.Purge(9999)
 				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); ok {
 					t.Fatalf("Got record still present, expected deleted after purge of evicted record")
 				}
@@ -1189,18 +1189,15 @@ func TestRecordCache_Purge(t *testing.T) {
 			},
 		},
 		{
-			name: "happy_two_calls_evict_then_delete",
+			name: "happy_evict_then_purge_deletes",
 			setupFunc: func(cache *RecordCache) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
+				cache.Evict("alpha", "svc-a")
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(100)
-				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); !ok {
-					t.Fatalf("Got record not found after first purge, expected guid preserved")
-				}
-				cache.Purge(100)
+				cache.Purge(9999)
 				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); ok {
-					t.Fatalf("Got record still present after second purge, expected deleted")
+					t.Fatalf("Got record still present after evict+purge, expected deleted")
 				}
 			},
 		},
@@ -1210,7 +1207,7 @@ func TestRecordCache_Purge(t *testing.T) {
 				cache.Store(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &Record{Value: NewNilValue()})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(0)
+				cache.Purge(9999)
 				if _, ok := cache.Load(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0)); !ok {
 					t.Fatalf("Got schema record deleted, expected preserved")
 				}
@@ -1221,20 +1218,20 @@ func TestRecordCache_Purge(t *testing.T) {
 			setupFunc: func(cache *RecordCache) {},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				var nilCache *RecordCache
-				nilCache.Purge(100)
+				nilCache.Purge(9999)
 			},
 		},
 		{
-			name: "happy_notifies_listeners_on_evict",
+			name: "happy_stale_records_no_listener_notification",
 			setupFunc: func(cache *RecordCache) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				listener := &mockListener{}
 				cache.SubscribeUpdates(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), listener)
-				cache.Purge(100)
-				if listener.dirtyCount != 1 {
-					t.Fatalf("Got dirty count = %d, expected 1 after purge evict", listener.dirtyCount)
+				cache.Purge(9999)
+				if listener.dirtyCount != 0 {
+					t.Fatalf("Got dirty count = %d, expected 0 for stale record purge noop", listener.dirtyCount)
 				}
 			},
 		},
@@ -1247,7 +1244,7 @@ func TestRecordCache_Purge(t *testing.T) {
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				listener := &mockListener{}
 				cache.SubscribeUpdates(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), listener)
-				cache.Purge(100)
+				cache.Purge(9999)
 				if listener.dirtyCount != 1 {
 					t.Fatalf("Got dirty count = %d, expected 1 after purge delete", listener.dirtyCount)
 				}
@@ -1260,7 +1257,7 @@ func TestRecordCache_Purge(t *testing.T) {
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				drainChannel(cache.Updates())
-				cache.Purge(100)
+				cache.Purge(9999)
 				select {
 				case <-cache.Updates():
 					t.Fatalf("Got update notification, expected none when purge is noop")
@@ -1269,7 +1266,7 @@ func TestRecordCache_Purge(t *testing.T) {
 			},
 		},
 		{
-			name: "happy_preserves_topic_tags_on_evict",
+			name: "happy_stale_records_preserve_topic_tags",
 			setupFunc: func(cache *RecordCache) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{
 					Topic: "supervisor/alpha/data/service/svc-a/name",
@@ -1278,16 +1275,19 @@ func TestRecordCache_Purge(t *testing.T) {
 				})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(100)
+				cache.Purge(9999)
 				record, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"))
 				if !ok || record == nil {
-					t.Fatalf("Got record not found after purge evict")
+					t.Fatalf("Got record not found after purge")
 				}
 				if record.Topic != "supervisor/alpha/data/service/svc-a/name" {
-					t.Fatalf("Got topic = %q, expected preserved after purge evict", record.Topic)
+					t.Fatalf("Got topic = %q, expected preserved after purge", record.Topic)
 				}
 				if record.Tags["host"] != "alpha" {
-					t.Fatalf("Got tags = %+v, expected preserved after purge evict", record.Tags)
+					t.Fatalf("Got tags = %+v, expected preserved after purge", record.Tags)
+				}
+				if record.Value.Pulse == nil {
+					t.Fatalf("Got nil pulse, expected value preserved after purge")
 				}
 			},
 		},
@@ -1300,7 +1300,7 @@ func TestRecordCache_Purge(t *testing.T) {
 				cache.Evict("alpha", "svc-a")
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(100)
+				cache.Purge(9999)
 				record, ok := cache.LoadByID(MetricServiceName, "alpha", 0)
 				if !ok || record == nil {
 					t.Fatalf("Got no record at index 0 after purge delete, expected svc-b")
@@ -1316,17 +1316,17 @@ func TestRecordCache_Purge(t *testing.T) {
 			},
 		},
 		{
-			name: "happy_notifies_updates_channel_on_evict",
+			name: "happy_stale_records_no_channel_notification",
 			setupFunc: func(cache *RecordCache) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				drainChannel(cache.Updates())
-				cache.Purge(100)
+				cache.Purge(9999)
 				select {
 				case <-cache.Updates():
+					t.Fatalf("Got update notification, expected none for stale record purge noop")
 				default:
-					t.Fatalf("Got no update notification, expected one after purge evict")
 				}
 			},
 		},
@@ -1338,7 +1338,7 @@ func TestRecordCache_Purge(t *testing.T) {
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				drainChannel(cache.Updates())
-				cache.Purge(100)
+				cache.Purge(9999)
 				select {
 				case <-cache.Updates():
 				default:
@@ -1347,18 +1347,18 @@ func TestRecordCache_Purge(t *testing.T) {
 			},
 		},
 		{
-			name: "happy_host_records_not_evicted",
+			name: "happy_host_stale_records_preserved",
 			setupFunc: func(cache *RecordCache) {
 				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: staleValue("v")})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(100)
+				cache.Purge(9999)
 				record, ok := cache.Load(NewRecordGUID(MetricHost, "alpha"))
 				if !ok || record == nil {
 					t.Fatalf("Got host record not found, expected preserved by purge")
 				}
 				if record.Value.Pulse == nil {
-					t.Fatalf("Got host pulse nil, expected value preserved by purge")
+					t.Fatalf("Got nil pulse, expected stale host record value unchanged by purge")
 				}
 			},
 		},
@@ -1368,7 +1368,7 @@ func TestRecordCache_Purge(t *testing.T) {
 				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: NewNilValue()})
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(0)
+				cache.Purge(9999)
 				if _, ok := cache.Load(NewRecordGUID(MetricHost, "alpha")); !ok {
 					t.Fatalf("Got host record deleted, expected preserved by purge")
 				}
@@ -1384,13 +1384,188 @@ func TestRecordCache_Purge(t *testing.T) {
 				cache.mutex.Unlock()
 			},
 			checkFunc: func(t *testing.T, cache *RecordCache) {
-				cache.Purge(100)
+				cache.Purge(9999)
 				services := cache.Services()
 				if _, exists := services["svc-a"]; exists {
 					t.Fatalf("Got svc-a still in services, expected orphan guid removed")
 				}
 				if _, exists := services["svc-b"]; !exists {
 					t.Fatalf("Got svc-b missing, expected preserved")
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_stale_service_record_evicted_not_deleted",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				record, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"))
+				if !ok || record == nil {
+					t.Fatalf("Got stale service record deleted, expected evicted to nil but still in cache")
+				}
+				if record.Value.Pulse != nil {
+					t.Fatalf("Got non-nil pulse, expected stale service record evicted to nil value")
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_stale_service_record_deleted_on_subsequent_purge",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				cache.Purge(9999)
+				if _, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a")); ok {
+					t.Fatalf("Got stale service record still present after second purge, expected deleted")
+				}
+				if cache.Size() != 0 {
+					t.Fatalf("Got size = %d, expected 0 after second purge deletes evicted record", cache.Size())
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_stale_host_record_evicted_not_deleted",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: staleValue("v")})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				record, ok := cache.Load(NewRecordGUID(MetricHost, "alpha"))
+				if !ok || record == nil {
+					t.Fatalf("Got host record deleted, expected preserved after eviction")
+				}
+				if record.Value.Pulse != nil {
+					t.Fatalf("Got non-nil pulse, expected host record evicted to nil value")
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_fresh_service_record_not_evicted",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: freshValue("v")})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				record, ok := cache.Load(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"))
+				if !ok || record == nil {
+					t.Fatalf("Got fresh record deleted, expected preserved")
+				}
+				if record.Value.Pulse == nil {
+					t.Fatalf("Got nil pulse, expected fresh record value unchanged")
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_schema_record_not_evicted",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &Record{Value: staleValue("v")})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				record, ok := cache.Load(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0))
+				if !ok || record == nil {
+					t.Fatalf("Got schema record deleted, expected preserved")
+				}
+				if record.Value.Pulse == nil {
+					t.Fatalf("Got nil pulse, expected schema record value unchanged")
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_stale_host_record_marks_dirty",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: staleValue("v")})
+				cache.Take()
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				dirty := cache.Take()
+				if len(dirty) != 1 {
+					t.Fatalf("Got dirty len = %d, expected 1 for evicted host record", len(dirty))
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_stale_service_record_dirty_after_eviction",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
+				cache.Take()
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				dirty := cache.Take()
+				if len(dirty) != 1 {
+					t.Fatalf("Got dirty len = %d, expected 1 after stale service record evicted", len(dirty))
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_stale_service_record_not_dirty_after_subsequent_delete",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
+				cache.Take()
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				cache.Take()
+				cache.Purge(9999)
+				if cache.Take() != nil {
+					t.Fatalf("Got dirty records after stale service record deleted, expected nil")
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_stale_service_record_notifies_listener",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: staleValue("v")})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				listener := &mockListener{}
+				cache.SubscribeUpdates(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), listener)
+				cache.Purge(100)
+				if listener.dirtyCount == 0 {
+					t.Fatalf("Got dirty count = 0, expected notifications for stale service record eviction")
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_stale_host_record_notifies_channel",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: staleValue("v")})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				drainChannel(cache.Updates())
+				cache.Purge(100)
+				select {
+				case <-cache.Updates():
+				default:
+					t.Fatalf("Got no update notification, expected one after stale host record eviction")
+				}
+			},
+		},
+		{
+			name: "happy_evict_secs_preserves_topic_tags_on_host_eviction",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{
+					Topic: "supervisor/alpha/data/host",
+					Tags:  map[string]string{"host": "alpha"},
+					Value: staleValue("v"),
+				})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				cache.Purge(100)
+				record, ok := cache.Load(NewRecordGUID(MetricHost, "alpha"))
+				if !ok || record == nil {
+					t.Fatalf("Got host record not found after eviction")
+				}
+				if record.Topic != "supervisor/alpha/data/host" {
+					t.Fatalf("Got topic = %q, expected preserved after eviction", record.Topic)
+				}
+				if record.Tags["host"] != "alpha" {
+					t.Fatalf("Got tags = %+v, expected preserved after eviction", record.Tags)
 				}
 			},
 		},
@@ -1530,15 +1705,15 @@ func TestRecordCache_SchemaListeners(t *testing.T) {
 			expectedSchemaDirty: 0,
 		},
 		{
-			name: "happy_purge_evict_notifies_schema_listener",
+			name: "happy_purge_stale_no_schema_notification",
 			setupFunc: func(cache *RecordCache, listener *mockListener) {
 				stale := ValueData{Timestamp: time.Now().Unix() - 200, Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "v"}}
 				cache.Store(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &Record{})
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: stale})
 				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), listener)
-				cache.Purge(100)
+				cache.Purge(9999)
 			},
-			expectedSchemaDirty: 1,
+			expectedSchemaDirty: 0,
 		},
 		{
 			name: "happy_purge_delete_notifies_schema_listener",
@@ -1547,7 +1722,7 @@ func TestRecordCache_SchemaListeners(t *testing.T) {
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value})
 				cache.Evict("alpha", "svc-a")
 				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), listener)
-				cache.Purge(100)
+				cache.Purge(9999)
 			},
 			expectedSchemaDirty: 1,
 		},
@@ -1558,7 +1733,7 @@ func TestRecordCache_SchemaListeners(t *testing.T) {
 				cache.Store(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &Record{})
 				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: fresh})
 				cache.SubscribeUpdates(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), listener)
-				cache.Purge(100)
+				cache.Purge(9999)
 			},
 			expectedSchemaDirty: 0,
 		},
@@ -1820,6 +1995,14 @@ func TestRecordCache_Topics(t *testing.T) {
 			expectedTopics: 0,
 		},
 		{
+			name: "happy_schema_records_with_real_service_records_not_included_in_topics",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &Record{})
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{})
+			},
+			expectedTopics: 1,
+		},
+		{
 			name:           "happy_empty_cache",
 			setupFunc:      func(cache *RecordCache) {},
 			expectedTopics: 0,
@@ -1921,7 +2104,7 @@ func TestRecordCache_SubscribeDeletes(t *testing.T) {
 			checkFunc: func(t *testing.T, cache *RecordCache) {
 				listener := &mockDeletesListener{}
 				cache.SubscribeDeletes(listener)
-				cache.Purge(100)
+				cache.Purge(9999)
 				if listener.unsubscribeCount != 1 {
 					t.Fatalf("Got unsubscribe count = %d, expected 1", listener.unsubscribeCount)
 				}
@@ -1996,5 +2179,297 @@ func drainChannel(ch <-chan struct{}) {
 		default:
 			return
 		}
+	}
+}
+
+func guidSliceToSet(guids []RecordGUID) map[guidKey]struct{} {
+	s := make(map[guidKey]struct{}, len(guids))
+	for _, g := range guids {
+		s[g.key()] = struct{}{}
+	}
+	return s
+}
+
+func TestRecordCache_Take(t *testing.T) {
+	value1 := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "first"}}
+	value2 := ValueData{Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "second"}}
+	tests := []struct {
+		name          string
+		setupFunc     func(*RecordCache)
+		checkFunc     func(*testing.T, *RecordCache)
+		expectedError bool
+	}{
+		{
+			name:      "happy_nil_cache_returns_nil",
+			setupFunc: func(_ *RecordCache) {},
+			checkFunc: func(t *testing.T, _ *RecordCache) {
+				var c *RecordCache
+				if c.Take() != nil {
+					t.Fatalf("Got non-nil from nil cache, expected nil")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name:      "happy_empty_cache_returns_nil",
+			setupFunc: func(_ *RecordCache) {},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				if cache.Take() != nil {
+					t.Fatalf("Got non-nil from empty cache, expected nil")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_store_new_value_marks_dirty",
+			setupFunc: func(cache *RecordCache) {
+				guid := NewRecordGUID(MetricHost, "alpha")
+				cache.Store(guid, &Record{Value: value1})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				got := cache.Take()
+				if len(got) != 1 {
+					t.Fatalf("Got %d dirty records, expected 1", len(got))
+				}
+				if got[0] != NewRecordGUID(MetricHost, "alpha") {
+					t.Fatalf("Got dirty guid = %+v, expected alpha/MetricHost", got[0])
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_new_service_insert_dirty_has_reindexed_service_index",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value1})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				got := cache.Take()
+				if len(got) != 1 {
+					t.Fatalf("Got %d dirty records, expected 1", len(got))
+				}
+				if got[0].ServiceIndex != 0 {
+					t.Fatalf("Got ServiceIndex = %d, expected 0 after reindex", got[0].ServiceIndex)
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_existing_service_update_dirty_has_reindexed_service_index",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value1})
+				cache.Take()
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value2})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				got := cache.Take()
+				if len(got) != 1 {
+					t.Fatalf("Got %d dirty records, expected 1", len(got))
+				}
+				if got[0].ServiceIndex != 0 {
+					t.Fatalf("Got ServiceIndex = %d, expected 0 for existing record update", got[0].ServiceIndex)
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_reindex_updates_dirty_service_index_on_earlier_insertion",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "nginx"), &Record{Value: value1})
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "apache"), &Record{Value: value1})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				got := cache.Take()
+				indices := make(map[string]int)
+				for _, guid := range got {
+					indices[guid.ServiceName] = guid.ServiceIndex
+				}
+				if indices["nginx"] != 1 {
+					t.Fatalf("Got nginx ServiceIndex = %d, expected 1 after apache inserted before it", indices["nginx"])
+				}
+				if indices["apache"] != 0 {
+					t.Fatalf("Got apache ServiceIndex = %d, expected 0", indices["apache"])
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_nil_value_new_insert_not_dirty",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: NewNilValue()})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				if cache.Take() != nil {
+					t.Fatalf("Got dirty records after nil-value new insert, expected nil")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_nil_value_schema_insert_not_dirty",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceSchemaRecordGUID(MetricServiceName, "alpha", 0), &Record{Value: NewNilValue()})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				if cache.Take() != nil {
+					t.Fatalf("Got dirty records after nil-value schema insert, expected nil")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_store_same_value_not_dirty",
+			setupFunc: func(cache *RecordCache) {
+				guid := NewRecordGUID(MetricHost, "alpha")
+				cache.Store(guid, &Record{Value: value1})
+				cache.Take()
+				cache.Store(guid, &Record{Value: value1})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				if cache.Take() != nil {
+					t.Fatalf("Got dirty records after same-value store, expected nil")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_store_changed_value_marks_dirty",
+			setupFunc: func(cache *RecordCache) {
+				guid := NewRecordGUID(MetricHost, "alpha")
+				cache.Store(guid, &Record{Value: value1})
+				cache.Take()
+				cache.Store(guid, &Record{Value: value2})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				got := cache.Take()
+				if len(got) != 1 {
+					t.Fatalf("Got %d dirty records after value change, expected 1", len(got))
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_take_flushes_dirty_map",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: value1})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				first := cache.Take()
+				if len(first) != 1 {
+					t.Fatalf("Got %d dirty records on first Take, expected 1", len(first))
+				}
+				second := cache.Take()
+				if second != nil {
+					t.Fatalf("Got %d dirty records on second Take, expected nil", len(second))
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_store_nil_value_after_non_nil_marks_dirty",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: value1})
+				cache.Take()
+				nilRecord := NewRecord(NewNilValue())
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &nilRecord)
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				got := cache.Take()
+				if len(got) != 1 {
+					t.Fatalf("Got %d dirty records after nil store over non-nil, expected 1", len(got))
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_evict_marks_dirty",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value1})
+				cache.Take()
+				cache.Evict("alpha", "svc-a")
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				got := cache.Take()
+				if len(got) != 1 {
+					t.Fatalf("Got %d dirty records after evict, expected 1", len(got))
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_delete_clears_dirty",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value1})
+				cache.Evict("alpha", "svc-a")
+				cache.Delete("alpha", "svc-a")
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				if cache.Take() != nil {
+					t.Fatalf("Got dirty records after delete, expected nil")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_purge_stale_not_dirty",
+			setupFunc: func(cache *RecordCache) {
+				fresh := ValueData{Timestamp: time.Now().Unix(), Pulse: &ValueDataDetail{OK: true, Kind: ValueString, ValueString: "first"}}
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: fresh})
+				cache.Take()
+				cache.Purge(9999)
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				if cache.Take() != nil {
+					t.Fatalf("Got dirty records after purge of non-nil record, expected nil")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_purge_delete_clears_dirty",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value1})
+				cache.Evict("alpha", "svc-a")
+				cache.Purge(9999)
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				if cache.Take() != nil {
+					t.Fatalf("Got dirty records after purge delete, expected nil")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_multiple_dirty_records",
+			setupFunc: func(cache *RecordCache) {
+				cache.Store(NewRecordGUID(MetricHost, "alpha"), &Record{Value: value1})
+				cache.Store(NewRecordGUID(MetricHost, "beta"), &Record{Value: value1})
+				cache.Store(NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"), &Record{Value: value1})
+			},
+			checkFunc: func(t *testing.T, cache *RecordCache) {
+				got := cache.Take()
+				if len(got) != 3 {
+					t.Fatalf("Got %d dirty records, expected 3", len(got))
+				}
+				gotSet := guidSliceToSet(got)
+				expected := []RecordGUID{
+					NewRecordGUID(MetricHost, "alpha"),
+					NewRecordGUID(MetricHost, "beta"),
+					NewServiceRecordGUID(MetricServiceName, "alpha", "svc-a"),
+				}
+				for _, g := range expected {
+					if _, ok := gotSet[g.key()]; !ok {
+						t.Fatalf("Got dirty set missing guid %+v", g)
+					}
+				}
+			},
+			expectedError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := NewRecordCache()
+			tt.setupFunc(cache)
+			tt.checkFunc(t, cache)
+		})
 	}
 }

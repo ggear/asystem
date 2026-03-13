@@ -1,8 +1,10 @@
 dar=udm,arm64,dar,linux
 gui=udm,arm64,gui,linux
 jac=raspbpi,arm64,dar,linux
+jem=raspbpi,arm64,dar,linux
 jen=raspbpi,arm64,dar,linux
 jil=raspbpi,arm64,gui,linux
+joy=raspbpi,arm64,gui,linux
 kit=fwkdesk,arm64,dar,linux
 roe=macbook,arm64,dar,darwin
 mad=macmini,arm64,dar,linux

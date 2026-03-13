@@ -1,4 +1,5 @@
 # Supervisor JSON
+supervisor/$HOST/status
 supervisor/$HOST/command
 supervisor/$HOST/snapshot
 
@@ -52,18 +53,3 @@ supervisor/$HOST/$SCOPE/service/$SERVICE/used_network
 supervisor/$HOST/$SCOPE/service/$SERVICE/running_time
 supervisor/$HOST/$SCOPE/service/$SERVICE/max_memory
 supervisor/$HOST/$SCOPE/service/$SERVICE/restart_count
-
-# Supervisor Booleans
-supervisor/$HOST/$SCOPE/service/supervisor
-
-# Supervisor Strings
-supervisor/$HOST/$SCOPE/service/supervisor/version
-
-# Supervisor Ints
-supervisor/$HOST/$SCOPE/service/supervisor/used_processor
-supervisor/$HOST/$SCOPE/service/supervisor/used_memory
-
-# Supervisor Floats
-supervisor/$HOST/$SCOPE/service/supervisor/running_time
-supervisor/$HOST/$SCOPE/service/supervisor/max_memory
-supervisor/$HOST/$SCOPE/service/supervisor/metric_rate

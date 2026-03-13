@@ -8,7 +8,7 @@ const (
 	MetricHostUsedProcessor
 	MetricHostUsedMemory
 	MetricHostAllocatedMemory
-	MetricHostFailedServices
+	MetricHostFailedLogs
 	MetricHostFailedShares
 	MetricHostFailedBackups
 	MetricHostWarnTemperatureOfMax
@@ -37,13 +37,6 @@ const (
 	MetricServiceRunningTime
 	MetricServiceMaxMemory
 	MetricServiceRestartCount
-	MetricSupervisor
-	MetricSupervisorVersion
-	MetricSupervisorUsedProcessor
-	MetricSupervisorUsedMemory
-	MetricSupervisorRunningTime
-	MetricSupervisorMaxMemory
-	MetricSupervisorMetricRate
 	MetricMax
 )
 

@@ -116,21 +116,6 @@ func TestProbeServices_Services(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name:                 "happy_ignore_supervisor",
-			expectedServiceCount: 0,
-			newDockerClient:      func() (*client.Client, error) { return &client.Client{}, nil },
-			listContainers: func(_ context.Context, _ *client.Client) ([]container.Summary, error) {
-				return []container.Summary{{ID: "supervisor", Names: []string{"/supervisor"}}}, nil
-			},
-			statsOneShot: func(_ context.Context, _ *client.Client, _ string) (container.StatsResponseReader, error) {
-				return container.StatsResponseReader{}, nil
-			},
-			inspectContainer: func(_ context.Context, _ *client.Client, _ string) (container.InspectResponse, error) {
-				return container.InspectResponse{}, nil
-			},
-			expectedError: false,
-		},
-		{
 			name:            "happy_reaper_prefix_ignored",
 			newDockerClient: func() (*client.Client, error) { return &client.Client{}, nil },
 			listContainers: func(_ context.Context, _ *client.Client) ([]container.Summary, error) {

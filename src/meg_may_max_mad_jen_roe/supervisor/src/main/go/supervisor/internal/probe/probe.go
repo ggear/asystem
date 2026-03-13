@@ -65,12 +65,14 @@ func Create(configPath string, cache *metric.RecordCache, periods config.Periods
 	return nil
 }
 
-func Run(ctx context.Context) error {
+func Run(ctx context.Context, onPulse func(isHeartbeat bool)) error {
 	if execProbes == nil {
 		return fmt.Errorf("create must be called before run")
 	}
 	pulseEveryTick := execPeriods.PulseMillis / execPeriods.PollMillis
 	pulseTickCount := 1
+	heartbeatEveryPulse := execPeriods.HeartbeatSecs * 1000 / execPeriods.PulseMillis
+	heartbeatPulseCount := 1
 	ticker := time.NewTicker(time.Duration(execPeriods.PollMillis) * time.Millisecond)
 	defer ticker.Stop()
 	for {
@@ -91,6 +93,16 @@ func Run(ctx context.Context) error {
 					slog.Error("error executing probe", "probe", p.name(), "error", err)
 				}
 				slog.Debug("profiling", "probe", p.name(), "phase", "tick", "duration", time.Since(probeStart).Truncate(time.Millisecond), "is_pulse", isPulse)
+			}
+			if isPulse {
+				heartbeatPulseCount--
+				isHeartbeat := heartbeatPulseCount <= 0
+				if isHeartbeat {
+					heartbeatPulseCount = heartbeatEveryPulse
+				}
+				if onPulse != nil {
+					onPulse(isHeartbeat)
+				}
 			}
 			slog.Debug("profiling", "probe", "*", "phase", "tick", "duration", time.Since(tickStart).Truncate(time.Millisecond), "is_pulse", isPulse)
 		}
@@ -113,7 +125,6 @@ var errProbeWarmingUp = errors.New("probe is still warming up")
 func init() {
 	registerProbes(
 		func() probe { return newServicesProbe() },
-		func() probe { return newSupervisorProbe() },
 		func() probe { return newHostProbe() },
 	)
 	verifyProbes()

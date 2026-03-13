@@ -1,4 +1,5 @@
 # Supervisor JSON
+supervisor/labnode-one/status
 supervisor/labnode-one/command
 supervisor/labnode-one/snapshot
 
@@ -85,25 +86,3 @@ supervisor/labnode-one/meta/service/a-service/max_memory
 supervisor/labnode-one/data/service/a-service/max_memory
 supervisor/labnode-one/meta/service/a-service/restart_count
 supervisor/labnode-one/data/service/a-service/restart_count
-
-# Supervisor Booleans
-supervisor/labnode-one/meta/service/supervisor
-supervisor/labnode-one/data/service/supervisor
-
-# Supervisor Strings
-supervisor/labnode-one/meta/service/supervisor/version
-supervisor/labnode-one/data/service/supervisor/version
-
-# Supervisor Ints
-supervisor/labnode-one/meta/service/supervisor/used_processor
-supervisor/labnode-one/data/service/supervisor/used_processor
-supervisor/labnode-one/meta/service/supervisor/used_memory
-supervisor/labnode-one/data/service/supervisor/used_memory
-
-# Supervisor Floats
-supervisor/labnode-one/meta/service/supervisor/running_time
-supervisor/labnode-one/data/service/supervisor/running_time
-supervisor/labnode-one/meta/service/supervisor/max_memory
-supervisor/labnode-one/data/service/supervisor/max_memory
-supervisor/labnode-one/meta/service/supervisor/metric_rate
-supervisor/labnode-one/data/service/supervisor/metric_rate

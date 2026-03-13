@@ -158,3 +158,177 @@ var (
 type mockUpdatesListener struct{}
 
 func (m *mockUpdatesListener) MarkDirty() {}
+
+func TestEngine_HostStatus(t *testing.T) {
+	value := metric.ValueData{Timestamp: time.Now().Unix(), Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "v"}}
+	tests := []struct {
+		name           string
+		setupFunc      func()
+		checkFunc      func(*testing.T)
+		expectedError  bool
+	}{
+		{
+			name: "happy_unknown_host_is_online",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+			},
+			checkFunc: func(t *testing.T) {
+				if !hostIsOnline("unknown-host") {
+					t.Fatalf("Got offline, expected unknown host to be treated as online")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_set_online",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+				setHostStatus("alpha", true)
+			},
+			checkFunc: func(t *testing.T) {
+				if !hostIsOnline("alpha") {
+					t.Fatalf("Got offline, expected online after setHostStatus true")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_set_offline",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+				setHostStatus("alpha", false)
+			},
+			checkFunc: func(t *testing.T) {
+				if hostIsOnline("alpha") {
+					t.Fatalf("Got online, expected offline after setHostStatus false")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_offline_evicts_service_metrics",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+			},
+			checkFunc: func(t *testing.T) {
+				cache := metric.NewRecordCache()
+				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"), &metric.Record{Value: value})
+				setHostStatus("alpha", false)
+				for svc := range cache.Services() {
+					cache.Evict("alpha", svc)
+				}
+				record, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"))
+				if !ok || record == nil {
+					t.Fatalf("Got record deleted, expected evicted to nil but present")
+				}
+				if record.Value.Pulse != nil {
+					t.Fatalf("Got non-nil pulse, expected service record evicted to nil on offline")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_offline_evicts_host_metrics",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+			},
+			checkFunc: func(t *testing.T) {
+				cache := metric.NewRecordCache()
+				cache.Store(metric.NewRecordGUID(metric.MetricHost, "alpha"), &metric.Record{Value: value})
+				setHostStatus("alpha", false)
+				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
+					record := metric.NewRecord(metric.NewNilValue())
+					cache.Store(metric.NewRecordGUID(id, "alpha"), &record)
+				}
+				record, ok := cache.Load(metric.NewRecordGUID(metric.MetricHost, "alpha"))
+				if !ok || record == nil {
+					t.Fatalf("Got host record deleted, expected evicted to nil but present")
+				}
+				if record.Value.Pulse != nil {
+					t.Fatalf("Got non-nil pulse, expected host record evicted to nil on offline")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_online_allows_store",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+				setHostStatus("alpha", true)
+			},
+			checkFunc: func(t *testing.T) {
+				if !hostIsOnline("alpha") {
+					t.Fatalf("Got offline, expected online host to allow stores")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_offline_blocks_store",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+				setHostStatus("alpha", false)
+			},
+			checkFunc: func(t *testing.T) {
+				if hostIsOnline("alpha") {
+					t.Fatalf("Got online, expected offline host to block stores")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_online_after_offline_allows_store",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+				setHostStatus("alpha", false)
+				setHostStatus("alpha", true)
+			},
+			checkFunc: func(t *testing.T) {
+				if !hostIsOnline("alpha") {
+					t.Fatalf("Got offline, expected online after transitioning offline→online")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_stale_offline_cleared_on_restart",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+				setHostStatus("alpha", false)
+			},
+			checkFunc: func(t *testing.T) {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+				if !hostIsOnline("alpha") {
+					t.Fatalf("Got offline, expected stale offline status cleared after restart")
+				}
+			},
+			expectedError: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.setupFunc()
+			tt.checkFunc(t)
+		})
+	}
+}

@@ -98,6 +98,7 @@ type RecordCache struct {
 	notify          chan struct{}
 	listeners       map[guidKey][]UpdatesListener
 	deletesListener DeletesListener
+	dirty           map[guidKey]RecordGUID
 }
 
 func NewRecordCache() *RecordCache {
@@ -107,6 +108,7 @@ func NewRecordCache() *RecordCache {
 		serviceIndex: make(map[indexKey]guidKey),
 		notify:       make(chan struct{}, 1),
 		listeners:    make(map[guidKey][]UpdatesListener),
+		dirty:        make(map[guidKey]RecordGUID),
 	}
 }
 
@@ -123,6 +125,7 @@ func (c *RecordCache) Store(guid RecordGUID, record *Record) {
 	var listeners []UpdatesListener
 	notify := true
 	k := guid.key()
+	nilValue := NewNilValue()
 	c.mutex.Lock()
 	cached, found := c.records[k]
 	if found && cached != nil && cached.Value.Equal(&record.Value) {
@@ -133,13 +136,18 @@ func (c *RecordCache) Store(guid RecordGUID, record *Record) {
 		c.guids = slices.Insert(c.guids, index, guid)
 		c.records[k] = record
 		c.reindex()
+		guid = c.guids[index]
 	} else {
+		guid = c.guids[index]
 		snapshot := *record
 		if snapshot.Topic == "" && cached != nil {
 			snapshot.Topic = cached.Topic
 			snapshot.Tags = cached.Tags
 		}
 		c.records[k] = &snapshot
+	}
+	if notify && (!record.Value.Equal(&nilValue) || (found && cached != nil && !cached.Value.Equal(&nilValue))) {
+		c.dirty[k] = guid
 	}
 	listeners = append([]UpdatesListener(nil), c.listeners[k]...)
 	if notify && GetIDKind(guid.ID) == MetricKindService && guid.ServiceName != ServiceNameUnset && guid.ServiceName != ServiceNameSchema {
@@ -202,15 +210,6 @@ func (c *RecordCache) RegisterService(hostName, serviceName string) []TopicBindi
 	return bindings
 }
 
-func (c *RecordCache) SubscribeDeletes(listener DeletesListener) {
-	if c == nil || listener == nil {
-		return
-	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	c.deletesListener = listener
-}
-
 func (c *RecordCache) Load(guid RecordGUID) (*Record, bool) {
 	if c == nil {
 		return nil, false
@@ -268,6 +267,7 @@ func (c *RecordCache) Evict(host, serviceName string) bool {
 			continue
 		}
 		c.records[k] = &Record{Topic: record.Topic, Tags: record.Tags, Value: nilValue}
+		c.dirty[k] = guid
 		allListeners = append(allListeners, c.listeners[k]...)
 		if GetIDKind(guid.ID) == MetricKindService {
 			schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
@@ -314,6 +314,7 @@ func (c *RecordCache) Delete(host, serviceName string) bool {
 		if record != nil && record.Topic != "" {
 			removedTopics = append(removedTopics, record.Topic)
 		}
+		delete(c.dirty, k)
 		allListeners = append(allListeners, c.listeners[k]...)
 		if GetIDKind(guid.ID) == MetricKindService {
 			schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
@@ -349,12 +350,12 @@ func (c *RecordCache) Purge(evictSecs int) {
 	if c == nil {
 		return
 	}
-	c.mutex.Lock()
-	evicted := false
-	removedGuids := false
-	updated := c.guids[:0]
 	now := time.Now().Unix()
 	nilValue := NewNilValue()
+	c.mutex.Lock()
+	changed := false
+	removedGuids := false
+	updated := c.guids[:0]
 	var allListeners []UpdatesListener
 	var removedTopics []string
 	deletesListener := c.deletesListener
@@ -362,6 +363,7 @@ func (c *RecordCache) Purge(evictSecs int) {
 		k := guid.key()
 		record := c.records[k]
 		if record == nil {
+			delete(c.dirty, k)
 			allListeners = append(allListeners, c.listeners[k]...)
 			if GetIDKind(guid.ID) == MetricKindService {
 				schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
@@ -369,16 +371,30 @@ func (c *RecordCache) Purge(evictSecs int) {
 			}
 			delete(c.listeners, k)
 			removedGuids = true
+			changed = true
 			continue
 		}
-		if guid.ServiceName == ServiceNameUnset || strings.HasPrefix(guid.ServiceName, ServiceNameSchema) {
+		if strings.HasPrefix(guid.ServiceName, ServiceNameSchema) {
 			updated = append(updated, guid)
 			continue
 		}
-		if record.Value.Equal(&nilValue) {
+		if !record.Value.Equal(&nilValue) && now-record.Value.Timestamp > int64(evictSecs) {
+			c.records[k] = &Record{Topic: record.Topic, Tags: record.Tags, Value: nilValue}
+			c.dirty[k] = guid
+			allListeners = append(allListeners, c.listeners[k]...)
+			if GetIDKind(guid.ID) == MetricKindService {
+				schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
+				allListeners = append(allListeners, c.listeners[schemaKey]...)
+			}
+			changed = true
+			updated = append(updated, guid)
+			continue
+		}
+		if record.Value.Equal(&nilValue) && guid.ServiceName != ServiceNameUnset {
 			if record.Topic != "" {
 				removedTopics = append(removedTopics, record.Topic)
 			}
+			delete(c.dirty, k)
 			allListeners = append(allListeners, c.listeners[k]...)
 			if GetIDKind(guid.ID) == MetricKindService {
 				schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
@@ -387,15 +403,7 @@ func (c *RecordCache) Purge(evictSecs int) {
 			delete(c.records, k)
 			delete(c.listeners, k)
 			removedGuids = true
-		} else if now-record.Value.Timestamp > int64(evictSecs) {
-			c.records[k] = &Record{Topic: record.Topic, Tags: record.Tags, Value: nilValue}
-			allListeners = append(allListeners, c.listeners[k]...)
-			if GetIDKind(guid.ID) == MetricKindService {
-				schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
-				allListeners = append(allListeners, c.listeners[schemaKey]...)
-			}
-			evicted = true
-			updated = append(updated, guid)
+			changed = true
 		} else {
 			updated = append(updated, guid)
 		}
@@ -408,7 +416,7 @@ func (c *RecordCache) Purge(evictSecs int) {
 		c.reindex()
 	}
 	c.mutex.Unlock()
-	if evicted || removedGuids {
+	if changed {
 		for _, listener := range allListeners {
 			listener.MarkDirty()
 		}
@@ -488,6 +496,84 @@ func (c *RecordCache) Topics() []TopicBinding {
 		bindings = append(bindings, TopicBinding{Topic: record.Topic, GUID: guid})
 	}
 	return bindings
+}
+
+func (c *RecordCache) Take() []RecordGUID {
+	if c == nil {
+		return nil
+	}
+	c.mutex.Lock()
+	if len(c.dirty) == 0 {
+		c.mutex.Unlock()
+		return nil
+	}
+	result := make([]RecordGUID, 0, len(c.dirty))
+	for _, guid := range c.dirty {
+		result = append(result, guid)
+	}
+	c.dirty = make(map[guidKey]RecordGUID, len(result))
+	c.mutex.Unlock()
+	return result
+}
+
+func (c *RecordCache) SubscribeDeletes(listener DeletesListener) {
+	if c == nil || listener == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.deletesListener = listener
+}
+
+func (c *RecordCache) ListenerIDs() map[string][]ID {
+	if c == nil {
+		return nil
+	}
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	idsByHost := make(map[string][]ID)
+	for k := range c.listeners {
+		idsByHost[k.Host] = append(idsByHost[k.Host], k.ID)
+	}
+	return idsByHost
+}
+
+func (c *RecordCache) ClearUpdateListeners() {
+	if c == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	for k := range c.listeners {
+		c.listeners[k] = nil
+	}
+}
+
+func (c *RecordCache) SubscribeUpdates(guid RecordGUID, listener UpdatesListener) {
+	if c == nil || listener == nil {
+		return
+	}
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	k := guid.key()
+	c.listeners[k] = append(c.listeners[k], listener)
+}
+
+func (c *RecordCache) Updates() <-chan struct{} {
+	if c == nil {
+		return nil
+	}
+	return c.notify
+}
+
+func (c *RecordCache) NotifyUpdates() {
+	if c == nil || c.notify == nil {
+		return
+	}
+	select {
+	case c.notify <- struct{}{}:
+	default:
+	}
 }
 
 func (c *RecordCache) Size() int {
@@ -598,57 +684,6 @@ func (c *RecordCache) String() string {
 	return stringBuilder.String()
 }
 
-func (c *RecordCache) ListenerIDs() map[string][]ID {
-	if c == nil {
-		return nil
-	}
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	idsByHost := make(map[string][]ID)
-	for k := range c.listeners {
-		idsByHost[k.Host] = append(idsByHost[k.Host], k.ID)
-	}
-	return idsByHost
-}
-
-func (c *RecordCache) ClearUpdateListeners() {
-	if c == nil {
-		return
-	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	for k := range c.listeners {
-		c.listeners[k] = nil
-	}
-}
-
-func (c *RecordCache) SubscribeUpdates(guid RecordGUID, listener UpdatesListener) {
-	if c == nil || listener == nil {
-		return
-	}
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	k := guid.key()
-	c.listeners[k] = append(c.listeners[k], listener)
-}
-
-func (c *RecordCache) Updates() <-chan struct{} {
-	if c == nil {
-		return nil
-	}
-	return c.notify
-}
-
-func (c *RecordCache) NotifyUpdates() {
-	if c == nil || c.notify == nil {
-		return
-	}
-	select {
-	case c.notify <- struct{}{}:
-	default:
-	}
-}
-
 func compareRecordGUID(this, that RecordGUID) int {
 	switch {
 	case this.Host < that.Host:
@@ -684,6 +719,10 @@ func (c *RecordCache) reindex() {
 			names[c.guids[i].ServiceName] = len(names)
 		}
 		c.guids[i].ServiceIndex = names[c.guids[i].ServiceName]
+		k := c.guids[i].key()
+		if _, inDirty := c.dirty[k]; inDirty {
+			c.dirty[k] = c.guids[i]
+		}
 	}
 	clear(c.serviceIndex)
 	for _, guid := range c.guids {
@@ -700,7 +739,7 @@ func (c *RecordCache) reindex() {
 		if guid.Host == "" {
 			continue
 		}
-		if GetIDKind(guid.ID) == MetricKindService && guid.ServiceName == ServiceNameUnset {
+		if GetIDKind(guid.ID) == MetricKindService && (guid.ServiceName == ServiceNameUnset || strings.HasPrefix(guid.ServiceName, ServiceNameSchema)) {
 			continue
 		}
 		topic, tags, err := buildFromID(guid.ID, guid.Host, guid.ServiceName, "data")
