@@ -127,8 +127,7 @@ func (p *servicesProbe) run(ctx context.Context, isPulse bool) error {
 	for name := range servicesByName {
 		polledServiceNames[name] = struct{}{}
 	}
-	cachedServiceNamesIndexes := p.cache.Services()
-	for cachedServiceName := range cachedServiceNamesIndexes {
+	for _, cachedServiceName := range p.cache.Services(config.LocalHostName()) {
 		if _, exists := polledServiceNames[cachedServiceName]; !exists {
 			p.cache.Delete(config.LocalHostName(), cachedServiceName)
 			p.cache.Evict(config.LocalHostName(), cachedServiceName)

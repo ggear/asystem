@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"strconv"
 	"strings"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
@@ -31,36 +32,6 @@ import (
 //  - drawValue to ~ out if necessary
 //  - Implement display update tests
 //  - Validate hot path is fast, validate dont recompute tags/topics
-
-func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.RecordCache) {
-	hostName := config.LocalHostName()
-	if hostName == "" {
-		slog.Error("cannot resolve local host name")
-		return
-	}
-	for _, id := range metric.GetIDs() {
-		record := metric.NewRecord(metric.NewNilValue())
-		cache.Store(metric.NewServiceSchemaRecordGUID(id, hostName, 0), &record)
-	}
-	periods := config.Periods{
-		PollMillis:   500,
-		PulseMillis:  1000,
-		TrendHours:   0,
-		CacheHours:   0,
-		SnapshotMins: 0,
-	}
-	if err := probe.Create(configPath, cache, periods); err != nil {
-		slog.Error("run all probes once: create failed", "error", err)
-		return
-	}
-	timeout := time.Duration(3*periods.PulseMillis) * time.Millisecond
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	err := probe.Run(ctx, nil)
-	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
-		slog.Error("run all probes once: run failed", "error", err)
-	}
-}
 
 func RunListeningProbesLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for host, ids := range cache.ListenerIDs() {
@@ -93,10 +64,21 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 		}
 	}
 	onConnect := func(client mqtt.Client) {
+		var subscribedMu sync.Mutex
+		subscribed := make(map[string]struct{})
 		subscribe := func(b metric.TopicBinding) {
+			subscribedMu.Lock()
+			_, exists := subscribed[b.Topic]
+			if !exists {
+				subscribed[b.Topic] = struct{}{}
+			}
+			subscribedMu.Unlock()
+			if exists {
+				return
+			}
 			guid := b.GUID
 			client.Subscribe(b.Topic, 0, func(_ mqtt.Client, msg mqtt.Message) {
-				if !hostIsOnline(guid.Host) {
+				if !isOnline(guid.Host) {
 					return
 				}
 				var value metric.ValueData
@@ -105,6 +87,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 					return
 				}
 				if value.Pulse == nil {
+					cache.Evict(guid.Host, guid.ServiceName)
 					return
 				}
 				record := metric.NewRecord(value)
@@ -128,7 +111,7 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 				return
 			}
 			hostName := tokens[1]
-			if !hostIsOnline(hostName) {
+			if !isOnline(hostName) {
 				return
 			}
 			for _, b := range cache.RegisterService(hostName, serviceName) {
@@ -146,10 +129,10 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 			payload := strings.TrimSpace(string(msg.Payload()))
 			switch payload {
 			case hostStatusOnline:
-				setHostStatus(hostName, true)
+				storeOnline(hostName, true)
 			case hostStatusOffline:
-				setHostStatus(hostName, false)
-				for svc := range cache.Services() {
+				storeOnline(hostName, false)
+				for _, svc := range cache.Services(hostName) {
 					cache.Evict(hostName, svc)
 				}
 				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
@@ -180,14 +163,131 @@ func RunListeningStreamLoop(ctx context.Context, configPath string, cache *metri
 	}
 }
 
-func RunAllProbesPublishLoop(ctx context.Context, cache *metric.RecordCache, periods config.Periods) {
-	_ = periods
-	// TODO:
-	//  - Loop over all metrics and load into cache
-	//  - Start probes, writing to cache per metric (necessary for deps, not for JSON/LineProto),
-	//                  writing async cache.publishStream by value (JSON) per metric,
-	//                  writing line protocol to reused buffer per metric,
-	//                  writing async cache.publishHistory by value (ValueString LineProto) at the end fo cycle
+func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.RecordCache) {
+	for _, id := range metric.GetIDs() {
+		record := metric.NewRecord(metric.NewNilValue())
+		cache.Store(metric.NewServiceSchemaRecordGUID(id, config.LocalHostName(), 0), &record)
+	}
+	periods := config.Periods{
+		PollMillis:   500,
+		PulseMillis:  1000,
+		TrendHours:   0,
+		CacheHours:   0,
+		SnapshotMins: 0,
+	}
+	if err := probe.Create(configPath, cache, periods); err != nil {
+		slog.Error("run all probes once: create failed", "error", err)
+		return
+	}
+	timeout := time.Duration(3*periods.PulseMillis) * time.Millisecond
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	err := probe.Run(ctx, nil)
+	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+		slog.Error("run all probes once: run failed", "error", err)
+	}
+}
+
+func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
+	for _, id := range metric.GetIDs() {
+		record := metric.NewRecord(metric.NewNilValue())
+		cache.Store(metric.NewServiceSchemaRecordGUID(id, config.LocalHostName(), 0), &record)
+	}
+	if err := probe.Create(configPath, cache, periods); err != nil {
+		slog.Error("run all probes publish loop: create failed", "error", err)
+		return
+	}
+	client, err := brokerConnect(configPath, nil)
+	if err != nil {
+		slog.Error("run all probes publish loop: broker connect failed", "error", err)
+		return
+	}
+	defer client.Disconnect(250)
+	hostName := config.LocalHostName()
+	snapshotTopic := "supervisor/" + hostName + "/snapshot"
+	statusTopic := "supervisor/" + hostName + "/status"
+	var lp strings.Builder
+	publish := func(record *metric.Record) {
+		if record.Topic == "" || record.Value.Pulse == nil {
+			return
+		}
+		payload, jsonErr := json.Marshal(record.Value)
+		if jsonErr != nil {
+			slog.Debug("run all probes publish loop: marshal failed", "topic", record.Topic, "error", jsonErr)
+			return
+		}
+		client.Publish(record.Topic, 0, false, payload)
+		if len(record.Tags) == 0 {
+			return
+		}
+		lp.WriteString("supervisor")
+		for k, v := range record.Tags {
+			lp.WriteByte(',')
+			lp.WriteString(k)
+			lp.WriteByte('=')
+			lp.WriteString(v)
+		}
+		lp.WriteByte(' ')
+		writeDetailLP(&lp, "pulse", record.Value.Pulse)
+		if record.Value.Trend != nil {
+			lp.WriteByte(',')
+			writeDetailLP(&lp, "trend", record.Value.Trend)
+		}
+		lp.WriteByte(' ')
+		lp.WriteString(strconv.FormatInt(record.Value.Timestamp*1_000_000_000, 10))
+		lp.WriteByte('\n')
+	}
+	err = probe.Run(ctx, func(isHeartbeat bool) {
+		lp.Reset()
+		if isHeartbeat {
+			cache.Records(func(_ metric.RecordGUID, record *metric.Record) {
+				publish(record)
+			})
+			cache.Take()
+			client.Publish(statusTopic, 1, true, hostStatusOnline)
+		} else {
+			for _, guid := range cache.Take() {
+				record, ok := cache.Load(guid)
+				if !ok {
+					continue
+				}
+				publish(record)
+			}
+		}
+		if lp.Len() > 0 {
+			client.Publish(snapshotTopic, 0, false, lp.String())
+		}
+	})
+	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
+		slog.Error("run all probes publish loop: run failed", "error", err)
+	}
+}
+
+func writeDetailLP(b *strings.Builder, prefix string, d *metric.ValueDataDetail) {
+	b.WriteString(prefix)
+	b.WriteString("_ok=")
+	if d.OK {
+		b.WriteString("true")
+	} else {
+		b.WriteString("false")
+	}
+	v := d.Value()
+	if v == "" {
+		return
+	}
+	b.WriteByte(',')
+	b.WriteString(prefix)
+	b.WriteString("_value=")
+	if d.Kind == metric.ValueString {
+		b.WriteByte('"')
+		b.WriteString(v)
+		b.WriteByte('"')
+	} else {
+		b.WriteString(v)
+		if d.Kind == metric.ValueInt {
+			b.WriteByte('i')
+		}
+	}
 }
 
 const (
@@ -200,14 +300,14 @@ var (
 	streamHostStatus   = make(map[string]bool)
 )
 
-func hostIsOnline(hostName string) bool {
+func isOnline(hostName string) bool {
 	streamHostStatusMu.RLock()
 	online, known := streamHostStatus[hostName]
 	streamHostStatusMu.RUnlock()
 	return !known || online
 }
 
-func setHostStatus(hostName string, online bool) {
+func storeOnline(hostName string, online bool) {
 	streamHostStatusMu.Lock()
 	streamHostStatus[hostName] = online
 	streamHostStatusMu.Unlock()

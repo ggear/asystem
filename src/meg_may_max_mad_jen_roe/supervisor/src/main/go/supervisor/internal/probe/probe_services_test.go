@@ -473,6 +473,28 @@ func TestProbeServices_Run(t *testing.T) {
 			},
 		},
 		{
+			name: "happy_does_not_evict_other_host_services",
+			setupFunc: func(p *servicesProbe, cache *metric.RecordCache) {
+				value := metric.ValueData{Pulse: &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"}}
+				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, "other-host", "svc-a"), &metric.Record{Value: value})
+				p.listContainers = func(_ context.Context, _ *client.Client) ([]container.Summary, error) {
+					return []container.Summary{}, nil
+				}
+			},
+			checkFunc: func(t *testing.T, p *servicesProbe, cache *metric.RecordCache) {
+				if err := p.run(context.Background(), true); err != nil {
+					t.Fatalf("Got run error = %v, expected nil", err)
+				}
+				record, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, "other-host", "svc-a"))
+				if !ok || record == nil {
+					t.Fatalf("Got other-host guid missing, expected preserved")
+				}
+				if record.Value.Pulse == nil {
+					t.Fatalf("Got other-host pulse nil, expected untouched")
+				}
+			},
+		},
+		{
 			name: "happy_partial_delete_on_second_missing_poll",
 			setupFunc: func(p *servicesProbe, cache *metric.RecordCache) {
 				host := config.LocalHostName()

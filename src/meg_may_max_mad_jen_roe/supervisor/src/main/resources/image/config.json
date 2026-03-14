@@ -11,11 +11,18 @@
     },
     "schema": [
       {
+        "host": "macbook-roe",
+        "services": [
+          "supervisor"
+        ]
+      },
+      {
         "host": "macmini-mad",
         "services": [
           "monitor",
           "plex",
-          "sabnzbd"
+          "sabnzbd",
+          "supervisor"
         ]
       },
       {
@@ -26,7 +33,8 @@
           "mlserver",
           "monitor",
           "openra",
-          "rhasspy"
+          "rhasspy",
+          "supervisor"
         ]
       },
       {
@@ -38,6 +46,7 @@
           "letsencrypt",
           "monitor",
           "sonarr",
+          "supervisor",
           "unpoller",
           "wrangle"
         ]
@@ -51,6 +60,7 @@
           "monitor",
           "nginx",
           "postgres",
+          "supervisor",
           "vernemq"
         ]
       },
@@ -58,6 +68,7 @@
         "host": "raspbpi-jen",
         "services": [
           "monitor",
+          "supervisor",
           "weewx",
           "zigbee2mqtt"
         ]

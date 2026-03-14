@@ -224,7 +224,7 @@ func (c *RecordCache) Load(guid RecordGUID) (*Record, bool) {
 	return &snapshot, true
 }
 
-func (c *RecordCache) LoadByID(id ID, host string, serviceIndex int) (*Record, bool) {
+func (c *RecordCache) LoadByID(id ID, hostName string, serviceIndex int) (*Record, bool) {
 	if c == nil {
 		return nil, false
 	}
@@ -233,10 +233,10 @@ func (c *RecordCache) LoadByID(id ID, host string, serviceIndex int) (*Record, b
 
 	var record *Record
 	if serviceIndex == ServiceIndexUnset {
-		guid := NewRecordGUID(id, host)
+		guid := NewRecordGUID(id, hostName)
 		record = c.records[guid.key()]
 	} else {
-		key, found := c.serviceIndex[indexKey{ID: id, Host: host, ServiceIndex: serviceIndex}]
+		key, found := c.serviceIndex[indexKey{ID: id, Host: hostName, ServiceIndex: serviceIndex}]
 		if !found {
 			return nil, false
 		}
@@ -249,8 +249,8 @@ func (c *RecordCache) LoadByID(id ID, host string, serviceIndex int) (*Record, b
 	return &snapshot, true
 }
 
-func (c *RecordCache) Evict(host, serviceName string) bool {
-	if c == nil || host == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
+func (c *RecordCache) Evict(hostName, serviceName string) bool {
+	if c == nil || hostName == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
 		return false
 	}
 	nilValue := NewNilValue()
@@ -258,7 +258,7 @@ func (c *RecordCache) Evict(host, serviceName string) bool {
 	var allListeners []UpdatesListener
 	evicted := false
 	for _, guid := range c.guids {
-		if guid.Host != host || guid.ServiceName != serviceName {
+		if guid.Host != hostName || guid.ServiceName != serviceName {
 			continue
 		}
 		k := guid.key()
@@ -285,8 +285,8 @@ func (c *RecordCache) Evict(host, serviceName string) bool {
 	return evicted
 }
 
-func (c *RecordCache) Delete(host, serviceName string) bool {
-	if c == nil || host == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
+func (c *RecordCache) Delete(hostName, serviceName string) bool {
+	if c == nil || hostName == "" || serviceName == ServiceNameUnset || strings.HasPrefix(serviceName, ServiceNameSchema) {
 		return false
 	}
 	nilValue := NewNilValue()
@@ -301,7 +301,7 @@ func (c *RecordCache) Delete(host, serviceName string) bool {
 	deletesListener := c.deletesListener
 	updated := c.guids[:0]
 	for _, guid := range c.guids {
-		if guid.Host != host || guid.ServiceName != serviceName {
+		if guid.Host != hostName || guid.ServiceName != serviceName {
 			updated = append(updated, guid)
 			continue
 		}
@@ -357,21 +357,13 @@ func (c *RecordCache) Purge(evictSecs int) {
 	removedGuids := false
 	updated := c.guids[:0]
 	var allListeners []UpdatesListener
-	var removedTopics []string
-	deletesListener := c.deletesListener
 	for _, guid := range c.guids {
 		k := guid.key()
 		record := c.records[k]
 		if record == nil {
 			delete(c.dirty, k)
-			allListeners = append(allListeners, c.listeners[k]...)
-			if GetIDKind(guid.ID) == MetricKindService {
-				schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
-				allListeners = append(allListeners, c.listeners[schemaKey]...)
-			}
 			delete(c.listeners, k)
 			removedGuids = true
-			changed = true
 			continue
 		}
 		if strings.HasPrefix(guid.ServiceName, ServiceNameSchema) {
@@ -387,26 +379,8 @@ func (c *RecordCache) Purge(evictSecs int) {
 				allListeners = append(allListeners, c.listeners[schemaKey]...)
 			}
 			changed = true
-			updated = append(updated, guid)
-			continue
 		}
-		if record.Value.Equal(&nilValue) && guid.ServiceName != ServiceNameUnset {
-			if record.Topic != "" {
-				removedTopics = append(removedTopics, record.Topic)
-			}
-			delete(c.dirty, k)
-			allListeners = append(allListeners, c.listeners[k]...)
-			if GetIDKind(guid.ID) == MetricKindService {
-				schemaKey := guidKey{ID: guid.ID, Host: guid.Host, ServiceName: ServiceNameSchema}
-				allListeners = append(allListeners, c.listeners[schemaKey]...)
-			}
-			delete(c.records, k)
-			delete(c.listeners, k)
-			removedGuids = true
-			changed = true
-		} else {
-			updated = append(updated, guid)
-		}
+		updated = append(updated, guid)
 	}
 	if removedGuids {
 		for i := len(updated); i < len(c.guids); i++ {
@@ -419,11 +393,6 @@ func (c *RecordCache) Purge(evictSecs int) {
 	if changed {
 		for _, listener := range allListeners {
 			listener.MarkDirty()
-		}
-		if deletesListener != nil {
-			for _, topic := range removedTopics {
-				deletesListener.Unsubscribe(topic)
-			}
 		}
 		c.NotifyUpdates()
 	}
@@ -459,21 +428,49 @@ func (c *RecordCache) Hosts() map[string]int {
 	return hosts
 }
 
-func (c *RecordCache) Services() map[string]int {
+
+func (c *RecordCache) Services(hostName string) []string {
 	if c == nil {
 		return nil
 	}
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	services := make(map[string]int)
+	var services []string
+	seen := make(map[string]struct{})
 	for _, guid := range c.guids {
-		if guid.ServiceName != ServiceNameUnset && !strings.HasPrefix(guid.ServiceName, ServiceNameSchema) {
-			if _, exists := services[guid.ServiceName]; !exists {
-				services[guid.ServiceName] = len(services)
-			}
+		if guid.Host != hostName {
+			continue
+		}
+		if guid.ServiceName == ServiceNameUnset || strings.HasPrefix(guid.ServiceName, ServiceNameSchema) {
+			continue
+		}
+		if _, exists := seen[guid.ServiceName]; !exists {
+			seen[guid.ServiceName] = struct{}{}
+			services = append(services, guid.ServiceName)
 		}
 	}
 	return services
+}
+
+func (c *RecordCache) Records(fn func(RecordGUID, *Record)) {
+	if c == nil {
+		return
+	}
+	c.mutex.RLock()
+	guids := make([]RecordGUID, 0, len(c.guids))
+	records := make([]Record, 0, len(c.guids))
+	for _, guid := range c.guids {
+		record := c.records[guid.key()]
+		if record == nil {
+			continue
+		}
+		guids = append(guids, guid)
+		records = append(records, *record)
+	}
+	c.mutex.RUnlock()
+	for i, guid := range guids {
+		fn(guid, &records[i])
+	}
 }
 
 func (c *RecordCache) Topics() []TopicBinding {
@@ -710,11 +707,11 @@ func (c *RecordCache) reindex() {
 			c.guids[i].ServiceIndex = ServiceIndexUnset
 			continue
 		}
-		host := c.guids[i].Host
-		if hostIndices[host] == nil {
-			hostIndices[host] = make(map[string]int)
+		hostName := c.guids[i].Host
+		if hostIndices[hostName] == nil {
+			hostIndices[hostName] = make(map[string]int)
 		}
-		names := hostIndices[host]
+		names := hostIndices[hostName]
 		if _, exists := names[c.guids[i].ServiceName]; !exists {
 			names[c.guids[i].ServiceName] = len(names)
 		}

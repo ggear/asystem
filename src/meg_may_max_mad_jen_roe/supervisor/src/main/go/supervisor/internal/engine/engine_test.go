@@ -2,8 +2,11 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"supervisor/internal/config"
 	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
@@ -175,7 +178,7 @@ func TestEngine_HostStatus(t *testing.T) {
 				streamHostStatusMu.Unlock()
 			},
 			checkFunc: func(t *testing.T) {
-				if !hostIsOnline("unknown-host") {
+				if !isOnline("unknown-host") {
 					t.Fatalf("Got offline, expected unknown host to be treated as online")
 				}
 			},
@@ -187,11 +190,11 @@ func TestEngine_HostStatus(t *testing.T) {
 				streamHostStatusMu.Lock()
 				streamHostStatus = make(map[string]bool)
 				streamHostStatusMu.Unlock()
-				setHostStatus("alpha", true)
+				storeOnline("alpha", true)
 			},
 			checkFunc: func(t *testing.T) {
-				if !hostIsOnline("alpha") {
-					t.Fatalf("Got offline, expected online after setHostStatus true")
+				if !isOnline("alpha") {
+					t.Fatalf("Got offline, expected online after storeOnline true")
 				}
 			},
 			expectedError: false,
@@ -202,11 +205,11 @@ func TestEngine_HostStatus(t *testing.T) {
 				streamHostStatusMu.Lock()
 				streamHostStatus = make(map[string]bool)
 				streamHostStatusMu.Unlock()
-				setHostStatus("alpha", false)
+				storeOnline("alpha", false)
 			},
 			checkFunc: func(t *testing.T) {
-				if hostIsOnline("alpha") {
-					t.Fatalf("Got online, expected offline after setHostStatus false")
+				if isOnline("alpha") {
+					t.Fatalf("Got online, expected offline after storeOnline false")
 				}
 			},
 			expectedError: false,
@@ -221,8 +224,8 @@ func TestEngine_HostStatus(t *testing.T) {
 			checkFunc: func(t *testing.T) {
 				cache := metric.NewRecordCache()
 				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"), &metric.Record{Value: value})
-				setHostStatus("alpha", false)
-				for svc := range cache.Services() {
+				storeOnline("alpha", false)
+				for _, svc := range cache.Services("alpha") {
 					cache.Evict("alpha", svc)
 				}
 				record, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"))
@@ -231,6 +234,31 @@ func TestEngine_HostStatus(t *testing.T) {
 				}
 				if record.Value.Pulse != nil {
 					t.Fatalf("Got non-nil pulse, expected service record evicted to nil on offline")
+				}
+			},
+			expectedError: false,
+		},
+		{
+			name: "happy_offline_evicts_only_services_of_offline_host",
+			setupFunc: func() {
+				streamHostStatusMu.Lock()
+				streamHostStatus = make(map[string]bool)
+				streamHostStatusMu.Unlock()
+			},
+			checkFunc: func(t *testing.T) {
+				cache := metric.NewRecordCache()
+				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"), &metric.Record{Value: value})
+				cache.Store(metric.NewServiceRecordGUID(metric.MetricServiceName, "beta", "svc-b"), &metric.Record{Value: value})
+				storeOnline("alpha", false)
+				for _, svc := range cache.Services("alpha") {
+					cache.Evict("alpha", svc)
+				}
+				betaRecord, ok := cache.Load(metric.NewServiceRecordGUID(metric.MetricServiceName, "beta", "svc-b"))
+				if !ok || betaRecord == nil {
+					t.Fatalf("Got beta record missing, expected untouched when only alpha goes offline")
+				}
+				if betaRecord.Value.Pulse == nil {
+					t.Fatalf("Got beta pulse nil, expected beta services unaffected when alpha goes offline")
 				}
 			},
 			expectedError: false,
@@ -245,7 +273,7 @@ func TestEngine_HostStatus(t *testing.T) {
 			checkFunc: func(t *testing.T) {
 				cache := metric.NewRecordCache()
 				cache.Store(metric.NewRecordGUID(metric.MetricHost, "alpha"), &metric.Record{Value: value})
-				setHostStatus("alpha", false)
+				storeOnline("alpha", false)
 				for _, id := range metric.GetIDsByKind([]metric.MetricKind{metric.MetricKindHost}) {
 					record := metric.NewRecord(metric.NewNilValue())
 					cache.Store(metric.NewRecordGUID(id, "alpha"), &record)
@@ -266,10 +294,10 @@ func TestEngine_HostStatus(t *testing.T) {
 				streamHostStatusMu.Lock()
 				streamHostStatus = make(map[string]bool)
 				streamHostStatusMu.Unlock()
-				setHostStatus("alpha", true)
+				storeOnline("alpha", true)
 			},
 			checkFunc: func(t *testing.T) {
-				if !hostIsOnline("alpha") {
+				if !isOnline("alpha") {
 					t.Fatalf("Got offline, expected online host to allow stores")
 				}
 			},
@@ -281,10 +309,10 @@ func TestEngine_HostStatus(t *testing.T) {
 				streamHostStatusMu.Lock()
 				streamHostStatus = make(map[string]bool)
 				streamHostStatusMu.Unlock()
-				setHostStatus("alpha", false)
+				storeOnline("alpha", false)
 			},
 			checkFunc: func(t *testing.T) {
-				if hostIsOnline("alpha") {
+				if isOnline("alpha") {
 					t.Fatalf("Got online, expected offline host to block stores")
 				}
 			},
@@ -296,11 +324,11 @@ func TestEngine_HostStatus(t *testing.T) {
 				streamHostStatusMu.Lock()
 				streamHostStatus = make(map[string]bool)
 				streamHostStatusMu.Unlock()
-				setHostStatus("alpha", false)
-				setHostStatus("alpha", true)
+				storeOnline("alpha", false)
+				storeOnline("alpha", true)
 			},
 			checkFunc: func(t *testing.T) {
-				if !hostIsOnline("alpha") {
+				if !isOnline("alpha") {
 					t.Fatalf("Got offline, expected online after transitioning offline→online")
 				}
 			},
@@ -312,13 +340,13 @@ func TestEngine_HostStatus(t *testing.T) {
 				streamHostStatusMu.Lock()
 				streamHostStatus = make(map[string]bool)
 				streamHostStatusMu.Unlock()
-				setHostStatus("alpha", false)
+				storeOnline("alpha", false)
 			},
 			checkFunc: func(t *testing.T) {
 				streamHostStatusMu.Lock()
 				streamHostStatus = make(map[string]bool)
 				streamHostStatusMu.Unlock()
-				if !hostIsOnline("alpha") {
+				if !isOnline("alpha") {
 					t.Fatalf("Got offline, expected stale offline status cleared after restart")
 				}
 			},
@@ -329,6 +357,108 @@ func TestEngine_HostStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.setupFunc()
 			tt.checkFunc(t)
+		})
+	}
+}
+
+func TestEngine_RunListeningStreamLoop(t *testing.T) {
+	scribe.EnableStdout(slog.LevelDebug)
+	testutil.RequiresDocker(t)
+	_, mqttClient, err := testutil.SetupBrokerContainer(t)
+	if err != nil {
+		t.Fatalf("setup broker container failed: %v", err)
+	}
+	host := os.Getenv("VERNEMQ_HOST")
+	port := os.Getenv("VERNEMQ_API_PORT")
+	configContent := fmt.Sprintf(`{"asystem":{"version":"10.100.6000","broker":{"host":%q,"port":%q},"database":{"host":"db.local","port":"2000"}}}`, host, port)
+	configFile := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatalf("write config file failed: %v", err)
+	}
+	nonNilValue := metric.ValueData{
+		Timestamp: time.Now().Unix(),
+		Pulse:     &metric.ValueDataDetail{OK: true, Kind: metric.ValueString, ValueString: "svc-a"},
+	}
+	nonNilPayload, err := json.Marshal(nonNilValue)
+	if err != nil {
+		t.Fatalf("marshal non-nil value failed: %v", err)
+	}
+	tests := []struct {
+		name      string
+		setupFunc func(*testing.T, *metric.RecordCache, metric.TopicBinding) []byte
+		checkFunc func(*testing.T, *metric.RecordCache, metric.TopicBinding)
+	}{
+		{
+			name: "happy_nil_mqtt_value_evicts_service",
+			setupFunc: func(_ *testing.T, _ *metric.RecordCache, _ metric.TopicBinding) []byte {
+				return []byte(`{}`)
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				deadline := time.Now().Add(3 * time.Second)
+				for time.Now().Before(deadline) {
+					record, ok := cache.Load(b.GUID)
+					if ok && record != nil && record.Value.Pulse == nil {
+						return
+					}
+					time.Sleep(50 * time.Millisecond)
+				}
+				t.Fatalf("Got non-nil pulse after nil publish, expected service evicted to nil")
+			},
+		},
+		{
+			name: "happy_non_nil_mqtt_value_stores_evicted_service",
+			setupFunc: func(_ *testing.T, cache *metric.RecordCache, b metric.TopicBinding) []byte {
+				cache.Evict(b.GUID.Host, b.GUID.ServiceName)
+				return nonNilPayload
+			},
+			checkFunc: func(t *testing.T, cache *metric.RecordCache, b metric.TopicBinding) {
+				deadline := time.Now().Add(3 * time.Second)
+				for time.Now().Before(deadline) {
+					record, ok := cache.Load(b.GUID)
+					if ok && record != nil && record.Value.Pulse != nil {
+						return
+					}
+					time.Sleep(50 * time.Millisecond)
+				}
+				t.Fatalf("Got nil pulse after non-nil publish, expected evicted service record restored")
+			},
+		},
+	}
+	periods := config.Periods{PulseMillis: 1000, HeartbeatSecs: 30}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cache := metric.NewRecordCache()
+			cache.Store(
+				metric.NewServiceRecordGUID(metric.MetricServiceName, "alpha", "svc-a"),
+				&metric.Record{Value: nonNilValue},
+			)
+			topics := cache.Topics()
+			if len(topics) == 0 {
+				t.Fatalf("Got no topics after store, expected at least one")
+			}
+			var binding metric.TopicBinding
+			for _, b := range topics {
+				if b.GUID.Host == "alpha" && b.GUID.ServiceName == "svc-a" {
+					binding = b
+					break
+				}
+			}
+			if binding.Topic == "" {
+				t.Fatalf("Got no binding for svc-a, expected topic to be set after store")
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+			defer cancel()
+			done := make(chan struct{})
+			go func() {
+				defer close(done)
+				RunListeningStreamLoop(ctx, configFile, cache, periods)
+			}()
+			time.Sleep(500 * time.Millisecond)
+			payload := tt.setupFunc(t, cache, binding)
+			mqttClient.Publish(binding.Topic, 0, false, payload)
+			tt.checkFunc(t, cache, binding)
+			cancel()
+			<-done
 		})
 	}
 }
