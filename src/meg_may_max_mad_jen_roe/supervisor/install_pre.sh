@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker exec monitor /asystem/etc/mqtt.sh
+docker exec supervisor /asystem/etc/mqtt.sh
 
 chmod +x /var/lib/asystem/install/supervisor/latest/supervisor
 cat >/usr/local/bin/atop <<'EOF'
