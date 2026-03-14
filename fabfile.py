@@ -849,7 +849,7 @@ def _release(context):
                             module_go_bin,
                             module_go_bin,
                         ), module_go_main_path)
-                        _run_local(context, "cp -rvf {}/* target/release".format(
+                        _run_local(context, "cp -rvf {}/* target/release/image".format(
                             module_go_bin
                         ), module)
                     if glob.glob(join(ROOT_MODULE_DIR, module, "target/package/main/resources/*")):

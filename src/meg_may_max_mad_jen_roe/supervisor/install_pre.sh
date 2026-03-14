@@ -2,18 +2,18 @@
 
 docker exec supervisor /asystem/etc/mqtt.sh
 
-chmod +x /var/lib/asystem/install/supervisor/latest/supervisor
+chmod +x /var/lib/asystem/install/supervisor/latest/image/supervisor
 cat >/usr/local/bin/atop <<'EOF'
 #!/bin/bash
 
-/var/lib/asystem/install/supervisor/latest/supervisor watch -m local -F 1 "$@"
+/var/lib/asystem/install/supervisor/latest/image/supervisor watch -m local -F 1 "$@"
 
 EOF
 chmod +x /usr/local/bin/atop
 cat >/usr/local/bin/atops <<'EOF'
 #!/bin/bash
 
-/var/lib/asystem/install/supervisor/latest/supervisor watch -m remote "$@"
+/var/lib/asystem/install/supervisor/latest/image/supervisor watch -m remote "$@"
 
 EOF
 chmod +x /usr/local/bin/atops
