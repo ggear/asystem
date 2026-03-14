@@ -1,8 +1,13 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
+	"os"
+	"os/signal"
+	"supervisor/internal/engine"
+	"supervisor/internal/metric"
 	"supervisor/internal/scribe"
 
 	"github.com/spf13/cobra"
@@ -44,16 +49,14 @@ func newServeCmd() *cobra.Command {
 }
 
 func executeServe(configPath string, opts *serveOptions) error {
-	_ = configPath
-	err := scribe.EnableFile(slog.LevelDebug, "serve", 10, 3, 7)
+	scribe.EnableStdout(slog.LevelDebug)
+	periods, err := makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod, opts.heartbeatFactor)
 	if err != nil {
 		return err
 	}
-
-	// TODO: START
-	_, err = makePeriods(opts.pollPeriod, opts.pulseFactor, opts.trendPeriod, opts.cachePeriod, opts.snapshotPeriod, opts.heartbeatFactor)
-	// TODO: END
-
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	engine.RunAllProbesPublishLoop(ctx, configPath, metric.NewRecordCache(), periods)
 	return nil
 }
 

@@ -188,6 +188,11 @@ func RunAllProbesOnce(ctx context.Context, configPath string, cache *metric.Reco
 	}
 }
 
+type lpKey struct {
+	host    string
+	service string
+}
+
 func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metric.RecordCache, periods config.Periods) {
 	for _, id := range metric.GetIDs() {
 		record := metric.NewRecord(metric.NewNilValue())
@@ -206,42 +211,53 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 	hostName := config.LocalHostName()
 	snapshotTopic := "supervisor/" + hostName + "/snapshot"
 	statusTopic := "supervisor/" + hostName + "/status"
-	var lp strings.Builder
-	publish := func(record *metric.Record) {
-		if record.Topic == "" || record.Value.Pulse == nil {
-			return
-		}
-		payload, jsonErr := json.Marshal(record.Value)
-		if jsonErr != nil {
-			slog.Debug("run all probes publish loop: marshal failed", "topic", record.Topic, "error", jsonErr)
-			return
-		}
-		client.Publish(record.Topic, 0, false, payload)
-		if len(record.Tags) == 0 {
-			return
-		}
-		lp.WriteString("supervisor")
-		for k, v := range record.Tags {
-			lp.WriteByte(',')
-			lp.WriteString(k)
-			lp.WriteByte('=')
-			lp.WriteString(v)
-		}
-		lp.WriteByte(' ')
-		writeDetailLP(&lp, "pulse", record.Value.Pulse)
-		if record.Value.Trend != nil {
-			lp.WriteByte(',')
-			writeDetailLP(&lp, "trend", record.Value.Trend)
-		}
-		lp.WriteByte(' ')
-		lp.WriteString(strconv.FormatInt(record.Value.Timestamp*1_000_000_000, 10))
-		lp.WriteByte('\n')
-	}
+	var lineProtocol strings.Builder
 	err = probe.Run(ctx, func(isHeartbeat bool) {
-		lp.Reset()
+		lineProtocol.Reset()
+		groups := make(map[lpKey]*strings.Builder)
+		addToGroup := func(key lpKey, field, suffix string, d *metric.ValueDataDetail) {
+			if d.Kind != metric.ValueInt && d.Kind != metric.ValueFloat {
+				return
+			}
+			b := groups[key]
+			if b == nil {
+				b = new(strings.Builder)
+				groups[key] = b
+			} else {
+				b.WriteByte(',')
+			}
+			b.WriteString(field)
+			b.WriteString(suffix)
+			b.WriteByte('=')
+			b.WriteString(d.Value())
+			if d.Kind == metric.ValueInt {
+				b.WriteByte('i')
+			}
+		}
+		process := func(guid metric.RecordGUID, record *metric.Record) {
+			if record.Topic != "" && record.Value.Pulse != nil {
+				if payload, jsonErr := json.Marshal(record.Value); jsonErr == nil {
+					client.Publish(record.Topic, 0, false, payload)
+				} else {
+					slog.Debug("run all probes publish loop: marshal failed", "topic", record.Topic, "error", jsonErr)
+				}
+			}
+			if record.Value.Pulse == nil || len(record.Tags) == 0 {
+				return
+			}
+			field, ok := record.Tags["metric"]
+			if !ok {
+				return
+			}
+			key := lpKey{host: guid.Host, service: guid.ServiceName}
+			addToGroup(key, field, "", record.Value.Pulse)
+			if record.Value.Trend != nil {
+				addToGroup(key, field, "_trend", record.Value.Trend)
+			}
+		}
 		if isHeartbeat {
-			cache.Records(func(_ metric.RecordGUID, record *metric.Record) {
-				publish(record)
+			cache.Records(func(guid metric.RecordGUID, record *metric.Record) {
+				process(guid, record)
 			})
 			cache.Take()
 			client.Publish(statusTopic, 1, true, hostStatusOnline)
@@ -251,42 +267,29 @@ func RunAllProbesPublishLoop(ctx context.Context, configPath string, cache *metr
 				if !ok {
 					continue
 				}
-				publish(record)
+				process(guid, record)
 			}
 		}
-		if lp.Len() > 0 {
-			client.Publish(snapshotTopic, 0, false, lp.String())
+		ts := strconv.FormatInt(time.Now().UnixNano(), 10)
+		for key, b := range groups {
+			lineProtocol.WriteString("supervisor,host=")
+			lineProtocol.WriteString(key.host)
+			if key.service != "" {
+				lineProtocol.WriteString(",service=")
+				lineProtocol.WriteString(key.service)
+			}
+			lineProtocol.WriteByte(' ')
+			lineProtocol.WriteString(b.String())
+			lineProtocol.WriteByte(' ')
+			lineProtocol.WriteString(ts)
+			lineProtocol.WriteByte('\n')
+		}
+		if lineProtocol.Len() > 0 {
+			client.Publish(snapshotTopic, 0, false, lineProtocol.String())
 		}
 	})
 	if err != nil && !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		slog.Error("run all probes publish loop: run failed", "error", err)
-	}
-}
-
-func writeDetailLP(b *strings.Builder, prefix string, d *metric.ValueDataDetail) {
-	b.WriteString(prefix)
-	b.WriteString("_ok=")
-	if d.OK {
-		b.WriteString("true")
-	} else {
-		b.WriteString("false")
-	}
-	v := d.Value()
-	if v == "" {
-		return
-	}
-	b.WriteByte(',')
-	b.WriteString(prefix)
-	b.WriteString("_value=")
-	if d.Kind == metric.ValueString {
-		b.WriteByte('"')
-		b.WriteString(v)
-		b.WriteByte('"')
-	} else {
-		b.WriteString(v)
-		if d.Kind == metric.ValueInt {
-			b.WriteByte('i')
-		}
 	}
 }
 

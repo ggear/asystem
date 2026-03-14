@@ -23,4 +23,4 @@ COPY target/package/main/resources/image/. /asystem/etc
 
 FROM image_build AS image_runtime
 WORKDIR /asystem/etc
-CMD ["sleep", "9999"]
+CMD ["/asystem/mnt/supervisor", "serve", "-c", "/asystem/etc/config.json"]
