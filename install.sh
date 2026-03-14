@@ -33,39 +33,41 @@ fi
 rm -f ${SERVICE_HOME}/../latest && ln -sfv ${SERVICE_HOME} ${SERVICE_HOME}/../latest
 touch .env
 chmod 600 .env
-[ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
-if [ -f "docker-compose.yml" ]; then
-  docker compose --compatibility --ansi never up --force-recreate -d
-  if [ $(docker ps | grep "${SERVICE_NAME}_bootstrap" | wc -l) -eq 1 ]; then
-    sleep 1
-    docker logs "${SERVICE_NAME}_bootstrap" -f
-  fi
-  echo "--------------------------------------------------------------------------------"
-  docker ps -f name="${SERVICE_NAME}"
-  echo "--------------------------------------------------------------------------------"
-  if find "${SERVICE_INSTALL}" -name checkexecuting.sh | grep -q . && find "${SERVICE_INSTALL}" -name checkhealthy.sh | grep -q .; then
-    echo
-    while ! docker exec "${SERVICE_NAME}" /asystem/etc/checkexecuting.sh; do
-      echo "Waiting for service to start executing ... " && sleep 1
-    done
-    echo && echo "Waiting to check service health ... " && echo && sleep 2
-    docker exec -i "${SERVICE_NAME}" bash -c 'command -v stdbuf >/dev/null 2>&1 && exec stdbuf -oL /asystem/etc/checkhealthy.sh -v || exec /asystem/etc/checkhealthy.sh -v'
-    echo && echo
-    sleep 1
-  else
-    echo && echo "❌ Service does not have health scripts defined" && echo "" && exit 1
-  fi
-  echo "--------------------------------------------------------------------------------"
-  docker ps -f name="${SERVICE_NAME}"
-  echo "--------------------------------------------------------------------------------"
-  docker logs "${SERVICE_NAME}"
-  echo "--------------------------------------------------------------------------------"
-  if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
-    echo && echo "❌ Service failed to start" && echo "" && exit 1
-  else
-    docker system prune --volumes -f -a 2>&1 >/dev/null
-    echo "✅ Service started successfully"
+if [ $(uname) == "Linux" ]; then
+  [ -f "./install_pre.sh" ] && chmod +x ./install_pre.sh && ./install_pre.sh || true
+  if [ -f "docker-compose.yml" ]; then
+    docker compose --compatibility --ansi never up --force-recreate -d
+    if [ $(docker ps | grep "${SERVICE_NAME}_bootstrap" | wc -l) -eq 1 ]; then
+      sleep 1
+      docker logs "${SERVICE_NAME}_bootstrap" -f
+    fi
     echo "--------------------------------------------------------------------------------"
+    docker ps -f name="${SERVICE_NAME}"
+    echo "--------------------------------------------------------------------------------"
+    if find "${SERVICE_INSTALL}" -name checkexecuting.sh | grep -q . && find "${SERVICE_INSTALL}" -name checkhealthy.sh | grep -q .; then
+      echo
+      while ! docker exec "${SERVICE_NAME}" /asystem/etc/checkexecuting.sh; do
+        echo "Waiting for service to start executing ... " && sleep 1
+      done
+      echo && echo "Waiting to check service health ... " && echo && sleep 2
+      docker exec -i "${SERVICE_NAME}" bash -c 'command -v stdbuf >/dev/null 2>&1 && exec stdbuf -oL /asystem/etc/checkhealthy.sh -v || exec /asystem/etc/checkhealthy.sh -v'
+      echo && echo
+      sleep 1
+    else
+      echo && echo "❌ Service does not have health scripts defined" && echo "" && exit 1
+    fi
+    echo "--------------------------------------------------------------------------------"
+    docker ps -f name="${SERVICE_NAME}"
+    echo "--------------------------------------------------------------------------------"
+    docker logs "${SERVICE_NAME}"
+    echo "--------------------------------------------------------------------------------"
+    if [ $(docker ps -f name="${SERVICE_NAME}" | grep -c "$SERVICE_NAME") -eq 0 ]; then
+      echo && echo "❌ Service failed to start" && echo "" && exit 1
+    else
+      docker system prune --volumes -f -a 2>&1 >/dev/null
+      echo "✅ Service started successfully"
+      echo "--------------------------------------------------------------------------------"
+    fi
   fi
 fi
 [ -f "./install_post.sh" ] && chmod +x ./install_post.sh && ./install_post.sh || true

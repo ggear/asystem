@@ -15,7 +15,7 @@ RUN apt-get update && \
     mkdir -p /asystem/bin && mkdir -p /asystem/etc && mkdir -p /asystem/mnt
 
 FROM image_upstream AS image_base
-COPY target/go/bin/supervisor /asystem/bin
+COPY target/package/main/resources/supervisor /asystem/bin
 RUN chmod +x /asystem/bin/supervisor
 
 FROM image_base AS image_build
